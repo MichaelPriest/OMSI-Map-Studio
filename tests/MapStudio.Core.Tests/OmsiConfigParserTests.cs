@@ -69,4 +69,51 @@ public sealed class OmsiConfigParserTests
         Assert.Equal("keep-me", document.FindFirstSection("future_feature")?.DataLines.Single());
         Assert.Equal(source, document.ToText());
     }
+
+    [Fact]
+    public async Task TileReader_CountsObjectsSplinesAndAttachments()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-{Guid.NewGuid():N}.map");
+
+        const string source =
+            "[version]\r\n14\r\n" +
+            "[spline]\r\n0\r\nSplines\\Street.sli\r\n" +
+            "[object]\r\n0\r\nSceneryobjects\\Building.sco\r\n" +
+            "[splineAttachement]\r\n0\r\nSceneryobjects\\BusStop.sco\r\n" +
+            "[object]\r\n0\r\nSceneryobjects\\Tree.sco\r\n" +
+            "[future_section]\r\nkeep-me\r\n";
+
+        try
+        {
+            await File.WriteAllTextAsync(path, source, new UTF8Encoding(false));
+
+            var summary = await new OmsiTileReader().ReadSummaryAsync(path);
+
+            Assert.True(summary.Exists);
+            Assert.Equal(2, summary.ObjectCount);
+            Assert.Equal(1, summary.SplineCount);
+            Assert.Equal(1, summary.SplineAttachmentCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public async Task TileReader_ReturnsMissingSummaryForAbsentTile()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-missing-{Guid.NewGuid():N}.map");
+
+        var summary = await new OmsiTileReader().ReadSummaryAsync(path);
+
+        Assert.False(summary.Exists);
+        Assert.Equal(0, summary.ObjectCount);
+        Assert.Equal(0, summary.SplineCount);
+        Assert.Equal(0, summary.SplineAttachmentCount);
+    }
 }
