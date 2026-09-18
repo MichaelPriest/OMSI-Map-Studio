@@ -34,6 +34,8 @@ At this stage it only extracts information that can be identified safely by sect
 - `[splineAttachement]` / `[splineAttachment]` count;
 - whether the referenced tile file exists.
 
+Tile file references pass through `OmsiMapPathResolver`. After normalization, the path must still remain inside the map directory. Directory traversal references such as `..\\` are rejected and treated as unavailable tiles.
+
 ### Coordinate system
 
 `OmsiMapCatalog` detects the `[worldcoordinates]` marker in `global.cfg`.
