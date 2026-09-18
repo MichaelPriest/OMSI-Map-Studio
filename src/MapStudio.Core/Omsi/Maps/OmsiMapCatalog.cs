@@ -143,6 +143,32 @@ public sealed class OmsiMapCatalog
                 Volatile.Read(ref skipped));
     }
 
+    public static async Task<OmsiMapDescriptor> OpenMapAsync(
+        string directory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+
+        var fullDirectory =
+            Path.GetFullPath(directory);
+
+        var globalConfigPath =
+            Path.Combine(
+                fullDirectory,
+                "global.cfg");
+
+        if (!File.Exists(globalConfigPath))
+        {
+            throw new FileNotFoundException(
+                "The selected map does not contain global.cfg.",
+                globalConfigPath);
+        }
+
+        return await ReadDescriptorAsync(
+            fullDirectory,
+            cancellationToken);
+    }
+
     private static async Task<OmsiMapDescriptor> ReadDescriptorAsync(
         string directory,
         CancellationToken cancellationToken)

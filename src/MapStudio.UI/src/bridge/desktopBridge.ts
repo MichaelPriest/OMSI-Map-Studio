@@ -102,25 +102,16 @@ export type OmsiSceneryObjectGeometry = {
 
 export type HostMessage =
   | {
-      type: "omsiInstallationLoadingStarted";
+      type: "omsiRootSelected";
       rootPath: string;
     }
   | {
-      type: "omsiInstallationLoadingProgress";
-      rootPath: string;
-      completed: number;
-      total: number;
-      skipped: number;
-      directoryName: string | null;
-    }
-  | {
-      type: "omsiInstallationLoaded";
-      rootPath: string;
-      skippedMaps: number;
-      maps: OmsiMap[];
+      type: "mapOpened";
+      map: OmsiMap;
     }
   | {
       type: "selectionCancelled";
+      target: "omsi" | "map";
     }
   | {
       type: "mapContentLoaded";
@@ -141,15 +132,7 @@ export type HostMessage =
     }
   | {
       type: "hostError";
-      code:
-        | "invalidMessage"
-        | "invalidOmsiRoot"
-        | "accessDenied"
-        | "ioError"
-        | "unknownMap"
-        | "unknownSceneryObject"
-        | "invalidSceneryObjectPath"
-        | string;
+      code: string;
       detail?: string;
     };
 
@@ -182,6 +165,12 @@ export function isDesktopBridgeAvailable() {
 export function selectOmsiRoot() {
   getWebView()?.postMessage({
     type: "selectOmsiRoot"
+  });
+}
+
+export function selectMap() {
+  getWebView()?.postMessage({
+    type: "selectMap"
   });
 }
 

@@ -91,17 +91,19 @@ React cannot provide arbitrary paths for reading. The host keeps a list of `.sco
 
 ### On-demand loading
 
-Initial discovery reads only `global.cfg` files and tile references. It does not open every `.map` file in the installation before releasing the interface.
+Selecting the OMSI root no longer triggers automatic map discovery. The root is only the trusted base for `maps`, `Sceneryobjects`, `Splines`, textures and other resources.
 
-- `loadMapContent` loads the selected map on demand and gets counts plus objects from a single read of each tile;
-- `global.cfg` files are read with limited concurrency and visible progress; one unreadable map is skipped instead of blocking the whole installation;
-- each `global.cfg` read has a time limit to prevent indefinite waiting;
+The user explicitly opens a map through the **Open map** button. The host accepts only a directory inside `OMSI 2/maps` that contains `global.cfg`. Only that `global.cfg` is read, followed by on-demand loading of the selected map's tiles.
+
+- `selectOmsiRoot` only validates and registers the OMSI root;
+- `selectMap` opens a native picker and reads only the chosen map's `global.cfg`;
+- `loadMapContent` loads the chosen map and gets counts plus objects from a single read of each tile;
 - selected-map tiles are processed with limited concurrency to reduce waiting without saturating storage;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
 - `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
 - previously read metadata and geometry are cached in React.
 
-This avoids scanning every `.map` and `.sco` file in the installation at application startup. The host sends discovery start and progress events to the interface, and unexpected exceptions are converted into visible errors to prevent a permanent “Reading OMSI” state. When returning to a previously loaded map, React reuses the cached content.
+This removes the full-map scan when selecting an installation. With no map open, the viewport remains empty; tiles and markers appear only after the user explicitly chooses a map. Host exceptions continue to be converted into visible errors instead of leaving the interface stuck.
 
 For Cartesian maps, the viewport represents object positions with:
 
@@ -138,12 +140,12 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 ## First vertical slice
 
 1. User selects the OMSI 2 root directory.
-2. Core discovers maps containing `global.cfg`.
-3. `global.cfg` is parsed without destructive rewriting.
-4. Real tile references are extracted.
-5. The interface immediately receives the lightweight installation catalog.
-6. Only the selected map has its `.map` files inspected.
-7. Each selected tile is read once for both statistics and objects.
+2. No map is loaded automatically.
+3. User clicks **Open map** and chooses a directory inside `maps`.
+4. That map's `global.cfg` is parsed without destructive rewriting.
+5. Real tile references are extracted.
+6. Only that map's `.map` files are inspected.
+7. Each tile is read once for both statistics and objects.
 8. The real tile layout and object/spline statistics are displayed.
 9. The base placed-object block is interpreted safely.
 10. Placed objects can be selected and inspected.

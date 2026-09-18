@@ -91,17 +91,19 @@ O React não pode fornecer caminhos arbitrários para leitura. O host mantém um
 
 ### Carregamento sob demanda
 
-A descoberta inicial lê somente os `global.cfg` e as referências de tiles. Ela não abre todos os arquivos `.map` da instalação antes de liberar a interface.
+Selecionar a pasta raiz do OMSI não faz mais descoberta automática de mapas. A raiz serve apenas como base segura para `maps`, `Sceneryobjects`, `Splines`, texturas e demais recursos.
 
-- `loadMapContent` carrega o mapa selecionado sob demanda e, em uma única leitura de cada tile, obtém contagens e objetos;
-- os `global.cfg` são lidos com concorrência limitada e progresso visível; um mapa individual ilegível é ignorado em vez de bloquear toda a instalação;
-- cada leitura de `global.cfg` possui limite de tempo para evitar espera indefinida;
+O usuário abre explicitamente um mapa pelo botão **Abrir mapa**. O host aceita somente uma pasta dentro de `OMSI 2/maps` que contenha `global.cfg`. Apenas esse `global.cfg` é lido e, em seguida, os tiles do mapa escolhido são carregados sob demanda.
+
+- `selectOmsiRoot` apenas valida e registra a raiz do OMSI;
+- `selectMap` abre um seletor nativo e lê somente o `global.cfg` do mapa escolhido;
+- `loadMapContent` carrega o mapa escolhido e, em uma única leitura de cada tile, obtém contagens e objetos;
 - os tiles do mapa selecionado são processados com concorrência limitada para reduzir a espera sem saturar o disco;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
 - `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
 - metadados e geometria já lidos são armazenados em cache no React.
 
-Isso evita ler todos os `.map` e `.sco` da instalação durante a abertura do programa. O host envia início e progresso da descoberta para a interface, e exceções inesperadas também são convertidas em erro visível para impedir o estado permanente de “Lendo OMSI”. Ao voltar para um mapa já carregado, o React reutiliza o conteúdo em cache.
+Isso elimina a varredura de todos os mapas ao escolher a instalação. Sem mapa aberto, o viewport permanece vazio; tiles e marcadores aparecem somente depois que o usuário escolhe explicitamente um mapa. Exceções do host continuam sendo convertidas em erro visível em vez de deixar a interface travada.
 
 Para mapas cartesianos, o viewport representa a posição com:
 
@@ -138,12 +140,12 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 ## Primeiro fluxo vertical
 
 1. Usuário seleciona a pasta raiz do OMSI 2.
-2. O Core encontra mapas contendo `global.cfg`.
-3. O `global.cfg` é lido sem alteração destrutiva.
-4. Referências reais de tiles são extraídas.
-5. A interface recebe imediatamente o catálogo leve da instalação.
-6. Somente o mapa selecionado tem seus arquivos `.map` inspecionados.
-7. Cada tile selecionado é lido uma única vez para estatísticas e objetos.
+2. Nenhum mapa é carregado automaticamente.
+3. Usuário clica em **Abrir mapa** e escolhe uma pasta dentro de `maps`.
+4. O `global.cfg` desse mapa é lido sem alteração destrutiva.
+5. Referências reais de tiles são extraídas.
+6. Somente os arquivos `.map` desse mapa são inspecionados.
+7. Cada tile é lido uma única vez para estatísticas e objetos.
 8. A malha real de tiles e estatísticas de objetos/splines são exibidas.
 9. O bloco-base de objetos passa a ser interpretado de forma segura.
 10. Objetos posicionados podem ser selecionados e inspecionados.

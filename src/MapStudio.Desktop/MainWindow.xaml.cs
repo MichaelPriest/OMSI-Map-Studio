@@ -108,6 +108,10 @@ public partial class MainWindow : Window
                     await SelectOmsiRootAsync();
                     break;
 
+                case "selectMap":
+                    await SelectMapAsync();
+                    break;
+
                 case "loadMapContent":
                     if (TryReadString(
                             message.RootElement,
@@ -169,7 +173,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task SelectOmsiRootAsync()
+    private Task SelectOmsiRootAsync()
     {
         var dialog = new OpenFolderDialog
         {
@@ -181,15 +185,21 @@ public partial class MainWindow : Window
         {
             PostMessage(new
             {
-                type = "selectionCancelled"
+                type = "selectionCancelled",
+                target = "omsi"
             });
-            return;
+
+            return Task.CompletedTask;
         }
 
-        var rootPath = dialog.FolderName;
-        var mapsPath = Path.Combine(
-            rootPath,
-            "maps");
+        var rootPath =
+            Path.GetFullPath(
+                dialog.FolderName);
+
+        var mapsPath =
+            Path.Combine(
+                rootPath,
+                "maps");
 
         if (!Directory.Exists(mapsPath))
         {
@@ -199,70 +209,147 @@ public partial class MainWindow : Window
                 code = "invalidOmsiRoot",
                 detail = rootPath
             });
-            return;
+
+            return Task.CompletedTask;
         }
+
+        _omsiRootPath = rootPath;
+
+        _knownMaps =
+            new Dictionary<string, OmsiMapDescriptor>(
+                StringComparer.OrdinalIgnoreCase);
+
+        _knownSceneryObjectPaths.Clear();
 
         PostMessage(new
         {
-            type = "omsiInstallationLoadingStarted",
+            type = "omsiRootSelected",
             rootPath
         });
 
+        return Task.CompletedTask;
+    }
+
+    private async Task SelectMapAsync()
+    {
+        if (_omsiRootPath is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "omsiRootRequired"
+            });
+
+            return;
+        }
+
+        var mapsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    _omsiRootPath,
+                    "maps"))
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Selecione a pasta do mapa dentro de OMSI 2\\maps",
+            Multiselect = false,
+            InitialDirectory = mapsRoot
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            PostMessage(new
+            {
+                type = "selectionCancelled",
+                target = "map"
+            });
+
+            return;
+        }
+
+        var selectedDirectory =
+            Path.GetFullPath(
+                dialog.FolderName)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        var requiredPrefix =
+            mapsRoot +
+            Path.DirectorySeparatorChar;
+
+        if (!selectedDirectory.StartsWith(
+                requiredPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "mapOutsideOmsiMaps",
+                detail = selectedDirectory
+            });
+
+            return;
+        }
+
+        var globalConfigPath =
+            Path.Combine(
+                selectedDirectory,
+                "global.cfg");
+
+        if (!File.Exists(globalConfigPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidMapFolder",
+                detail = selectedDirectory
+            });
+
+            return;
+        }
+
         try
         {
-            var progress =
-                new InlineProgress<OmsiMapDiscoveryProgress>(
-                    item =>
-                        Dispatcher.Invoke(
-                            () =>
-                                PostMessage(new
-                                {
-                                    type = "omsiInstallationLoadingProgress",
-                                    rootPath,
-                                    item.Completed,
-                                    item.Total,
-                                    item.Skipped,
-                                    item.DirectoryName
-                                })));
+            var map =
+                await OmsiMapCatalog.OpenMapAsync(
+                    selectedDirectory);
 
-            var result =
-                await _mapCatalog.DiscoverWithProgressAsync(
-                    rootPath,
-                    progress);
-
-            var maps = result.Maps;
-
-            _omsiRootPath = rootPath;
             _knownSceneryObjectPaths.Clear();
 
-            _knownMaps = maps.ToDictionary(
-                map => map.DirectoryName,
-                StringComparer.OrdinalIgnoreCase);
+            _knownMaps =
+                new Dictionary<string, OmsiMapDescriptor>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    [map.DirectoryName] = map
+                };
 
             PostMessage(new
             {
-                type = "omsiInstallationLoaded",
-                rootPath,
-                skippedMaps = result.SkippedMaps,
-                maps = maps.Select(map => new
+                type = "mapOpened",
+                map = new
                 {
                     map.DirectoryName,
                     map.DisplayName,
                     map.DirectoryPath,
                     map.GlobalConfigPath,
                     map.UsesWorldCoordinates,
-                    tiles = map.Tiles.Select(tile => new
-                    {
-                        tile.X,
-                        tile.Y,
-                        tile.RelativeMapPath,
-                        detailsLoaded = false,
-                        fileExists = false,
-                        objectCount = 0,
-                        splineCount = 0,
-                        splineAttachmentCount = 0
-                    })
-                })
+                    tiles = map.Tiles.Select(
+                        tile => new
+                        {
+                            tile.X,
+                            tile.Y,
+                            tile.RelativeMapPath,
+                            detailsLoaded = false,
+                            fileExists = false,
+                            objectCount = 0,
+                            splineCount = 0,
+                            splineAttachmentCount = 0
+                        })
+                }
             });
         }
         catch (UnauthorizedAccessException)
@@ -271,7 +358,7 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "accessDenied",
-                detail = rootPath
+                detail = selectedDirectory
             });
         }
         catch (IOException exception)
@@ -288,7 +375,7 @@ public partial class MainWindow : Window
             PostMessage(new
             {
                 type = "hostError",
-                code = "catalogError",
+                code = "mapOpenError",
                 detail = exception.Message
             });
         }

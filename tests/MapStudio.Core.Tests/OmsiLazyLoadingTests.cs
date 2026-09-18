@@ -129,6 +129,66 @@ public sealed class OmsiLazyLoadingTests
     }
 
     [Fact]
+    public async Task OpenMapAsync_ReadsOnlySelectedMap()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-open-map-{Guid.NewGuid():N}");
+
+        var selectedMap = Path.Combine(
+            root,
+            "maps",
+            "Selected");
+
+        var otherMap = Path.Combine(
+            root,
+            "maps",
+            "Other");
+
+        Directory.CreateDirectory(selectedMap);
+        Directory.CreateDirectory(otherMap);
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    selectedMap,
+                    "global.cfg"),
+                "[name]\r\nSelected Map\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                new UTF8Encoding(false));
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    otherMap,
+                    "global.cfg"),
+                "[name]\r\nOther Map\r\n",
+                new UTF8Encoding(false));
+
+            var descriptor =
+                await OmsiMapCatalog.OpenMapAsync(
+                    selectedMap);
+
+            Assert.Equal(
+                "Selected Map",
+                descriptor.DisplayName);
+
+            Assert.Equal(
+                "Selected",
+                descriptor.DirectoryName);
+
+            Assert.Single(
+                descriptor.Tiles);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task TileContent_ReadsSummaryAndObjectsTogether()
     {
         var path = Path.Combine(

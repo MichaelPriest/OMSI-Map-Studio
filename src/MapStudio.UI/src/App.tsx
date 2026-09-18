@@ -9,12 +9,13 @@ import {
   loadMapContent,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
+  selectMap,
+  selectOmsiRoot,
+  subscribeToHost,
   type OmsiMap,
   type OmsiPlacedObject,
   type OmsiSceneryObjectGeometry,
-  type OmsiSceneryObjectMetadata,
-  selectOmsiRoot,
-  subscribeToHost
+  type OmsiSceneryObjectMetadata
 } from "./bridge/desktopBridge";
 import { Viewport } from "./editor/Viewport";
 
@@ -23,23 +24,29 @@ const errorMessages: Record<string, string> = {
     "A interface enviou uma mensagem inválida para o host.",
   invalidOmsiRoot:
     "A pasta selecionada não parece ser a raiz do OMSI 2: a pasta maps não foi encontrada.",
+  omsiRootRequired:
+    "Selecione primeiro a pasta raiz do OMSI 2.",
+  mapOutsideOmsiMaps:
+    "Escolha uma pasta de mapa que esteja dentro da pasta maps do OMSI selecionado.",
+  invalidMapFolder:
+    "A pasta selecionada não contém global.cfg e não parece ser um mapa do OMSI.",
   accessDenied:
-    "O Windows bloqueou o acesso a essa instalação do OMSI 2.",
+    "O Windows bloqueou o acesso aos arquivos selecionados.",
   ioError:
-    "Não foi possível ler os arquivos da instalação selecionada.",
+    "Não foi possível ler os arquivos selecionados.",
   unknownMap:
-    "O mapa solicitado não pertence à instalação carregada.",
+    "O mapa solicitado não é o mapa atualmente aberto.",
   unknownSceneryObject:
-    "O objeto solicitado não pertence aos mapas já carregados.",
+    "O objeto solicitado não pertence ao mapa aberto.",
   invalidSceneryObjectPath:
     "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects.",
-  catalogError:
-    "Não foi possível concluir a leitura do catálogo de mapas.",
+  mapOpenError:
+    "Não foi possível abrir esse mapa.",
   unexpectedHostError:
-    "O host encontrou um erro inesperado. A operação foi interrompida para não deixar a interface travada."
+    "O host desktop encontrou um erro inesperado."
 };
 
-const appVersion = "0.1.0-alpha.2";
+const appVersion = "0.1.0-alpha.3-dev";
 
 const formatNumber = (value: number) =>
   value.toLocaleString("pt-BR", {
@@ -101,17 +108,11 @@ export function App() {
   const [rootPath, setRootPath] =
     useState<string>();
 
-  const [maps, setMaps] =
-    useState<OmsiMap[]>([]);
-
   const [selectedMap, setSelectedMap] =
     useState<OmsiMap>();
 
-  const [selectedObject, setSelectedObject] =
-    useState<OmsiPlacedObject>();
-
-  const [objectsByMap, setObjectsByMap] =
-    useState<Record<string, OmsiPlacedObject[]>>({});
+  const [objects, setObjects] =
+    useState<OmsiPlacedObject[]>([]);
 
   const [
     sceneryMetadataByPath,
@@ -127,10 +128,19 @@ export function App() {
     Record<string, OmsiSceneryObjectGeometry>
   >({});
 
+  const [selectedObject, setSelectedObject] =
+    useState<OmsiPlacedObject>();
+
+  const [selectingRoot, setSelectingRoot] =
+    useState(false);
+
+  const [selectingMap, setSelectingMap] =
+    useState(false);
+
   const [
-    loadingObjectsFor,
-    setLoadingObjectsFor
-  ] = useState<string>();
+    loadingMapContent,
+    setLoadingMapContent
+  ] = useState(false);
 
   const [
     loadingMetadataFor,
@@ -142,29 +152,6 @@ export function App() {
     setLoadingGeometryFor
   ] = useState<string>();
 
-  const [loading, setLoading] =
-    useState(false);
-
-  const [
-    loadingRootPath,
-    setLoadingRootPath
-  ] = useState<string>();
-
-  const [
-    loadingProgress,
-    setLoadingProgress
-  ] = useState<{
-    completed: number;
-    total: number;
-    skipped: number;
-    directoryName: string | null;
-  }>();
-
-  const [
-    loadingHeartbeat,
-    setLoadingHeartbeat
-  ] = useState(0);
-
   const [error, setError] =
     useState<string>();
 
@@ -173,63 +160,30 @@ export function App() {
       subscribeToHost((message) => {
         if (
           message.type ===
-          "omsiInstallationLoadingStarted"
+          "omsiRootSelected"
         ) {
-          setLoading(true);
-          setLoadingRootPath(
-            message.rootPath
-          );
-          setLoadingProgress(undefined);
-          setLoadingHeartbeat(
-            (value) => value + 1
-          );
+          setRootPath(message.rootPath);
+          setSelectedMap(undefined);
+          setObjects([]);
+          setSelectedObject(undefined);
+          setSceneryMetadataByPath({});
+          setGeometryByPath({});
+          setSelectingRoot(false);
+          setSelectingMap(false);
+          setLoadingMapContent(false);
           setError(undefined);
           return;
         }
 
-        if (
-          message.type ===
-          "omsiInstallationLoadingProgress"
-        ) {
-          setLoading(true);
-          setLoadingRootPath(
-            message.rootPath
-          );
-          setLoadingProgress({
-            completed: message.completed,
-            total: message.total,
-            skipped: message.skipped,
-            directoryName:
-              message.directoryName
-          });
-          setLoadingHeartbeat(
-            (value) => value + 1
-          );
-          return;
-        }
-
-        if (
-          message.type ===
-          "omsiInstallationLoaded"
-        ) {
-          setRootPath(message.rootPath);
-          setMaps(message.maps);
-          setObjectsByMap({});
+        if (message.type === "mapOpened") {
+          setSelectedMap(message.map);
+          setObjects([]);
+          setSelectedObject(undefined);
           setSceneryMetadataByPath({});
           setGeometryByPath({});
-          setLoadingObjectsFor(undefined);
-          setLoadingMetadataFor(undefined);
-          setLoadingGeometryFor(undefined);
-          setSelectedMap(message.maps[0]);
-          setSelectedObject(undefined);
-          setLoading(false);
-          setLoadingRootPath(undefined);
-          setLoadingProgress(undefined);
-          setError(
-            message.skippedMaps > 0
-              ? `${message.skippedMaps} mapa(s) não puderam ser lidos e foram ignorados.`
-              : undefined
-          );
+          setSelectingMap(false);
+          setLoadingMapContent(false);
+          setError(undefined);
           return;
         }
 
@@ -237,10 +191,12 @@ export function App() {
           message.type ===
           "selectionCancelled"
         ) {
-          setLoading(false);
-          setLoadingRootPath(undefined);
-          setLoadingProgress(undefined);
-          setError(undefined);
+          if (message.target === "omsi") {
+            setSelectingRoot(false);
+          } else {
+            setSelectingMap(false);
+          }
+
           return;
         }
 
@@ -248,23 +204,7 @@ export function App() {
           message.type ===
           "mapContentLoaded"
         ) {
-          setObjectsByMap((current) => ({
-            ...current,
-            [message.directoryName]:
-              message.objects
-          }));
-
-          setMaps((current) =>
-            current.map((map) =>
-              map.directoryName ===
-              message.directoryName
-                ? {
-                    ...map,
-                    tiles: message.tiles
-                  }
-                : map
-            )
-          );
+          setObjects(message.objects);
 
           setSelectedMap((current) =>
             current?.directoryName ===
@@ -276,11 +216,7 @@ export function App() {
               : current
           );
 
-          setLoadingObjectsFor((current) =>
-            current === message.directoryName
-              ? undefined
-              : current
-          );
+          setLoadingMapContent(false);
           return;
         }
 
@@ -303,6 +239,7 @@ export function App() {
                 ? undefined
                 : current
           );
+
           return;
         }
 
@@ -317,18 +254,19 @@ export function App() {
           }));
 
           setLoadingGeometryFor((current) =>
-            current === message.sceneryObjectPath
+            current ===
+            message.sceneryObjectPath
               ? undefined
               : current
           );
+
           return;
         }
 
         if (message.type === "hostError") {
-          setLoading(false);
-          setLoadingRootPath(undefined);
-          setLoadingProgress(undefined);
-          setLoadingObjectsFor(undefined);
+          setSelectingRoot(false);
+          setSelectingMap(false);
+          setLoadingMapContent(false);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
 
@@ -343,59 +281,24 @@ export function App() {
 
   useEffect(() => {
     if (
-      !loading ||
-      !loadingRootPath
-    ) {
-      return;
-    }
-
-    const timeout = window.setTimeout(
-      () => {
-        setLoading(false);
-        setLoadingRootPath(undefined);
-        setLoadingProgress(undefined);
-        setError(
-          "A leitura do OMSI parou de responder. Tente novamente; se houver um mapa problemático, a próxima tentativa poderá ignorá-lo."
-        );
-      },
-      45_000
-    );
-
-    return () =>
-      window.clearTimeout(timeout);
-  }, [
-    loading,
-    loadingHeartbeat,
-    loadingRootPath
-  ]);
-
-  useEffect(() => {
-    if (
       !bridgeAvailable ||
-      !selectedMap
+      !selectedMap ||
+      selectedMap.tiles.every(
+        (tile) => tile.detailsLoaded
+      ) ||
+      loadingMapContent
     ) {
       return;
     }
 
-    if (
-      Object.hasOwn(
-        objectsByMap,
-        selectedMap.directoryName
-      )
-    ) {
-      return;
-    }
-
-    setLoadingObjectsFor(
-      selectedMap.directoryName
-    );
+    setLoadingMapContent(true);
 
     loadMapContent(
       selectedMap.directoryName
     );
   }, [
     bridgeAvailable,
-    objectsByMap,
+    loadingMapContent,
     selectedMap
   ]);
 
@@ -498,13 +401,6 @@ export function App() {
     );
   }, [selectedMap]);
 
-  const selectedObjects =
-    selectedMap
-      ? objectsByMap[
-          selectedMap.directoryName
-        ] ?? []
-      : [];
-
   const selectedMetadata =
     selectedObject
       ? sceneryMetadataByPath[
@@ -548,6 +444,29 @@ export function App() {
     );
   }, [selectedGeometry]);
 
+  const selectedDisplayName =
+    selectedMetadata?.friendlyName ??
+    (selectedObject
+      ? getObjectName(
+          selectedObject.sceneryObjectPath
+        )
+      : undefined);
+
+  const selectedObjectGlobal =
+    selectedMap &&
+    selectedObject &&
+    !selectedMap.usesWorldCoordinates
+      ? {
+          x:
+            selectedObject.tileX * 300 +
+            selectedObject.x,
+          y: selectedObject.z,
+          z:
+            selectedObject.tileY * 300 +
+            selectedObject.y
+        }
+      : undefined;
+
   const handleObjectSelection =
     useCallback(
       (
@@ -558,6 +477,7 @@ export function App() {
         setSelectedObject(
           placedObject
         );
+
         setError(undefined);
       },
       []
@@ -566,45 +486,33 @@ export function App() {
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
       setError(
-        "Abra esta interface pelo aplicativo desktop OMSI Map Studio para acessar os arquivos locais."
+        "Abra esta interface pelo aplicativo desktop OMSI Map Studio."
       );
       return;
     }
 
-    setLoading(true);
-    setLoadingRootPath(undefined);
-    setLoadingProgress(undefined);
-    setLoadingHeartbeat(
-      (value) => value + 1
-    );
+    setSelectingRoot(true);
     setError(undefined);
     selectOmsiRoot();
   };
 
-  const selectedObjectGlobal =
-    selectedMap &&
-    selectedObject &&
-    !selectedMap.usesWorldCoordinates
-      ? {
-          x:
-            selectedObject.tileX *
-              300 +
-            selectedObject.x,
-          y: selectedObject.z,
-          z:
-            selectedObject.tileY *
-              300 +
-            selectedObject.y
-        }
-      : undefined;
+  const handleOpenMap = () => {
+    if (!rootPath) {
+      setError(
+        "Selecione primeiro a pasta raiz do OMSI 2."
+      );
+      return;
+    }
 
-  const selectedDisplayName =
-    selectedMetadata?.friendlyName ??
-    (selectedObject
-      ? getObjectName(
-          selectedObject.sceneryObjectPath
-        )
-      : undefined);
+    setSelectingMap(true);
+    setError(undefined);
+    selectMap();
+  };
+
+  const busy =
+    selectingRoot ||
+    selectingMap ||
+    loadingMapContent;
 
   return (
     <main className="editor-shell">
@@ -628,22 +536,32 @@ export function App() {
           <button
             type="button"
             onClick={handleOpenOmsi}
-            disabled={loading}
+            disabled={busy}
           >
-            {loading
-              ? loadingProgress?.total
-                ? `Lendo ${loadingProgress.completed}/${loadingProgress.total}...`
-                : "Lendo OMSI..."
+            {selectingRoot
+              ? "Selecionando OMSI..."
               : rootPath
                 ? "Trocar OMSI"
                 : "Abrir OMSI"}
           </button>
+
+          <button
+            type="button"
+            onClick={handleOpenMap}
+            disabled={!rootPath || busy}
+          >
+            {selectingMap
+              ? "Selecionando mapa..."
+              : "Abrir mapa"}
+          </button>
+
           <button
             type="button"
             disabled
           >
             Novo mapa
           </button>
+
           <button
             type="button"
             disabled
@@ -655,13 +573,11 @@ export function App() {
 
       <aside className="asset-panel">
         <div className="panel-heading">
-          <span>
-            Mapas instalados
-          </span>
+          <span>Projeto</span>
           <small>
-            {rootPath ??
-              loadingRootPath ??
-              "Nenhuma instalação carregada"}
+            {rootPath
+              ? "OMSI conectado"
+              : "Nenhum OMSI selecionado"}
           </small>
         </div>
 
@@ -671,101 +587,52 @@ export function App() {
           </div>
         )}
 
-        {!rootPath && loading && (
+        {!rootPath ? (
           <div className="empty-panel">
-            {loadingProgress
-              ? `Lendo mapas: ${loadingProgress.completed}/${loadingProgress.total}${loadingProgress.skipped ? ` · ${loadingProgress.skipped} ignorado(s)` : ""}`
-              : "Preparando catálogo do OMSI..."}
-
-            {loadingProgress?.directoryName
-              ? ` · ${loadingProgress.directoryName}`
-              : ""}
+            Clique em <strong>Abrir OMSI</strong>{" "}
+            e selecione a pasta raiz da
+            instalação. Nenhum mapa será
+            carregado automaticamente.
           </div>
-        )}
-
-        {!rootPath && !loading && !error && (
-          <div className="empty-panel">
-            Selecione a pasta raiz do
-            OMSI 2. Os mapas reais
-            encontrados em{" "}
-            <code>maps</code>{" "}
-            aparecerão aqui.
-          </div>
-        )}
-
-        {rootPath &&
-          maps.length === 0 && (
-            <div className="empty-panel">
-              Nenhum mapa com{" "}
-              <code>global.cfg</code>{" "}
-              foi encontrado nessa
-              instalação.
+        ) : (
+          <dl className="property-list">
+            <div>
+              <dt>Instalação OMSI</dt>
+              <dd>{rootPath}</dd>
             </div>
-          )}
 
-        {maps.length > 0 && (
-          <div
-            className="map-list"
-            role="list"
-            aria-label="Mapas do OMSI 2"
-          >
-            {maps.map((map) => {
-              const detailsLoaded =
-                map.tiles.every(
-                  (tile) =>
-                    tile.detailsLoaded
-                );
+            <div>
+              <dt>Mapa aberto</dt>
+              <dd>
+                {selectedMap
+                  ? selectedMap.displayName
+                  : "Nenhum"}
+              </dd>
+            </div>
+          </dl>
+        )}
 
-              const missingTiles =
-                detailsLoaded
-                  ? map.tiles.filter(
-                      (tile) =>
-                        !tile.fileExists
-                    ).length
-                  : 0;
+        {rootPath && !selectedMap && (
+          <div className="empty-panel">
+            Agora clique em{" "}
+            <strong>Abrir mapa</strong>{" "}
+            e escolha uma pasta dentro de{" "}
+            <code>maps</code>.
+          </div>
+        )}
 
-              return (
-                <button
-                  key={map.directoryPath}
-                  type="button"
-                  className={
-                    map.directoryPath ===
-                    selectedMap?.directoryPath
-                      ? "map-card selected"
-                      : "map-card"
-                  }
-                  onClick={() => {
-                    setError(undefined);
-                    setSelectedObject(
-                      undefined
-                    );
-                    setSelectedMap(map);
-                  }}
-                >
-                  <strong>
-                    {map.displayName}
-                  </strong>
-                  <span>
-                    {map.directoryName}
-                  </span>
-                  <small>
-                    {map.tiles.length} tiles
-                    {map.usesWorldCoordinates
-                      ? " · coordenadas mundiais"
-                      : ""}
-                    {detailsLoaded &&
-                    missingTiles
-                      ? ` · ${missingTiles} ausentes`
-                      : ""}
-                    {!detailsLoaded &&
-                    map.directoryName ===
-                      selectedMap?.directoryName
-                      ? " · lendo conteúdo..."
-                      : ""}
-                  </small>
-                </button>
-              );
-            })}
+        {selectedMap && (
+          <div className="empty-panel">
+            <strong>
+              {selectedMap.displayName}
+            </strong>
+            <br />
+            {selectedMap.directoryName}
+            <br />
+            {selectedMap.tiles.length} tiles
+            {selectedMap.usesWorldCoordinates
+              ? " · coordenadas mundiais"
+              : ""}
           </div>
         )}
       </aside>
@@ -775,7 +642,9 @@ export function App() {
           tiles={
             selectedMap?.tiles ?? []
           }
-          objects={selectedObjects}
+          objects={
+            selectedMap ? objects : []
+          }
           usesWorldCoordinates={
             selectedMap
               ?.usesWorldCoordinates ??
@@ -791,25 +660,18 @@ export function App() {
         <div className="viewport-hint">
           <strong>
             {selectedMap?.displayName ??
-              "Nenhum mapa carregado"}
+              "Nenhum mapa aberto"}
           </strong>
 
           <span>
-            {selectedMap
-              ? selectedMap
-                  .usesWorldCoordinates
-                ? `${selectedMap.tiles.length} tiles · malha esquemática · ${selectedObjects.length} objetos lidos`
-                : `${selectedMap.tiles.length} tiles · 300 m · ${selectedObjects.length} posições de objetos`
-              : "O grid vazio representa apenas o espaço de edição."}
+            {!selectedMap
+              ? "Use Abrir mapa para escolher o mapa que deseja editar."
+              : loadingMapContent
+                ? "Lendo tiles, objetos e splines..."
+                : selectedMap.usesWorldCoordinates
+                  ? `${selectedMap.tiles.length} tiles · visualização esquemática · ${objects.length} objetos lidos`
+                  : `${selectedMap.tiles.length} tiles · 300 m · ${objects.length} posições de objetos`}
           </span>
-
-          {selectedMap &&
-            loadingObjectsFor ===
-              selectedMap.directoryName && (
-              <span>
-                Lendo conteúdo do mapa...
-              </span>
-            )}
 
           {selectedObject && (
             <span>
@@ -838,28 +700,21 @@ export function App() {
             <dl className="property-list">
               <div>
                 <dt>Objeto</dt>
-                <dd>
-                  {selectedDisplayName}
-                </dd>
+                <dd>{selectedDisplayName}</dd>
               </div>
 
               <div>
                 <dt>Arquivo SCO</dt>
                 <dd>
-                  {
-                    selectedObject
-                      .sceneryObjectPath
-                  }
+                  {selectedObject
+                    .sceneryObjectPath}
                 </dd>
               </div>
 
               <div>
                 <dt>ID</dt>
                 <dd>
-                  {
-                    selectedObject
-                      .objectId
-                  }
+                  {selectedObject.objectId}
                 </dd>
               </div>
 
@@ -873,18 +728,15 @@ export function App() {
 
               <div>
                 <dt>
-                  Posição local X / Y /
-                  Z
+                  Posição local X / Y / Z
                 </dt>
                 <dd>
                   {formatNumber(
                     selectedObject.x
-                  )}{" "}
-                  /{" "}
+                  )}{" / "}
                   {formatNumber(
                     selectedObject.y
-                  )}{" "}
-                  /{" "}
+                  )}{" / "}
                   {formatNumber(
                     selectedObject.z
                   )}
@@ -894,18 +746,15 @@ export function App() {
               {selectedObjectGlobal && (
                 <div>
                   <dt>
-                    Posição global X /
-                    Y / Z
+                    Posição global X / Y / Z
                   </dt>
                   <dd>
                     {formatNumber(
                       selectedObjectGlobal.x
-                    )}{" "}
-                    /{" "}
+                    )}{" / "}
                     {formatNumber(
                       selectedObjectGlobal.y
-                    )}{" "}
-                    /{" "}
+                    )}{" / "}
                     {formatNumber(
                       selectedObjectGlobal.z
                     )}
@@ -918,8 +767,7 @@ export function App() {
                 <dd>
                   {formatNumber(
                     selectedObject.rotation
-                  )}
-                  °
+                  )}°
                 </dd>
               </div>
 
@@ -928,8 +776,7 @@ export function App() {
                 <dd>
                   {formatNumber(
                     selectedObject.pitch
-                  )}
-                  °
+                  )}°
                 </dd>
               </div>
 
@@ -938,20 +785,15 @@ export function App() {
                 <dd>
                   {formatNumber(
                     selectedObject.bank
-                  )}
-                  °
+                  )}°
                 </dd>
               </div>
 
               {loadingMetadataFor ===
                 selectedObject.sceneryObjectPath && (
                 <div>
-                  <dt>
-                    Metadados SCO
-                  </dt>
-                  <dd>
-                    Carregando...
-                  </dd>
+                  <dt>Metadados SCO</dt>
+                  <dd>Carregando...</dd>
                 </div>
               )}
 
@@ -990,9 +832,9 @@ export function App() {
                     <dd>
                       {selectedMetadata
                         .groups.length
-                        ? selectedMetadata.groups.join(
-                            " › "
-                          )
+                        ? selectedMetadata
+                            .groups
+                            .join(" › ")
                         : "Nenhum"}
                     </dd>
                   </div>
@@ -1002,23 +844,8 @@ export function App() {
                     <dd>
                       {selectedMetadata
                         .meshes.length
-                        ? selectedMetadata.meshes
-                            .map(describeMesh)
-                            .join(", ")
-                        : "Nenhum"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>
-                      Collision meshes
-                    </dt>
-                    <dd>
-                      {selectedMetadata
-                        .collisionMeshes
-                        .length
                         ? selectedMetadata
-                            .collisionMeshes
+                            .meshes
                             .map(describeMesh)
                             .join(", ")
                         : "Nenhum"}
@@ -1028,24 +855,9 @@ export function App() {
               )}
             </dl>
 
-            {selectedMetadata &&
-              !selectedMetadata.exists && (
-                <div className="error-panel">
-                  O arquivo SCO
-                  referenciado não foi
-                  encontrado na instalação
-                  selecionada.
-                </div>
-              )}
-
             <div className="empty-panel">
-              A posição, os metadados e
-              a geometria disponível vêm
-              dos arquivos reais do OMSI.
-              Nesta alpha os meshes O3D
-              não criptografados são
-              exibidos sem texturas. Nada
-              é alterado ou salvo.
+              A visualização é somente
+              leitura nesta alpha.
             </div>
           </>
         ) : selectedMap &&
@@ -1061,10 +873,7 @@ export function App() {
             <div>
               <dt>Pasta</dt>
               <dd>
-                {
-                  selectedMap
-                    .directoryName
-                }
+                {selectedMap.directoryName}
               </dd>
             </div>
 
@@ -1086,107 +895,64 @@ export function App() {
             </div>
 
             <div>
-              <dt>
-                Objetos declarados
-              </dt>
-              <dd>
-                {selectedStats.objects}
-              </dd>
-            </div>
-
-            <div>
-              <dt>
-                Objetos interpretados
-              </dt>
-              <dd>
-                {loadingObjectsFor ===
-                selectedMap.directoryName
-                  ? "Carregando..."
-                  : selectedObjects.length}
-              </dd>
+              <dt>Objetos</dt>
+              <dd>{selectedStats.objects}</dd>
             </div>
 
             <div>
               <dt>Splines</dt>
-              <dd>
-                {selectedStats.splines}
-              </dd>
+              <dd>{selectedStats.splines}</dd>
             </div>
 
             <div>
               <dt>Attachments</dt>
               <dd>
-                {
-                  selectedStats
-                    .attachments
-                }
+                {selectedStats.attachments}
               </dd>
             </div>
 
             <div>
               <dt>Tiles ausentes</dt>
               <dd>
-                {
-                  selectedStats
-                    .missingTiles
-                }
+                {selectedStats.missingTiles}
               </dd>
             </div>
           </dl>
         ) : selectedMap ? (
           <div className="empty-panel">
-            Lendo tiles, objetos e
-            splines deste mapa. A lista
-            inicial da instalação já foi
-            carregada.
+            Lendo o mapa escolhido...
           </div>
         ) : (
           <div className="empty-panel">
-            Escolha um mapa para
-            visualizar os tiles
-            encontrados no arquivo{" "}
-            <code>global.cfg</code>.
+            Nenhum mapa aberto. Use{" "}
+            <strong>Abrir mapa</strong>.
           </div>
         )}
-
-        {selectedMap
-          ?.usesWorldCoordinates &&
-          selectedObjects.length >
-            0 && (
-            <div className="empty-panel">
-              Os objetos foram lidos,
-              mas seus marcadores 3D
-              ficam ocultos até
-              implementarmos a conversão
-              correta das coordenadas
-              mundiais.
-            </div>
-          )}
       </aside>
 
       <footer className="statusbar">
         <span>
           {error
             ? "Erro"
-            : loading
-              ? "Carregando..."
-              : loadingObjectsFor ===
-                  selectedMap
-                    ?.directoryName
-                ? "Lendo mapa selecionado..."
-                : loadingMetadataFor
-                  ? "Lendo SCO..."
-                  : loadingGeometryFor
-                    ? "Lendo geometria..."
-                    : selectedObject
-                    ? `Objeto #${selectedObject.objectId} selecionado`
-                    : "Pronto"}
+            : selectingRoot
+              ? "Selecionando OMSI..."
+              : selectingMap
+                ? "Selecionando mapa..."
+                : loadingMapContent
+                  ? "Lendo mapa..."
+                  : loadingMetadataFor
+                    ? "Lendo SCO..."
+                    : loadingGeometryFor
+                      ? "Lendo geometria..."
+                      : "Pronto"}
         </span>
 
         <span>
           {selectedMap
             ? selectedMap.displayName
-            : "Sem mapa aberto"}
+            : rootPath
+              ? "OMSI pronto · sem mapa aberto"
+              : "Sem OMSI selecionado"}
         </span>
       </footer>
     </main>
