@@ -41,6 +41,37 @@ const formatNumber = (value: number) =>
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
+const describeMesh = (
+  mesh: {
+    declaredPath: string;
+    fileExists: boolean;
+    o3d: {
+      isValid: boolean;
+      version: number | null;
+      isEncrypted: boolean;
+    } | null;
+  }
+) => {
+  if (!mesh.fileExists) {
+    return `${mesh.declaredPath} · ausente`;
+  }
+
+  if (!mesh.o3d) {
+    return `${mesh.declaredPath} · encontrado`;
+  }
+
+  if (!mesh.o3d.isValid) {
+    return `${mesh.declaredPath} · cabeçalho O3D inválido`;
+  }
+
+  const version =
+    mesh.o3d.version === null
+      ? "versão desconhecida"
+      : `v${mesh.o3d.version}`;
+
+  return `${mesh.declaredPath} · O3D ${version}${mesh.o3d.isEncrypted ? " · criptografado" : ""}`;
+};
+
 export function App() {
   const bridgeAvailable = useMemo(
     () => isDesktopBridgeAvailable(),
@@ -669,10 +700,7 @@ export function App() {
                       {selectedMetadata
                         .meshes.length
                         ? selectedMetadata.meshes
-                            .map(
-                              (mesh) =>
-                                `${mesh.declaredPath} · ${mesh.fileExists ? "encontrado" : "ausente"}`
-                            )
+                            .map(describeMesh)
                             .join(", ")
                         : "Nenhum"}
                     </dd>
@@ -688,10 +716,7 @@ export function App() {
                         .length
                         ? selectedMetadata
                             .collisionMeshes
-                            .map(
-                              (mesh) =>
-                                `${mesh.declaredPath} · ${mesh.fileExists ? "encontrado" : "ausente"}`
-                            )
+                            .map(describeMesh)
                             .join(", ")
                         : "Nenhum"}
                     </dd>

@@ -31,9 +31,20 @@ export type OmsiPlacedObject = {
   bank: number;
 };
 
+export type OmsiO3dHeader = {
+  exists: boolean;
+  isValid: boolean;
+  version: number | null;
+  hasExtendedHeader: boolean;
+  usesLongTriangleIndices: boolean;
+  usesAlternativeEncryptionSeed: boolean;
+  isEncrypted: boolean;
+};
+
 export type OmsiSceneryMeshReference = {
   declaredPath: string;
   fileExists: boolean;
+  o3d: OmsiO3dHeader | null;
 };
 
 export type OmsiSceneryObjectMetadata = {

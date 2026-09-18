@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
@@ -13,6 +14,7 @@ public partial class MainWindow : Window
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
     private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
+    private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
@@ -346,6 +348,18 @@ public partial class MainWindow : Window
                 await _sceneryObjectReader.ReadMetadataAsync(
                     fullPath);
 
+            var meshes =
+                await CreateMeshReferencesAsync(
+                    _omsiRootPath,
+                    fullPath,
+                    metadata.MeshPaths);
+
+            var collisionMeshes =
+                await CreateMeshReferencesAsync(
+                    _omsiRootPath,
+                    fullPath,
+                    metadata.CollisionMeshPaths);
+
             PostMessage(new
             {
                 type = "sceneryObjectMetadataLoaded",
@@ -355,17 +369,8 @@ public partial class MainWindow : Window
                     metadata.Exists,
                     metadata.FriendlyName,
                     metadata.Groups,
-                    meshes = metadata.MeshPaths.Select(
-                        path => CreateMeshReference(
-                            _omsiRootPath,
-                            fullPath,
-                            path)),
-                    collisionMeshes =
-                        metadata.CollisionMeshPaths.Select(
-                            path => CreateMeshReference(
-                                _omsiRootPath,
-                                fullPath,
-                                path))
+                    meshes,
+                    collisionMeshes
                 }
             });
         }
@@ -389,24 +394,51 @@ public partial class MainWindow : Window
         }
     }
 
-    private static object CreateMeshReference(
-        string omsiRoot,
-        string sceneryObjectFullPath,
-        string declaredPath)
+    private async Task<IReadOnlyList<object>>
+        CreateMeshReferencesAsync(
+            string omsiRoot,
+            string sceneryObjectFullPath,
+            IReadOnlyList<string> declaredPaths)
     {
-        var resolved =
-            OmsiSceneryMeshPathResolver.TryResolve(
-                omsiRoot,
-                sceneryObjectFullPath,
-                declaredPath,
-                out var fullPath);
+        var results =
+            new List<object>(
+                declaredPaths.Count);
 
-        return new
+        foreach (var declaredPath in declaredPaths)
         {
-            declaredPath,
-            fileExists =
-                resolved && File.Exists(fullPath)
-        };
+            var resolved =
+                OmsiSceneryMeshPathResolver.TryResolve(
+                    omsiRoot,
+                    sceneryObjectFullPath,
+                    declaredPath,
+                    out var fullPath);
+
+            var fileExists =
+                resolved &&
+                File.Exists(fullPath);
+
+            OmsiO3dHeader? o3d = null;
+
+            if (fileExists &&
+                string.Equals(
+                    Path.GetExtension(fullPath),
+                    ".o3d",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                o3d =
+                    await _o3dHeaderReader.ReadAsync(
+                        fullPath);
+            }
+
+            results.Add(new
+            {
+                declaredPath,
+                fileExists,
+                o3d
+            });
+        }
+
+        return results;
     }
 
     private static bool TryReadString(

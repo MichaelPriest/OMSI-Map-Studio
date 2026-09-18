@@ -1,6 +1,7 @@
 using System.Text;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
 using Xunit;
 
@@ -305,6 +306,127 @@ public sealed class OmsiConfigParserTests
                 scoPath,
                 "material.cfg",
                 out _));
+    }
+
+    [Fact]
+    public async Task O3dHeaderReader_ReadsShortAndExtendedHeaders()
+    {
+        var shortPath = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-short-{Guid.NewGuid():N}.o3d");
+
+        var longPath = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-long-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            await File.WriteAllBytesAsync(
+                shortPath,
+                [0x84, 0x19, 0x03]);
+
+            await File.WriteAllBytesAsync(
+                longPath,
+                [
+                    0x84,
+                    0x19,
+                    0x07,
+                    0x03,
+                    0xFF,
+                    0xFF,
+                    0xFF,
+                    0xFF
+                ]);
+
+            var reader =
+                new OmsiO3dHeaderReader();
+
+            var shortHeader =
+                await reader.ReadAsync(shortPath);
+
+            Assert.True(shortHeader.Exists);
+            Assert.True(shortHeader.IsValid);
+            Assert.Equal(3, shortHeader.Version);
+            Assert.False(
+                shortHeader.HasExtendedHeader);
+
+            var longHeader =
+                await reader.ReadAsync(longPath);
+
+            Assert.True(longHeader.Exists);
+            Assert.True(longHeader.IsValid);
+            Assert.Equal(7, longHeader.Version);
+            Assert.True(
+                longHeader.HasExtendedHeader);
+            Assert.True(
+                longHeader
+                    .UsesLongTriangleIndices);
+            Assert.True(
+                longHeader
+                    .UsesAlternativeEncryptionSeed);
+            Assert.False(
+                longHeader.IsEncrypted);
+        }
+        finally
+        {
+            File.Delete(shortPath);
+            File.Delete(longPath);
+        }
+    }
+
+    [Fact]
+    public async Task O3dHeaderReader_DetectsEncryptionAndInvalidSignature()
+    {
+        var encryptedPath = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-encrypted-{Guid.NewGuid():N}.o3d");
+
+        var invalidPath = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-invalid-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            await File.WriteAllBytesAsync(
+                encryptedPath,
+                [
+                    0x84,
+                    0x19,
+                    0x07,
+                    0x00,
+                    0x78,
+                    0x56,
+                    0x34,
+                    0x12
+                ]);
+
+            await File.WriteAllBytesAsync(
+                invalidPath,
+                [0x00, 0x00, 0x07]);
+
+            var reader =
+                new OmsiO3dHeaderReader();
+
+            var encrypted =
+                await reader.ReadAsync(
+                    encryptedPath);
+
+            Assert.True(encrypted.IsValid);
+            Assert.True(encrypted.IsEncrypted);
+
+            var invalid =
+                await reader.ReadAsync(
+                    invalidPath);
+
+            Assert.True(invalid.Exists);
+            Assert.False(invalid.IsValid);
+            Assert.Null(invalid.Version);
+        }
+        finally
+        {
+            File.Delete(encryptedPath);
+            File.Delete(invalidPath);
+        }
     }
 
     [Fact]

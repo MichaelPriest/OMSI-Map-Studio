@@ -71,11 +71,11 @@ Later values are retained in `ExtraValues` and are not assigned meaning until de
 - references declared by `[mesh]`;
 - references declared by `[collision_mesh]`.
 
-Block order and all commands that are not interpreted yet remain preserved in the source document. At this stage the editor does not interpret materials, scripts, animations or the binary contents of `.o3d` files.
+Block order and all commands that are not interpreted yet remain preserved in the source document. At this stage the editor does not interpret materials, scripts or animations. For `.o3d` files it reads only the binary header required to identify the signature, version, extended-header options and encryption state; vertices, triangles, materials and bones are not loaded yet.
 
 `OmsiSceneryObjectPathResolver` restricts `.sco` resolution to the selected installation's `Sceneryobjects` directory and rejects directory traversal or different extensions.
 
-`OmsiSceneryMeshPathResolver` resolves `[mesh]` and `[collision_mesh]` references from the `model` directory associated with the `.sco`. Both `.o3d` and `.x` files are accepted, including relative cross-package references with `..\`, as long as the final path remains inside `Sceneryobjects`. React receives only the declared path and found/missing status; the machine's absolute path is not exposed.
+`OmsiSceneryMeshPathResolver` resolves `[mesh]` and `[collision_mesh]` references from the `model` directory associated with the `.sco`. Both `.o3d` and `.x` files are accepted, including relative cross-package references with `..\`, as long as the final path remains inside `Sceneryobjects`. React receives only the declared path and found/missing status; the machine's absolute path is not exposed. For found `.o3d` meshes, the host also sends safe header metadata such as version and encryption state.
 
 ## MapStudio.Desktop
 
@@ -143,7 +143,8 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 8. The base placed-object block is interpreted safely.
 9. Placed objects can be selected and inspected.
 10. The selected object's `.sco` provides real metadata on demand.
-11. `.o3d` geometry, splines and terrain are rendered incrementally.
+11. Found `.o3d` mesh headers are validated without loading geometry.
+12. `.o3d` geometry, splines and terrain are rendered incrementally.
 
 ## Documentation rule
 
