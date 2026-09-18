@@ -17,6 +17,20 @@ export type OmsiMap = {
   tiles: OmsiTile[];
 };
 
+export type OmsiPlacedObject = {
+  tileX: number;
+  tileY: number;
+  headerValue: string;
+  sceneryObjectPath: string;
+  objectId: number;
+  x: number;
+  y: number;
+  z: number;
+  rotation: number;
+  pitch: number;
+  bank: number;
+};
+
 export type HostMessage =
   | {
       type: "omsiInstallationLoaded";
@@ -24,8 +38,20 @@ export type HostMessage =
       maps: OmsiMap[];
     }
   | {
+      type: "mapObjectsLoaded";
+      directoryName: string;
+      usesWorldCoordinates: boolean;
+      objects: OmsiPlacedObject[];
+    }
+  | {
       type: "hostError";
-      code: "invalidMessage" | "invalidOmsiRoot" | "accessDenied" | "ioError" | string;
+      code:
+        | "invalidMessage"
+        | "invalidOmsiRoot"
+        | "accessDenied"
+        | "ioError"
+        | "unknownMap"
+        | string;
       detail?: string;
     };
 
@@ -57,6 +83,13 @@ export function isDesktopBridgeAvailable() {
 
 export function selectOmsiRoot() {
   getWebView()?.postMessage({ type: "selectOmsiRoot" });
+}
+
+export function loadMapObjects(directoryName: string) {
+  getWebView()?.postMessage({
+    type: "loadMapObjects",
+    directoryName
+  });
 }
 
 export function subscribeToHost(
