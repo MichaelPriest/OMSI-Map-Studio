@@ -116,4 +116,57 @@ public sealed class OmsiConfigParserTests
         Assert.Equal(0, summary.SplineCount);
         Assert.Equal(0, summary.SplineAttachmentCount);
     }
+
+    [Fact]
+    public void ReadObjects_ExtractsConfirmedBaseTransformAndKeepsExtras()
+    {
+        const string source =
+            "[object]\r\n" +
+            "0\r\n" +
+            "Sceneryobjects\\Trees_MC\\tree_medium_06.sco\r\n" +
+            "5702\r\n" +
+            "10.0813293437846\r\n" +
+            "8.29534931351765\r\n" +
+            "1.25\r\n" +
+            "170.279991404134\r\n" +
+            "7.5\r\n" +
+            "-2.25\r\n" +
+            "4\r\n" +
+            "Tree_Medium_06.tga\r\n" +
+            "14.160\r\n" +
+            "0.926\r\n";
+
+        var document = OmsiConfigParser.Parse(source);
+        var objects = OmsiTileReader.ReadObjects(document);
+
+        var placedObject = Assert.Single(objects);
+        Assert.Equal("0", placedObject.HeaderValue);
+        Assert.Equal("Sceneryobjects\\Trees_MC\\tree_medium_06.sco", placedObject.SceneryObjectPath);
+        Assert.Equal(5702, placedObject.ObjectId);
+        Assert.Equal(10.0813293437846, placedObject.X);
+        Assert.Equal(8.29534931351765, placedObject.Y);
+        Assert.Equal(1.25, placedObject.Z);
+        Assert.Equal(170.279991404134, placedObject.Rotation);
+        Assert.Equal(7.5, placedObject.Pitch);
+        Assert.Equal(-2.25, placedObject.Bank);
+        Assert.Equal(
+            new[] { "4", "Tree_Medium_06.tga", "14.160", "0.926" },
+            placedObject.ExtraValues);
+    }
+
+    [Fact]
+    public void ReadObjects_SkipsMalformedObjectWithoutThrowing()
+    {
+        const string source =
+            "[object]\r\n" +
+            "0\r\n" +
+            "Sceneryobjects\\Broken.sco\r\n" +
+            "not-an-id\r\n" +
+            "10\r\n20\r\n30\r\n0\r\n0\r\n0\r\n";
+
+        var document = OmsiConfigParser.Parse(source);
+
+        Assert.Empty(OmsiTileReader.ReadObjects(document));
+        Assert.Equal(source, document.ToText());
+    }
 }
