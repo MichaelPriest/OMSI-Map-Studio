@@ -12,8 +12,9 @@ Responsável pela lógica de domínio relacionada ao OMSI:
 - detecção e preservação da codificação original dos arquivos;
 - descoberta de mapas;
 - leitura segura dos arquivos de tile `.map`;
+- leitura do bloco-base de objetos posicionados;
 - tiles;
-- futuramente objetos de cenário;
+- futuramente objetos de cenário completos;
 - splines;
 - terreno;
 - paths;
@@ -33,7 +34,21 @@ Nesta fase ele extrai apenas informações que podemos identificar com seguranç
 - quantidade de `[splineAttachement]` / `[splineAttachment]`;
 - existência ou ausência do arquivo do tile.
 
-Campos internos de objetos e splines não devem ser interpretados por posição até existirem modelos e testes específicos para essas estruturas.
+### Objetos posicionados
+
+Para `[object]`, o Core interpreta somente o bloco-base confirmado:
+
+1. valor de cabeçalho ainda sem semântica atribuída;
+2. caminho do arquivo `.sco`;
+3. ID do objeto;
+4. posição `x`;
+5. posição `y`;
+6. posição `z`;
+7. rotação;
+8. pitch;
+9. bank.
+
+Valores posteriores são mantidos em `ExtraValues` e não recebem significado até existirem modelos e testes específicos. Se o bloco-base estiver incompleto ou inválido, o objeto é ignorado pela visão estruturada, mas o texto original continua preservado no documento.
 
 ## MapStudio.Desktop
 
@@ -82,7 +97,8 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 5. Cada arquivo `.map` existente é inspecionado.
 6. O estado real é enviado à interface React.
 7. A malha real de tiles e estatísticas de objetos/splines são exibidas.
-8. Objetos, splines e terreno passam a ser interpretados e renderizados progressivamente.
+8. O bloco-base de objetos passa a ser interpretado de forma segura.
+9. Objetos, splines e terreno passam a ser renderizados progressivamente.
 
 ## Regra de documentação
 
