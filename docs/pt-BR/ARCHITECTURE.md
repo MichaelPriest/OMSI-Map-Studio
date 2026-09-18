@@ -34,6 +34,8 @@ Nesta fase ele extrai apenas informações que podemos identificar com seguranç
 - quantidade de `[splineAttachement]` / `[splineAttachment]`;
 - existência ou ausência do arquivo do tile.
 
+As referências de arquivos de tile passam por `OmsiMapPathResolver`. Depois de normalizado, o caminho deve continuar dentro da pasta do mapa. Referências com travessia de diretório, como `..\\`, são rejeitadas e tratadas como tile indisponível.
+
 ### Sistema de coordenadas
 
 `OmsiMapCatalog` detecta a presença de `[worldcoordinates]` no `global.cfg`.
