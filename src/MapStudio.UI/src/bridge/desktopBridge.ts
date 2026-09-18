@@ -51,6 +51,26 @@ export type OmsiPlacedSpline = {
   isHeightSpline: boolean;
 };
 
+export type OmsiSplineProfilePoint = {
+  x: number;
+  z: number;
+  textureX: number;
+  textureScale: number;
+};
+
+export type OmsiSplineSurface = {
+  textureIndex: number;
+  textureName: string | null;
+  from: OmsiSplineProfilePoint;
+  to: OmsiSplineProfilePoint;
+};
+
+export type OmsiSplineDefinition = {
+  exists: boolean;
+  textures: string[];
+  surfaces: OmsiSplineSurface[];
+};
+
 export type OmsiO3dHeader = {
   exists: boolean;
   isValid: boolean;
@@ -147,6 +167,11 @@ export type HostMessage =
       splines: OmsiPlacedSpline[];
     }
   | {
+      type: "splineProfileLoaded";
+      splinePath: string;
+      definition: OmsiSplineDefinition;
+    }
+  | {
       type: "sceneryObjectMetadataLoaded";
       sceneryObjectPath: string;
       metadata: OmsiSceneryObjectMetadata;
@@ -212,6 +237,15 @@ export function loadMapRegion(
     centerX,
     centerY,
     radius
+  });
+}
+
+export function loadSplineProfile(
+  splinePath: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSplineProfile",
+    splinePath
   });
 }
 

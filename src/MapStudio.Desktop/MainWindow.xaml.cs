@@ -5,6 +5,7 @@ using System.Windows;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
+using MapStudio.Core.Omsi.Splines;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
     private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
     private readonly OmsiO3dStructureReader _o3dStructureReader = new();
     private readonly OmsiO3dGeometryReader _o3dGeometryReader = new();
+    private readonly OmsiSplineDefinitionReader _splineDefinitionReader = new();
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
@@ -38,6 +40,18 @@ public partial class MainWindow : Window
         string,
         Task<OmsiTileContent>>
         _tileContentCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        byte>
+        _knownSplinePaths =
+            new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        Task<OmsiSplineDefinition>>
+        _splineDefinitionCache =
             new(StringComparer.OrdinalIgnoreCase);
 
     private string? _omsiRootPath;
@@ -153,6 +167,21 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "loadSplineProfile":
+                    if (TryReadString(
+                            message.RootElement,
+                            "splinePath",
+                            out var splinePath))
+                    {
+                        await LoadSplineProfileAsync(
+                            splinePath);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadSceneryObjectMetadata":
                     if (TryReadString(
                             message.RootElement,
@@ -246,7 +275,9 @@ public partial class MainWindow : Window
                 StringComparer.OrdinalIgnoreCase);
 
         _knownSceneryObjectPaths.Clear();
+        _knownSplinePaths.Clear();
         _tileContentCache.Clear();
+        _splineDefinitionCache.Clear();
 
         PostMessage(new
         {
@@ -534,6 +565,10 @@ public partial class MainWindow : Window
                 foreach (var placedSpline in
                     loaded.Content.Splines)
                 {
+                    _knownSplinePaths.TryAdd(
+                        placedSpline.SplinePath,
+                        0);
+
                     splines.Add(new
                     {
                         tileX = loaded.Tile.X,
@@ -626,6 +661,88 @@ public partial class MainWindow : Window
                 out _);
 
             throw;
+        }
+    }
+
+    private async Task LoadSplineProfileAsync(
+        string? splinePath)
+    {
+        if (_omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(splinePath) ||
+            !_knownSplinePaths.ContainsKey(
+                splinePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownSpline"
+            });
+
+            return;
+        }
+
+        if (!OmsiSplinePathResolver.TryResolve(
+                _omsiRootPath,
+                splinePath,
+                out var fullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSplinePath"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var task =
+                _splineDefinitionCache.GetOrAdd(
+                    fullPath,
+                    path =>
+                        _splineDefinitionReader.ReadAsync(
+                            path));
+
+            OmsiSplineDefinition definition;
+
+            try
+            {
+                definition = await task;
+            }
+            catch
+            {
+                _splineDefinitionCache.TryRemove(
+                    fullPath,
+                    out _);
+
+                throw;
+            }
+
+            PostMessage(new
+            {
+                type = "splineProfileLoaded",
+                splinePath,
+                definition
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = splinePath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
         }
     }
 
