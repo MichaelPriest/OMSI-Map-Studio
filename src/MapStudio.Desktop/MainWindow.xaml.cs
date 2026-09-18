@@ -10,7 +10,10 @@ namespace MapStudio.Desktop;
 public partial class MainWindow : Window
 {
     private readonly OmsiMapCatalog _mapCatalog = new();
+    private readonly OmsiTileReader _tileReader = new();
     private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private IReadOnlyDictionary<string, OmsiMapDescriptor> _knownMaps =
+        new Dictionary<string, OmsiMapDescriptor>(StringComparer.OrdinalIgnoreCase);
 
     public MainWindow()
     {
@@ -71,6 +74,13 @@ public partial class MainWindow : Window
                 case "selectOmsiRoot":
                     await SelectOmsiRootAsync();
                     break;
+
+                case "loadMapObjects":
+                    if (message.RootElement.TryGetProperty("directoryName", out var directoryElement))
+                    {
+                        await LoadMapObjectsAsync(directoryElement.GetString());
+                    }
+                    break;
             }
         }
         catch (JsonException)
@@ -113,6 +123,9 @@ public partial class MainWindow : Window
         try
         {
             var maps = await _mapCatalog.DiscoverAsync(rootPath);
+            _knownMaps = maps.ToDictionary(
+                map => map.DirectoryName,
+                StringComparer.OrdinalIgnoreCase);
 
             PostMessage(new
             {
@@ -156,6 +169,91 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private async Task LoadMapObjectsAsync(string? directoryName)
+    {
+        if (string.IsNullOrWhiteSpace(directoryName) ||
+            !_knownMaps.TryGetValue(directoryName, out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+            return;
+        }
+
+        try
+        {
+            var objects = new List<object>();
+
+            foreach (var tile in map.Tiles)
+            {
+                if (tile.Summary?.Exists != true)
+                {
+                    continue;
+                }
+
+                var tilePath = ResolveTilePath(map, tile);
+
+                foreach (var placedObject in await _tileReader.ReadObjectsAsync(tilePath))
+                {
+                    objects.Add(new
+                    {
+                        tileX = tile.X,
+                        tileY = tile.Y,
+                        placedObject.HeaderValue,
+                        placedObject.SceneryObjectPath,
+                        placedObject.ObjectId,
+                        placedObject.X,
+                        placedObject.Y,
+                        placedObject.Z,
+                        placedObject.Rotation,
+                        placedObject.Pitch,
+                        placedObject.Bank
+                    });
+                }
+            }
+
+            PostMessage(new
+            {
+                type = "mapObjectsLoaded",
+                map.DirectoryName,
+                map.UsesWorldCoordinates,
+                objects
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = map.DirectoryPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private static string ResolveTilePath(
+        OmsiMapDescriptor map,
+        OmsiTileReference tile)
+    {
+        var relativePath = tile.RelativeMapPath
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar)
+            .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        return Path.Combine(map.DirectoryPath, relativePath);
     }
 
     private void PostMessage(object payload)
