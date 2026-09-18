@@ -11,6 +11,7 @@ Owns OMSI-facing domain logic:
 - configuration parsing;
 - detection and preservation of source file encodings;
 - map discovery;
+- safe `.map` tile file reading;
 - tiles;
 - future scenery objects;
 - splines;
@@ -20,6 +21,19 @@ Owns OMSI-facing domain logic:
 - validation.
 
 Core must not depend on WPF, WebView2 or React.
+
+### Tile reading
+
+`OmsiTileReader` receives the real path of a `.map` file and uses the same preservation-oriented parser as the other configuration files.
+
+At this stage it only extracts information that can be identified safely by section:
+
+- `[object]` count;
+- `[spline]` count;
+- `[splineAttachement]` / `[splineAttachment]` count;
+- whether the referenced tile file exists.
+
+Internal object and spline fields must not be interpreted by position until dedicated models and tests exist for those structures.
 
 ## MapStudio.Desktop
 
@@ -37,8 +51,9 @@ In the first functional flow:
 2. The host opens a native `OpenFolderDialog`.
 3. The host validates the presence of the `maps` directory.
 4. `OmsiMapCatalog` reads real installed maps.
-5. The host sends real map names, paths and tile coordinates to React.
-6. The viewport uses those coordinates to draw the map tile layout.
+5. Each tile reference is inspected by `OmsiTileReader`.
+6. The host sends real map names, paths, coordinates and counts to React.
+7. The viewport uses those coordinates to draw the map tile layout.
 
 Host failures are sent as stable error codes. The interface is responsible for presenting the appropriate user-facing message.
 
@@ -48,7 +63,7 @@ Primary editor interface, responsible for the Babylon.js viewport, asset browser
 
 Production state must come from real data supplied by Core/Desktop.
 
-The grid shown without an opened map is only editor-space visual guidance. Once a map is loaded, the tile layout must be generated from real coordinates read from `global.cfg`.
+The grid shown without an opened map is only editor-space visual guidance. Once a map is loaded, the tile layout must be generated from real coordinates read from `global.cfg`. Referenced tiles whose `.map` file is missing are highlighted separately.
 
 ## Compatibility strategy
 
@@ -64,9 +79,10 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 2. Core discovers maps containing `global.cfg`.
 3. `global.cfg` is parsed without destructive rewriting.
 4. Real tile references are extracted.
-5. Real state is sent to the React interface.
-6. The real tile layout is displayed in the viewport.
-7. Objects, splines and terrain are rendered incrementally.
+5. Existing `.map` tile files are inspected.
+6. Real state is sent to the React interface.
+7. The real tile layout and object/spline statistics are displayed.
+8. Objects, splines and terrain are interpreted and rendered incrementally.
 
 ## Documentation rule
 
