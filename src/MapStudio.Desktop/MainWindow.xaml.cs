@@ -124,6 +124,7 @@ public partial class MainWindow : Window
                     map.DisplayName,
                     map.DirectoryPath,
                     map.GlobalConfigPath,
+                    map.UsesWorldCoordinates,
                     tiles = map.Tiles.Select(tile => new
                     {
                         tile.X,
