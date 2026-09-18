@@ -88,24 +88,26 @@ public sealed class OmsiLazyLoadingTests
                 "[name]\r\nGood Map\r\n",
                 new UTF8Encoding(false));
 
-            Directory.CreateDirectory(
-                Path.Combine(
-                    badMap,
-                    "global.cfg"));
+            var badGlobal = Path.Combine(
+                badMap,
+                "global.cfg");
 
-            var progressValues =
-                new List<OmsiMapDiscoveryProgress>();
+            await File.WriteAllTextAsync(
+                badGlobal,
+                "[name]\r\nLocked Map\r\n",
+                new UTF8Encoding(false));
 
-            var progress =
-                new Progress<OmsiMapDiscoveryProgress>(
-                    value =>
-                        progressValues.Add(value));
+            using var lockStream =
+                new FileStream(
+                    badGlobal,
+                    FileMode.Open,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
 
             var result =
                 await new OmsiMapCatalog()
                     .DiscoverWithProgressAsync(
-                        root,
-                        progress);
+                        root);
 
             var map =
                 Assert.Single(result.Maps);

@@ -211,17 +211,19 @@ public partial class MainWindow : Window
         try
         {
             var progress =
-                new Progress<OmsiMapDiscoveryProgress>(
+                new InlineProgress<OmsiMapDiscoveryProgress>(
                     item =>
-                        PostMessage(new
-                        {
-                            type = "omsiInstallationLoadingProgress",
-                            rootPath,
-                            item.Completed,
-                            item.Total,
-                            item.Skipped,
-                            item.DirectoryName
-                        }));
+                        Dispatcher.Invoke(
+                            () =>
+                                PostMessage(new
+                                {
+                                    type = "omsiInstallationLoadingProgress",
+                                    rootPath,
+                                    item.Completed,
+                                    item.Total,
+                                    item.Skipped,
+                                    item.DirectoryName
+                                })));
 
             var result =
                 await _mapCatalog.DiscoverWithProgressAsync(
@@ -668,6 +670,13 @@ public partial class MainWindow : Window
         }
 
         return results;
+    }
+
+    private sealed class InlineProgress<T>(
+        Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) =>
+            handler(value);
     }
 
     private static bool TryReadString(

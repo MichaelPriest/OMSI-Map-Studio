@@ -240,6 +240,7 @@ export function App() {
           setLoading(false);
           setLoadingRootPath(undefined);
           setLoadingProgress(undefined);
+          setError(undefined);
           return;
         }
 
@@ -341,7 +342,10 @@ export function App() {
   );
 
   useEffect(() => {
-    if (!loading) {
+    if (
+      !loading ||
+      !loadingRootPath
+    ) {
       return;
     }
 
@@ -361,7 +365,8 @@ export function App() {
       window.clearTimeout(timeout);
   }, [
     loading,
-    loadingHeartbeat
+    loadingHeartbeat,
+    loadingRootPath
   ]);
 
   useEffect(() => {
