@@ -26,6 +26,112 @@ type ViewportProps = {
   onSelectObject: (placedObject: OmsiPlacedObject | undefined) => void;
 };
 
+function createTileSurface(
+  scene: Scene,
+  tiles: OmsiTile[],
+  tileSize: number
+) {
+  if (tiles.length === 0) {
+    return;
+  }
+
+  const positions: number[] = [];
+  const indices: number[] = [];
+
+  for (
+    let tileIndex = 0;
+    tileIndex < tiles.length;
+    tileIndex += 1
+  ) {
+    const tile = tiles[tileIndex];
+
+    if (
+      tile.detailsLoaded &&
+      !tile.fileExists
+    ) {
+      continue;
+    }
+
+    const x0 =
+      tile.x * tileSize;
+    const z0 =
+      tile.y * tileSize;
+    const x1 =
+      x0 + tileSize;
+    const z1 =
+      z0 + tileSize;
+
+    const vertexOffset =
+      positions.length / 3;
+
+    positions.push(
+      x0, -0.04, z0,
+      x1, -0.04, z0,
+      x1, -0.04, z1,
+      x0, -0.04, z1
+    );
+
+    indices.push(
+      vertexOffset,
+      vertexOffset + 2,
+      vertexOffset + 1,
+      vertexOffset,
+      vertexOffset + 3,
+      vertexOffset + 2
+    );
+  }
+
+  if (positions.length === 0) {
+    return;
+  }
+
+  const mesh = new Mesh(
+    "omsi-editor-tile-surface",
+    scene
+  );
+
+  const vertexData =
+    new VertexData();
+
+  vertexData.positions =
+    positions;
+
+  vertexData.indices =
+    indices;
+
+  VertexData.ComputeNormals(
+    positions,
+    indices,
+    (vertexData.normals = [])
+  );
+
+  vertexData.applyToMesh(
+    mesh,
+    false
+  );
+
+  const material =
+    new StandardMaterial(
+      "omsi-editor-tile-surface-material",
+      scene
+    );
+
+  material.diffuseColor =
+    new Color3(
+      0.045,
+      0.095,
+      0.14
+    );
+
+  material.specularColor =
+    Color3.Black();
+
+  material.alpha = 0.92;
+
+  mesh.material = material;
+  mesh.isPickable = false;
+}
+
 function createTileOutline(tile: OmsiTile, tileSize: number) {
   const x0 = tile.x * tileSize;
   const z0 = tile.y * tileSize;
@@ -472,6 +578,12 @@ export function Viewport({
     };
 
     if (tiles.length) {
+      createTileSurface(
+        scene,
+        tiles,
+        tileSize
+      );
+
       const existingLines = tiles
         .filter(
           (tile) =>

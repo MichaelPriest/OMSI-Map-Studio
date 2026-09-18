@@ -50,3 +50,10 @@ All displayed information comes from real OMSI files. Material information uses 
 ## Visual rule
 
 The UI may follow the approved concept, but it must never invent thumbnails, maps, counts or states to look complete. Unsupported states must remain empty, disabled or explicitly marked as in development.
+
+
+## Viewport base surface
+
+While the binary `.terrain` format is not interpreted yet, existing tiles receive a neutral editor base surface. It is only spatial guidance and does not represent real terrain elevation or texture.
+
+Missing tiles remain unfilled and highlighted separately. Spline axes and object markers are rendered above this surface.
