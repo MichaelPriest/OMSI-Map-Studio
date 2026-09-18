@@ -208,7 +208,13 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                var tilePath = ResolveTilePath(map, tile);
+                if (!OmsiMapPathResolver.TryResolveTilePath(
+                        map.DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath))
+                {
+                    continue;
+                }
 
                 foreach (var placedObject in await _tileReader.ReadObjectsAsync(tilePath))
                 {
@@ -255,18 +261,6 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
-    }
-
-    private static string ResolveTilePath(
-        OmsiMapDescriptor map,
-        OmsiTileReference tile)
-    {
-        var relativePath = tile.RelativeMapPath
-            .Replace('\\', Path.DirectorySeparatorChar)
-            .Replace('/', Path.DirectorySeparatorChar)
-            .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-        return Path.Combine(map.DirectoryPath, relativePath);
     }
 
     private void PostMessage(object payload)
