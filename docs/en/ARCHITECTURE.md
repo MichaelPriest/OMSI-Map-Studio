@@ -107,6 +107,24 @@ Production state must come from real data supplied by Core/Desktop.
 
 The grid shown without an opened map is only editor-space visual guidance. Once a map is loaded, the tile layout must be generated from real coordinates read from `global.cfg`. Referenced tiles whose `.map` file is missing are highlighted separately.
 
+
+### Object selection in the viewport
+
+On Cartesian maps, a short click in the viewport finds the placed object nearest to the camera ray. Selection does not create one individual mesh per object, avoiding multiplied scene cost on large maps.
+
+The selected object receives only a highlight marker and its real values are shown in the inspector:
+
+- `.sco` file path;
+- ID;
+- source tile;
+- local position;
+- calculated Cartesian global position;
+- rotation, pitch and bank.
+
+Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
+
+At this stage selection is read-only. The editor does not modify or save transforms yet.
+
 ## Compatibility strategy
 
 OMSI configuration files are command-oriented text files and older maps may use legacy encodings.
@@ -125,7 +143,8 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 6. Real state is sent to the React interface.
 7. The real tile layout and object/spline statistics are displayed.
 8. The base placed-object block is interpreted safely.
-9. Objects, splines and terrain are interpreted and rendered incrementally.
+9. Placed objects can be selected and inspected without writing changes.
+10. Objects, splines and terrain are interpreted and rendered incrementally.
 
 ## Documentation rule
 

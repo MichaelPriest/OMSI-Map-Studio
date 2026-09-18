@@ -107,6 +107,24 @@ O estado de produção deve vir de dados reais fornecidos pelo Core/Desktop.
 
 O grid exibido sem mapa é apenas referência visual do espaço de edição. Quando um mapa é carregado, a malha de tiles deve ser gerada a partir das coordenadas reais lidas do `global.cfg`. Tiles referenciados cujo arquivo `.map` não existe são destacados separadamente.
 
+
+### Seleção de objetos no viewport
+
+Em mapas cartesianos, um clique curto no viewport calcula o objeto posicionado mais próximo do raio da câmera. A seleção não cria um mesh individual para cada objeto, evitando multiplicar o custo de cena em mapas grandes.
+
+O objeto selecionado recebe apenas um marcador de destaque e seus dados reais são exibidos no inspetor:
+
+- caminho do arquivo `.sco`;
+- ID;
+- tile de origem;
+- posição local;
+- posição global cartesiana calculada;
+- rotação, pitch e bank.
+
+Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
+
+Nesta fase a seleção é somente leitura. O editor ainda não altera nem grava transformações.
+
 ## Estratégia de compatibilidade
 
 Arquivos de configuração do OMSI são orientados por comandos de texto e mapas antigos podem utilizar codificações legadas.
@@ -125,7 +143,8 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 6. O estado real é enviado à interface React.
 7. A malha real de tiles e estatísticas de objetos/splines são exibidas.
 8. O bloco-base de objetos passa a ser interpretado de forma segura.
-9. Objetos, splines e terreno passam a ser renderizados progressivamente.
+9. Objetos posicionados podem ser selecionados e inspecionados sem gravação.
+10. Objetos, splines e terreno passam a ser renderizados progressivamente.
 
 ## Regra de documentação
 

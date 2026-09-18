@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   isDesktopBridgeAvailable,
   loadMapObjects,
@@ -17,11 +17,20 @@ const errorMessages: Record<string, string> = {
   unknownMap: "O mapa solicitado não pertence à instalação carregada."
 };
 
+const formatNumber = (value: number) =>
+  value.toLocaleString("pt-BR", {
+    maximumFractionDigits: 3
+  });
+
+const getObjectName = (path: string) =>
+  path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+
 export function App() {
   const bridgeAvailable = useMemo(() => isDesktopBridgeAvailable(), []);
   const [rootPath, setRootPath] = useState<string>();
   const [maps, setMaps] = useState<OmsiMap[]>([]);
   const [selectedMap, setSelectedMap] = useState<OmsiMap>();
+  const [selectedObject, setSelectedObject] = useState<OmsiPlacedObject>();
   const [objectsByMap, setObjectsByMap] = useState<Record<string, OmsiPlacedObject[]>>({});
   const [loadingObjectsFor, setLoadingObjectsFor] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -36,6 +45,7 @@ export function App() {
           setObjectsByMap({});
           setLoadingObjectsFor(undefined);
           setSelectedMap(message.maps[0]);
+          setSelectedObject(undefined);
           setLoading(false);
           setError(undefined);
           return;
@@ -99,6 +109,13 @@ export function App() {
     ? objectsByMap[selectedMap.directoryName] ?? []
     : [];
 
+  const handleObjectSelection = useCallback(
+    (placedObject: OmsiPlacedObject | undefined) => {
+      setSelectedObject(placedObject);
+    },
+    []
+  );
+
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
       setError("Abra esta interface pelo aplicativo desktop OMSI Map Studio para acessar os arquivos locais.");
@@ -109,6 +126,15 @@ export function App() {
     setError(undefined);
     selectOmsiRoot();
   };
+
+  const selectedObjectGlobal =
+    selectedMap && selectedObject && !selectedMap.usesWorldCoordinates
+      ? {
+          x: selectedObject.tileX * 300 + selectedObject.x,
+          y: selectedObject.z,
+          z: selectedObject.tileY * 300 + selectedObject.y
+        }
+      : undefined;
 
   return (
     <main className="editor-shell">
@@ -159,6 +185,7 @@ export function App() {
                   className={map.directoryPath === selectedMap?.directoryPath ? "map-card selected" : "map-card"}
                   onClick={() => {
                     setError(undefined);
+                    setSelectedObject(undefined);
                     setSelectedMap(map);
                   }}
                 >
@@ -181,6 +208,7 @@ export function App() {
           tiles={selectedMap?.tiles ?? []}
           objects={selectedObjects}
           usesWorldCoordinates={selectedMap?.usesWorldCoordinates ?? false}
+          onSelectObject={handleObjectSelection}
         />
         <div className="viewport-hint">
           <strong>{selectedMap?.displayName ?? "Nenhum mapa carregado"}</strong>
@@ -194,16 +222,76 @@ export function App() {
           {selectedMap && loadingObjectsFor === selectedMap.directoryName && (
             <span>Lendo objetos do mapa...</span>
           )}
+          {selectedObject && (
+            <span>Selecionado: {getObjectName(selectedObject.sceneryObjectPath)} #{selectedObject.objectId}</span>
+          )}
         </div>
       </section>
 
       <aside className="inspector-panel">
         <div className="panel-heading">
           <span>Propriedades</span>
-          <small>{selectedMap ? "Mapa selecionado" : "Nenhuma seleção"}</small>
+          <small>
+            {selectedObject
+              ? `Objeto #${selectedObject.objectId}`
+              : selectedMap
+                ? "Mapa selecionado"
+                : "Nenhuma seleção"}
+          </small>
         </div>
 
-        {selectedMap && selectedStats ? (
+        {selectedObject ? (
+          <>
+            <dl className="property-list">
+              <div>
+                <dt>Objeto</dt>
+                <dd>{getObjectName(selectedObject.sceneryObjectPath)}</dd>
+              </div>
+              <div>
+                <dt>Arquivo SCO</dt>
+                <dd>{selectedObject.sceneryObjectPath}</dd>
+              </div>
+              <div>
+                <dt>ID</dt>
+                <dd>{selectedObject.objectId}</dd>
+              </div>
+              <div>
+                <dt>Tile</dt>
+                <dd>{selectedObject.tileX}, {selectedObject.tileY}</dd>
+              </div>
+              <div>
+                <dt>Posição local X / Y / Z</dt>
+                <dd>
+                  {formatNumber(selectedObject.x)} / {formatNumber(selectedObject.y)} / {formatNumber(selectedObject.z)}
+                </dd>
+              </div>
+              {selectedObjectGlobal && (
+                <div>
+                  <dt>Posição global X / Y / Z</dt>
+                  <dd>
+                    {formatNumber(selectedObjectGlobal.x)} / {formatNumber(selectedObjectGlobal.y)} / {formatNumber(selectedObjectGlobal.z)}
+                  </dd>
+                </div>
+              )}
+              <div>
+                <dt>Rotação</dt>
+                <dd>{formatNumber(selectedObject.rotation)}°</dd>
+              </div>
+              <div>
+                <dt>Pitch</dt>
+                <dd>{formatNumber(selectedObject.pitch)}°</dd>
+              </div>
+              <div>
+                <dt>Bank</dt>
+                <dd>{formatNumber(selectedObject.bank)}°</dd>
+              </div>
+            </dl>
+
+            <div className="empty-panel">
+              Este marcador usa a posição real do arquivo <code>.map</code>. A geometria do <code>.sco</code> ainda não está sendo renderizada e nenhuma alteração é salva nesta etapa.
+            </div>
+          </>
+        ) : selectedMap && selectedStats ? (
           <dl className="property-list">
             <div>
               <dt>Nome</dt>
@@ -267,7 +355,9 @@ export function App() {
               ? "Carregando..."
               : loadingObjectsFor === selectedMap?.directoryName
                 ? "Lendo objetos..."
-                : "Pronto"}
+                : selectedObject
+                  ? `Objeto #${selectedObject.objectId} selecionado`
+                  : "Pronto"}
         </span>
         <span>{selectedMap ? selectedMap.displayName : "Sem mapa aberto"}</span>
       </footer>
