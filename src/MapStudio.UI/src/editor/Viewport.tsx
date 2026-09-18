@@ -10,11 +10,10 @@ import type { OmsiTile } from "../bridge/desktopBridge";
 
 type ViewportProps = {
   tiles: OmsiTile[];
+  usesWorldCoordinates: boolean;
 };
 
-const tileSize = 300;
-
-function createTileOutline(tile: OmsiTile) {
+function createTileOutline(tile: OmsiTile, tileSize: number) {
   const x0 = tile.x * tileSize;
   const z0 = tile.y * tileSize;
   const x1 = x0 + tileSize;
@@ -29,7 +28,7 @@ function createTileOutline(tile: OmsiTile) {
   ];
 }
 
-export function Viewport({ tiles }: ViewportProps) {
+export function Viewport({ tiles, usesWorldCoordinates }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -40,6 +39,7 @@ export function Viewport({ tiles }: ViewportProps) {
     const scene = new Scene(engine);
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
+    const tileSize = usesWorldCoordinates ? 1 : 300;
     const tileXs = tiles.map((tile) => tile.x);
     const tileYs = tiles.map((tile) => tile.y);
 
@@ -57,7 +57,11 @@ export function Viewport({ tiles }: ViewportProps) {
       : Vector3.Zero();
 
     const mapSpan = Math.max(maxX - minX + 1, maxY - minY + 1);
-    const radius = tiles.length ? Math.max(450, mapSpan * tileSize * 0.85) : 95;
+    const radius = tiles.length
+      ? usesWorldCoordinates
+        ? Math.max(5, mapSpan * 0.85)
+        : Math.max(450, mapSpan * tileSize * 0.85)
+      : 95;
 
     const camera = new ArcRotateCamera(
       "editor-camera",
@@ -68,8 +72,8 @@ export function Viewport({ tiles }: ViewportProps) {
       scene
     );
 
-    camera.lowerRadiusLimit = 5;
-    camera.upperRadiusLimit = Math.max(900, radius * 4);
+    camera.lowerRadiusLimit = usesWorldCoordinates ? 0.5 : 5;
+    camera.upperRadiusLimit = Math.max(usesWorldCoordinates ? 50 : 900, radius * 4);
     camera.attachControl(canvas, true);
 
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
@@ -78,7 +82,7 @@ export function Viewport({ tiles }: ViewportProps) {
     if (tiles.length) {
       const existingLines = tiles
         .filter((tile) => tile.fileExists)
-        .map(createTileOutline);
+        .map((tile) => createTileOutline(tile, tileSize));
 
       if (existingLines.length) {
         const existingGrid = MeshBuilder.CreateLineSystem(
@@ -92,7 +96,7 @@ export function Viewport({ tiles }: ViewportProps) {
 
       const missingLines = tiles
         .filter((tile) => !tile.fileExists)
-        .map(createTileOutline);
+        .map((tile) => createTileOutline(tile, tileSize));
 
       if (missingLines.length) {
         const missingGrid = MeshBuilder.CreateLineSystem(
@@ -128,7 +132,7 @@ export function Viewport({ tiles }: ViewportProps) {
       scene.dispose();
       engine.dispose();
     };
-  }, [tiles]);
+  }, [tiles, usesWorldCoordinates]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
 }
