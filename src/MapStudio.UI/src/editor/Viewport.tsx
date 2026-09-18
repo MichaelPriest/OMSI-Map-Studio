@@ -12,6 +12,7 @@ import { Scene } from "@babylonjs/core/scene";
 import type {
   OmsiPlacedObject,
   OmsiPlacedSpline,
+  OmsiSplineDefinition,
   OmsiSceneryObjectGeometry,
   OmsiTile
 } from "../bridge/desktopBridge";
@@ -33,7 +34,10 @@ type ViewportProps = {
   usesWorldCoordinates: boolean;
   selectedObject?: OmsiPlacedObject;
   selectedGeometry?: OmsiSceneryObjectGeometry;
+  selectedSpline?: OmsiPlacedSpline;
+  selectedSplineProfile?: OmsiSplineDefinition;
   onSelectObject: (placedObject: OmsiPlacedObject | undefined) => void;
+  onSelectSpline: (placedSpline: OmsiPlacedSpline | undefined) => void;
 };
 
 function createTileSurface(
@@ -212,6 +216,99 @@ function createObjectMarkerLines(objects: OmsiPlacedObject[]) {
 }
 
 
+function getSplineFrame(
+  placedSpline: OmsiPlacedSpline,
+  distance: number
+) {
+  const length =
+    Math.max(0, placedSpline.length);
+
+  const clampedDistance =
+    Math.min(
+      length,
+      Math.max(0, distance)
+    );
+
+  const yaw =
+    -placedSpline.rotation *
+    degreesToRadians;
+
+  const hasCurve =
+    Math.abs(placedSpline.radius) >
+    0.001;
+
+  const angle =
+    hasCurve
+      ? clampedDistance /
+        placedSpline.radius
+      : 0;
+
+  const localX =
+    hasCurve
+      ? placedSpline.radius *
+        (1 - Math.cos(angle))
+      : 0;
+
+  const localZ =
+    hasCurve
+      ? placedSpline.radius *
+        Math.sin(angle)
+      : clampedDistance;
+
+  const cosYaw = Math.cos(yaw);
+  const sinYaw = Math.sin(yaw);
+
+  const worldOffsetX =
+    localX * cosYaw +
+    localZ * sinYaw;
+
+  const worldOffsetZ =
+    -localX * sinYaw +
+    localZ * cosYaw;
+
+  const gradientStart =
+    placedSpline.gradientStart / 100;
+
+  const gradientEnd =
+    placedSpline.gradientEnd / 100;
+
+  const gradientDelta =
+    gradientEnd -
+    gradientStart;
+
+  const heightOffset =
+    clampedDistance *
+      gradientStart +
+    (length > 0
+      ? 0.5 *
+        clampedDistance *
+        clampedDistance /
+        length *
+        gradientDelta
+      : 0);
+
+  const heading =
+    yaw + angle;
+
+  return {
+    center: new Vector3(
+      placedSpline.tileX * 300 +
+        placedSpline.x +
+        worldOffsetX,
+      placedSpline.z +
+        heightOffset,
+      placedSpline.tileY * 300 +
+        placedSpline.y +
+        worldOffsetZ
+    ),
+    widthAxis: new Vector3(
+      Math.cos(heading),
+      0,
+      -Math.sin(heading)
+    )
+  };
+}
+
 function getSplineAxisLine(
   placedSpline: OmsiPlacedSpline
 ) {
@@ -231,19 +328,6 @@ function getSplineAxisLine(
       )
     );
 
-  const yaw =
-    -placedSpline.rotation *
-    degreesToRadians;
-
-  const cosYaw = Math.cos(yaw);
-  const sinYaw = Math.sin(yaw);
-
-  const gradientStart =
-    placedSpline.gradientStart / 100;
-
-  const gradientEnd =
-    placedSpline.gradientEnd / 100;
-
   const points: Vector3[] = [];
 
   for (
@@ -255,59 +339,15 @@ function getSplineAxisLine(
       length *
       (index / segmentCount);
 
-    let localX = 0;
-    let localZ = distance;
-
-    if (
-      Math.abs(placedSpline.radius) >
-      0.001
-    ) {
-      const angle =
-        distance /
-        placedSpline.radius;
-
-      localX =
-        placedSpline.radius *
-        (1 - Math.cos(angle));
-
-      localZ =
-        placedSpline.radius *
-        Math.sin(angle);
-    }
-
-    const worldOffsetX =
-      localX * cosYaw +
-      localZ * sinYaw;
-
-    const worldOffsetZ =
-      -localX * sinYaw +
-      localZ * cosYaw;
-
-    const gradientDelta =
-      gradientEnd -
-      gradientStart;
-
-    const heightOffset =
-      distance * gradientStart +
-      (length > 0
-        ? 0.5 *
-          distance *
-          distance /
-          length *
-          gradientDelta
-        : 0);
+    const frame =
+      getSplineFrame(
+        placedSpline,
+        distance
+      );
 
     points.push(
-      new Vector3(
-        placedSpline.tileX * 300 +
-          placedSpline.x +
-          worldOffsetX,
-        placedSpline.z +
-          heightOffset +
-          0.08,
-        placedSpline.tileY * 300 +
-          placedSpline.y +
-          worldOffsetZ
+      frame.center.add(
+        new Vector3(0, 0.08, 0)
       )
     );
   }
@@ -315,14 +355,195 @@ function getSplineAxisLine(
   return points;
 }
 
-function createSplineAxisLines(
-  splines: OmsiPlacedSpline[]
+function isSameSpline(
+  left: OmsiPlacedSpline | undefined,
+  right: OmsiPlacedSpline | undefined
 ) {
-  return splines
-    .map(getSplineAxisLine)
-    .filter(
-      (line) => line.length >= 2
+  return Boolean(
+    left &&
+    right &&
+    left.tileX === right.tileX &&
+    left.tileY === right.tileY &&
+    left.splineId === right.splineId &&
+    left.splinePath === right.splinePath
+  );
+}
+
+function createSelectedSplineProfile(
+  scene: Scene,
+  placedSpline: OmsiPlacedSpline,
+  definition: OmsiSplineDefinition
+) {
+  const length =
+    Math.max(0, placedSpline.length);
+
+  if (
+    length < 0.01 ||
+    !definition.exists ||
+    definition.surfaces.length === 0
+  ) {
+    return;
+  }
+
+  const segmentCount =
+    Math.min(
+      128,
+      Math.max(
+        4,
+        Math.ceil(length / 5)
+      )
     );
+
+  for (
+    let surfaceIndex = 0;
+    surfaceIndex <
+      definition.surfaces.length;
+    surfaceIndex += 1
+  ) {
+    const surface =
+      definition.surfaces[
+        surfaceIndex
+      ];
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+    const indices: number[] = [];
+
+    for (
+      let segmentIndex = 0;
+      segmentIndex <= segmentCount;
+      segmentIndex += 1
+    ) {
+      const distance =
+        length *
+        (segmentIndex /
+          segmentCount);
+
+      const frame =
+        getSplineFrame(
+          placedSpline,
+          distance
+        );
+
+      for (const point of [
+        surface.from,
+        surface.to
+      ]) {
+        const world =
+          frame.center
+            .add(
+              frame.widthAxis.scale(
+                point.x
+              )
+            )
+            .add(
+              new Vector3(
+                0,
+                point.z + 0.03,
+                0
+              )
+            );
+
+        positions.push(
+          world.x,
+          world.y,
+          world.z
+        );
+
+        uvs.push(
+          point.textureX,
+          distance *
+            point.textureScale
+        );
+      }
+
+      if (segmentIndex > 0) {
+        const current =
+          segmentIndex * 2;
+
+        const previous =
+          current - 2;
+
+        indices.push(
+          previous,
+          current,
+          previous + 1,
+          previous + 1,
+          current,
+          current + 1
+        );
+      }
+    }
+
+    const mesh = new Mesh(
+      `selected-spline-profile-${surfaceIndex}`,
+      scene
+    );
+
+    const vertexData =
+      new VertexData();
+
+    vertexData.positions =
+      positions;
+
+    vertexData.uvs =
+      uvs;
+
+    vertexData.indices =
+      indices;
+
+    const normals: number[] = [];
+
+    VertexData.ComputeNormals(
+      positions,
+      indices,
+      normals
+    );
+
+    vertexData.normals =
+      normals;
+
+    vertexData.applyToMesh(
+      mesh,
+      false
+    );
+
+    const material =
+      new StandardMaterial(
+        `selected-spline-profile-material-${surfaceIndex}`,
+        scene
+      );
+
+    material.diffuseColor =
+      new Color3(
+        0.28,
+        0.34,
+        0.4
+      );
+
+    material.emissiveColor =
+      new Color3(
+        0.035,
+        0.08,
+        0.11
+      );
+
+    material.specularColor =
+      new Color3(
+        0.06,
+        0.06,
+        0.06
+      );
+
+    material.backFaceCulling =
+      false;
+
+    material.twoSidedLighting =
+      true;
+
+    mesh.material = material;
+    mesh.isPickable = false;
+  }
 }
 
 function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
@@ -540,7 +761,10 @@ export function Viewport({
   usesWorldCoordinates,
   selectedObject,
   selectedGeometry,
-  onSelectObject
+  selectedSpline,
+  selectedSplineProfile,
+  onSelectObject,
+  onSelectSpline
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -686,31 +910,58 @@ export function Viewport({
         !usesWorldCoordinates &&
         splines.length
       ) {
-        const splineLines =
-          createSplineAxisLines(
-            splines
-          );
+        splines.forEach(
+          (
+            placedSpline,
+            splineIndex
+          ) => {
+            const points =
+              getSplineAxisLine(
+                placedSpline
+              );
 
-        if (splineLines.length) {
-          const splineAxes =
-            MeshBuilder.CreateLineSystem(
-              "omsi-spline-axes",
-              {
-                lines: splineLines
-              },
-              scene
-            );
+            if (points.length < 2) {
+              return;
+            }
 
-          splineAxes.color =
-            new Color3(
-              0.25,
-              0.62,
-              1
-            );
+            const splineAxis =
+              MeshBuilder.CreateLines(
+                `omsi-spline-axis-${splineIndex}`,
+                {
+                  points
+                },
+                scene
+              );
 
-          splineAxes.isPickable =
-            false;
-        }
+            splineAxis.color =
+              isSameSpline(
+                placedSpline,
+                selectedSpline
+              )
+                ? new Color3(
+                    0.25,
+                    1,
+                    0.65
+                  )
+                : new Color3(
+                    0.25,
+                    0.62,
+                    1
+                  );
+
+            splineAxis.isPickable =
+              true;
+
+            splineAxis.intersectionThreshold =
+              5;
+
+            splineAxis.metadata = {
+              mapStudioKind:
+                "spline",
+              splineIndex
+            };
+          }
+        );
       }
 
       if (!usesWorldCoordinates && objects.length) {
@@ -735,6 +986,18 @@ export function Viewport({
       material.wireframe = true;
       ground.material = material;
       ground.isPickable = false;
+    }
+
+    if (
+      !usesWorldCoordinates &&
+      selectedSpline &&
+      selectedSplineProfile
+    ) {
+      createSelectedSplineProfile(
+        scene,
+        selectedSpline,
+        selectedSplineProfile
+      );
     }
 
     if (
@@ -782,6 +1045,7 @@ export function Viewport({
 
       if (usesWorldCoordinates) {
         onSelectObject(undefined);
+        onSelectSpline(undefined);
         return;
       }
 
@@ -828,11 +1092,51 @@ export function Viewport({
       }
 
       if (selected) {
+        onSelectSpline(undefined);
         onSelectObject(selected);
         return;
       }
 
+      const splinePick =
+        scene.pick(
+          pointerX,
+          pointerY,
+          (mesh) =>
+            mesh.metadata
+              ?.mapStudioKind ===
+            "spline",
+          false,
+          camera
+        );
+
+      if (
+        splinePick?.hit &&
+        splinePick.pickedMesh
+          ?.metadata &&
+        typeof splinePick
+          .pickedMesh
+          .metadata
+          .splineIndex === "number"
+      ) {
+        const splineIndex =
+          splinePick.pickedMesh
+            .metadata
+            .splineIndex as number;
+
+        const placedSpline =
+          splines[splineIndex];
+
+        if (placedSpline) {
+          onSelectObject(undefined);
+          onSelectSpline(
+            placedSpline
+          );
+          return;
+        }
+      }
+
       onSelectObject(undefined);
+      onSelectSpline(undefined);
 
       if (
         !usesWorldCoordinates &&
@@ -908,7 +1212,10 @@ export function Viewport({
     usesWorldCoordinates,
     selectedObject,
     selectedGeometry,
-    onSelectObject
+    selectedSpline,
+    selectedSplineProfile,
+    onSelectObject,
+    onSelectSpline
   ]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
