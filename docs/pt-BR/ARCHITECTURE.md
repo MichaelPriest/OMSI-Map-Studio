@@ -34,6 +34,15 @@ Nesta fase ele extrai apenas informações que podemos identificar com seguranç
 - quantidade de `[splineAttachement]` / `[splineAttachment]`;
 - existência ou ausência do arquivo do tile.
 
+### Sistema de coordenadas
+
+`OmsiMapCatalog` detecta a presença de `[worldcoordinates]` no `global.cfg`.
+
+- sem `[worldcoordinates]`: a malha cartesiana usa tiles de 300 m;
+- com `[worldcoordinates]`: o viewport inicial mostra apenas a topologia dos tiles de forma esquemática até existir conversão geográfica própria.
+
+O editor não deve aplicar uma escala cartesiana de 300 m a mapas de coordenadas mundiais.
+
 ### Objetos posicionados
 
 Para `[object]`, o Core interpreta somente o bloco-base confirmado:
