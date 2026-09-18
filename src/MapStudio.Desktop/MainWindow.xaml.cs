@@ -1,11 +1,17 @@
 using System.IO;
+using System.Text.Json;
 using System.Windows;
+using MapStudio.Core.Omsi.Maps;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Win32;
 
 namespace MapStudio.Desktop;
 
 public partial class MainWindow : Window
 {
+    private readonly OmsiMapCatalog _mapCatalog = new();
+    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+
     public MainWindow()
     {
         InitializeComponent();
@@ -16,6 +22,7 @@ public partial class MainWindow : Window
     {
         Loaded -= OnLoaded;
         await EditorWebView.EnsureCoreWebView2Async();
+        EditorWebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
 
         var devUrl = Environment.GetEnvironmentVariable("MAPSTUDIO_DEV_URL");
 
@@ -44,5 +51,111 @@ public partial class MainWindow : Window
             CoreWebView2HostResourceAccessKind.DenyCors);
 
         EditorWebView.Source = new Uri("https://app.mapstudio/index.html");
+    }
+
+    private async void OnWebMessageReceived(
+        object? sender,
+        CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var message = JsonDocument.Parse(e.WebMessageAsJson);
+
+            if (!message.RootElement.TryGetProperty("type", out var typeElement))
+            {
+                return;
+            }
+
+            switch (typeElement.GetString())
+            {
+                case "selectOmsiRoot":
+                    await SelectOmsiRootAsync();
+                    break;
+            }
+        }
+        catch (JsonException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidMessage"
+            });
+        }
+    }
+
+    private async Task SelectOmsiRootAsync()
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "Selecione a pasta raiz do OMSI 2",
+            Multiselect = false
+        };
+
+        if (dialog.ShowDialog(this) != true)
+        {
+            return;
+        }
+
+        var rootPath = dialog.FolderName;
+        var mapsPath = Path.Combine(rootPath, "maps");
+
+        if (!Directory.Exists(mapsPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidOmsiRoot",
+                detail = rootPath
+            });
+            return;
+        }
+
+        try
+        {
+            var maps = await _mapCatalog.DiscoverAsync(rootPath);
+
+            PostMessage(new
+            {
+                type = "omsiInstallationLoaded",
+                rootPath,
+                maps = maps.Select(map => new
+                {
+                    map.DirectoryName,
+                    map.DisplayName,
+                    map.DirectoryPath,
+                    map.GlobalConfigPath,
+                    tiles = map.Tiles.Select(tile => new
+                    {
+                        tile.X,
+                        tile.Y,
+                        tile.RelativeMapPath
+                    })
+                })
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = rootPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private void PostMessage(object payload)
+    {
+        var json = JsonSerializer.Serialize(payload, _jsonOptions);
+        EditorWebView.CoreWebView2.PostWebMessageAsJson(json);
     }
 }
