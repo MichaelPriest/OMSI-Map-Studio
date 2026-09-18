@@ -7,6 +7,7 @@ import {
 import {
   isDesktopBridgeAvailable,
   loadMapRegion,
+  loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
   selectMap,
@@ -15,6 +16,7 @@ import {
   type OmsiMap,
   type OmsiPlacedObject,
   type OmsiPlacedSpline,
+  type OmsiSplineDefinition,
   type OmsiSceneryObjectGeometry,
   type OmsiSceneryObjectMetadata
 } from "./bridge/desktopBridge";
@@ -55,6 +57,10 @@ const errorMessages: Record<string, string> = {
     "O objeto solicitado não pertence ao mapa aberto.",
   invalidSceneryObjectPath:
     "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects.",
+  unknownSpline:
+    "A spline solicitada não pertence à área atualmente carregada.",
+  invalidSplinePath:
+    "A referência da spline não pôde ser resolvida com segurança na pasta Splines.",
   mapOpenError:
     "Não foi possível abrir esse mapa.",
   unexpectedHostError:
@@ -129,6 +135,16 @@ export function App() {
   const [selectedObject, setSelectedObject] =
     useState<OmsiPlacedObject>();
 
+  const [selectedSpline, setSelectedSpline] =
+    useState<OmsiPlacedSpline>();
+
+  const [
+    splineProfilesByPath,
+    setSplineProfilesByPath
+  ] = useState<
+    Record<string, OmsiSplineDefinition>
+  >({});
+
   const [selectingRoot, setSelectingRoot] =
     useState(false);
 
@@ -143,6 +159,11 @@ export function App() {
   const [
     loadedRegionKey,
     setLoadedRegionKey
+  ] = useState<string>();
+
+  const [
+    loadingSplineFor,
+    setLoadingSplineFor
   ] = useState<string>();
 
   const [
@@ -170,6 +191,8 @@ export function App() {
           setObjects([]);
           setSplines([]);
           setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setSelectingRoot(false);
@@ -189,6 +212,8 @@ export function App() {
           setObjects([]);
           setSplines([]);
           setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setSelectingMap(false);
@@ -276,10 +301,36 @@ export function App() {
               setSelectedObject(
                 undefined
               );
+              setSelectedSpline(
+                undefined
+              );
             }
 
             return current;
           });
+
+          return;
+        }
+
+        if (
+          message.type ===
+          "splineProfileLoaded"
+        ) {
+          setSplineProfilesByPath(
+            (current) => ({
+              ...current,
+              [message.splinePath]:
+                message.definition
+            })
+          );
+
+          setLoadingSplineFor(
+            (current) =>
+              current ===
+              message.splinePath
+                ? undefined
+                : current
+          );
 
           return;
         }
@@ -331,6 +382,7 @@ export function App() {
           setSelectingRoot(false);
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
+          setLoadingSplineFor(undefined);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
 
@@ -380,6 +432,37 @@ export function App() {
     loadedRegionKey,
     loadingRegionKey,
     selectedMap
+  ]);
+
+  useEffect(() => {
+    const splinePath =
+      selectedSpline?.splinePath;
+
+    if (
+      !bridgeAvailable ||
+      !splinePath ||
+      Object.hasOwn(
+        splineProfilesByPath,
+        splinePath
+      ) ||
+      loadingSplineFor ===
+        splinePath
+    ) {
+      return;
+    }
+
+    setLoadingSplineFor(
+      splinePath
+    );
+
+    loadSplineProfile(
+      splinePath
+    );
+  }, [
+    bridgeAvailable,
+    loadingSplineFor,
+    selectedSpline,
+    splineProfilesByPath
   ]);
 
   useEffect(() => {
@@ -503,6 +586,13 @@ export function App() {
     );
   }, [activeTiles]);
 
+  const selectedSplineProfile =
+    selectedSpline
+      ? splineProfilesByPath[
+          selectedSpline.splinePath
+        ]
+      : undefined;
+
   const selectedMetadata =
     selectedObject
       ? sceneryMetadataByPath[
@@ -604,6 +694,28 @@ export function App() {
         );
 
         if (placedObject) {
+          setSelectedSpline(undefined);
+          setInspectorTab("general");
+        }
+
+        setError(undefined);
+      },
+      []
+    );
+
+  const handleSplineSelection =
+    useCallback(
+      (
+        placedSpline:
+          | OmsiPlacedSpline
+          | undefined
+      ) => {
+        setSelectedSpline(
+          placedSpline
+        );
+
+        if (placedSpline) {
+          setSelectedObject(undefined);
           setInspectorTab("general");
         }
 
@@ -1354,6 +1466,235 @@ export function App() {
     );
   };
 
+  const renderSplineInspector = () => {
+    if (!selectedSpline) {
+      return renderMapInspector();
+    }
+
+    const profile =
+      selectedSplineProfile;
+
+    return (
+      <>
+        <div className="inspector-hero">
+          <div className="object-symbol">S</div>
+          <div>
+            <strong>
+              {getObjectName(
+                selectedSpline.splinePath
+              )}
+            </strong>
+            <span>
+              Spline #{selectedSpline.splineId}
+            </span>
+          </div>
+        </div>
+
+        <div className="inspector-tabs">
+          <button
+            type="button"
+            className={
+              inspectorTab === "general"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("general")
+            }
+          >
+            Geral
+          </button>
+          <button
+            type="button"
+            className={
+              inspectorTab === "transform"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("transform")
+            }
+          >
+            Traçado
+          </button>
+          <button
+            type="button"
+            className={
+              inspectorTab === "geometry"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("geometry")
+            }
+          >
+            Perfil
+          </button>
+        </div>
+
+        {inspectorTab === "general" && (
+          <dl className="property-list dense">
+            <div>
+              <dt>Arquivo</dt>
+              <dd>
+                {selectedSpline.splinePath}
+              </dd>
+            </div>
+            <div>
+              <dt>ID</dt>
+              <dd>
+                {selectedSpline.splineId}
+              </dd>
+            </div>
+            <div>
+              <dt>Anterior / Próxima</dt>
+              <dd>
+                {selectedSpline.previousSplineId} /{" "}
+                {selectedSpline.nextSplineId}
+              </dd>
+            </div>
+            <div>
+              <dt>Tile</dt>
+              <dd>
+                {selectedSpline.tileX},{" "}
+                {selectedSpline.tileY}
+              </dd>
+            </div>
+            <div>
+              <dt>Tipo</dt>
+              <dd>
+                {selectedSpline.isHeightSpline
+                  ? "Spline de altura"
+                  : "Spline"}
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        {inspectorTab === "transform" && (
+          <dl className="property-list dense">
+            <div>
+              <dt>Posição X / Y / Z</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.x
+                )}{" / "}
+                {formatNumber(
+                  selectedSpline.y
+                )}{" / "}
+                {formatNumber(
+                  selectedSpline.z
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Rotação</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.rotation
+                )}°
+              </dd>
+            </div>
+            <div>
+              <dt>Comprimento</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.length
+                )} m
+              </dd>
+            </div>
+            <div>
+              <dt>Raio</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.radius
+                )} m
+              </dd>
+            </div>
+            <div>
+              <dt>Gradiente inicial</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.gradientStart
+                )}%
+              </dd>
+            </div>
+            <div>
+              <dt>Gradiente final</dt>
+              <dd>
+                {formatNumber(
+                  selectedSpline.gradientEnd
+                )}%
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        {inspectorTab === "geometry" && (
+          <div className="inspector-stack">
+            {loadingSplineFor ===
+              selectedSpline.splinePath && (
+              <div className="inspector-empty">
+                Lendo perfil .sli...
+              </div>
+            )}
+
+            {profile && (
+              <>
+                <dl className="property-list dense">
+                  <div>
+                    <dt>Arquivo encontrado</dt>
+                    <dd>
+                      {profile.exists
+                        ? "Sim"
+                        : "Não"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Texturas</dt>
+                    <dd>
+                      {profile.textures.length}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Superfícies</dt>
+                    <dd>
+                      {profile.surfaces.length}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="mesh-list">
+                  {profile.surfaces.map(
+                    (surface, index) => (
+                      <div
+                        className="mesh-row"
+                        key={`${surface.textureIndex}-${index}`}
+                      >
+                        <strong>
+                          {surface.textureName ??
+                            `Material ${surface.textureIndex}`}
+                        </strong>
+                        <span>
+                          {formatNumber(
+                            surface.from.x
+                          )} →{" "}
+                          {formatNumber(
+                            surface.to.x
+                          )} m
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </>
+    );
+  };
+
   const renderEditor = () => {
     if (!selectedMap) {
       return renderMapPage();
@@ -1560,6 +1901,9 @@ export function App() {
                   setSelectedObject(
                     undefined
                   );
+                  setSelectedSpline(
+                    undefined
+                  );
                 }
               }
               usesWorldCoordinates={
@@ -1567,8 +1911,15 @@ export function App() {
               }
               selectedObject={selectedObject}
               selectedGeometry={selectedGeometry}
+              selectedSpline={selectedSpline}
+              selectedSplineProfile={
+                selectedSplineProfile
+              }
               onSelectObject={
                 handleObjectSelection
+              }
+              onSelectSpline={
+                handleSplineSelection
               }
             />
 
@@ -1624,11 +1975,15 @@ export function App() {
               <span>
                 {selectedObject
                   ? "Objeto selecionado"
-                  : "Mapa aberto"}
+                  : selectedSpline
+                    ? "Spline selecionada"
+                    : "Mapa aberto"}
               </span>
             </div>
 
-            {renderObjectInspector()}
+            {selectedSpline
+              ? renderSplineInspector()
+              : renderObjectInspector()}
           </aside>
         </div>
 
@@ -1638,9 +1993,11 @@ export function App() {
               ? "Erro"
               : Boolean(loadingRegionKey)
                 ? "Carregando mapa..."
-                : loadingMetadataFor
-                  ? "Lendo SCO..."
-                  : loadingGeometryFor
+                : loadingSplineFor
+                  ? "Lendo SLI..."
+                  : loadingMetadataFor
+                    ? "Lendo SCO..."
+                    : loadingGeometryFor
                     ? "Lendo geometria..."
                     : "Pronto"}
           </span>
