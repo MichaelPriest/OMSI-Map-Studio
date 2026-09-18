@@ -19,6 +19,20 @@ import {
 } from "./bridge/desktopBridge";
 import { Viewport } from "./editor/Viewport";
 
+type AppView =
+  | "home"
+  | "omsi"
+  | "map"
+  | "editor"
+  | "tools"
+  | "settings";
+
+type InspectorTab =
+  | "general"
+  | "transform"
+  | "geometry"
+  | "materials";
+
 const errorMessages: Record<string, string> = {
   invalidMessage:
     "A interface enviou uma mensagem inválida para o host.",
@@ -56,54 +70,27 @@ const formatNumber = (value: number) =>
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
-const describeMesh = (
-  mesh: {
-    declaredPath: string;
-    fileExists: boolean;
-    o3d: {
-      isValid: boolean;
-      version: number | null;
-      isEncrypted: boolean;
-    } | null;
-    structure: {
-      isParsed: boolean;
-      vertexCount: number;
-      triangleCount: number;
-      materialCount: number;
-      boneCount: number;
-    } | null;
-  }
-) => {
-  if (!mesh.fileExists) {
-    return `${mesh.declaredPath} · ausente`;
-  }
+const clamp01 = (value: number) =>
+  Math.min(1, Math.max(0, value));
 
-  if (!mesh.o3d) {
-    return `${mesh.declaredPath} · encontrado`;
-  }
-
-  if (!mesh.o3d.isValid) {
-    return `${mesh.declaredPath} · cabeçalho O3D inválido`;
-  }
-
-  const version =
-    mesh.o3d.version === null
-      ? "versão desconhecida"
-      : `v${mesh.o3d.version}`;
-
-  const structure =
-    mesh.structure?.isParsed
-      ? ` · ${mesh.structure.vertexCount} vértices · ${mesh.structure.triangleCount} triângulos · ${mesh.structure.materialCount} materiais`
-      : "";
-
-  return `${mesh.declaredPath} · O3D ${version}${mesh.o3d.isEncrypted ? " · criptografado" : ""}${structure}`;
-};
+const toRgb = (
+  red: number,
+  green: number,
+  blue: number
+) =>
+  `rgb(${Math.round(clamp01(red) * 255)} ${Math.round(clamp01(green) * 255)} ${Math.round(clamp01(blue) * 255)})`;
 
 export function App() {
   const bridgeAvailable = useMemo(
     () => isDesktopBridgeAvailable(),
     []
   );
+
+  const [view, setView] =
+    useState<AppView>("home");
+
+  const [inspectorTab, setInspectorTab] =
+    useState<InspectorTab>("general");
 
   const [rootPath, setRootPath] =
     useState<string>();
@@ -172,6 +159,7 @@ export function App() {
           setSelectingMap(false);
           setLoadingMapContent(false);
           setError(undefined);
+          setView("map");
           return;
         }
 
@@ -183,7 +171,9 @@ export function App() {
           setGeometryByPath({});
           setSelectingMap(false);
           setLoadingMapContent(false);
+          setInspectorTab("general");
           setError(undefined);
+          setView("editor");
           return;
         }
 
@@ -434,13 +424,36 @@ export function App() {
           stats.triangles +
           Math.floor(
             mesh.geometry.indices.length / 3
-          )
+          ),
+        materials:
+          stats.materials +
+          mesh.geometry.materials.length
       }),
       {
         loadedMeshes: 0,
         vertices: 0,
-        triangles: 0
+        triangles: 0,
+        materials: 0
       }
+    );
+  }, [selectedGeometry]);
+
+  const materialRows = useMemo(() => {
+    if (!selectedGeometry) {
+      return [];
+    }
+
+    return selectedGeometry.meshes.flatMap(
+      (mesh) =>
+        mesh.geometry.materials.map(
+          (material, index) => ({
+            mesh: getObjectName(
+              mesh.declaredPath
+            ),
+            index,
+            material
+          })
+        )
     );
   }, [selectedGeometry]);
 
@@ -478,6 +491,10 @@ export function App() {
           placedObject
         );
 
+        if (placedObject) {
+          setInspectorTab("general");
+        }
+
         setError(undefined);
       },
       []
@@ -501,6 +518,7 @@ export function App() {
       setError(
         "Selecione primeiro a pasta raiz do OMSI 2."
       );
+      setView("omsi");
       return;
     }
 
@@ -514,447 +532,1077 @@ export function App() {
     selectingMap ||
     loadingMapContent;
 
-  return (
-    <main className="editor-shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>
-            OMSI Map Studio
-            <span className="version-badge">
-              v{appVersion}
-            </span>
-          </strong>
-          <span>
-            Alpha somente leitura · OMSI 2
-          </span>
+  const renderNav = () => (
+    <aside className="studio-sidebar">
+      <div className="sidebar-brand">
+        <div className="brand-mark">O</div>
+        <div>
+          <strong>OMSI Map Studio</strong>
+          <span>Editor moderno para OMSI 2</span>
         </div>
+      </div>
 
-        <nav
-          className="toolbar"
-          aria-label="Ferramentas principais"
+      <nav
+        className="sidebar-nav"
+        aria-label="Navegação principal"
+      >
+        <button
+          type="button"
+          className={
+            view === "home"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("home")}
         >
+          <span className="nav-icon">⌂</span>
+          Início
+        </button>
+
+        <button
+          type="button"
+          className={
+            view === "omsi"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("omsi")}
+        >
+          <span className="nav-icon">▣</span>
+          Abrir OMSI
+          {rootPath && (
+            <span className="nav-check">✓</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={
+            view === "map"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("map")}
+        >
+          <span className="nav-icon">▰</span>
+          Abrir mapa
+          {selectedMap && (
+            <span className="nav-check">✓</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={
+            view === "editor"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("editor")}
+          disabled={!selectedMap}
+        >
+          <span className="nav-icon">◇</span>
+          Explorador
+        </button>
+
+        <button
+          type="button"
+          className={
+            view === "tools"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("tools")}
+        >
+          <span className="nav-icon">⌘</span>
+          Ferramentas
+        </button>
+
+        <button
+          type="button"
+          className={
+            view === "settings"
+              ? "nav-item active"
+              : "nav-item"
+          }
+          onClick={() => setView("settings")}
+        >
+          <span className="nav-icon">⚙</span>
+          Configurações
+        </button>
+      </nav>
+
+      <div className="sidebar-footer">
+        <span>v{appVersion}</span>
+        <span>Somente leitura</span>
+      </div>
+    </aside>
+  );
+
+  const renderHome = () => (
+    <section className="page-shell">
+      <div className="page-title">
+        <span className="eyebrow">
+          OMSI MAP STUDIO
+        </span>
+        <h1>Editor de mapas moderno para OMSI 2</h1>
+        <p>
+          Abra sua instalação, escolha manualmente
+          o mapa e explore os dados reais sem
+          modificar os arquivos do jogo.
+        </p>
+      </div>
+
+      <div className="home-grid">
+        <article className="home-card accent-card">
+          <span className="card-kicker">
+            1 · Ambiente
+          </span>
+          <h2>Abrir OMSI</h2>
+          <p>
+            Selecione a pasta principal do OMSI 2.
+            O editor usará essa raiz para resolver
+            mapas, objetos, splines e texturas.
+          </p>
           <button
             type="button"
+            className="primary-button"
+            onClick={() => setView("omsi")}
+          >
+            {rootPath
+              ? "OMSI conectado"
+              : "Selecionar OMSI"}
+          </button>
+        </article>
+
+        <article className="home-card">
+          <span className="card-kicker">
+            2 · Projeto
+          </span>
+          <h2>Abrir mapa</h2>
+          <p>
+            Escolha manualmente uma pasta dentro
+            de <code>maps</code>. Nenhum mapa é
+            carregado automaticamente.
+          </p>
+          <button
+            type="button"
+            onClick={() => setView("map")}
+            disabled={!rootPath}
+          >
+            {selectedMap
+              ? selectedMap.displayName
+              : "Escolher mapa"}
+          </button>
+        </article>
+
+        <article className="home-card">
+          <span className="card-kicker">
+            3 · Editor
+          </span>
+          <h2>Explorar mapa</h2>
+          <p>
+            Visualize tiles, objetos reais,
+            geometria O3D e propriedades do
+            elemento selecionado.
+          </p>
+          <button
+            type="button"
+            onClick={() => setView("editor")}
+            disabled={!selectedMap}
+          >
+            Abrir editor
+          </button>
+        </article>
+      </div>
+
+      <div className="status-strip">
+        <div>
+          <span>OMSI</span>
+          <strong>
+            {rootPath
+              ? "Conectado"
+              : "Não selecionado"}
+          </strong>
+        </div>
+        <div>
+          <span>Mapa</span>
+          <strong>
+            {selectedMap?.displayName ??
+              "Nenhum aberto"}
+          </strong>
+        </div>
+        <div>
+          <span>Modo</span>
+          <strong>Somente leitura</strong>
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderOmsiPage = () => (
+    <section className="page-shell">
+      <div className="page-title compact">
+        <span className="eyebrow">
+          CONFIGURAÇÃO DO AMBIENTE
+        </span>
+        <h1>Abrir OMSI</h1>
+        <p>
+          Selecione a pasta principal da sua
+          instalação do OMSI 2.
+        </p>
+      </div>
+
+      <div className="setup-grid">
+        <article className="setup-card">
+          <div className="folder-illustration">
+            ▰
+          </div>
+          <h2>Selecionar pasta do OMSI 2</h2>
+          <p>
+            Escolha a pasta que contém
+            <code> maps </code>,
+            <code> Sceneryobjects </code> e
+            <code> Splines</code>.
+          </p>
+
+          <div className="path-field">
+            <span>
+              {rootPath ??
+                "Nenhuma pasta selecionada"}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="primary-button wide"
             onClick={handleOpenOmsi}
             disabled={busy}
           >
             {selectingRoot
-              ? "Selecionando OMSI..."
+              ? "Selecionando..."
               : rootPath
-                ? "Trocar OMSI"
+                ? "Trocar pasta do OMSI"
                 : "Abrir OMSI"}
           </button>
+        </article>
 
+        <aside className="info-card">
+          <h3>Informações</h3>
+          <p>
+            A instalação serve apenas como base
+            para localizar os recursos reais do
+            jogo. Nenhum mapa é aberto nesta etapa.
+          </p>
+
+          <div
+            className={
+              rootPath
+                ? "status-message success"
+                : "status-message"
+            }
+          >
+            <strong>
+              {rootPath
+                ? "✓ Pasta encontrada"
+                : "○ Aguardando seleção"}
+            </strong>
+            <span>
+              {rootPath
+                ? rootPath
+                : "Selecione sua instalação do OMSI 2."}
+            </span>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+
+  const renderMapPage = () => (
+    <section className="page-shell">
+      <div className="page-title compact">
+        <span className="eyebrow">
+          PROJETO
+        </span>
+        <h1>Abrir mapa</h1>
+        <p>
+          Escolha manualmente a pasta do mapa que
+          deseja visualizar.
+        </p>
+      </div>
+
+      {!rootPath ? (
+        <article className="setup-card centered">
+          <h2>Selecione o OMSI primeiro</h2>
+          <p>
+            Antes de abrir um mapa, precisamos
+            conhecer a pasta raiz da instalação.
+          </p>
           <button
             type="button"
-            onClick={handleOpenMap}
-            disabled={!rootPath || busy}
+            className="primary-button"
+            onClick={() => setView("omsi")}
           >
-            {selectingMap
-              ? "Selecionando mapa..."
-              : "Abrir mapa"}
+            Ir para Abrir OMSI
           </button>
+        </article>
+      ) : (
+        <div className="setup-grid">
+          <article className="setup-card">
+            <div className="folder-illustration">
+              ▱
+            </div>
+            <h2>Selecionar pasta do mapa</h2>
+            <p>
+              O seletor será aberto diretamente em
+              <code> {rootPath}\\maps</code>.
+            </p>
 
-          <button
-            type="button"
-            disabled
-          >
-            Novo mapa
-          </button>
+            <div className="path-field">
+              <span>
+                {selectedMap?.directoryPath ??
+                  "Nenhum mapa selecionado"}
+              </span>
+            </div>
 
-          <button
-            type="button"
-            disabled
-          >
-            Salvar
-          </button>
-        </nav>
-      </header>
+            <button
+              type="button"
+              className="primary-button wide"
+              onClick={handleOpenMap}
+              disabled={busy}
+            >
+              {selectingMap
+                ? "Selecionando..."
+                : selectedMap
+                  ? "Abrir outro mapa"
+                  : "Abrir mapa"}
+            </button>
+          </article>
 
-      <aside className="asset-panel">
-        <div className="panel-heading">
-          <span>Projeto</span>
-          <small>
-            {rootPath
-              ? "OMSI conectado"
-              : "Nenhum OMSI selecionado"}
-          </small>
+          <aside className="info-card">
+            <h3>Orientações</h3>
+            <p>
+              Escolha uma pasta de mapa dentro de
+              <code> maps</code>. A pasta precisa
+              conter <code>global.cfg</code>.
+            </p>
+
+            {selectedMap ? (
+              <div className="selected-map-card">
+                <strong>
+                  {selectedMap.displayName}
+                </strong>
+                <span>
+                  {selectedMap.directoryName}
+                </span>
+                <span>
+                  {selectedMap.tiles.length} tiles
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setView("editor")}
+                >
+                  Abrir no editor →
+                </button>
+              </div>
+            ) : (
+              <div className="status-message">
+                <strong>
+                  Nenhum mapa aberto
+                </strong>
+                <span>
+                  A instalação não será varrida
+                  automaticamente.
+                </span>
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+    </section>
+  );
+
+  const renderMapInspector = () => (
+    <>
+      <div className="inspector-hero">
+        <div className="object-symbol">M</div>
+        <div>
+          <strong>
+            {selectedMap?.displayName}
+          </strong>
+          <span>
+            {selectedMap?.directoryName}
+          </span>
+        </div>
+      </div>
+
+      <dl className="property-list dense">
+        <div>
+          <dt>Tiles</dt>
+          <dd>
+            {selectedMap?.tiles.length ?? 0}
+          </dd>
+        </div>
+        <div>
+          <dt>Objetos</dt>
+          <dd>
+            {selectedStats?.objects ??
+              (loadingMapContent
+                ? "Carregando..."
+                : objects.length)}
+          </dd>
+        </div>
+        <div>
+          <dt>Splines</dt>
+          <dd>
+            {selectedStats?.splines ??
+              (loadingMapContent
+                ? "Carregando..."
+                : "—")}
+          </dd>
+        </div>
+        <div>
+          <dt>Sistema</dt>
+          <dd>
+            {selectedMap?.usesWorldCoordinates
+              ? "Coordenadas mundiais"
+              : "Cartesiano"}
+          </dd>
+        </div>
+        <div>
+          <dt>Tiles ausentes</dt>
+          <dd>
+            {selectedStats?.missingTiles ?? "—"}
+          </dd>
+        </div>
+      </dl>
+    </>
+  );
+
+  const renderObjectInspector = () => {
+    if (!selectedObject) {
+      return renderMapInspector();
+    }
+
+    return (
+      <>
+        <div className="inspector-hero">
+          <div className="object-symbol">O</div>
+          <div>
+            <strong>
+              {selectedDisplayName}
+            </strong>
+            <span>
+              Objeto #{selectedObject.objectId}
+            </span>
+          </div>
         </div>
 
-        {error && (
-          <div className="error-panel">
+        <div className="inspector-tabs">
+          <button
+            type="button"
+            className={
+              inspectorTab === "general"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("general")
+            }
+          >
+            Geral
+          </button>
+          <button
+            type="button"
+            className={
+              inspectorTab === "transform"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("transform")
+            }
+          >
+            Transformação
+          </button>
+          <button
+            type="button"
+            className={
+              inspectorTab === "geometry"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("geometry")
+            }
+          >
+            Geometria
+          </button>
+          <button
+            type="button"
+            className={
+              inspectorTab === "materials"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setInspectorTab("materials")
+            }
+          >
+            Materiais
+          </button>
+        </div>
+
+        {inspectorTab === "general" && (
+          <dl className="property-list dense">
+            <div>
+              <dt>Arquivo</dt>
+              <dd>
+                {getObjectName(
+                  selectedObject.sceneryObjectPath
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Caminho</dt>
+              <dd>
+                {selectedObject.sceneryObjectPath}
+              </dd>
+            </div>
+            <div>
+              <dt>ID</dt>
+              <dd>{selectedObject.objectId}</dd>
+            </div>
+            <div>
+              <dt>Grupos</dt>
+              <dd>
+                {selectedMetadata?.groups.length
+                  ? selectedMetadata.groups.join(" › ")
+                  : loadingMetadataFor
+                    ? "Carregando..."
+                    : "Não informado"}
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        {inspectorTab === "transform" && (
+          <dl className="property-list dense">
+            <div>
+              <dt>Tile</dt>
+              <dd>
+                {selectedObject.tileX},{" "}
+                {selectedObject.tileY}
+              </dd>
+            </div>
+            <div>
+              <dt>Posição local X / Y / Z</dt>
+              <dd>
+                {formatNumber(selectedObject.x)} /{" "}
+                {formatNumber(selectedObject.y)} /{" "}
+                {formatNumber(selectedObject.z)}
+              </dd>
+            </div>
+            {selectedObjectGlobal && (
+              <div>
+                <dt>
+                  Posição global X / Y / Z
+                </dt>
+                <dd>
+                  {formatNumber(
+                    selectedObjectGlobal.x
+                  )}{" / "}
+                  {formatNumber(
+                    selectedObjectGlobal.y
+                  )}{" / "}
+                  {formatNumber(
+                    selectedObjectGlobal.z
+                  )}
+                </dd>
+              </div>
+            )}
+            <div>
+              <dt>Rotação</dt>
+              <dd>
+                {formatNumber(
+                  selectedObject.rotation
+                )}°
+              </dd>
+            </div>
+            <div>
+              <dt>Pitch / Bank</dt>
+              <dd>
+                {formatNumber(
+                  selectedObject.pitch
+                )}° /{" "}
+                {formatNumber(
+                  selectedObject.bank
+                )}°
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        {inspectorTab === "geometry" && (
+          <div className="inspector-stack">
+            <dl className="property-list dense">
+              <div>
+                <dt>Meshes carregados</dt>
+                <dd>
+                  {geometryStats?.loadedMeshes ??
+                    (loadingGeometryFor
+                      ? "Carregando..."
+                      : 0)}
+                </dd>
+              </div>
+              <div>
+                <dt>Vértices</dt>
+                <dd>
+                  {geometryStats?.vertices ?? 0}
+                </dd>
+              </div>
+              <div>
+                <dt>Triângulos</dt>
+                <dd>
+                  {geometryStats?.triangles ?? 0}
+                </dd>
+              </div>
+              <div>
+                <dt>Materiais</dt>
+                <dd>
+                  {geometryStats?.materials ?? 0}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mesh-list">
+              {selectedMetadata?.meshes.map(
+                (mesh) => (
+                  <div
+                    className="mesh-row"
+                    key={mesh.declaredPath}
+                  >
+                    <strong>
+                      {getObjectName(
+                        mesh.declaredPath
+                      )}
+                    </strong>
+                    <span>
+                      {mesh.fileExists
+                        ? "Encontrado"
+                        : "Ausente"}
+                    </span>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+
+        {inspectorTab === "materials" && (
+          <div className="material-list">
+            {materialRows.length === 0 ? (
+              <div className="inspector-empty">
+                {loadingGeometryFor
+                  ? "Carregando materiais..."
+                  : "Nenhum material O3D disponível."}
+              </div>
+            ) : (
+              materialRows.map((row) => (
+                <div
+                  className="material-row"
+                  key={`${row.mesh}-${row.index}`}
+                >
+                  <span
+                    className="material-swatch"
+                    style={{
+                      background: toRgb(
+                        row.material.diffuseR,
+                        row.material.diffuseG,
+                        row.material.diffuseB
+                      )
+                    }}
+                  />
+                  <div>
+                    <strong>
+                      Material {row.index + 1}
+                    </strong>
+                    <span>{row.mesh}</span>
+                    <small>
+                      {row.material.textureName ??
+                        "Sem textura declarada"}
+                    </small>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderEditor = () => {
+    if (!selectedMap) {
+      return renderMapPage();
+    }
+
+    return (
+      <section className="map-editor">
+        <div className="editor-titlebar">
+          <div>
+            <strong>
+              OMSI Map Studio —{" "}
+              {selectedMap.displayName}
+            </strong>
+            <span className="map-open-indicator">
+              ● Mapa aberto
+            </span>
+          </div>
+        </div>
+
+        <div className="editor-menubar">
+          {[
+            "Arquivo",
+            "Editar",
+            "Visualizar",
+            "Objetos",
+            "Terreno",
+            "Splines",
+            "Mapa",
+            "Ferramentas",
+            "Ajuda"
+          ].map((item) => (
+            <button
+              key={item}
+              type="button"
+              disabled
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+
+        <div className="editor-toolbar">
+          <button
+            type="button"
+            className="tool active"
+            title="Seleção"
+          >
+            ↖
+          </button>
+          <button
+            type="button"
+            className="tool"
+            disabled
+            title="Mover"
+          >
+            ✥
+          </button>
+          <button
+            type="button"
+            className="tool"
+            disabled
+            title="Rotacionar"
+          >
+            ⟳
+          </button>
+          <button
+            type="button"
+            className="tool"
+            disabled
+            title="Escala"
+          >
+            ◫
+          </button>
+
+          <span className="toolbar-separator" />
+
+          <span className="toolbar-chip">
+            Global
+          </span>
+          <span className="toolbar-chip">
+            Perspectiva
+          </span>
+
+          <span className="toolbar-spacer" />
+
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={handleOpenMap}
+            disabled={busy}
+          >
+            Abrir outro mapa
+          </button>
+        </div>
+
+        <div className="editor-grid">
+          <aside className="map-explorer">
+            <div className="explorer-tabs">
+              <button
+                type="button"
+                className="active"
+              >
+                Explorador
+              </button>
+              <button
+                type="button"
+                disabled
+              >
+                Camadas
+              </button>
+              <button
+                type="button"
+                disabled
+              >
+                Favoritos
+              </button>
+            </div>
+
+            <div className="explorer-tree">
+              <div className="tree-root">
+                <span>▾</span>
+                <strong>
+                  {selectedMap.displayName}
+                </strong>
+              </div>
+
+              <div className="tree-node active">
+                <span>▣</span>
+                Objetos
+                <strong>
+                  {selectedStats?.objects ??
+                    objects.length}
+                </strong>
+              </div>
+
+              <div className="tree-node">
+                <span>⌇</span>
+                Splines
+                <strong>
+                  {selectedStats?.splines ??
+                    "…"}
+                </strong>
+              </div>
+
+              <div className="tree-node disabled">
+                <span>▧</span>
+                Terreno
+                <small>em desenvolvimento</small>
+              </div>
+
+              <div className="tree-node disabled">
+                <span>◩</span>
+                Texturas
+                <small>em desenvolvimento</small>
+              </div>
+
+              <div className="tree-node disabled">
+                <span>◎</span>
+                Rotas
+                <small>em desenvolvimento</small>
+              </div>
+
+              <div className="tree-node">
+                <span>□</span>
+                Tiles
+                <strong>
+                  {selectedMap.tiles.length}
+                </strong>
+              </div>
+            </div>
+
+            <div className="explorer-search">
+              <input
+                type="search"
+                placeholder="Buscar no mapa..."
+                disabled
+              />
+            </div>
+          </aside>
+
+          <section className="editor-viewport">
+            <Viewport
+              tiles={selectedMap.tiles}
+              objects={objects}
+              usesWorldCoordinates={
+                selectedMap.usesWorldCoordinates
+              }
+              selectedObject={selectedObject}
+              selectedGeometry={selectedGeometry}
+              onSelectObject={
+                handleObjectSelection
+              }
+            />
+
+            <div className="viewport-toolbar">
+              <span>Perspectiva</span>
+              <span>Iluminação</span>
+            </div>
+
+            <div className="viewport-layers">
+              <label>
+                <input
+                  type="checkbox"
+                  checked
+                  readOnly
+                />
+                Grelha
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked
+                  readOnly
+                />
+                Objetos
+              </label>
+              <label className="muted">
+                <input
+                  type="checkbox"
+                  disabled
+                />
+                Splines
+              </label>
+              <label className="muted">
+                <input
+                  type="checkbox"
+                  disabled
+                />
+                Terreno
+              </label>
+            </div>
+
+            {loadingMapContent && (
+              <div className="viewport-loading">
+                Lendo tiles, objetos e splines...
+              </div>
+            )}
+          </section>
+
+          <aside className="object-inspector">
+            <div className="inspector-heading">
+              <strong>Inspetor</strong>
+              <span>
+                {selectedObject
+                  ? "Objeto selecionado"
+                  : "Mapa aberto"}
+              </span>
+            </div>
+
+            {renderObjectInspector()}
+          </aside>
+        </div>
+
+        <footer className="editor-statusbar">
+          <span>
+            {error
+              ? "Erro"
+              : loadingMapContent
+                ? "Carregando mapa..."
+                : loadingMetadataFor
+                  ? "Lendo SCO..."
+                  : loadingGeometryFor
+                    ? "Lendo geometria..."
+                    : "Pronto"}
+          </span>
+
+          <span>
+            Objetos:{" "}
+            {selectedStats?.objects ??
+              objects.length}
+            <b>·</b>
+            Splines:{" "}
+            {selectedStats?.splines ?? "…"}
+            <b>·</b>
+            Tiles: {selectedMap.tiles.length}
+          </span>
+        </footer>
+      </section>
+    );
+  };
+
+  const renderPlaceholder = (
+    title: string,
+    description: string
+  ) => (
+    <section className="page-shell">
+      <div className="page-title compact">
+        <span className="eyebrow">
+          EM DESENVOLVIMENTO
+        </span>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+
+      <article className="placeholder-card">
+        <strong>
+          Ainda não disponível nesta alpha
+        </strong>
+        <span>
+          A interface já reserva este espaço,
+          mas nenhum estado fictício será usado.
+        </span>
+      </article>
+    </section>
+  );
+
+  return (
+    <main className="studio-shell">
+      {renderNav()}
+
+      <section className="studio-main">
+        <header className="studio-topbar">
+          <div className="topbar-tagline">
+            <span>CRIAR</span>
+            <b>·</b>
+            <span>EDITAR</span>
+            <b>·</b>
+            <span>EXPLORAR</span>
+          </div>
+
+          <div className="topbar-state">
+            {selectedMap ? (
+              <>
+                <span className="state-dot" />
+                {selectedMap.displayName}
+              </>
+            ) : rootPath ? (
+              "OMSI conectado"
+            ) : (
+              "Nenhum projeto aberto"
+            )}
+          </div>
+        </header>
+
+        {error && view !== "editor" && (
+          <div className="global-error">
             {error}
           </div>
         )}
 
-        {!rootPath ? (
-          <div className="empty-panel">
-            Clique em <strong>Abrir OMSI</strong>{" "}
-            e selecione a pasta raiz da
-            instalação. Nenhum mapa será
-            carregado automaticamente.
-          </div>
-        ) : (
-          <dl className="property-list">
-            <div>
-              <dt>Instalação OMSI</dt>
-              <dd>{rootPath}</dd>
-            </div>
-
-            <div>
-              <dt>Mapa aberto</dt>
-              <dd>
-                {selectedMap
-                  ? selectedMap.displayName
-                  : "Nenhum"}
-              </dd>
-            </div>
-          </dl>
-        )}
-
-        {rootPath && !selectedMap && (
-          <div className="empty-panel">
-            Agora clique em{" "}
-            <strong>Abrir mapa</strong>{" "}
-            e escolha uma pasta dentro de{" "}
-            <code>maps</code>.
-          </div>
-        )}
-
-        {selectedMap && (
-          <div className="empty-panel">
-            <strong>
-              {selectedMap.displayName}
-            </strong>
-            <br />
-            {selectedMap.directoryName}
-            <br />
-            {selectedMap.tiles.length} tiles
-            {selectedMap.usesWorldCoordinates
-              ? " · coordenadas mundiais"
-              : ""}
-          </div>
-        )}
-      </aside>
-
-      <section className="viewport-panel">
-        <Viewport
-          tiles={
-            selectedMap?.tiles ?? []
-          }
-          objects={
-            selectedMap ? objects : []
-          }
-          usesWorldCoordinates={
-            selectedMap
-              ?.usesWorldCoordinates ??
-            false
-          }
-          selectedObject={selectedObject}
-          selectedGeometry={selectedGeometry}
-          onSelectObject={
-            handleObjectSelection
-          }
-        />
-
-        <div className="viewport-hint">
-          <strong>
-            {selectedMap?.displayName ??
-              "Nenhum mapa aberto"}
-          </strong>
-
-          <span>
-            {!selectedMap
-              ? "Use Abrir mapa para escolher o mapa que deseja editar."
-              : loadingMapContent
-                ? "Lendo tiles, objetos e splines..."
-                : selectedMap.usesWorldCoordinates
-                  ? `${selectedMap.tiles.length} tiles · visualização esquemática · ${objects.length} objetos lidos`
-                  : `${selectedMap.tiles.length} tiles · 300 m · ${objects.length} posições de objetos`}
-          </span>
-
-          {selectedObject && (
-            <span>
-              Selecionado:{" "}
-              {selectedDisplayName} #
-              {selectedObject.objectId}
-            </span>
-          )}
+        <div className="studio-content">
+          {view === "home" &&
+            renderHome()}
+          {view === "omsi" &&
+            renderOmsiPage()}
+          {view === "map" &&
+            renderMapPage()}
+          {view === "editor" &&
+            renderEditor()}
+          {view === "tools" &&
+            renderPlaceholder(
+              "Ferramentas",
+              "Ferramentas de construção e diagnóstico serão ativadas conforme o Core ganhar suporte real."
+            )}
+          {view === "settings" &&
+            renderPlaceholder(
+              "Configurações",
+              "Preferências do editor, idioma e opções visuais ainda serão implementadas."
+            )}
         </div>
       </section>
-
-      <aside className="inspector-panel">
-        <div className="panel-heading">
-          <span>Propriedades</span>
-          <small>
-            {selectedObject
-              ? `Objeto #${selectedObject.objectId}`
-              : selectedMap
-                ? "Mapa selecionado"
-                : "Nenhuma seleção"}
-          </small>
-        </div>
-
-        {selectedObject ? (
-          <>
-            <dl className="property-list">
-              <div>
-                <dt>Objeto</dt>
-                <dd>{selectedDisplayName}</dd>
-              </div>
-
-              <div>
-                <dt>Arquivo SCO</dt>
-                <dd>
-                  {selectedObject
-                    .sceneryObjectPath}
-                </dd>
-              </div>
-
-              <div>
-                <dt>ID</dt>
-                <dd>
-                  {selectedObject.objectId}
-                </dd>
-              </div>
-
-              <div>
-                <dt>Tile</dt>
-                <dd>
-                  {selectedObject.tileX},{" "}
-                  {selectedObject.tileY}
-                </dd>
-              </div>
-
-              <div>
-                <dt>
-                  Posição local X / Y / Z
-                </dt>
-                <dd>
-                  {formatNumber(
-                    selectedObject.x
-                  )}{" / "}
-                  {formatNumber(
-                    selectedObject.y
-                  )}{" / "}
-                  {formatNumber(
-                    selectedObject.z
-                  )}
-                </dd>
-              </div>
-
-              {selectedObjectGlobal && (
-                <div>
-                  <dt>
-                    Posição global X / Y / Z
-                  </dt>
-                  <dd>
-                    {formatNumber(
-                      selectedObjectGlobal.x
-                    )}{" / "}
-                    {formatNumber(
-                      selectedObjectGlobal.y
-                    )}{" / "}
-                    {formatNumber(
-                      selectedObjectGlobal.z
-                    )}
-                  </dd>
-                </div>
-              )}
-
-              <div>
-                <dt>Rotação</dt>
-                <dd>
-                  {formatNumber(
-                    selectedObject.rotation
-                  )}°
-                </dd>
-              </div>
-
-              <div>
-                <dt>Pitch</dt>
-                <dd>
-                  {formatNumber(
-                    selectedObject.pitch
-                  )}°
-                </dd>
-              </div>
-
-              <div>
-                <dt>Bank</dt>
-                <dd>
-                  {formatNumber(
-                    selectedObject.bank
-                  )}°
-                </dd>
-              </div>
-
-              {loadingMetadataFor ===
-                selectedObject.sceneryObjectPath && (
-                <div>
-                  <dt>Metadados SCO</dt>
-                  <dd>Carregando...</dd>
-                </div>
-              )}
-
-              {selectedGeometry && (
-                <div>
-                  <dt>Geometria O3D</dt>
-                  <dd>
-                    {geometryStats?.loadedMeshes ?? 0} meshes ·{" "}
-                    {geometryStats?.vertices ?? 0} vértices ·{" "}
-                    {geometryStats?.triangles ?? 0} triângulos
-                  </dd>
-                </div>
-              )}
-
-              {loadingGeometryFor ===
-                selectedObject.sceneryObjectPath && (
-                <div>
-                  <dt>Geometria O3D</dt>
-                  <dd>Carregando preview...</dd>
-                </div>
-              )}
-
-              {selectedMetadata && (
-                <>
-                  <div>
-                    <dt>Friendly name</dt>
-                    <dd>
-                      {selectedMetadata
-                        .friendlyName ??
-                        "Não informado"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Grupos</dt>
-                    <dd>
-                      {selectedMetadata
-                        .groups.length
-                        ? selectedMetadata
-                            .groups
-                            .join(" › ")
-                        : "Nenhum"}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt>Meshes</dt>
-                    <dd>
-                      {selectedMetadata
-                        .meshes.length
-                        ? selectedMetadata
-                            .meshes
-                            .map(describeMesh)
-                            .join(", ")
-                        : "Nenhum"}
-                    </dd>
-                  </div>
-                </>
-              )}
-            </dl>
-
-            <div className="empty-panel">
-              A visualização é somente
-              leitura nesta alpha.
-            </div>
-          </>
-        ) : selectedMap &&
-          selectedStats ? (
-          <dl className="property-list">
-            <div>
-              <dt>Nome</dt>
-              <dd>
-                {selectedMap.displayName}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Pasta</dt>
-              <dd>
-                {selectedMap.directoryName}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Sistema</dt>
-              <dd>
-                {selectedMap
-                  .usesWorldCoordinates
-                  ? "Coordenadas mundiais"
-                  : "Coordenadas cartesianas"}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Tiles</dt>
-              <dd>
-                {selectedMap.tiles.length}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Objetos</dt>
-              <dd>{selectedStats.objects}</dd>
-            </div>
-
-            <div>
-              <dt>Splines</dt>
-              <dd>{selectedStats.splines}</dd>
-            </div>
-
-            <div>
-              <dt>Attachments</dt>
-              <dd>
-                {selectedStats.attachments}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Tiles ausentes</dt>
-              <dd>
-                {selectedStats.missingTiles}
-              </dd>
-            </div>
-          </dl>
-        ) : selectedMap ? (
-          <div className="empty-panel">
-            Lendo o mapa escolhido...
-          </div>
-        ) : (
-          <div className="empty-panel">
-            Nenhum mapa aberto. Use{" "}
-            <strong>Abrir mapa</strong>.
-          </div>
-        )}
-      </aside>
-
-      <footer className="statusbar">
-        <span>
-          {error
-            ? "Erro"
-            : selectingRoot
-              ? "Selecionando OMSI..."
-              : selectingMap
-                ? "Selecionando mapa..."
-                : loadingMapContent
-                  ? "Lendo mapa..."
-                  : loadingMetadataFor
-                    ? "Lendo SCO..."
-                    : loadingGeometryFor
-                      ? "Lendo geometria..."
-                      : "Pronto"}
-        </span>
-
-        <span>
-          {selectedMap
-            ? selectedMap.displayName
-            : rootPath
-              ? "OMSI pronto · sem mapa aberto"
-              : "Sem OMSI selecionado"}
-        </span>
-      </footer>
     </main>
   );
 }

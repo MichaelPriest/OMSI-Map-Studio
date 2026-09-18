@@ -1,0 +1,52 @@
+# User interface
+
+**English** · [Português (Brasil)](../pt-BR/UI.md)
+
+The Alpha.3 primary interface follows the project's approved visual concept: persistent side navigation, dedicated installation/map-opening screens, and a three-area editor layout.
+
+## Navigation
+
+The sidebar contains:
+
+- Home;
+- Open OMSI;
+- Open map;
+- Explorer;
+- Tools;
+- Settings.
+
+Items that are not implemented yet may exist as visual structure, but they must not expose fake data or fake actions.
+
+## Flow
+
+1. **Open OMSI** registers the installation root.
+2. **Open map** lets the user manually choose a directory inside `maps`.
+3. After the map opens, the interface enters the **Editor**.
+
+No map is loaded automatically when selecting the installation.
+
+## Editor
+
+The editor is divided into:
+
+- **Explorer** on the left, using real object, spline and tile counts;
+- **Viewport** in the center, rendered with Babylon.js;
+- **Inspector** on the right, showing the open map or selected object;
+- **Status bar** with real counts from the open map.
+
+Unsupported categories such as terrain and routes are clearly marked as “in development”.
+
+## Object inspector
+
+When an object is selected, the inspector provides tabs for:
+
+- General;
+- Transform;
+- Geometry;
+- Materials.
+
+All displayed information comes from real OMSI files. Material information uses real O3D data already interpreted by Core.
+
+## Visual rule
+
+The UI may follow the approved concept, but it must never invent thumbnails, maps, counts or states to look complete. Unsupported states must remain empty, disabled or explicitly marked as in development.
