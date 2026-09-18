@@ -38,6 +38,9 @@ export type HostMessage =
       maps: OmsiMap[];
     }
   | {
+      type: "selectionCancelled";
+    }
+  | {
       type: "mapObjectsLoaded";
       directoryName: string;
       usesWorldCoordinates: boolean;
