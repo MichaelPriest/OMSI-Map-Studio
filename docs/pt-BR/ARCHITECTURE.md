@@ -15,7 +15,7 @@ Responsável pela lógica de domínio relacionada ao OMSI:
 - leitura do bloco-base de objetos posicionados;
 - leitura conservadora de metadados `.sco`;
 - tiles;
-- futuramente geometria real `.o3d`;
+- geometria real `.o3d` não criptografada para preview;
 - splines;
 - terreno;
 - paths;
@@ -71,7 +71,7 @@ Valores posteriores são mantidos em `ExtraValues` e não recebem significado at
 - referências declaradas por `[mesh]`;
 - referências declaradas por `[collision_mesh]`.
 
-A ordem dos blocos e todos os comandos ainda não interpretados continuam preservados no documento de origem. Nesta etapa o editor não interpreta materiais, scripts ou animações. Para arquivos `.o3d`, o Core valida o cabeçalho e percorre apenas a estrutura binária necessária para inventariar as seções. Nesta etapa ele obtém contagens de vértices, triângulos, materiais e bones e detecta a transformação final, sem decodificar vértices para renderização.
+A ordem dos blocos e todos os comandos ainda não interpretados continuam preservados no documento de origem. Nesta etapa o editor não interpreta materiais, scripts ou animações. Para arquivos `.o3d`, o Core valida o cabeçalho, inventaria as seções e pode decodificar posição, normal e UV dos vértices e índices dos triângulos quando o arquivo não está criptografado. Os dados são convertidos do sistema Z-up do OMSI para o sistema Y-up usado pelo viewport. Arquivos criptografados, `.x` e modelos acima dos limites de segurança permanecem sem preview geométrico.
 
 `OmsiSceneryObjectPathResolver` restringe a resolução de `.sco` à pasta `Sceneryobjects` da instalação selecionada e rejeita travessia de diretório ou extensões diferentes.
 
@@ -95,7 +95,8 @@ A descoberta inicial envia apenas catálogo, tiles e contagens.
 
 - `loadMapObjects` carrega os blocos de `[object]` apenas quando um mapa é selecionado;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
-- metadados já lidos são armazenados em cache no React.
+- `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
+- metadados e geometria já lidos são armazenados em cache no React.
 
 Isso evita ler todos os `.sco` da instalação durante a abertura do programa.
 
@@ -121,7 +122,7 @@ O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do
 
 Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
 
-Nesta fase a seleção é somente leitura. O editor ainda não altera nem grava transformações.
+Nesta fase a seleção é somente leitura. Quando disponível, a geometria O3D real do objeto selecionado é exibida com material neutro, sem texturas. O editor ainda não altera nem grava transformações.
 
 ## Estratégia de compatibilidade
 
@@ -143,9 +144,10 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 8. O bloco-base de objetos passa a ser interpretado de forma segura.
 9. Objetos posicionados podem ser selecionados e inspecionados.
 10. O `.sco` do objeto selecionado fornece metadados reais sob demanda.
-11. O cabeçalho e as seções de meshes `.o3d` encontrados são validados e inventariados sem renderizar a geometria.
-12. A leitura real de vértices/UVs/normais é adicionada para meshes não criptografados.
-13. Geometria `.o3d`, splines e terreno passam a ser renderizados progressivamente.
+11. O cabeçalho e as seções de meshes `.o3d` são validados e inventariados.
+12. Vértices, normais, UVs e triângulos de meshes O3D não criptografados são carregados sob demanda.
+13. O modelo real do objeto selecionado é exibido no viewport com material neutro.
+14. Splines, terreno, materiais e texturas passam a ser implementados progressivamente.
 
 ## Regra de documentação
 

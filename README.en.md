@@ -16,6 +16,12 @@
 - Never replace missing real production data with fake/mock data.
 - Make map building approachable for users who do not know OMSI's internal file formats.
 
+## First test version
+
+The first prerelease is **v0.1.0-alpha.1** and remains read-only.
+
+It can select a real OMSI 2 installation, open maps, display tiles, select objects and load previews for unencrypted O3D meshes. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
+
 ## Development requirements
 
 - .NET 10 SDK

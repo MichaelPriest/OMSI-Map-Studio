@@ -15,7 +15,7 @@ Owns OMSI-facing domain logic:
 - base placed-object parsing;
 - conservative `.sco` metadata reading;
 - tiles;
-- future real `.o3d` geometry;
+- real unencrypted `.o3d` geometry for preview;
 - splines;
 - terrain;
 - paths;
@@ -71,7 +71,7 @@ Later values are retained in `ExtraValues` and are not assigned meaning until de
 - references declared by `[mesh]`;
 - references declared by `[collision_mesh]`.
 
-Block order and all commands that are not interpreted yet remain preserved in the source document. At this stage the editor does not interpret materials, scripts or animations. For `.o3d` files Core validates the header and walks only the binary structure required to inventory sections. At this stage it obtains vertex, triangle, material and bone counts and detects the final transform without decoding vertices for rendering.
+Block order and all commands that are not interpreted yet remain preserved in the source document. At this stage the editor does not interpret materials, scripts or animations. For `.o3d` files Core validates the header, inventories sections and can decode vertex positions, normals, UVs and triangle indices when the file is not encrypted. Data is converted from OMSI's Z-up system to the Y-up system used by the viewport. Encrypted files, `.x` files and models above the safety limits remain without a geometry preview.
 
 `OmsiSceneryObjectPathResolver` restricts `.sco` resolution to the selected installation's `Sceneryobjects` directory and rejects directory traversal or different extensions.
 
@@ -95,7 +95,8 @@ Initial discovery sends only the catalog, tiles and counts.
 
 - `loadMapObjects` loads `[object]` blocks only when a map is selected;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
-- previously read metadata is cached in React.
+- `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
+- previously read metadata and geometry are cached in React.
 
 This avoids scanning every `.sco` in the installation at application startup.
 
@@ -121,7 +122,7 @@ The inspector displays real `.map` values and, when available, real `.sco` metad
 
 Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
 
-At this stage selection is read-only. The editor does not modify or save transforms yet.
+At this stage selection is read-only. When available, the selected object's real O3D geometry is displayed with a neutral material and no textures. The editor does not modify or save transforms yet.
 
 ## Compatibility strategy
 
@@ -143,9 +144,10 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 8. The base placed-object block is interpreted safely.
 9. Placed objects can be selected and inspected.
 10. The selected object's `.sco` provides real metadata on demand.
-11. Found `.o3d` mesh headers and sections are validated and inventoried without rendering geometry.
-12. Real vertex/UV/normal reading is added for unencrypted meshes.
-13. `.o3d` geometry, splines and terrain are rendered incrementally.
+11. Found `.o3d` mesh headers and sections are validated and inventoried.
+12. Vertices, normals, UVs and triangles from unencrypted O3D meshes are loaded on demand.
+13. The selected object's real model is displayed in the viewport with a neutral material.
+14. Splines, terrain, materials and textures are implemented incrementally.
 
 ## Documentation rule
 

@@ -16,6 +16,12 @@ O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2
 - Nunca substituir dados reais ausentes por dados fake/mock em produção.
 - Tornar a construção de mapas simples para usuários que não conhecem os formatos internos do OMSI.
 
+## Primeira versão de teste
+
+A primeira prerelease é **v0.1.0-alpha.1** e permanece somente leitura.
+
+Ela permite selecionar uma instalação real do OMSI 2, abrir mapas, visualizar tiles, selecionar objetos e carregar previews de meshes O3D não criptografados. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
+
 ## Requisitos de desenvolvimento
 
 - .NET 10 SDK
