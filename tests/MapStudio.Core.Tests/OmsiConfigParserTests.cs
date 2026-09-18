@@ -85,6 +85,30 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
+    public void TilePathResolver_AllowsFilesInsideMapAndRejectsTraversal()
+    {
+        var mapDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-path-{Guid.NewGuid():N}");
+
+        Assert.True(OmsiMapPathResolver.TryResolveTilePath(
+            mapDirectory,
+            "tile_0_0.map",
+            out var validPath));
+
+        Assert.Equal(
+            Path.GetFullPath(Path.Combine(mapDirectory, "tile_0_0.map")),
+            validPath);
+
+        Assert.False(OmsiMapPathResolver.TryResolveTilePath(
+            mapDirectory,
+            "..\\outside.map",
+            out var escapedPath));
+
+        Assert.Equal(string.Empty, escapedPath);
+    }
+
+    [Fact]
     public async Task TileReader_CountsObjectsSplinesAndAttachments()
     {
         var path = Path.Combine(
