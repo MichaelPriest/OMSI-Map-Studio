@@ -41,6 +41,7 @@ public sealed class OmsiMapCatalog
             var document = await OmsiConfigParser.ParseFileAsync(globalConfigPath, cancellationToken);
             var directoryName = Path.GetFileName(directory);
             var displayName = document.FindFirstSection("name")?.DataLines.FirstOrDefault() ?? directoryName;
+            var usesWorldCoordinates = document.FindFirstSection("worldcoordinates") is not null;
             var tileReferences = ReadTiles(document);
             var tiles = new List<OmsiTileReference>(tileReferences.Count);
 
@@ -63,6 +64,7 @@ public sealed class OmsiMapCatalog
                 displayName,
                 directory,
                 globalConfigPath,
+                usesWorldCoordinates,
                 tiles));
         }
 
