@@ -1,36 +1,34 @@
 # OMSI Map Studio
 
-A modern, standalone map editor for **OMSI 2** focused on making map creation easier, safer and more visual.
+🌐 **Documentation / Documentação**
 
-> This project is completely independent from OMSI NavBR Multiplayer. It has its own repository, architecture, releases and development lifecycle.
+- 🇧🇷 [Português (Brasil)](README.pt-BR.md)
+- 🇬🇧 [English](README.en.md)
 
-## Product goals
+---
 
-- Make it possible to build an OMSI 2 map without editing configuration files by hand.
-- Preserve unknown OMSI configuration data instead of silently discarding it.
-- Provide a modern 3D viewport with selection, transform gizmos and visual asset browsing.
-- Add safe editing features from the beginning: backups, validation and undo/redo.
-- Keep compatibility with real OMSI 2 maps as the primary technical constraint.
+## Português
 
-## Initial milestone
+O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2**, criado para tornar a construção de mapas mais fácil, segura e visual.
 
-The first development milestone is intentionally small:
+Este projeto é **totalmente separado do OMSI NavBR Multiplayer**.
 
-1. Locate an OMSI 2 installation.
-2. List available maps.
-3. Parse a real `global.cfg` without destructive rewriting.
-4. Build an internal map/tile model.
-5. Display the initial editor shell and 3D viewport.
-6. Progress toward selecting, moving and saving scenery objects safely.
+Toda a documentação oficial do projeto deve existir, no mínimo, em:
 
-## Proposed stack
+- Português do Brasil (`pt-BR`)
+- Inglês (`en`)
 
-- .NET 10 / C#
-- React + TypeScript + Vite
-- WebView2 desktop host
-- Babylon.js for the 3D editor viewport
-- xUnit for parser/core tests
+Consulte a versão em português para detalhes completos.
 
-## Status
+## English
 
-Early development / bootstrap.
+**OMSI Map Studio** is a modern, standalone map editor for **OMSI 2**, designed to make map creation easier, safer and more visual.
+
+This project is **completely independent from OMSI NavBR Multiplayer**.
+
+All official project documentation must exist, at minimum, in:
+
+- Brazilian Portuguese (`pt-BR`)
+- English (`en`)
+
+See the English version for full details.

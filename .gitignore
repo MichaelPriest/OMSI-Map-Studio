@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+.vs/
+.idea/
+.vscode/
+*.user
+*.suo
+.DS_Store
+local-test-data/
+*.bak

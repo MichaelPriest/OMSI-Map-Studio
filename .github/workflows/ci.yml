@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/ci.yml"
+      - "Directory.Build.props"
+      - "*.sln"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/ci.yml"
+      - "Directory.Build.props"
+      - "*.sln"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Detect release request
+        id: release
+        shell: pwsh
+        run: |
+          $message = git log -1 --pretty=%B
+          $requested = $message.Contains("[release]")
+          "requested=$($requested.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Restore and test Core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release
+
+      - name: Install UI dependencies
+        working-directory: src/MapStudio.UI
+        run: npm install --no-audit --no-fund
+
+      - name: Build UI
+        working-directory: src/MapStudio.UI
+        run: npm run build
+
+      - name: Build desktop host
+        run: dotnet build src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release
+
+      - name: Publish alpha package
+        if: steps.release.outputs.requested == 'true'
+        shell: pwsh
+        run: |
+          $version = "v0.1.0-alpha.2"
+          $publishDir = "artifacts/OMSI-Map-Studio-$version-win-x64"
+          $zipPath = "artifacts/OMSI-Map-Studio-$version-win-x64.zip"
+          New-Item -ItemType Directory -Path "artifacts" -Force | Out-Null
+          dotnet publish src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false --output $publishDir
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
+          $pt = Get-Content "docs/pt-BR/releases/v0.1.0-alpha.2.md" -Raw
+          $en = Get-Content "docs/en/releases/v0.1.0-alpha.2.md" -Raw
+          Set-Content "artifacts/release-notes.md" ($pt + "`r`n`r`n---`r`n`r`n" + $en) -Encoding utf8
+
+      - name: Upload alpha artifact
+        if: steps.release.outputs.requested == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-v0.1.0-alpha.2-win-x64
+          path: artifacts/OMSI-Map-Studio-v0.1.0-alpha.2-win-x64.zip
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        if: steps.release.outputs.requested == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.0-alpha.2"
+          $zipPath = "artifacts/OMSI-Map-Studio-$tag-win-x64.zip"
+          $sha = (git rev-parse HEAD).Trim()
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag $zipPath --clobber
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          else {
+            gh release create $tag $zipPath --target $sha --title "OMSI Map Studio $tag" --notes-file "artifacts/release-notes.md" --prerelease
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
