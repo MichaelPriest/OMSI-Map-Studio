@@ -32,7 +32,11 @@ const errorMessages: Record<string, string> = {
   unknownSceneryObject:
     "O objeto solicitado não pertence aos mapas já carregados.",
   invalidSceneryObjectPath:
-    "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects."
+    "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects.",
+  catalogError:
+    "Não foi possível concluir a leitura do catálogo de mapas.",
+  unexpectedHostError:
+    "O host encontrou um erro inesperado. A operação foi interrompida para não deixar a interface travada."
 };
 
 const appVersion = "0.1.0-alpha.2";
@@ -141,12 +145,69 @@ export function App() {
   const [loading, setLoading] =
     useState(false);
 
+  const [
+    loadingRootPath,
+    setLoadingRootPath
+  ] = useState<string>();
+
+  const [
+    loadingProgress,
+    setLoadingProgress
+  ] = useState<{
+    completed: number;
+    total: number;
+    skipped: number;
+    directoryName: string | null;
+  }>();
+
+  const [
+    loadingHeartbeat,
+    setLoadingHeartbeat
+  ] = useState(0);
+
   const [error, setError] =
     useState<string>();
 
   useEffect(
     () =>
       subscribeToHost((message) => {
+        if (
+          message.type ===
+          "omsiInstallationLoadingStarted"
+        ) {
+          setLoading(true);
+          setLoadingRootPath(
+            message.rootPath
+          );
+          setLoadingProgress(undefined);
+          setLoadingHeartbeat(
+            (value) => value + 1
+          );
+          setError(undefined);
+          return;
+        }
+
+        if (
+          message.type ===
+          "omsiInstallationLoadingProgress"
+        ) {
+          setLoading(true);
+          setLoadingRootPath(
+            message.rootPath
+          );
+          setLoadingProgress({
+            completed: message.completed,
+            total: message.total,
+            skipped: message.skipped,
+            directoryName:
+              message.directoryName
+          });
+          setLoadingHeartbeat(
+            (value) => value + 1
+          );
+          return;
+        }
+
         if (
           message.type ===
           "omsiInstallationLoaded"
@@ -162,7 +223,13 @@ export function App() {
           setSelectedMap(message.maps[0]);
           setSelectedObject(undefined);
           setLoading(false);
-          setError(undefined);
+          setLoadingRootPath(undefined);
+          setLoadingProgress(undefined);
+          setError(
+            message.skippedMaps > 0
+              ? `${message.skippedMaps} mapa(s) não puderam ser lidos e foram ignorados.`
+              : undefined
+          );
           return;
         }
 
@@ -171,6 +238,8 @@ export function App() {
           "selectionCancelled"
         ) {
           setLoading(false);
+          setLoadingRootPath(undefined);
+          setLoadingProgress(undefined);
           return;
         }
 
@@ -256,6 +325,8 @@ export function App() {
 
         if (message.type === "hostError") {
           setLoading(false);
+          setLoadingRootPath(undefined);
+          setLoadingProgress(undefined);
           setLoadingObjectsFor(undefined);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
@@ -268,6 +339,30 @@ export function App() {
       }),
     []
   );
+
+  useEffect(() => {
+    if (!loading) {
+      return;
+    }
+
+    const timeout = window.setTimeout(
+      () => {
+        setLoading(false);
+        setLoadingRootPath(undefined);
+        setLoadingProgress(undefined);
+        setError(
+          "A leitura do OMSI parou de responder. Tente novamente; se houver um mapa problemático, a próxima tentativa poderá ignorá-lo."
+        );
+      },
+      45_000
+    );
+
+    return () =>
+      window.clearTimeout(timeout);
+  }, [
+    loading,
+    loadingHeartbeat
+  ]);
 
   useEffect(() => {
     if (
@@ -472,6 +567,11 @@ export function App() {
     }
 
     setLoading(true);
+    setLoadingRootPath(undefined);
+    setLoadingProgress(undefined);
+    setLoadingHeartbeat(
+      (value) => value + 1
+    );
     setError(undefined);
     selectOmsiRoot();
   };
@@ -526,7 +626,9 @@ export function App() {
             disabled={loading}
           >
             {loading
-              ? "Lendo OMSI..."
+              ? loadingProgress?.total
+                ? `Lendo ${loadingProgress.completed}/${loadingProgress.total}...`
+                : "Lendo OMSI..."
               : rootPath
                 ? "Trocar OMSI"
                 : "Abrir OMSI"}
@@ -553,6 +655,7 @@ export function App() {
           </span>
           <small>
             {rootPath ??
+              loadingRootPath ??
               "Nenhuma instalação carregada"}
           </small>
         </div>
@@ -563,7 +666,19 @@ export function App() {
           </div>
         )}
 
-        {!rootPath && !error && (
+        {!rootPath && loading && (
+          <div className="empty-panel">
+            {loadingProgress
+              ? `Lendo mapas: ${loadingProgress.completed}/${loadingProgress.total}${loadingProgress.skipped ? ` · ${loadingProgress.skipped} ignorado(s)` : ""}`
+              : "Preparando catálogo do OMSI..."}
+
+            {loadingProgress?.directoryName
+              ? ` · ${loadingProgress.directoryName}`
+              : ""}
+          </div>
+        )}
+
+        {!rootPath && !loading && !error && (
           <div className="empty-panel">
             Selecione a pasta raiz do
             OMSI 2. Os mapas reais

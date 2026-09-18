@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using MapStudio.Core.Omsi.Config;
 
@@ -5,8 +6,21 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiMapCatalog
 {
+    private const int MaxConcurrentGlobalReads = 4;
+    private static readonly TimeSpan PerMapTimeout =
+        TimeSpan.FromSeconds(20);
+
     public async Task<IReadOnlyList<OmsiMapDescriptor>> DiscoverAsync(
         string omsiRoot,
+        CancellationToken cancellationToken = default) =>
+        (await DiscoverWithProgressAsync(
+            omsiRoot,
+            progress: null,
+            cancellationToken)).Maps;
+
+    public async Task<OmsiMapCatalogResult> DiscoverWithProgressAsync(
+        string omsiRoot,
+        IProgress<OmsiMapDiscoveryProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
@@ -15,52 +29,158 @@ public sealed class OmsiMapCatalog
 
         if (!Directory.Exists(mapsDirectory))
         {
-            return Array.Empty<OmsiMapDescriptor>();
+            return new OmsiMapCatalogResult(
+                Array.Empty<OmsiMapDescriptor>(),
+                SkippedMaps: 0);
         }
 
-        var results = new List<OmsiMapDescriptor>();
-
-        foreach (var directory in Directory
+        var directories = Directory
             .EnumerateDirectories(mapsDirectory)
-            .OrderBy(static path => path))
+            .Where(directory =>
+                File.Exists(
+                    Path.Combine(
+                        directory,
+                        "global.cfg")))
+            .OrderBy(static path => path)
+            .Select((path, index) =>
+                new
+                {
+                    Path = path,
+                    Index = index
+                })
+            .ToArray();
+
+        if (directories.Length == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            progress?.Report(
+                new OmsiMapDiscoveryProgress(
+                    Completed: 0,
+                    Total: 0,
+                    Skipped: 0,
+                    DirectoryName: null));
 
-            var globalConfigPath = Path.Combine(
-                directory,
-                "global.cfg");
-
-            if (!File.Exists(globalConfigPath))
-            {
-                continue;
-            }
-
-            var document =
-                await OmsiConfigParser.ParseFileAsync(
-                    globalConfigPath,
-                    cancellationToken);
-
-            var directoryName =
-                Path.GetFileName(directory);
-
-            var displayName =
-                document
-                    .FindFirstSection("name")
-                    ?.DataLines
-                    .FirstOrDefault()
-                ?? directoryName;
-
-            results.Add(new OmsiMapDescriptor(
-                directoryName,
-                displayName,
-                directory,
-                globalConfigPath,
-                UsesWorldCoordinates(document),
-                ReadTiles(document)));
+            return new OmsiMapCatalogResult(
+                Array.Empty<OmsiMapDescriptor>(),
+                SkippedMaps: 0);
         }
 
-        return results;
+        var results =
+            new ConcurrentDictionary<int, OmsiMapDescriptor>();
+
+        var completed = 0;
+        var skipped = 0;
+
+        await Parallel.ForEachAsync(
+            directories,
+            new ParallelOptions
+            {
+                CancellationToken = cancellationToken,
+                MaxDegreeOfParallelism =
+                    Math.Min(
+                        MaxConcurrentGlobalReads,
+                        Math.Max(
+                            1,
+                            Environment.ProcessorCount))
+            },
+            async (entry, token) =>
+            {
+                var directoryName =
+                    Path.GetFileName(entry.Path);
+
+                try
+                {
+                    using var timeout =
+                        CancellationTokenSource
+                            .CreateLinkedTokenSource(token);
+
+                    timeout.CancelAfter(
+                        PerMapTimeout);
+
+                    var descriptor =
+                        await ReadDescriptorAsync(
+                            entry.Path,
+                            timeout.Token);
+
+                    results[entry.Index] =
+                        descriptor;
+                }
+                catch (OperationCanceledException)
+                    when (!token.IsCancellationRequested)
+                {
+                    Interlocked.Increment(
+                        ref skipped);
+                }
+                catch (Exception exception)
+                    when (IsRecoverableMapError(
+                        exception))
+                {
+                    Interlocked.Increment(
+                        ref skipped);
+                }
+                finally
+                {
+                    var current =
+                        Interlocked.Increment(
+                            ref completed);
+
+                    progress?.Report(
+                        new OmsiMapDiscoveryProgress(
+                            Completed: current,
+                            Total: directories.Length,
+                            Skipped: Volatile.Read(
+                                ref skipped),
+                            DirectoryName:
+                                directoryName));
+                }
+            });
+
+        return new OmsiMapCatalogResult(
+            results
+                .OrderBy(pair => pair.Key)
+                .Select(pair => pair.Value)
+                .ToArray(),
+            SkippedMaps:
+                Volatile.Read(ref skipped));
     }
+
+    private static async Task<OmsiMapDescriptor> ReadDescriptorAsync(
+        string directory,
+        CancellationToken cancellationToken)
+    {
+        var globalConfigPath = Path.Combine(
+            directory,
+            "global.cfg");
+
+        var document =
+            await OmsiConfigParser.ParseFileAsync(
+                globalConfigPath,
+                cancellationToken);
+
+        var directoryName =
+            Path.GetFileName(directory);
+
+        var displayName =
+            document
+                .FindFirstSection("name")
+                ?.DataLines
+                .FirstOrDefault()
+            ?? directoryName;
+
+        return new OmsiMapDescriptor(
+            directoryName,
+            displayName,
+            directory,
+            globalConfigPath,
+            UsesWorldCoordinates(document),
+            ReadTiles(document));
+    }
+
+    private static bool IsRecoverableMapError(
+        Exception exception) =>
+        exception is IOException or
+        UnauthorizedAccessException or
+        ArgumentException or
+        NotSupportedException;
 
     public static bool UsesWorldCoordinates(
         OmsiConfigDocument document)

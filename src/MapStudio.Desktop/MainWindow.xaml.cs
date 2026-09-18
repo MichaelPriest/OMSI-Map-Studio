@@ -158,6 +158,15 @@ public partial class MainWindow : Window
         {
             PostInvalidMessage();
         }
+        catch (Exception exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unexpectedHostError",
+                detail = exception.Message
+            });
+        }
     }
 
     private async Task SelectOmsiRootAsync()
@@ -193,11 +202,33 @@ public partial class MainWindow : Window
             return;
         }
 
+        PostMessage(new
+        {
+            type = "omsiInstallationLoadingStarted",
+            rootPath
+        });
+
         try
         {
-            var maps =
-                await _mapCatalog.DiscoverAsync(
-                    rootPath);
+            var progress =
+                new Progress<OmsiMapDiscoveryProgress>(
+                    item =>
+                        PostMessage(new
+                        {
+                            type = "omsiInstallationLoadingProgress",
+                            rootPath,
+                            item.Completed,
+                            item.Total,
+                            item.Skipped,
+                            item.DirectoryName
+                        }));
+
+            var result =
+                await _mapCatalog.DiscoverWithProgressAsync(
+                    rootPath,
+                    progress);
+
+            var maps = result.Maps;
 
             _omsiRootPath = rootPath;
             _knownSceneryObjectPaths.Clear();
@@ -210,6 +241,7 @@ public partial class MainWindow : Window
             {
                 type = "omsiInstallationLoaded",
                 rootPath,
+                skippedMaps = result.SkippedMaps,
                 maps = maps.Select(map => new
                 {
                     map.DirectoryName,
@@ -246,6 +278,15 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "ioError",
+                detail = exception.Message
+            });
+        }
+        catch (Exception exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "catalogError",
                 detail = exception.Message
             });
         }

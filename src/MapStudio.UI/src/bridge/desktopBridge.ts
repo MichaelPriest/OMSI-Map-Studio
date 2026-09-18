@@ -102,8 +102,21 @@ export type OmsiSceneryObjectGeometry = {
 
 export type HostMessage =
   | {
+      type: "omsiInstallationLoadingStarted";
+      rootPath: string;
+    }
+  | {
+      type: "omsiInstallationLoadingProgress";
+      rootPath: string;
+      completed: number;
+      total: number;
+      skipped: number;
+      directoryName: string | null;
+    }
+  | {
       type: "omsiInstallationLoaded";
       rootPath: string;
+      skippedMaps: number;
       maps: OmsiMap[];
     }
   | {

@@ -60,6 +60,73 @@ public sealed class OmsiLazyLoadingTests
     }
 
     [Fact]
+    public async Task CatalogDiscovery_SkipsUnreadableMapAndContinues()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-catalog-errors-{Guid.NewGuid():N}");
+
+        var goodMap = Path.Combine(
+            root,
+            "maps",
+            "Good");
+
+        var badMap = Path.Combine(
+            root,
+            "maps",
+            "Bad");
+
+        Directory.CreateDirectory(goodMap);
+        Directory.CreateDirectory(badMap);
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    goodMap,
+                    "global.cfg"),
+                "[name]\r\nGood Map\r\n",
+                new UTF8Encoding(false));
+
+            Directory.CreateDirectory(
+                Path.Combine(
+                    badMap,
+                    "global.cfg"));
+
+            var progressValues =
+                new List<OmsiMapDiscoveryProgress>();
+
+            var progress =
+                new Progress<OmsiMapDiscoveryProgress>(
+                    value =>
+                        progressValues.Add(value));
+
+            var result =
+                await new OmsiMapCatalog()
+                    .DiscoverWithProgressAsync(
+                        root,
+                        progress);
+
+            var map =
+                Assert.Single(result.Maps);
+
+            Assert.Equal(
+                "Good Map",
+                map.DisplayName);
+
+            Assert.Equal(
+                1,
+                result.SkippedMaps);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task TileContent_ReadsSummaryAndObjectsTogether()
     {
         var path = Path.Combine(

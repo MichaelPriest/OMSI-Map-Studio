@@ -94,12 +94,14 @@ O React não pode fornecer caminhos arbitrários para leitura. O host mantém um
 A descoberta inicial lê somente os `global.cfg` e as referências de tiles. Ela não abre todos os arquivos `.map` da instalação antes de liberar a interface.
 
 - `loadMapContent` carrega o mapa selecionado sob demanda e, em uma única leitura de cada tile, obtém contagens e objetos;
+- os `global.cfg` são lidos com concorrência limitada e progresso visível; um mapa individual ilegível é ignorado em vez de bloquear toda a instalação;
+- cada leitura de `global.cfg` possui limite de tempo para evitar espera indefinida;
 - os tiles do mapa selecionado são processados com concorrência limitada para reduzir a espera sem saturar o disco;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
 - `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
 - metadados e geometria já lidos são armazenados em cache no React.
 
-Isso evita ler todos os `.map` e `.sco` da instalação durante a abertura do programa. Ao voltar para um mapa já carregado, o React reutiliza o conteúdo em cache.
+Isso evita ler todos os `.map` e `.sco` da instalação durante a abertura do programa. O host envia início e progresso da descoberta para a interface, e exceções inesperadas também são convertidas em erro visível para impedir o estado permanente de “Lendo OMSI”. Ao voltar para um mapa já carregado, o React reutiliza o conteúdo em cache.
 
 Para mapas cartesianos, o viewport representa a posição com:
 

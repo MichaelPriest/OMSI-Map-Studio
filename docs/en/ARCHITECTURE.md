@@ -94,12 +94,14 @@ React cannot provide arbitrary paths for reading. The host keeps a list of `.sco
 Initial discovery reads only `global.cfg` files and tile references. It does not open every `.map` file in the installation before releasing the interface.
 
 - `loadMapContent` loads the selected map on demand and gets counts plus objects from a single read of each tile;
+- `global.cfg` files are read with limited concurrency and visible progress; one unreadable map is skipped instead of blocking the whole installation;
+- each `global.cfg` read has a time limit to prevent indefinite waiting;
 - selected-map tiles are processed with limited concurrency to reduce waiting without saturating storage;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
 - `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
 - previously read metadata and geometry are cached in React.
 
-This avoids scanning every `.map` and `.sco` file in the installation at application startup. When returning to a previously loaded map, React reuses the cached content.
+This avoids scanning every `.map` and `.sco` file in the installation at application startup. The host sends discovery start and progress events to the interface, and unexpected exceptions are converted into visible errors to prevent a permanent “Reading OMSI” state. When returning to a previously loaded map, React reuses the cached content.
 
 For Cartesian maps, the viewport represents object positions with:
 
