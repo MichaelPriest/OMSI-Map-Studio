@@ -81,6 +81,22 @@ In the first functional flow:
 
 Host failures are sent as stable error codes. The interface is responsible for presenting the appropriate user-facing message.
 
+### On-demand object loading
+
+Initial installation discovery sends only the catalog, tiles and counts. Full `[object]` blocks are loaded only after the user selects a map.
+
+React sends `loadMapObjects` using only the directory name of a map already known by the host. The desktop resolves that name against its internal catalog; the interface does not provide an arbitrary file path.
+
+For Cartesian maps, the viewport can represent an object position with:
+
+- `worldX = tileX * 300 + objectX`;
+- `worldZ = tileY * 300 + objectY`;
+- `worldY = objectZ`.
+
+At this stage these points are position markers only. They do not represent the real geometry of the `.sco` file.
+
+For maps with `[worldcoordinates]`, objects are parsed and counted, but global markers remain hidden until the correct geographic conversion exists.
+
 ## MapStudio.UI
 
 Primary editor interface, responsible for the Babylon.js viewport, asset browser, property inspector, construction tools, visual validation and simplified editing experience.
