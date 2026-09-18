@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   isDesktopBridgeAvailable,
+  loadMapObjects,
   type OmsiMap,
+  type OmsiPlacedObject,
   selectOmsiRoot,
   subscribeToHost
 } from "./bridge/desktopBridge";
@@ -11,7 +13,8 @@ const errorMessages: Record<string, string> = {
   invalidMessage: "A interface enviou uma mensagem inválida para o host.",
   invalidOmsiRoot: "A pasta selecionada não parece ser a raiz do OMSI 2: a pasta maps não foi encontrada.",
   accessDenied: "O Windows bloqueou o acesso a essa instalação do OMSI 2.",
-  ioError: "Não foi possível ler os arquivos da instalação selecionada."
+  ioError: "Não foi possível ler os arquivos da instalação selecionada.",
+  unknownMap: "O mapa solicitado não pertence à instalação carregada."
 };
 
 export function App() {
@@ -19,6 +22,8 @@ export function App() {
   const [rootPath, setRootPath] = useState<string>();
   const [maps, setMaps] = useState<OmsiMap[]>([]);
   const [selectedMap, setSelectedMap] = useState<OmsiMap>();
+  const [objectsByMap, setObjectsByMap] = useState<Record<string, OmsiPlacedObject[]>>({});
+  const [loadingObjectsFor, setLoadingObjectsFor] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -28,19 +33,46 @@ export function App() {
         if (message.type === "omsiInstallationLoaded") {
           setRootPath(message.rootPath);
           setMaps(message.maps);
+          setObjectsByMap({});
+          setLoadingObjectsFor(undefined);
           setSelectedMap(message.maps[0]);
           setLoading(false);
           setError(undefined);
           return;
         }
 
+        if (message.type === "mapObjectsLoaded") {
+          setObjectsByMap((current) => ({
+            ...current,
+            [message.directoryName]: message.objects
+          }));
+          setLoadingObjectsFor((current) =>
+            current === message.directoryName ? undefined : current
+          );
+          return;
+        }
+
         if (message.type === "hostError") {
           setLoading(false);
+          setLoadingObjectsFor(undefined);
           setError(errorMessages[message.code] ?? "O host desktop encontrou um erro inesperado.");
         }
       }),
     []
   );
+
+  useEffect(() => {
+    if (!bridgeAvailable || !selectedMap) {
+      return;
+    }
+
+    if (Object.hasOwn(objectsByMap, selectedMap.directoryName)) {
+      return;
+    }
+
+    setLoadingObjectsFor(selectedMap.directoryName);
+    loadMapObjects(selectedMap.directoryName);
+  }, [bridgeAvailable, objectsByMap, selectedMap]);
 
   const selectedStats = useMemo(() => {
     if (!selectedMap) {
@@ -57,6 +89,10 @@ export function App() {
       { objects: 0, splines: 0, attachments: 0, missingTiles: 0 }
     );
   }, [selectedMap]);
+
+  const selectedObjects = selectedMap
+    ? objectsByMap[selectedMap.directoryName] ?? []
+    : [];
 
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
@@ -116,7 +152,10 @@ export function App() {
                   key={map.directoryPath}
                   type="button"
                   className={map.directoryPath === selectedMap?.directoryPath ? "map-card selected" : "map-card"}
-                  onClick={() => setSelectedMap(map)}
+                  onClick={() => {
+                    setError(undefined);
+                    setSelectedMap(map);
+                  }}
                 >
                   <strong>{map.displayName}</strong>
                   <span>{map.directoryName}</span>
@@ -135,6 +174,7 @@ export function App() {
       <section className="viewport-panel">
         <Viewport
           tiles={selectedMap?.tiles ?? []}
+          objects={selectedObjects}
           usesWorldCoordinates={selectedMap?.usesWorldCoordinates ?? false}
         />
         <div className="viewport-hint">
@@ -142,10 +182,13 @@ export function App() {
           <span>
             {selectedMap
               ? selectedMap.usesWorldCoordinates
-                ? `${selectedMap.tiles.length} tiles · malha esquemática · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
-                : `${selectedMap.tiles.length} tiles · escala cartesiana de 300 m · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
+                ? `${selectedMap.tiles.length} tiles · malha esquemática · ${selectedObjects.length} objetos lidos`
+                : `${selectedMap.tiles.length} tiles · 300 m · ${selectedObjects.length} posições de objetos`
               : "O grid vazio representa apenas o espaço de edição."}
           </span>
+          {selectedMap && loadingObjectsFor === selectedMap.directoryName && (
+            <span>Lendo objetos do mapa...</span>
+          )}
         </div>
       </section>
 
@@ -174,8 +217,16 @@ export function App() {
               <dd>{selectedMap.tiles.length}</dd>
             </div>
             <div>
-              <dt>Objetos</dt>
+              <dt>Objetos declarados</dt>
               <dd>{selectedStats.objects}</dd>
+            </div>
+            <div>
+              <dt>Objetos interpretados</dt>
+              <dd>
+                {loadingObjectsFor === selectedMap.directoryName
+                  ? "Carregando..."
+                  : selectedObjects.length}
+              </dd>
             </div>
             <div>
               <dt>Splines</dt>
@@ -195,10 +246,24 @@ export function App() {
             Escolha um mapa para visualizar os tiles encontrados no arquivo <code>global.cfg</code>.
           </div>
         )}
+
+        {selectedMap?.usesWorldCoordinates && selectedObjects.length > 0 && (
+          <div className="empty-panel">
+            Os objetos foram lidos, mas seus marcadores 3D ficam ocultos até implementarmos a conversão correta das coordenadas mundiais.
+          </div>
+        )}
       </aside>
 
       <footer className="statusbar">
-        <span>{error ? "Erro" : loading ? "Carregando..." : "Pronto"}</span>
+        <span>
+          {error
+            ? "Erro"
+            : loading
+              ? "Carregando..."
+              : loadingObjectsFor === selectedMap?.directoryName
+                ? "Lendo objetos..."
+                : "Pronto"}
+        </span>
         <span>{selectedMap ? selectedMap.displayName : "Sem mapa aberto"}</span>
       </footer>
     </main>
