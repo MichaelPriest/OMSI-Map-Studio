@@ -1,6 +1,58 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  isDesktopBridgeAvailable,
+  type OmsiMap,
+  selectOmsiRoot,
+  subscribeToHost
+} from "./bridge/desktopBridge";
 import { Viewport } from "./editor/Viewport";
 
+const errorMessages: Record<string, string> = {
+  invalidMessage: "A interface enviou uma mensagem inválida para o host.",
+  invalidOmsiRoot: "A pasta selecionada não parece ser a raiz do OMSI 2: a pasta maps não foi encontrada.",
+  accessDenied: "O Windows bloqueou o acesso a essa instalação do OMSI 2.",
+  ioError: "Não foi possível ler os arquivos da instalação selecionada."
+};
+
 export function App() {
+  const bridgeAvailable = useMemo(() => isDesktopBridgeAvailable(), []);
+  const [rootPath, setRootPath] = useState<string>();
+  const [maps, setMaps] = useState<OmsiMap[]>([]);
+  const [selectedMap, setSelectedMap] = useState<OmsiMap>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
+
+  useEffect(
+    () =>
+      subscribeToHost((message) => {
+        if (message.type === "omsiInstallationLoaded") {
+          setRootPath(message.rootPath);
+          setMaps(message.maps);
+          setSelectedMap(message.maps[0]);
+          setLoading(false);
+          setError(undefined);
+          return;
+        }
+
+        if (message.type === "hostError") {
+          setLoading(false);
+          setError(errorMessages[message.code] ?? "O host desktop encontrou um erro inesperado.");
+        }
+      }),
+    []
+  );
+
+  const handleOpenOmsi = () => {
+    if (!bridgeAvailable) {
+      setError("Abra esta interface pelo aplicativo desktop OMSI Map Studio para acessar os arquivos locais.");
+      return;
+    }
+
+    setLoading(true);
+    setError(undefined);
+    selectOmsiRoot();
+  };
+
   return (
     <main className="editor-shell">
       <header className="topbar">
@@ -8,8 +60,11 @@ export function App() {
           <strong>OMSI Map Studio</strong>
           <span>Editor independente para OMSI 2</span>
         </div>
+
         <nav className="toolbar" aria-label="Ferramentas principais">
-          <button type="button">Abrir OMSI</button>
+          <button type="button" onClick={handleOpenOmsi} disabled={loading}>
+            {loading ? "Lendo OMSI..." : rootPath ? "Trocar OMSI" : "Abrir OMSI"}
+          </button>
           <button type="button" disabled>Novo mapa</button>
           <button type="button" disabled>Salvar</button>
         </nav>
@@ -17,36 +72,85 @@ export function App() {
 
       <aside className="asset-panel">
         <div className="panel-heading">
-          <span>Biblioteca</span>
-          <small>Nenhuma instalação carregada</small>
+          <span>Mapas instalados</span>
+          <small>{rootPath ?? "Nenhuma instalação carregada"}</small>
         </div>
-        <input className="search" type="search" placeholder="Buscar objetos, splines..." disabled />
-        <div className="empty-panel">
-          Selecione a instalação do OMSI 2 para carregar os recursos reais.
-        </div>
+
+        {error && <div className="error-panel">{error}</div>}
+
+        {!rootPath && !error && (
+          <div className="empty-panel">
+            Selecione a pasta raiz do OMSI 2. Os mapas reais encontrados em <code>maps</code> aparecerão aqui.
+          </div>
+        )}
+
+        {rootPath && maps.length === 0 && (
+          <div className="empty-panel">
+            Nenhum mapa com <code>global.cfg</code> foi encontrado nessa instalação.
+          </div>
+        )}
+
+        {maps.length > 0 && (
+          <div className="map-list" role="list" aria-label="Mapas do OMSI 2">
+            {maps.map((map) => (
+              <button
+                key={map.directoryPath}
+                type="button"
+                className={map.directoryPath === selectedMap?.directoryPath ? "map-card selected" : "map-card"}
+                onClick={() => setSelectedMap(map)}
+              >
+                <strong>{map.displayName}</strong>
+                <span>{map.directoryName}</span>
+                <small>{map.tiles.length} tiles</small>
+              </button>
+            ))}
+          </div>
+        )}
       </aside>
 
       <section className="viewport-panel">
-        <Viewport />
+        <Viewport tiles={selectedMap?.tiles ?? []} />
         <div className="viewport-hint">
-          <strong>Nenhum mapa carregado</strong>
-          <span>O grid representa apenas o espaço de edição.</span>
+          <strong>{selectedMap?.displayName ?? "Nenhum mapa carregado"}</strong>
+          <span>
+            {selectedMap
+              ? `${selectedMap.tiles.length} tiles reais lidos do global.cfg`
+              : "O grid vazio representa apenas o espaço de edição."}
+          </span>
         </div>
       </section>
 
       <aside className="inspector-panel">
         <div className="panel-heading">
           <span>Propriedades</span>
-          <small>Nenhuma seleção</small>
+          <small>{selectedMap ? "Mapa selecionado" : "Nenhuma seleção"}</small>
         </div>
-        <div className="empty-panel">
-          Selecione um objeto, spline ou tile para editar suas propriedades.
-        </div>
+
+        {selectedMap ? (
+          <dl className="property-list">
+            <div>
+              <dt>Nome</dt>
+              <dd>{selectedMap.displayName}</dd>
+            </div>
+            <div>
+              <dt>Pasta</dt>
+              <dd>{selectedMap.directoryName}</dd>
+            </div>
+            <div>
+              <dt>Tiles</dt>
+              <dd>{selectedMap.tiles.length}</dd>
+            </div>
+          </dl>
+        ) : (
+          <div className="empty-panel">
+            Escolha um mapa para visualizar os tiles encontrados no arquivo <code>global.cfg</code>.
+          </div>
+        )}
       </aside>
 
       <footer className="statusbar">
-        <span>Pronto</span>
-        <span>Sem mapa aberto</span>
+        <span>{error ? "Erro" : loading ? "Carregando..." : "Pronto"}</span>
+        <span>{selectedMap ? selectedMap.displayName : "Sem mapa aberto"}</span>
       </footer>
     </main>
   );
