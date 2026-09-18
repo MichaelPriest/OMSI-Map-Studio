@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -69,7 +69,7 @@ jobs:
         run: npm run build
 
       - name: Build desktop host
-        run: dotnet build src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release
+        run: dotnet build src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release -p:EnableWindowsTargeting=true
 
       - name: Publish alpha package
         if: steps.release.outputs.requested == 'true'
@@ -79,7 +79,7 @@ jobs:
           $publishDir = "artifacts/OMSI-Map-Studio-$version-win-x64"
           $zipPath = "artifacts/OMSI-Map-Studio-$version-win-x64.zip"
           New-Item -ItemType Directory -Path "artifacts" -Force | Out-Null
-          dotnet publish src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false --output $publishDir
+          dotnet publish src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true -p:EnableWindowsTargeting=true -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false --output $publishDir
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
           $pt = Get-Content "docs/pt-BR/releases/v0.1.0-alpha.3.md" -Raw
