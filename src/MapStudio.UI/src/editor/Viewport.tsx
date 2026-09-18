@@ -6,10 +6,14 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
-import type { OmsiTile } from "../bridge/desktopBridge";
+import type {
+  OmsiPlacedObject,
+  OmsiTile
+} from "../bridge/desktopBridge";
 
 type ViewportProps = {
   tiles: OmsiTile[];
+  objects: OmsiPlacedObject[];
   usesWorldCoordinates: boolean;
 };
 
@@ -28,7 +32,37 @@ function createTileOutline(tile: OmsiTile, tileSize: number) {
   ];
 }
 
-export function Viewport({ tiles, usesWorldCoordinates }: ViewportProps) {
+function createObjectMarkerLines(objects: OmsiPlacedObject[]) {
+  const markerRadius = 1.5;
+  const markerHeight = 3;
+
+  return objects.flatMap((placedObject) => {
+    const x = placedObject.tileX * 300 + placedObject.x;
+    const z = placedObject.tileY * 300 + placedObject.y;
+    const y = placedObject.z;
+
+    return [
+      [
+        new Vector3(x - markerRadius, y, z),
+        new Vector3(x + markerRadius, y, z)
+      ],
+      [
+        new Vector3(x, y, z - markerRadius),
+        new Vector3(x, y, z + markerRadius)
+      ],
+      [
+        new Vector3(x, y, z),
+        new Vector3(x, y + markerHeight, z)
+      ]
+    ];
+  });
+}
+
+export function Viewport({
+  tiles,
+  objects,
+  usesWorldCoordinates
+}: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -107,6 +141,16 @@ export function Viewport({ tiles, usesWorldCoordinates }: ViewportProps) {
         missingGrid.color = new Color3(0.9, 0.35, 0.35);
         missingGrid.isPickable = false;
       }
+
+      if (!usesWorldCoordinates && objects.length) {
+        const objectMarkers = MeshBuilder.CreateLineSystem(
+          "omsi-object-markers",
+          { lines: createObjectMarkerLines(objects) },
+          scene
+        );
+        objectMarkers.color = new Color3(0.95, 0.78, 0.38);
+        objectMarkers.isPickable = false;
+      }
     } else {
       const ground = MeshBuilder.CreateGround(
         "editor-grid",
@@ -132,7 +176,7 @@ export function Viewport({ tiles, usesWorldCoordinates }: ViewportProps) {
       scene.dispose();
       engine.dispose();
     };
-  }, [tiles, usesWorldCoordinates]);
+  }, [tiles, objects, usesWorldCoordinates]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
 }
