@@ -72,6 +72,19 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
+    public void UsesWorldCoordinates_DetectsWorldCoordinateMarker()
+    {
+        var worldDocument = OmsiConfigParser.Parse(
+            "[name]\r\nWorld Map\r\n[worldcoordinates]\r\n");
+
+        var cartesianDocument = OmsiConfigParser.Parse(
+            "[name]\r\nCartesian Map\r\n");
+
+        Assert.True(OmsiMapCatalog.UsesWorldCoordinates(worldDocument));
+        Assert.False(OmsiMapCatalog.UsesWorldCoordinates(cartesianDocument));
+    }
+
+    [Fact]
     public async Task TileReader_CountsObjectsSplinesAndAttachments()
     {
         var path = Path.Combine(
