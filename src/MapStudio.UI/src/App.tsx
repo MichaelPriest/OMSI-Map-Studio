@@ -41,6 +41,11 @@ export function App() {
           return;
         }
 
+        if (message.type === "selectionCancelled") {
+          setLoading(false);
+          return;
+        }
+
         if (message.type === "mapObjectsLoaded") {
           setObjectsByMap((current) => ({
             ...current,
