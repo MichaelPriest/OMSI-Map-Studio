@@ -439,6 +439,7 @@ public partial class MainWindow : Window
                 await Task.WhenAll(tasks);
 
             var objects = new List<object>();
+            var splines = new List<object>();
 
             foreach (var loaded in loadedTiles
                 .OrderBy(result => result.Index))
@@ -462,6 +463,30 @@ public partial class MainWindow : Window
                         placedObject.Rotation,
                         placedObject.Pitch,
                         placedObject.Bank
+                    });
+                }
+
+                foreach (var placedSpline in
+                    loaded.Content.Splines)
+                {
+                    splines.Add(new
+                    {
+                        tileX = loaded.Tile.X,
+                        tileY = loaded.Tile.Y,
+                        placedSpline.HeaderValue,
+                        placedSpline.SplinePath,
+                        placedSpline.SplineId,
+                        placedSpline.PreviousSplineId,
+                        placedSpline.NextSplineId,
+                        placedSpline.X,
+                        placedSpline.Z,
+                        placedSpline.Y,
+                        placedSpline.Rotation,
+                        placedSpline.Length,
+                        placedSpline.Radius,
+                        placedSpline.GradientStart,
+                        placedSpline.GradientEnd,
+                        placedSpline.IsHeightSpline
                     });
                 }
             }
@@ -489,7 +514,8 @@ public partial class MainWindow : Window
                             loaded.Content.Summary
                                 .SplineAttachmentCount
                     }),
-                objects
+                objects,
+                splines
             });
         }
         catch (UnauthorizedAccessException)

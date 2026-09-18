@@ -32,6 +32,25 @@ export type OmsiPlacedObject = {
   bank: number;
 };
 
+export type OmsiPlacedSpline = {
+  tileX: number;
+  tileY: number;
+  headerValue: string;
+  splinePath: string;
+  splineId: number;
+  previousSplineId: number;
+  nextSplineId: number;
+  x: number;
+  z: number;
+  y: number;
+  rotation: number;
+  length: number;
+  radius: number;
+  gradientStart: number;
+  gradientEnd: number;
+  isHeightSpline: boolean;
+};
+
 export type OmsiO3dHeader = {
   exists: boolean;
   isValid: boolean;
@@ -119,6 +138,7 @@ export type HostMessage =
       usesWorldCoordinates: boolean;
       tiles: OmsiTile[];
       objects: OmsiPlacedObject[];
+      splines: OmsiPlacedSpline[];
     }
   | {
       type: "sceneryObjectMetadataLoaded";

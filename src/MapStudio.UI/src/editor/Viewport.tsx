@@ -11,6 +11,7 @@ import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Scene } from "@babylonjs/core/scene";
 import type {
   OmsiPlacedObject,
+  OmsiPlacedSpline,
   OmsiSceneryObjectGeometry,
   OmsiTile
 } from "../bridge/desktopBridge";
@@ -18,6 +19,7 @@ import type {
 type ViewportProps = {
   tiles: OmsiTile[];
   objects: OmsiPlacedObject[];
+  splines: OmsiPlacedSpline[];
   usesWorldCoordinates: boolean;
   selectedObject?: OmsiPlacedObject;
   selectedGeometry?: OmsiSceneryObjectGeometry;
@@ -69,6 +71,120 @@ function createObjectMarkerLines(objects: OmsiPlacedObject[]) {
       ]
     ];
   });
+}
+
+
+function getSplineAxisLine(
+  placedSpline: OmsiPlacedSpline
+) {
+  const length =
+    Math.max(0, placedSpline.length);
+
+  if (length < 0.01) {
+    return [];
+  }
+
+  const segmentCount =
+    Math.min(
+      96,
+      Math.max(
+        2,
+        Math.ceil(length / 10)
+      )
+    );
+
+  const yaw =
+    -placedSpline.rotation *
+    degreesToRadians;
+
+  const cosYaw = Math.cos(yaw);
+  const sinYaw = Math.sin(yaw);
+
+  const gradientStart =
+    placedSpline.gradientStart / 100;
+
+  const gradientEnd =
+    placedSpline.gradientEnd / 100;
+
+  const points: Vector3[] = [];
+
+  for (
+    let index = 0;
+    index <= segmentCount;
+    index += 1
+  ) {
+    const distance =
+      length *
+      (index / segmentCount);
+
+    let localX = 0;
+    let localZ = distance;
+
+    if (
+      Math.abs(placedSpline.radius) >
+      0.001
+    ) {
+      const angle =
+        distance /
+        placedSpline.radius;
+
+      localX =
+        placedSpline.radius *
+        (1 - Math.cos(angle));
+
+      localZ =
+        placedSpline.radius *
+        Math.sin(angle);
+    }
+
+    const worldOffsetX =
+      localX * cosYaw +
+      localZ * sinYaw;
+
+    const worldOffsetZ =
+      -localX * sinYaw +
+      localZ * cosYaw;
+
+    const gradientDelta =
+      gradientEnd -
+      gradientStart;
+
+    const heightOffset =
+      distance * gradientStart +
+      (length > 0
+        ? 0.5 *
+          distance *
+          distance /
+          length *
+          gradientDelta
+        : 0);
+
+    points.push(
+      new Vector3(
+        placedSpline.tileX * 300 +
+          placedSpline.x +
+          worldOffsetX,
+        placedSpline.z +
+          heightOffset +
+          0.08,
+        placedSpline.tileY * 300 +
+          placedSpline.y +
+          worldOffsetZ
+      )
+    );
+  }
+
+  return points;
+}
+
+function createSplineAxisLines(
+  splines: OmsiPlacedSpline[]
+) {
+  return splines
+    .map(getSplineAxisLine)
+    .filter(
+      (line) => line.length >= 2
+    );
 }
 
 function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
@@ -280,6 +396,7 @@ function createSelectedGeometry(
 export function Viewport({
   tiles,
   objects,
+  splines,
   usesWorldCoordinates,
   selectedObject,
   selectedGeometry,
@@ -389,6 +506,37 @@ export function Viewport({
         );
         missingGrid.color = new Color3(0.9, 0.35, 0.35);
         missingGrid.isPickable = false;
+      }
+
+      if (
+        !usesWorldCoordinates &&
+        splines.length
+      ) {
+        const splineLines =
+          createSplineAxisLines(
+            splines
+          );
+
+        if (splineLines.length) {
+          const splineAxes =
+            MeshBuilder.CreateLineSystem(
+              "omsi-spline-axes",
+              {
+                lines: splineLines
+              },
+              scene
+            );
+
+          splineAxes.color =
+            new Color3(
+              0.25,
+              0.62,
+              1
+            );
+
+          splineAxes.isPickable =
+            false;
+        }
       }
 
       if (!usesWorldCoordinates && objects.length) {
@@ -532,6 +680,7 @@ export function Viewport({
   }, [
     tiles,
     objects,
+    splines,
     usesWorldCoordinates,
     selectedObject,
     selectedGeometry,

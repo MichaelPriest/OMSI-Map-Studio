@@ -14,6 +14,7 @@ import {
   subscribeToHost,
   type OmsiMap,
   type OmsiPlacedObject,
+  type OmsiPlacedSpline,
   type OmsiSceneryObjectGeometry,
   type OmsiSceneryObjectMetadata
 } from "./bridge/desktopBridge";
@@ -101,6 +102,9 @@ export function App() {
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
 
+  const [splines, setSplines] =
+    useState<OmsiPlacedSpline[]>([]);
+
   const [
     sceneryMetadataByPath,
     setSceneryMetadataByPath
@@ -152,6 +156,7 @@ export function App() {
           setRootPath(message.rootPath);
           setSelectedMap(undefined);
           setObjects([]);
+          setSplines([]);
           setSelectedObject(undefined);
           setSceneryMetadataByPath({});
           setGeometryByPath({});
@@ -166,6 +171,7 @@ export function App() {
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
           setObjects([]);
+          setSplines([]);
           setSelectedObject(undefined);
           setSceneryMetadataByPath({});
           setGeometryByPath({});
@@ -195,6 +201,7 @@ export function App() {
           "mapContentLoaded"
         ) {
           setObjects(message.objects);
+          setSplines(message.splines);
 
           setSelectedMap((current) =>
             current?.directoryName ===
@@ -1382,7 +1389,7 @@ export function App() {
                 Splines
                 <strong>
                   {selectedStats?.splines ??
-                    "…"}
+                    splines.length}
                 </strong>
               </div>
 
@@ -1426,6 +1433,7 @@ export function App() {
             <Viewport
               tiles={selectedMap.tiles}
               objects={objects}
+              splines={splines}
               usesWorldCoordinates={
                 selectedMap.usesWorldCoordinates
               }
@@ -1458,10 +1466,11 @@ export function App() {
                 />
                 Objetos
               </label>
-              <label className="muted">
+              <label>
                 <input
                   type="checkbox"
-                  disabled
+                  checked
+                  readOnly
                 />
                 Splines
               </label>
@@ -1514,7 +1523,8 @@ export function App() {
               objects.length}
             <b>·</b>
             Splines:{" "}
-            {selectedStats?.splines ?? "…"}
+            {selectedStats?.splines ??
+              splines.length}
             <b>·</b>
             Tiles: {selectedMap.tiles.length}
           </span>

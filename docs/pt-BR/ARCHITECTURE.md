@@ -46,6 +46,14 @@ As referências de arquivos de tile passam por `OmsiMapPathResolver`. Depois de 
 
 O editor não deve aplicar uma escala cartesiana de 300 m a mapas de coordenadas mundiais.
 
+### Splines posicionadas
+
+Para `[spline]` e `[spline_h]`, o Core interpreta de forma conservadora o bloco-base usado pelo mapa: caminho `.sli`, IDs de encadeamento, posição, rotação, comprimento, raio e gradientes inicial/final. Valores posteriores permanecem em `ExtraValues`.
+
+Em mapas cartesianos, o viewport usa esses dados para desenhar somente o eixo real de cada spline. Segmentos retos usam comprimento e rotação; curvas usam o raio declarado; a altura do eixo interpola os gradientes inicial e final. Essa visualização não inventa largura, perfil ou textura da rua.
+
+A geometria completa da via continuará dependendo da leitura do perfil `.sli`. Mapas com `[worldcoordinates]` ainda não exibem os eixos globalmente até existir a conversão geográfica correta.
+
 ### Objetos posicionados
 
 Para `[object]`, o Core interpreta somente o bloco-base confirmado:
@@ -145,8 +153,8 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 4. O `global.cfg` desse mapa é lido sem alteração destrutiva.
 5. Referências reais de tiles são extraídas.
 6. Somente os arquivos `.map` desse mapa são inspecionados.
-7. Cada tile é lido uma única vez para estatísticas e objetos.
-8. A malha real de tiles e estatísticas de objetos/splines são exibidas.
+7. Cada tile é lido uma única vez para estatísticas, objetos e splines.
+8. A malha real de tiles, os eixos reais das splines e as estatísticas do mapa são exibidos.
 9. O bloco-base de objetos passa a ser interpretado de forma segura.
 10. Objetos posicionados podem ser selecionados e inspecionados.
 11. O `.sco` do objeto selecionado fornece metadados reais sob demanda.

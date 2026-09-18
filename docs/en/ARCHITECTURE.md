@@ -46,6 +46,14 @@ Tile file references pass through `OmsiMapPathResolver`. After normalization, th
 
 The editor must not apply a 300 m Cartesian scale to world-coordinate maps.
 
+### Placed splines
+
+For `[spline]` and `[spline_h]`, Core conservatively interprets the base map block: `.sli` path, chain IDs, position, rotation, length, radius and start/end gradients. Later values remain in `ExtraValues`.
+
+On Cartesian maps, the viewport uses these values to draw only the real spline axis. Straight segments use length and rotation; curves use the declared radius; axis height interpolates the start/end gradients. This preview does not invent road width, profile or texture.
+
+Full road geometry will still depend on reading the `.sli` profile. Maps using `[worldcoordinates]` do not display global spline axes until the geographic conversion is implemented.
+
 ### Placed objects
 
 For `[object]`, Core interprets only the confirmed base block:
@@ -145,8 +153,8 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 4. That map's `global.cfg` is parsed without destructive rewriting.
 5. Real tile references are extracted.
 6. Only that map's `.map` files are inspected.
-7. Each tile is read once for both statistics and objects.
-8. The real tile layout and object/spline statistics are displayed.
+7. Each tile is read once for statistics, objects and splines.
+8. The real tile layout, real spline axes and map statistics are displayed.
 9. The base placed-object block is interpreted safely.
 10. Placed objects can be selected and inspected.
 11. The selected object's `.sco` provides real metadata on demand.

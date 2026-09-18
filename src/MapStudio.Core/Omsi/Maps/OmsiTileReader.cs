@@ -25,18 +25,23 @@ public sealed class OmsiTileReader
             document.FindSections("splineAttachement").Count() +
             document.FindSections("splineAttachment").Count();
 
+        var splineCount =
+            document.FindSections("spline").Count() +
+            document.FindSections("spline_h").Count();
+
         var summary = new OmsiTileSummary(
             Exists: true,
             ObjectCount:
                 document.FindSections("object").Count(),
             SplineCount:
-                document.FindSections("spline").Count(),
+                splineCount,
             SplineAttachmentCount:
                 attachmentCount);
 
         return new OmsiTileContent(
             summary,
-            ReadObjects(document));
+            ReadObjects(document),
+            ReadSplines(document));
     }
 
     public async Task<OmsiTileSummary> ReadSummaryAsync(
@@ -103,6 +108,96 @@ public sealed class OmsiTileReader
         }
 
         return objects;
+    }
+
+    public static IReadOnlyList<OmsiPlacedSpline> ReadSplines(
+        OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var splines =
+            new List<OmsiPlacedSpline>();
+
+        foreach (var section in document.Sections)
+        {
+            var isSpline =
+                string.Equals(
+                    section.Keyword,
+                    "spline",
+                    StringComparison.OrdinalIgnoreCase);
+
+            var isHeightSpline =
+                string.Equals(
+                    section.Keyword,
+                    "spline_h",
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (!isSpline && !isHeightSpline)
+            {
+                continue;
+            }
+
+            var values =
+                section.DataLines.ToArray();
+
+            if (values.Length < 13 ||
+                !int.TryParse(
+                    values[2],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var splineId) ||
+                !int.TryParse(
+                    values[3],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var previousSplineId) ||
+                !int.TryParse(
+                    values[4],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var nextSplineId) ||
+                !TryParseDouble(values[5], out var x) ||
+                !TryParseDouble(values[6], out var z) ||
+                !TryParseDouble(values[7], out var y) ||
+                !TryParseDouble(
+                    values[8],
+                    out var rotation) ||
+                !TryParseDouble(
+                    values[9],
+                    out var length) ||
+                !TryParseDouble(
+                    values[10],
+                    out var radius) ||
+                !TryParseDouble(
+                    values[11],
+                    out var gradientStart) ||
+                !TryParseDouble(
+                    values[12],
+                    out var gradientEnd))
+            {
+                continue;
+            }
+
+            splines.Add(new OmsiPlacedSpline(
+                HeaderValue: values[0],
+                SplinePath: values[1],
+                SplineId: splineId,
+                PreviousSplineId: previousSplineId,
+                NextSplineId: nextSplineId,
+                X: x,
+                Z: z,
+                Y: y,
+                Rotation: rotation,
+                Length: length,
+                Radius: radius,
+                GradientStart: gradientStart,
+                GradientEnd: gradientEnd,
+                IsHeightSpline: isHeightSpline,
+                ExtraValues:
+                    values.Skip(13).ToArray()));
+        }
+
+        return splines;
     }
 
     private static bool TryParseDouble(
