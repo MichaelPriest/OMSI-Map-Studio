@@ -76,9 +76,18 @@ public partial class MainWindow : Window
                     break;
 
                 case "loadMapObjects":
-                    if (message.RootElement.TryGetProperty("directoryName", out var directoryElement))
+                    if (message.RootElement.TryGetProperty("directoryName", out var directoryElement) &&
+                        directoryElement.ValueKind == JsonValueKind.String)
                     {
                         await LoadMapObjectsAsync(directoryElement.GetString());
+                    }
+                    else
+                    {
+                        PostMessage(new
+                        {
+                            type = "hostError",
+                            code = "invalidMessage"
+                        });
                     }
                     break;
             }
@@ -103,6 +112,10 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog(this) != true)
         {
+            PostMessage(new
+            {
+                type = "selectionCancelled"
+            });
             return;
         }
 
