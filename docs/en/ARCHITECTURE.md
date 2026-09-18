@@ -27,11 +27,28 @@ Windows host responsible for native file and folder access, Core services, WebVi
 
 The desktop host must not become the primary editor UI.
 
+### C# ↔ React bridge
+
+The interface sends small commands through WebView2, such as `selectOmsiRoot`. The host performs only operations that require native machine access and returns JSON messages containing real state.
+
+In the first functional flow:
+
+1. React requests OMSI 2 installation selection.
+2. The host opens a native `OpenFolderDialog`.
+3. The host validates the presence of the `maps` directory.
+4. `OmsiMapCatalog` reads real installed maps.
+5. The host sends real map names, paths and tile coordinates to React.
+6. The viewport uses those coordinates to draw the map tile layout.
+
+Host failures are sent as stable error codes. The interface is responsible for presenting the appropriate user-facing message.
+
 ## MapStudio.UI
 
 Primary editor interface, responsible for the Babylon.js viewport, asset browser, property inspector, construction tools, visual validation and simplified editing experience.
 
 Production state must come from real data supplied by Core/Desktop.
+
+The grid shown without an opened map is only editor-space visual guidance. Once a map is loaded, the tile layout must be generated from real coordinates read from `global.cfg`.
 
 ## Compatibility strategy
 
@@ -48,7 +65,8 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 3. `global.cfg` is parsed without destructive rewriting.
 4. Real tile references are extracted.
 5. Real state is sent to the React interface.
-6. Tiles, objects, splines and terrain are rendered incrementally.
+6. The real tile layout is displayed in the viewport.
+7. Objects, splines and terrain are rendered incrementally.
 
 ## Documentation rule
 
