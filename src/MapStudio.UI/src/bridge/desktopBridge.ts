@@ -2,6 +2,10 @@ export type OmsiTile = {
   x: number;
   y: number;
   relativeMapPath: string;
+  fileExists: boolean;
+  objectCount: number;
+  splineCount: number;
+  splineAttachmentCount: number;
 };
 
 export type OmsiMap = {
