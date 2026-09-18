@@ -122,6 +122,7 @@ export function App() {
                   <span>{map.directoryName}</span>
                   <small>
                     {map.tiles.length} tiles
+                    {map.usesWorldCoordinates ? " · coordenadas mundiais" : ""}
                     {missingTiles ? ` · ${missingTiles} ausentes` : ""}
                   </small>
                 </button>
@@ -132,12 +133,17 @@ export function App() {
       </aside>
 
       <section className="viewport-panel">
-        <Viewport tiles={selectedMap?.tiles ?? []} />
+        <Viewport
+          tiles={selectedMap?.tiles ?? []}
+          usesWorldCoordinates={selectedMap?.usesWorldCoordinates ?? false}
+        />
         <div className="viewport-hint">
           <strong>{selectedMap?.displayName ?? "Nenhum mapa carregado"}</strong>
           <span>
             {selectedMap
-              ? `${selectedMap.tiles.length} tiles · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
+              ? selectedMap.usesWorldCoordinates
+                ? `${selectedMap.tiles.length} tiles · malha esquemática · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
+                : `${selectedMap.tiles.length} tiles · escala cartesiana de 300 m · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
               : "O grid vazio representa apenas o espaço de edição."}
           </span>
         </div>
@@ -158,6 +164,10 @@ export function App() {
             <div>
               <dt>Pasta</dt>
               <dd>{selectedMap.directoryName}</dd>
+            </div>
+            <div>
+              <dt>Sistema</dt>
+              <dd>{selectedMap.usesWorldCoordinates ? "Coordenadas mundiais" : "Coordenadas cartesianas"}</dd>
             </div>
             <div>
               <dt>Tiles</dt>
