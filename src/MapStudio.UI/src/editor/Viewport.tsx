@@ -14,6 +14,21 @@ type ViewportProps = {
 
 const tileSize = 300;
 
+function createTileOutline(tile: OmsiTile) {
+  const x0 = tile.x * tileSize;
+  const z0 = tile.y * tileSize;
+  const x1 = x0 + tileSize;
+  const z1 = z0 + tileSize;
+
+  return [
+    new Vector3(x0, 0, z0),
+    new Vector3(x1, 0, z0),
+    new Vector3(x1, 0, z1),
+    new Vector3(x0, 0, z1),
+    new Vector3(x0, 0, z0)
+  ];
+}
+
 export function Viewport({ tiles }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -61,28 +76,33 @@ export function Viewport({ tiles }: ViewportProps) {
     light.intensity = 0.9;
 
     if (tiles.length) {
-      const lines = tiles.map((tile) => {
-        const x0 = tile.x * tileSize;
-        const z0 = tile.y * tileSize;
-        const x1 = x0 + tileSize;
-        const z1 = z0 + tileSize;
+      const existingLines = tiles
+        .filter((tile) => tile.fileExists)
+        .map(createTileOutline);
 
-        return [
-          new Vector3(x0, 0, z0),
-          new Vector3(x1, 0, z0),
-          new Vector3(x1, 0, z1),
-          new Vector3(x0, 0, z1),
-          new Vector3(x0, 0, z0)
-        ];
-      });
+      if (existingLines.length) {
+        const existingGrid = MeshBuilder.CreateLineSystem(
+          "omsi-tile-grid",
+          { lines: existingLines },
+          scene
+        );
+        existingGrid.color = new Color3(0.55, 0.68, 0.82);
+        existingGrid.isPickable = false;
+      }
 
-      const tileGrid = MeshBuilder.CreateLineSystem(
-        "omsi-tile-grid",
-        { lines },
-        scene
-      );
-      tileGrid.color = new Color3(0.55, 0.68, 0.82);
-      tileGrid.isPickable = false;
+      const missingLines = tiles
+        .filter((tile) => !tile.fileExists)
+        .map(createTileOutline);
+
+      if (missingLines.length) {
+        const missingGrid = MeshBuilder.CreateLineSystem(
+          "omsi-missing-tile-grid",
+          { lines: missingLines },
+          scene
+        );
+        missingGrid.color = new Color3(0.9, 0.35, 0.35);
+        missingGrid.isPickable = false;
+      }
     } else {
       const ground = MeshBuilder.CreateGround(
         "editor-grid",
