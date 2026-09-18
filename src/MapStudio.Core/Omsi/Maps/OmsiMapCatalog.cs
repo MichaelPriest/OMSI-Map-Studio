@@ -49,13 +49,13 @@ public sealed class OmsiMapCatalog
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var relativePath = tile.RelativeMapPath
-                    .Replace('\\', Path.DirectorySeparatorChar)
-                    .Replace('/', Path.DirectorySeparatorChar)
-                    .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var summary = OmsiMapPathResolver.TryResolveTilePath(
+                    directory,
+                    tile.RelativeMapPath,
+                    out var tilePath)
+                    ? await _tileReader.ReadSummaryAsync(tilePath, cancellationToken)
+                    : OmsiTileSummary.Missing;
 
-                var tilePath = Path.Combine(directory, relativePath);
-                var summary = await _tileReader.ReadSummaryAsync(tilePath, cancellationToken);
                 tiles.Add(tile with { Summary = summary });
             }
 
