@@ -52,7 +52,11 @@ For `[spline]` and `[spline_h]`, Core conservatively interprets the base map blo
 
 On Cartesian maps, the viewport uses these values to draw only the real spline axis. Straight segments use length and rotation; curves use the declared radius; axis height interpolates the start/end gradients. This preview does not invent road width, profile or texture.
 
-Full road geometry will still depend on reading the `.sli` profile. Maps using `[worldcoordinates]` do not display global spline axes until the geographic conversion is implemented.
+`OmsiSplineDefinitionReader` reads the selected `.sli` on demand. `[texture]` provides texture names and each `[profile]` is associated with two `[profilepnt]` entries, preserving width, height, horizontal texture coordinate and longitudinal repetition factor. The path passes through `OmsiSplinePathResolver` and must remain inside `OMSI 2/Splines`.
+
+When a spline is selected, the viewport extrudes recognized profile surfaces along its real length, radius and gradients. Other splines remain lightweight axes. Image textures are not loaded in this alpha; the profile uses a neutral material so the editor does not fake the road appearance.
+
+Maps using `[worldcoordinates]` do not display global spline axes until the geographic conversion is implemented.
 
 ### Placed objects
 
@@ -110,6 +114,7 @@ The user explicitly opens a map through the **Open map** button. The host accept
 - previously read tiles are cached by the host for the duration of the map session;
 - clicking another visible tile makes it the active center and loads the required neighbors;
 - active-region tiles are processed with limited concurrency to reduce waiting without saturating storage;
+- `loadSplineProfile` loads the `.sli` only when a spline is selected and caches the definition;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
 - `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
 - previously read metadata and geometry are cached in React.
@@ -166,7 +171,9 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 14. The selected object's real model is displayed in the viewport with a neutral material.
 15. Embedded O3D materials are applied per triangle in the preview.
 16. O3D textures and `[matl_*]` extensions are loaded incrementally.
-17. Splines and terrain are implemented incrementally.
+17. Splines can be selected and inspected directly in the viewport.
+18. The selected spline's real `.sli` profile is loaded on demand and extruded with a neutral material.
+19. Spline textures and terrain are implemented incrementally.
 
 ## Documentation rule
 

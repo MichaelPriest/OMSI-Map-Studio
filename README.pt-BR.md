@@ -18,9 +18,9 @@ O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2
 
 ## Primeira versão de teste
 
-A prerelease atual é **v0.1.0-alpha.2** e permanece somente leitura.
+A prerelease atual é **v0.1.0-alpha.3** e permanece somente leitura.
 
-Ela permite selecionar uma instalação real do OMSI 2, abrir mapas, visualizar tiles, selecionar objetos e carregar previews de meshes O3D não criptografados. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
+Ela permite selecionar uma instalação real do OMSI 2, abrir manualmente um mapa, navegar por regiões 3×3, selecionar objetos e splines, visualizar eixos reais de splines, extrudar o perfil real `.sli` da spline selecionada e carregar previews O3D não criptografados. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
 
 ## Requisitos de desenvolvimento
 

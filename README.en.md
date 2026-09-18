@@ -18,9 +18,9 @@
 
 ## First test version
 
-The current prerelease is **v0.1.0-alpha.2** and remains read-only.
+The current prerelease is **v0.1.0-alpha.3** and remains read-only.
 
-It can select a real OMSI 2 installation, open maps, display tiles, select objects and load previews for unencrypted O3D meshes. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
+It can select a real OMSI 2 installation, manually open one map, navigate 3×3 tile regions, select objects and splines, display real spline axes, extrude the selected spline's real `.sli` profile and load previews for unencrypted O3D meshes. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
 
 ## Development requirements
 

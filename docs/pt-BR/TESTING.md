@@ -1,54 +1,57 @@
-# Testes — v0.1.0-alpha.2
+# Testes — v0.1.0-alpha.3
 
 [English](../en/TESTING.md) · **Português (Brasil)**
 
-Esta é a segunda versão pública de teste do OMSI Map Studio. Ela é deliberadamente **somente leitura**.
+A **v0.1.0-alpha.3** continua deliberadamente **somente leitura**.
 
 ## Instalação
 
-1. Baixe o arquivo `OMSI-Map-Studio-v0.1.0-alpha.2-win-x64.zip` da prerelease.
-2. Extraia o ZIP para uma pasta comum.
+1. Baixe `OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip`.
+2. Extraia o ZIP.
 3. Execute `OMSI Map Studio.exe`.
-4. O Microsoft Edge WebView2 Runtime precisa estar disponível no Windows.
-5. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2, a pasta que contém `maps`, `Sceneryobjects` e `Splines`.
+4. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2.
+5. Clique em **Abrir mapa** e escolha manualmente uma pasta dentro de `maps`.
 
-O pacote é self-contained para .NET 10; não exige instalação separada do .NET Desktop Runtime.
+O pacote é self-contained para .NET 10. O Microsoft Edge WebView2 Runtime precisa estar disponível no Windows.
 
-## Principal correção da alpha.2
+## O que mudou nesta alpha
 
-A abertura da pasta raiz do OMSI agora usa catálogo leve. O programa lê primeiro apenas os `global.cfg`; os arquivos `.map` são carregados somente para o mapa selecionado e cada tile é lido uma única vez para estatísticas e objetos.
+- nova interface baseada no conceito visual aprovado;
+- nenhum mapa é listado ou aberto automaticamente;
+- streaming de mapa por **tile ativo + área 3×3**;
+- cache de tiles já lidos;
+- superfície-base neutra para tiles existentes;
+- leitura e desenho dos eixos reais de `[spline]` e `[spline_h]`;
+- seleção direta de splines no viewport;
+- inspetor de spline com IDs, posição, rotação, comprimento, raio e gradientes;
+- leitura sob demanda de arquivos `.sli`;
+- leitura de `[texture]`, `[profile]` e `[profilepnt]`;
+- extrusão do perfil real da spline selecionada;
+- materiais O3D embutidos aplicados no preview do objeto selecionado.
 
-Isso deve reduzir bastante a demora inicial em instalações com muitos mapas.
+## Roteiro principal
 
-## O que testar
-
-- tempo de abertura da pasta raiz do OMSI;
-- abertura e troca da instalação do OMSI;
-- mudança entre mapas e reutilização do conteúdo já carregado;
-- lista de mapas encontrados;
-- quantidade e disposição dos tiles;
-- indicação de tiles ausentes;
-- quantidade de objetos e splines;
-- seleção de objetos em mapas cartesianos;
-- dados do `.map` no inspetor;
-- `friendlyname`, grupos e meshes do `.sco`;
-- indicação de meshes encontrados/ausentes;
-- preview geométrico de meshes `.o3d` não criptografados.
+- abra um mapa grande e confirme que apenas a região 3×3 é carregada;
+- clique em outro tile visível e confirme que ele vira o tile ativo;
+- volte para uma área visitada e observe se a troca é rápida por causa do cache;
+- clique em um eixo azul de spline;
+- confira no inspetor o caminho `.sli`, ID, comprimento, raio e gradientes;
+- abra a aba **Perfil**;
+- em splines com `[profile]` válido, confira se a faixa/superfície aparece sobre o eixo;
+- selecione um objeto e confirme que a seleção de spline é limpa, e vice-versa;
+- selecione um objeto O3D não criptografado e valide geometria/materiais.
 
 ## Limitações conhecidas
 
-- não existe criação ou salvamento de mapas nesta alpha;
-- splines e terreno ainda não são renderizados;
-- texturas e materiais do O3D ainda não são aplicados;
-- arquivos O3D criptografados não recebem preview geométrico;
-- arquivos `.x` são detectados, mas ainda não são renderizados;
-- mapas com `[worldcoordinates]` usam visualização esquemática e ainda não posicionam objetos globalmente;
-- altura do terreno ainda não é aplicada à posição visual dos objetos;
-- pitch/bank e orientação de alguns objetos ainda precisam de validação visual em mapas reais;
-- meshes muito grandes podem ser recusados pelo limite de segurança do preview.
+- salvar, criar e editar mapas continuam desabilitados;
+- a geometria detalhada de spline é carregada somente para a spline selecionada;
+- texturas de imagem da spline ainda não são aplicadas;
+- `[patchwork_chain]` e extensões avançadas de material de spline ainda não são renderizadas;
+- terreno binário `.terrain` ainda não é interpretado;
+- mapas `[worldcoordinates]` continuam esquemáticos;
+- O3D criptografado e arquivos `.x` continuam sem preview geométrico;
+- texturas O3D ainda não são aplicadas.
 
 ## Segurança
 
-Esta versão não possui operação de escrita de mapas. O botão **Salvar** permanece desabilitado.
-
-Não use esta alpha como substituta do editor original para modificar mapas. O objetivo é validar leitura, compatibilidade e visualização antes de habilitar qualquer gravação.
+Esta alpha não possui operação de escrita de mapas. O botão **Salvar** continua desabilitado.

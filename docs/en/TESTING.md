@@ -1,54 +1,57 @@
-# Testing — v0.1.0-alpha.2
+# Testing — v0.1.0-alpha.3
 
 **English** · [Português (Brasil)](../pt-BR/TESTING.md)
 
-This is the second public test build of OMSI Map Studio. It is deliberately **read-only**.
+**v0.1.0-alpha.3** deliberately remains **read-only**.
 
 ## Installation
 
-1. Download `OMSI-Map-Studio-v0.1.0-alpha.2-win-x64.zip` from the prerelease.
-2. Extract the ZIP to a regular folder.
+1. Download `OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip`.
+2. Extract the ZIP.
 3. Run `OMSI Map Studio.exe`.
-4. Microsoft Edge WebView2 Runtime must be available on Windows.
-5. Click **Open OMSI** and select the OMSI 2 root directory, the folder containing `maps`, `Sceneryobjects` and `Splines`.
+4. Click **Open OMSI** and select the OMSI 2 root directory.
+5. Click **Open map** and manually choose a directory inside `maps`.
 
-The package is self-contained for .NET 10 and does not require a separate .NET Desktop Runtime installation.
+The package is self-contained for .NET 10. Microsoft Edge WebView2 Runtime must be available on Windows.
 
-## Main alpha.2 fix
+## What's new in this alpha
 
-Opening the OMSI root now uses a lightweight catalog. The application first reads only `global.cfg` files; `.map` files are loaded only for the selected map, and each tile is read once for both statistics and objects.
+- redesigned UI based on the approved visual concept;
+- maps are no longer listed or opened automatically;
+- map streaming using an **active tile + 3×3 region**;
+- cache for previously read tiles;
+- neutral base surface for existing tiles;
+- reading and drawing real `[spline]` / `[spline_h]` axes;
+- direct spline selection in the viewport;
+- spline inspector with IDs, position, rotation, length, radius and gradients;
+- on-demand `.sli` reading;
+- `[texture]`, `[profile]` and `[profilepnt]` parsing;
+- extrusion of the selected spline's real profile;
+- embedded O3D materials applied to selected-object previews.
 
-This should significantly reduce initial loading time on installations with many maps.
+## Main test checklist
 
-## What to test
-
-- OMSI root opening time;
-- opening and changing the OMSI installation;
-- switching between maps and reuse of already loaded content;
-- discovered map list;
-- tile count and layout;
-- missing-tile indication;
-- object and spline counts;
-- object selection on Cartesian maps;
-- `.map` values in the inspector;
-- `.sco` friendly name, groups and meshes;
-- found/missing mesh indication;
-- geometry preview for unencrypted `.o3d` meshes.
+- open a large map and confirm only the 3×3 region is loaded;
+- click another visible tile and confirm it becomes the active tile;
+- return to a previously visited area and check that cached loading is fast;
+- click a blue spline axis;
+- verify the `.sli` path, ID, length, radius and gradients in the inspector;
+- open the **Profile** tab;
+- for splines with a valid `[profile]`, verify that a strip/surface appears over the axis;
+- select an object and verify spline selection is cleared, and vice versa;
+- select an unencrypted O3D object and validate geometry/material preview.
 
 ## Known limitations
 
-- map creation and saving are not available in this alpha;
-- splines and terrain are not rendered yet;
-- O3D textures and materials are not applied yet;
-- encrypted O3D files do not receive a geometry preview;
-- `.x` files are detected but not rendered yet;
-- maps using `[worldcoordinates]` use a schematic view and do not globally place objects yet;
-- terrain height is not yet applied to visual object placement;
-- pitch/bank and orientation for some objects still need visual validation against real maps;
-- very large meshes may be rejected by the preview safety limit.
+- saving, map creation and editing remain disabled;
+- detailed spline geometry is loaded only for the selected spline;
+- spline image textures are not applied yet;
+- `[patchwork_chain]` and advanced spline material extensions are not rendered yet;
+- binary `.terrain` is not interpreted yet;
+- `[worldcoordinates]` maps remain schematic;
+- encrypted O3D and `.x` files remain without geometry previews;
+- O3D image textures are not applied yet.
 
 ## Safety
 
-This version has no map write operation. The **Save** button remains disabled.
-
-Do not use this alpha as a replacement for the original editor to modify maps. Its purpose is to validate reading, compatibility and visualization before any write support is enabled.
+This alpha has no map write operation. **Save** remains disabled.

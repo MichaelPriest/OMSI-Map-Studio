@@ -66,3 +66,16 @@ O editor trabalha com um **tile ativo** e uma janela padrão de 3×3 tiles ao re
 Clicar em outro tile visível muda o centro da área ativa. Tiles já lidos permanecem em cache durante a sessão para que voltar a uma área anterior não exija nova leitura do disco.
 
 Contagens exibidas para objetos e splines na árvore/status são identificadas como contagens da **área ativa**, não do mapa inteiro.
+
+
+## Seleção e inspeção de splines
+
+Os eixos azuis das splines da área ativa são clicáveis. Quando uma spline é selecionada:
+
+- o eixo selecionado muda de destaque;
+- o inspetor mostra arquivo `.sli`, ID, encadeamento, tile, posição, rotação, comprimento, raio e gradientes;
+- o `.sli` é lido somente nesse momento;
+- a aba **Perfil** mostra texturas declaradas e superfícies reconhecidas;
+- quando existem pares válidos de `[profilepnt]`, o viewport extruda a superfície real da spline ao longo do traçado.
+
+A geometria usa material neutro nesta alpha. O nome real da textura é exibido no inspetor, mas a imagem ainda não é aplicada.

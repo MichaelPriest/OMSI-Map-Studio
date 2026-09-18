@@ -67,7 +67,7 @@ const errorMessages: Record<string, string> = {
     "O host desktop encontrou um erro inesperado."
 };
 
-const appVersion = "0.1.0-alpha.3-dev";
+const appVersion = "0.1.0-alpha.3";
 const tileStreamRadius = 1;
 
 const formatNumber = (value: number) =>

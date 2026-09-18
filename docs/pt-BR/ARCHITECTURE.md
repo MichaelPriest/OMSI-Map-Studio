@@ -52,7 +52,11 @@ Para `[spline]` e `[spline_h]`, o Core interpreta de forma conservadora o bloco-
 
 Em mapas cartesianos, o viewport usa esses dados para desenhar somente o eixo real de cada spline. Segmentos retos usam comprimento e rotação; curvas usam o raio declarado; a altura do eixo interpola os gradientes inicial e final. Essa visualização não inventa largura, perfil ou textura da rua.
 
-A geometria completa da via continuará dependendo da leitura do perfil `.sli`. Mapas com `[worldcoordinates]` ainda não exibem os eixos globalmente até existir a conversão geográfica correta.
+`OmsiSplineDefinitionReader` lê o `.sli` selecionado sob demanda. `[texture]` fornece os nomes das texturas e cada `[profile]` é associado a dois `[profilepnt]`, preservando largura, altura, coordenada horizontal de textura e fator de repetição longitudinal. O caminho passa por `OmsiSplinePathResolver` e precisa permanecer dentro de `OMSI 2/Splines`.
+
+Quando uma spline é selecionada, o viewport extruda as superfícies reconhecidas desse perfil ao longo de seu comprimento, raio e gradientes reais. As demais splines continuam como eixos leves. Texturas de imagem ainda não são carregadas nesta alpha; o perfil usa material neutro para não simular aparência inexistente.
+
+Mapas com `[worldcoordinates]` ainda não exibem os eixos globalmente até existir a conversão geográfica correta.
 
 ### Objetos posicionados
 
@@ -110,6 +114,7 @@ O usuário abre explicitamente um mapa pelo botão **Abrir mapa**. O host aceita
 - tiles já lidos são mantidos em cache pelo host durante a sessão do mapa;
 - ao clicar em outro tile visível, ele se torna o centro da área ativa e os vizinhos necessários são carregados;
 - os tiles da área ativa são processados com concorrência limitada para reduzir a espera sem saturar o disco;
+- `loadSplineProfile` carrega o `.sli` apenas quando uma spline é selecionada e mantém a definição em cache;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
 - `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
 - metadados e geometria já lidos são armazenados em cache no React.
@@ -166,7 +171,9 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 14. O modelo real do objeto selecionado é exibido no viewport com material neutro.
 15. Materiais O3D embutidos passam a ser aplicados por triângulo no preview.
 16. Texturas O3D e extensões `[matl_*]` passam a ser carregadas progressivamente.
-17. Splines e terreno passam a ser implementados progressivamente.
+17. Splines podem ser selecionadas e inspecionadas diretamente no viewport.
+18. O perfil real `.sli` da spline selecionada é carregado sob demanda e extrudado com material neutro.
+19. Texturas de splines e terreno passam a ser implementados progressivamente.
 
 ## Regra de documentação
 
