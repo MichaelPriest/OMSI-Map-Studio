@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly OmsiTileReader _tileReader = new();
     private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
     private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
+    private readonly OmsiO3dStructureReader _o3dStructureReader = new();
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
@@ -418,6 +419,7 @@ public partial class MainWindow : Window
                 File.Exists(fullPath);
 
             OmsiO3dHeader? o3d = null;
+            OmsiO3dStructureSummary? structure = null;
 
             if (fileExists &&
                 string.Equals(
@@ -428,13 +430,21 @@ public partial class MainWindow : Window
                 o3d =
                     await _o3dHeaderReader.ReadAsync(
                         fullPath);
+
+                if (o3d.IsValid)
+                {
+                    structure =
+                        _o3dStructureReader.Read(
+                            fullPath);
+                }
             }
 
             results.Add(new
             {
                 declaredPath,
                 fileExists,
-                o3d
+                o3d,
+                structure
             });
         }
 

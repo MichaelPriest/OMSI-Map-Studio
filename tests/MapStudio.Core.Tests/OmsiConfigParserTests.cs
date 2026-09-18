@@ -430,6 +430,109 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
+    public void O3dStructureReader_CountsSectionsWithoutDecodingGeometry()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-structure-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x07);
+                writer.Write((byte)0x01);
+                writer.Write(uint.MaxValue);
+
+                writer.Write((byte)0x17);
+                writer.Write((uint)2);
+                writer.Write(new byte[64]);
+
+                writer.Write((byte)0x49);
+                writer.Write((uint)1);
+                writer.Write(new byte[14]);
+
+                writer.Write((byte)0x26);
+                writer.Write((ushort)1);
+                writer.Write(new byte[44]);
+                writer.Write((byte)0);
+
+                writer.Write((byte)0x54);
+                writer.Write((uint)0);
+
+                writer.Write((byte)0x79);
+                writer.Write(new byte[64]);
+            }
+
+            var summary =
+                new OmsiO3dStructureReader()
+                    .Read(path);
+
+            Assert.True(summary.IsParsed);
+            Assert.Equal(
+                (uint)2,
+                summary.VertexCount);
+            Assert.Equal(
+                (uint)1,
+                summary.TriangleCount);
+            Assert.Equal(
+                (ushort)1,
+                summary.MaterialCount);
+            Assert.Equal(
+                (uint)0,
+                summary.BoneCount);
+            Assert.True(
+                summary.HasTransform);
+            Assert.Null(
+                summary.ErrorCode);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void O3dStructureReader_RejectsTruncatedSections()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-truncated-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            File.WriteAllBytes(
+                path,
+                [
+                    0x84,
+                    0x19,
+                    0x03,
+                    0x17,
+                    0x01,
+                    0x00
+                ]);
+
+            var summary =
+                new OmsiO3dStructureReader()
+                    .Read(path);
+
+            Assert.False(
+                summary.IsParsed);
+
+            Assert.Equal(
+                "invalidVertexSection",
+                summary.ErrorCode);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void SceneryObjectReader_ReadsFriendlyNameGroupsAndMeshes()
     {
         const string source =

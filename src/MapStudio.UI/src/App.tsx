@@ -50,6 +50,13 @@ const describeMesh = (
       version: number | null;
       isEncrypted: boolean;
     } | null;
+    structure: {
+      isParsed: boolean;
+      vertexCount: number;
+      triangleCount: number;
+      materialCount: number;
+      boneCount: number;
+    } | null;
   }
 ) => {
   if (!mesh.fileExists) {
@@ -69,7 +76,12 @@ const describeMesh = (
       ? "versão desconhecida"
       : `v${mesh.o3d.version}`;
 
-  return `${mesh.declaredPath} · O3D ${version}${mesh.o3d.isEncrypted ? " · criptografado" : ""}`;
+  const structure =
+    mesh.structure?.isParsed
+      ? ` · ${mesh.structure.vertexCount} vértices · ${mesh.structure.triangleCount} triângulos · ${mesh.structure.materialCount} materiais`
+      : "";
+
+  return `${mesh.declaredPath} · O3D ${version}${mesh.o3d.isEncrypted ? " · criptografado" : ""}${structure}`;
 };
 
 export function App() {

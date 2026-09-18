@@ -41,10 +41,21 @@ export type OmsiO3dHeader = {
   isEncrypted: boolean;
 };
 
+export type OmsiO3dStructureSummary = {
+  isParsed: boolean;
+  vertexCount: number;
+  triangleCount: number;
+  materialCount: number;
+  boneCount: number;
+  hasTransform: boolean;
+  errorCode: string | null;
+};
+
 export type OmsiSceneryMeshReference = {
   declaredPath: string;
   fileExists: boolean;
   o3d: OmsiO3dHeader | null;
+  structure: OmsiO3dStructureSummary | null;
 };
 
 export type OmsiSceneryObjectMetadata = {

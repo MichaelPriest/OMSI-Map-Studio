@@ -71,11 +71,11 @@ Valores posteriores são mantidos em `ExtraValues` e não recebem significado at
 - referências declaradas por `[mesh]`;
 - referências declaradas por `[collision_mesh]`.
 
-A ordem dos blocos e todos os comandos ainda não interpretados continuam preservados no documento de origem. Nesta etapa o editor não interpreta materiais, scripts ou animações. Para arquivos `.o3d`, lê somente o cabeçalho binário necessário para identificar assinatura, versão, opções do header estendido e indicação de criptografia; vértices, triângulos, materiais e bones ainda não são carregados.
+A ordem dos blocos e todos os comandos ainda não interpretados continuam preservados no documento de origem. Nesta etapa o editor não interpreta materiais, scripts ou animações. Para arquivos `.o3d`, o Core valida o cabeçalho e percorre apenas a estrutura binária necessária para inventariar as seções. Nesta etapa ele obtém contagens de vértices, triângulos, materiais e bones e detecta a transformação final, sem decodificar vértices para renderização.
 
 `OmsiSceneryObjectPathResolver` restringe a resolução de `.sco` à pasta `Sceneryobjects` da instalação selecionada e rejeita travessia de diretório ou extensões diferentes.
 
-`OmsiSceneryMeshPathResolver` interpreta referências `[mesh]` e `[collision_mesh]` a partir da pasta `model` associada ao `.sco`. São aceitos arquivos `.o3d` e `.x`, inclusive referências relativas entre pacotes com `..\`, desde que o caminho final continue dentro de `Sceneryobjects`. O React recebe apenas o caminho declarado e o estado encontrado/ausente; o caminho absoluto do computador não é exposto. Para meshes `.o3d` encontrados, o host também envia os metadados seguros do cabeçalho, como versão e criptografia.
+`OmsiSceneryMeshPathResolver` interpreta referências `[mesh]` e `[collision_mesh]` a partir da pasta `model` associada ao `.sco`. São aceitos arquivos `.o3d` e `.x`, inclusive referências relativas entre pacotes com `..\`, desde que o caminho final continue dentro de `Sceneryobjects`. O React recebe apenas o caminho declarado e o estado encontrado/ausente; o caminho absoluto do computador não é exposto. Para meshes `.o3d` encontrados, o host também envia metadados seguros do cabeçalho, como versão e criptografia, além das contagens estruturais de vértices, triângulos, materiais e bones.
 
 ## MapStudio.Desktop
 
@@ -143,8 +143,9 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 8. O bloco-base de objetos passa a ser interpretado de forma segura.
 9. Objetos posicionados podem ser selecionados e inspecionados.
 10. O `.sco` do objeto selecionado fornece metadados reais sob demanda.
-11. O cabeçalho de meshes `.o3d` encontrados é validado sem carregar a geometria.
-12. Geometria `.o3d`, splines e terreno passam a ser renderizados progressivamente.
+11. O cabeçalho e as seções de meshes `.o3d` encontrados são validados e inventariados sem renderizar a geometria.
+12. A leitura real de vértices/UVs/normais é adicionada para meshes não criptografados.
+13. Geometria `.o3d`, splines e terreno passam a ser renderizados progressivamente.
 
 ## Regra de documentação
 
