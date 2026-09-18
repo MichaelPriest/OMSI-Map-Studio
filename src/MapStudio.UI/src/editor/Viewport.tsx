@@ -6,8 +6,15 @@ import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3, Vector3 } from "@babylonjs/core/Maths/math";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { Scene } from "@babylonjs/core/scene";
+import type { OmsiTile } from "../bridge/desktopBridge";
 
-export function Viewport() {
+type ViewportProps = {
+  tiles: OmsiTile[];
+};
+
+const tileSize = 300;
+
+export function Viewport({ tiles }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -18,32 +25,78 @@ export function Viewport() {
     const scene = new Scene(engine);
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
+    const tileXs = tiles.map((tile) => tile.x);
+    const tileYs = tiles.map((tile) => tile.y);
+
+    const minX = tileXs.length ? Math.min(...tileXs) : 0;
+    const maxX = tileXs.length ? Math.max(...tileXs) : 0;
+    const minY = tileYs.length ? Math.min(...tileYs) : 0;
+    const maxY = tileYs.length ? Math.max(...tileYs) : 0;
+
+    const target = tiles.length
+      ? new Vector3(
+          ((minX + maxX + 1) * tileSize) / 2,
+          0,
+          ((minY + maxY + 1) * tileSize) / 2
+        )
+      : Vector3.Zero();
+
+    const mapSpan = Math.max(maxX - minX + 1, maxY - minY + 1);
+    const radius = tiles.length ? Math.max(450, mapSpan * tileSize * 0.85) : 95;
+
     const camera = new ArcRotateCamera(
       "editor-camera",
       -Math.PI / 2,
       Math.PI / 3,
-      95,
-      Vector3.Zero(),
+      radius,
+      target,
       scene
     );
+
     camera.lowerRadiusLimit = 5;
-    camera.upperRadiusLimit = 900;
+    camera.upperRadiusLimit = Math.max(900, radius * 4);
     camera.attachControl(canvas, true);
 
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
     light.intensity = 0.9;
 
-    const ground = MeshBuilder.CreateGround(
-      "editor-grid",
-      { width: 300, height: 300, subdivisions: 30 },
-      scene
-    );
-    const material = new StandardMaterial("editor-grid-material", scene);
-    material.diffuseColor = new Color3(0.08, 0.1, 0.12);
-    material.specularColor = Color3.Black();
-    material.wireframe = true;
-    ground.material = material;
-    ground.isPickable = false;
+    if (tiles.length) {
+      const lines = tiles.map((tile) => {
+        const x0 = tile.x * tileSize;
+        const z0 = tile.y * tileSize;
+        const x1 = x0 + tileSize;
+        const z1 = z0 + tileSize;
+
+        return [
+          new Vector3(x0, 0, z0),
+          new Vector3(x1, 0, z0),
+          new Vector3(x1, 0, z1),
+          new Vector3(x0, 0, z1),
+          new Vector3(x0, 0, z0)
+        ];
+      });
+
+      const tileGrid = MeshBuilder.CreateLineSystem(
+        "omsi-tile-grid",
+        { lines },
+        scene
+      );
+      tileGrid.color = new Color3(0.55, 0.68, 0.82);
+      tileGrid.isPickable = false;
+    } else {
+      const ground = MeshBuilder.CreateGround(
+        "editor-grid",
+        { width: 300, height: 300, subdivisions: 30 },
+        scene
+      );
+
+      const material = new StandardMaterial("editor-grid-material", scene);
+      material.diffuseColor = new Color3(0.08, 0.1, 0.12);
+      material.specularColor = Color3.Black();
+      material.wireframe = true;
+      ground.material = material;
+      ground.isPickable = false;
+    }
 
     engine.runRenderLoop(() => scene.render());
 
@@ -55,7 +108,7 @@ export function Viewport() {
       scene.dispose();
       engine.dispose();
     };
-  }, []);
+  }, [tiles]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
 }
