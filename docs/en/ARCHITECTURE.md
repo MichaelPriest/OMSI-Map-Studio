@@ -9,6 +9,7 @@ OMSI Map Studio is an independent product and must not depend on OMSI NavBR Mult
 Owns OMSI-facing domain logic:
 
 - configuration parsing;
+- detection and preservation of source file encodings;
 - map discovery;
 - tiles;
 - future scenery objects;
@@ -22,35 +23,23 @@ Core must not depend on WPF, WebView2 or React.
 
 ## MapStudio.Desktop
 
-Windows host responsible for:
-
-- native file and folder access;
-- Core services;
-- WebView2 lifecycle;
-- communication between C# and the interface.
+Windows host responsible for native file and folder access, Core services, WebView2 lifecycle and communication between C# and the interface.
 
 The desktop host must not become the primary editor UI.
 
 ## MapStudio.UI
 
-Primary editor interface.
-
-Responsibilities:
-
-- Babylon.js viewport;
-- asset browser;
-- property inspector;
-- construction tools;
-- visual validation;
-- simplified editing experience.
+Primary editor interface, responsible for the Babylon.js viewport, asset browser, property inspector, construction tools, visual validation and simplified editing experience.
 
 Production state must come from real data supplied by Core/Desktop.
 
 ## Compatibility strategy
 
-OMSI configuration files are command-oriented text files.
+OMSI configuration files are command-oriented text files and older maps may use legacy encodings.
 
-The parser keeps the complete original line stream and adds structured interpretations over that content. Unknown commands remain stored in the document and must survive an unchanged read/write round-trip.
+The parser keeps the complete line stream, detects UTF-8/UTF-16 where identifiable, and falls back to Windows-1252. The original encoding and BOM presence are retained by the document to support safe writes.
+
+Unknown commands remain stored and must survive an unchanged read/write round-trip.
 
 ## First vertical slice
 
@@ -63,6 +52,4 @@ The parser keeps the complete original line stream and adds structured interpret
 
 ## Documentation rule
 
-All official documentation must have equivalent `pt-BR` and `en` versions.
-
-A documentation change is only complete when both languages are updated.
+All official documentation must have equivalent `pt-BR` and `en` versions. A documentation change is only complete when both languages are updated.

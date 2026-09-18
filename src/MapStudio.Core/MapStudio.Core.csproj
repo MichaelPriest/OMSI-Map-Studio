@@ -4,4 +4,8 @@
     <RootNamespace>MapStudio.Core</RootNamespace>
     <AssemblyName>MapStudio.Core</AssemblyName>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="10.0.0" />
+  </ItemGroup>
 </Project>

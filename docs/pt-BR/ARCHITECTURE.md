@@ -9,6 +9,7 @@ O OMSI Map Studio é um produto independente e não deve depender de código, se
 Responsável pela lógica de domínio relacionada ao OMSI:
 
 - leitura de arquivos de configuração;
+- detecção e preservação da codificação original dos arquivos;
 - descoberta de mapas;
 - tiles;
 - futuramente objetos de cenário;
@@ -22,35 +23,23 @@ O Core não deve depender de WPF, WebView2 ou React.
 
 ## MapStudio.Desktop
 
-Host Windows responsável por:
-
-- acesso nativo a arquivos e pastas;
-- serviços do Core;
-- ciclo de vida do WebView2;
-- comunicação entre C# e a interface.
+Host Windows responsável por acesso nativo a arquivos e pastas, serviços do Core, ciclo de vida do WebView2 e comunicação entre C# e a interface.
 
 O host desktop não deve se transformar na interface principal do editor.
 
 ## MapStudio.UI
 
-Interface principal do editor.
-
-Responsabilidades:
-
-- viewport Babylon.js;
-- biblioteca de recursos;
-- inspetor de propriedades;
-- ferramentas de construção;
-- validações visuais;
-- experiência de edição simplificada.
+Interface principal do editor, responsável pelo viewport Babylon.js, biblioteca de recursos, inspetor de propriedades, ferramentas de construção, validações visuais e experiência de edição simplificada.
 
 O estado de produção deve vir de dados reais fornecidos pelo Core/Desktop.
 
 ## Estratégia de compatibilidade
 
-Arquivos de configuração do OMSI são orientados por comandos de texto.
+Arquivos de configuração do OMSI são orientados por comandos de texto e mapas antigos podem utilizar codificações legadas.
 
-O parser mantém o fluxo completo de linhas original e acrescenta interpretações estruturadas sobre esse conteúdo. Comandos desconhecidos continuam armazenados no documento e devem sobreviver a um ciclo de leitura/gravação sem alterações.
+O parser mantém o fluxo completo de linhas, detecta UTF-8/UTF-16 quando identificado e possui fallback para Windows-1252. A codificação original e a presença de BOM são mantidas no documento para permitir gravação segura.
+
+Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de leitura/gravação sem alterações.
 
 ## Primeiro fluxo vertical
 
@@ -63,6 +52,4 @@ O parser mantém o fluxo completo de linhas original e acrescenta interpretaçõ
 
 ## Regra de documentação
 
-Toda documentação oficial deve possuir versões equivalentes em `pt-BR` e `en`.
-
-Uma mudança documental só é considerada completa quando os dois idiomas forem atualizados.
+Toda documentação oficial deve possuir versões equivalentes em `pt-BR` e `en`. Uma mudança documental só é considerada completa quando os dois idiomas forem atualizados.

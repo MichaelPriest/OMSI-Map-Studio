@@ -1,3 +1,4 @@
+using System.Text;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
 
@@ -14,6 +15,40 @@ public sealed class OmsiConfigParserTests
         Assert.Equal("\r\n", document.NewLine);
         Assert.True(document.HasTrailingNewLine);
         Assert.Equal(source, document.ToText());
+    }
+
+    [Fact]
+    public void ParseBytes_PreservesWindows1252Bytes()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var windows1252 = Encoding.GetEncoding(1252);
+        const string source =
+            "[name]\r\nSão Paulo\r\n" +
+            "[unknown_command]\r\nação\r\n";
+
+        var originalBytes = windows1252.GetBytes(source);
+        var document = OmsiConfigParser.ParseBytes(originalBytes);
+
+        Assert.Equal(1252, document.TextEncoding.CodePage);
+        Assert.False(document.HasByteOrderMark);
+        Assert.Equal(source, document.ToText());
+        Assert.Equal(originalBytes, document.ToBytes());
+    }
+
+    [Fact]
+    public void ParseBytes_PreservesUtf8Bom()
+    {
+        const string source = "[name]\r\nSão Paulo\r\n";
+        var utf8WithBom = new UTF8Encoding(true);
+        var body = utf8WithBom.GetBytes(source);
+        var preamble = utf8WithBom.GetPreamble();
+        var originalBytes = preamble.Concat(body).ToArray();
+
+        var document = OmsiConfigParser.ParseBytes(originalBytes);
+
+        Assert.Equal(65001, document.TextEncoding.CodePage);
+        Assert.True(document.HasByteOrderMark);
+        Assert.Equal(originalBytes, document.ToBytes());
     }
 
     [Fact]
