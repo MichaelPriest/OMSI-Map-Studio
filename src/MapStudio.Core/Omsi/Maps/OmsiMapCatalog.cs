@@ -5,6 +5,13 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiMapCatalog
 {
+    private readonly OmsiTileReader _tileReader;
+
+    public OmsiMapCatalog(OmsiTileReader? tileReader = null)
+    {
+        _tileReader = tileReader ?? new OmsiTileReader();
+    }
+
     public async Task<IReadOnlyList<OmsiMapDescriptor>> DiscoverAsync(
         string omsiRoot,
         CancellationToken cancellationToken = default)
@@ -34,13 +41,29 @@ public sealed class OmsiMapCatalog
             var document = await OmsiConfigParser.ParseFileAsync(globalConfigPath, cancellationToken);
             var directoryName = Path.GetFileName(directory);
             var displayName = document.FindFirstSection("name")?.DataLines.FirstOrDefault() ?? directoryName;
+            var tileReferences = ReadTiles(document);
+            var tiles = new List<OmsiTileReference>(tileReferences.Count);
+
+            foreach (var tile in tileReferences)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var relativePath = tile.RelativeMapPath
+                    .Replace('\\', Path.DirectorySeparatorChar)
+                    .Replace('/', Path.DirectorySeparatorChar)
+                    .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                var tilePath = Path.Combine(directory, relativePath);
+                var summary = await _tileReader.ReadSummaryAsync(tilePath, cancellationToken);
+                tiles.Add(tile with { Summary = summary });
+            }
 
             results.Add(new OmsiMapDescriptor(
                 directoryName,
                 displayName,
                 directory,
                 globalConfigPath,
-                ReadTiles(document)));
+                tiles));
         }
 
         return results;
