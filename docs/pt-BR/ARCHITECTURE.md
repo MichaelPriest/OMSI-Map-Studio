@@ -91,14 +91,15 @@ O React não pode fornecer caminhos arbitrários para leitura. O host mantém um
 
 ### Carregamento sob demanda
 
-A descoberta inicial envia apenas catálogo, tiles e contagens.
+A descoberta inicial lê somente os `global.cfg` e as referências de tiles. Ela não abre todos os arquivos `.map` da instalação antes de liberar a interface.
 
-- `loadMapObjects` carrega os blocos de `[object]` apenas quando um mapa é selecionado;
+- `loadMapContent` carrega o mapa selecionado sob demanda e, em uma única leitura de cada tile, obtém contagens e objetos;
+- os tiles do mapa selecionado são processados com concorrência limitada para reduzir a espera sem saturar o disco;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
 - `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
 - metadados e geometria já lidos são armazenados em cache no React.
 
-Isso evita ler todos os `.sco` da instalação durante a abertura do programa.
+Isso evita ler todos os `.map` e `.sco` da instalação durante a abertura do programa. Ao voltar para um mapa já carregado, o React reutiliza o conteúdo em cache.
 
 Para mapas cartesianos, o viewport representa a posição com:
 
@@ -138,16 +139,17 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 2. O Core encontra mapas contendo `global.cfg`.
 3. O `global.cfg` é lido sem alteração destrutiva.
 4. Referências reais de tiles são extraídas.
-5. Cada arquivo `.map` existente é inspecionado.
-6. O estado real é enviado à interface React.
-7. A malha real de tiles e estatísticas de objetos/splines são exibidas.
-8. O bloco-base de objetos passa a ser interpretado de forma segura.
-9. Objetos posicionados podem ser selecionados e inspecionados.
-10. O `.sco` do objeto selecionado fornece metadados reais sob demanda.
-11. O cabeçalho e as seções de meshes `.o3d` são validados e inventariados.
-12. Vértices, normais, UVs e triângulos de meshes O3D não criptografados são carregados sob demanda.
-13. O modelo real do objeto selecionado é exibido no viewport com material neutro.
-14. Splines, terreno, materiais e texturas passam a ser implementados progressivamente.
+5. A interface recebe imediatamente o catálogo leve da instalação.
+6. Somente o mapa selecionado tem seus arquivos `.map` inspecionados.
+7. Cada tile selecionado é lido uma única vez para estatísticas e objetos.
+8. A malha real de tiles e estatísticas de objetos/splines são exibidas.
+9. O bloco-base de objetos passa a ser interpretado de forma segura.
+10. Objetos posicionados podem ser selecionados e inspecionados.
+11. O `.sco` do objeto selecionado fornece metadados reais sob demanda.
+12. O cabeçalho e as seções de meshes `.o3d` são validados e inventariados.
+13. Vértices, normais, UVs e triângulos de meshes O3D não criptografados são carregados sob demanda.
+14. O modelo real do objeto selecionado é exibido no viewport com material neutro.
+15. Splines, terreno, materiais e texturas passam a ser implementados progressivamente.
 
 ## Regra de documentação
 

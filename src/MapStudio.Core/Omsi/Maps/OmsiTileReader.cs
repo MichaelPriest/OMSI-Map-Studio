@@ -5,7 +5,7 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiTileReader
 {
-    public async Task<OmsiTileSummary> ReadSummaryAsync(
+    public async Task<OmsiTileContent> ReadContentAsync(
         string tilePath,
         CancellationToken cancellationToken = default)
     {
@@ -13,38 +13,49 @@ public sealed class OmsiTileReader
 
         if (!File.Exists(tilePath))
         {
-            return OmsiTileSummary.Missing;
+            return OmsiTileContent.Missing;
         }
 
-        var document = await OmsiConfigParser.ParseFileAsync(tilePath, cancellationToken);
+        var document =
+            await OmsiConfigParser.ParseFileAsync(
+                tilePath,
+                cancellationToken);
 
         var attachmentCount =
             document.FindSections("splineAttachement").Count() +
             document.FindSections("splineAttachment").Count();
 
-        return new OmsiTileSummary(
+        var summary = new OmsiTileSummary(
             Exists: true,
-            ObjectCount: document.FindSections("object").Count(),
-            SplineCount: document.FindSections("spline").Count(),
-            SplineAttachmentCount: attachmentCount);
+            ObjectCount:
+                document.FindSections("object").Count(),
+            SplineCount:
+                document.FindSections("spline").Count(),
+            SplineAttachmentCount:
+                attachmentCount);
+
+        return new OmsiTileContent(
+            summary,
+            ReadObjects(document));
     }
 
-    public async Task<IReadOnlyList<OmsiPlacedObject>> ReadObjectsAsync(
+    public async Task<OmsiTileSummary> ReadSummaryAsync(
         string tilePath,
-        CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(tilePath);
+        CancellationToken cancellationToken = default) =>
+        (await ReadContentAsync(
+            tilePath,
+            cancellationToken)).Summary;
 
-        if (!File.Exists(tilePath))
-        {
-            return Array.Empty<OmsiPlacedObject>();
-        }
+    public async Task<IReadOnlyList<OmsiPlacedObject>>
+        ReadObjectsAsync(
+            string tilePath,
+            CancellationToken cancellationToken = default) =>
+        (await ReadContentAsync(
+            tilePath,
+            cancellationToken)).Objects;
 
-        var document = await OmsiConfigParser.ParseFileAsync(tilePath, cancellationToken);
-        return ReadObjects(document);
-    }
-
-    public static IReadOnlyList<OmsiPlacedObject> ReadObjects(OmsiConfigDocument document)
+    public static IReadOnlyList<OmsiPlacedObject> ReadObjects(
+        OmsiConfigDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
 
@@ -52,16 +63,27 @@ public sealed class OmsiTileReader
 
         foreach (var section in document.FindSections("object"))
         {
-            var values = section.DataLines.ToArray();
+            var values =
+                section.DataLines.ToArray();
 
             if (values.Length < 9 ||
-                !int.TryParse(values[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out var objectId) ||
+                !int.TryParse(
+                    values[2],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var objectId) ||
                 !TryParseDouble(values[3], out var x) ||
                 !TryParseDouble(values[4], out var y) ||
                 !TryParseDouble(values[5], out var z) ||
-                !TryParseDouble(values[6], out var rotation) ||
-                !TryParseDouble(values[7], out var pitch) ||
-                !TryParseDouble(values[8], out var bank))
+                !TryParseDouble(
+                    values[6],
+                    out var rotation) ||
+                !TryParseDouble(
+                    values[7],
+                    out var pitch) ||
+                !TryParseDouble(
+                    values[8],
+                    out var bank))
             {
                 continue;
             }
@@ -76,13 +98,16 @@ public sealed class OmsiTileReader
                 Rotation: rotation,
                 Pitch: pitch,
                 Bank: bank,
-                ExtraValues: values.Skip(9).ToArray()));
+                ExtraValues:
+                    values.Skip(9).ToArray()));
         }
 
         return objects;
     }
 
-    private static bool TryParseDouble(string value, out double result) =>
+    private static bool TryParseDouble(
+        string value,
+        out double result) =>
         double.TryParse(
             value,
             NumberStyles.Float,

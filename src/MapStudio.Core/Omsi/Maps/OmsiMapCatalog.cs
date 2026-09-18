@@ -5,13 +5,6 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiMapCatalog
 {
-    private readonly OmsiTileReader _tileReader;
-
-    public OmsiMapCatalog(OmsiTileReader? tileReader = null)
-    {
-        _tileReader = tileReader ?? new OmsiTileReader();
-    }
-
     public async Task<IReadOnlyList<OmsiMapDescriptor>> DiscoverAsync(
         string omsiRoot,
         CancellationToken cancellationToken = default)
@@ -27,57 +20,59 @@ public sealed class OmsiMapCatalog
 
         var results = new List<OmsiMapDescriptor>();
 
-        foreach (var directory in Directory.EnumerateDirectories(mapsDirectory).OrderBy(static path => path))
+        foreach (var directory in Directory
+            .EnumerateDirectories(mapsDirectory)
+            .OrderBy(static path => path))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var globalConfigPath = Path.Combine(directory, "global.cfg");
+            var globalConfigPath = Path.Combine(
+                directory,
+                "global.cfg");
 
             if (!File.Exists(globalConfigPath))
             {
                 continue;
             }
 
-            var document = await OmsiConfigParser.ParseFileAsync(globalConfigPath, cancellationToken);
-            var directoryName = Path.GetFileName(directory);
-            var displayName = document.FindFirstSection("name")?.DataLines.FirstOrDefault() ?? directoryName;
-            var usesWorldCoordinates = UsesWorldCoordinates(document);
-            var tileReferences = ReadTiles(document);
-            var tiles = new List<OmsiTileReference>(tileReferences.Count);
+            var document =
+                await OmsiConfigParser.ParseFileAsync(
+                    globalConfigPath,
+                    cancellationToken);
 
-            foreach (var tile in tileReferences)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
+            var directoryName =
+                Path.GetFileName(directory);
 
-                var summary = OmsiMapPathResolver.TryResolveTilePath(
-                    directory,
-                    tile.RelativeMapPath,
-                    out var tilePath)
-                    ? await _tileReader.ReadSummaryAsync(tilePath, cancellationToken)
-                    : OmsiTileSummary.Missing;
-
-                tiles.Add(tile with { Summary = summary });
-            }
+            var displayName =
+                document
+                    .FindFirstSection("name")
+                    ?.DataLines
+                    .FirstOrDefault()
+                ?? directoryName;
 
             results.Add(new OmsiMapDescriptor(
                 directoryName,
                 displayName,
                 directory,
                 globalConfigPath,
-                usesWorldCoordinates,
-                tiles));
+                UsesWorldCoordinates(document),
+                ReadTiles(document)));
         }
 
         return results;
     }
 
-    public static bool UsesWorldCoordinates(OmsiConfigDocument document)
+    public static bool UsesWorldCoordinates(
+        OmsiConfigDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
-        return document.FindFirstSection("worldcoordinates") is not null;
+
+        return document.FindFirstSection(
+            "worldcoordinates") is not null;
     }
 
-    public static IReadOnlyList<OmsiTileReference> ReadTiles(OmsiConfigDocument document)
+    public static IReadOnlyList<OmsiTileReference> ReadTiles(
+        OmsiConfigDocument document)
     {
         ArgumentNullException.ThrowIfNull(document);
 
@@ -85,16 +80,30 @@ public sealed class OmsiMapCatalog
 
         foreach (var section in document.FindSections("map"))
         {
-            var values = section.DataLines.Take(3).ToArray();
+            var values =
+                section.DataLines
+                    .Take(3)
+                    .ToArray();
 
             if (values.Length < 3 ||
-                !int.TryParse(values[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var x) ||
-                !int.TryParse(values[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var y))
+                !int.TryParse(
+                    values[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var x) ||
+                !int.TryParse(
+                    values[1],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var y))
             {
                 continue;
             }
 
-            tiles.Add(new OmsiTileReference(x, y, values[2]));
+            tiles.Add(new OmsiTileReference(
+                x,
+                y,
+                values[2]));
         }
 
         return tiles;

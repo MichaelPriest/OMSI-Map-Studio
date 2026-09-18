@@ -91,14 +91,15 @@ React cannot provide arbitrary paths for reading. The host keeps a list of `.sco
 
 ### On-demand loading
 
-Initial discovery sends only the catalog, tiles and counts.
+Initial discovery reads only `global.cfg` files and tile references. It does not open every `.map` file in the installation before releasing the interface.
 
-- `loadMapObjects` loads `[object]` blocks only when a map is selected;
+- `loadMapContent` loads the selected map on demand and gets counts plus objects from a single read of each tile;
+- selected-map tiles are processed with limited concurrency to reduce waiting without saturating storage;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
 - `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
 - previously read metadata and geometry are cached in React.
 
-This avoids scanning every `.sco` in the installation at application startup.
+This avoids scanning every `.map` and `.sco` file in the installation at application startup. When returning to a previously loaded map, React reuses the cached content.
 
 For Cartesian maps, the viewport represents object positions with:
 
@@ -138,16 +139,17 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 2. Core discovers maps containing `global.cfg`.
 3. `global.cfg` is parsed without destructive rewriting.
 4. Real tile references are extracted.
-5. Existing `.map` tile files are inspected.
-6. Real state is sent to the React interface.
-7. The real tile layout and object/spline statistics are displayed.
-8. The base placed-object block is interpreted safely.
-9. Placed objects can be selected and inspected.
-10. The selected object's `.sco` provides real metadata on demand.
-11. Found `.o3d` mesh headers and sections are validated and inventoried.
-12. Vertices, normals, UVs and triangles from unencrypted O3D meshes are loaded on demand.
-13. The selected object's real model is displayed in the viewport with a neutral material.
-14. Splines, terrain, materials and textures are implemented incrementally.
+5. The interface immediately receives the lightweight installation catalog.
+6. Only the selected map has its `.map` files inspected.
+7. Each selected tile is read once for both statistics and objects.
+8. The real tile layout and object/spline statistics are displayed.
+9. The base placed-object block is interpreted safely.
+10. Placed objects can be selected and inspected.
+11. The selected object's `.sco` provides real metadata on demand.
+12. Found `.o3d` mesh headers and sections are validated and inventoried.
+13. Vertices, normals, UVs and triangles from unencrypted O3D meshes are loaded on demand.
+14. The selected object's real model is displayed in the viewport with a neutral material.
+15. Splines, terrain, materials and textures are implemented incrementally.
 
 ## Documentation rule
 

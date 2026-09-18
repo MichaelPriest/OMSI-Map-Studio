@@ -11,6 +11,8 @@ namespace MapStudio.Desktop;
 
 public partial class MainWindow : Window
 {
+    private const int MaxConcurrentTileReads = 4;
+
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
     private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
@@ -39,6 +41,7 @@ public partial class MainWindow : Window
     {
         Loaded -= OnLoaded;
         await EditorWebView.EnsureCoreWebView2Async();
+
         EditorWebView.CoreWebView2.WebMessageReceived +=
             OnWebMessageReceived;
 
@@ -88,8 +91,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            using var message = JsonDocument.Parse(
-                e.WebMessageAsJson);
+            using var message =
+                JsonDocument.Parse(
+                    e.WebMessageAsJson);
 
             if (!message.RootElement.TryGetProperty(
                     "type",
@@ -104,13 +108,14 @@ public partial class MainWindow : Window
                     await SelectOmsiRootAsync();
                     break;
 
-                case "loadMapObjects":
+                case "loadMapContent":
                     if (TryReadString(
                             message.RootElement,
                             "directoryName",
                             out var directoryName))
                     {
-                        await LoadMapObjectsAsync(directoryName);
+                        await LoadMapContentAsync(
+                            directoryName);
                     }
                     else
                     {
@@ -173,7 +178,9 @@ public partial class MainWindow : Window
         }
 
         var rootPath = dialog.FolderName;
-        var mapsPath = Path.Combine(rootPath, "maps");
+        var mapsPath = Path.Combine(
+            rootPath,
+            "maps");
 
         if (!Directory.Exists(mapsPath))
         {
@@ -188,10 +195,13 @@ public partial class MainWindow : Window
 
         try
         {
-            var maps = await _mapCatalog.DiscoverAsync(rootPath);
+            var maps =
+                await _mapCatalog.DiscoverAsync(
+                    rootPath);
 
             _omsiRootPath = rootPath;
             _knownSceneryObjectPaths.Clear();
+
             _knownMaps = maps.ToDictionary(
                 map => map.DirectoryName,
                 StringComparer.OrdinalIgnoreCase);
@@ -212,14 +222,11 @@ public partial class MainWindow : Window
                         tile.X,
                         tile.Y,
                         tile.RelativeMapPath,
-                        fileExists =
-                            tile.Summary?.Exists ?? false,
-                        objectCount =
-                            tile.Summary?.ObjectCount ?? 0,
-                        splineCount =
-                            tile.Summary?.SplineCount ?? 0,
-                        splineAttachmentCount =
-                            tile.Summary?.SplineAttachmentCount ?? 0
+                        detailsLoaded = false,
+                        fileExists = false,
+                        objectCount = 0,
+                        splineCount = 0,
+                        splineAttachmentCount = 0
                     })
                 })
             });
@@ -244,7 +251,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task LoadMapObjectsAsync(
+    private async Task LoadMapContentAsync(
         string? directoryName)
     {
         if (string.IsNullOrWhiteSpace(directoryName) ||
@@ -262,33 +269,60 @@ public partial class MainWindow : Window
 
         try
         {
+            using var semaphore =
+                new SemaphoreSlim(
+                    Math.Min(
+                        MaxConcurrentTileReads,
+                        Math.Max(
+                            1,
+                            Environment.ProcessorCount)));
+
+            var tasks = map.Tiles
+                .Select(async (tile, index) =>
+                {
+                    await semaphore.WaitAsync();
+
+                    try
+                    {
+                        var content =
+                            OmsiMapPathResolver.TryResolveTilePath(
+                                map.DirectoryPath,
+                                tile.RelativeMapPath,
+                                out var tilePath)
+                            ? await _tileReader.ReadContentAsync(
+                                tilePath)
+                            : OmsiTileContent.Missing;
+
+                        return (
+                            Index: index,
+                            Tile: tile,
+                            Content: content);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                })
+                .ToArray();
+
+            var loadedTiles =
+                await Task.WhenAll(tasks);
+
             var objects = new List<object>();
 
-            foreach (var tile in map.Tiles)
+            foreach (var loaded in loadedTiles
+                .OrderBy(result => result.Index))
             {
-                if (tile.Summary?.Exists != true)
-                {
-                    continue;
-                }
-
-                if (!OmsiMapPathResolver.TryResolveTilePath(
-                        map.DirectoryPath,
-                        tile.RelativeMapPath,
-                        out var tilePath))
-                {
-                    continue;
-                }
-
                 foreach (var placedObject in
-                    await _tileReader.ReadObjectsAsync(tilePath))
+                    loaded.Content.Objects)
                 {
                     _knownSceneryObjectPaths.Add(
                         placedObject.SceneryObjectPath);
 
                     objects.Add(new
                     {
-                        tileX = tile.X,
-                        tileY = tile.Y,
+                        tileX = loaded.Tile.X,
+                        tileY = loaded.Tile.Y,
                         placedObject.HeaderValue,
                         placedObject.SceneryObjectPath,
                         placedObject.ObjectId,
@@ -304,9 +338,27 @@ public partial class MainWindow : Window
 
             PostMessage(new
             {
-                type = "mapObjectsLoaded",
+                type = "mapContentLoaded",
                 map.DirectoryName,
                 map.UsesWorldCoordinates,
+                tiles = loadedTiles
+                    .OrderBy(result => result.Index)
+                    .Select(loaded => new
+                    {
+                        loaded.Tile.X,
+                        loaded.Tile.Y,
+                        loaded.Tile.RelativeMapPath,
+                        detailsLoaded = true,
+                        fileExists =
+                            loaded.Content.Summary.Exists,
+                        objectCount =
+                            loaded.Content.Summary.ObjectCount,
+                        splineCount =
+                            loaded.Content.Summary.SplineCount,
+                        splineAttachmentCount =
+                            loaded.Content.Summary
+                                .SplineAttachmentCount
+                    }),
                 objects
             });
         }
@@ -410,7 +462,6 @@ public partial class MainWindow : Window
             });
         }
     }
-
 
     private async Task LoadSceneryObjectGeometryAsync(
         string? sceneryObjectPath)
@@ -594,6 +645,7 @@ public partial class MainWindow : Window
         }
 
         value = property.GetString();
+
         return !string.IsNullOrWhiteSpace(value);
     }
 
@@ -608,9 +660,10 @@ public partial class MainWindow : Window
 
     private void PostMessage(object payload)
     {
-        var json = JsonSerializer.Serialize(
-            payload,
-            _jsonOptions);
+        var json =
+            JsonSerializer.Serialize(
+                payload,
+                _jsonOptions);
 
         EditorWebView.CoreWebView2
             .PostWebMessageAsJson(json);

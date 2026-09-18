@@ -6,7 +6,7 @@ import {
 } from "react";
 import {
   isDesktopBridgeAvailable,
-  loadMapObjects,
+  loadMapContent,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
   type OmsiMap,
@@ -176,13 +176,35 @@ export function App() {
 
         if (
           message.type ===
-          "mapObjectsLoaded"
+          "mapContentLoaded"
         ) {
           setObjectsByMap((current) => ({
             ...current,
             [message.directoryName]:
               message.objects
           }));
+
+          setMaps((current) =>
+            current.map((map) =>
+              map.directoryName ===
+              message.directoryName
+                ? {
+                    ...map,
+                    tiles: message.tiles
+                  }
+                : map
+            )
+          );
+
+          setSelectedMap((current) =>
+            current?.directoryName ===
+            message.directoryName
+              ? {
+                  ...current,
+                  tiles: message.tiles
+                }
+              : current
+          );
 
           setLoadingObjectsFor((current) =>
             current === message.directoryName
@@ -268,7 +290,7 @@ export function App() {
       selectedMap.directoryName
     );
 
-    loadMapObjects(
+    loadMapContent(
       selectedMap.directoryName
     );
   }, [
@@ -343,7 +365,12 @@ export function App() {
   ]);
 
   const selectedStats = useMemo(() => {
-    if (!selectedMap) {
+    if (
+      !selectedMap ||
+      !selectedMap.tiles.every(
+        (tile) => tile.detailsLoaded
+      )
+    ) {
       return undefined;
     }
 
@@ -563,11 +590,19 @@ export function App() {
             aria-label="Mapas do OMSI 2"
           >
             {maps.map((map) => {
-              const missingTiles =
-                map.tiles.filter(
+              const detailsLoaded =
+                map.tiles.every(
                   (tile) =>
-                    !tile.fileExists
-                ).length;
+                    tile.detailsLoaded
+                );
+
+              const missingTiles =
+                detailsLoaded
+                  ? map.tiles.filter(
+                      (tile) =>
+                        !tile.fileExists
+                    ).length
+                  : 0;
 
               return (
                 <button
@@ -598,8 +633,14 @@ export function App() {
                     {map.usesWorldCoordinates
                       ? " · coordenadas mundiais"
                       : ""}
-                    {missingTiles
+                    {detailsLoaded &&
+                    missingTiles
                       ? ` · ${missingTiles} ausentes`
+                      : ""}
+                    {!detailsLoaded &&
+                    map.directoryName ===
+                      selectedMap?.directoryName
+                      ? " · lendo conteúdo..."
                       : ""}
                   </small>
                 </button>
@@ -646,7 +687,7 @@ export function App() {
             loadingObjectsFor ===
               selectedMap.directoryName && (
               <span>
-                Lendo objetos do mapa...
+                Lendo conteúdo do mapa...
               </span>
             )}
 
@@ -972,6 +1013,13 @@ export function App() {
               </dd>
             </div>
           </dl>
+        ) : selectedMap ? (
+          <div className="empty-panel">
+            Lendo tiles, objetos e
+            splines deste mapa. A lista
+            inicial da instalação já foi
+            carregada.
+          </div>
         ) : (
           <div className="empty-panel">
             Escolha um mapa para
@@ -1005,7 +1053,7 @@ export function App() {
               : loadingObjectsFor ===
                   selectedMap
                     ?.directoryName
-                ? "Lendo objetos..."
+                ? "Lendo mapa selecionado..."
                 : loadingMetadataFor
                   ? "Lendo SCO..."
                   : loadingGeometryFor

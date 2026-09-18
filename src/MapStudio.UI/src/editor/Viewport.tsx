@@ -238,7 +238,11 @@ export function Viewport({
 
     if (tiles.length) {
       const existingLines = tiles
-        .filter((tile) => tile.fileExists)
+        .filter(
+          (tile) =>
+            !tile.detailsLoaded ||
+            tile.fileExists
+        )
         .map((tile) => createTileOutline(tile, tileSize));
 
       if (existingLines.length) {
@@ -252,7 +256,11 @@ export function Viewport({
       }
 
       const missingLines = tiles
-        .filter((tile) => !tile.fileExists)
+        .filter(
+          (tile) =>
+            tile.detailsLoaded &&
+            !tile.fileExists
+        )
         .map((tile) => createTileOutline(tile, tileSize));
 
       if (missingLines.length) {

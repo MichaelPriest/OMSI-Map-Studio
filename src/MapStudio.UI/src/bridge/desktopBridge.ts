@@ -2,6 +2,7 @@ export type OmsiTile = {
   x: number;
   y: number;
   relativeMapPath: string;
+  detailsLoaded: boolean;
   fileExists: boolean;
   objectCount: number;
   splineCount: number;
@@ -92,9 +93,10 @@ export type HostMessage =
       type: "selectionCancelled";
     }
   | {
-      type: "mapObjectsLoaded";
+      type: "mapContentLoaded";
       directoryName: string;
       usesWorldCoordinates: boolean;
+      tiles: OmsiTile[];
       objects: OmsiPlacedObject[];
     }
   | {
@@ -153,11 +155,11 @@ export function selectOmsiRoot() {
   });
 }
 
-export function loadMapObjects(
+export function loadMapContent(
   directoryName: string
 ) {
   getWebView()?.postMessage({
-    type: "loadMapObjects",
+    type: "loadMapContent",
     directoryName
   });
 }
