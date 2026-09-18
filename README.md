@@ -1,37 +1,34 @@
 # OMSI Map Studio
 
-Standalone, modern map editor for **OMSI 2**, focused on making map creation easier, safer and more visual.
+🌐 **Documentation / Documentação**
 
-> This project is completely independent from OMSI NavBR Multiplayer. It has its own repository, architecture, releases and development lifecycle.
+- 🇧🇷 [Português (Brasil)](README.pt-BR.md)
+- 🇬🇧 [English](README.en.md)
 
-## Bootstrap goals
+---
 
-- Discover a real OMSI 2 installation and its maps.
-- Parse `global.cfg` while preserving unknown content.
-- Extract real `[map]` tile references.
-- Provide a .NET 10 WPF/WebView2 desktop host.
-- Provide a React + TypeScript + Babylon.js editor shell.
-- Never replace missing runtime data with fake production data.
+## Português
 
-## Requirements
+O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2**, criado para tornar a construção de mapas mais fácil, segura e visual.
 
-- .NET 10 SDK
-- Node.js 22+
-- Windows for the desktop host
+Este projeto é **totalmente separado do OMSI NavBR Multiplayer**.
 
-## Core
+Toda a documentação oficial do projeto deve existir, no mínimo, em:
 
-    dotnet build src/MapStudio.Core/MapStudio.Core.csproj
-    dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj
+- Português do Brasil (`pt-BR`)
+- Inglês (`en`)
 
-## UI
+Consulte a versão em português para detalhes completos.
 
-    cd src/MapStudio.UI
-    npm install
-    npm run dev
+## English
 
-For the packaged desktop UI, run `npm run build` before building the desktop project.
+**OMSI Map Studio** is a modern, standalone map editor for **OMSI 2**, designed to make map creation easier, safer and more visual.
 
-## Compatibility rule
+This project is **completely independent from OMSI NavBR Multiplayer**.
 
-Understanding an OMSI command is optional; preserving it is not. An unchanged document must round-trip without silently losing commands the editor does not understand yet.
+All official project documentation must exist, at minimum, in:
+
+- Brazilian Portuguese (`pt-BR`)
+- English (`en`)
+
+See the English version for full details.
