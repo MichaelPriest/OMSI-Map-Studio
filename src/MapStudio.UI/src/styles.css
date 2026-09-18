@@ -23,11 +23,12 @@ button {
   padding: 7px 11px;
 }
 
+button:not(:disabled) { cursor: pointer; }
 button:disabled { opacity: .45; }
 
 .editor-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 280px;
+  grid-template-columns: 280px minmax(0, 1fr) 280px;
   grid-template-rows: 56px minmax(0, 1fr) 28px;
   grid-template-areas:
     "topbar topbar topbar"
@@ -62,30 +63,66 @@ button:disabled { opacity: .45; }
 .asset-panel, .inspector-panel {
   padding: 14px;
   background: #12161c;
+  overflow: auto;
 }
 
 .asset-panel { grid-area: assets; border-right: 1px solid #252b34; }
 .inspector-panel { grid-area: inspector; border-left: 1px solid #252b34; }
 .panel-heading { gap: 3px; margin-bottom: 12px; }
 .panel-heading span { font-weight: 650; font-size: 13px; }
+.panel-heading small { overflow-wrap: anywhere; }
 
-.search {
-  width: 100%;
-  border: 1px solid #2a313c;
-  border-radius: 7px;
-  background: #0d1116;
-  color: #eef2f7;
-  padding: 8px 10px;
+.empty-panel,
+.error-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .empty-panel {
-  margin-top: 14px;
-  padding: 12px;
   border: 1px dashed #303744;
-  border-radius: 8px;
   color: #778394;
-  font-size: 12px;
-  line-height: 1.5;
+}
+
+.error-panel {
+  border: 1px solid #6d3540;
+  background: #25171b;
+  color: #efb7c1;
+}
+
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  gap: 2px;
+}
+
+.map-card strong {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-card span,
+.map-card small {
+  color: #8c98a8;
+  font-size: 11px;
+}
+
+.map-card.selected {
+  border-color: #70849d;
+  background: #232d39;
 }
 
 .viewport-panel {
@@ -117,6 +154,29 @@ button:disabled { opacity: .45; }
 
 .viewport-hint strong { font-size: 12px; }
 .viewport-hint span { color: #8894a4; font-size: 11px; }
+
+.property-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.property-list div {
+  display: grid;
+  gap: 3px;
+}
+
+.property-list dt {
+  color: #8994a3;
+  font-size: 11px;
+}
+
+.property-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
 
 .statusbar {
   grid-area: status;
