@@ -34,6 +34,15 @@ At this stage it only extracts information that can be identified safely by sect
 - `[splineAttachement]` / `[splineAttachment]` count;
 - whether the referenced tile file exists.
 
+### Coordinate system
+
+`OmsiMapCatalog` detects the `[worldcoordinates]` marker in `global.cfg`.
+
+- without `[worldcoordinates]`: the Cartesian layout uses 300 m tiles;
+- with `[worldcoordinates]`: the initial viewport shows only schematic tile topology until a dedicated geographic conversion exists.
+
+The editor must not apply a 300 m Cartesian scale to world-coordinate maps.
+
 ### Placed objects
 
 For `[object]`, Core interprets only the confirmed base block:
