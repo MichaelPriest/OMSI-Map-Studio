@@ -13,8 +13,9 @@ Responsável pela lógica de domínio relacionada ao OMSI:
 - descoberta de mapas;
 - leitura segura dos arquivos de tile `.map`;
 - leitura do bloco-base de objetos posicionados;
+- leitura conservadora de metadados `.sco`;
 - tiles;
-- futuramente objetos de cenário completos;
+- futuramente geometria real `.o3d`;
 - splines;
 - terreno;
 - paths;
@@ -61,6 +62,19 @@ Para `[object]`, o Core interpreta somente o bloco-base confirmado:
 
 Valores posteriores são mantidos em `ExtraValues` e não recebem significado até existirem modelos e testes específicos. Se o bloco-base estiver incompleto ou inválido, o objeto é ignorado pela visão estruturada, mas o texto original continua preservado no documento.
 
+### Metadados de objetos de cenário
+
+`OmsiSceneryObjectReader` usa o mesmo parser preservativo para arquivos `.sco` e expõe apenas metadados claramente identificáveis:
+
+- `[friendlyname]`;
+- hierarquia declarada em `[groups]`;
+- referências declaradas por `[mesh]`;
+- referências declaradas por `[collision_mesh]`.
+
+A ordem dos blocos e todos os comandos ainda não interpretados continuam preservados no documento de origem. Nesta etapa o editor não interpreta materiais, scripts, animações nem o conteúdo binário dos arquivos `.o3d`.
+
+`OmsiSceneryObjectPathResolver` restringe a resolução de `.sco` à pasta `Sceneryobjects` da instalação selecionada e rejeita travessia de diretório ou extensões diferentes.
+
 ## MapStudio.Desktop
 
 Host Windows responsável por acesso nativo a arquivos e pastas, serviços do Core, ciclo de vida do WebView2 e comunicação entre C# e a interface.
@@ -69,33 +83,25 @@ O host desktop não deve se transformar na interface principal do editor.
 
 ### Ponte C# ↔ React
 
-A interface envia comandos pequenos pelo WebView2, como `selectOmsiRoot`. O host executa somente operações que precisam de acesso nativo ao computador e devolve mensagens JSON com estado real.
+A interface envia comandos pequenos pelo WebView2. O host executa somente operações que precisam de acesso nativo ao computador e devolve mensagens JSON com estado real.
 
-No primeiro fluxo funcional:
+O React não pode fornecer caminhos arbitrários para leitura. O host mantém uma lista dos caminhos `.sco` encontrados nos objetos dos mapas já carregados; somente esses caminhos podem solicitar metadados.
 
-1. React solicita a seleção da instalação do OMSI 2.
-2. O host abre `OpenFolderDialog` nativo.
-3. O host valida a presença da pasta `maps`.
-4. `OmsiMapCatalog` lê os mapas reais.
-5. Cada referência de tile é inspecionada por `OmsiTileReader`.
-6. O host envia nomes, caminhos, coordenadas e contagens reais para React.
-7. O viewport usa essas coordenadas para desenhar a malha do mapa.
+### Carregamento sob demanda
 
-Erros do host são enviados por códigos estáveis. A interface é responsável por apresentar a mensagem apropriada ao usuário.
+A descoberta inicial envia apenas catálogo, tiles e contagens.
 
-### Carregamento sob demanda de objetos
+- `loadMapObjects` carrega os blocos de `[object]` apenas quando um mapa é selecionado;
+- `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
+- metadados já lidos são armazenados em cache no React.
 
-A descoberta inicial da instalação envia apenas catálogo, tiles e contagens. Os blocos completos de `[object]` são carregados somente quando o usuário seleciona um mapa.
+Isso evita ler todos os `.sco` da instalação durante a abertura do programa.
 
-O React envia `loadMapObjects` usando apenas o nome de diretório de um mapa já conhecido pelo host. O desktop resolve esse nome em seu catálogo interno; a interface não fornece um caminho de arquivo arbitrário.
-
-Para mapas cartesianos, o viewport pode representar a posição de um objeto com:
+Para mapas cartesianos, o viewport representa a posição com:
 
 - `worldX = tileX * 300 + objectX`;
 - `worldZ = tileY * 300 + objectY`;
 - `worldY = objectZ`.
-
-Nesta etapa esses pontos são apenas marcadores de posição. Eles não representam a geometria real do arquivo `.sco`.
 
 Para mapas com `[worldcoordinates]`, os objetos são lidos e contabilizados, mas os marcadores globais ficam ocultos até existir a conversão geográfica correta.
 
@@ -105,21 +111,11 @@ Interface principal do editor, responsável pelo viewport Babylon.js, biblioteca
 
 O estado de produção deve vir de dados reais fornecidos pelo Core/Desktop.
 
-O grid exibido sem mapa é apenas referência visual do espaço de edição. Quando um mapa é carregado, a malha de tiles deve ser gerada a partir das coordenadas reais lidas do `global.cfg`. Tiles referenciados cujo arquivo `.map` não existe são destacados separadamente.
-
-
 ### Seleção de objetos no viewport
 
-Em mapas cartesianos, um clique curto no viewport calcula o objeto posicionado mais próximo do raio da câmera. A seleção não cria um mesh individual para cada objeto, evitando multiplicar o custo de cena em mapas grandes.
+Em mapas cartesianos, um clique curto no viewport calcula o objeto posicionado mais próximo do raio da câmera sem criar um mesh individual por objeto.
 
-O objeto selecionado recebe apenas um marcador de destaque e seus dados reais são exibidos no inspetor:
-
-- caminho do arquivo `.sco`;
-- ID;
-- tile de origem;
-- posição local;
-- posição global cartesiana calculada;
-- rotação, pitch e bank.
+O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do `.sco`: nome amigável, grupos, meshes e collision meshes.
 
 Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
 
@@ -143,8 +139,9 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 6. O estado real é enviado à interface React.
 7. A malha real de tiles e estatísticas de objetos/splines são exibidas.
 8. O bloco-base de objetos passa a ser interpretado de forma segura.
-9. Objetos posicionados podem ser selecionados e inspecionados sem gravação.
-10. Objetos, splines e terreno passam a ser renderizados progressivamente.
+9. Objetos posicionados podem ser selecionados e inspecionados.
+10. O `.sco` do objeto selecionado fornece metadados reais sob demanda.
+11. Geometria `.o3d`, splines e terreno passam a ser renderizados progressivamente.
 
 ## Regra de documentação
 

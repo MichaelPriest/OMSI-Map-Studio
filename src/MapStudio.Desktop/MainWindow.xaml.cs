@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using System.Windows;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Scenery;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 
@@ -11,9 +12,18 @@ public partial class MainWindow : Window
 {
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
-    private readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
+    private readonly JsonSerializerOptions _jsonOptions =
+        new(JsonSerializerDefaults.Web);
+
     private IReadOnlyDictionary<string, OmsiMapDescriptor> _knownMaps =
-        new Dictionary<string, OmsiMapDescriptor>(StringComparer.OrdinalIgnoreCase);
+        new Dictionary<string, OmsiMapDescriptor>(
+            StringComparer.OrdinalIgnoreCase);
+
+    private readonly HashSet<string> _knownSceneryObjectPaths =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private string? _omsiRootPath;
 
     public MainWindow()
     {
@@ -25,18 +35,28 @@ public partial class MainWindow : Window
     {
         Loaded -= OnLoaded;
         await EditorWebView.EnsureCoreWebView2Async();
-        EditorWebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+        EditorWebView.CoreWebView2.WebMessageReceived +=
+            OnWebMessageReceived;
 
-        var devUrl = Environment.GetEnvironmentVariable("MAPSTUDIO_DEV_URL");
+        var devUrl = Environment.GetEnvironmentVariable(
+            "MAPSTUDIO_DEV_URL");
 
-        if (Uri.TryCreate(devUrl, UriKind.Absolute, out var developmentUri))
+        if (Uri.TryCreate(
+                devUrl,
+                UriKind.Absolute,
+                out var developmentUri))
         {
             EditorWebView.Source = developmentUri;
             return;
         }
 
-        var uiDirectory = Path.Combine(AppContext.BaseDirectory, "ui");
-        var indexPath = Path.Combine(uiDirectory, "index.html");
+        var uiDirectory = Path.Combine(
+            AppContext.BaseDirectory,
+            "ui");
+
+        var indexPath = Path.Combine(
+            uiDirectory,
+            "index.html");
 
         if (!File.Exists(indexPath))
         {
@@ -48,12 +68,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        EditorWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-            "app.mapstudio",
-            uiDirectory,
-            CoreWebView2HostResourceAccessKind.DenyCors);
+        EditorWebView.CoreWebView2
+            .SetVirtualHostNameToFolderMapping(
+                "app.mapstudio",
+                uiDirectory,
+                CoreWebView2HostResourceAccessKind.DenyCors);
 
-        EditorWebView.Source = new Uri("https://app.mapstudio/index.html");
+        EditorWebView.Source = new Uri(
+            "https://app.mapstudio/index.html");
     }
 
     private async void OnWebMessageReceived(
@@ -62,9 +84,12 @@ public partial class MainWindow : Window
     {
         try
         {
-            using var message = JsonDocument.Parse(e.WebMessageAsJson);
+            using var message = JsonDocument.Parse(
+                e.WebMessageAsJson);
 
-            if (!message.RootElement.TryGetProperty("type", out var typeElement))
+            if (!message.RootElement.TryGetProperty(
+                    "type",
+                    out var typeElement))
             {
                 return;
             }
@@ -76,29 +101,38 @@ public partial class MainWindow : Window
                     break;
 
                 case "loadMapObjects":
-                    if (message.RootElement.TryGetProperty("directoryName", out var directoryElement) &&
-                        directoryElement.ValueKind == JsonValueKind.String)
+                    if (TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var directoryName))
                     {
-                        await LoadMapObjectsAsync(directoryElement.GetString());
+                        await LoadMapObjectsAsync(directoryName);
                     }
                     else
                     {
-                        PostMessage(new
-                        {
-                            type = "hostError",
-                            code = "invalidMessage"
-                        });
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "loadSceneryObjectMetadata":
+                    if (TryReadString(
+                            message.RootElement,
+                            "sceneryObjectPath",
+                            out var sceneryObjectPath))
+                    {
+                        await LoadSceneryObjectMetadataAsync(
+                            sceneryObjectPath);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
                     }
                     break;
             }
         }
         catch (JsonException)
         {
-            PostMessage(new
-            {
-                type = "hostError",
-                code = "invalidMessage"
-            });
+            PostInvalidMessage();
         }
     }
 
@@ -136,6 +170,9 @@ public partial class MainWindow : Window
         try
         {
             var maps = await _mapCatalog.DiscoverAsync(rootPath);
+
+            _omsiRootPath = rootPath;
+            _knownSceneryObjectPaths.Clear();
             _knownMaps = maps.ToDictionary(
                 map => map.DirectoryName,
                 StringComparer.OrdinalIgnoreCase);
@@ -156,10 +193,14 @@ public partial class MainWindow : Window
                         tile.X,
                         tile.Y,
                         tile.RelativeMapPath,
-                        fileExists = tile.Summary?.Exists ?? false,
-                        objectCount = tile.Summary?.ObjectCount ?? 0,
-                        splineCount = tile.Summary?.SplineCount ?? 0,
-                        splineAttachmentCount = tile.Summary?.SplineAttachmentCount ?? 0
+                        fileExists =
+                            tile.Summary?.Exists ?? false,
+                        objectCount =
+                            tile.Summary?.ObjectCount ?? 0,
+                        splineCount =
+                            tile.Summary?.SplineCount ?? 0,
+                        splineAttachmentCount =
+                            tile.Summary?.SplineAttachmentCount ?? 0
                     })
                 })
             });
@@ -184,10 +225,13 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task LoadMapObjectsAsync(string? directoryName)
+    private async Task LoadMapObjectsAsync(
+        string? directoryName)
     {
         if (string.IsNullOrWhiteSpace(directoryName) ||
-            !_knownMaps.TryGetValue(directoryName, out var map))
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
         {
             PostMessage(new
             {
@@ -216,8 +260,12 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                foreach (var placedObject in await _tileReader.ReadObjectsAsync(tilePath))
+                foreach (var placedObject in
+                    await _tileReader.ReadObjectsAsync(tilePath))
                 {
+                    _knownSceneryObjectPaths.Add(
+                        placedObject.SceneryObjectPath);
+
                     objects.Add(new
                     {
                         tileX = tile.X,
@@ -263,9 +311,103 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task LoadSceneryObjectMetadataAsync(
+        string? sceneryObjectPath)
+    {
+        if (_omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(sceneryObjectPath) ||
+            !_knownSceneryObjectPaths.Contains(
+                sceneryObjectPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownSceneryObject"
+            });
+            return;
+        }
+
+        if (!OmsiSceneryObjectPathResolver.TryResolve(
+                _omsiRootPath,
+                sceneryObjectPath,
+                out var fullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSceneryObjectPath"
+            });
+            return;
+        }
+
+        try
+        {
+            var metadata =
+                await _sceneryObjectReader.ReadMetadataAsync(
+                    fullPath);
+
+            PostMessage(new
+            {
+                type = "sceneryObjectMetadataLoaded",
+                sceneryObjectPath,
+                metadata
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = sceneryObjectPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private static bool TryReadString(
+        JsonElement element,
+        string propertyName,
+        out string? value)
+    {
+        value = null;
+
+        if (!element.TryGetProperty(
+                propertyName,
+                out var property) ||
+            property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString();
+        return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private void PostInvalidMessage()
+    {
+        PostMessage(new
+        {
+            type = "hostError",
+            code = "invalidMessage"
+        });
+    }
+
     private void PostMessage(object payload)
     {
-        var json = JsonSerializer.Serialize(payload, _jsonOptions);
-        EditorWebView.CoreWebView2.PostWebMessageAsJson(json);
+        var json = JsonSerializer.Serialize(
+            payload,
+            _jsonOptions);
+
+        EditorWebView.CoreWebView2
+            .PostWebMessageAsJson(json);
     }
 }

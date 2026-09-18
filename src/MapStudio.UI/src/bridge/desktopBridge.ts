@@ -31,6 +31,14 @@ export type OmsiPlacedObject = {
   bank: number;
 };
 
+export type OmsiSceneryObjectMetadata = {
+  exists: boolean;
+  friendlyName: string | null;
+  groups: string[];
+  meshPaths: string[];
+  collisionMeshPaths: string[];
+};
+
 export type HostMessage =
   | {
       type: "omsiInstallationLoaded";
@@ -47,6 +55,11 @@ export type HostMessage =
       objects: OmsiPlacedObject[];
     }
   | {
+      type: "sceneryObjectMetadataLoaded";
+      sceneryObjectPath: string;
+      metadata: OmsiSceneryObjectMetadata;
+    }
+  | {
       type: "hostError";
       code:
         | "invalidMessage"
@@ -54,6 +67,8 @@ export type HostMessage =
         | "accessDenied"
         | "ioError"
         | "unknownMap"
+        | "unknownSceneryObject"
+        | "invalidSceneryObjectPath"
         | string;
       detail?: string;
     };
@@ -85,13 +100,26 @@ export function isDesktopBridgeAvailable() {
 }
 
 export function selectOmsiRoot() {
-  getWebView()?.postMessage({ type: "selectOmsiRoot" });
+  getWebView()?.postMessage({
+    type: "selectOmsiRoot"
+  });
 }
 
-export function loadMapObjects(directoryName: string) {
+export function loadMapObjects(
+  directoryName: string
+) {
   getWebView()?.postMessage({
     type: "loadMapObjects",
     directoryName
+  });
+}
+
+export function loadSceneryObjectMetadata(
+  sceneryObjectPath: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSceneryObjectMetadata",
+    sceneryObjectPath
   });
 }
 
@@ -104,8 +132,18 @@ export function subscribeToHost(
     return () => undefined;
   }
 
-  const listener = (event: MessageEvent<HostMessage>) => handler(event.data);
-  webView.addEventListener("message", listener);
+  const listener = (
+    event: MessageEvent<HostMessage>
+  ) => handler(event.data);
 
-  return () => webView.removeEventListener("message", listener);
+  webView.addEventListener(
+    "message",
+    listener
+  );
+
+  return () =>
+    webView.removeEventListener(
+      "message",
+      listener
+    );
 }

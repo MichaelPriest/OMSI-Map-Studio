@@ -13,8 +13,9 @@ Owns OMSI-facing domain logic:
 - map discovery;
 - safe `.map` tile file reading;
 - base placed-object parsing;
+- conservative `.sco` metadata reading;
 - tiles;
-- future full scenery-object support;
+- future real `.o3d` geometry;
 - splines;
 - terrain;
 - paths;
@@ -61,6 +62,19 @@ For `[object]`, Core interprets only the confirmed base block:
 
 Later values are retained in `ExtraValues` and are not assigned meaning until dedicated models and tests exist. If the base block is incomplete or invalid, the object is skipped by the structured view while the original source text remains preserved in the document.
 
+### Scenery-object metadata
+
+`OmsiSceneryObjectReader` uses the same preservation-oriented parser for `.sco` files and exposes only clearly identifiable metadata:
+
+- `[friendlyname]`;
+- the hierarchy declared by `[groups]`;
+- references declared by `[mesh]`;
+- references declared by `[collision_mesh]`.
+
+Block order and all commands that are not interpreted yet remain preserved in the source document. At this stage the editor does not interpret materials, scripts, animations or the binary contents of `.o3d` files.
+
+`OmsiSceneryObjectPathResolver` restricts `.sco` resolution to the selected installation's `Sceneryobjects` directory and rejects directory traversal or different extensions.
+
 ## MapStudio.Desktop
 
 Windows host responsible for native file and folder access, Core services, WebView2 lifecycle and communication between C# and the interface.
@@ -69,33 +83,25 @@ The desktop host must not become the primary editor UI.
 
 ### C# ↔ React bridge
 
-The interface sends small commands through WebView2, such as `selectOmsiRoot`. The host performs only operations that require native machine access and returns JSON messages containing real state.
+The interface sends small commands through WebView2. The host performs only operations that require native machine access and returns JSON messages containing real state.
 
-In the first functional flow:
+React cannot provide arbitrary paths for reading. The host keeps a list of `.sco` paths discovered from objects in maps that have already been loaded; only those paths can request metadata.
 
-1. React requests OMSI 2 installation selection.
-2. The host opens a native `OpenFolderDialog`.
-3. The host validates the presence of the `maps` directory.
-4. `OmsiMapCatalog` reads real installed maps.
-5. Each tile reference is inspected by `OmsiTileReader`.
-6. The host sends real map names, paths, coordinates and counts to React.
-7. The viewport uses those coordinates to draw the map tile layout.
+### On-demand loading
 
-Host failures are sent as stable error codes. The interface is responsible for presenting the appropriate user-facing message.
+Initial discovery sends only the catalog, tiles and counts.
 
-### On-demand object loading
+- `loadMapObjects` loads `[object]` blocks only when a map is selected;
+- `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
+- previously read metadata is cached in React.
 
-Initial installation discovery sends only the catalog, tiles and counts. Full `[object]` blocks are loaded only after the user selects a map.
+This avoids scanning every `.sco` in the installation at application startup.
 
-React sends `loadMapObjects` using only the directory name of a map already known by the host. The desktop resolves that name against its internal catalog; the interface does not provide an arbitrary file path.
-
-For Cartesian maps, the viewport can represent an object position with:
+For Cartesian maps, the viewport represents object positions with:
 
 - `worldX = tileX * 300 + objectX`;
 - `worldZ = tileY * 300 + objectY`;
 - `worldY = objectZ`.
-
-At this stage these points are position markers only. They do not represent the real geometry of the `.sco` file.
 
 For maps with `[worldcoordinates]`, objects are parsed and counted, but global markers remain hidden until the correct geographic conversion exists.
 
@@ -105,21 +111,11 @@ Primary editor interface, responsible for the Babylon.js viewport, asset browser
 
 Production state must come from real data supplied by Core/Desktop.
 
-The grid shown without an opened map is only editor-space visual guidance. Once a map is loaded, the tile layout must be generated from real coordinates read from `global.cfg`. Referenced tiles whose `.map` file is missing are highlighted separately.
-
-
 ### Object selection in the viewport
 
-On Cartesian maps, a short click in the viewport finds the placed object nearest to the camera ray. Selection does not create one individual mesh per object, avoiding multiplied scene cost on large maps.
+On Cartesian maps, a short click finds the placed object nearest to the camera ray without creating one individual mesh per object.
 
-The selected object receives only a highlight marker and its real values are shown in the inspector:
-
-- `.sco` file path;
-- ID;
-- source tile;
-- local position;
-- calculated Cartesian global position;
-- rotation, pitch and bank.
+The inspector displays real `.map` values and, when available, real `.sco` metadata: friendly name, groups, meshes and collision meshes.
 
 Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
 
@@ -143,8 +139,9 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 6. Real state is sent to the React interface.
 7. The real tile layout and object/spline statistics are displayed.
 8. The base placed-object block is interpreted safely.
-9. Placed objects can be selected and inspected without writing changes.
-10. Objects, splines and terrain are interpreted and rendered incrementally.
+9. Placed objects can be selected and inspected.
+10. The selected object's `.sco` provides real metadata on demand.
+11. `.o3d` geometry, splines and terrain are rendered incrementally.
 
 ## Documentation rule
 
