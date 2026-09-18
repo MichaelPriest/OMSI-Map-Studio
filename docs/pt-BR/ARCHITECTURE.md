@@ -11,6 +11,7 @@ Responsável pela lógica de domínio relacionada ao OMSI:
 - leitura de arquivos de configuração;
 - detecção e preservação da codificação original dos arquivos;
 - descoberta de mapas;
+- leitura segura dos arquivos de tile `.map`;
 - tiles;
 - futuramente objetos de cenário;
 - splines;
@@ -20,6 +21,19 @@ Responsável pela lógica de domínio relacionada ao OMSI:
 - validação.
 
 O Core não deve depender de WPF, WebView2 ou React.
+
+### Leitura de tiles
+
+`OmsiTileReader` recebe o caminho real de um arquivo `.map` e usa o mesmo parser preservativo dos demais arquivos de configuração.
+
+Nesta fase ele extrai apenas informações que podemos identificar com segurança pela seção:
+
+- quantidade de `[object]`;
+- quantidade de `[spline]`;
+- quantidade de `[splineAttachement]` / `[splineAttachment]`;
+- existência ou ausência do arquivo do tile.
+
+Campos internos de objetos e splines não devem ser interpretados por posição até existirem modelos e testes específicos para essas estruturas.
 
 ## MapStudio.Desktop
 
@@ -37,8 +51,9 @@ No primeiro fluxo funcional:
 2. O host abre `OpenFolderDialog` nativo.
 3. O host valida a presença da pasta `maps`.
 4. `OmsiMapCatalog` lê os mapas reais.
-5. O host envia nomes, caminhos e coordenadas reais de tiles para React.
-6. O viewport usa essas coordenadas para desenhar a malha do mapa.
+5. Cada referência de tile é inspecionada por `OmsiTileReader`.
+6. O host envia nomes, caminhos, coordenadas e contagens reais para React.
+7. O viewport usa essas coordenadas para desenhar a malha do mapa.
 
 Erros do host são enviados por códigos estáveis. A interface é responsável por apresentar a mensagem apropriada ao usuário.
 
@@ -48,7 +63,7 @@ Interface principal do editor, responsável pelo viewport Babylon.js, biblioteca
 
 O estado de produção deve vir de dados reais fornecidos pelo Core/Desktop.
 
-O grid exibido sem mapa é apenas referência visual do espaço de edição. Quando um mapa é carregado, a malha de tiles deve ser gerada a partir das coordenadas reais lidas do `global.cfg`.
+O grid exibido sem mapa é apenas referência visual do espaço de edição. Quando um mapa é carregado, a malha de tiles deve ser gerada a partir das coordenadas reais lidas do `global.cfg`. Tiles referenciados cujo arquivo `.map` não existe são destacados separadamente.
 
 ## Estratégia de compatibilidade
 
@@ -64,9 +79,10 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 2. O Core encontra mapas contendo `global.cfg`.
 3. O `global.cfg` é lido sem alteração destrutiva.
 4. Referências reais de tiles são extraídas.
-5. O estado real é enviado à interface React.
-6. A malha real de tiles é exibida no viewport.
-7. Objetos, splines e terreno passam a ser renderizados progressivamente.
+5. Cada arquivo `.map` existente é inspecionado.
+6. O estado real é enviado à interface React.
+7. A malha real de tiles e estatísticas de objetos/splines são exibidas.
+8. Objetos, splines e terreno passam a ser interpretados e renderizados progressivamente.
 
 ## Regra de documentação
 
