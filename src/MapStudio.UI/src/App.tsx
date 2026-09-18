@@ -1050,13 +1050,13 @@ export function App() {
 
       <dl className="property-list dense">
         <div>
-          <dt>Tiles</dt>
+          <dt>Tiles totais</dt>
           <dd>
             {selectedMap?.tiles.length ?? 0}
           </dd>
         </div>
         <div>
-          <dt>Objetos</dt>
+          <dt>Objetos (área ativa)</dt>
           <dd>
             {selectedStats?.objects ??
               (Boolean(loadingRegionKey)
@@ -1065,7 +1065,7 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Splines</dt>
+          <dt>Splines (área ativa)</dt>
           <dd>
             {selectedStats?.splines ??
               (Boolean(loadingRegionKey)
@@ -1082,9 +1082,9 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Tiles ausentes</dt>
+          <dt>Tiles ativos</dt>
           <dd>
-            {selectedStats?.missingTiles ?? "—"}
+            {activeTiles.length}
           </dd>
         </div>
       </dl>

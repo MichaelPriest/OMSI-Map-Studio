@@ -780,7 +780,7 @@ export function Viewport({
         return;
       }
 
-      if (usesWorldCoordinates || objects.length === 0) {
+      if (usesWorldCoordinates) {
         onSelectObject(undefined);
         return;
       }

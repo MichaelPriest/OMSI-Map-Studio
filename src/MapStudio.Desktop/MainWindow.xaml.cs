@@ -28,8 +28,11 @@ public partial class MainWindow : Window
         new Dictionary<string, OmsiMapDescriptor>(
             StringComparer.OrdinalIgnoreCase);
 
-    private readonly HashSet<string> _knownSceneryObjectPaths =
-        new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<
+        string,
+        byte>
+        _knownSceneryObjectPaths =
+            new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<
         string,
@@ -508,8 +511,9 @@ public partial class MainWindow : Window
                 foreach (var placedObject in
                     loaded.Content.Objects)
                 {
-                    _knownSceneryObjectPaths.Add(
-                        placedObject.SceneryObjectPath);
+                    _knownSceneryObjectPaths.TryAdd(
+                        placedObject.SceneryObjectPath,
+                        0);
 
                     objects.Add(new
                     {
@@ -630,7 +634,7 @@ public partial class MainWindow : Window
     {
         if (_omsiRootPath is null ||
             string.IsNullOrWhiteSpace(sceneryObjectPath) ||
-            !_knownSceneryObjectPaths.Contains(
+            !_knownSceneryObjectPaths.ContainsKey(
                 sceneryObjectPath))
         {
             PostMessage(new
