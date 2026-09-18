@@ -715,7 +715,7 @@ public partial class MainWindow : Window
     {
         if (_omsiRootPath is null ||
             string.IsNullOrWhiteSpace(sceneryObjectPath) ||
-            !_knownSceneryObjectPaths.Contains(
+            !_knownSceneryObjectPaths.ContainsKey(
                 sceneryObjectPath))
         {
             PostMessage(new
