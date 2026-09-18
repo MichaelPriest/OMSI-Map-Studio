@@ -42,6 +42,22 @@ export function App() {
     []
   );
 
+  const selectedStats = useMemo(() => {
+    if (!selectedMap) {
+      return undefined;
+    }
+
+    return selectedMap.tiles.reduce(
+      (stats, tile) => ({
+        objects: stats.objects + tile.objectCount,
+        splines: stats.splines + tile.splineCount,
+        attachments: stats.attachments + tile.splineAttachmentCount,
+        missingTiles: stats.missingTiles + (tile.fileExists ? 0 : 1)
+      }),
+      { objects: 0, splines: 0, attachments: 0, missingTiles: 0 }
+    );
+  }, [selectedMap]);
+
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
       setError("Abra esta interface pelo aplicativo desktop OMSI Map Studio para acessar os arquivos locais.");
@@ -92,18 +108,25 @@ export function App() {
 
         {maps.length > 0 && (
           <div className="map-list" role="list" aria-label="Mapas do OMSI 2">
-            {maps.map((map) => (
-              <button
-                key={map.directoryPath}
-                type="button"
-                className={map.directoryPath === selectedMap?.directoryPath ? "map-card selected" : "map-card"}
-                onClick={() => setSelectedMap(map)}
-              >
-                <strong>{map.displayName}</strong>
-                <span>{map.directoryName}</span>
-                <small>{map.tiles.length} tiles</small>
-              </button>
-            ))}
+            {maps.map((map) => {
+              const missingTiles = map.tiles.filter((tile) => !tile.fileExists).length;
+
+              return (
+                <button
+                  key={map.directoryPath}
+                  type="button"
+                  className={map.directoryPath === selectedMap?.directoryPath ? "map-card selected" : "map-card"}
+                  onClick={() => setSelectedMap(map)}
+                >
+                  <strong>{map.displayName}</strong>
+                  <span>{map.directoryName}</span>
+                  <small>
+                    {map.tiles.length} tiles
+                    {missingTiles ? ` · ${missingTiles} ausentes` : ""}
+                  </small>
+                </button>
+              );
+            })}
           </div>
         )}
       </aside>
@@ -114,7 +137,7 @@ export function App() {
           <strong>{selectedMap?.displayName ?? "Nenhum mapa carregado"}</strong>
           <span>
             {selectedMap
-              ? `${selectedMap.tiles.length} tiles reais lidos do global.cfg`
+              ? `${selectedMap.tiles.length} tiles · ${selectedStats?.objects ?? 0} objetos · ${selectedStats?.splines ?? 0} splines`
               : "O grid vazio representa apenas o espaço de edição."}
           </span>
         </div>
@@ -126,7 +149,7 @@ export function App() {
           <small>{selectedMap ? "Mapa selecionado" : "Nenhuma seleção"}</small>
         </div>
 
-        {selectedMap ? (
+        {selectedMap && selectedStats ? (
           <dl className="property-list">
             <div>
               <dt>Nome</dt>
@@ -139,6 +162,22 @@ export function App() {
             <div>
               <dt>Tiles</dt>
               <dd>{selectedMap.tiles.length}</dd>
+            </div>
+            <div>
+              <dt>Objetos</dt>
+              <dd>{selectedStats.objects}</dd>
+            </div>
+            <div>
+              <dt>Splines</dt>
+              <dd>{selectedStats.splines}</dd>
+            </div>
+            <div>
+              <dt>Attachments</dt>
+              <dd>{selectedStats.attachments}</dd>
+            </div>
+            <div>
+              <dt>Tiles ausentes</dt>
+              <dd>{selectedStats.missingTiles}</dd>
             </div>
           </dl>
         ) : (
