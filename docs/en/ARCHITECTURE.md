@@ -12,8 +12,9 @@ Owns OMSI-facing domain logic:
 - detection and preservation of source file encodings;
 - map discovery;
 - safe `.map` tile file reading;
+- base placed-object parsing;
 - tiles;
-- future scenery objects;
+- future full scenery-object support;
 - splines;
 - terrain;
 - paths;
@@ -33,7 +34,21 @@ At this stage it only extracts information that can be identified safely by sect
 - `[splineAttachement]` / `[splineAttachment]` count;
 - whether the referenced tile file exists.
 
-Internal object and spline fields must not be interpreted by position until dedicated models and tests exist for those structures.
+### Placed objects
+
+For `[object]`, Core interprets only the confirmed base block:
+
+1. header value whose semantics are still intentionally unassigned;
+2. `.sco` file path;
+3. object ID;
+4. `x` position;
+5. `y` position;
+6. `z` position;
+7. rotation;
+8. pitch;
+9. bank.
+
+Later values are retained in `ExtraValues` and are not assigned meaning until dedicated models and tests exist. If the base block is incomplete or invalid, the object is skipped by the structured view while the original source text remains preserved in the document.
 
 ## MapStudio.Desktop
 
@@ -82,7 +97,8 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 5. Existing `.map` tile files are inspected.
 6. Real state is sent to the React interface.
 7. The real tile layout and object/spline statistics are displayed.
-8. Objects, splines and terrain are interpreted and rendered incrementally.
+8. The base placed-object block is interpreted safely.
+9. Objects, splines and terrain are interpreted and rendered incrementally.
 
 ## Documentation rule
 
