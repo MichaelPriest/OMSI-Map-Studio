@@ -6,7 +6,9 @@ public sealed record OmsiO3dGeometry(
     float[] Positions,
     float[] Normals,
     float[] Uvs,
-    uint[] Indices)
+    uint[] Indices,
+    ushort[] TriangleMaterialIndices,
+    IReadOnlyList<OmsiO3dMaterial> Materials)
 {
     public static OmsiO3dGeometry Error(
         string errorCode) => new(
@@ -15,5 +17,7 @@ public sealed record OmsiO3dGeometry(
             Positions: Array.Empty<float>(),
             Normals: Array.Empty<float>(),
             Uvs: Array.Empty<float>(),
-            Indices: Array.Empty<uint>());
+            Indices: Array.Empty<uint>(),
+            TriangleMaterialIndices: Array.Empty<ushort>(),
+            Materials: Array.Empty<OmsiO3dMaterial>());
 }

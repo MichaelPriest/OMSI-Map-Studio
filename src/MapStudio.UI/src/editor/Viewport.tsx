@@ -94,6 +94,63 @@ function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
 
 const degreesToRadians = Math.PI / 180;
 
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function createPreviewMaterial(
+  scene: Scene,
+  meshIndex: number,
+  materialIndex: number,
+  materialData:
+    | OmsiSceneryObjectGeometry["meshes"][number]["geometry"]["materials"][number]
+    | undefined
+) {
+  const material = new StandardMaterial(
+    `selected-object-material-${meshIndex}-${materialIndex}`,
+    scene
+  );
+
+  material.backFaceCulling = false;
+  material.twoSidedLighting = true;
+
+  if (!materialData) {
+    material.diffuseColor =
+      new Color3(0.72, 0.76, 0.82);
+    material.specularColor =
+      new Color3(0.12, 0.12, 0.12);
+    return material;
+  }
+
+  material.diffuseColor = new Color3(
+    clamp01(materialData.diffuseR),
+    clamp01(materialData.diffuseG),
+    clamp01(materialData.diffuseB)
+  );
+
+  material.alpha =
+    clamp01(materialData.diffuseA);
+
+  material.specularColor = new Color3(
+    clamp01(materialData.specularR),
+    clamp01(materialData.specularG),
+    clamp01(materialData.specularB)
+  );
+
+  material.emissiveColor = new Color3(
+    clamp01(materialData.emissionR),
+    clamp01(materialData.emissionG),
+    clamp01(materialData.emissionB)
+  );
+
+  material.specularPower = Math.max(
+    1,
+    materialData.specularPower
+  );
+
+  return material;
+}
+
 function createSelectedGeometry(
   scene: Scene,
   placedObject: OmsiPlacedObject,
@@ -115,49 +172,110 @@ function createSelectedGeometry(
       -placedObject.pitch * degreesToRadians
     );
 
-  const material = new StandardMaterial(
-    "selected-object-material",
-    scene
-  );
-
-  material.diffuseColor =
-    new Color3(0.72, 0.76, 0.82);
-  material.specularColor =
-    new Color3(0.12, 0.12, 0.12);
-  material.backFaceCulling = false;
-  material.twoSidedLighting = true;
-
   for (const [meshIndex, meshReference]
     of geometry.meshes.entries()) {
+    const meshGeometry =
+      meshReference.geometry;
+
     if (
-      !meshReference.geometry.isLoaded ||
-      meshReference.geometry.positions.length === 0 ||
-      meshReference.geometry.indices.length === 0
+      !meshGeometry.isLoaded ||
+      meshGeometry.positions.length === 0 ||
+      meshGeometry.indices.length === 0
     ) {
       continue;
     }
 
-    const mesh = new Mesh(
-      "selected-o3d-" + meshIndex,
-      scene
-    );
+    const triangleCount =
+      Math.floor(
+        meshGeometry.indices.length / 3
+      );
 
-    const vertexData = new VertexData();
-    vertexData.positions =
-      meshReference.geometry.positions;
-    vertexData.normals =
-      meshReference.geometry.normals;
-    vertexData.uvs =
-      meshReference.geometry.uvs;
-    vertexData.indices =
-      meshReference.geometry.indices;
+    const groups =
+      new Map<number, number[]>();
 
-    vertexData.applyToMesh(mesh, false);
-    mesh.material = material;
-    mesh.parent = root;
-    mesh.isPickable = false;
+    for (
+      let triangleIndex = 0;
+      triangleIndex < triangleCount;
+      triangleIndex += 1
+    ) {
+      const materialIndex =
+        meshGeometry
+          .triangleMaterialIndices[
+            triangleIndex
+          ] ?? -1;
+
+      const groupedIndices =
+        groups.get(materialIndex) ?? [];
+
+      const indexOffset =
+        triangleIndex * 3;
+
+      groupedIndices.push(
+        meshGeometry.indices[indexOffset],
+        meshGeometry.indices[indexOffset + 1],
+        meshGeometry.indices[indexOffset + 2]
+      );
+
+      groups.set(
+        materialIndex,
+        groupedIndices
+      );
+    }
+
+    if (groups.size === 0) {
+      groups.set(
+        -1,
+        meshGeometry.indices
+      );
+    }
+
+    for (const [
+      materialIndex,
+      groupedIndices
+    ] of groups) {
+      const mesh = new Mesh(
+        `selected-o3d-${meshIndex}-material-${materialIndex}`,
+        scene
+      );
+
+      const vertexData =
+        new VertexData();
+
+      vertexData.positions =
+        meshGeometry.positions;
+
+      vertexData.normals =
+        meshGeometry.normals;
+
+      vertexData.uvs =
+        meshGeometry.uvs;
+
+      vertexData.indices =
+        groupedIndices;
+
+      vertexData.applyToMesh(
+        mesh,
+        false
+      );
+
+      mesh.material =
+        createPreviewMaterial(
+          scene,
+          meshIndex,
+          materialIndex,
+          materialIndex >= 0
+            ? meshGeometry.materials[
+                materialIndex
+              ]
+            : undefined
+        );
+
+      mesh.parent = root;
+      mesh.isPickable = false;
+    }
   }
 }
+
 
 export function Viewport({
   tiles,

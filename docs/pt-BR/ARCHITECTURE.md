@@ -123,7 +123,7 @@ O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do
 
 Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
 
-Nesta fase a seleção é somente leitura. Quando disponível, a geometria O3D real do objeto selecionado é exibida com material neutro, sem texturas. O editor ainda não altera nem grava transformações.
+Nesta fase a seleção é somente leitura. Quando disponível, a geometria O3D real do objeto selecionado é exibida usando os materiais embutidos no O3D: cor difusa, alpha, especular e emissão. Cada triângulo mantém seu índice de material e o nome da textura embutida é preservado para o próximo estágio de carregamento de imagens. O editor ainda não altera nem grava transformações.
 
 ## Estratégia de compatibilidade
 
@@ -149,7 +149,9 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 12. O cabeçalho e as seções de meshes `.o3d` são validados e inventariados.
 13. Vértices, normais, UVs e triângulos de meshes O3D não criptografados são carregados sob demanda.
 14. O modelo real do objeto selecionado é exibido no viewport com material neutro.
-15. Splines, terreno, materiais e texturas passam a ser implementados progressivamente.
+15. Materiais O3D embutidos passam a ser aplicados por triângulo no preview.
+16. Texturas O3D e extensões `[matl_*]` passam a ser carregadas progressivamente.
+17. Splines e terreno passam a ser implementados progressivamente.
 
 ## Regra de documentação
 

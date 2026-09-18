@@ -67,6 +67,21 @@ export type OmsiSceneryObjectMetadata = {
   collisionMeshes: OmsiSceneryMeshReference[];
 };
 
+export type OmsiO3dMaterial = {
+  diffuseR: number;
+  diffuseG: number;
+  diffuseB: number;
+  diffuseA: number;
+  specularR: number;
+  specularG: number;
+  specularB: number;
+  emissionR: number;
+  emissionG: number;
+  emissionB: number;
+  specularPower: number;
+  textureName: string | null;
+};
+
 export type OmsiO3dGeometry = {
   isLoaded: boolean;
   errorCode: string | null;
@@ -74,6 +89,8 @@ export type OmsiO3dGeometry = {
   normals: number[];
   uvs: number[];
   indices: number[];
+  triangleMaterialIndices: number[];
+  materials: OmsiO3dMaterial[];
 };
 
 export type OmsiSceneryObjectGeometry = {

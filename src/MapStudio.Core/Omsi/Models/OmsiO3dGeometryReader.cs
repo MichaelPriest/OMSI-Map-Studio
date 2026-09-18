@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace MapStudio.Core.Omsi.Models;
 
 public sealed class OmsiO3dGeometryReader
@@ -10,6 +12,10 @@ public sealed class OmsiO3dGeometryReader
 
     private const uint MaxVertices = 150_000;
     private const uint MaxTriangles = 300_000;
+    private const ushort MaxMaterials = 4_096;
+
+    private static readonly Encoding Windows1252 =
+        CreateWindows1252();
 
     public OmsiO3dGeometry Read(string path)
     {
@@ -69,6 +75,10 @@ public sealed class OmsiO3dGeometryReader
             float[]? normals = null;
             float[]? uvs = null;
             uint[]? indices = null;
+            ushort[]? triangleMaterialIndices = null;
+            IReadOnlyList<OmsiO3dMaterial> materials =
+                Array.Empty<OmsiO3dMaterial>();
+
             uint vertexCount = 0;
 
             while (stream.Position < stream.Length)
@@ -153,6 +163,9 @@ public sealed class OmsiO3dGeometryReader
                         indices =
                             new uint[checked((int)triangleCount * 3)];
 
+                        triangleMaterialIndices =
+                            new ushort[checked((int)triangleCount)];
+
                         for (var index = 0U;
                              index < triangleCount;
                              index++)
@@ -182,17 +195,25 @@ public sealed class OmsiO3dGeometryReader
                                 c = reader.ReadUInt16();
                             }
 
-                            _ = reader.ReadUInt16();
+                            var materialIndex =
+                                reader.ReadUInt16();
 
                             var t = checked((int)index * 3);
                             indices[t] = c;
                             indices[t + 1] = b;
                             indices[t + 2] = a;
+
+                            triangleMaterialIndices[
+                                checked((int)index)] =
+                                materialIndex;
                         }
                         break;
 
                     case MaterialSection:
-                        if (!SkipMaterials(reader, stream))
+                        if (!TryReadMaterials(
+                                reader,
+                                stream,
+                                out materials))
                         {
                             return OmsiO3dGeometry.Error(
                                 "invalidMaterialSection");
@@ -228,7 +249,8 @@ public sealed class OmsiO3dGeometryReader
             if (positions is null ||
                 normals is null ||
                 uvs is null ||
-                indices is null)
+                indices is null ||
+                triangleMaterialIndices is null)
             {
                 return OmsiO3dGeometry.Error(
                     "noRenderableGeometry");
@@ -249,7 +271,10 @@ public sealed class OmsiO3dGeometryReader
                 Positions: positions,
                 Normals: normals,
                 Uvs: uvs,
-                Indices: indices);
+                Indices: indices,
+                TriangleMaterialIndices:
+                    triangleMaterialIndices,
+                Materials: materials);
         }
         catch (EndOfStreamException)
         {
@@ -263,10 +288,13 @@ public sealed class OmsiO3dGeometryReader
         }
     }
 
-    private static bool SkipMaterials(
+    private static bool TryReadMaterials(
         BinaryReader reader,
-        Stream stream)
+        Stream stream,
+        out IReadOnlyList<OmsiO3dMaterial> materials)
     {
+        materials = Array.Empty<OmsiO3dMaterial>();
+
         if (!HasRemaining(stream, 2))
         {
             return false;
@@ -274,24 +302,73 @@ public sealed class OmsiO3dGeometryReader
 
         var materialCount = reader.ReadUInt16();
 
+        if (materialCount > MaxMaterials)
+        {
+            return false;
+        }
+
+        var result =
+            new List<OmsiO3dMaterial>(materialCount);
+
         for (var index = 0;
              index < materialCount;
              index++)
         {
-            if (!TrySkip(stream, 44) ||
-                !HasRemaining(stream, 1))
+            if (!HasRemaining(stream, 45))
             {
                 return false;
             }
+
+            var diffuseR = reader.ReadSingle();
+            var diffuseG = reader.ReadSingle();
+            var diffuseB = reader.ReadSingle();
+            var diffuseA = reader.ReadSingle();
+
+            var specularR = reader.ReadSingle();
+            var specularG = reader.ReadSingle();
+            var specularB = reader.ReadSingle();
+
+            var emissionR = reader.ReadSingle();
+            var emissionG = reader.ReadSingle();
+            var emissionB = reader.ReadSingle();
+
+            var specularPower = reader.ReadSingle();
 
             var textureLength = reader.ReadByte();
 
-            if (!TrySkip(stream, textureLength))
+            if (!HasRemaining(
+                    stream,
+                    textureLength))
             {
                 return false;
             }
+
+            var textureName =
+                textureLength == 0
+                    ? null
+                    : Windows1252.GetString(
+                        reader.ReadBytes(
+                            textureLength));
+
+            result.Add(new OmsiO3dMaterial(
+                diffuseR,
+                diffuseG,
+                diffuseB,
+                diffuseA,
+                specularR,
+                specularG,
+                specularB,
+                emissionR,
+                emissionG,
+                emissionB,
+                specularPower,
+                string.IsNullOrWhiteSpace(
+                    textureName)
+                    ? null
+                    : textureName));
         }
 
+        materials = result;
         return true;
     }
 
@@ -379,4 +456,12 @@ public sealed class OmsiO3dGeometryReader
         long bytes) =>
         bytes >= 0 &&
         stream.Position <= stream.Length - bytes;
+
+    private static Encoding CreateWindows1252()
+    {
+        Encoding.RegisterProvider(
+            CodePagesEncodingProvider.Instance);
+
+        return Encoding.GetEncoding(1252);
+    }
 }

@@ -123,7 +123,7 @@ The inspector displays real `.map` values and, when available, real `.sco` metad
 
 Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
 
-At this stage selection is read-only. When available, the selected object's real O3D geometry is displayed with a neutral material and no textures. The editor does not modify or save transforms yet.
+At this stage selection is read-only. When available, the selected object's real O3D geometry is displayed using embedded O3D materials: diffuse color, alpha, specular and emission. Each triangle keeps its material index and the embedded texture name is preserved for the next image-loading stage. The editor does not modify or save transforms yet.
 
 ## Compatibility strategy
 
@@ -149,7 +149,9 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 12. Found `.o3d` mesh headers and sections are validated and inventoried.
 13. Vertices, normals, UVs and triangles from unencrypted O3D meshes are loaded on demand.
 14. The selected object's real model is displayed in the viewport with a neutral material.
-15. Splines, terrain, materials and textures are implemented incrementally.
+15. Embedded O3D materials are applied per triangle in the preview.
+16. O3D textures and `[matl_*]` extensions are loaded incrementally.
+17. Splines and terrain are implemented incrementally.
 
 ## Documentation rule
 
