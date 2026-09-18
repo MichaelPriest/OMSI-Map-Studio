@@ -31,12 +31,17 @@ export type OmsiPlacedObject = {
   bank: number;
 };
 
+export type OmsiSceneryMeshReference = {
+  declaredPath: string;
+  fileExists: boolean;
+};
+
 export type OmsiSceneryObjectMetadata = {
   exists: boolean;
   friendlyName: string | null;
   groups: string[];
-  meshPaths: string[];
-  collisionMeshPaths: string[];
+  meshes: OmsiSceneryMeshReference[];
+  collisionMeshes: OmsiSceneryMeshReference[];
 };
 
 export type HostMessage =

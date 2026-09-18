@@ -75,6 +75,8 @@ A ordem dos blocos e todos os comandos ainda não interpretados continuam preser
 
 `OmsiSceneryObjectPathResolver` restringe a resolução de `.sco` à pasta `Sceneryobjects` da instalação selecionada e rejeita travessia de diretório ou extensões diferentes.
 
+`OmsiSceneryMeshPathResolver` interpreta referências `[mesh]` e `[collision_mesh]` a partir da pasta `model` associada ao `.sco`. São aceitos arquivos `.o3d` e `.x`, inclusive referências relativas entre pacotes com `..\`, desde que o caminho final continue dentro de `Sceneryobjects`. O React recebe apenas o caminho declarado e o estado encontrado/ausente; o caminho absoluto do computador não é exposto.
+
 ## MapStudio.Desktop
 
 Host Windows responsável por acesso nativo a arquivos e pastas, serviços do Core, ciclo de vida do WebView2 e comunicação entre C# e a interface.
@@ -115,7 +117,7 @@ O estado de produção deve vir de dados reais fornecidos pelo Core/Desktop.
 
 Em mapas cartesianos, um clique curto no viewport calcula o objeto posicionado mais próximo do raio da câmera sem criar um mesh individual por objeto.
 
-O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do `.sco`: nome amigável, grupos, meshes e collision meshes.
+O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do `.sco`: nome amigável, grupos, meshes e collision meshes. Cada referência de mesh mostra também se o arquivo correspondente foi encontrado na instalação.
 
 Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
 

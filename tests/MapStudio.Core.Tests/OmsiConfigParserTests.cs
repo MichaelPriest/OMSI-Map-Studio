@@ -246,6 +246,68 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
+    public void SceneryMeshPathResolver_UsesModelFolderAndStaysInsideSceneryobjects()
+    {
+        var omsiRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-mesh-{Guid.NewGuid():N}");
+
+        var scoPath = Path.Combine(
+            omsiRoot,
+            "Sceneryobjects",
+            "Pack",
+            "Object.sco");
+
+        Assert.True(
+            OmsiSceneryMeshPathResolver.TryResolve(
+                omsiRoot,
+                scoPath,
+                "building.o3d",
+                out var localMesh));
+
+        Assert.Equal(
+            Path.GetFullPath(
+                Path.Combine(
+                    omsiRoot,
+                    "Sceneryobjects",
+                    "Pack",
+                    "model",
+                    "building.o3d")),
+            localMesh);
+
+        Assert.True(
+            OmsiSceneryMeshPathResolver.TryResolve(
+                omsiRoot,
+                scoPath,
+                @"..\..\OtherPack\model\shared.x",
+                out var sharedMesh));
+
+        Assert.Equal(
+            Path.GetFullPath(
+                Path.Combine(
+                    omsiRoot,
+                    "Sceneryobjects",
+                    "OtherPack",
+                    "model",
+                    "shared.x")),
+            sharedMesh);
+
+        Assert.False(
+            OmsiSceneryMeshPathResolver.TryResolve(
+                omsiRoot,
+                scoPath,
+                @"..\..\..\outside.o3d",
+                out _));
+
+        Assert.False(
+            OmsiSceneryMeshPathResolver.TryResolve(
+                omsiRoot,
+                scoPath,
+                "material.cfg",
+                out _));
+    }
+
+    [Fact]
     public void SceneryObjectReader_ReadsFriendlyNameGroupsAndMeshes()
     {
         const string source =

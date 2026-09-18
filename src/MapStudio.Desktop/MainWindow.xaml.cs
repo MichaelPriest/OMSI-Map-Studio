@@ -350,7 +350,23 @@ public partial class MainWindow : Window
             {
                 type = "sceneryObjectMetadataLoaded",
                 sceneryObjectPath,
-                metadata
+                metadata = new
+                {
+                    metadata.Exists,
+                    metadata.FriendlyName,
+                    metadata.Groups,
+                    meshes = metadata.MeshPaths.Select(
+                        path => CreateMeshReference(
+                            _omsiRootPath,
+                            fullPath,
+                            path)),
+                    collisionMeshes =
+                        metadata.CollisionMeshPaths.Select(
+                            path => CreateMeshReference(
+                                _omsiRootPath,
+                                fullPath,
+                                path))
+                }
             });
         }
         catch (UnauthorizedAccessException)
@@ -371,6 +387,26 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private static object CreateMeshReference(
+        string omsiRoot,
+        string sceneryObjectFullPath,
+        string declaredPath)
+    {
+        var resolved =
+            OmsiSceneryMeshPathResolver.TryResolve(
+                omsiRoot,
+                sceneryObjectFullPath,
+                declaredPath,
+                out var fullPath);
+
+        return new
+        {
+            declaredPath,
+            fileExists =
+                resolved && File.Exists(fullPath)
+        };
     }
 
     private static bool TryReadString(

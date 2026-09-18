@@ -667,10 +667,13 @@ export function App() {
                     <dt>Meshes</dt>
                     <dd>
                       {selectedMetadata
-                        .meshPaths.length
-                        ? selectedMetadata.meshPaths.join(
-                            ", "
-                          )
+                        .meshes.length
+                        ? selectedMetadata.meshes
+                            .map(
+                              (mesh) =>
+                                `${mesh.declaredPath} · ${mesh.fileExists ? "encontrado" : "ausente"}`
+                            )
+                            .join(", ")
                         : "Nenhum"}
                     </dd>
                   </div>
@@ -681,11 +684,15 @@ export function App() {
                     </dt>
                     <dd>
                       {selectedMetadata
-                        .collisionMeshPaths
+                        .collisionMeshes
                         .length
-                        ? selectedMetadata.collisionMeshPaths.join(
-                            ", "
-                          )
+                        ? selectedMetadata
+                            .collisionMeshes
+                            .map(
+                              (mesh) =>
+                                `${mesh.declaredPath} · ${mesh.fileExists ? "encontrado" : "ausente"}`
+                            )
+                            .join(", ")
                         : "Nenhum"}
                     </dd>
                   </div>

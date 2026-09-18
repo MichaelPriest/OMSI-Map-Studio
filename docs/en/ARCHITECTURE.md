@@ -75,6 +75,8 @@ Block order and all commands that are not interpreted yet remain preserved in th
 
 `OmsiSceneryObjectPathResolver` restricts `.sco` resolution to the selected installation's `Sceneryobjects` directory and rejects directory traversal or different extensions.
 
+`OmsiSceneryMeshPathResolver` resolves `[mesh]` and `[collision_mesh]` references from the `model` directory associated with the `.sco`. Both `.o3d` and `.x` files are accepted, including relative cross-package references with `..\`, as long as the final path remains inside `Sceneryobjects`. React receives only the declared path and found/missing status; the machine's absolute path is not exposed.
+
 ## MapStudio.Desktop
 
 Windows host responsible for native file and folder access, Core services, WebView2 lifecycle and communication between C# and the interface.
@@ -115,7 +117,7 @@ Production state must come from real data supplied by Core/Desktop.
 
 On Cartesian maps, a short click finds the placed object nearest to the camera ray without creating one individual mesh per object.
 
-The inspector displays real `.map` values and, when available, real `.sco` metadata: friendly name, groups, meshes and collision meshes.
+The inspector displays real `.map` values and, when available, real `.sco` metadata: friendly name, groups, meshes and collision meshes. Each mesh reference also reports whether the corresponding file was found in the installation.
 
 Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
 
