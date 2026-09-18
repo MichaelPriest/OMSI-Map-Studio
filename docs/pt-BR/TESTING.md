@@ -1,12 +1,12 @@
-# Testes — v0.1.0-alpha.1
+# Testes — v0.1.0-alpha.2
 
 [English](../en/TESTING.md) · **Português (Brasil)**
 
-Esta é a primeira versão pública de teste do OMSI Map Studio. Ela é deliberadamente **somente leitura**.
+Esta é a segunda versão pública de teste do OMSI Map Studio. Ela é deliberadamente **somente leitura**.
 
 ## Instalação
 
-1. Baixe o arquivo `OMSI-Map-Studio-v0.1.0-alpha.1-win-x64.zip` da prerelease.
+1. Baixe o arquivo `OMSI-Map-Studio-v0.1.0-alpha.2-win-x64.zip` da prerelease.
 2. Extraia o ZIP para uma pasta comum.
 3. Execute `OMSI Map Studio.exe`.
 4. O Microsoft Edge WebView2 Runtime precisa estar disponível no Windows.
@@ -14,9 +14,17 @@ Esta é a primeira versão pública de teste do OMSI Map Studio. Ela é delibera
 
 O pacote é self-contained para .NET 10; não exige instalação separada do .NET Desktop Runtime.
 
+## Principal correção da alpha.2
+
+A abertura da pasta raiz do OMSI agora usa catálogo leve. O programa lê primeiro apenas os `global.cfg`; os arquivos `.map` são carregados somente para o mapa selecionado e cada tile é lido uma única vez para estatísticas e objetos.
+
+Isso deve reduzir bastante a demora inicial em instalações com muitos mapas.
+
 ## O que testar
 
+- tempo de abertura da pasta raiz do OMSI;
 - abertura e troca da instalação do OMSI;
+- mudança entre mapas e reutilização do conteúdo já carregado;
 - lista de mapas encontrados;
 - quantidade e disposição dos tiles;
 - indicação de tiles ausentes;

@@ -18,7 +18,7 @@
 
 ## First test version
 
-The first prerelease is **v0.1.0-alpha.1** and remains read-only.
+The current prerelease is **v0.1.0-alpha.2** and remains read-only.
 
 It can select a real OMSI 2 installation, open maps, display tiles, select objects and load previews for unencrypted O3D meshes. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
 

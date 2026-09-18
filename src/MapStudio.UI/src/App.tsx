@@ -35,7 +35,7 @@ const errorMessages: Record<string, string> = {
     "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects."
 };
 
-const appVersion = "0.1.0-alpha.1";
+const appVersion = "0.1.0-alpha.2";
 
 const formatNumber = (value: number) =>
   value.toLocaleString("pt-BR", {
