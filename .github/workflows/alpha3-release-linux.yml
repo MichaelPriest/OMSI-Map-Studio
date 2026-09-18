@@ -1,0 +1,93 @@
+name: Alpha.3 emergency release
+
+on:
+  push:
+    branches:
+      - feature/alpha3-material-preview
+    paths:
+      - ".github/workflows/alpha3-release-linux.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpha3-release-linux
+  cancel-in-progress: true
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Test Core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release
+
+      - name: Install UI dependencies
+        working-directory: src/MapStudio.UI
+        run: npm install --no-audit --no-fund
+
+      - name: Build UI
+        working-directory: src/MapStudio.UI
+        run: npm run build
+
+      - name: Publish Windows x64
+        run: |
+          mkdir -p artifacts
+          dotnet publish src/MapStudio.Desktop/MapStudio.Desktop.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            -p:EnableWindowsTargeting=true \
+            -p:PublishReadyToRun=false \
+            -p:PublishTrimmed=false \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            --output artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-win-x64
+
+      - name: Create ZIP
+        run: |
+          cd artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-win-x64
+          zip -r ../OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip .
+          cd ../..
+          cat docs/pt-BR/releases/v0.1.0-alpha.3.md > artifacts/release-notes.md
+          printf "\n\n---\n\n" >> artifacts/release-notes.md
+          cat docs/en/releases/v0.1.0-alpha.3.md >> artifacts/release-notes.md
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-v0.1.0-alpha.3-win-x64
+          path: artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v0.1.0-alpha.3"
+          ZIP="artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" "$ZIP" \
+              --target "${GITHUB_SHA}" \
+              --title "OMSI Map Studio $TAG" \
+              --notes-file artifacts/release-notes.md \
+              --prerelease
+          fi
