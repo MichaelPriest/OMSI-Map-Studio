@@ -81,6 +81,22 @@ No primeiro fluxo funcional:
 
 Erros do host são enviados por códigos estáveis. A interface é responsável por apresentar a mensagem apropriada ao usuário.
 
+### Carregamento sob demanda de objetos
+
+A descoberta inicial da instalação envia apenas catálogo, tiles e contagens. Os blocos completos de `[object]` são carregados somente quando o usuário seleciona um mapa.
+
+O React envia `loadMapObjects` usando apenas o nome de diretório de um mapa já conhecido pelo host. O desktop resolve esse nome em seu catálogo interno; a interface não fornece um caminho de arquivo arbitrário.
+
+Para mapas cartesianos, o viewport pode representar a posição de um objeto com:
+
+- `worldX = tileX * 300 + objectX`;
+- `worldZ = tileY * 300 + objectY`;
+- `worldY = objectZ`.
+
+Nesta etapa esses pontos são apenas marcadores de posição. Eles não representam a geometria real do arquivo `.sco`.
+
+Para mapas com `[worldcoordinates]`, os objetos são lidos e contabilizados, mas os marcadores globais ficam ocultos até existir a conversão geográfica correta.
+
 ## MapStudio.UI
 
 Interface principal do editor, responsável pelo viewport Babylon.js, biblioteca de recursos, inspetor de propriedades, ferramentas de construção, validações visuais e experiência de edição simplificada.
