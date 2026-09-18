@@ -57,3 +57,12 @@ The UI may follow the approved concept, but it must never invent thumbnails, map
 While the binary `.terrain` format is not interpreted yet, existing tiles receive a neutral editor base surface. It is only spatial guidance and does not represent real terrain elevation or texture.
 
 Missing tiles remain unfilled and highlighted separately. Spline axes and object markers are rendered above this surface.
+
+
+## Tile streaming on large maps
+
+The editor works with an **active tile** and a default 3×3 window around it. The full map topology still comes from `global.cfg`, but objects, splines and other heavy data are loaded only for that region.
+
+Clicking another visible tile changes the active-region center. Tiles already read remain cached for the map session, so returning to a previous area does not require another disk read.
+
+Object and spline counts shown in the explorer/status are explicitly active-region counts, not whole-map totals.

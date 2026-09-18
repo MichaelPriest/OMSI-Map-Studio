@@ -20,6 +20,16 @@ type ViewportProps = {
   tiles: OmsiTile[];
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
+  activeTile?: {
+    x: number;
+    y: number;
+  };
+  onActiveTileChange?: (
+    tile: {
+      x: number;
+      y: number;
+    }
+  ) => void;
   usesWorldCoordinates: boolean;
   selectedObject?: OmsiPlacedObject;
   selectedGeometry?: OmsiSceneryObjectGeometry;
@@ -130,6 +140,28 @@ function createTileSurface(
 
   mesh.material = material;
   mesh.isPickable = false;
+}
+
+function createActiveTileOutline(
+  activeTile: {
+    x: number;
+    y: number;
+  },
+  tileSize: number
+) {
+  return createTileOutline(
+    {
+      x: activeTile.x,
+      y: activeTile.y,
+      relativeMapPath: "",
+      detailsLoaded: true,
+      fileExists: true,
+      objectCount: 0,
+      splineCount: 0,
+      splineAttachmentCount: 0
+    },
+    tileSize
+  );
 }
 
 function createTileOutline(tile: OmsiTile, tileSize: number) {
@@ -503,6 +535,8 @@ export function Viewport({
   tiles,
   objects,
   splines,
+  activeTile,
+  onActiveTileChange,
   usesWorldCoordinates,
   selectedObject,
   selectedGeometry,
@@ -618,6 +652,34 @@ export function Viewport({
         );
         missingGrid.color = new Color3(0.9, 0.35, 0.35);
         missingGrid.isPickable = false;
+      }
+
+      if (
+        activeTile &&
+        !usesWorldCoordinates
+      ) {
+        const activeGrid =
+          MeshBuilder.CreateLines(
+            "omsi-active-tile",
+            {
+              points:
+                createActiveTileOutline(
+                  activeTile,
+                  tileSize
+                )
+            },
+            scene
+          );
+
+        activeGrid.color =
+          new Color3(
+            0.2,
+            0.95,
+            0.65
+          );
+
+        activeGrid.isPickable =
+          false;
       }
 
       if (
@@ -765,7 +827,55 @@ export function Viewport({
         }
       }
 
-      onSelectObject(selected);
+      if (selected) {
+        onSelectObject(selected);
+        return;
+      }
+
+      onSelectObject(undefined);
+
+      if (
+        !usesWorldCoordinates &&
+        onActiveTileChange &&
+        Math.abs(direction.y) >
+          0.000001
+      ) {
+        const distanceToGround =
+          -ray.origin.y /
+          direction.y;
+
+        if (distanceToGround > 0) {
+          const groundPoint =
+            ray.origin.add(
+              direction.scale(
+                distanceToGround
+              )
+            );
+
+          const tileX =
+            Math.floor(
+              groundPoint.x / 300
+            );
+
+          const tileY =
+            Math.floor(
+              groundPoint.z / 300
+            );
+
+          if (
+            tiles.some(
+              (tile) =>
+                tile.x === tileX &&
+                tile.y === tileY
+            )
+          ) {
+            onActiveTileChange({
+              x: tileX,
+              y: tileY
+            });
+          }
+        }
+      }
     };
 
     const handlePointerCancel = () => {
@@ -793,6 +903,8 @@ export function Viewport({
     tiles,
     objects,
     splines,
+    activeTile,
+    onActiveTileChange,
     usesWorldCoordinates,
     selectedObject,
     selectedGeometry,

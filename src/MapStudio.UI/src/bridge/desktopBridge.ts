@@ -126,6 +126,10 @@ export type HostMessage =
     }
   | {
       type: "mapOpened";
+      initialTile: {
+        x: number;
+        y: number;
+      } | null;
       map: OmsiMap;
     }
   | {
@@ -133,9 +137,11 @@ export type HostMessage =
       target: "omsi" | "map";
     }
   | {
-      type: "mapContentLoaded";
+      type: "mapRegionLoaded";
       directoryName: string;
-      usesWorldCoordinates: boolean;
+      centerX: number;
+      centerY: number;
+      radius: number;
       tiles: OmsiTile[];
       objects: OmsiPlacedObject[];
       splines: OmsiPlacedSpline[];
@@ -194,12 +200,18 @@ export function selectMap() {
   });
 }
 
-export function loadMapContent(
-  directoryName: string
+export function loadMapRegion(
+  directoryName: string,
+  centerX: number,
+  centerY: number,
+  radius: number
 ) {
   getWebView()?.postMessage({
-    type: "loadMapContent",
-    directoryName
+    type: "loadMapRegion",
+    directoryName,
+    centerX,
+    centerY,
+    radius
   });
 }
 

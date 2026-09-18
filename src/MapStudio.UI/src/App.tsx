@@ -6,7 +6,7 @@ import {
 } from "react";
 import {
   isDesktopBridgeAvailable,
-  loadMapContent,
+  loadMapRegion,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
   selectMap,
@@ -62,6 +62,7 @@ const errorMessages: Record<string, string> = {
 };
 
 const appVersion = "0.1.0-alpha.3-dev";
+const tileStreamRadius = 1;
 
 const formatNumber = (value: number) =>
   value.toLocaleString("pt-BR", {
@@ -99,6 +100,12 @@ export function App() {
   const [selectedMap, setSelectedMap] =
     useState<OmsiMap>();
 
+  const [activeTile, setActiveTile] =
+    useState<{
+      x: number;
+      y: number;
+    }>();
+
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
 
@@ -129,9 +136,14 @@ export function App() {
     useState(false);
 
   const [
-    loadingMapContent,
-    setLoadingMapContent
-  ] = useState(false);
+    loadingRegionKey,
+    setLoadingRegionKey
+  ] = useState<string>();
+
+  const [
+    loadedRegionKey,
+    setLoadedRegionKey
+  ] = useState<string>();
 
   const [
     loadingMetadataFor,
@@ -162,7 +174,7 @@ export function App() {
           setGeometryByPath({});
           setSelectingRoot(false);
           setSelectingMap(false);
-          setLoadingMapContent(false);
+          setLoadingRegionKey(undefined);
           setError(undefined);
           setView("map");
           return;
@@ -170,13 +182,18 @@ export function App() {
 
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
+          setActiveTile(
+            message.initialTile ??
+              undefined
+          );
           setObjects([]);
           setSplines([]);
           setSelectedObject(undefined);
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setSelectingMap(false);
-          setLoadingMapContent(false);
+          setLoadingRegionKey(undefined);
+          setLoadedRegionKey(undefined);
           setInspectorTab("general");
           setError(undefined);
           setView("editor");
@@ -198,22 +215,72 @@ export function App() {
 
         if (
           message.type ===
-          "mapContentLoaded"
+          "mapRegionLoaded"
         ) {
-          setObjects(message.objects);
-          setSplines(message.splines);
+          const responseKey =
+            `${message.directoryName}:${message.centerX}:${message.centerY}:${message.radius}`;
 
-          setSelectedMap((current) =>
-            current?.directoryName ===
-            message.directoryName
-              ? {
-                  ...current,
-                  tiles: message.tiles
-                }
-              : current
+          setSelectedMap((current) => {
+            if (
+              current?.directoryName !==
+              message.directoryName
+            ) {
+              return current;
+            }
+
+            const loadedByCoordinate =
+              new Map(
+                message.tiles.map(
+                  (tile) => [
+                    `${tile.x}:${tile.y}`,
+                    tile
+                  ]
+                )
+              );
+
+            return {
+              ...current,
+              tiles: current.tiles.map(
+                (tile) =>
+                  loadedByCoordinate.get(
+                    `${tile.x}:${tile.y}`
+                  ) ?? tile
+              )
+            };
+          });
+
+          setLoadingRegionKey(
+            (current) =>
+              current === responseKey
+                ? undefined
+                : current
           );
 
-          setLoadingMapContent(false);
+          setLoadedRegionKey(
+            responseKey
+          );
+
+          setActiveTile((current) => {
+            if (
+              current?.x ===
+                message.centerX &&
+              current?.y ===
+                message.centerY
+            ) {
+              setObjects(
+                message.objects
+              );
+              setSplines(
+                message.splines
+              );
+              setSelectedObject(
+                undefined
+              );
+            }
+
+            return current;
+          });
+
           return;
         }
 
@@ -263,7 +330,7 @@ export function App() {
         if (message.type === "hostError") {
           setSelectingRoot(false);
           setSelectingMap(false);
-          setLoadingMapContent(false);
+          setLoadingRegionKey(undefined);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
 
@@ -280,22 +347,38 @@ export function App() {
     if (
       !bridgeAvailable ||
       !selectedMap ||
-      selectedMap.tiles.every(
-        (tile) => tile.detailsLoaded
-      ) ||
-      loadingMapContent
+      !activeTile
     ) {
       return;
     }
 
-    setLoadingMapContent(true);
+    const regionKey =
+      `${selectedMap.directoryName}:${activeTile.x}:${activeTile.y}:${tileStreamRadius}`;
 
-    loadMapContent(
-      selectedMap.directoryName
+    if (
+      loadingRegionKey ===
+        regionKey ||
+      loadedRegionKey ===
+        regionKey
+    ) {
+      return;
+    }
+
+    setLoadingRegionKey(
+      regionKey
+    );
+
+    loadMapRegion(
+      selectedMap.directoryName,
+      activeTile.x,
+      activeTile.y,
+      tileStreamRadius
     );
   }, [
+    activeTile,
     bridgeAvailable,
-    loadingMapContent,
+    loadedRegionKey,
+    loadingRegionKey,
     selectedMap
   ]);
 
@@ -364,17 +447,39 @@ export function App() {
     selectedObject
   ]);
 
-  const selectedStats = useMemo(() => {
+  const activeTiles = useMemo(() => {
     if (
       !selectedMap ||
-      !selectedMap.tiles.every(
+      !activeTile
+    ) {
+      return [];
+    }
+
+    return selectedMap.tiles.filter(
+      (tile) =>
+        Math.abs(
+          tile.x - activeTile.x
+        ) <= tileStreamRadius &&
+        Math.abs(
+          tile.y - activeTile.y
+        ) <= tileStreamRadius
+    );
+  }, [
+    activeTile,
+    selectedMap
+  ]);
+
+  const selectedStats = useMemo(() => {
+    if (
+      activeTiles.length === 0 ||
+      !activeTiles.every(
         (tile) => tile.detailsLoaded
       )
     ) {
       return undefined;
     }
 
-    return selectedMap.tiles.reduce(
+    return activeTiles.reduce(
       (stats, tile) => ({
         objects:
           stats.objects +
@@ -396,7 +501,7 @@ export function App() {
         missingTiles: 0
       }
     );
-  }, [selectedMap]);
+  }, [activeTiles]);
 
   const selectedMetadata =
     selectedObject
@@ -537,7 +642,7 @@ export function App() {
   const busy =
     selectingRoot ||
     selectingMap ||
-    loadingMapContent;
+    Boolean(loadingRegionKey);
 
   const renderNav = () => (
     <aside className="studio-sidebar">
@@ -954,7 +1059,7 @@ export function App() {
           <dt>Objetos</dt>
           <dd>
             {selectedStats?.objects ??
-              (loadingMapContent
+              (Boolean(loadingRegionKey)
                 ? "Carregando..."
                 : objects.length)}
           </dd>
@@ -963,7 +1068,7 @@ export function App() {
           <dt>Splines</dt>
           <dd>
             {selectedStats?.splines ??
-              (loadingMapContent
+              (Boolean(loadingRegionKey)
                 ? "Carregando..."
                 : "—")}
           </dd>
@@ -1377,7 +1482,7 @@ export function App() {
 
               <div className="tree-node active">
                 <span>▣</span>
-                Objetos
+                Objetos (área)
                 <strong>
                   {selectedStats?.objects ??
                     objects.length}
@@ -1386,7 +1491,7 @@ export function App() {
 
               <div className="tree-node">
                 <span>⌇</span>
-                Splines
+                Splines (área)
                 <strong>
                   {selectedStats?.splines ??
                     splines.length}
@@ -1413,7 +1518,7 @@ export function App() {
 
               <div className="tree-node">
                 <span>□</span>
-                Tiles
+                Tiles totais
                 <strong>
                   {selectedMap.tiles.length}
                 </strong>
@@ -1431,9 +1536,32 @@ export function App() {
 
           <section className="editor-viewport">
             <Viewport
-              tiles={selectedMap.tiles}
+              tiles={activeTiles}
               objects={objects}
               splines={splines}
+              activeTile={activeTile}
+              onActiveTileChange={
+                (tile) => {
+                  if (
+                    tile.x ===
+                      activeTile?.x &&
+                    tile.y ===
+                      activeTile?.y
+                  ) {
+                    return;
+                  }
+
+                  setLoadedRegionKey(
+                    undefined
+                  );
+                  setActiveTile(tile);
+                  setObjects([]);
+                  setSplines([]);
+                  setSelectedObject(
+                    undefined
+                  );
+                }
+              }
               usesWorldCoordinates={
                 selectedMap.usesWorldCoordinates
               }
@@ -1456,7 +1584,7 @@ export function App() {
                   checked
                   readOnly
                 />
-                Grelha
+                Área ativa 3×3
               </label>
               <label>
                 <input
@@ -1483,9 +1611,9 @@ export function App() {
               </label>
             </div>
 
-            {loadingMapContent && (
+            {Boolean(loadingRegionKey) && (
               <div className="viewport-loading">
-                Lendo tiles, objetos e splines...
+                Carregando área ativa...
               </div>
             )}
           </section>
@@ -1508,7 +1636,7 @@ export function App() {
           <span>
             {error
               ? "Erro"
-              : loadingMapContent
+              : Boolean(loadingRegionKey)
                 ? "Carregando mapa..."
                 : loadingMetadataFor
                   ? "Lendo SCO..."
@@ -1518,15 +1646,21 @@ export function App() {
           </span>
 
           <span>
-            Objetos:{" "}
+            Tile ativo:{" "}
+            {activeTile
+              ? `${activeTile.x}, ${activeTile.y}`
+              : "—"}
+            <b>·</b>
+            Objetos (área):{" "}
             {selectedStats?.objects ??
               objects.length}
             <b>·</b>
-            Splines:{" "}
+            Splines (área):{" "}
             {selectedStats?.splines ??
               splines.length}
             <b>·</b>
-            Tiles: {selectedMap.tiles.length}
+            Tiles totais:{" "}
+            {selectedMap.tiles.length}
           </span>
         </footer>
       </section>

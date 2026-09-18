@@ -105,13 +105,16 @@ O usuário abre explicitamente um mapa pelo botão **Abrir mapa**. O host aceita
 
 - `selectOmsiRoot` apenas valida e registra a raiz do OMSI;
 - `selectMap` abre um seletor nativo e lê somente o `global.cfg` do mapa escolhido;
-- `loadMapContent` carrega o mapa escolhido e, em uma única leitura de cada tile, obtém contagens e objetos;
-- os tiles do mapa selecionado são processados com concorrência limitada para reduzir a espera sem saturar o disco;
+- `loadMapRegion` carrega somente uma janela de tiles ao redor do tile ativo;
+- a janela padrão é 3×3 (raio 1), portanto mapas grandes não abrem todos os arquivos `.map` de uma vez;
+- tiles já lidos são mantidos em cache pelo host durante a sessão do mapa;
+- ao clicar em outro tile visível, ele se torna o centro da área ativa e os vizinhos necessários são carregados;
+- os tiles da área ativa são processados com concorrência limitada para reduzir a espera sem saturar o disco;
 - `loadSceneryObjectMetadata` carrega o `.sco` apenas quando um objeto é selecionado;
 - `loadSceneryObjectGeometry` carrega somente os meshes `.o3d` não criptografados do objeto selecionado;
 - metadados e geometria já lidos são armazenados em cache no React.
 
-Isso elimina a varredura de todos os mapas ao escolher a instalação. Sem mapa aberto, o viewport permanece vazio; tiles e marcadores aparecem somente depois que o usuário escolhe explicitamente um mapa. Exceções do host continuam sendo convertidas em erro visível em vez de deixar a interface travada.
+Isso elimina a varredura de todos os mapas ao escolher a instalação e também evita carregar todos os tiles de um mapa grande. Sem mapa aberto, o viewport permanece vazio; com um mapa aberto, apenas a área ativa recebe objetos, splines e demais dados pesados. Exceções do host continuam sendo convertidas em erro visível em vez de deixar a interface travada.
 
 Para mapas cartesianos, o viewport representa a posição com:
 

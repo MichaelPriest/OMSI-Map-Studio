@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -12,6 +13,7 @@ namespace MapStudio.Desktop;
 public partial class MainWindow : Window
 {
     private const int MaxConcurrentTileReads = 4;
+    private const int MaxTileStreamRadius = 2;
 
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
@@ -28,6 +30,12 @@ public partial class MainWindow : Window
 
     private readonly HashSet<string> _knownSceneryObjectPaths =
         new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        Task<OmsiTileContent>>
+        _tileContentCache =
+            new(StringComparer.OrdinalIgnoreCase);
 
     private string? _omsiRootPath;
 
@@ -112,14 +120,29 @@ public partial class MainWindow : Window
                     await SelectMapAsync();
                     break;
 
-                case "loadMapContent":
+                case "loadMapRegion":
                     if (TryReadString(
                             message.RootElement,
                             "directoryName",
-                            out var directoryName))
+                            out var directoryName) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "centerX",
+                            out var centerX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "centerY",
+                            out var centerY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "radius",
+                            out var radius))
                     {
-                        await LoadMapContentAsync(
-                            directoryName);
+                        await LoadMapRegionAsync(
+                            directoryName,
+                            centerX,
+                            centerY,
+                            radius);
                     }
                     else
                     {
@@ -220,6 +243,7 @@ public partial class MainWindow : Window
                 StringComparer.OrdinalIgnoreCase);
 
         _knownSceneryObjectPaths.Clear();
+        _tileContentCache.Clear();
 
         PostMessage(new
         {
@@ -319,6 +343,7 @@ public partial class MainWindow : Window
                     selectedDirectory);
 
             _knownSceneryObjectPaths.Clear();
+            _tileContentCache.Clear();
 
             _knownMaps =
                 new Dictionary<string, OmsiMapDescriptor>(
@@ -327,9 +352,21 @@ public partial class MainWindow : Window
                     [map.DirectoryName] = map
                 };
 
+            var initialTile =
+                OmsiTileRegionSelector
+                    .FindInitialTile(
+                        map.Tiles);
+
             PostMessage(new
             {
                 type = "mapOpened",
+                initialTile = initialTile is null
+                    ? null
+                    : new
+                    {
+                        x = initialTile.X,
+                        y = initialTile.Y
+                    },
                 map = new
                 {
                     map.DirectoryName,
@@ -381,8 +418,11 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task LoadMapContentAsync(
-        string? directoryName)
+    private async Task LoadMapRegionAsync(
+        string? directoryName,
+        int centerX,
+        int centerY,
+        int radius)
     {
         if (string.IsNullOrWhiteSpace(directoryName) ||
             !_knownMaps.TryGetValue(
@@ -394,11 +434,31 @@ public partial class MainWindow : Window
                 type = "hostError",
                 code = "unknownMap"
             });
+
+            return;
+        }
+
+        if (radius < 0 ||
+            radius > MaxTileStreamRadius)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTileRegion"
+            });
+
             return;
         }
 
         try
         {
+            var requestedTiles =
+                OmsiTileRegionSelector.Select(
+                    map.Tiles,
+                    centerX,
+                    centerY,
+                    radius);
+
             using var semaphore =
                 new SemaphoreSlim(
                     Math.Min(
@@ -407,7 +467,7 @@ public partial class MainWindow : Window
                             1,
                             Environment.ProcessorCount)));
 
-            var tasks = map.Tiles
+            var tasks = requestedTiles
                 .Select(async (tile, index) =>
                 {
                     await semaphore.WaitAsync();
@@ -415,11 +475,12 @@ public partial class MainWindow : Window
                     try
                     {
                         var content =
-                            OmsiMapPathResolver.TryResolveTilePath(
-                                map.DirectoryPath,
-                                tile.RelativeMapPath,
-                                out var tilePath)
-                            ? await _tileReader.ReadContentAsync(
+                            OmsiMapPathResolver
+                                .TryResolveTilePath(
+                                    map.DirectoryPath,
+                                    tile.RelativeMapPath,
+                                    out var tilePath)
+                            ? await ReadTileCachedAsync(
                                 tilePath)
                             : OmsiTileContent.Missing;
 
@@ -493,9 +554,11 @@ public partial class MainWindow : Window
 
             PostMessage(new
             {
-                type = "mapContentLoaded",
+                type = "mapRegionLoaded",
                 map.DirectoryName,
-                map.UsesWorldCoordinates,
+                centerX,
+                centerY,
+                radius,
                 tiles = loadedTiles
                     .OrderBy(result => result.Index)
                     .Select(loaded => new
@@ -535,6 +598,30 @@ public partial class MainWindow : Window
                 code = "ioError",
                 detail = exception.Message
             });
+        }
+    }
+
+    private async Task<OmsiTileContent> ReadTileCachedAsync(
+        string tilePath)
+    {
+        var task =
+            _tileContentCache.GetOrAdd(
+                tilePath,
+                path =>
+                    _tileReader.ReadContentAsync(
+                        path));
+
+        try
+        {
+            return await task;
+        }
+        catch
+        {
+            _tileContentCache.TryRemove(
+                tilePath,
+                out _);
+
+            throw;
         }
     }
 
@@ -790,6 +877,22 @@ public partial class MainWindow : Window
     {
         public void Report(T value) =>
             handler(value);
+    }
+
+    private static bool TryReadInt32(
+        JsonElement element,
+        string propertyName,
+        out int value)
+    {
+        value = 0;
+
+        return element.TryGetProperty(
+                propertyName,
+                out var property) &&
+            property.ValueKind ==
+                JsonValueKind.Number &&
+            property.TryGetInt32(
+                out value);
     }
 
     private static bool TryReadString(

@@ -105,13 +105,16 @@ The user explicitly opens a map through the **Open map** button. The host accept
 
 - `selectOmsiRoot` only validates and registers the OMSI root;
 - `selectMap` opens a native picker and reads only the chosen map's `global.cfg`;
-- `loadMapContent` loads the chosen map and gets counts plus objects from a single read of each tile;
-- selected-map tiles are processed with limited concurrency to reduce waiting without saturating storage;
+- `loadMapRegion` loads only a tile window around the active tile;
+- the default window is 3×3 (radius 1), so large maps do not open every `.map` file at once;
+- previously read tiles are cached by the host for the duration of the map session;
+- clicking another visible tile makes it the active center and loads the required neighbors;
+- active-region tiles are processed with limited concurrency to reduce waiting without saturating storage;
 - `loadSceneryObjectMetadata` loads the `.sco` only when an object is selected;
 - `loadSceneryObjectGeometry` loads only unencrypted `.o3d` meshes for the selected object;
 - previously read metadata and geometry are cached in React.
 
-This removes the full-map scan when selecting an installation. With no map open, the viewport remains empty; tiles and markers appear only after the user explicitly chooses a map. Host exceptions continue to be converted into visible errors instead of leaving the interface stuck.
+This removes the full-map scan when selecting an installation and also avoids loading every tile in a large map. With no map open, the viewport remains empty; with a map open, only the active region receives objects, splines and other heavy data. Host exceptions continue to be converted into visible errors instead of leaving the interface stuck.
 
 For Cartesian maps, the viewport represents object positions with:
 
