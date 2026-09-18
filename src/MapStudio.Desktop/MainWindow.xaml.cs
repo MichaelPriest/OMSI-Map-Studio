@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
     private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
     private readonly OmsiO3dStructureReader _o3dStructureReader = new();
+    private readonly OmsiO3dGeometryReader _o3dGeometryReader = new();
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
@@ -125,6 +126,21 @@ public partial class MainWindow : Window
                     {
                         await LoadSceneryObjectMetadataAsync(
                             sceneryObjectPath);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "loadSceneryObjectGeometry":
+                    if (TryReadString(
+                            message.RootElement,
+                            "sceneryObjectPath",
+                            out var geometryObjectPath))
+                    {
+                        await LoadSceneryObjectGeometryAsync(
+                            geometryObjectPath);
                     }
                     else
                     {
@@ -372,6 +388,117 @@ public partial class MainWindow : Window
                     metadata.Groups,
                     meshes,
                     collisionMeshes
+                }
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = sceneryObjectPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
+        }
+    }
+
+
+    private async Task LoadSceneryObjectGeometryAsync(
+        string? sceneryObjectPath)
+    {
+        if (_omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(sceneryObjectPath) ||
+            !_knownSceneryObjectPaths.Contains(
+                sceneryObjectPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownSceneryObject"
+            });
+            return;
+        }
+
+        if (!OmsiSceneryObjectPathResolver.TryResolve(
+                _omsiRootPath,
+                sceneryObjectPath,
+                out var sceneryObjectFullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSceneryObjectPath"
+            });
+            return;
+        }
+
+        try
+        {
+            var metadata =
+                await _sceneryObjectReader.ReadMetadataAsync(
+                    sceneryObjectFullPath);
+
+            var meshes = new List<object>(
+                metadata.MeshPaths.Count);
+
+            foreach (var declaredPath in metadata.MeshPaths)
+            {
+                if (!OmsiSceneryMeshPathResolver.TryResolve(
+                        _omsiRootPath,
+                        sceneryObjectFullPath,
+                        declaredPath,
+                        out var meshFullPath))
+                {
+                    meshes.Add(new
+                    {
+                        declaredPath,
+                        geometry =
+                            OmsiO3dGeometry.Error(
+                                "invalidMeshPath")
+                    });
+                    continue;
+                }
+
+                if (!string.Equals(
+                        Path.GetExtension(meshFullPath),
+                        ".o3d",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    meshes.Add(new
+                    {
+                        declaredPath,
+                        geometry =
+                            OmsiO3dGeometry.Error(
+                                "unsupportedFormat")
+                    });
+                    continue;
+                }
+
+                meshes.Add(new
+                {
+                    declaredPath,
+                    geometry =
+                        _o3dGeometryReader.Read(
+                            meshFullPath)
+                });
+            }
+
+            PostMessage(new
+            {
+                type = "sceneryObjectGeometryLoaded",
+                sceneryObjectPath,
+                geometry = new
+                {
+                    meshes
                 }
             });
         }

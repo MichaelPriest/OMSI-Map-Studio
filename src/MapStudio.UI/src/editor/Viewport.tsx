@@ -3,11 +3,15 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
-import { Color3, Matrix, Vector3 } from "@babylonjs/core/Maths/math";
+import { Color3, Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math";
+import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
+import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
+import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Scene } from "@babylonjs/core/scene";
 import type {
   OmsiPlacedObject,
+  OmsiSceneryObjectGeometry,
   OmsiTile
 } from "../bridge/desktopBridge";
 
@@ -15,6 +19,8 @@ type ViewportProps = {
   tiles: OmsiTile[];
   objects: OmsiPlacedObject[];
   usesWorldCoordinates: boolean;
+  selectedObject?: OmsiPlacedObject;
+  selectedGeometry?: OmsiSceneryObjectGeometry;
   onSelectObject: (placedObject: OmsiPlacedObject | undefined) => void;
 };
 
@@ -85,10 +91,80 @@ function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
   ];
 }
 
+
+const degreesToRadians = Math.PI / 180;
+
+function createSelectedGeometry(
+  scene: Scene,
+  placedObject: OmsiPlacedObject,
+  geometry: OmsiSceneryObjectGeometry
+) {
+  const root = new TransformNode(
+    "selected-object-geometry-root",
+    scene
+  );
+
+  root.position.copyFrom(
+    getObjectWorldPosition(placedObject)
+  );
+
+  root.rotationQuaternion =
+    Quaternion.RotationYawPitchRoll(
+      -placedObject.rotation * degreesToRadians,
+      -placedObject.bank * degreesToRadians,
+      -placedObject.pitch * degreesToRadians
+    );
+
+  const material = new StandardMaterial(
+    "selected-object-material",
+    scene
+  );
+
+  material.diffuseColor =
+    new Color3(0.72, 0.76, 0.82);
+  material.specularColor =
+    new Color3(0.12, 0.12, 0.12);
+  material.backFaceCulling = false;
+  material.twoSidedLighting = true;
+
+  for (const [meshIndex, meshReference]
+    of geometry.meshes.entries()) {
+    if (
+      !meshReference.geometry.isLoaded ||
+      meshReference.geometry.positions.length === 0 ||
+      meshReference.geometry.indices.length === 0
+    ) {
+      continue;
+    }
+
+    const mesh = new Mesh(
+      "selected-o3d-" + meshIndex,
+      scene
+    );
+
+    const vertexData = new VertexData();
+    vertexData.positions =
+      meshReference.geometry.positions;
+    vertexData.normals =
+      meshReference.geometry.normals;
+    vertexData.uvs =
+      meshReference.geometry.uvs;
+    vertexData.indices =
+      meshReference.geometry.indices;
+
+    vertexData.applyToMesh(mesh, false);
+    mesh.material = material;
+    mesh.parent = root;
+    mesh.isPickable = false;
+  }
+}
+
 export function Viewport({
   tiles,
   objects,
   usesWorldCoordinates,
+  selectedObject,
+  selectedGeometry,
   onSelectObject
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -213,6 +289,20 @@ export function Viewport({
       ground.isPickable = false;
     }
 
+    if (
+      !usesWorldCoordinates &&
+      selectedObject &&
+      selectedGeometry
+    ) {
+      createSelectedGeometry(
+        scene,
+        selectedObject,
+        selectedGeometry
+      );
+    }
+
+    showSelection(selectedObject);
+
     let pointerStart: { x: number; y: number } | undefined;
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -243,7 +333,6 @@ export function Viewport({
       }
 
       if (usesWorldCoordinates || objects.length === 0) {
-        showSelection(undefined);
         onSelectObject(undefined);
         return;
       }
@@ -290,7 +379,6 @@ export function Viewport({
         }
       }
 
-      showSelection(selected);
       onSelectObject(selected);
     };
 
@@ -315,7 +403,14 @@ export function Viewport({
       scene.dispose();
       engine.dispose();
     };
-  }, [tiles, objects, usesWorldCoordinates, onSelectObject]);
+  }, [
+    tiles,
+    objects,
+    usesWorldCoordinates,
+    selectedObject,
+    selectedGeometry,
+    onSelectObject
+  ]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
 }

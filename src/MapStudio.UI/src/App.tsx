@@ -7,9 +7,11 @@ import {
 import {
   isDesktopBridgeAvailable,
   loadMapObjects,
+  loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
   type OmsiMap,
   type OmsiPlacedObject,
+  type OmsiSceneryObjectGeometry,
   type OmsiSceneryObjectMetadata,
   selectOmsiRoot,
   subscribeToHost
@@ -32,6 +34,8 @@ const errorMessages: Record<string, string> = {
   invalidSceneryObjectPath:
     "A referência do objeto não pôde ser resolvida com segurança na pasta Sceneryobjects."
 };
+
+const appVersion = "0.1.0-alpha.1";
 
 const formatNumber = (value: number) =>
   value.toLocaleString("pt-BR", {
@@ -113,6 +117,13 @@ export function App() {
   >({});
 
   const [
+    geometryByPath,
+    setGeometryByPath
+  ] = useState<
+    Record<string, OmsiSceneryObjectGeometry>
+  >({});
+
+  const [
     loadingObjectsFor,
     setLoadingObjectsFor
   ] = useState<string>();
@@ -120,6 +131,11 @@ export function App() {
   const [
     loadingMetadataFor,
     setLoadingMetadataFor
+  ] = useState<string>();
+
+  const [
+    loadingGeometryFor,
+    setLoadingGeometryFor
   ] = useState<string>();
 
   const [loading, setLoading] =
@@ -139,8 +155,10 @@ export function App() {
           setMaps(message.maps);
           setObjectsByMap({});
           setSceneryMetadataByPath({});
+          setGeometryByPath({});
           setLoadingObjectsFor(undefined);
           setLoadingMetadataFor(undefined);
+          setLoadingGeometryFor(undefined);
           setSelectedMap(message.maps[0]);
           setSelectedObject(undefined);
           setLoading(false);
@@ -196,10 +214,29 @@ export function App() {
           return;
         }
 
+        if (
+          message.type ===
+          "sceneryObjectGeometryLoaded"
+        ) {
+          setGeometryByPath((current) => ({
+            ...current,
+            [message.sceneryObjectPath]:
+              message.geometry
+          }));
+
+          setLoadingGeometryFor((current) =>
+            current === message.sceneryObjectPath
+              ? undefined
+              : current
+          );
+          return;
+        }
+
         if (message.type === "hostError") {
           setLoading(false);
           setLoadingObjectsFor(undefined);
           setLoadingMetadataFor(undefined);
+          setLoadingGeometryFor(undefined);
 
           setError(
             errorMessages[message.code] ??
@@ -271,6 +308,40 @@ export function App() {
     selectedObject
   ]);
 
+  useEffect(() => {
+    const sceneryObjectPath =
+      selectedObject?.sceneryObjectPath;
+
+    if (
+      !bridgeAvailable ||
+      !selectedMap ||
+      selectedMap.usesWorldCoordinates ||
+      !sceneryObjectPath ||
+      Object.hasOwn(
+        geometryByPath,
+        sceneryObjectPath
+      ) ||
+      loadingGeometryFor ===
+        sceneryObjectPath
+    ) {
+      return;
+    }
+
+    setLoadingGeometryFor(
+      sceneryObjectPath
+    );
+
+    loadSceneryObjectGeometry(
+      sceneryObjectPath
+    );
+  }, [
+    bridgeAvailable,
+    geometryByPath,
+    loadingGeometryFor,
+    selectedMap,
+    selectedObject
+  ]);
+
   const selectedStats = useMemo(() => {
     if (!selectedMap) {
       return undefined;
@@ -313,6 +384,42 @@ export function App() {
           selectedObject.sceneryObjectPath
         ]
       : undefined;
+
+  const selectedGeometry =
+    selectedObject
+      ? geometryByPath[
+          selectedObject.sceneryObjectPath
+        ]
+      : undefined;
+
+  const geometryStats = useMemo(() => {
+    if (!selectedGeometry) {
+      return undefined;
+    }
+
+    return selectedGeometry.meshes.reduce(
+      (stats, mesh) => ({
+        loadedMeshes:
+          stats.loadedMeshes +
+          (mesh.geometry.isLoaded ? 1 : 0),
+        vertices:
+          stats.vertices +
+          Math.floor(
+            mesh.geometry.positions.length / 3
+          ),
+        triangles:
+          stats.triangles +
+          Math.floor(
+            mesh.geometry.indices.length / 3
+          )
+      }),
+      {
+        loadedMeshes: 0,
+        vertices: 0,
+        triangles: 0
+      }
+    );
+  }, [selectedGeometry]);
 
   const handleObjectSelection =
     useCallback(
@@ -373,10 +480,12 @@ export function App() {
         <div className="brand">
           <strong>
             OMSI Map Studio
+            <span className="version-badge">
+              v{appVersion}
+            </span>
           </strong>
           <span>
-            Editor independente para
-            OMSI 2
+            Alpha somente leitura · OMSI 2
           </span>
         </div>
 
@@ -511,6 +620,8 @@ export function App() {
               ?.usesWorldCoordinates ??
             false
           }
+          selectedObject={selectedObject}
+          selectedGeometry={selectedGeometry}
           onSelectObject={
             handleObjectSelection
           }
@@ -683,6 +794,25 @@ export function App() {
                 </div>
               )}
 
+              {selectedGeometry && (
+                <div>
+                  <dt>Geometria O3D</dt>
+                  <dd>
+                    {geometryStats?.loadedMeshes ?? 0} meshes ·{" "}
+                    {geometryStats?.vertices ?? 0} vértices ·{" "}
+                    {geometryStats?.triangles ?? 0} triângulos
+                  </dd>
+                </div>
+              )}
+
+              {loadingGeometryFor ===
+                selectedObject.sceneryObjectPath && (
+                <div>
+                  <dt>Geometria O3D</dt>
+                  <dd>Carregando preview...</dd>
+                </div>
+              )}
+
               {selectedMetadata && (
                 <>
                   <div>
@@ -748,13 +878,13 @@ export function App() {
               )}
 
             <div className="empty-panel">
-              A posição e os metadados
-              vêm dos arquivos reais do
-              OMSI. A geometria{" "}
-              <code>.o3d</code> ainda não
-              é renderizada e nenhuma
-              alteração é salva nesta
-              etapa.
+              A posição, os metadados e
+              a geometria disponível vêm
+              dos arquivos reais do OMSI.
+              Nesta alpha os meshes O3D
+              não criptografados são
+              exibidos sem texturas. Nada
+              é alterado ou salvo.
             </div>
           </>
         ) : selectedMap &&
@@ -878,7 +1008,9 @@ export function App() {
                 ? "Lendo objetos..."
                 : loadingMetadataFor
                   ? "Lendo SCO..."
-                  : selectedObject
+                  : loadingGeometryFor
+                    ? "Lendo geometria..."
+                    : selectedObject
                     ? `Objeto #${selectedObject.objectId} selecionado`
                     : "Pronto"}
         </span>

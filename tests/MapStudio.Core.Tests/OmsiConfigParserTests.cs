@@ -533,6 +533,141 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
+    public void O3dGeometryReader_ReadsRenderableGeometry()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-geometry-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x07);
+                writer.Write((byte)0x01);
+                writer.Write(uint.MaxValue);
+
+                writer.Write((byte)0x17);
+                writer.Write((uint)3);
+
+                WriteVertex(writer, 0, 0, 0, 0, 0, 1, 0, 0);
+                WriteVertex(writer, 1, 0, 0, 0, 0, 1, 1, 0);
+                WriteVertex(writer, 0, 1, 0, 0, 0, 1, 0, 1);
+
+                writer.Write((byte)0x49);
+                writer.Write((uint)1);
+                writer.Write((uint)0);
+                writer.Write((uint)1);
+                writer.Write((uint)2);
+                writer.Write((ushort)0);
+            }
+
+            var geometry =
+                new OmsiO3dGeometryReader()
+                    .Read(path);
+
+            Assert.True(geometry.IsLoaded);
+            Assert.Null(geometry.ErrorCode);
+
+            Assert.Equal(
+                new float[]
+                {
+                    0, 0, 0,
+                    1, 0, 0,
+                    0, 0, 1
+                },
+                geometry.Positions);
+
+            Assert.Equal(
+                new float[]
+                {
+                    0, 1, 0,
+                    0, 1, 0,
+                    0, 1, 0
+                },
+                geometry.Normals);
+
+            Assert.Equal(
+                new float[]
+                {
+                    0, 1,
+                    1, 1,
+                    0, 0
+                },
+                geometry.Uvs);
+
+            Assert.Equal(
+                new uint[] { 2, 1, 0 },
+                geometry.Indices);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void O3dGeometryReader_RejectsEncryptedGeometry()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-encrypted-geometry-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            File.WriteAllBytes(
+                path,
+                [
+                    0x84,
+                    0x19,
+                    0x07,
+                    0x00,
+                    0x78,
+                    0x56,
+                    0x34,
+                    0x12
+                ]);
+
+            var geometry =
+                new OmsiO3dGeometryReader()
+                    .Read(path);
+
+            Assert.False(geometry.IsLoaded);
+            Assert.Equal(
+                "encrypted",
+                geometry.ErrorCode);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    private static void WriteVertex(
+        BinaryWriter writer,
+        float x,
+        float y,
+        float z,
+        float nx,
+        float ny,
+        float nz,
+        float u,
+        float v)
+    {
+        writer.Write(x);
+        writer.Write(y);
+        writer.Write(z);
+        writer.Write(nx);
+        writer.Write(ny);
+        writer.Write(nz);
+        writer.Write(u);
+        writer.Write(v);
+    }
+
+    [Fact]
     public void SceneryObjectReader_ReadsFriendlyNameGroupsAndMeshes()
     {
         const string source =

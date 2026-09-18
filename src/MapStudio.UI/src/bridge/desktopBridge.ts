@@ -66,6 +66,22 @@ export type OmsiSceneryObjectMetadata = {
   collisionMeshes: OmsiSceneryMeshReference[];
 };
 
+export type OmsiO3dGeometry = {
+  isLoaded: boolean;
+  errorCode: string | null;
+  positions: number[];
+  normals: number[];
+  uvs: number[];
+  indices: number[];
+};
+
+export type OmsiSceneryObjectGeometry = {
+  meshes: Array<{
+    declaredPath: string;
+    geometry: OmsiO3dGeometry;
+  }>;
+};
+
 export type HostMessage =
   | {
       type: "omsiInstallationLoaded";
@@ -85,6 +101,11 @@ export type HostMessage =
       type: "sceneryObjectMetadataLoaded";
       sceneryObjectPath: string;
       metadata: OmsiSceneryObjectMetadata;
+    }
+  | {
+      type: "sceneryObjectGeometryLoaded";
+      sceneryObjectPath: string;
+      geometry: OmsiSceneryObjectGeometry;
     }
   | {
       type: "hostError";
@@ -146,6 +167,15 @@ export function loadSceneryObjectMetadata(
 ) {
   getWebView()?.postMessage({
     type: "loadSceneryObjectMetadata",
+    sceneryObjectPath
+  });
+}
+
+export function loadSceneryObjectGeometry(
+  sceneryObjectPath: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSceneryObjectGeometry",
     sceneryObjectPath
   });
 }
