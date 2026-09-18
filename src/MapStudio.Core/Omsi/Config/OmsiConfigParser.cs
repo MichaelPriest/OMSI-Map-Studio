@@ -98,7 +98,7 @@ public static class OmsiConfigParser
     {
         if (bytes.StartsWith(new byte[] { 0xEF, 0xBB, 0xBF }))
         {
-            return (new UTF8Encoding(false, true), true, 3);
+            return (new UTF8Encoding(true, true), true, 3);
         }
 
         if (bytes.StartsWith(new byte[] { 0xFF, 0xFE }))
