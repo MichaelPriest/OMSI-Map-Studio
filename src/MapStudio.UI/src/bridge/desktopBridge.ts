@@ -13,6 +13,7 @@ export type OmsiMap = {
   displayName: string;
   directoryPath: string;
   globalConfigPath: string;
+  usesWorldCoordinates: boolean;
   tiles: OmsiTile[];
 };
 
