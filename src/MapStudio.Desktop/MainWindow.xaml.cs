@@ -128,7 +128,11 @@ public partial class MainWindow : Window
                     {
                         tile.X,
                         tile.Y,
-                        tile.RelativeMapPath
+                        tile.RelativeMapPath,
+                        fileExists = tile.Summary?.Exists ?? false,
+                        objectCount = tile.Summary?.ObjectCount ?? 0,
+                        splineCount = tile.Summary?.SplineCount ?? 0,
+                        splineAttachmentCount = tile.Summary?.SplineAttachmentCount ?? 0
                     })
                 })
             });
