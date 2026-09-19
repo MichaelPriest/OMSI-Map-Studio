@@ -295,3 +295,17 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 3. test `[terrain]` without a sidecar and verify **Missing**;
 4. test an existing sidecar without the marker and verify the inconsistency is visible;
 5. verify no `.terrain` file is modified.
+
+## Fullscreen and navigation test
+
+1. open a map and press **F11**; verify the Windows frame/title bar disappears;
+2. press **Esc** and verify the previous window state is restored;
+3. repeat using the editor toolbar fullscreen button;
+4. right-drag and verify camera orbit without accidental object selection;
+5. middle-drag and verify camera-target panning;
+6. use Shift + middle-drag and verify accelerated panning;
+7. validate smooth zoom with the wheel and `+` / `-`;
+8. use arrows and Shift + arrows to move across the map;
+9. trigger progressive loading of several O3D models/textures, move the camera while loading, and verify position/target/zoom do not jump back to the initial fit;
+10. verify left-click selection and edit gizmos still work;
+11. validate **F**, **Home**, **1**, and **2** after manual navigation.

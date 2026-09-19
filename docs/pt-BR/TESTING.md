@@ -295,3 +295,17 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 3. teste tile com `[terrain]` mas sem sidecar e confirme **Ausente**;
 4. teste sidecar existente sem marcador e confirme que a inconsistência fica visível;
 5. confirme que nenhum arquivo `.terrain` é alterado.
+
+## Teste de tela cheia e navegação
+
+1. abra um mapa e pressione **F11**; confirme que a moldura/barra de título do Windows desaparece;
+2. pressione **Esc** e confirme retorno ao estado anterior da janela;
+3. repita usando o botão de tela cheia da barra do editor;
+4. arraste com o botão direito e confirme órbita sem selecionar objetos acidentalmente;
+5. arraste com o botão do meio e confirme deslocamento do alvo da câmera;
+6. use Shift + botão do meio e confirme deslocamento acelerado;
+7. valide zoom suave pela roda e por `+` / `-`;
+8. use as setas e Shift + setas para deslocar pelo mapa;
+9. inicie o carregamento progressivo de vários O3D/texturas, mova a câmera durante o processo e confirme que posição/alvo/zoom não retornam ao enquadramento inicial;
+10. confirme que clique esquerdo, seleção e gizmos continuam funcionando;
+11. valide **F**, **Home**, **1** e **2** após navegar manualmente.

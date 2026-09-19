@@ -416,3 +416,24 @@ Rendering is limited to the active tile's 3×3 area and 120 splines per scene. D
 The map inspector shows, for the active tile: coordinates, `[terrain]` marker presence, `.map.terrain` sidecar presence, and file size.
 
 It also shows a loaded-area `sidecars/markers` summary, making inconsistent tiles visible before binary editing exists.
+
+## Fullscreen and viewport navigation
+
+The editor now provides **native fullscreen** from the toolbar or **F11**. The WPF host removes the Windows frame and maximizes the window; **F11** or **Esc** restores the previous window state.
+
+The viewport camera preserves position, target, and zoom when the 3D scene is rebuilt during progressive O3D/texture loading. This prevents camera jumps while the map continues filling in.
+
+Navigation controls:
+
+- right mouse drag: orbit the camera;
+- middle mouse drag: pan;
+- Shift while panning: faster movement;
+- mouse wheel: progressive zoom;
+- arrow keys: move across the map;
+- Shift + arrows: accelerated movement;
+- `+` / `-`: zoom in/out;
+- **F**: focus the selected object or spline;
+- **Home**: fit the map;
+- **1 / 2**: perspective / top view.
+
+The left mouse button remains reserved for selection, placement, and edit gizmos.

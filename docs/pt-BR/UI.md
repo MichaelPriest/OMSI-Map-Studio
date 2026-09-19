@@ -416,3 +416,24 @@ A renderização é limitada ao entorno 3×3 do tile ativo e a 120 splines por c
 O inspetor do mapa mostra para o tile ativo: coordenadas, presença do marcador `[terrain]`, presença do sidecar `.map.terrain` e tamanho do arquivo.
 
 Também exibe um resumo da área carregada com `sidecars/marcadores`, facilitando detectar tiles inconsistentes antes de existir edição binária.
+
+## Tela cheia e navegação do viewport
+
+O editor possui **tela cheia nativa** pelo botão da barra de ferramentas ou por **F11**. O host WPF remove a moldura do Windows e maximiza a janela; **F11** ou **Esc** retornam ao estado anterior.
+
+A câmera do viewport mantém posição, alvo e zoom quando a cena 3D é reconstruída durante carregamento progressivo de O3D/texturas. Isso evita saltos de câmera enquanto o mapa continua sendo preenchido.
+
+Controles de navegação:
+
+- botão direito + arrastar: orbitar a câmera;
+- botão do meio + arrastar: deslocar/panoramizar;
+- Shift durante o deslocamento: movimento mais rápido;
+- roda do mouse: zoom progressivo;
+- setas: deslocamento pelo mapa;
+- Shift + setas: deslocamento acelerado;
+- `+` / `-`: aproximar/afastar;
+- **F**: focar objeto ou spline selecionada;
+- **Home**: reenquadrar o mapa;
+- **1 / 2**: perspectiva / topo.
+
+O botão esquerdo permanece reservado para seleção, posicionamento e gizmos de edição.
