@@ -257,3 +257,12 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 2. verify the corresponding material shows `Not simulated:` in the inspector;
 3. verify repeated commands are not duplicated;
 4. verify these commands do not visually alter the material at this stage.
+
+
+## LRU cache test
+
+1. navigate/select enough resources to exceed 64 unique textures;
+2. verify `Cache: X/64` never exceeds 64;
+3. return to an object whose old texture was evicted and verify it can be requested again;
+4. click **Clear cache** and verify `Cache: 0/64` and `Auto textures: 0/24` before progressive repopulation;
+5. verify the map stays loaded and only texture assets are discarded.

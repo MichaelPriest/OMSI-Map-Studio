@@ -388,3 +388,10 @@ Isso é intencional: referências `\S:`/script e lightmaps controlados por vari�
 Quando um material usa comandos reconhecidos mas ainda não simulados, a aba **Materiais** mostra `Não simulado:` seguido dos comandos.
 
 Atualmente isso inclui `[matl_envmap_mask]`, `[alphascale]` e `[matl_allcolor]`. O objetivo é tornar a diferença visível, em vez de silenciosamente ignorar recursos do editor/OMSI.
+
+
+## Controle do cache de texturas
+
+A barra inferior mostra `Cache: X/64`. O cache de assets reais é limitado a 64 entradas e remove automaticamente a textura menos recente quando necessário.
+
+A área de camadas ganhou **Limpar cache**, que remove texturas carregadas, cancela o histórico de requisições em andamento e reinicia o orçamento automático de prefetch sem descarregar o mapa.

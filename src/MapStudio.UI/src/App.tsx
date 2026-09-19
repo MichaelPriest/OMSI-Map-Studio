@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from "react";
 import {
@@ -106,6 +107,8 @@ const autoSplineTextureBatch = 2;
 const autoTextureLimit =
   autoObjectTextureLimit +
   autoSplineTextureLimit;
+
+const maxTextureCacheEntries = 64;
 
 type PendingSplinePlacement = {
   targetTileX: number;
@@ -582,6 +585,9 @@ export function App() {
     Record<string, true>
   >({});
 
+  const textureCacheOrderRef =
+    useRef<string[]>([]);
+
   const [
     autoPrefetchedTextureKeys,
     setAutoPrefetchedTextureKeys
@@ -696,6 +702,8 @@ export function App() {
           setTextureAssetsByKey({});
           setRequestedTextureKeys({});
           setAutoPrefetchedTextureKeys({});
+          textureCacheOrderRef.current =
+            [];
           setPreviewObjectTransforms({});
           setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
@@ -762,6 +770,8 @@ export function App() {
           setTextureAssetsByKey({});
           setRequestedTextureKeys({});
           setAutoPrefetchedTextureKeys({});
+          textureCacheOrderRef.current =
+            [];
           setPreloadingGeometryFor(undefined);
           setPreloadingSplineProfileFor(
             undefined
@@ -984,13 +994,68 @@ export function App() {
           message.type ===
           "textureAssetLoaded"
         ) {
-          setTextureAssetsByKey(
-            (current) => ({
-              ...current,
-              [message.requestKey]:
-                message.asset
-            })
+          setRequestedTextureKeys(
+            (current) => {
+              if (
+                !Object.hasOwn(
+                  current,
+                  message.requestKey
+                )
+              ) {
+                return current;
+              }
+
+              const next = {
+                ...current
+              };
+
+              delete next[
+                message.requestKey
+              ];
+
+              return next;
+            }
           );
+
+          setTextureAssetsByKey(
+            (current) => {
+              const next = {
+                ...current,
+                [message.requestKey]:
+                  message.asset
+              };
+
+              const order =
+                textureCacheOrderRef.current
+                  .filter(
+                    (key) =>
+                      key !==
+                      message.requestKey
+                  );
+
+              order.push(
+                message.requestKey
+              );
+
+              while (
+                order.length >
+                maxTextureCacheEntries
+              ) {
+                const evicted =
+                  order.shift();
+
+                if (evicted) {
+                  delete next[evicted];
+                }
+              }
+
+              textureCacheOrderRef.current =
+                order;
+
+              return next;
+            }
+          );
+
           return;
         }
 
@@ -7215,6 +7280,31 @@ export function App() {
                 />
                 Terreno
               </label>
+
+              <button
+                type="button"
+                className="texture-cache-clear"
+                disabled={
+                  Object.keys(
+                    textureAssetsByKey
+                  ).length === 0 &&
+                  Object.keys(
+                    requestedTextureKeys
+                  ).length === 0
+                }
+                onClick={() => {
+                  setTextureAssetsByKey({});
+                  setRequestedTextureKeys({});
+                  setAutoPrefetchedTextureKeys(
+                    {}
+                  );
+                  textureCacheOrderRef.current =
+                    [];
+                }}
+                title="Limpar texturas carregadas e reiniciar o orçamento automático"
+              >
+                Limpar cache
+              </button>
             </div>
 
             {(loadingFullMap ||
@@ -7296,6 +7386,12 @@ export function App() {
               autoPrefetchedTextureKeys
             ).length}/
             {autoTextureLimit}
+            <b>·</b>
+            Cache:{" "}
+            {Object.keys(
+              textureAssetsByKey
+            ).length}/
+            {maxTextureCacheEntries}
             <b>·</b>
             Prévia:{" "}
             {previewEditCount}

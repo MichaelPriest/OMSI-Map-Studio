@@ -725,6 +725,22 @@ code {
   color: #506b83;
 }
 
+.viewport-layers .texture-cache-clear {
+  margin-top: 3px;
+  padding: 4px 6px;
+  border: 1px solid #284b66;
+  border-radius: 4px;
+  background: #0a1a27;
+  color: #89a8c0;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.viewport-layers .texture-cache-clear:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .viewport-loading {
   left: 50%;
   bottom: 14px;

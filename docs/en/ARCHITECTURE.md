@@ -372,3 +372,12 @@ Babylon applies the image as a spherical `reflectionTexture`. Preview strength i
 Core records known per-material commands that do not yet have sufficiently faithful visual reproduction. At this stage: `[matl_envmap_mask]`, `[alphascale]`, and `[matl_allcolor]`.
 
 The information travels Core → host → bridge → React and appears in the inspector. None of these commands changes the material until a safe implementation exists.
+
+
+## Texture LRU cache
+
+`requestedTextureKeys` now represents in-flight requests only. When the host responds — success or failure — the key leaves that set.
+
+The React cache keeps at most 64 assets using LRU order. When asset 65 arrives, the oldest entry is removed; if needed again it can be requested because it is no longer permanently marked as `requested`.
+
+The automatic prefetch budget (24 unique keys) remains separate from the cache limit.

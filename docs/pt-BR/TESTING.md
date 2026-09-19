@@ -257,3 +257,12 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 2. confirme que o material correspondente mostra `Não simulado:` no inspetor;
 3. valide que comandos repetidos não aparecem duplicados;
 4. confirme que esses comandos não alteram o material visualmente nesta etapa.
+
+
+## Teste do cache LRU
+
+1. navegue/seleciona recursos suficientes para ultrapassar 64 texturas únicas;
+2. confirme que `Cache: X/64` nunca mostra mais de 64;
+3. volte a um objeto cuja textura antiga foi removida e confirme que ela pode ser solicitada novamente;
+4. clique **Limpar cache** e confirme `Cache: 0/64` e `Texturas auto: 0/24` antes do repovoamento progressivo;
+5. confirme que o mapa continua carregado e somente assets de textura são descartados.

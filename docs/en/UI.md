@@ -388,3 +388,10 @@ This is intentional: `\S:`/script references and OMSI variable-controlled lightm
 When a material uses recognized commands that are not simulated yet, **Materials** shows `Not simulated:` followed by the commands.
 
 This currently includes `[matl_envmap_mask]`, `[alphascale]`, and `[matl_allcolor]`. The goal is to expose fidelity gaps instead of silently ignoring OMSI/editor features.
+
+
+## Texture-cache controls
+
+The bottom bar shows `Cache: X/64`. Real texture assets are capped at 64 entries and the least-recent entry is automatically evicted when needed.
+
+The layers panel now has **Clear cache**, removing loaded textures, clearing in-flight request bookkeeping, and resetting the automatic prefetch budget without unloading the map.
