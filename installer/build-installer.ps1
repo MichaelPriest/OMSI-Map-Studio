@@ -4,7 +4,8 @@ param(
     [string]$Configuration = "Release",
     [string]$Runtime = "win-x64",
     [string]$ArtifactsDirectory = "artifacts",
-    [switch]$SkipUiBuild
+    [switch]$SkipUiBuild,
+    [switch]$SkipLaunchSmokeTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,6 +54,48 @@ $exePath = Join-Path $publishDirectory "OMSI Map Studio.exe"
 $uiIndex = Join-Path $publishDirectory "ui/index.html"
 if (-not (Test-Path $exePath)) { throw "Expected desktop executable not found: $exePath" }
 if (-not (Test-Path $uiIndex)) { throw "React UI output not found: $uiIndex" }
+
+if (-not $SkipLaunchSmokeTest) {
+    Write-Host "Running desktop startup smoke test..."
+
+    $previousSmokeValue =
+        $env:MAPSTUDIO_SMOKE_TEST
+
+    try {
+        $env:MAPSTUDIO_SMOKE_TEST = "1"
+
+        $process =
+            Start-Process -FilePath $exePath -PassThru
+
+        $deadline =
+            (Get-Date).AddSeconds(8)
+
+        while (
+            -not $process.HasExited -and
+            (Get-Date) -lt $deadline
+        ) {
+            Start-Sleep -Milliseconds 250
+            $process.Refresh()
+        }
+
+        if ($process.HasExited) {
+            throw "Desktop startup smoke test failed: process exited early with code $($process.ExitCode)."
+        }
+
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+
+        Write-Host "Desktop startup smoke test passed."
+    }
+    finally {
+        if ($null -eq $previousSmokeValue) {
+            Remove-Item Env:MAPSTUDIO_SMOKE_TEST -ErrorAction SilentlyContinue
+        }
+        else {
+            $env:MAPSTUDIO_SMOKE_TEST =
+                $previousSmokeValue
+        }
+    }
+}
 
 $isccFromPath =
     Get-Command ISCC.exe -ErrorAction SilentlyContinue |
