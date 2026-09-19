@@ -104,8 +104,6 @@ const defaultPlacementTransform:
     bank: 0
   };
 
-const nearbyObjectPathLimit = 64;
-const nearbySplinePathLimit = 48;
 const autoObjectTextureLimit = 128;
 const autoSplineTextureLimit = 96;
 const autoObjectTextureBatch = 12;
@@ -2566,10 +2564,6 @@ export function App() {
               right[0]
             )
         )
-        .slice(
-          0,
-          nearbyObjectPathLimit
-        )
         .map(([path]) => path);
     }, [
       activeTile,
@@ -2702,10 +2696,6 @@ export function App() {
             left[0].localeCompare(
               right[0]
             )
-        )
-        .slice(
-          0,
-          nearbySplinePathLimit
         )
         .map(([path]) => path);
     }, [
