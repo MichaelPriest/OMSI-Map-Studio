@@ -97,6 +97,81 @@ public sealed class OmsiO3dMaterialTests
     }
 
     [Fact]
+    public void GeometryReader_AppliesInverseO3dTransform()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-transform-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x03);
+
+                writer.Write((byte)0x17);
+                writer.Write((ushort)3);
+                WriteVertex(writer, 11, 0, 0);
+                WriteVertex(writer, 12, 0, 0);
+                WriteVertex(writer, 11, 1, 0);
+
+                writer.Write((byte)0x49);
+                writer.Write((ushort)1);
+                writer.Write((ushort)0);
+                writer.Write((ushort)1);
+                writer.Write((ushort)2);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x26);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x79);
+                writer.Write(1f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(1f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(1f);
+                writer.Write(0f);
+                writer.Write(10f);
+                writer.Write(0f);
+                writer.Write(0f);
+                writer.Write(1f);
+            }
+
+            var geometry =
+                new OmsiO3dGeometryReader()
+                    .Read(path);
+
+            Assert.True(
+                geometry.IsLoaded,
+                geometry.ErrorCode);
+
+            Assert.Equal(
+                1f,
+                geometry.Positions[0],
+                4);
+
+            Assert.Equal(
+                2f,
+                geometry.Positions[3],
+                4);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void GeometryReader_LongHeaderBoneSection_UsesShortBoneCount()
     {
         var path = Path.Combine(
