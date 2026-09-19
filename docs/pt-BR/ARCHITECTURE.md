@@ -549,3 +549,12 @@ A geometria do helper continua preservada no metadata/importador; apenas a compo
 Objetos comuns de mapa usam altura relativa ao terreno: a coordenada Z gravada no bloco `[object]` é somada à altura interpolada do terrain no ponto X/Y. Objetos cujo SCO contém `[absheight]` permanecem em altura absoluta e não recebem esse deslocamento.
 
 O mesmo cálculo é usado na renderização, seleção, foco da câmera, hit-test e gizmo de edição. Ao salvar um objeto relativo, o editor converte novamente a altura visual para o Z relativo do arquivo para não corromper a posição OMSI.
+
+
+## Eixos nativos do O3D e cor de textura
+
+O binário O3D usa um sistema local diferente das coordenadas de posicionamento gravadas no mapa/SCO. Para o viewport Babylon (Y-up), os vértices O3D devem permanecer em seus eixos nativos durante a renderização; a conversão X/Y/Z do mapa continua acontecendo apenas na composição da cena.
+
+A seção O3D `0x79` é preservada como metadata de transformação e não é mais aplicada isoladamente como inversa sobre os vértices de prévia. Aplicar apenas a inversa deslocava/rotacionava meshes sem reaplicar o transform de objeto correspondente.
+
+Quando existe textura difusa, o RGB da textura passa a ser usado diretamente como cor de superfície. O `diffuseColor` do material não multiplica mais a textura, evitando objetos OMSI escurecidos ou pretos.
