@@ -97,6 +97,122 @@ public sealed class OmsiO3dMaterialTests
     }
 
     [Fact]
+    public void GeometryReader_DecodesProtectedOfficialStyleVertices()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-protected-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x07);
+
+                // Extended option bit 1 is the alternative protection seed.
+                writer.Write((byte)0x02);
+                writer.Write((uint)0);
+
+                writer.Write((byte)0x17);
+                writer.Write((uint)3);
+
+                WriteProtectedVertex(
+                    writer,
+                    2.5f,
+                    1.25f,
+                    3.75f,
+                    0.2f,
+                    -0.4f,
+                    0.6f,
+                    0.1f,
+                    0.2576f);
+
+                WriteProtectedVertex(
+                    writer,
+                    4.25f,
+                    2.5f,
+                    1.75f,
+                    0f,
+                    0f,
+                    1f,
+                    0f,
+                    0f);
+
+                WriteProtectedVertex(
+                    writer,
+                    1.5f,
+                    4.25f,
+                    2.75f,
+                    0f,
+                    0f,
+                    1f,
+                    0f,
+                    0f);
+
+                writer.Write((byte)0x49);
+                writer.Write((uint)1);
+                writer.Write((ushort)0);
+                writer.Write((ushort)1);
+                writer.Write((ushort)2);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x26);
+                writer.Write((ushort)0);
+            }
+
+            var geometry =
+                new OmsiO3dGeometryReader()
+                    .Read(path);
+
+            Assert.True(
+                geometry.IsLoaded,
+                geometry.ErrorCode);
+
+            Assert.Equal(
+                1.25f,
+                geometry.Positions[0],
+                4);
+            Assert.Equal(
+                3.75f,
+                geometry.Positions[1],
+                4);
+            Assert.Equal(
+                2.5f,
+                geometry.Positions[2],
+                4);
+
+            Assert.Equal(
+                -0.2f,
+                geometry.Normals[0],
+                4);
+            Assert.Equal(
+                0.6f,
+                geometry.Normals[1],
+                4);
+            Assert.Equal(
+                0.4f,
+                geometry.Normals[2],
+                4);
+
+            Assert.Equal(
+                0.1f,
+                geometry.Uvs[0],
+                4);
+            Assert.Equal(
+                0.8f,
+                geometry.Uvs[1],
+                4);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void GeometryReader_AppliesInverseO3dTransform()
     {
         var path = Path.Combine(
@@ -313,6 +429,29 @@ public sealed class OmsiO3dMaterialTests
         {
             File.Delete(path);
         }
+    }
+
+    private static void WriteProtectedVertex(
+        BinaryWriter writer,
+        float x,
+        float y,
+        float z,
+        float normalX,
+        float normalY,
+        float normalZ,
+        float u,
+        float v)
+    {
+        writer.Write(x);
+        writer.Write(y);
+        writer.Write(z);
+
+        writer.Write(normalX);
+        writer.Write(normalY);
+        writer.Write(normalZ);
+
+        writer.Write(u);
+        writer.Write(v);
     }
 
     private static void WriteVertex(

@@ -511,3 +511,10 @@ In 3×3 performance mode, the Inspector now reports actually renderable meshes, 
 OMSI Map Studio is an independent editor and does not depend on alternate source files to replace protected assets. A protected `.o3d` remains explicitly identified until a real compatibility path with the installed OMSI runtime exists.
 
 The UI separates actually renderable meshes from protected assets. Protected O3D markers use a distinct color from missing/invalid asset markers, and the status reports how many object types and meshes remain protected.
+
+
+## Native compatibility with protected O3D vertices
+
+The O3D reader now handles protected extended headers inside the Core itself. Vertex transformation is applied in memory while reading, before axis conversion for the viewport. The original file is never rewritten.
+
+The implementation keeps defensive limits. Protected meshes outside the currently validated vertex domain return `protectedVertexCountUnsupported` instead of producing approximate geometry.

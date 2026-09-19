@@ -52,6 +52,8 @@ public sealed class OmsiO3dGeometryReader
             var version = reader.ReadByte();
             var longHeader = version > 3;
             var longTriangleIndices = false;
+            var usesAlternativeProtectionSeed = false;
+            var protectionKey = uint.MaxValue;
 
             if (longHeader)
             {
@@ -62,15 +64,14 @@ public sealed class OmsiO3dGeometryReader
                 }
 
                 var options = reader.ReadByte();
-                var encryptionKey = reader.ReadUInt32();
+                protectionKey =
+                    reader.ReadUInt32();
 
                 longTriangleIndices =
                     (options & 0x01) != 0;
 
-                if (encryptionKey != uint.MaxValue)
-                {
-                    return OmsiO3dGeometry.Error("encrypted");
-                }
+                usesAlternativeProtectionSeed =
+                    (options & 0x02) != 0;
             }
 
             float[]? positions = null;
@@ -113,6 +114,22 @@ public sealed class OmsiO3dGeometryReader
                         uvs =
                             new float[checked((int)vertexCount * 2)];
 
+                        OmsiO3dProtectedVertexDecoder?
+                            protectedVertexDecoder = null;
+
+                        if (
+                            protectionKey != uint.MaxValue &&
+                            !OmsiO3dProtectedVertexDecoder.TryCreate(
+                                version,
+                                protectionKey,
+                                usesAlternativeProtectionSeed,
+                                vertexCount,
+                                out protectedVertexDecoder))
+                        {
+                            return OmsiO3dGeometry.Error(
+                                "protectedVertexCountUnsupported");
+                        }
+
                         for (var index = 0U;
                              index < vertexCount;
                              index++)
@@ -131,6 +148,16 @@ public sealed class OmsiO3dGeometryReader
                             var nz = reader.ReadSingle();
                             var u = reader.ReadSingle();
                             var v = reader.ReadSingle();
+
+                            protectedVertexDecoder?.Decode(
+                                ref x,
+                                ref y,
+                                ref z,
+                                ref nx,
+                                ref ny,
+                                ref nz,
+                                ref u,
+                                ref v);
 
                             var p = checked((int)index * 3);
                             positions[p] = x;

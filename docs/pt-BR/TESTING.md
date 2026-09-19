@@ -554,3 +554,12 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 3. confirme que o status final informa a quantidade de tipos de objeto e malhas protegidas;
 4. confirme que um O3D protegido não recebe geometria fictícia nem substituição automática por outro formato;
 5. confirme que marcadores de O3D protegido têm cor diferente dos marcadores de arquivo ausente/inválido.
+
+
+## Validação de O3D protegido no Core
+
+1. valide um O3D v7 com cabeçalho estendido, chave de proteção e seed alternativo;
+2. confirme que a leitura produz posições, normais e UVs decodificados sem alterar o arquivo fonte;
+3. confirme que triângulos, materiais e transform continuam sendo processados pelo pipeline O3D normal;
+4. em Grundorf, compare o total de **Malhas reais** com a test.21: os objetos anteriormente marcados como `encrypted` devem migrar para renderizáveis quando estiverem dentro do domínio suportado;
+5. se uma malha protegida exceder o domínio validado, confirme o erro explícito `protectedVertexCountUnsupported`.

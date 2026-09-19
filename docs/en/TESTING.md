@@ -554,3 +554,12 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 3. confirm the final status reports protected object-type and mesh counts;
 4. confirm a protected O3D does not receive fake geometry or automatic substitution by another format;
 5. confirm protected O3D markers use a different color from missing/invalid asset markers.
+
+
+## Protected O3D Core validation
+
+1. validate a v7 O3D with an extended header, protection key, and alternative seed;
+2. confirm reading produces decoded positions, normals, and UVs without modifying the source file;
+3. confirm triangles, materials, and transforms continue through the normal O3D pipeline;
+4. in Grundorf, compare the **Real meshes** total with test.21: objects previously reported as `encrypted` should become renderable when they are inside the supported domain;
+5. if a protected mesh exceeds the validated domain, confirm the explicit `protectedVertexCountUnsupported` error.

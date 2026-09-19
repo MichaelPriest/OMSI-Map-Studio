@@ -511,3 +511,10 @@ No modo desempenho 3×3, o inspetor passa a mostrar malhas realmente renderizáv
 O OMSI Map Studio é um editor independente e não depende de arquivos-fonte alternativos para substituir assets protegidos. Um `.o3d` marcado como protegido permanece explicitamente identificado como tal até existir um caminho de compatibilidade real com o runtime instalado do OMSI.
 
 A interface separa malhas realmente renderizáveis de assets protegidos. Marcadores de O3D protegido usam cor distinta dos marcadores de asset ausente/inválido, e o status informa quantos tipos de objeto e quantas malhas continuam protegidos.
+
+
+## Compatibilidade nativa com vértices O3D protegidos
+
+O leitor O3D passa a tratar o cabeçalho estendido protegido dentro do próprio Core. A transformação de vértices é aplicada em memória durante a leitura, antes da conversão de eixos para o viewport. O arquivo original nunca é regravado.
+
+A implementação mantém limites defensivos. Malhas protegidas com domínio de vértices ainda não validado retornam `protectedVertexCountUnsupported` em vez de produzir geometria aproximada.
