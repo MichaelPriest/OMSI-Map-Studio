@@ -224,8 +224,9 @@ public sealed class OmsiTileReader
             document.FindSections("splineAttachment").Count();
 
         var splineCount =
-            document.FindSections("spline").Count() +
-            document.FindSections("spline_h").Count();
+            document.Sections.Count(
+                OmsiSplineFieldLayout
+                    .IsSplineSection);
 
         var summary = new OmsiTileSummary(
             Exists: true,
@@ -334,22 +335,14 @@ public sealed class OmsiTileReader
             new List<OmsiPlacedSpline>();
 
         var sourceSectionOrdinal = 0;
+        var version =
+            OmsiSplineFieldLayout
+                .ReadVersion(document);
 
         foreach (var section in document.Sections)
         {
-            var isSpline =
-                string.Equals(
-                    section.Keyword,
-                    "spline",
-                    StringComparison.OrdinalIgnoreCase);
-
-            var isHeightSpline =
-                string.Equals(
-                    section.Keyword,
-                    "spline_h",
-                    StringComparison.OrdinalIgnoreCase);
-
-            if (!isSpline && !isHeightSpline)
+            if (!OmsiSplineFieldLayout
+                .IsSplineSection(section))
             {
                 continue;
             }
@@ -360,50 +353,85 @@ public sealed class OmsiTileReader
             var values =
                 section.DataLines.ToArray();
 
-            if (values.Length < 13 ||
+            if (
+                !OmsiSplineFieldLayout.TryCreate(
+                    version,
+                    values.Length,
+                    out var layout) ||
                 !int.TryParse(
-                    values[2],
+                    values[layout.IdIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var splineId) ||
                 !int.TryParse(
-                    values[3],
+                    values[layout.PreviousIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var previousSplineId) ||
+                    out var previousSplineId))
+            {
+                continue;
+            }
+
+            var nextSplineId = -1;
+
+            if (
+                layout.NextIndex is int nextIndex &&
                 !int.TryParse(
-                    values[4],
+                    values[nextIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var nextSplineId) ||
-                !TryParseDouble(values[5], out var x) ||
-                !TryParseDouble(values[6], out var z) ||
-                !TryParseDouble(values[7], out var y) ||
+                    out nextSplineId))
+            {
+                continue;
+            }
+
+            if (
                 !TryParseDouble(
-                    values[8],
+                    values[layout.XIndex],
+                    out var x) ||
+                !TryParseDouble(
+                    values[layout.ZIndex],
+                    out var z) ||
+                !TryParseDouble(
+                    values[layout.YIndex],
+                    out var y) ||
+                !TryParseDouble(
+                    values[layout.RotationIndex],
                     out var rotation) ||
                 !TryParseDouble(
-                    values[9],
+                    values[layout.LengthIndex],
                     out var length) ||
                 !TryParseDouble(
-                    values[10],
+                    values[layout.RadiusIndex],
                     out var radius) ||
                 !TryParseDouble(
-                    values[11],
+                    values[layout.GradientStartIndex],
                     out var gradientStart) ||
                 !TryParseDouble(
-                    values[12],
+                    values[layout.GradientEndIndex],
                     out var gradientEnd))
             {
                 continue;
             }
 
+            var isHeightSpline =
+                string.Equals(
+                    section.Keyword,
+                    "spline_h",
+                    StringComparison.OrdinalIgnoreCase);
+
             splines.Add(new OmsiPlacedSpline(
-                HeaderValue: values[0],
-                SplinePath: values[1],
+                HeaderValue:
+                    layout.HeaderIndex >= 0
+                        ? values[layout.HeaderIndex]
+                        : string.Empty,
+                SplinePath:
+                    values[layout.PathIndex],
                 SplineId: splineId,
-                PreviousSplineId: previousSplineId,
-                NextSplineId: nextSplineId,
+                PreviousSplineId:
+                    previousSplineId,
+                NextSplineId:
+                    nextSplineId,
                 X: x,
                 Z: z,
                 Y: y,
@@ -414,7 +442,10 @@ public sealed class OmsiTileReader
                 GradientEnd: gradientEnd,
                 IsHeightSpline: isHeightSpline,
                 ExtraValues:
-                    values.Skip(13).ToArray())
+                    values
+                        .Skip(
+                            layout.ExtraStartIndex)
+                        .ToArray())
                 {
                     SourceSectionOrdinal =
                         currentSectionOrdinal

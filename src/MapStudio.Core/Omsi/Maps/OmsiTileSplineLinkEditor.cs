@@ -24,8 +24,14 @@ public static class OmsiTileSplineLinkEditor
 
         var sections =
             document.Sections
-                .Where(IsSplineSection)
+                .Where(
+                    OmsiSplineFieldLayout
+                        .IsSplineSection)
                 .ToArray();
+
+        var version =
+            OmsiSplineFieldLayout
+                .ReadVersion(document);
 
         var applied = 0;
         var usedOrdinals =
@@ -58,9 +64,15 @@ public static class OmsiTileSplineLinkEditor
                     edit.SourceSectionOrdinal];
 
             var indices =
-                GetDataLineIndices(section);
+                OmsiSplineFieldLayout
+                    .GetDataLineIndices(
+                        section);
 
-            if (indices.Count < 13)
+            if (
+                !OmsiSplineFieldLayout.TryCreate(
+                    version,
+                    indices.Count,
+                    out var layout))
             {
                 throw new InvalidDataException(
                     "malformedSplineSection");
@@ -78,24 +90,44 @@ public static class OmsiTileSplineLinkEditor
                     "spline_h",
                     StringComparison.OrdinalIgnoreCase);
 
+            var sourceNextId = -1;
+
+            if (
+                layout.NextIndex is int nextIndex &&
+                !int.TryParse(
+                    values[nextIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out sourceNextId))
+            {
+                throw new InvalidDataException(
+                    "splineLinkSourceChanged");
+            }
+
+            if (
+                layout.NextIndex is null &&
+                (
+                    edit.OriginalNextSplineId != -1 ||
+                    edit.NextSplineId != -1
+                ))
+            {
+                throw new InvalidDataException(
+                    "splineLinkUnsupportedByVersion");
+            }
+
             if (
                 isHeightSpline !=
                     edit.IsHeightSpline ||
                 !int.TryParse(
-                    values[2],
+                    values[layout.IdIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var sourceId) ||
                 !int.TryParse(
-                    values[3],
+                    values[layout.PreviousIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var sourcePreviousId) ||
-                !int.TryParse(
-                    values[4],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var sourceNextId) ||
                 sourceId !=
                     edit.SplineId ||
                 sourcePreviousId !=
@@ -103,7 +135,7 @@ public static class OmsiTileSplineLinkEditor
                 sourceNextId !=
                     edit.OriginalNextSplineId ||
                 !string.Equals(
-                    values[1],
+                    values[layout.PathIndex],
                     edit.SplinePath,
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -111,15 +143,18 @@ public static class OmsiTileSplineLinkEditor
                     "splineLinkSourceChanged");
             }
 
-            lines[indices[3]] =
+            lines[indices[layout.PreviousIndex]] =
                 edit.PreviousSplineId
                     .ToString(
                         CultureInfo.InvariantCulture);
 
-            lines[indices[4]] =
-                edit.NextSplineId
-                    .ToString(
-                        CultureInfo.InvariantCulture);
+            if (layout.NextIndex is int writeNextIndex)
+            {
+                lines[indices[writeNextIndex]] =
+                    edit.NextSplineId
+                        .ToString(
+                            CultureInfo.InvariantCulture);
+            }
 
             applied++;
         }
@@ -129,49 +164,6 @@ public static class OmsiTileSplineLinkEditor
                 document,
                 lines),
             applied);
-    }
-
-    private static bool IsSplineSection(
-        OmsiConfigSection section) =>
-        string.Equals(
-            section.Keyword,
-            "spline",
-            StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(
-            section.Keyword,
-            "spline_h",
-            StringComparison.OrdinalIgnoreCase);
-
-    private static List<int> GetDataLineIndices(
-        OmsiConfigSection section)
-    {
-        var result =
-            new List<int>();
-
-        for (
-            var offset = 0;
-            offset <
-                section.RawBodyLines.Count;
-            offset++)
-        {
-            var value =
-                section.RawBodyLines[
-                    offset].Trim();
-
-            if (
-                value.Length == 0 ||
-                value.StartsWith('#'))
-            {
-                continue;
-            }
-
-            result.Add(
-                section.KeywordLineIndex +
-                1 +
-                offset);
-        }
-
-        return result;
     }
 
     private static byte[] Encode(

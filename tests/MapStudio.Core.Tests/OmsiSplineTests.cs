@@ -96,6 +96,128 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void ReadSplines_Version10_UsesLegacyFieldLayout()
+    {
+        const string source =
+            "[version]\n10\n" +
+            "[spline]\n" +
+            "0\n" +
+            "Splines\\\\Legacy\\\\road.sli\n" +
+            "2\n" +
+            "-1\n" +
+            "232.825830609256\n" +
+            "0\n" +
+            "221.586691469607\n" +
+            "449.1714593869\n" +
+            "9.99999984306749\n" +
+            "0\n" +
+            "0\n" +
+            "0\n" +
+            "0\n" +
+            "0\n" +
+            "0\n";
+
+        var document =
+            OmsiConfigParser.Parse(source);
+
+        var spline =
+            Assert.Single(
+                OmsiTileReader.ReadSplines(
+                    document));
+
+        Assert.Equal(2, spline.SplineId);
+        Assert.Equal(-1, spline.PreviousSplineId);
+        Assert.Equal(-1, spline.NextSplineId);
+        Assert.Equal(
+            232.825830609256,
+            spline.X,
+            9);
+        Assert.Equal(
+            221.586691469607,
+            spline.Y,
+            9);
+        Assert.Equal(
+            449.1714593869,
+            spline.Rotation,
+            9);
+        Assert.Equal(
+            9.99999984306749,
+            spline.Length,
+            9);
+        Assert.Equal(
+            new[] { "0", "0", "0" },
+            spline.ExtraValues);
+    }
+
+    [Fact]
+    public void SplineEditor_Version10_ChangesLegacyTransformOffsetsSafely()
+    {
+        const string source =
+            "[version]\n10\n" +
+            "[spline]\n" +
+            "0\n" +
+            "Splines\\\\Legacy\\\\road.sli\n" +
+            "2\n" +
+            "-1\n" +
+            "10\n20\n30\n40\n50\n60\n70\n80\n" +
+            "0\n0\n0\n";
+
+        var document =
+            OmsiConfigParser.Parse(source);
+
+        var result =
+            OmsiTileSplineEditor.ApplyTransforms(
+                document,
+                [
+                    new(
+                        0,
+                        @"Splines\Legacy\road.sli",
+                        2,
+                        -1,
+                        -1,
+                        false,
+                        11,
+                        21,
+                        31,
+                        41,
+                        51,
+                        61,
+                        71,
+                        81)
+                ]);
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(result.Bytes);
+
+        Assert.Contains(
+            "2\n-1\n11\n21\n31\n41\n51\n61\n71\n81\n0\n0\n0\n",
+            text);
+    }
+
+    [Fact]
+    public void ReadContent_CountsSplineAbschnittAsSpline()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[version]\n14\n" +
+                "[splineAbschnitt]\n" +
+                "0\nSplines\\\\A.sli\n1\n-1\n-1\n" +
+                "0\n0\n0\n0\n10\n0\n0\n0\n");
+
+        var content =
+            OmsiTileReader.ReadContent(
+                document);
+
+        Assert.Equal(
+            1,
+            content.Summary.SplineCount);
+
+        Assert.Single(
+            content.Splines);
+    }
+
+    [Fact]
     public void SplineEditor_ChangesOnlyEditableNumericLines()
     {
         const string source =

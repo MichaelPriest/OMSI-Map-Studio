@@ -21,16 +21,13 @@ public static class OmsiTileSplineDeleter
         var splineSections =
             document.Sections
                 .Where(
-                    section =>
-                        string.Equals(
-                            section.Keyword,
-                            "spline",
-                            StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(
-                            section.Keyword,
-                            "spline_h",
-                            StringComparison.OrdinalIgnoreCase))
+                    OmsiSplineFieldLayout
+                        .IsSplineSection)
                 .ToArray();
+
+        var version =
+            OmsiSplineFieldLayout
+                .ReadVersion(document);
 
         if (
             sourceSectionOrdinal < 0 ||
@@ -46,9 +43,15 @@ public static class OmsiTileSplineDeleter
                 sourceSectionOrdinal];
 
         var dataLineIndices =
-            GetDataLineIndices(section);
+            OmsiSplineFieldLayout
+                .GetDataLineIndices(
+                    section);
 
-        if (dataLineIndices.Count < 13)
+        if (
+            !OmsiSplineFieldLayout.TryCreate(
+                version,
+                dataLineIndices.Count,
+                out var layout))
         {
             throw new InvalidDataException(
                 "malformedSplineSection");
@@ -69,31 +72,40 @@ public static class OmsiTileSplineDeleter
                 "spline_h",
                 StringComparison.OrdinalIgnoreCase);
 
+        var sourceNextSplineId = -1;
+
+        if (
+            layout.NextIndex is int nextIndex &&
+            !int.TryParse(
+                dataValues[nextIndex],
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out sourceNextSplineId))
+        {
+            throw new InvalidDataException(
+                "splineSourceChanged");
+        }
+
         if (
             sourceIsHeightSpline !=
                 isHeightSpline ||
             !int.TryParse(
-                dataValues[2],
+                dataValues[layout.IdIndex],
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out var sourceSplineId) ||
             !int.TryParse(
-                dataValues[3],
+                dataValues[layout.PreviousIndex],
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out var sourcePreviousSplineId) ||
-            !int.TryParse(
-                dataValues[4],
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out var sourceNextSplineId) ||
             sourceSplineId != splineId ||
             sourcePreviousSplineId !=
                 previousSplineId ||
             sourceNextSplineId !=
                 nextSplineId ||
             !string.Equals(
-                dataValues[1],
+                dataValues[layout.PathIndex],
                 splinePath,
                 StringComparison.OrdinalIgnoreCase))
         {
@@ -119,38 +131,6 @@ public static class OmsiTileSplineDeleter
                 document,
                 remainingLines),
             1);
-    }
-
-    private static List<int> GetDataLineIndices(
-        OmsiConfigSection section)
-    {
-        var result =
-            new List<int>();
-
-        for (
-            var offset = 0;
-            offset <
-                section.RawBodyLines.Count;
-            offset++)
-        {
-            var value =
-                section.RawBodyLines[
-                    offset].Trim();
-
-            if (
-                value.Length == 0 ||
-                value.StartsWith('#'))
-            {
-                continue;
-            }
-
-            result.Add(
-                section.KeywordLineIndex +
-                1 +
-                offset);
-        }
-
-        return result;
     }
 
     private static byte[] Encode(

@@ -24,8 +24,14 @@ public static class OmsiTileSplineEditor
 
         var splineSections =
             document.Sections
-                .Where(IsSplineSection)
+                .Where(
+                    OmsiSplineFieldLayout
+                        .IsSplineSection)
                 .ToArray();
+
+        var version =
+            OmsiSplineFieldLayout
+                .ReadVersion(document);
 
         var applied = 0;
         var usedOrdinals =
@@ -50,10 +56,15 @@ public static class OmsiTileSplineEditor
                     edit.SourceSectionOrdinal];
 
             var dataLineIndices =
-                GetDataLineIndices(
-                    section);
+                OmsiSplineFieldLayout
+                    .GetDataLineIndices(
+                        section);
 
-            if (dataLineIndices.Count < 13)
+            if (
+                !OmsiSplineFieldLayout.TryCreate(
+                    version,
+                    dataLineIndices.Count,
+                    out var layout))
             {
                 throw new InvalidDataException(
                     "malformedSplineSection");
@@ -71,32 +82,41 @@ public static class OmsiTileSplineEditor
                     "spline_h",
                     StringComparison.OrdinalIgnoreCase);
 
+            var sourceNextSplineId = -1;
+
+            if (
+                layout.NextIndex is int nextIndex &&
+                !int.TryParse(
+                    dataValues[nextIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out sourceNextSplineId))
+            {
+                throw new InvalidDataException(
+                    "splineSourceChanged");
+            }
+
             if (
                 isHeightSpline !=
                     edit.IsHeightSpline ||
                 !int.TryParse(
-                    dataValues[2],
+                    dataValues[layout.IdIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var sourceSplineId) ||
                 !int.TryParse(
-                    dataValues[3],
+                    dataValues[layout.PreviousIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
                     out var previousSplineId) ||
-                !int.TryParse(
-                    dataValues[4],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var nextSplineId) ||
                 sourceSplineId !=
                     edit.SplineId ||
                 previousSplineId !=
                     edit.PreviousSplineId ||
-                nextSplineId !=
+                sourceNextSplineId !=
                     edit.NextSplineId ||
                 !string.Equals(
-                    dataValues[1],
+                    dataValues[layout.PathIndex],
                     edit.SplinePath,
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -104,22 +124,22 @@ public static class OmsiTileSplineEditor
                     "splineSourceChanged");
             }
 
-            lines[dataLineIndices[5]] =
+            lines[dataLineIndices[layout.XIndex]] =
                 Format(edit.X);
-            lines[dataLineIndices[6]] =
+            lines[dataLineIndices[layout.ZIndex]] =
                 Format(edit.Z);
-            lines[dataLineIndices[7]] =
+            lines[dataLineIndices[layout.YIndex]] =
                 Format(edit.Y);
-            lines[dataLineIndices[8]] =
+            lines[dataLineIndices[layout.RotationIndex]] =
                 Format(edit.Rotation);
-            lines[dataLineIndices[9]] =
+            lines[dataLineIndices[layout.LengthIndex]] =
                 Format(edit.Length);
-            lines[dataLineIndices[10]] =
+            lines[dataLineIndices[layout.RadiusIndex]] =
                 Format(edit.Radius);
-            lines[dataLineIndices[11]] =
+            lines[dataLineIndices[layout.GradientStartIndex]] =
                 Format(
                     edit.GradientStart);
-            lines[dataLineIndices[12]] =
+            lines[dataLineIndices[layout.GradientEndIndex]] =
                 Format(
                     edit.GradientEnd);
 
@@ -131,49 +151,6 @@ public static class OmsiTileSplineEditor
                 document,
                 lines),
             applied);
-    }
-
-    private static bool IsSplineSection(
-        OmsiConfigSection section) =>
-        string.Equals(
-            section.Keyword,
-            "spline",
-            StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(
-            section.Keyword,
-            "spline_h",
-            StringComparison.OrdinalIgnoreCase);
-
-    private static List<int> GetDataLineIndices(
-        OmsiConfigSection section)
-    {
-        var result =
-            new List<int>();
-
-        for (
-            var offset = 0;
-            offset <
-                section.RawBodyLines.Count;
-            offset++)
-        {
-            var value =
-                section.RawBodyLines[
-                    offset].Trim();
-
-            if (
-                value.Length == 0 ||
-                value.StartsWith('#'))
-            {
-                continue;
-            }
-
-            result.Add(
-                section.KeywordLineIndex +
-                1 +
-                offset);
-        }
-
-        return result;
     }
 
     private static bool IsFinite(
