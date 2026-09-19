@@ -5818,16 +5818,14 @@ export function App() {
                               ? !activeMask.isValid
                                 ? `inválida · ${activeMask.errorCode ?? "erro"}`
                                 : activeMask.maximumAlpha === 0
-                                  ? `${activeMask.width}×${activeMask.height} · vazia`
-                                  : maskAsset?.exists
-                                    ? `${activeMask.width}×${activeMask.height} · ${Math.round(
+                                  ? `${activeMask.width}×${activeMask.height} · vazia · alpha 0`
+                                  : activeMask.minimumAlpha === 255 &&
+                                      activeMask.maximumAlpha === 255
+                                    ? `${activeMask.width}×${activeMask.height} · 100% cobertura · alpha 255 · opaca`
+                                    : `${activeMask.width}×${activeMask.height} · ${formatNumber(
                                         activeMask.coverage *
                                           100
-                                      )}% cobertura · carregada`
-                                    : `${activeMask.width}×${activeMask.height} · ${Math.round(
-                                        activeMask.coverage *
-                                          100
-                                      )}% cobertura · presente`
+                                      )}% cobertura · alpha ${activeMask.minimumAlpha}-${activeMask.maximumAlpha} · ${maskAsset?.exists ? "carregada" : "presente"}`
                               : "sem máscara no tile"}
                         </small>
                       </span>
