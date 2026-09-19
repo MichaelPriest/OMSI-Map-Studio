@@ -504,3 +504,10 @@ Bone section `0x54` now follows the O3D header width again: extended-header file
 Mesh, SLI profile, and texture warmup once again displays a continuous loading animation after structural map loading. During this visual phase the animation is informational and does not block editor interaction.
 
 In 3×3 performance mode, the Inspector now reports actually renderable meshes, failures, and pending geometry for the active area instead of treating payload presence alone as visual success.
+
+
+## Safe preview fallback for protected O3D
+
+When a protected `.o3d` mesh cannot be read directly, the host only looks for a same-name DirectX `.x` source file that is already present next to the installed asset. If that real `.x` file exists and is readable, it is used for preview; no file is converted, decrypted, or modified.
+
+The UI now separates actually renderable meshes from protected assets. Protected O3D markers use a distinct color from missing/invalid asset markers, and the status reports how many object types and meshes remain protected.
