@@ -231,6 +231,7 @@ export type OmsiSceneryMaterialOverride = {
 };
 
 export type OmsiSceneryObjectGeometry = {
+  tree: OmsiSceneryTreeDefinition | null;
   meshes: Array<{
     declaredPath: string;
     lodThreshold: number | null;
