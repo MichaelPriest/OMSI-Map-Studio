@@ -1011,3 +1011,76 @@ code {
   font-size: 9px;
   line-height: 1.45;
 }
+
+
+.explorer-search {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.explorer-search input:not(:disabled) {
+  border-color: #1b4566;
+  background: #071725;
+  color: #dbe8f4;
+}
+
+.explorer-search span {
+  color: #67859f;
+  font-size: 8px;
+}
+
+.explorer-object-list {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  overflow: auto;
+  padding: 0 7px 8px;
+}
+
+.explorer-object {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #bfd0df;
+  text-align: left;
+  cursor: pointer;
+}
+
+.explorer-object:hover {
+  border-color: #193b56;
+  background: #0a1d2c;
+}
+
+.explorer-object.active {
+  border-color: #2b6da0;
+  background: #0d2a40;
+}
+
+.explorer-object-name {
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-object small {
+  color: #66849e;
+  font-size: 8px;
+}
+
+.explorer-empty {
+  padding: 10px 7px;
+  color: #66849e;
+  font-size: 9px;
+}

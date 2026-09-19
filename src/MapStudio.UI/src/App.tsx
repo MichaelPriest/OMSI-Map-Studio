@@ -292,6 +292,11 @@ export function App() {
   const [error, setError] =
     useState<string>();
 
+  const [
+    explorerSearch,
+    setExplorerSearch
+  ] = useState("");
+
   const [saving, setSaving] =
     useState(false);
 
@@ -327,6 +332,7 @@ export function App() {
           setLoadedFullMapFor(undefined);
           setSaving(false);
           setSaveNotice(undefined);
+          setExplorerSearch("");
           setError(undefined);
           setView("map");
           return;
@@ -360,6 +366,7 @@ export function App() {
           setInspectorTab("general");
           setSaving(false);
           setSaveNotice(undefined);
+          setExplorerSearch("");
           setError(undefined);
           setView("editor");
           return;
@@ -811,6 +818,109 @@ export function App() {
       previewObjectTransforms
     ]
   );
+
+  const normalizedExplorerSearch =
+    explorerSearch
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+
+  const filteredExplorerObjects =
+    useMemo(() => {
+      if (
+        objectsForViewport.length === 0
+      ) {
+        return [];
+      }
+
+      const filtered =
+        normalizedExplorerSearch
+          ? objectsForViewport.filter(
+              (placedObject) => {
+                const name =
+                  getObjectName(
+                    placedObject
+                      .sceneryObjectPath
+                  ).toLocaleLowerCase(
+                    "pt-BR"
+                  );
+
+                const path =
+                  placedObject
+                    .sceneryObjectPath
+                    .toLocaleLowerCase(
+                      "pt-BR"
+                    );
+
+                const id =
+                  String(
+                    placedObject.objectId
+                  );
+
+                const tile =
+                  `${placedObject.tileX},${placedObject.tileY}`;
+
+                return (
+                  name.includes(
+                    normalizedExplorerSearch
+                  ) ||
+                  path.includes(
+                    normalizedExplorerSearch
+                  ) ||
+                  id.includes(
+                    normalizedExplorerSearch
+                  ) ||
+                  tile.includes(
+                    normalizedExplorerSearch
+                  )
+                );
+              }
+            )
+          : objectsForViewport;
+
+      return filtered.slice(
+        0,
+        250
+      );
+    }, [
+      normalizedExplorerSearch,
+      objectsForViewport
+    ]);
+
+  const explorerObjectResultCount =
+    useMemo(() => {
+      if (
+        !normalizedExplorerSearch
+      ) {
+        return objectsForViewport.length;
+      }
+
+      return objectsForViewport.filter(
+        (placedObject) => {
+          const searchable =
+            [
+              getObjectName(
+                placedObject
+                  .sceneryObjectPath
+              ),
+              placedObject
+                .sceneryObjectPath,
+              placedObject.objectId,
+              `${placedObject.tileX},${placedObject.tileY}`
+            ]
+              .join(" ")
+              .toLocaleLowerCase(
+                "pt-BR"
+              );
+
+          return searchable.includes(
+            normalizedExplorerSearch
+          );
+        }
+      ).length;
+    }, [
+      normalizedExplorerSearch,
+      objectsForViewport
+    ]);
 
   const previewEditCount =
     Object.keys(
@@ -2934,9 +3044,93 @@ export function App() {
             <div className="explorer-search">
               <input
                 type="search"
-                placeholder="Buscar no mapa..."
-                disabled
+                placeholder="Buscar objeto, ID ou tile..."
+                value={explorerSearch}
+                onChange={(event) =>
+                  setExplorerSearch(
+                    event.target.value
+                  )
+                }
               />
+              <span>
+                {explorerObjectResultCount}
+                {" "}resultado(s)
+                {explorerObjectResultCount > 250
+                  ? " · mostrando 250"
+                  : ""}
+              </span>
+            </div>
+
+            <div className="explorer-object-list">
+              {filteredExplorerObjects.map(
+                (placedObject) => {
+                  const key =
+                    getPlacedObjectKey(
+                      placedObject
+                    );
+
+                  const isSelected =
+                    selectedObject &&
+                    getPlacedObjectKey(
+                      selectedObject
+                    ) === key;
+
+                  const hasPreview =
+                    Object.hasOwn(
+                      previewObjectTransforms,
+                      key
+                    );
+
+                  return (
+                    <button
+                      type="button"
+                      className={
+                        isSelected
+                          ? "explorer-object active"
+                          : "explorer-object"
+                      }
+                      key={key}
+                      onClick={() => {
+                        handleObjectSelection(
+                          placedObject
+                        );
+
+                        requestCameraAction(
+                          "focus"
+                        );
+                      }}
+                    >
+                      <span
+                        className="explorer-object-name"
+                        title={
+                          placedObject.sceneryObjectPath
+                        }
+                      >
+                        {getObjectName(
+                          placedObject
+                            .sceneryObjectPath
+                        )}
+                      </span>
+                      <small>
+                        #{placedObject.objectId}
+                        {" · "}
+                        {placedObject.tileX},
+                        {placedObject.tileY}
+                        {hasPreview
+                          ? " · alterado"
+                          : ""}
+                      </small>
+                    </button>
+                  );
+                }
+              )}
+
+              {filteredExplorerObjects.length ===
+                0 && (
+                <div className="explorer-empty">
+                  Nenhum objeto encontrado.
+                </div>
+              )}
             </div>
           </aside>
 
