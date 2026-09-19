@@ -6,4 +6,5 @@ public sealed record OmsiMapDescriptor(
     string DirectoryPath,
     string GlobalConfigPath,
     bool UsesWorldCoordinates,
-    IReadOnlyList<OmsiTileReference> Tiles);
+    IReadOnlyList<OmsiTileReference> Tiles,
+    IReadOnlyList<OmsiGroundTexture> GroundTextures);
