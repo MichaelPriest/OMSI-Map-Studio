@@ -6578,7 +6578,8 @@ export function App() {
                     Nenhuma spline encontrada.
                   </div>
                 )}
-  
+
+              </div>
               </>
             ) : explorerPanelTab ===
               "library" ? (
@@ -6757,7 +6758,6 @@ export function App() {
                 </div>
               </div>
             )}
-            </div>
           </aside>
 
           <section className="editor-viewport">
