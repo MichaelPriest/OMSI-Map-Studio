@@ -518,3 +518,10 @@ The UI separates actually renderable meshes from protected assets. Protected O3D
 The O3D reader now handles protected extended headers inside the Core itself. Vertex transformation is applied in memory while reading, before axis conversion for the viewport. The original file is never rewritten.
 
 The implementation keeps defensive limits. Protected meshes outside the currently validated vertex domain return `protectedVertexCountUnsupported` instead of producing approximate geometry.
+
+
+## Complete texture loading in full-map mode
+
+**Full map** mode no longer uses the texture ceiling intended for 3×3 performance mode. Object prefetch now allows up to 1024 textures and spline prefetch up to 256, in progressive batches, with a cache of up to 1536 assets. Performance mode keeps the smaller limits to preserve responsiveness.
+
+The Inspector and status bar now separate loaded textures, resolve/read failures, and pending requests. This prevents a successfully decoded O3D mesh from being treated as visually complete while its texture is still missing.
