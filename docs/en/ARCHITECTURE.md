@@ -439,3 +439,12 @@ The physical-mesh cache prevents the same O3D from being reopened and reparsed w
 Geometry and SLI preload use bounded batches, while broad texture prefetch only starts after the structural paths for the current region (or full map) have received responses. Terrain/base resources remain priority paths and do not depend on that prefetch.
 
 Editing is no longer kept locked solely because automatic textures are still arriving. Locking remains active while selecting the installation/map, reading tiles, switching regions, and running explicit library scans.
+
+
+## Protected O3D and legacy DirectX mesh diagnostics
+
+The `encrypted` code is reserved for extended-header O3D files whose encryption key is not `0xFFFFFFFF`. The editor does not attempt to interpret protected bytes as ordinary geometry and never invents a replacement mesh.
+
+`[mesh]` references ending in `.x` are now classified as `legacyDirectXMesh` instead of the generic `unsupportedFormat`. This separates objects that depend on the legacy DirectX mesh format from genuinely unknown formats.
+
+The structure reader is now aligned with the geometry reader as well: the section `0x54` bone-list count remains `UInt16` even for extended-header O3D files. A valid long-header O3D with bones therefore no longer becomes misaligned during structural diagnostics.

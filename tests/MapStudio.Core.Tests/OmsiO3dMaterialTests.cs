@@ -242,6 +242,79 @@ public sealed class OmsiO3dMaterialTests
         }
     }
 
+    [Fact]
+    public void StructureReader_LongHeaderBoneSection_UsesShortBoneCount()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-structure-bone-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x07);
+                writer.Write((byte)0x01);
+                writer.Write(uint.MaxValue);
+
+                writer.Write((byte)0x17);
+                writer.Write((uint)3);
+                WriteVertex(writer, 0, 0, 0);
+                WriteVertex(writer, 1, 0, 0);
+                WriteVertex(writer, 0, 1, 0);
+
+                writer.Write((byte)0x49);
+                writer.Write((uint)1);
+                writer.Write((uint)0);
+                writer.Write((uint)1);
+                writer.Write((uint)2);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x26);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x54);
+                writer.Write((ushort)1);
+
+                var boneName =
+                    Encoding.ASCII
+                        .GetBytes("root");
+
+                writer.Write(
+                    checked((byte)boneName.Length));
+                writer.Write(boneName);
+
+                writer.Write((ushort)1);
+                writer.Write((uint)0);
+                writer.Write(1f);
+            }
+
+            var summary =
+                new OmsiO3dStructureReader()
+                    .Read(path);
+
+            Assert.True(
+                summary.IsParsed,
+                summary.ErrorCode);
+            Assert.Equal(
+                (uint)1,
+                summary.BoneCount);
+            Assert.Equal(
+                (uint)3,
+                summary.VertexCount);
+            Assert.Equal(
+                (uint)1,
+                summary.TriangleCount);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static void WriteVertex(
         BinaryWriter writer,
         float x,

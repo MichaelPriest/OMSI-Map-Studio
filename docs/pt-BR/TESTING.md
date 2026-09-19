@@ -484,3 +484,12 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 5. use dois `.sco` que referenciem o mesmo arquivo `.o3d` e confirme que a geometria continua idêntica, sem leitura/parsing duplicado perceptível;
 6. altere para o modo 3×3 e confirme que a troca de região ainda bloqueia edição somente durante a leitura consistente dos novos tiles;
 7. confirme que erros reais como `encrypted` e `unsupportedFormat` continuam aparecendo no diagnóstico e não são convertidos em geometria fictícia.
+
+
+## Validação de diagnóstico O3D/DirectX
+
+1. abra um objeto com O3D de cabeçalho longo e seção de bones `0x54`; confirme que o resumo estrutural é válido e mostra a contagem correta;
+2. confirme que O3D com chave diferente de `0xFFFFFFFF` continua aparecendo como `encrypted`, sem tentativa de geometria falsa;
+3. abra um `.sco` cujo `[mesh]` aponte para `.x` e confirme `legacyDirectXMesh` no diagnóstico;
+4. use uma extensão de mesh desconhecida e confirme que ela continua como `unsupportedFormat`;
+5. confirme que objetos `[tree]` com `treehelper.x` continuam fora da contagem de falhas, pois são renderizados pela definição real de árvore.

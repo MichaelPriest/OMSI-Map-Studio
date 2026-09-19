@@ -6321,7 +6321,7 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Erros O3D (malhas)</dt>
+          <dt>Falhas de malha (código)</dt>
           <dd>
             {o3dErrorSummary.length > 0
               ? o3dErrorSummary

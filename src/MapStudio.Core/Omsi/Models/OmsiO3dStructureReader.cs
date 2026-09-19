@@ -146,14 +146,17 @@ public sealed class OmsiO3dStructureReader
                     break;
 
                 case BoneSection:
-                    if (!TryReadCount(
-                            reader,
-                            longHeader,
-                            out boneCount))
+                    // OMSI keeps the bone-list count at UInt16
+                    // even when vertex/triangle sections use the
+                    // extended long header.
+                    if (!HasRemaining(stream, 2))
                     {
                         return OmsiO3dStructureSummary.Invalid(
                             "invalidBoneSection");
                     }
+
+                    boneCount =
+                        reader.ReadUInt16();
 
                     for (uint index = 0;
                          index < boneCount;

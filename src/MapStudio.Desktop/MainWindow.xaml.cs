@@ -4788,14 +4788,22 @@ public partial class MainWindow : Window
         ReadMeshGeometryCached(
             string meshFullPath)
     {
+        var extension =
+            Path.GetExtension(
+                meshFullPath);
+
         if (!string.Equals(
-                Path.GetExtension(
-                    meshFullPath),
+                extension,
                 ".o3d",
                 StringComparison.OrdinalIgnoreCase))
         {
             return OmsiO3dGeometry.Error(
-                "unsupportedFormat");
+                string.Equals(
+                    extension,
+                    ".x",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "legacyDirectXMesh"
+                    : "unsupportedFormat");
         }
 
         var lazy =

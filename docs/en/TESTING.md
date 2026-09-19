@@ -484,3 +484,12 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 5. use two `.sco` files that reference the same `.o3d` and confirm identical geometry without perceptible duplicate reading/parsing;
 6. switch to 3×3 mode and confirm region changes still lock editing only while the new tiles are being read consistently;
 7. confirm real errors such as `encrypted` and `unsupportedFormat` remain visible in diagnostics and are never replaced by fake geometry.
+
+
+## O3D/DirectX diagnostics validation
+
+1. open an object with an extended-header O3D containing bone section `0x54`; confirm the structure summary is valid and reports the correct count;
+2. confirm an O3D whose key differs from `0xFFFFFFFF` still reports `encrypted`, with no fake geometry attempt;
+3. open a `.sco` whose `[mesh]` points to `.x` and confirm `legacyDirectXMesh` in diagnostics;
+4. use an unknown mesh extension and confirm it remains `unsupportedFormat`;
+5. confirm `[tree]` objects using `treehelper.x` remain excluded from failure counts because they are rendered from their real tree definition.

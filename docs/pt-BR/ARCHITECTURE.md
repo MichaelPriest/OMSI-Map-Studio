@@ -439,3 +439,12 @@ O cache por mesh físico evita reabrir e reprocessar o mesmo O3D quando arquivos
 O preloading de geometria e SLI usa lotes limitados, enquanto o prefetch amplo de texturas só começa depois que os caminhos estruturais do recorte atual (ou do mapa completo) receberam resposta. Terreno/base continuam prioritários e não dependem desse prefetch.
 
 A edição deixa de permanecer bloqueada apenas porque texturas automáticas ainda estão chegando. O bloqueio continua existindo durante seleção da instalação/mapa, leitura dos tiles, troca de região e varreduras explícitas de biblioteca.
+
+
+## Diagnóstico O3D protegido e mesh DirectX legado
+
+O código `encrypted` é reservado para O3D de cabeçalho estendido cuja chave de criptografia não é `0xFFFFFFFF`. O editor não tenta interpretar os bytes protegidos como geometria comum e não inventa uma malha substituta.
+
+Referências `[mesh]` terminadas em `.x` passam a ser classificadas como `legacyDirectXMesh`, em vez do genérico `unsupportedFormat`. Isso permite separar objetos que dependem do formato DirectX legado de formatos realmente desconhecidos.
+
+Também foi alinhado o leitor estrutural ao leitor de geometria: a contagem da lista de bones da seção `0x54` permanece `UInt16` mesmo em O3D com cabeçalho estendido. Assim, um O3D longo válido com bones não é mais deslocado incorretamente pelo diagnóstico estrutural.
