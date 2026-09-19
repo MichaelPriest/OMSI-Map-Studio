@@ -337,3 +337,10 @@ Selection and placement preview do not consume this automatic budget: they remai
 `[matl_change]` ends the static context and is not applied as a fixed material because it depends on runtime variables/scripts. In React an override is accepted only when both material index and texture basename match the O3D material.
 
 Current mapping: alpha 0 = opaque; alpha 1 = alpha-test/cutout; alpha 2 = alpha-blend; noZwrite disables depth writing; noZcheck uses the ALWAYS depth test.
+
+
+## Static SCO bump maps
+
+`[matl_bumpmap]` is read only inside a static `[matl]` context. Texture name and numeric factor travel with the same override matched by mesh ordinal + material ID + texture.
+
+The bump file uses the same `OmsiTextureAssetPathResolver`, so it remains restricted to `Sceneryobjects`, supported formats, and the 16 MiB cap. Babylon applies it to `StandardMaterial.bumpTexture`, with `level` set to the explicit factor when available.

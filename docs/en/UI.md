@@ -353,3 +353,10 @@ O3D preview now respects static `.sco` overrides for `[matl_alpha]`, `[matl_noZw
 - `matl_noZcheck`: does not reject drawing through the Z test.
 
 The **Materials** tab shows a `SCO:` line only when a static override was actually matched to the material. `[matl_change]` materials remain without fake runtime state because they depend on OMSI scripts/variables.
+
+
+## O3D/SCO bump maps
+
+Static materials with `[matl_bumpmap]` now load the real bump image and apply the factor defined by the `.sco`. The **Materials** tab shows the bump name, loading state, and factor.
+
+Like the diffuse texture, a missing or unsafe bump asset gets no placeholder: the material simply continues without bump mapping.

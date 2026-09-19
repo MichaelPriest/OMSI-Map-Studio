@@ -159,6 +159,40 @@ public sealed class OmsiSceneryObjectReader
 
             if (string.Equals(
                     section.Keyword,
+                    "matl_bumpmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    !string.IsNullOrWhiteSpace(
+                        values[0]))
+                {
+                    current.BumpMapTextureName =
+                        values[0];
+                }
+
+                if (
+                    values.Length > 1 &&
+                    double.TryParse(
+                        values[1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var strength) &&
+                    double.IsFinite(strength))
+                {
+                    current.BumpMapStrength =
+                        strength;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
                     "matl_noZwrite",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -184,7 +218,9 @@ public sealed class OmsiSceneryObjectReader
                         builder.MaterialIndex,
                         builder.AlphaMode,
                         builder.NoZWrite,
-                        builder.NoZCheck))
+                        builder.NoZCheck,
+                        builder.BumpMapTextureName,
+                        builder.BumpMapStrength))
             .ToArray();
     }
 
@@ -243,5 +279,13 @@ public sealed class OmsiSceneryObjectReader
         public bool NoZWrite { get; set; }
 
         public bool NoZCheck { get; set; }
+
+        public string?
+            BumpMapTextureName
+        { get; set; }
+
+        public double?
+            BumpMapStrength
+        { get; set; }
     }
 }

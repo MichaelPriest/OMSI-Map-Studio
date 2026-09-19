@@ -337,3 +337,10 @@ A seleção e a prévia não consomem esse orçamento automático: continuam ten
 `[matl_change]` encerra o contexto estático e não é aplicado como material fixo, porque depende de variável/script em runtime. No React, o override só é aceito quando índice e nome-base da textura correspondem ao material O3D.
 
 Mapeamento atual: alpha 0 = opaco; alpha 1 = alpha-test/cutout; alpha 2 = alpha-blend; noZwrite desativa escrita de profundidade; noZcheck usa teste de profundidade ALWAYS.
+
+
+## Bumpmap estático do SCO
+
+`[matl_bumpmap]` é lido somente no contexto de um `[matl]` estático. Nome de textura e fator numérico são transportados com o mesmo override associado por mesh ordinal + material ID + textura.
+
+O arquivo de bump usa o mesmo `OmsiTextureAssetPathResolver`, portanto continua restrito a `Sceneryobjects`, formatos suportados e limite de 16 MiB. No Babylon ele é aplicado em `StandardMaterial.bumpTexture`, com `level` igual ao fator explícito quando disponível.

@@ -213,3 +213,12 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. test `[matl_noZwrite]` and `[matl_noZcheck]` on a known object;
 5. use a `.sco` with `[matl_change]` and verify dynamic state is not applied as a static override;
 6. verify a material whose index/texture name does not match the O3D receives no override.
+
+
+## Bump-map test
+
+1. select a `.sco` with static `[matl]` and `[matl_bumpmap]`;
+2. verify the bump name and factor in the inspector;
+3. verify the asset transitions from waiting/loading to loaded;
+4. compare surface detail against an equivalent material without bump mapping;
+5. temporarily remove the bump image and verify fallback without a placeholder/fake.

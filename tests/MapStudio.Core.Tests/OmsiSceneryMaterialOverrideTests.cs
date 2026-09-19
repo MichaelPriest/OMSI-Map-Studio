@@ -16,6 +16,9 @@ public sealed class OmsiSceneryMaterialOverrideTests
             "1\n" +
             "[matl_alpha]\n" +
             "2\n" +
+            "[matl_bumpmap]\n" +
+            "glass_bump.bmp\n" +
+            "0.05\n" +
             "[matl_noZwrite]\n" +
             "[matl_noZcheck]\n" +
             "[mesh]\n" +
@@ -48,6 +51,12 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Equal(2, glass.AlphaMode);
         Assert.True(glass.NoZWrite);
         Assert.True(glass.NoZCheck);
+        Assert.Equal(
+            "glass_bump.bmp",
+            glass.BumpMapTextureName);
+        Assert.Equal(
+            0.05,
+            glass.BumpMapStrength);
 
         var leaf =
             metadata.MaterialOverrides[1];
@@ -58,6 +67,10 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Equal(1, leaf.AlphaMode);
         Assert.False(leaf.NoZWrite);
         Assert.False(leaf.NoZCheck);
+        Assert.Null(
+            leaf.BumpMapTextureName);
+        Assert.Null(
+            leaf.BumpMapStrength);
     }
 
     [Fact]

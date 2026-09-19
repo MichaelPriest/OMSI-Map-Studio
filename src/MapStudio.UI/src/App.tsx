@@ -214,6 +214,45 @@ const formatNumber = (value: number) =>
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
+const normalizeTextureFileName = (
+  value: string
+) =>
+  value
+    .replace(/\\/g, "/")
+    .split("/")
+    .at(-1)
+    ?.toLocaleLowerCase("en-US") ??
+  value.toLocaleLowerCase("en-US");
+
+const findSceneryMaterialOverride = (
+  mesh:
+    OmsiSceneryObjectGeometry["meshes"][number],
+  materialIndex: number
+) => {
+  const textureName =
+    mesh.geometry.materials[
+      materialIndex
+    ]?.textureName;
+
+  if (!textureName) {
+    return undefined;
+  }
+
+  const normalized =
+    normalizeTextureFileName(
+      textureName
+    );
+
+  return mesh.materialOverrides.find(
+    (override) =>
+      override.materialIndex ===
+        materialIndex &&
+      normalizeTextureFileName(
+        override.textureName
+      ) === normalized
+  );
+};
+
 const getPlacedObjectKey = (
   placedObject: OmsiPlacedObject
 ) =>
@@ -1435,43 +1474,73 @@ export function App() {
         textureName: string;
       }> = [];
 
+    const queuedKeys =
+      new Set<string>();
+
+    const queueTexture = (
+      meshPath: string,
+      textureName:
+        | string
+        | null
+        | undefined
+    ) => {
+      if (!textureName) {
+        return;
+      }
+
+      const key =
+        getSceneryTextureAssetKey(
+          sceneryObjectPath,
+          meshPath,
+          textureName
+        );
+
+      if (
+        queuedKeys.has(key) ||
+        Object.hasOwn(
+          textureAssetsByKey,
+          key
+        ) ||
+        Object.hasOwn(
+          requestedTextureKeys,
+          key
+        )
+      ) {
+        return;
+      }
+
+      queuedKeys.add(key);
+
+      requests.push({
+        key,
+        meshPath,
+        textureName
+      });
+    };
+
     for (const mesh of
       geometry.meshes) {
-      for (const material of
-        mesh.geometry.materials) {
-        const textureName =
-          material.textureName;
+      for (const [
+        materialIndex,
+        material
+      ] of mesh.geometry.materials
+        .entries()) {
+        queueTexture(
+          mesh.declaredPath,
+          material.textureName
+        );
 
-        if (!textureName) {
-          continue;
-        }
-
-        const key =
-          getSceneryTextureAssetKey(
-            sceneryObjectPath,
-            mesh.declaredPath,
-            textureName
+        const materialOverride =
+          findSceneryMaterialOverride(
+            mesh,
+            materialIndex
           );
 
-        if (
-          Object.hasOwn(
-            textureAssetsByKey,
-            key
-          ) ||
-          Object.hasOwn(
-            requestedTextureKeys,
-            key
-          )
-        ) {
-          continue;
-        }
-
-        requests.push({
-          key,
-          meshPath:
-            mesh.declaredPath,
-          textureName
-        });
+        queueTexture(
+          mesh.declaredPath,
+          materialOverride
+            ?.bumpMapTextureName
+        );
       }
     }
 
@@ -1852,10 +1921,68 @@ export function App() {
         continue;
       }
 
+      const queuedKeys =
+        new Set(
+          objectRequests.map(
+            (request) =>
+              request.key
+          )
+        );
+
+      const queueObjectTexture = (
+        meshPath: string,
+        textureName:
+          | string
+          | null
+          | undefined
+      ) => {
+        if (
+          !textureName ||
+          objectRequests.length >=
+            objectBudget
+        ) {
+          return;
+        }
+
+        const key =
+          getSceneryTextureAssetKey(
+            sceneryObjectPath,
+            meshPath,
+            textureName
+          );
+
+        if (
+          queuedKeys.has(key) ||
+          Object.hasOwn(
+            textureAssetsByKey,
+            key
+          ) ||
+          Object.hasOwn(
+            requestedTextureKeys,
+            key
+          )
+        ) {
+          return;
+        }
+
+        queuedKeys.add(key);
+
+        objectRequests.push({
+          kind: "scenery",
+          key,
+          sceneryObjectPath,
+          meshPath,
+          textureName
+        });
+      };
+
       for (const mesh of
         geometry.meshes) {
-        for (const material of
-          mesh.geometry.materials) {
+        for (const [
+          materialIndex,
+          material
+        ] of mesh.geometry.materials
+          .entries()) {
           if (
             objectRequests.length >=
               objectBudget
@@ -1863,41 +1990,22 @@ export function App() {
             break;
           }
 
-          const textureName =
-            material.textureName;
+          queueObjectTexture(
+            mesh.declaredPath,
+            material.textureName
+          );
 
-          if (!textureName) {
-            continue;
-          }
-
-          const key =
-            getSceneryTextureAssetKey(
-              sceneryObjectPath,
-              mesh.declaredPath,
-              textureName
+          const materialOverride =
+            findSceneryMaterialOverride(
+              mesh,
+              materialIndex
             );
 
-          if (
-            Object.hasOwn(
-              textureAssetsByKey,
-              key
-            ) ||
-            Object.hasOwn(
-              requestedTextureKeys,
-              key
-            )
-          ) {
-            continue;
-          }
-
-          objectRequests.push({
-            kind: "scenery",
-            key,
-            sceneryObjectPath,
-            meshPath:
-              mesh.declaredPath,
-            textureName
-          });
+          queueObjectTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.bumpMapTextureName
+          );
         }
       }
     }
@@ -2614,29 +2722,21 @@ export function App() {
                   )
                 : undefined;
 
-            const normalizedTexture =
-              material.textureName
-                ?.replace(/\\/g, "/")
-                .split("/")
-                .at(-1)
-                ?.toLocaleLowerCase(
-                  "en-US"
-                );
-
             const materialOverride =
-              normalizedTexture
-                ? mesh.materialOverrides.find(
-                    (override) =>
-                      override.materialIndex ===
-                        index &&
-                      override.textureName
-                        .replace(/\\/g, "/")
-                        .split("/")
-                        .at(-1)
-                        ?.toLocaleLowerCase(
-                          "en-US"
-                        ) ===
-                        normalizedTexture
+              findSceneryMaterialOverride(
+                mesh,
+                index
+              );
+
+            const bumpTextureKey =
+              materialOverride
+                ?.bumpMapTextureName
+                ? getSceneryTextureAssetKey(
+                    selectedObject
+                      .sceneryObjectPath,
+                    mesh.declaredPath,
+                    materialOverride
+                      .bumpMapTextureName
                   )
                 : undefined;
 
@@ -2660,6 +2760,20 @@ export function App() {
                   ? Boolean(
                       requestedTextureKeys[
                         textureKey
+                      ]
+                    )
+                  : false,
+              bumpTextureAsset:
+                bumpTextureKey
+                  ? textureAssetsByKey[
+                      bumpTextureKey
+                    ]
+                  : undefined,
+              bumpTextureRequested:
+                bumpTextureKey
+                  ? Boolean(
+                      requestedTextureKeys[
+                        bumpTextureKey
                       ]
                     )
                   : false
@@ -4972,20 +5086,45 @@ export function App() {
                         {textureState.label}
                       </span>
                       {row.materialOverride && (
-                        <small>
-                          SCO: alpha{" "}
+                        <>
+                          <small>
+                            SCO: alpha{" "}
+                            {row.materialOverride
+                              .alphaMode ??
+                              "padrão"}
+                            {row.materialOverride
+                              .noZWrite
+                              ? " · noZwrite"
+                              : ""}
+                            {row.materialOverride
+                              .noZCheck
+                              ? " · noZcheck"
+                              : ""}
+                          </small>
                           {row.materialOverride
-                            .alphaMode ??
-                            "padrão"}
-                          {row.materialOverride
-                            .noZWrite
-                            ? " · noZwrite"
-                            : ""}
-                          {row.materialOverride
-                            .noZCheck
-                            ? " · noZcheck"
-                            : ""}
-                        </small>
+                            .bumpMapTextureName && (
+                            <small>
+                              Bump:{" "}
+                              {row.materialOverride
+                                .bumpMapTextureName}
+                              {" · "}
+                              {getTextureState(
+                                row.materialOverride
+                                  .bumpMapTextureName,
+                                row.bumpTextureAsset,
+                                row.bumpTextureRequested
+                              ).label}
+                              {row.materialOverride
+                                .bumpMapStrength !=
+                              null
+                                ? ` · fator ${formatNumber(
+                                    row.materialOverride
+                                      .bumpMapStrength
+                                  )}`
+                                : ""}
+                            </small>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>

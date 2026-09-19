@@ -353,3 +353,10 @@ O preview O3D passa a respeitar overrides estáticos do `.sco` para `[matl_alpha
 - `matl_noZcheck`: não bloqueia o desenho pelo teste Z.
 
 A aba **Materiais** mostra a linha `SCO:` quando um override estático foi realmente associado ao material. Materiais `[matl_change]` continuam sem estado fake porque dependem de scripts/variáveis do OMSI.
+
+
+## Bumpmap O3D/SCO
+
+Materiais estáticos com `[matl_bumpmap]` agora carregam a imagem real de bump e aplicam o fator definido no `.sco`. A aba **Materiais** mostra o nome, estado de carregamento e fator do bump.
+
+Assim como a textura difusa, bump ausente ou inseguro não recebe placeholder: o material continua renderizado sem bump.

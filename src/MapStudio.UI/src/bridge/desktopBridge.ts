@@ -159,6 +159,8 @@ export type OmsiSceneryMaterialOverride = {
   alphaMode: number | null;
   noZWrite: boolean;
   noZCheck: boolean;
+  bumpMapTextureName: string | null;
+  bumpMapStrength: number | null;
 };
 
 export type OmsiSceneryObjectGeometry = {

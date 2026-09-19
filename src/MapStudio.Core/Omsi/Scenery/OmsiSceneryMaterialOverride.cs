@@ -6,4 +6,6 @@ public sealed record OmsiSceneryMaterialOverride(
     int MaterialIndex,
     int? AlphaMode,
     bool NoZWrite,
-    bool NoZCheck);
+    bool NoZCheck,
+    string? BumpMapTextureName,
+    double? BumpMapStrength);

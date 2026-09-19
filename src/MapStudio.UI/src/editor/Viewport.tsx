@@ -781,6 +781,9 @@ function createPreviewMaterial(
     | undefined,
   materialOverride:
     | OmsiSceneryMaterialOverride
+    | undefined,
+  bumpTextureAsset:
+    | OmsiTextureAsset
     | undefined
 ) {
   const material = new StandardMaterial(
@@ -866,6 +869,22 @@ function createPreviewMaterial(
       material.useAlphaFromDiffuseTexture =
         false;
     }
+  }
+
+  const bumpTexture =
+    createTextureFromAsset(
+      scene,
+      bumpTextureAsset
+    );
+
+  if (bumpTexture) {
+    material.bumpTexture =
+      bumpTexture;
+
+    bumpTexture.level =
+      materialOverride
+        ?.bumpMapStrength ??
+      1;
   }
 
   if (materialOverride?.noZWrite) {
@@ -1019,6 +1038,36 @@ function createGeometryMeshes(
                   materialIndex
                 ]?.textureName
               )
+            : undefined,
+          materialIndex >= 0
+            ? (() => {
+                const materialOverride =
+                  findMaterialOverride(
+                    meshReference
+                      .materialOverrides,
+                    materialIndex,
+                    meshGeometry.materials[
+                      materialIndex
+                    ]?.textureName
+                  );
+
+                const textureName =
+                  materialOverride
+                    ?.bumpMapTextureName;
+
+                if (!textureName) {
+                  return undefined;
+                }
+
+                return textureAssetsByKey[
+                  getSceneryTextureAssetKey(
+                    sceneryObjectPath,
+                    meshReference
+                      .declaredPath,
+                    textureName
+                  )
+                ];
+              })()
             : undefined
         );
 

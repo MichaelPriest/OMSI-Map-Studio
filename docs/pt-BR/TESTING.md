@@ -213,3 +213,12 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. teste `[matl_noZwrite]` e `[matl_noZcheck]` em objeto conhecido;
 5. use um `.sco` com `[matl_change]` e confirme que o estado dinâmico não é aplicado como override estático;
 6. confirme que material cujo índice/nome de textura não correspondem ao O3D não recebe override.
+
+
+## Teste de bumpmap
+
+1. selecione um `.sco` com `[matl]` e `[matl_bumpmap]` estáticos;
+2. confirme no inspetor o nome e fator do bump;
+3. valide que o asset passa de Aguardando/Carregando para Carregada;
+4. compare o relevo visual com um material equivalente sem bump;
+5. remova temporariamente a imagem do bump e confirme fallback sem placeholder/fake.
