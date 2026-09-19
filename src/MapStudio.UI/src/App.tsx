@@ -1639,6 +1639,7 @@ export function App() {
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
           setLoadingFullMap(false);
+          setAssetWarmupActive(false);
           setFullMapProgress(undefined);
           setLoadingSplineFor(undefined);
           setPreloadingSplineProfileFor(
