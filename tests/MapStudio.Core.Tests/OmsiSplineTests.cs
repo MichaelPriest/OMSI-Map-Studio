@@ -102,7 +102,7 @@ public sealed class OmsiSplineTests
             "[version]\n10\n" +
             "[spline]\n" +
             "0\n" +
-            "Splines\\\\Legacy\\\\road.sli\n" +
+            "Splines\\Legacy\\road.sli\n" +
             "2\n" +
             "-1\n" +
             "232.825830609256\n" +
