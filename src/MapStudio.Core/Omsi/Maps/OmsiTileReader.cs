@@ -5,6 +5,8 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiTileReader
 {
+    private readonly OmsiTerrainReader _terrainReader =
+        new();
     public async Task<OmsiTileContent> ReadContentAsync(
         string tilePath,
         CancellationToken cancellationToken = default)
@@ -39,8 +41,28 @@ public sealed class OmsiTileReader
                     .Length
                 : 0;
 
+        OmsiTerrainGrid? terrain =
+            null;
+
+        if (terrainFileExists)
+        {
+            try
+            {
+                terrain =
+                    await _terrainReader
+                        .ReadAsync(
+                            terrainPath,
+                            cancellationToken);
+            }
+            catch (InvalidDataException)
+            {
+                terrain = null;
+            }
+        }
+
         return content with
         {
+            Terrain = terrain,
             Summary =
                 content.Summary with
                 {
