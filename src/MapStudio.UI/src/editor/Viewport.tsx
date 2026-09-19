@@ -3521,7 +3521,8 @@ export function Viewport({
             splineAxis.metadata = {
               mapStudioKind:
                 "spline",
-              splineIndex
+              splineIndex,
+              placedSpline
             };
           }
         );
@@ -4313,6 +4314,129 @@ export function Viewport({
       event.preventDefault();
     };
 
+    const handleDoubleClick = (
+      event: MouseEvent
+    ) => {
+      if (
+        usesWorldCoordinates ||
+        placementAssetPath ||
+        splinePlacementTemplate
+      ) {
+        return;
+      }
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const pointerX =
+        (event.clientX - rect.left) *
+        (engine.getRenderWidth() /
+          rect.width);
+
+      const pointerY =
+        (event.clientY - rect.top) *
+        (engine.getRenderHeight() /
+          rect.height);
+
+      const picked =
+        scene.pick(
+          pointerX,
+          pointerY,
+          (mesh) =>
+            mesh.isPickable &&
+            (
+              mesh.metadata
+                ?.mapStudioKind ===
+                "object" ||
+              mesh.metadata
+                ?.mapStudioKind ===
+                "spline"
+            ),
+          false,
+          camera
+        );
+
+      if (
+        !picked?.hit ||
+        !picked.pickedMesh
+      ) {
+        return;
+      }
+
+      if (
+        picked.pickedMesh.metadata
+          ?.mapStudioKind ===
+        "object"
+      ) {
+        const placedObject =
+          picked.pickedMesh.metadata
+            .placedObject as
+              | OmsiPlacedObject
+              | undefined;
+
+        if (!placedObject) {
+          return;
+        }
+
+        onSelectSpline(undefined);
+        onSelectObject(placedObject);
+
+        camera.setTarget(
+          getObjectWorldPosition(
+            placedObject,
+            objectGeometryByPath[
+              placedObject
+                .sceneryObjectPath
+            ],
+            tiles
+          )
+        );
+
+        camera.radius =
+          clampCameraRadius(
+            usesWorldCoordinates
+              ? 4
+              : 55
+          );
+
+        return;
+      }
+
+      const placedSpline =
+        picked.pickedMesh.metadata
+          ?.placedSpline as
+            | OmsiPlacedSpline
+            | undefined;
+
+      if (!placedSpline) {
+        return;
+      }
+
+      onSelectObject(undefined);
+      onSelectSpline(placedSpline);
+
+      camera.setTarget(
+        getSplineFrame(
+          placedSpline,
+          placedSpline.length / 2
+        ).center
+      );
+
+      camera.radius =
+        clampCameraRadius(
+          usesWorldCoordinates
+            ? 4
+            : Math.max(
+                40,
+                Math.min(
+                  180,
+                  placedSpline.length *
+                    1.5
+                )
+              )
+        );
+    };
+
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -4714,6 +4838,10 @@ export function Viewport({
       "contextmenu",
       handleContextMenu
     );
+    canvas.addEventListener(
+      "dblclick",
+      handleDoubleClick
+    );
 
     const refreshObjectLods =
       () => {
@@ -4795,6 +4923,10 @@ export function Viewport({
         "contextmenu",
         handleContextMenu
       );
+      canvas.removeEventListener(
+        "dblclick",
+        handleDoubleClick
+      );
       window.removeEventListener("resize", resize);
 
       if (lodObserver) {
@@ -4857,7 +4989,7 @@ export function Viewport({
       className="viewport-canvas"
       tabIndex={0}
       aria-label="Viewport 3D do editor"
-      title="Navegação: botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem para frente/trás/laterais · Shift acelera · roda aproxima/afasta"
+      title="Clique seleciona objeto/spline · duplo clique seleciona e centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
     />
   );
 }
