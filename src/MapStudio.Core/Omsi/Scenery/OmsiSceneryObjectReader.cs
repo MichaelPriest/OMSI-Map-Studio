@@ -43,6 +43,9 @@ public sealed class OmsiSceneryObjectReader
             ReadMaterialOverrides(
                 document);
 
+        var tree =
+            ReadTree(document);
+
         return new OmsiSceneryObjectMetadata(
             Exists: true,
             FriendlyName: friendlyName,
@@ -52,7 +55,8 @@ public sealed class OmsiSceneryObjectReader
                 meshes.LodThresholds,
             CollisionMeshPaths: collisionMeshes,
             MaterialOverrides:
-                materialOverrides);
+                materialOverrides,
+            Tree: tree);
     }
 
     private static MeshReadResult
@@ -421,6 +425,61 @@ public sealed class OmsiSceneryObjectReader
                                 StringComparer.OrdinalIgnoreCase)
                             .ToArray()))
             .ToArray();
+    }
+
+    private static OmsiSceneryTreeDefinition?
+        ReadTree(
+            OmsiConfigDocument document)
+    {
+        var values =
+            document
+                .FindFirstSection("tree")
+                ?.DataLines
+                .ToArray();
+
+        if (
+            values is null ||
+            values.Length < 5 ||
+            string.IsNullOrWhiteSpace(
+                values[0]) ||
+            !double.TryParse(
+                values[1],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var minimumHeight) ||
+            !double.TryParse(
+                values[2],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var maximumHeight) ||
+            !double.TryParse(
+                values[3],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var minimumAspect) ||
+            !double.TryParse(
+                values[4],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var maximumAspect) ||
+            !double.IsFinite(minimumHeight) ||
+            !double.IsFinite(maximumHeight) ||
+            !double.IsFinite(minimumAspect) ||
+            !double.IsFinite(maximumAspect) ||
+            minimumHeight <= 0 ||
+            maximumHeight < minimumHeight ||
+            minimumAspect <= 0 ||
+            maximumAspect < minimumAspect)
+        {
+            return null;
+        }
+
+        return new OmsiSceneryTreeDefinition(
+            values[0].Trim(),
+            minimumHeight,
+            maximumHeight,
+            minimumAspect,
+            maximumAspect);
     }
 
     private static IReadOnlyList<string> ReadGroups(
