@@ -37,7 +37,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Known limitations
 
 - creation and copying only persist when a safe template of the same `.sco` exists;
-- free-form spline creation and automatic previous/next link editing are not implemented yet; current creation is a detached copy of a real spline;
+- free-form creation from any installed `.sli` is not implemented yet; current creation starts from a real spline already present in the map;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
 - `[worldcoordinates]` maps remain limited;
@@ -147,3 +147,17 @@ Select a spline whose `previous` or `next` is not `-1` and verify deletion remai
 3. click the result and verify the spline is selected and focused;
 4. create an edit preview and verify the **changed** marker in the list;
 5. search for a term matching both objects and splines and verify both sections.
+
+
+## Transactional link test
+
+1. select a detached spline and note its ID;
+2. select another spline with a free endpoint;
+3. under **Chain links**, enter the appropriate ID as Previous or Next;
+4. click **Save links**;
+5. after reload, verify the neighbor received the reciprocal link;
+6. switch to another free neighbor and verify the old neighbor endpoint returned to `-1`;
+7. test **Disconnect draft** + **Save links** and verify both sides of the connection are released;
+8. verify backups for every modified tile share the same timestamp.
+
+Conflict test: try linking to an occupied endpoint or externally change a link before Save. No tile may be left partially modified.

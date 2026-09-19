@@ -37,7 +37,7 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Limitações conhecidas
 
 - criação e cópia só gravam quando existe template seguro do mesmo `.sco`;
-- criação livre de splines e edição automática dos vínculos previous/next ainda não existem; a criação atual é por cópia desconectada de uma spline real;
+- criação livre baseada em qualquer `.sli` instalado ainda não existe; a criação atual parte de uma spline real do mapa;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
 - mapas `[worldcoordinates]` continuam limitados;
@@ -147,3 +147,17 @@ Selecione uma spline com `previous` ou `next` diferente de `-1` e confirme que a
 3. clique no resultado e confirme que a spline é selecionada e focada;
 4. crie uma prévia de edição e confirme a marca **alterada** na lista;
 5. pesquise um termo que corresponda simultaneamente a objetos e splines e confirme as duas seções.
+
+
+## Teste de vínculos transacionais
+
+1. selecione uma spline desconectada e anote seu ID;
+2. selecione outra spline com ponta livre;
+3. em **Vínculos da cadeia**, informe o ID apropriado em Anterior ou Próxima;
+4. clique **Salvar vínculos**;
+5. após o recarregamento, confirme que a spline vizinha recebeu o vínculo recíproco;
+6. troque o vizinho por outra spline livre e confirme que a ponta do vizinho antigo voltou para `-1`;
+7. teste **Desconectar rascunho** + **Salvar vínculos** e confirme que os dois lados da conexão são liberados;
+8. confira backups de todos os tiles alterados no mesmo timestamp.
+
+Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um vínculo antes do Save. Nenhum dos tiles deve ficar parcialmente alterado.

@@ -21,6 +21,7 @@ import {
   selectMap,
   selectOmsiRoot,
   subscribeToHost,
+  updateSplineLinks,
   type SceneryLibraryEntry,
   type OmsiMap,
   type OmsiPlacedObject,
@@ -162,6 +163,16 @@ const errorMessages: Record<string, string> = {
     "A spline mudou no arquivo desde a leitura. A exclusão foi cancelada para proteger os vínculos.",
   splineDeleteError:
     "Não foi possível excluir a spline com segurança.",
+  splineLinkTargetBusy:
+    "A ponta escolhida da spline vizinha já está ligada a outra spline.",
+  splineLinkTargetMissing:
+    "O ID de uma spline vizinha não existe mais no mapa.",
+  splineLinkInvalid:
+    "Os vínculos são inválidos: uma spline não pode apontar para si mesma nem usar o mesmo vizinho nas duas pontas.",
+  splineLinkConflict:
+    "A cadeia de splines mudou no disco ou já estava inconsistente. Nenhum vínculo foi gravado.",
+  splineLinkError:
+    "Não foi possível atualizar os vínculos das splines com segurança.",
   unknownTile:
     "O tile escolhido não pertence ao mapa aberto.",
   invalidTilePath:
@@ -316,6 +327,21 @@ export function App() {
   ] = useState(false);
 
   const [
+    savingSplineLinks,
+    setSavingSplineLinks
+  ] = useState(false);
+
+  const [
+    splineLinkPreviousId,
+    setSplineLinkPreviousId
+  ] = useState(-1);
+
+  const [
+    splineLinkNextId,
+    setSplineLinkNextId
+  ] = useState(-1);
+
+  const [
     undoPreviewStack,
     setUndoPreviewStack
   ] = useState<
@@ -385,6 +411,25 @@ export function App() {
   ] = useState<
     Record<string, OmsiSplineDefinition>
   >({});
+
+  useEffect(() => {
+    if (!selectedSpline) {
+      setSplineLinkPreviousId(-1);
+      setSplineLinkNextId(-1);
+      return;
+    }
+
+    setSplineLinkPreviousId(
+      selectedSpline.previousSplineId
+    );
+    setSplineLinkNextId(
+      selectedSpline.nextSplineId
+    );
+  }, [
+    selectedSpline?.splineId,
+    selectedSpline?.previousSplineId,
+    selectedSpline?.nextSplineId
+  ]);
 
   const [selectingRoot, setSelectingRoot] =
     useState(false);
@@ -898,6 +943,28 @@ export function App() {
 
         if (
           message.type ===
+          "splineLinksUpdated"
+        ) {
+          setSavingSplineLinks(false);
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            message.linksUpdated > 0
+              ? `Vínculos da spline #${message.splineId} atualizados em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
+              : `Vínculos da spline #${message.splineId} já estavam atualizados.`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+
+          return;
+        }
+
+        if (
+          message.type ===
           "splineTransformsSaved"
         ) {
           setSavingSpline(false);
@@ -982,6 +1049,7 @@ export function App() {
           setInsertingObject(false);
           setDeletingObject(false);
           setSavingSpline(false);
+          setSavingSplineLinks(false);
           setInsertingSpline(false);
           setDeletingSpline(false);
 
@@ -2086,6 +2154,74 @@ export function App() {
       ]
     );
 
+  const handleSaveSplineLinks =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !selectedSpline ||
+        savingSplineLinks
+      ) {
+        return;
+      }
+
+      if (
+        !Number.isInteger(
+          splineLinkPreviousId
+        ) ||
+        !Number.isInteger(
+          splineLinkNextId
+        ) ||
+        splineLinkPreviousId ==
+          selectedSpline.splineId ||
+        splineLinkNextId ==
+          selectedSpline.splineId ||
+        (
+          splineLinkPreviousId != -1 &&
+          splineLinkPreviousId ==
+            splineLinkNextId
+        )
+      ) {
+        setError(
+          errorMessages
+            .splineLinkInvalid
+        );
+        return;
+      }
+
+      if (
+        previewEditCount > 0 ||
+        splinePreviewEditCount > 0 ||
+        placementAsset ||
+        splinePlacementTemplate
+      ) {
+        setError(
+          "Salve, descarte ou cancele as edições pendentes antes de alterar vínculos."
+        );
+        return;
+      }
+
+      setSavingSplineLinks(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      updateSplineLinks(
+        selectedMap.directoryName,
+        selectedSpline,
+        splineLinkPreviousId,
+        splineLinkNextId
+      );
+    }, [
+      placementAsset,
+      previewEditCount,
+      savingSplineLinks,
+      selectedMap,
+      selectedSpline,
+      splineLinkNextId,
+      splineLinkPreviousId,
+      splinePlacementTemplate,
+      splinePreviewEditCount
+    ]);
+
   const handleDeleteSelectedSpline =
     useCallback(() => {
       if (
@@ -2878,6 +3014,7 @@ export function App() {
     selectingMap ||
     saving ||
     savingSpline ||
+    savingSplineLinks ||
     insertingObject ||
     deletingObject ||
     insertingSpline ||
@@ -3842,6 +3979,142 @@ export function App() {
               parâmetros extras reais. Os vínculos
               anterior/próxima começam em -1 para
               não alterar a cadeia existente.
+            </div>
+
+            <div className="spline-link-editor">
+              <strong>Vínculos da cadeia</strong>
+
+              <div className="spline-link-fields">
+                <label className="transform-field">
+                  <span>Anterior ID</span>
+                  <input
+                    type="number"
+                    step="1"
+                    list="spline-link-id-options"
+                    value={
+                      splineLinkPreviousId
+                    }
+                    onChange={(event) => {
+                      const value =
+                        event.currentTarget
+                          .valueAsNumber;
+
+                      if (
+                        Number.isInteger(
+                          value
+                        )
+                      ) {
+                        setSplineLinkPreviousId(
+                          value
+                        );
+                      }
+                    }}
+                  />
+                </label>
+
+                <label className="transform-field">
+                  <span>Próxima ID</span>
+                  <input
+                    type="number"
+                    step="1"
+                    list="spline-link-id-options"
+                    value={
+                      splineLinkNextId
+                    }
+                    onChange={(event) => {
+                      const value =
+                        event.currentTarget
+                          .valueAsNumber;
+
+                      if (
+                        Number.isInteger(
+                          value
+                        )
+                      ) {
+                        setSplineLinkNextId(
+                          value
+                        );
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <datalist id="spline-link-id-options">
+                {splines
+                  .filter(
+                    (candidate) =>
+                      candidate.splineId !==
+                      selectedSpline.splineId
+                  )
+                  .map((candidate) => (
+                    <option
+                      key={
+                        candidate.splineId
+                      }
+                      value={
+                        candidate.splineId
+                      }
+                    >
+                      {getObjectName(
+                        candidate.splinePath
+                      )}
+                    </option>
+                  ))}
+              </datalist>
+
+              <div className="transform-help">
+                Use -1 para ponta livre. A lista
+                sugere splines carregadas, mas o
+                host valida IDs no mapa completo e
+                atualiza reciprocamente as pontas
+                afetadas.
+              </div>
+
+              <div className="spline-edit-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={
+                    handleSaveSplineLinks
+                  }
+                  disabled={
+                    busy ||
+                    (
+                      splineLinkPreviousId ===
+                        selectedSpline.previousSplineId &&
+                      splineLinkNextId ===
+                        selectedSpline.nextSplineId
+                    ) ||
+                    previewEditCount > 0 ||
+                    splinePreviewEditCount > 0 ||
+                    Boolean(placementAsset) ||
+                    Boolean(
+                      splinePlacementTemplate
+                    )
+                  }
+                >
+                  {savingSplineLinks
+                    ? "Atualizando..."
+                    : "Salvar vínculos"}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={busy}
+                  onClick={() => {
+                    setSplineLinkPreviousId(
+                      -1
+                    );
+                    setSplineLinkNextId(
+                      -1
+                    );
+                  }}
+                >
+                  Desconectar rascunho
+                </button>
+              </div>
             </div>
 
             <button

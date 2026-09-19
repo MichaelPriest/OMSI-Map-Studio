@@ -340,6 +340,21 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "updateSplineLinks":
+                    if (
+                        TryReadSplineLinkRequest(
+                            message.RootElement,
+                            out var splineLinkRequest))
+                    {
+                        await UpdateSplineLinksAsync(
+                            splineLinkRequest);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "saveSplineTransforms":
                     if (
                         TryReadString(
@@ -2036,6 +2051,345 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task UpdateSplineLinksAsync(
+        SplineLinkRequest request)
+    {
+        if (
+            !_knownMaps.TryGetValue(
+                request.DirectoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var snapshot =
+                await ReadMapInsertionSnapshotAsync(
+                    map);
+
+            var entries =
+                new List<SplineMapEntry>();
+
+            var count =
+                Math.Min(
+                    map.Tiles.Count,
+                    snapshot.Contents.Count);
+
+            for (
+                var index = 0;
+                index < count;
+                index++)
+            {
+                var tile =
+                    map.Tiles[index];
+
+                foreach (var spline in
+                    snapshot
+                        .Contents[index]
+                        .Splines)
+                {
+                    entries.Add(
+                        new SplineMapEntry(
+                            tile.X,
+                            tile.Y,
+                            tile.RelativeMapPath,
+                            spline));
+                }
+            }
+
+            if (
+                entries
+                    .GroupBy(entry =>
+                        entry.Spline.SplineId)
+                    .Any(group =>
+                        group.Count() > 1))
+            {
+                throw new InvalidDataException(
+                    "duplicateSplineId");
+            }
+
+            var byId =
+                entries.ToDictionary(
+                    entry =>
+                        entry.Spline.SplineId);
+
+            if (
+                !byId.TryGetValue(
+                    request.SplineId,
+                    out var source) ||
+                source.TileX !=
+                    request.TileX ||
+                source.TileY !=
+                    request.TileY ||
+                source.Spline
+                    .SourceSectionOrdinal !=
+                    request
+                        .SourceSectionOrdinal ||
+                source.Spline
+                    .PreviousSplineId !=
+                    request
+                        .PreviousSplineId ||
+                source.Spline
+                    .NextSplineId !=
+                    request
+                        .NextSplineId ||
+                source.Spline
+                    .IsHeightSpline !=
+                    request
+                        .IsHeightSpline ||
+                !string.Equals(
+                    source.Spline.SplinePath,
+                    request.SplinePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "splineLinkSourceChanged");
+            }
+
+            var states =
+                byId.ToDictionary(
+                    pair => pair.Key,
+                    pair =>
+                        new OmsiSplineLinkState(
+                            pair.Key,
+                            pair.Value
+                                .Spline
+                                .PreviousSplineId,
+                            pair.Value
+                                .Spline
+                                .NextSplineId));
+
+            var plan =
+                OmsiSplineLinkPlanner
+                    .Plan(
+                        states,
+                        request.SplineId,
+                        request.PreviousSplineId,
+                        request.NextSplineId,
+                        request
+                            .DesiredPreviousSplineId,
+                        request
+                            .DesiredNextSplineId);
+
+            if (plan.Count == 0)
+            {
+                PostMessage(new
+                {
+                    type = "splineLinksUpdated",
+                    map.DirectoryName,
+                    splineId =
+                        request.SplineId,
+                    previousSplineId =
+                        request
+                            .DesiredPreviousSplineId,
+                    nextSplineId =
+                        request
+                            .DesiredNextSplineId,
+                    linksUpdated = 0,
+                    filesSaved = 0,
+                    backupDirectory =
+                        string.Empty
+                });
+
+                return;
+            }
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var writes =
+                new List<PendingFileWrite>();
+
+            var editedTilePaths =
+                new List<string>();
+
+            var appliedEdits = 0;
+
+            foreach (
+                var group in plan.Keys
+                    .Select(id => byId[id])
+                    .GroupBy(entry =>
+                        (
+                            entry.TileX,
+                            entry.TileY,
+                            entry.RelativeMapPath)))
+            {
+                if (!OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        map.DirectoryPath,
+                        group.Key
+                            .RelativeMapPath,
+                        out var tilePath) ||
+                    !File.Exists(tilePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            tilePath);
+
+                var edits =
+                    group.Select(entry =>
+                    {
+                        var target =
+                            plan[
+                                entry.Spline
+                                    .SplineId];
+
+                        return new OmsiSplineLinkEdit(
+                            entry.Spline
+                                .SourceSectionOrdinal,
+                            entry.Spline
+                                .SplinePath,
+                            entry.Spline
+                                .SplineId,
+                            entry.Spline
+                                .PreviousSplineId,
+                            entry.Spline
+                                .NextSplineId,
+                            entry.Spline
+                                .IsHeightSpline,
+                            target
+                                .PreviousSplineId,
+                            target
+                                .NextSplineId);
+                    })
+                    .ToArray();
+
+                var result =
+                    OmsiTileSplineLinkEditor
+                        .ApplyLinks(
+                            document,
+                            edits);
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        tilePath);
+
+                if (
+                    relativePath.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relativePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        tilePath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        result.Bytes));
+
+                editedTilePaths.Add(
+                    tilePath);
+
+                appliedEdits +=
+                    result.AppliedEdits;
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    writes);
+
+            foreach (var tilePath in
+                editedTilePaths)
+            {
+                _tileContentCache
+                    .TryRemove(
+                        tilePath,
+                        out _);
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "splineLinksUpdated",
+                map.DirectoryName,
+                splineId =
+                    request.SplineId,
+                previousSplineId =
+                    request
+                        .DesiredPreviousSplineId,
+                nextSplineId =
+                    request
+                        .DesiredNextSplineId,
+                linksUpdated =
+                    appliedEdits,
+                filesSaved =
+                    writes.Count,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            var code =
+                exception.Message switch
+                {
+                    "splineLinkTargetBusy" =>
+                        "splineLinkTargetBusy",
+                    "splineLinkNeighborMissing" =>
+                        "splineLinkTargetMissing",
+                    "splineLinkSelf" =>
+                        "splineLinkInvalid",
+                    "splineLinkDuplicateNeighbor" =>
+                        "splineLinkInvalid",
+                    _ =>
+                        "splineLinkConflict"
+                };
+
+            PostMessage(new
+            {
+                type = "hostError",
+                code,
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = map.DirectoryPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "splineLinkError",
+                detail = exception.Message
+            });
+        }
+    }
+
     private async Task SaveSplineTransformsAsync(
         string? directoryName,
         IReadOnlyList<SplineTransformRequest> requests)
@@ -3063,6 +3417,78 @@ public partial class MainWindow : Window
         return result.Count > 0;
     }
 
+    private static bool TryReadSplineLinkRequest(
+        JsonElement element,
+        out SplineLinkRequest request)
+    {
+        request = default!;
+
+        if (
+            !TryReadString(
+                element,
+                "directoryName",
+                out var directoryName) ||
+            !TryReadInt32(
+                element,
+                "tileX",
+                out var tileX) ||
+            !TryReadInt32(
+                element,
+                "tileY",
+                out var tileY) ||
+            !TryReadInt32(
+                element,
+                "sourceSectionOrdinal",
+                out var sourceSectionOrdinal) ||
+            !TryReadString(
+                element,
+                "splinePath",
+                out var splinePath) ||
+            !TryReadInt32(
+                element,
+                "splineId",
+                out var splineId) ||
+            !TryReadInt32(
+                element,
+                "previousSplineId",
+                out var previousSplineId) ||
+            !TryReadInt32(
+                element,
+                "nextSplineId",
+                out var nextSplineId) ||
+            !TryReadBoolean(
+                element,
+                "isHeightSpline",
+                out var isHeightSpline) ||
+            !TryReadInt32(
+                element,
+                "desiredPreviousSplineId",
+                out var desiredPreviousSplineId) ||
+            !TryReadInt32(
+                element,
+                "desiredNextSplineId",
+                out var desiredNextSplineId))
+        {
+            return false;
+        }
+
+        request =
+            new SplineLinkRequest(
+                directoryName!,
+                tileX,
+                tileY,
+                sourceSectionOrdinal,
+                splinePath!,
+                splineId,
+                previousSplineId,
+                nextSplineId,
+                isHeightSpline,
+                desiredPreviousSplineId,
+                desiredNextSplineId);
+
+        return true;
+    }
+
     private static bool TryReadSplineInsertionRequest(
         JsonElement element,
         out SplineInsertionRequest request)
@@ -3361,6 +3787,25 @@ public partial class MainWindow : Window
         double Rotation,
         double Pitch,
         double Bank);
+
+    private sealed record SplineMapEntry(
+        int TileX,
+        int TileY,
+        string RelativeMapPath,
+        OmsiPlacedSpline Spline);
+
+    private sealed record SplineLinkRequest(
+        string DirectoryName,
+        int TileX,
+        int TileY,
+        int SourceSectionOrdinal,
+        string SplinePath,
+        int SplineId,
+        int PreviousSplineId,
+        int NextSplineId,
+        bool IsHeightSpline,
+        int DesiredPreviousSplineId,
+        int DesiredNextSplineId);
 
     private sealed record SplineInsertionRequest(
         string DirectoryName,

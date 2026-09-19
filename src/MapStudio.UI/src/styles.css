@@ -1311,3 +1311,23 @@ code {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+
+.spline-link-editor {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #173852;
+  border-radius: 6px;
+  background: #071522;
+}
+
+.spline-link-editor > strong {
+  font-size: 11px;
+}
+
+.spline-link-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}

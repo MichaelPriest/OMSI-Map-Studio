@@ -201,6 +201,16 @@ export type HostMessage =
       placedSpline: OmsiPlacedSpline;
     }
   | {
+      type: "splineLinksUpdated";
+      directoryName: string;
+      splineId: number;
+      previousSplineId: number;
+      nextSplineId: number;
+      linksUpdated: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
       type: "splineTransformsSaved";
       directoryName: string;
       editsSaved: number;
@@ -430,6 +440,34 @@ export function insertSpline(
     isHeightSpline:
       sourceSpline.isHeightSpline,
     ...placement
+  });
+}
+
+export function updateSplineLinks(
+  directoryName: string,
+  placedSpline: OmsiPlacedSpline,
+  desiredPreviousSplineId: number,
+  desiredNextSplineId: number
+) {
+  getWebView()?.postMessage({
+    type: "updateSplineLinks",
+    directoryName,
+    tileX: placedSpline.tileX,
+    tileY: placedSpline.tileY,
+    sourceSectionOrdinal:
+      placedSpline.sourceSectionOrdinal,
+    splinePath:
+      placedSpline.splinePath,
+    splineId:
+      placedSpline.splineId,
+    previousSplineId:
+      placedSpline.previousSplineId,
+    nextSplineId:
+      placedSpline.nextSplineId,
+    isHeightSpline:
+      placedSpline.isHeightSpline,
+    desiredPreviousSplineId,
+    desiredNextSplineId
   });
 }
 

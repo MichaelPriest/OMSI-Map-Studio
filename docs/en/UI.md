@@ -295,3 +295,12 @@ Connected splines remain protected until transactional editing of neighboring li
 The main Explorer search now searches loaded objects and splines. For splines, search accepts the `.sli` filename, full path, ID and tile coordinate.
 
 Objects and splines are shown in separate sections, each capped at 250 rendered rows. Clicking a spline selects the real instance and focuses the camera; a spline with a pending preview is marked **changed**.
+
+
+## previous/next link editor
+
+In the spline **General** tab, **Chain links** lets you enter previous and next IDs. Use `-1` for a free endpoint.
+
+The field list suggests currently loaded splines, but the host searches and validates IDs across the full map. On save it also updates reciprocal endpoints on old and new neighbors. If a new endpoint is already occupied, a neighbor disappeared, or the current chain is inconsistent, no part of the transaction is written.
+
+**Disconnect draft** only puts `-1/-1` into the fields; persistence happens only after **Save links**.

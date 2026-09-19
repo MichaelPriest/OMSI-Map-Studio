@@ -278,3 +278,17 @@ O host relê o tile diretamente do disco antes da exclusão, usa `SafeFileTransa
 Cada `[spline]` / `[spline_h]` recebe um `SourceSectionOrdinal` estável na ordem em que aparece no tile. `OmsiTileSplineEditor` pode alterar somente X, Z, Y, rotação, comprimento, raio e gradientes inicial/final.
 
 Antes de gravar, o editor valida ordinal, tipo `spline`/ `spline_h`, caminho `.sli`, ID e vínculos `previous/next`. Esses vínculos não são editados nesta etapa. O host relê o tile atual, preserva extras/comentários/seções desconhecidas e usa o mesmo backup + troca atômica das transformações de objetos.
+
+
+## Vínculos transacionais de splines
+
+`OmsiSplineLinkPlanner` calcula a mudança de cadeia antes de qualquer gravação. A fonte mantém identidade por tile + ordinal + ID + caminho `.sli` + tipo + vínculos atuais.
+
+Ao trocar `previous` ou `next`:
+
+- a ponta recíproca do vizinho antigo é liberada;
+- a ponta do vizinho novo só é usada se estiver livre ou já apontar para a fonte;
+- IDs ausentes, duplicados, auto-referência e o mesmo vizinho nas duas pontas são recusados;
+- inconsistência entre a fonte e seus vizinhos atuais cancela o lote.
+
+`OmsiTileSplineLinkEditor` altera somente as duas linhas de vínculo. O host agrupa os edits por tile, relê apenas os tiles afetados e envia todos os arquivos para uma única `SafeFileTransaction`, que restaura os já substituídos se uma troca posterior falhar.

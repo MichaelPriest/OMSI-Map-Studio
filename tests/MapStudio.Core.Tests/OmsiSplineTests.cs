@@ -369,6 +369,146 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void SplineLinkPlanner_RelinksBothOldAndNewNeighbors()
+    {
+        var states =
+            new Dictionary<
+                int,
+                OmsiSplineLinkState>
+            {
+                [10] = new(
+                    10,
+                    8,
+                    12),
+                [8] = new(
+                    8,
+                    -1,
+                    10),
+                [12] = new(
+                    12,
+                    10,
+                    -1),
+                [20] = new(
+                    20,
+                    -1,
+                    -1),
+                [22] = new(
+                    22,
+                    -1,
+                    -1)
+            };
+
+        var plan =
+            OmsiSplineLinkPlanner.Plan(
+                states,
+                10,
+                8,
+                12,
+                20,
+                22);
+
+        Assert.Equal(
+            new OmsiSplineLinkTarget(
+                20,
+                22),
+            plan[10]);
+
+        Assert.Equal(
+            -1,
+            plan[8].NextSplineId);
+
+        Assert.Equal(
+            -1,
+            plan[12].PreviousSplineId);
+
+        Assert.Equal(
+            10,
+            plan[20].NextSplineId);
+
+        Assert.Equal(
+            10,
+            plan[22].PreviousSplineId);
+    }
+
+    [Fact]
+    public void SplineLinkPlanner_RefusesBusyTarget()
+    {
+        var states =
+            new Dictionary<
+                int,
+                OmsiSplineLinkState>
+            {
+                [10] = new(
+                    10,
+                    -1,
+                    -1),
+                [20] = new(
+                    20,
+                    -1,
+                    99)
+            };
+
+        Assert.Throws<InvalidDataException>(
+            () =>
+                OmsiSplineLinkPlanner.Plan(
+                    states,
+                    10,
+                    -1,
+                    -1,
+                    20,
+                    -1));
+    }
+
+    [Fact]
+    public void SplineLinkEditor_ChangesOnlyLinkLines()
+    {
+        const string source =
+            "[spline]\r\n" +
+            "0\r\n" +
+            "Splines\\A.sli\r\n" +
+            "10\r\n-1\r\n-1\r\n" +
+            "1\r\n2\r\n3\r\n4\r\n" +
+            "5\r\n6\r\n7\r\n8\r\n" +
+            "future-extra\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var result =
+            OmsiTileSplineLinkEditor
+                .ApplyLinks(
+                    document,
+                    [
+                        new(
+                            0,
+                            @"Splines\A.sli",
+                            10,
+                            -1,
+                            -1,
+                            false,
+                            20,
+                            30)
+                    ]);
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(
+                    result.Bytes);
+
+        Assert.Equal(
+            1,
+            result.AppliedEdits);
+
+        Assert.Contains(
+            "10\r\n20\r\n30\r\n" +
+            "1\r\n2\r\n3\r\n4\r\n" +
+            "5\r\n6\r\n7\r\n8\r\n" +
+            "future-extra\r\n",
+            text);
+    }
+
+    [Fact]
     public void ReadSplines_RecognizesHeightSpline()
     {
         const string source =

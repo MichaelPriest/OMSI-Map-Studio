@@ -278,3 +278,17 @@ The host rereads the tile directly from disk before deletion, uses `SafeFileTran
 Each `[spline]` / `[spline_h]` gets a stable `SourceSectionOrdinal` in tile order. `OmsiTileSplineEditor` can change only X, Z, Y, rotation, length, radius and start/end gradients.
 
 Before writing, the editor validates ordinal, `spline`/ `spline_h` type, `.sli` path, ID and `previous/next` links. Those links are not editable at this stage. The host rereads the current tile, preserves extras/comments/unknown sections, and uses the same backup + atomic replacement flow as object transforms.
+
+
+## Transactional spline links
+
+`OmsiSplineLinkPlanner` computes the chain change before any write. The source keeps identity by tile + ordinal + ID + `.sli` path + type + current links.
+
+When changing `previous` or `next`:
+
+- the old neighbor's reciprocal endpoint is released;
+- a new neighbor endpoint is used only when free or already pointing at the source;
+- missing/duplicate IDs, self-links and the same neighbor on both ends are rejected;
+- inconsistency between the source and its current neighbors cancels the batch.
+
+`OmsiTileSplineLinkEditor` changes only the two link lines. The host groups edits by tile, rereads only affected tiles and sends every file through one `SafeFileTransaction`, which restores already replaced files if a later replacement fails.
