@@ -9752,7 +9752,8 @@ export function App() {
             Auto solicitadas:{" "}
             {Object.keys(
               autoPrefetchedTextureKeys
-            ).length}/
+            ).length}
+            {" · limite atual: "}
             {autoTextureLimit}
             <b>·</b>
             Cache:{" "}
