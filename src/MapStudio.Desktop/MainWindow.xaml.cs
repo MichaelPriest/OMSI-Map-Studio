@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Media;
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
@@ -4040,12 +4041,14 @@ public partial class MainWindow : Window
             int? height = ddsMetadata?.Height;
             string? pixelFormat = ddsMetadata?.Format;
             bool? alphaOnly = ddsMetadata?.AlphaOnly;
+            string? rgbaBase64 = null;
 
             if (
                 extension == ".bmp" &&
                 TryTranscodeBmpToPng(
                     bytes,
                     out var pngBytes,
+                    out var rgbaBytes,
                     out var bitmapWidth,
                     out var bitmapHeight))
             {
@@ -4053,8 +4056,11 @@ public partial class MainWindow : Window
                 extension = ".png";
                 width = bitmapWidth;
                 height = bitmapHeight;
-                pixelFormat = "BMP→PNG";
+                pixelFormat = "BMP→PNG+RGBA";
                 alphaOnly = false;
+                rgbaBase64 =
+                    Convert.ToBase64String(
+                        rgbaBytes);
             }
 
             PostMessage(new
@@ -4069,6 +4075,7 @@ public partial class MainWindow : Window
                             bytes),
                     extension,
                     sourceExtension,
+                    rgbaBase64,
                     mimeType =
                         GetTextureMimeType(
                             extension),
@@ -4118,6 +4125,8 @@ public partial class MainWindow : Window
                     (string?)null,
                 sourceExtension =
                     (string?)null,
+                rgbaBase64 =
+                    (string?)null,
                 mimeType =
                     (string?)null,
                 width =
@@ -4137,10 +4146,12 @@ public partial class MainWindow : Window
         TryTranscodeBmpToPng(
             byte[] source,
             out byte[] pngBytes,
+            out byte[] rgbaBytes,
             out int width,
             out int height)
     {
         pngBytes = source;
+        rgbaBytes = Array.Empty<byte>();
         width = 0;
         height = 0;
 
@@ -4164,11 +4175,62 @@ public partial class MainWindow : Window
             }
 
             var frame = decoder.Frames[0];
+
+            var converted =
+                new FormatConvertedBitmap(
+                    frame,
+                    PixelFormats.Bgra32,
+                    null,
+                    0);
+
+            width = converted.PixelWidth;
+            height = converted.PixelHeight;
+
+            if (
+                width <= 0 ||
+                height <= 0)
+            {
+                return false;
+            }
+
+            var stride =
+                checked(width * 4);
+
+            var bgra =
+                new byte[
+                    checked(
+                        stride *
+                        height)];
+
+            converted.CopyPixels(
+                bgra,
+                stride,
+                0);
+
+            rgbaBytes =
+                new byte[bgra.Length];
+
+            for (
+                var index = 0;
+                index < bgra.Length;
+                index += 4)
+            {
+                rgbaBytes[index] =
+                    bgra[index + 2];
+                rgbaBytes[index + 1] =
+                    bgra[index + 1];
+                rgbaBytes[index + 2] =
+                    bgra[index];
+                rgbaBytes[index + 3] =
+                    bgra[index + 3];
+            }
+
             var encoder =
                 new PngBitmapEncoder();
 
             encoder.Frames.Add(
-                BitmapFrame.Create(frame));
+                BitmapFrame.Create(
+                    converted));
 
             using var output =
                 new MemoryStream();
@@ -4176,10 +4238,14 @@ public partial class MainWindow : Window
             encoder.Save(output);
 
             pngBytes = output.ToArray();
-            width = frame.PixelWidth;
-            height = frame.PixelHeight;
 
-            return pngBytes.Length > 0;
+            return
+                pngBytes.Length > 0 &&
+                rgbaBytes.Length ==
+                    checked(
+                        width *
+                        height *
+                        4);
         }
         catch
         {
