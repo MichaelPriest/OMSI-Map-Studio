@@ -586,3 +586,12 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 ## Validação dos helpers de árvore — test.25
 
 No Grundorf, confirme que as árvores `[tree]` continuam renderizadas, mas os grandes painéis cinza associados a helpers de árvore não aparecem mais sobre o mapa.
+
+
+## Validação de posição dos objetos — test.25
+
+1. abra Grundorf e compare casas, postes, árvores e demais objetos com o terreno e as splines;
+2. confirme que objetos comuns acompanham a altura local do terrain em vez de ficarem enterrados/flutuando em Z = 0;
+3. confirme que SCOs com `[absheight]` continuam usando a altura absoluta gravada no mapa;
+4. mova verticalmente um objeto comum, salve e reabra o mapa: o valor salvo deve continuar relativo ao terreno;
+5. confirme que seleção, foco e gizmo ficam sobre a geometria visual corrigida.
