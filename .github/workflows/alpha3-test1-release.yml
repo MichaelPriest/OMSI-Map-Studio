@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: alpha3-test1-prerelease
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-and-release:
