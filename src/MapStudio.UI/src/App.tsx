@@ -5294,6 +5294,52 @@ export function App() {
           </dd>
         </div>
         <div>
+          <dt>Camadas [groundtex]</dt>
+          <dd>
+            {selectedMap
+              ?.groundTextures.length ??
+              0}
+          </dd>
+        </div>
+        <div>
+          <dt>Textura base</dt>
+          <dd>
+            {baseGroundTexture
+              ? `${baseGroundTexture.mainTexturePath} · ${getTextureState(
+                  baseGroundTexture.mainTexturePath,
+                  baseGroundMainAsset,
+                  Boolean(
+                    baseGroundMainKey &&
+                      requestedGroundTextureKeys[
+                        baseGroundMainKey
+                      ]
+                  )
+                ).label} · rep. ${formatNumber(
+                  baseGroundTexture.mainTextureRepeating
+                )}`
+              : "Nenhuma camada declarada"}
+          </dd>
+        </div>
+        <div>
+          <dt>Detalhe base</dt>
+          <dd>
+            {baseGroundTexture
+              ? `${baseGroundTexture.detailTexturePath} · ${getTextureState(
+                  baseGroundTexture.detailTexturePath,
+                  baseGroundDetailAsset,
+                  Boolean(
+                    baseGroundDetailKey &&
+                      requestedGroundTextureKeys[
+                        baseGroundDetailKey
+                      ]
+                  )
+                ).label} · rep. ${formatNumber(
+                  baseGroundTexture.detailTextureRepeating
+                )}`
+              : "—"}
+          </dd>
+        </div>
+        <div>
           <dt>Terrenos (área)</dt>
           <dd>
             {selectedStats
@@ -7155,16 +7201,9 @@ export function App() {
               terrainMainTextureAsset={
                 baseGroundMainAsset
               }
-              terrainDetailTextureAsset={
-                baseGroundDetailAsset
-              }
               terrainMainTextureRepeating={
                 baseGroundTexture
                   ?.mainTextureRepeating
-              }
-              terrainDetailTextureRepeating={
-                baseGroundTexture
-                  ?.detailTextureRepeating
               }
               showObjects={showObjects}
               showSplines={showSplines}
