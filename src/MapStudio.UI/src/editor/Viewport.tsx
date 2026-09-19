@@ -1639,6 +1639,9 @@ function createPreviewMaterial(
   environmentTextureAsset:
     | OmsiTextureAsset
     | undefined,
+  transparencyTextureAsset:
+    | OmsiTextureAsset
+    | undefined,
   nightPreviewEnabled: boolean
 ) {
   const material = new StandardMaterial(
@@ -1734,6 +1737,29 @@ function createPreviewMaterial(
       material.useAlphaFromDiffuseTexture =
         false;
     }
+  }
+
+  const transparencyTexture =
+    createTextureFromAsset(
+      scene,
+      transparencyTextureAsset
+    );
+
+  if (transparencyTexture) {
+    // OMSI [matl_transmap] supplies a dedicated transparency mask.
+    // It is separate from [matl_alpha], which reads alpha from the
+    // diffuse texture. Grayscale BMP/TGA transmaps need their RGB
+    // intensity interpreted as opacity in Babylon.
+    transparencyTexture.hasAlpha = true;
+    transparencyTexture.getAlphaFromRGB = true;
+
+    material.opacityTexture =
+      transparencyTexture;
+
+    material.transparencyMode =
+      Material.MATERIAL_ALPHATESTANDBLEND;
+
+    material.alphaCutOff = 0.4;
   }
 
   const bumpTexture =
@@ -2418,6 +2444,42 @@ function createGeometryMeshes(
                     ?.environmentMapTextureName;
 
                 if (!textureName) {
+                  return undefined;
+                }
+
+                return textureAssetsByKey[
+                  getSceneryTextureAssetKey(
+                    sceneryObjectPath,
+                    meshReference
+                      .declaredPath,
+                    textureName
+                  )
+                ];
+              })()
+            : undefined,
+          materialIndex >= 0
+            ? (() => {
+                const materialOverride =
+                  findMaterialOverride(
+                    meshReference
+                      .materialOverrides,
+                    materialIndex,
+                    meshGeometry.materials[
+                      materialIndex
+                    ]?.textureName
+                  );
+
+                const textureName =
+                  materialOverride
+                    ?.transMapSource
+                    ?.trim();
+
+                if (
+                  !textureName ||
+                  textureName.startsWith(
+                    "\\S:"
+                  )
+                ) {
                   return undefined;
                 }
 

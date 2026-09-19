@@ -255,6 +255,21 @@ const normalizeTextureFileName = (
     ?.toLocaleLowerCase("en-US") ??
   value.toLocaleLowerCase("en-US");
 
+
+const getStaticTransparencyMapName = (
+  value: string | null | undefined
+) => {
+  const normalized = value?.trim();
+
+  if (
+    !normalized ||
+    normalized.startsWith("\\S:")
+  ) {
+    return undefined;
+  }
+
+  return normalized;
+};
 const findSceneryMaterialOverride = (
   mesh:
     OmsiSceneryObjectGeometry["meshes"][number],
@@ -2013,6 +2028,14 @@ export function App() {
             ?.environmentMapTextureName
         );
 
+        queueTexture(
+          mesh.declaredPath,
+          getStaticTransparencyMapName(
+            materialOverride
+              ?.transMapSource
+          )
+        );
+
         if (nightPreviewEnabled) {
           queueTexture(
             mesh.declaredPath,
@@ -3077,6 +3100,14 @@ export function App() {
             mesh.declaredPath,
             materialOverride
               ?.environmentMapTextureName
+          );
+
+          queueObjectTexture(
+            mesh.declaredPath,
+            getStaticTransparencyMapName(
+              materialOverride
+                ?.transMapSource
+            )
           );
 
           if (nightPreviewEnabled) {
