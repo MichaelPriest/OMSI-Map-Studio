@@ -2162,6 +2162,17 @@ export function App() {
               return [];
             }
 
+            if (
+              groundTexture.maskResolution !==
+                null &&
+              (mask.width !==
+                groundTexture.maskResolution ||
+                mask.height !==
+                  groundTexture.maskResolution)
+            ) {
+              return [];
+            }
+
             const textureKey =
               getGroundTextureAssetKey(
                 selectedMap.directoryName,
@@ -5706,15 +5717,36 @@ export function App() {
                       ?.length ?? 0
                   ) > 0
                 ? activeTileDetails.terrainTextureMasks!
-                    .map(
-                      (mask) =>
-                        mask.isValid
-                          ? `${mask.layerIndex}: ${mask.width}×${mask.height} · ${Math.round(
-                              mask.coverage *
-                                100
-                            )}%`
-                          : `${mask.layerIndex}: inválida (${mask.errorCode ?? "erro"})`
-                    )
+                    .map((mask) => {
+                      const layer =
+                        selectedMap
+                          ?.groundTextures[
+                            mask.layerIndex
+                          ];
+
+                      const expected =
+                        layer?.maskResolution;
+
+                      if (!mask.isValid) {
+                        return `${mask.layerIndex}: inválida (${mask.errorCode ?? "erro"})`;
+                      }
+
+                      if (
+                        expected !== null &&
+                        expected !== undefined &&
+                        (mask.width !==
+                          expected ||
+                          mask.height !==
+                            expected)
+                      ) {
+                        return `${mask.layerIndex}: ${mask.width}×${mask.height} · esperado ${expected}×${expected}`;
+                      }
+
+                      return `${mask.layerIndex}: ${mask.width}×${mask.height} · ${Math.round(
+                        mask.coverage *
+                          100
+                      )}%`;
+                    })
                     .join(" · ")
                 : "Nenhuma"}
           </dd>
@@ -5760,6 +5792,15 @@ export function App() {
                         ]
                       : undefined;
 
+                  const maskResolutionMatches =
+                    !activeMask ||
+                    layer.maskResolution ===
+                      null ||
+                    (activeMask.width ===
+                      layer.maskResolution &&
+                      activeMask.height ===
+                        layer.maskResolution);
+
                   return (
                     <label
                       key={index}
@@ -5771,6 +5812,7 @@ export function App() {
                           index > 0 &&
                           (!activeMask ||
                             !activeMask.isValid ||
+                            !maskResolutionMatches ||
                             activeMask.maximumAlpha === 0)
                         }
                         checked={
@@ -5817,7 +5859,9 @@ export function App() {
                             : activeMask
                               ? !activeMask.isValid
                                 ? `inválida · ${activeMask.errorCode ?? "erro"}`
-                                : activeMask.maximumAlpha === 0
+                                : !maskResolutionMatches
+                                  ? `${activeMask.width}×${activeMask.height} · esperado ${layer.maskResolution}×${layer.maskResolution} · incompatível`
+                                  : activeMask.maximumAlpha === 0
                                   ? `${activeMask.width}×${activeMask.height} · vazia · alpha 0`
                                   : activeMask.minimumAlpha === 255 &&
                                       activeMask.maximumAlpha === 255
