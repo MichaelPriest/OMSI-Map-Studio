@@ -477,3 +477,13 @@ The viewport layer panel separates **Terrain** from **Terrain paint**. Disabling
 The host reads DDS headers and reports width, height, pixel format, and whether the texture is alpha-only. At this stage, a numbered mask is rendered only after it is validated as **DDS A8 alpha-only**. Other formats remain visible in diagnostics as **not rendered** instead of being guessed.
 
 Terrain caches are bounded to **32 [groundtex] textures** and **96 DDS masks**. **Clear cache** removes object, spline, terrain, and mask textures without unloading the map.
+
+## Terrain DDS-mask validation
+
+Numbered `texture/map/<tile>.map.N.dds` masks are now validated before rendering. The format accepted at this stage is the A8 DDS format observed in real OMSI maps: `DDS ` signature, standard header, 8 bits per pixel, and an 8-bit alpha channel.
+
+For each mask, Core records width, height, minimum/maximum alpha, and real coverage (percentage of pixels with alpha greater than zero). The inspector exposes these values per layer.
+
+Invalid or completely empty masks are not loaded/rendered. Fully opaque masks still apply their layer, but the editor avoids loading an unnecessary `opacityTexture`. This reduces I/O and material cost without changing the visual result.
+
+Base-layer (index 0) visibility is also honored by the editor preview. These visualization options never modify the original map files.

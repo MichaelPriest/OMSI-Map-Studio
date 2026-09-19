@@ -477,3 +477,13 @@ O painel do viewport separa **Terreno** de **Pintura terreno**. Desligar a pintu
 O host lê o cabeçalho DDS e informa largura, altura, formato de pixel e se a textura é alpha-only. Nesta etapa, uma máscara numerada só é usada no render quando foi validada como **DDS A8 alpha-only**. Formatos diferentes permanecem visíveis no diagnóstico como **não renderizados**, em vez de serem interpretados no chute.
 
 Os caches de terreno são limitados: até **32 texturas [groundtex]** e **96 máscaras DDS**. O botão **Limpar cache** remove texturas de objetos, splines, terreno e máscaras sem descarregar o mapa.
+
+## Validação das máscaras DDS de terreno
+
+As máscaras numeradas `texture/map/<tile>.map.N.dds` agora são validadas antes da renderização. O formato aceito nesta etapa é o DDS A8 observado em mapas OMSI reais: assinatura `DDS `, cabeçalho padrão, 8 bits por pixel e canal alpha de 8 bits.
+
+Para cada máscara o Core registra largura, altura, alpha mínimo/máximo e cobertura real (percentual de pixels com alpha maior que zero). O inspetor exibe esses dados por camada.
+
+Máscaras inválidas ou completamente vazias não são carregadas/renderizadas. Máscaras 100% opacas continuam aplicando a camada, mas o editor evita carregar um `opacityTexture` desnecessário. Isso reduz I/O e uso de material sem mudar o resultado visual.
+
+A visibilidade da camada base (índice 0) também é respeitada no preview do editor. O arquivo original do mapa nunca é modificado por essas opções de visualização.

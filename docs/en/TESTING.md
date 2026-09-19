@@ -357,3 +357,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 8. navigate through enough tiles to exceed the mask cache and verify the editor remains stable and reloads evicted assets when needed;
 9. click **Clear cache** and verify progressive repopulation without unloading the map;
 10. verify no `.dds`, `.terrain`, `.rdy`, or `global.cfg` file is modified.
+
+## DDS mask validation/coverage test
+
+1. open a map with `tile.map.N.dds` files and select a painted tile;
+2. verify the inspector reports resolution, coverage, and alpha range for each valid mask;
+3. verify an empty A8 mask is reported as empty and creates no visual layer;
+4. verify a fully opaque mask paints the whole layer without requiring an additional opacity texture;
+5. test a truncated or unsupported DDS in a test map and verify it is marked invalid without preventing the map from opening;
+6. hide base layer 0 using the visibility control and verify the base texture disappears while terrain relief remains;
+7. re-enable layer 0 and verify immediate restoration;
+8. switch tiles in 3×3 mode and verify empty masks do not enter the cache and only required masks are loaded.

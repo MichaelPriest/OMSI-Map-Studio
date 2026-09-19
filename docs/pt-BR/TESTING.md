@@ -357,3 +357,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 8. navegue por tiles suficientes para exceder o cache de máscaras e confirme que o editor continua estável, recarregando assets removidos quando necessário;
 9. clique **Limpar cache** e confirme repovoamento progressivo sem descarregar o mapa;
 10. confirme que nenhum `.dds`, `.terrain`, `.rdy` ou `global.cfg` é modificado.
+
+## Teste de validação/cobertura das máscaras DDS
+
+1. abra um mapa com `tile.map.N.dds` e selecione um tile que possua pintura;
+2. confirme no inspetor resolução, cobertura e faixa alpha de cada máscara válida;
+3. confirme que uma máscara A8 vazia aparece como vazia e não gera camada visual;
+4. confirme que máscara 100% opaca pinta toda a camada sem depender de textura de opacidade adicional;
+5. teste um DDS truncado ou de formato não suportado em um mapa de teste e confirme que é marcado como inválido sem impedir a abertura do mapa;
+6. desligue a camada base 0 no controle de visibilidade e confirme que a textura base some, mantendo o relevo;
+7. reative a camada 0 e confirme restauração imediata;
+8. alterne entre tiles no modo 3×3 e confirme que máscaras vazias não entram no cache e somente as necessárias são carregadas.
