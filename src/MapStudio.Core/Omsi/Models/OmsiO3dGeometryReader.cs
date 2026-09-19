@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 
 namespace MapStudio.Core.Omsi.Models;
@@ -80,6 +81,7 @@ public sealed class OmsiO3dGeometryReader
                 Array.Empty<OmsiO3dMaterial>();
 
             uint vertexCount = 0;
+            Matrix4x4? fileTransform = null;
 
             while (stream.Position < stream.Length)
             {
@@ -232,11 +234,30 @@ public sealed class OmsiO3dGeometryReader
                         break;
 
                     case TransformSection:
-                        if (!TrySkip(stream, 64))
+                        if (!HasRemaining(stream, 64))
                         {
                             return OmsiO3dGeometry.Error(
                                 "invalidTransformSection");
                         }
+
+                        fileTransform =
+                            new Matrix4x4(
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle(),
+                                reader.ReadSingle());
                         break;
 
                     default:
@@ -253,6 +274,78 @@ public sealed class OmsiO3dGeometryReader
             {
                 return OmsiO3dGeometry.Error(
                     "noRenderableGeometry");
+            }
+
+            if (fileTransform is Matrix4x4 transform)
+            {
+                if (!Matrix4x4.Invert(
+                        transform,
+                        out var inverseTransform))
+                {
+                    return OmsiO3dGeometry.Error(
+                        "invalidTransformMatrix");
+                }
+
+                var axisSwap =
+                    new Matrix4x4(
+                        1, 0, 0, 0,
+                        0, 0, 1, 0,
+                        0, 1, 0, 0,
+                        0, 0, 0, 1);
+
+                var convertedTransform =
+                    axisSwap *
+                    inverseTransform *
+                    axisSwap;
+
+                for (
+                    var vertexIndex = 0;
+                    vertexIndex <
+                        checked((int)vertexCount);
+                    vertexIndex++)
+                {
+                    var offset =
+                        vertexIndex * 3;
+
+                    var position =
+                        Vector3.Transform(
+                            new Vector3(
+                                positions[offset],
+                                positions[offset + 1],
+                                positions[offset + 2]),
+                            convertedTransform);
+
+                    positions[offset] =
+                        position.X;
+                    positions[offset + 1] =
+                        position.Y;
+                    positions[offset + 2] =
+                        position.Z;
+
+                    var normal =
+                        Vector3.TransformNormal(
+                            new Vector3(
+                                normals[offset],
+                                normals[offset + 1],
+                                normals[offset + 2]),
+                            convertedTransform);
+
+                    if (
+                        normal.LengthSquared() >
+                        0.0000001f)
+                    {
+                        normal =
+                            Vector3.Normalize(
+                                normal);
+                    }
+
+                    normals[offset] =
+                        normal.X;
+                    normals[offset + 1] =
+                        normal.Y;
+                    normals[offset + 2] =
+                        normal.Z;
+                }
             }
 
             foreach (var index in indices)
