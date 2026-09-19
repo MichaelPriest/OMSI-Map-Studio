@@ -4026,6 +4026,12 @@ public partial class MainWindow : Window
                 Path.GetExtension(fullPath)
                     .ToLowerInvariant();
 
+            var ddsMetadata =
+                extension == ".dds"
+                    ? OmsiDdsTextureMetadataReader
+                        .TryRead(bytes)
+                    : null;
+
             PostMessage(new
             {
                 type = "textureAssetLoaded",
@@ -4040,6 +4046,14 @@ public partial class MainWindow : Window
                     mimeType =
                         GetTextureMimeType(
                             extension),
+                    width =
+                        ddsMetadata?.Width,
+                    height =
+                        ddsMetadata?.Height,
+                    pixelFormat =
+                        ddsMetadata?.Format,
+                    alphaOnly =
+                        ddsMetadata?.AlphaOnly,
                     errorCode =
                         (string?)null
                 }
@@ -4082,6 +4096,14 @@ public partial class MainWindow : Window
                     (string?)null,
                 mimeType =
                     (string?)null,
+                width =
+                    (int?)null,
+                height =
+                    (int?)null,
+                pixelFormat =
+                    (string?)null,
+                alphaOnly =
+                    (bool?)null,
                 errorCode
             }
         });
