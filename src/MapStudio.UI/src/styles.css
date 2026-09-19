@@ -930,3 +930,10 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+
+.secondary-action.active-mode {
+  border-color: #ff8a1c;
+  background: linear-gradient(180deg, #b85212, #82380f);
+  color: #fff4e8;
+}

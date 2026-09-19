@@ -79,3 +79,19 @@ Blue spline axes in the active region are clickable. When a spline is selected:
 - when valid `[profilepnt]` pairs exist, the viewport extrudes the spline's real surface along its path.
 
 Geometry uses a neutral material in this alpha. The real texture name is shown in the inspector, but the image is not applied yet.
+
+
+## Map loading modes
+
+The editor now defaults to **Full map**, matching the expected behavior of the standard OMSI editor:
+
+- every declared tile is read;
+- all placed objects remain available;
+- all placed splines remain available;
+- navigation does not discard elements just because they moved outside a 3×3 window;
+- loading uses bounded concurrency and per-tile caching;
+- the UI shows progress by tile count.
+
+The previous 3×3 streaming behavior remains available as **3×3 performance mode**. It is optional and intended for very large maps or lower-memory computers.
+
+Every newly opened map starts in **Full map** mode.

@@ -79,3 +79,19 @@ Os eixos azuis das splines da área ativa são clicáveis. Quando uma spline é 
 - quando existem pares válidos de `[profilepnt]`, o viewport extruda a superfície real da spline ao longo do traçado.
 
 A geometria usa material neutro nesta alpha. O nome real da textura é exibido no inspetor, mas a imagem ainda não é aplicada.
+
+
+## Modos de carregamento do mapa
+
+O comportamento padrão do editor agora é **Mapa completo**, seguindo a expectativa do editor padrão do OMSI:
+
+- todos os tiles declarados são lidos;
+- todos os objetos posicionados são mantidos disponíveis;
+- todas as splines posicionadas são mantidas disponíveis;
+- a navegação não descarta elementos apenas porque ficaram fora de uma janela 3×3;
+- o carregamento usa concorrência limitada e cache por tile;
+- a interface mostra progresso por número de tiles.
+
+O antigo streaming 3×3 continua disponível como **Modo desempenho 3×3**. Ele é opcional e indicado para mapas muito grandes ou computadores com pouca memória.
+
+Ao abrir um mapa novo, o editor sempre começa em **Mapa completo**.
