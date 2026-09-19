@@ -51,6 +51,7 @@ type ViewportProps = {
   showObjects: boolean;
   showSplines: boolean;
   showSplineProfiles: boolean;
+  showAllSplineProfiles: boolean;
   nightPreviewEnabled: boolean;
   cameraAction?: {
     type:
@@ -910,7 +911,7 @@ function getSplineAxisLine(
 
     points.push(
       frame.center.add(
-        new Vector3(0, 0.08, 0)
+        new Vector3(0, 0.16, 0)
       )
     );
   }
@@ -1111,6 +1112,8 @@ function createSelectedSplineProfile(
     material.twoSidedLighting =
       true;
 
+    material.disableLighting = true;
+
     if (surface.textureName) {
       const asset =
         textureAssetsByKey[
@@ -1143,7 +1146,7 @@ function createSelectedSplineProfile(
   }
 }
 
-const maxMapSplineProfiles = 120;
+const maxMapSplineProfiles = 500;
 const mapSplineProfileTileRadius = 1;
 
 function createMapSplineProfiles(
@@ -1162,7 +1165,8 @@ function createMapSplineProfiles(
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
-  >
+  >,
+  showAllSplineProfiles: boolean
 ) {
   let rendered = 0;
 
@@ -1176,6 +1180,7 @@ function createMapSplineProfiles(
       splines[splineIndex];
 
     if (
+      !showAllSplineProfiles &&
       activeTile &&
       Math.max(
         Math.abs(
@@ -2269,6 +2274,7 @@ export function Viewport({
   showObjects,
   showSplines,
   showSplineProfiles,
+  showAllSplineProfiles,
   nightPreviewEnabled,
   cameraAction,
   placementAssetPath,
@@ -2644,7 +2650,8 @@ export function Viewport({
             activeTile,
             selectedSpline,
             splineProfilesByPath,
-            textureAssetsByKey
+            textureAssetsByKey,
+            showAllSplineProfiles
           );
         }
 
@@ -3857,6 +3864,7 @@ export function Viewport({
     showObjects,
     showSplines,
     showSplineProfiles,
+    showAllSplineProfiles,
     nightPreviewEnabled,
     cameraAction,
     placementAssetPath,

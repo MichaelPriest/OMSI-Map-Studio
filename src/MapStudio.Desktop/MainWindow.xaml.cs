@@ -3,6 +3,7 @@ using System.IO;
 using System.Globalization;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
@@ -4026,11 +4027,35 @@ public partial class MainWindow : Window
                 Path.GetExtension(fullPath)
                     .ToLowerInvariant();
 
+            var sourceExtension =
+                extension;
+
             var ddsMetadata =
                 extension == ".dds"
                     ? OmsiDdsTextureMetadataReader
                         .TryRead(bytes)
                     : null;
+
+            int? width = ddsMetadata?.Width;
+            int? height = ddsMetadata?.Height;
+            string? pixelFormat = ddsMetadata?.Format;
+            bool? alphaOnly = ddsMetadata?.AlphaOnly;
+
+            if (
+                extension == ".bmp" &&
+                TryTranscodeBmpToPng(
+                    bytes,
+                    out var pngBytes,
+                    out var bitmapWidth,
+                    out var bitmapHeight))
+            {
+                bytes = pngBytes;
+                extension = ".png";
+                width = bitmapWidth;
+                height = bitmapHeight;
+                pixelFormat = "BMP→PNG";
+                alphaOnly = false;
+            }
 
             PostMessage(new
             {
@@ -4043,17 +4068,14 @@ public partial class MainWindow : Window
                         Convert.ToBase64String(
                             bytes),
                     extension,
+                    sourceExtension,
                     mimeType =
                         GetTextureMimeType(
                             extension),
-                    width =
-                        ddsMetadata?.Width,
-                    height =
-                        ddsMetadata?.Height,
-                    pixelFormat =
-                        ddsMetadata?.Format,
-                    alphaOnly =
-                        ddsMetadata?.AlphaOnly,
+                    width,
+                    height,
+                    pixelFormat,
+                    alphaOnly,
                     errorCode =
                         (string?)null
                 }
@@ -4094,6 +4116,8 @@ public partial class MainWindow : Window
                     (string?)null,
                 extension =
                     (string?)null,
+                sourceExtension =
+                    (string?)null,
                 mimeType =
                     (string?)null,
                 width =
@@ -4107,6 +4131,60 @@ public partial class MainWindow : Window
                 errorCode
             }
         });
+    }
+
+    private static bool
+        TryTranscodeBmpToPng(
+            byte[] source,
+            out byte[] pngBytes,
+            out int width,
+            out int height)
+    {
+        pngBytes = source;
+        width = 0;
+        height = 0;
+
+        try
+        {
+            using var input =
+                new MemoryStream(
+                    source,
+                    writable: false);
+
+            var decoder =
+                BitmapDecoder.Create(
+                    input,
+                    BitmapCreateOptions
+                        .PreservePixelFormat,
+                    BitmapCacheOption.OnLoad);
+
+            if (decoder.Frames.Count == 0)
+            {
+                return false;
+            }
+
+            var frame = decoder.Frames[0];
+            var encoder =
+                new PngBitmapEncoder();
+
+            encoder.Frames.Add(
+                BitmapFrame.Create(frame));
+
+            using var output =
+                new MemoryStream();
+
+            encoder.Save(output);
+
+            pngBytes = output.ToArray();
+            width = frame.PixelWidth;
+            height = frame.PixelHeight;
+
+            return pngBytes.Length > 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static string

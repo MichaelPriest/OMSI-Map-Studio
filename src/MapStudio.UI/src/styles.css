@@ -1621,3 +1621,82 @@ code {
   color: #6b8aa4;
   font-size: 8px;
 }
+
+
+/* Immersive fullscreen editor */
+.studio-shell.is-fullscreen { grid-template-columns: minmax(0, 1fr); }
+.studio-shell.is-fullscreen > .studio-sidebar,
+.studio-shell.is-fullscreen .studio-topbar { display: none; }
+.studio-shell.is-fullscreen .studio-main { grid-template-rows: minmax(0, 1fr); }
+.studio-shell.is-fullscreen .studio-content { height: 100%; }
+.fullscreen-editor { grid-template-rows: minmax(0, 1fr); }
+.fullscreen-editor > .editor-titlebar,
+.fullscreen-editor > .editor-menubar,
+.fullscreen-editor > .editor-toolbar,
+.fullscreen-editor > .editor-statusbar { display: none; }
+.fullscreen-editor .editor-grid {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+}
+.fullscreen-editor .editor-viewport { grid-column: 1; grid-row: 1; }
+.fullscreen-editor .viewport-toolbar,
+.fullscreen-editor .viewport-layers { display: none; }
+.fullscreen-editor .fullscreen-drawer { display: none; }
+.fullscreen-editor .fullscreen-drawer.open {
+  position: absolute;
+  z-index: 30;
+  top: 64px;
+  bottom: 48px;
+  display: grid;
+  width: min(360px, calc(100% - 32px));
+  border: 1px solid #28618d;
+  border-radius: 10px;
+  background: rgb(6 20 32 / 97%);
+  box-shadow: 0 22px 60px rgb(0 0 0 / 48%);
+  backdrop-filter: blur(12px);
+}
+.fullscreen-editor .fullscreen-left.open { left: 16px; }
+.fullscreen-editor .fullscreen-right.open { right: 16px; display: block; overflow: auto; }
+.fullscreen-drawer-close {
+  position: absolute; z-index: 3; top: 5px; right: 6px;
+  display: grid; width: 24px; height: 24px; place-items: center;
+  padding: 0; border-color: #315d7d; background: #0b2031;
+  color: #bdd7e9; font-size: 15px;
+}
+.fullscreen-tool-dock {
+  position: absolute; z-index: 25; top: 12px; left: 50%;
+  display: flex; max-width: calc(100% - 28px); align-items: center;
+  gap: 6px; padding: 6px; overflow-x: auto;
+  border: 1px solid #275b80; border-radius: 10px;
+  background: rgb(5 18 29 / 92%);
+  box-shadow: 0 14px 42px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(12px); transform: translateX(-50%);
+}
+.fullscreen-tool-group { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; }
+.fullscreen-tool-group button {
+  display: inline-flex; min-width: 31px; height: 31px; align-items: center;
+  justify-content: center; gap: 5px; padding: 0 8px;
+  border-color: #234966; background: #0a1d2c; color: #c5d8e8; font-size: 10px;
+}
+.fullscreen-tool-group.compact button { padding: 0 7px; }
+.fullscreen-tool-group button span { color: #7899b3; font-size: 8px; }
+.fullscreen-tool-group button.active { border-color: #1784ff; background: #096ee1; color: #fff; }
+.fullscreen-tool-group button.active span { color: #d9edff; }
+.fullscreen-tool-group button.save:not(:disabled) { border-color: #258354; background: #125b3b; color: #e5fff0; }
+.fullscreen-tool-group button.exit { border-color: #7a4e2a; color: #ffd7b0; }
+.fullscreen-tool-divider { flex: 0 0 auto; width: 1px; height: 23px; background: #24455f; }
+.fullscreen-shortcuts {
+  position: absolute; z-index: 20; right: 14px; bottom: 12px;
+  display: flex; max-width: calc(100% - 28px); align-items: center;
+  gap: 8px; padding: 6px 9px; overflow-x: auto;
+  border: 1px solid #1d4665; border-radius: 8px;
+  background: rgb(5 18 29 / 88%); color: #7694ad;
+  font-size: 8px; white-space: nowrap; backdrop-filter: blur(8px);
+}
+.fullscreen-shortcuts strong { color: #b9d5e9; font-size: 8px; }
+@media (max-width: 1100px) {
+  .fullscreen-tool-dock { left: 12px; right: 12px; transform: none; }
+  .fullscreen-shortcuts { left: 12px; right: 12px; }
+}

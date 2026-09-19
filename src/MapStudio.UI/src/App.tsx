@@ -104,9 +104,9 @@ const defaultPlacementTransform:
   };
 
 const nearbyObjectPathLimit = 64;
-const nearbySplinePathLimit = 12;
+const nearbySplinePathLimit = 48;
 const autoObjectTextureLimit = 16;
-const autoSplineTextureLimit = 8;
+const autoSplineTextureLimit = 24;
 const autoObjectTextureBatch = 4;
 const autoSplineTextureBatch = 2;
 const autoTextureLimit =
@@ -424,6 +424,19 @@ export function App() {
     isFullScreen,
     setIsFullScreen
   ] = useState(false);
+
+  const [
+    fullScreenPanel,
+    setFullScreenPanel
+  ] = useState<
+    "explorer" | "inspector" | undefined
+  >();
+
+  useEffect(() => {
+    if (!isFullScreen) {
+      setFullScreenPanel(undefined);
+    }
+  }, [isFullScreen]);
 
   const [
     previewObjectTransforms,
@@ -779,7 +792,13 @@ export function App() {
     Boolean(loadingGeometryFor) ||
     Boolean(preloadingGeometryFor) ||
     loadingSceneryLibrary ||
-    loadingSplineLibrary;
+    loadingSplineLibrary ||
+    Object.keys(
+      requestedGroundTextureKeys
+    ).length > 0 ||
+    Object.keys(
+      requestedTerrainMaskKeys
+    ).length > 0;
 
   useEffect(() => {
     if (!interactionLocked) {
@@ -2627,6 +2646,42 @@ export function App() {
       splinesForViewport
     ]);
 
+  const splinePathsForPreload =
+    useMemo(
+      () =>
+        mapLoadMode === "full"
+          ? Array.from(
+              new Set(
+                splinesForViewport.map(
+                  (placedSpline) =>
+                    placedSpline.splinePath
+                )
+              )
+            )
+          : nearbySplinePaths,
+      [
+        mapLoadMode,
+        nearbySplinePaths,
+        splinesForViewport
+      ]
+    );
+
+  const loadedSplineProfileCount =
+    useMemo(
+      () =>
+        splinePathsForPreload.filter(
+          (path) =>
+            Object.hasOwn(
+              splineProfilesByPath,
+              path
+            )
+        ).length,
+      [
+        splinePathsForPreload,
+        splineProfilesByPath
+      ]
+    );
+
   useEffect(() => {
     if (
       !bridgeAvailable ||
@@ -2637,7 +2692,7 @@ export function App() {
     }
 
     const nextPath =
-      nearbySplinePaths.find(
+      splinePathsForPreload.find(
         (path) =>
           !Object.hasOwn(
             splineProfilesByPath,
@@ -2657,8 +2712,8 @@ export function App() {
   }, [
     bridgeAvailable,
     loadingSplineFor,
-    nearbySplinePaths,
     preloadingSplineProfileFor,
+    splinePathsForPreload,
     splineProfilesByPath
   ]);
 
@@ -2847,7 +2902,7 @@ export function App() {
       }> = [];
 
     for (const splinePath of
-      nearbySplinePaths) {
+      splinePathsForPreload) {
       if (
         splineRequests.length >=
           splineBudget
@@ -2969,9 +3024,9 @@ export function App() {
     bridgeAvailable,
     geometryByPath,
     nearbyObjectPaths,
-    nearbySplinePaths,
     nightPreviewEnabled,
     requestedTextureKeys,
+    splinePathsForPreload,
     splineProfilesByPath,
     textureAssetsByKey
   ]);
@@ -3754,10 +3809,20 @@ export function App() {
             ?.replace(".", "")
             .toUpperCase();
 
+        const sourceExtension =
+          textureAsset.sourceExtension
+            ?.replace(".", "")
+            .toUpperCase();
+
         return {
-          label: extension
-            ? `Carregada · ${extension}`
-            : "Carregada",
+          label:
+            extension &&
+            sourceExtension &&
+            extension !== sourceExtension
+              ? `Carregada · ${extension} (origem ${sourceExtension})`
+              : extension
+                ? `Carregada · ${extension}`
+                : "Carregada",
           tone: "loaded"
         } as const;
       }
@@ -5294,7 +5359,28 @@ export function App() {
       return {
         title: "Preparando perfis de spline",
         detail:
-          "Lendo os arquivos SLI reais necessários para o mapa."
+          mapLoadMode === "full"
+            ? "Lendo todos os perfis SLI reais usados pelo mapa completo."
+            : "Lendo os perfis SLI reais necessários para a área ativa.",
+        completed:
+          loadedSplineProfileCount,
+        total:
+          splinePathsForPreload.length
+      };
+    }
+
+    if (
+      Object.keys(
+        requestedGroundTextureKeys
+      ).length > 0 ||
+      Object.keys(
+        requestedTerrainMaskKeys
+      ).length > 0
+    ) {
+      return {
+        title: "Carregando terreno",
+        detail:
+          "Preparando texturas reais [groundtex] e máscaras DDS do terreno antes de liberar a edição."
       };
     }
 
@@ -7141,7 +7227,13 @@ export function App() {
     }
 
     return (
-      <section className="map-editor">
+      <section
+        className={
+          isFullScreen
+            ? "map-editor fullscreen-editor"
+            : "map-editor"
+        }
+      >
         <div className="editor-titlebar">
           <div>
             <strong>
@@ -7462,7 +7554,32 @@ export function App() {
         </div>
 
         <div className="editor-grid">
-          <aside className="map-explorer">
+          <aside
+            className={[
+              "map-explorer",
+              isFullScreen
+                ? "fullscreen-drawer fullscreen-left"
+                : "",
+              isFullScreen &&
+              fullScreenPanel === "explorer"
+                ? "open"
+                : ""
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {isFullScreen && (
+              <button
+                type="button"
+                className="fullscreen-drawer-close"
+                onClick={() =>
+                  setFullScreenPanel(undefined)
+                }
+                title="Fechar painel"
+              >
+                ×
+              </button>
+            )}
             <div className="explorer-tabs">
               <button
                 type="button"
@@ -7948,6 +8065,51 @@ export function App() {
           </aside>
 
           <section className="editor-viewport">
+            {isFullScreen && (
+              <>
+                <div className="fullscreen-tool-dock">
+                  <div className="fullscreen-tool-group">
+                    <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)">↖ <span>Q</span></button>
+                    <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)">✥ <span>W</span></button>
+                    <button type="button" className={editorTool === "rotate" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("rotate")} title="Rotacionar (E)">⟳ <span>E</span></button>
+                    <button type="button" onClick={() => requestCameraAction("fit")} title="Enquadrar mapa (Home)">⛶</button>
+                    <button type="button" disabled={!selectedObject && !selectedSpline} onClick={() => requestCameraAction("focus")} title="Focar seleção (F)">◎ <span>F</span></button>
+                  </div>
+                  <div className="fullscreen-tool-divider" />
+                  <div className="fullscreen-tool-group">
+                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("map"); }} title="Abrir Explorador">☰ <span>Explorar</span></button>
+                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("library"); }} title="Criar/colocar objeto real">＋ <span>Objeto</span></button>
+                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("splineLibrary"); }} title="Criar/colocar spline real">⌇＋ <span>Spline</span></button>
+                    <button type="button" onClick={() => setFullScreenPanel((current) => current === "inspector" ? undefined : "inspector")} title="Abrir Inspetor">ⓘ <span>Inspetor</span></button>
+                  </div>
+                  <div className="fullscreen-tool-divider" />
+                  <div className="fullscreen-tool-group">
+                    <button type="button" className={snapEnabled ? "active" : ""} onClick={() => setSnapEnabled((current) => !current)} title="Snap (N)">N</button>
+                    <button type="button" disabled={undoPreviewStack.length === 0} onClick={handleUndoPreview} title="Desfazer (Ctrl+Z)">↶</button>
+                    <button type="button" disabled={redoPreviewStack.length === 0} onClick={handleRedoPreview} title="Refazer (Ctrl+Y)">↷</button>
+                    <button type="button" className="save" disabled={(previewEditCount === 0 && splinePreviewEditCount === 0) || busy} onClick={splinePreviewEditCount > 0 ? handleSaveSplinePreview : handleSavePreviewEdits} title="Salvar com backup (Ctrl+S)">✓ <span>Salvar</span></button>
+                  </div>
+                  <div className="fullscreen-tool-divider" />
+                  <div className="fullscreen-tool-group compact">
+                    <button type="button" className={showTerrain ? "active" : ""} onClick={() => setShowTerrain((current) => !current)} title="Terreno">T</button>
+                    <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((current) => !current)} title="Grade (G)">G</button>
+                    <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)">O</button>
+                    <button type="button" className={showSplines ? "active" : ""} onClick={() => setShowSplines((current) => !current)} title="Splines (L)">L</button>
+                    <button type="button" className={showSplineProfiles ? "active" : ""} onClick={() => setShowSplineProfiles((current) => !current)} title="Perfis reais das splines">P</button>
+                    <button type="button" className="exit" onClick={() => setFullScreen(false)} title="Sair da tela cheia (F11/Esc)">⤡</button>
+                  </div>
+                </div>
+                <div className="fullscreen-shortcuts">
+                  <strong>Atalhos</strong>
+                  <span>Q selecionar</span><span>W mover</span><span>E rotacionar</span>
+                  <span>1 perspectiva</span><span>2 topo</span><span>N snap</span>
+                  <span>F foco</span><span>Home enquadrar</span><span>G grade</span>
+                  <span>O objetos</span><span>L splines</span><span>Ctrl+S salvar</span>
+                  <span>Ctrl+Z/Y desfazer/refazer</span><span>RMB orbitar</span>
+                  <span>MMB deslocar</span><span>roda zoom</span>
+                </div>
+              </>
+            )}
             <Viewport
               tiles={activeTiles}
               cameraStateKey={
@@ -7986,6 +8148,9 @@ export function App() {
               showSplines={showSplines}
               showSplineProfiles={
                 showSplineProfiles
+              }
+              showAllSplineProfiles={
+                mapLoadMode === "full"
               }
               nightPreviewEnabled={
                 nightPreviewEnabled
@@ -8710,7 +8875,32 @@ export function App() {
 
           </section>
 
-          <aside className="object-inspector">
+          <aside
+            className={[
+              "object-inspector",
+              isFullScreen
+                ? "fullscreen-drawer fullscreen-right"
+                : "",
+              isFullScreen &&
+              fullScreenPanel === "inspector"
+                ? "open"
+                : ""
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            {isFullScreen && (
+              <button
+                type="button"
+                className="fullscreen-drawer-close"
+                onClick={() =>
+                  setFullScreenPanel(undefined)
+                }
+                title="Fechar painel"
+              >
+                ×
+              </button>
+            )}
             <div className="inspector-heading">
               <strong>Inspetor</strong>
               <span>
@@ -8832,11 +9022,18 @@ export function App() {
 
   return (
     <main
-      className={
+      className={[
+        "studio-shell",
         interactionLocked
-          ? "studio-shell interaction-locked"
-          : "studio-shell"
-      }
+          ? "interaction-locked"
+          : "",
+        isFullScreen &&
+        view === "editor"
+          ? "is-fullscreen"
+          : ""
+      ]
+        .filter(Boolean)
+        .join(" ")}
       aria-busy={interactionLocked}
     >
       {renderNav()}
