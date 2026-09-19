@@ -1172,7 +1172,7 @@ function createSelectedSplineProfile(
             .add(
               new Vector3(
                 0,
-                point.z + 0.03,
+                point.z + 0.08,
                 0
               )
             );
@@ -2245,6 +2245,52 @@ function updateObjectLod(
   }
 }
 
+function getHorizontalSurfaceRenderLift(
+  positions: number[]
+) {
+  if (positions.length < 9) {
+    return 0;
+  }
+
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  let minZ = Number.POSITIVE_INFINITY;
+  let maxZ = Number.NEGATIVE_INFINITY;
+
+  for (
+    let index = 0;
+    index + 2 < positions.length;
+    index += 3
+  ) {
+    const x = positions[index];
+    const y = positions[index + 1];
+    const z = positions[index + 2];
+
+    minX = Math.min(minX, x);
+    maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y);
+    maxY = Math.max(maxY, y);
+    minZ = Math.min(minZ, z);
+    maxZ = Math.max(maxZ, z);
+  }
+
+  const verticalSpan = maxY - minY;
+  const horizontalSpan =
+    Math.max(
+      maxX - minX,
+      maxZ - minZ
+    );
+
+  return (
+    verticalSpan <= 0.12 &&
+    horizontalSpan >= 2
+  )
+    ? 0.06
+    : 0;
+}
+
 function createGeometryMeshes(
   scene: Scene,
   namePrefix: string,
@@ -2527,11 +2573,25 @@ function createGeometryMeshes(
       // O3D is already Y-up, just like Babylon, so these transforms
       // must stay on their native axes. Only the placed [object]
       // container converts OMSI map Z-up coordinates to the viewport.
+      const renderLift =
+        getHorizontalSurfaceRenderLift(
+          meshGeometry.positions
+        );
+
       mesh.position.set(
         meshTransform.positionX,
-        meshTransform.positionY,
+        meshTransform.positionY +
+          renderLift,
         meshTransform.positionZ
       );
+
+      if (renderLift > 0) {
+        mesh.metadata = {
+          ...(mesh.metadata ?? {}),
+          mapStudioRenderLift:
+            renderLift
+        };
+      }
 
       mesh.scaling.set(
         meshTransform.scaleX,
@@ -4046,6 +4106,86 @@ export function Viewport({
       | { x: number; y: number }
       | undefined;
 
+    let lastMapItemClick:
+      | {
+          kind: "object" | "spline";
+          item:
+            | OmsiPlacedObject
+            | OmsiPlacedSpline;
+          at: number;
+        }
+      | undefined;
+
+    const isRepeatedMapItemClick = (
+      kind: "object" | "spline",
+      item:
+        | OmsiPlacedObject
+        | OmsiPlacedSpline
+    ) => {
+      const now = performance.now();
+
+      const repeated =
+        lastMapItemClick?.kind === kind &&
+        lastMapItemClick.item === item &&
+        now - lastMapItemClick.at <=
+          450;
+
+      lastMapItemClick = {
+        kind,
+        item,
+        at: now
+      };
+
+      return repeated;
+    };
+
+    const focusPlacedObject = (
+      placedObject: OmsiPlacedObject
+    ) => {
+      camera.setTarget(
+        getObjectWorldPosition(
+          placedObject,
+          objectGeometryByPath[
+            placedObject
+              .sceneryObjectPath
+          ],
+          tiles
+        )
+      );
+
+      camera.radius =
+        clampCameraRadius(
+          usesWorldCoordinates
+            ? 4
+            : 55
+        );
+    };
+
+    const focusPlacedSpline = (
+      placedSpline: OmsiPlacedSpline
+    ) => {
+      camera.setTarget(
+        getSplineFrame(
+          placedSpline,
+          placedSpline.length / 2
+        ).center
+      );
+
+      camera.radius =
+        clampCameraRadius(
+          usesWorldCoordinates
+            ? 4
+            : Math.max(
+                40,
+                Math.min(
+                  180,
+                  placedSpline.length *
+                    1.5
+                )
+              )
+        );
+    };
+
     let navigationPointer:
       | {
           pointerId: number;
@@ -4314,129 +4454,6 @@ export function Viewport({
       event.preventDefault();
     };
 
-    const handleDoubleClick = (
-      event: MouseEvent
-    ) => {
-      if (
-        usesWorldCoordinates ||
-        placementAssetPath ||
-        splinePlacementTemplate
-      ) {
-        return;
-      }
-
-      const rect =
-        canvas.getBoundingClientRect();
-
-      const pointerX =
-        (event.clientX - rect.left) *
-        (engine.getRenderWidth() /
-          rect.width);
-
-      const pointerY =
-        (event.clientY - rect.top) *
-        (engine.getRenderHeight() /
-          rect.height);
-
-      const picked =
-        scene.pick(
-          pointerX,
-          pointerY,
-          (mesh) =>
-            mesh.isPickable &&
-            (
-              mesh.metadata
-                ?.mapStudioKind ===
-                "object" ||
-              mesh.metadata
-                ?.mapStudioKind ===
-                "spline"
-            ),
-          false,
-          camera
-        );
-
-      if (
-        !picked?.hit ||
-        !picked.pickedMesh
-      ) {
-        return;
-      }
-
-      if (
-        picked.pickedMesh.metadata
-          ?.mapStudioKind ===
-        "object"
-      ) {
-        const placedObject =
-          picked.pickedMesh.metadata
-            .placedObject as
-              | OmsiPlacedObject
-              | undefined;
-
-        if (!placedObject) {
-          return;
-        }
-
-        onSelectSpline(undefined);
-        onSelectObject(placedObject);
-
-        camera.setTarget(
-          getObjectWorldPosition(
-            placedObject,
-            objectGeometryByPath[
-              placedObject
-                .sceneryObjectPath
-            ],
-            tiles
-          )
-        );
-
-        camera.radius =
-          clampCameraRadius(
-            usesWorldCoordinates
-              ? 4
-              : 55
-          );
-
-        return;
-      }
-
-      const placedSpline =
-        picked.pickedMesh.metadata
-          ?.placedSpline as
-            | OmsiPlacedSpline
-            | undefined;
-
-      if (!placedSpline) {
-        return;
-      }
-
-      onSelectObject(undefined);
-      onSelectSpline(placedSpline);
-
-      camera.setTarget(
-        getSplineFrame(
-          placedSpline,
-          placedSpline.length / 2
-        ).center
-      );
-
-      camera.radius =
-        clampCameraRadius(
-          usesWorldCoordinates
-            ? 4
-            : Math.max(
-                40,
-                Math.min(
-                  180,
-                  placedSpline.length *
-                    1.5
-                )
-              )
-        );
-    };
-
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -4636,8 +4653,21 @@ export function Viewport({
               | undefined;
 
         if (placedObject) {
+          const shouldFocus =
+            isRepeatedMapItemClick(
+              "object",
+              placedObject
+            );
+
           onSelectSpline(undefined);
           onSelectObject(placedObject);
+
+          if (shouldFocus) {
+            focusPlacedObject(
+              placedObject
+            );
+          }
+
           return;
         }
       }
@@ -4654,8 +4684,21 @@ export function Viewport({
               | undefined;
 
         if (placedSpline) {
+          const shouldFocus =
+            isRepeatedMapItemClick(
+              "spline",
+              placedSpline
+            );
+
           onSelectObject(undefined);
           onSelectSpline(placedSpline);
+
+          if (shouldFocus) {
+            focusPlacedSpline(
+              placedSpline
+            );
+          }
+
           return;
         }
       }
@@ -4702,8 +4745,21 @@ export function Viewport({
       }
 
       if (selected) {
+        const shouldFocus =
+          isRepeatedMapItemClick(
+            "object",
+            selected
+          );
+
         onSelectSpline(undefined);
         onSelectObject(selected);
+
+        if (shouldFocus) {
+          focusPlacedObject(
+            selected
+          );
+        }
+
         return;
       }
 
@@ -4838,10 +4894,6 @@ export function Viewport({
       "contextmenu",
       handleContextMenu
     );
-    canvas.addEventListener(
-      "dblclick",
-      handleDoubleClick
-    );
 
     const refreshObjectLods =
       () => {
@@ -4923,10 +4975,6 @@ export function Viewport({
         "contextmenu",
         handleContextMenu
       );
-      canvas.removeEventListener(
-        "dblclick",
-        handleDoubleClick
-      );
       window.removeEventListener("resize", resize);
 
       if (lodObserver) {
@@ -4989,7 +5037,7 @@ export function Viewport({
       className="viewport-canvas"
       tabIndex={0}
       aria-label="Viewport 3D do editor"
-      title="Clique seleciona objeto/spline · duplo clique seleciona e centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
+      title="Clique seleciona objeto/spline · segundo clique rápido no mesmo item centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
     />
   );
 }
