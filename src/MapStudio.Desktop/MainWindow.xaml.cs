@@ -81,20 +81,6 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-
-        try
-        {
-            Icon =
-                BitmapFrame.Create(
-                    new Uri(
-                        "pack://application:,,,/MapStudio.Desktop;component/Assets/MapStudio.ico",
-                        UriKind.Absolute));
-        }
-        catch
-        {
-            // The compiled Win32 icon remains the fallback.
-        }
-
         Loaded += OnLoaded;
     }
 
