@@ -11,6 +11,7 @@ import {
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
+  saveObjectTransforms,
   selectMap,
   selectOmsiRoot,
   subscribeToHost,
@@ -76,6 +77,10 @@ const errorMessages: Record<string, string> = {
     "A spline solicitada não pertence à área atualmente carregada.",
   invalidSplinePath:
     "A referência da spline não pôde ser resolvida com segurança na pasta Splines.",
+  saveConflict:
+    "O arquivo do mapa mudou ou o objeto não corresponde mais à versão aberta. O salvamento foi cancelado para proteger o mapa.",
+  saveError:
+    "Não foi possível salvar as alterações. O backup criado foi mantido quando possível.",
   mapOpenError:
     "Não foi possível abrir esse mapa.",
   unexpectedHostError:
@@ -100,6 +105,7 @@ const getPlacedObjectKey = (
     placedObject.tileX,
     placedObject.tileY,
     placedObject.objectId,
+    placedObject.sourceSectionOrdinal,
     placedObject.sceneryObjectPath
   ].join("|");
 
@@ -254,6 +260,12 @@ export function App() {
   const [error, setError] =
     useState<string>();
 
+  const [saving, setSaving] =
+    useState(false);
+
+  const [saveNotice, setSaveNotice] =
+    useState<string>();
+
   useEffect(
     () =>
       subscribeToHost((message) => {
@@ -279,6 +291,8 @@ export function App() {
           setLoadingFullMap(false);
           setFullMapProgress(undefined);
           setLoadedFullMapFor(undefined);
+          setSaving(false);
+          setSaveNotice(undefined);
           setError(undefined);
           setView("map");
           return;
@@ -308,6 +322,8 @@ export function App() {
           setFullMapProgress(undefined);
           setLoadedFullMapFor(undefined);
           setInspectorTab("general");
+          setSaving(false);
+          setSaveNotice(undefined);
           setError(undefined);
           setView("editor");
           return;
@@ -532,6 +548,33 @@ export function App() {
           return;
         }
 
+        if (
+          message.type ===
+          "objectTransformsSaved"
+        ) {
+          setSaving(false);
+          setPreviewObjectTransforms({});
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            `${message.editsSaved} alteração(ões) salva(s) em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
+          );
+
+          if (mapLoadMode === "full") {
+            setLoadedFullMapFor(undefined);
+            setObjects([]);
+            setSplines([]);
+          } else {
+            setLoadedRegionKey(undefined);
+            setObjects([]);
+            setSplines([]);
+          }
+
+          return;
+        }
+
         if (message.type === "hostError") {
           setSelectingRoot(false);
           setSelectingMap(false);
@@ -542,6 +585,7 @@ export function App() {
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
           setPreloadingGeometryFor(undefined);
+          setSaving(false);
 
           setError(
             errorMessages[message.code] ??
@@ -1074,6 +1118,38 @@ export function App() {
       selectedObject
     ]);
 
+  const handleSavePreviewEdits =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        saving
+      ) {
+        return;
+      }
+
+      const edits =
+        Object.values(
+          previewObjectTransforms
+        );
+
+      if (edits.length === 0) {
+        return;
+      }
+
+      setSaving(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      saveObjectTransforms(
+        selectedMap.directoryName,
+        edits
+      );
+    }, [
+      previewObjectTransforms,
+      saving,
+      selectedMap
+    ]);
+
   const requestCameraAction =
     useCallback(
       (type: "fit" | "focus") => {
@@ -1108,6 +1184,23 @@ export function App() {
 
       const key =
         event.key.toLowerCase();
+
+      if (
+        (event.ctrlKey ||
+          event.metaKey) &&
+        key === "s"
+      ) {
+        event.preventDefault();
+
+        if (
+          previewEditCount > 0 &&
+          !saving
+        ) {
+          handleSavePreviewEdits();
+        }
+
+        return;
+      }
 
       if (key === "q") {
         setEditorTool("select");
@@ -1187,7 +1280,10 @@ export function App() {
         handleKeyDown
       );
   }, [
+    handleSavePreviewEdits,
+    previewEditCount,
     requestCameraAction,
+    saving,
     selectedObject,
     selectedSpline
   ]);
@@ -1222,6 +1318,7 @@ export function App() {
   const busy =
     selectingRoot ||
     selectingMap ||
+    saving ||
     loadingFullMap ||
     Boolean(loadingRegionKey);
 
@@ -2406,6 +2503,23 @@ export function App() {
 
           <button
             type="button"
+            className="primary-button editor-save"
+            onClick={
+              handleSavePreviewEdits
+            }
+            disabled={
+              previewEditCount === 0 ||
+              busy
+            }
+            title="Salvar transformações com backup automático (Ctrl+S)"
+          >
+            {saving
+              ? "Salvando..."
+              : `Salvar${previewEditCount > 0 ? ` (${previewEditCount})` : ""}`}
+          </button>
+
+          <button
+            type="button"
             className="secondary-action"
             onClick={handleOpenMap}
             disabled={busy}
@@ -2678,7 +2792,11 @@ export function App() {
           <span>
             {error
               ? "Erro"
-              : loadingFullMap
+              : saving
+                ? "Salvando com backup..."
+                : saveNotice
+                  ? saveNotice
+                  : loadingFullMap
                 ? "Carregando mapa completo..."
                 : Boolean(loadingRegionKey)
                   ? "Carregando área..."

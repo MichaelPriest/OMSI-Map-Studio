@@ -24,6 +24,7 @@ export type OmsiPlacedObject = {
   headerValue: string;
   sceneryObjectPath: string;
   objectId: number;
+  sourceSectionOrdinal: number;
   x: number;
   y: number;
   z: number;
@@ -157,6 +158,13 @@ export type HostMessage =
       target: "omsi" | "map";
     }
   | {
+      type: "objectTransformsSaved";
+      directoryName: string;
+      editsSaved: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
       type: "mapFullLoadingStarted";
       directoryName: string;
       totalTiles: number;
@@ -240,6 +248,37 @@ export function selectOmsiRoot() {
 export function selectMap() {
   getWebView()?.postMessage({
     type: "selectMap"
+  });
+}
+
+export function saveObjectTransforms(
+  directoryName: string,
+  edits: OmsiPlacedObject[]
+) {
+  getWebView()?.postMessage({
+    type: "saveObjectTransforms",
+    directoryName,
+    edits: edits.map(
+      (placedObject) => ({
+        tileX: placedObject.tileX,
+        tileY: placedObject.tileY,
+        sourceSectionOrdinal:
+          placedObject.sourceSectionOrdinal,
+        sceneryObjectPath:
+          placedObject.sceneryObjectPath,
+        objectId:
+          placedObject.objectId,
+        x: placedObject.x,
+        y: placedObject.y,
+        z: placedObject.z,
+        rotation:
+          placedObject.rotation,
+        pitch:
+          placedObject.pitch,
+        bank:
+          placedObject.bank
+      })
+    )
   });
 }
 
