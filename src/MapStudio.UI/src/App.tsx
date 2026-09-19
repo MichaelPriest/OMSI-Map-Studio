@@ -2216,6 +2216,15 @@ export function App() {
             defaultPlacementTransform
       ) => {
         if (
+          splinePreviewEditCount > 0
+        ) {
+          setError(
+            "Salve ou descarte a prévia de spline antes de iniciar uma colocação."
+          );
+          return;
+        }
+
+        if (
           selectedMap
             ?.usesWorldCoordinates
         ) {
@@ -2250,7 +2259,8 @@ export function App() {
       },
       [
         geometryByPath,
-        selectedMap
+        selectedMap,
+        splinePreviewEditCount
       ]
     );
 
@@ -2349,9 +2359,12 @@ export function App() {
         return;
       }
 
-      if (previewEditCount > 0) {
+      if (
+        previewEditCount > 0 ||
+        splinePreviewEditCount > 0
+      ) {
         setError(
-          "Salve ou descarte as prévias de transformação antes de excluir um objeto."
+          "Salve ou descarte todas as prévias de transformação antes de excluir um objeto."
         );
         return;
       }
@@ -2385,6 +2398,7 @@ export function App() {
       placementAsset,
       previewEditCount,
       selectedMap,
+      splinePreviewEditCount,
       selectedObject
     ]);
 
@@ -3064,10 +3078,12 @@ export function App() {
               disabled={
                 busy ||
                 previewEditCount > 0 ||
+                splinePreviewEditCount > 0 ||
                 Boolean(placementAsset)
               }
               title={
-                previewEditCount > 0
+                previewEditCount > 0 ||
+                splinePreviewEditCount > 0
                   ? "Salve ou descarte as prévias antes de excluir"
                   : placementAsset
                     ? "Cancele a colocação atual antes de excluir"

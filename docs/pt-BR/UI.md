@@ -250,3 +250,6 @@ Para evitar perda de trabalho, o comando fica bloqueado enquanto existir prévia
 Ao selecionar uma spline, a aba **Traçado** permite criar uma prévia para X, Y, Z, rotação, comprimento, raio e gradientes inicial/final.
 
 **Salvar spline** persiste a prévia com backup automático. IDs e vínculos **Anterior / Próxima** permanecem somente leitura nesta etapa. A prévia da spline é independente do histórico de desfazer/refazer de objetos e possui **Descartar prévia** próprio.
+
+
+Enquanto existir uma prévia de spline não salva, o editor também bloqueia **Colocar**, **Colocar cópia** e **Excluir objeto**, evitando descarte indireto da prévia ao recarregar o mapa.

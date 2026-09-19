@@ -1286,3 +1286,14 @@ code {
   color: #ffe2bb;
   font-size: 8px;
 }
+
+
+.spline-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.spline-edit-actions > button {
+  flex: 1;
+}

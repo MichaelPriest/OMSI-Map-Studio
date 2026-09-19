@@ -250,3 +250,6 @@ To avoid losing work, the command is disabled while an unsaved transform preview
 When a spline is selected, the **Path** tab can preview X, Y, Z, rotation, length, radius and start/end gradient changes.
 
 **Save spline** persists the preview with an automatic backup. IDs and **Previous / Next** links remain read-only at this stage. Spline preview is separate from the object undo/redo history and has its own **Discard preview** action.
+
+
+While an unsaved spline preview exists, the editor also blocks **Place**, **Place copy** and **Delete object**, preventing an indirect preview loss when the map reloads.
