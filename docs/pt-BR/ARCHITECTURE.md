@@ -506,8 +506,8 @@ O aquecimento de malhas, perfis SLI e texturas volta a exibir uma animação con
 No modo desempenho 3×3, o inspetor passa a mostrar malhas realmente renderizáveis, falhas e pendências da área ativa, em vez de tratar apenas a presença de um payload como sucesso visual.
 
 
-## Prévia segura de O3D protegido
+## O3D protegido no editor próprio
 
-Quando um mesh `.o3d` protegido não pode ser lido diretamente, o host procura somente um arquivo-fonte DirectX `.x` de mesmo nome já existente ao lado do asset instalado. Se esse `.x` real existir e for legível, ele é usado para a prévia; nenhum arquivo é convertido, descriptografado ou alterado.
+O OMSI Map Studio é um editor independente e não depende de arquivos-fonte alternativos para substituir assets protegidos. Um `.o3d` marcado como protegido permanece explicitamente identificado como tal até existir um caminho de compatibilidade real com o runtime instalado do OMSI.
 
 A interface separa malhas realmente renderizáveis de assets protegidos. Marcadores de O3D protegido usam cor distinta dos marcadores de asset ausente/inválido, e o status informa quantos tipos de objeto e quantas malhas continuam protegidos.
