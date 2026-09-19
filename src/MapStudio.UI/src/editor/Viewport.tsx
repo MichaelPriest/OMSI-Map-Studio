@@ -1814,19 +1814,24 @@ export function Viewport({
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const cameraStateRef = useRef<{
-    alpha: number;
-    beta: number;
-    radius: number;
-    target: {
-      x: number;
-      y: number;
-      z: number;
-    };
-  }>();
+  const cameraStateRef = useRef<
+    | {
+        alpha: number;
+        beta: number;
+        radius: number;
+        target: {
+          x: number;
+          y: number;
+          z: number;
+        };
+      }
+    | undefined
+  >(undefined);
 
   const lastCameraActionTokenRef =
-    useRef<number>();
+    useRef<number | undefined>(
+      undefined
+    );
 
   const cameraStateKeyRef =
     useRef(cameraStateKey);
