@@ -2190,6 +2190,9 @@ export function App() {
                 textureRepeating:
                   groundTexture
                     .mainTextureRepeating,
+                maskIsFull:
+                  mask.minimumAlpha === 255 &&
+                  mask.maximumAlpha === 255,
                 textureKey,
                 maskKey
               }
@@ -2237,6 +2240,7 @@ export function App() {
     const maskRequests =
       terrainOverlayEntries.filter(
         (entry) =>
+          !entry.maskIsFull &&
           !Object.hasOwn(
             terrainMaskAssetsByKey,
             entry.maskKey
@@ -2325,14 +2329,18 @@ export function App() {
               entry.layerIndex,
             textureRepeating:
               entry.textureRepeating,
+            maskIsFull:
+              entry.maskIsFull,
             textureAsset:
               groundTextureAssetsByKey[
                 entry.textureKey
               ],
             maskAsset:
-              terrainMaskAssetsByKey[
-                entry.maskKey
-              ]
+              entry.maskIsFull
+                ? undefined
+                : terrainMaskAssetsByKey[
+                    entry.maskKey
+                  ]
           })
         ),
       [
