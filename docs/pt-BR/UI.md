@@ -310,8 +310,6 @@ A lista do campo sugere splines atualmente carregadas, mas o host pesquisa e val
 
 A guia **Splines** no Explorer varre `OMSI 2/Splines` sob demanda e permite buscar até 50.000 arquivos `.sli` por nome/caminho. A lista renderiza no máximo 300 resultados.
 
-**Colocar** inicia uma nova `[spline]` normal: a prévia usa o perfil real do `.sli`, começa desconectada e oferece Z, rotação, comprimento, raio e gradientes antes da confirmação.
+Cada arquivo oferece **Normal** e **Altura**. A prévia usa o perfil real do `.sli`, começa desconectada e oferece Z, rotação, comprimento, raio e gradientes antes da confirmação.
 
-A UI não inventa header/cant/skew. No **Confirmar e salvar**, o host procura no mapa completo um `[spline]` real neutro com exatamente cinco extras numéricos explícitos zerados. Se não existir, a prévia continua utilizável, mas a gravação é recusada com mensagem de template indisponível.
-
-`[spline_h]` instalada ainda não pode ser criada livremente; use **Colocar cópia desconectada** sobre uma spline de altura real.
+A UI não inventa header/cant/skew/delta_h. No **Confirmar e salvar**, o host procura no mapa completo um template real neutro do tipo escolhido: cinco extras numéricos explícitos zerados para `[spline]` normal ou seis para `[spline_h]`. Se não existir, a prévia continua utilizável, mas a gravação é recusada com mensagem de template indisponível.

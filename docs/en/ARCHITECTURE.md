@@ -307,6 +307,6 @@ This lets a connected spline be deleted while releasing reciprocal endpoints wit
 
 The Spline Library scans `OMSI 2/Splines` only on demand, skips reparse points/inaccessible directories, and caps the index at 50,000 `.sli` files. Found paths become part of `_knownSplinePaths`, allowing the real profile to load.
 
-For persistent creation from an installed `.sli`, `OmsiSplinePlacementTemplateAnalyzer` requires a real normal `[spline]` template in the map with exactly five explicit numeric `ExtraValues`, all zero. This covers start/end cant, start/end skew, and the additional placement line without inventing data.
+For persistent creation from an installed `.sli`, `OmsiSplinePlacementTemplateAnalyzer` requires a real neutral template of the same type in the map. A normal `[spline]` requires exactly five explicit numeric zero `ExtraValues`; `[spline_h]` requires six, including `delta_h`. This avoids inventing cant, skew, or height data.
 
-The new block reuses the template `HeaderValue` and five extras, replaces the path with the selected `.sli`, allocates a new global ID, and starts detached. `[spline_h]` does not use this path because it has its own extra structure.
+The new block reuses the selected type's template `HeaderValue` and extras, replaces the path with the installed `.sli`, allocates a new global ID, and starts detached.

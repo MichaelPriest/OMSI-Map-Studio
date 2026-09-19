@@ -529,6 +529,11 @@ export function App() {
   >();
 
   const [
+    splineLibraryPlacementIsHeight,
+    setSplineLibraryPlacementIsHeight
+  ] = useState(false);
+
+  const [
     placementAsset,
     setPlacementAsset
   ] = useState<
@@ -628,6 +633,9 @@ export function App() {
           setSplineLibraryPlacementAsset(
             undefined
           );
+          setSplineLibraryPlacementIsHeight(
+            false
+          );
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
           setInsertingObject(false);
@@ -637,6 +645,9 @@ export function App() {
           );
           setSplineLibraryPlacementAsset(
             undefined
+          );
+          setSplineLibraryPlacementIsHeight(
+            false
           );
           setPendingSplinePlacement(
             undefined
@@ -691,6 +702,9 @@ export function App() {
           );
           setSplineLibraryPlacementAsset(
             undefined
+          );
+          setSplineLibraryPlacementIsHeight(
+            false
           );
           setPendingSplinePlacement(
             undefined
@@ -1001,6 +1015,9 @@ export function App() {
           );
           setSplineLibraryPlacementAsset(
             undefined
+          );
+          setSplineLibraryPlacementIsHeight(
+            false
           );
           setPendingSplinePlacement(
             undefined
@@ -2452,6 +2469,9 @@ export function App() {
       setSplineLibraryPlacementAsset(
         undefined
       );
+      setSplineLibraryPlacementIsHeight(
+        false
+      );
 
       setSplinePlacementTemplate(
         selectedSpline
@@ -2477,7 +2497,8 @@ export function App() {
     useCallback(
       (
         entry:
-          SplineLibraryEntry
+          SplineLibraryEntry,
+        isHeightSpline: boolean
       ) => {
         if (!selectedMap) {
           return;
@@ -2515,6 +2536,10 @@ export function App() {
           entry
         );
 
+        setSplineLibraryPlacementIsHeight(
+          isHeightSpline
+        );
+
         setSplinePlacementTemplate({
           tileX: 0,
           tileY: 0,
@@ -2533,7 +2558,7 @@ export function App() {
           radius: 0,
           gradientStart: 0,
           gradientEnd: 0,
-          isHeightSpline: false
+          isHeightSpline
         });
 
         setPendingSplinePlacement(
@@ -2617,6 +2642,9 @@ export function App() {
       setSplineLibraryPlacementAsset(
         undefined
       );
+      setSplineLibraryPlacementIsHeight(
+        false
+      );
       setPendingSplinePlacement(
         undefined
       );
@@ -2645,6 +2673,7 @@ export function App() {
           selectedMap.directoryName,
           splineLibraryPlacementAsset
             .splinePath,
+          splineLibraryPlacementIsHeight,
           pendingSplinePlacement
         );
       } else {
@@ -2659,6 +2688,7 @@ export function App() {
       pendingSplinePlacement,
       selectedMap,
       splineLibraryPlacementAsset,
+      splineLibraryPlacementIsHeight,
       splinePlacementTemplate
     ]);
 
@@ -5314,20 +5344,39 @@ export function App() {
                         <span>
                           {entry.splinePath}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleSelectSplineLibraryAsset(
-                              entry
-                            )
-                          }
-                          disabled={
-                            insertingSpline
-                          }
-                          title="Criar uma nova [spline] normal usando este .sli"
-                        >
-                          Colocar
-                        </button>
+                        <div className="library-entry-actions">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectSplineLibraryAsset(
+                                entry,
+                                false
+                              )
+                            }
+                            disabled={
+                              insertingSpline
+                            }
+                            title="Criar uma nova [spline] normal usando este .sli"
+                          >
+                            Normal
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleSelectSplineLibraryAsset(
+                                entry,
+                                true
+                              )
+                            }
+                            disabled={
+                              insertingSpline
+                            }
+                            title="Criar uma nova [spline_h] usando este .sli"
+                          >
+                            Altura
+                          </button>
+                        </div>
                       </div>
                     )
                   )}
@@ -5344,7 +5393,8 @@ export function App() {
                 <div className="library-safety-note">
                   A prévia usa o .sli real.
                   Ao salvar, o host exige um
-                  template [spline] normal neutro
+                  template real neutro do mesmo
+                  tipo ([spline] ou [spline_h])
                   já existente no mapa para copiar
                   header e extras sem inventar
                   metadados.
@@ -5472,7 +5522,9 @@ export function App() {
                 <div>
                   <strong>
                     {splineLibraryPlacementAsset
-                      ? "Nova spline: "
+                      ? splineLibraryPlacementIsHeight
+                        ? "Nova spline de altura: "
+                        : "Nova spline: "
                       : "Copiando spline: "}
                     {getObjectName(
                       splinePlacementTemplate
@@ -5483,7 +5535,9 @@ export function App() {
                     {pendingSplinePlacement
                       ? `Tile ${pendingSplinePlacement.targetTileX},${pendingSplinePlacement.targetTileY} · X ${formatNumber(pendingSplinePlacement.x)} · Y ${formatNumber(pendingSplinePlacement.y)} · desconectada`
                       : splineLibraryPlacementAsset
-                        ? "Clique em um tile para posicionar a nova spline normal."
+                        ? splineLibraryPlacementIsHeight
+                          ? "Clique em um tile para posicionar a nova spline de altura."
+                          : "Clique em um tile para posicionar a nova spline normal."
                         : "Clique em um tile para posicionar o início da cópia."}
                   </span>
                 </div>

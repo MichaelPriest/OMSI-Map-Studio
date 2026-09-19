@@ -1097,8 +1097,9 @@ public partial class MainWindow : Window
 
             var template =
                 OmsiSplinePlacementTemplateAnalyzer
-                    .FindNeutralNormalTemplate(
-                        snapshot.Contents);
+                    .FindNeutralTemplate(
+                        snapshot.Contents,
+                        request.IsHeightSpline);
 
             if (template is null)
             {
@@ -1149,7 +1150,7 @@ public partial class MainWindow : Window
                             request.Radius,
                             request.GradientStart,
                             request.GradientEnd,
-                            false,
+                            request.IsHeightSpline,
                             template.ExtraValues));
 
             var timestamp =
@@ -1230,7 +1231,8 @@ public partial class MainWindow : Window
                         request.GradientStart,
                     gradientEnd =
                         request.GradientEnd,
-                    isHeightSpline = false
+                    isHeightSpline =
+                        request.IsHeightSpline
                 }
             });
         }
@@ -4020,6 +4022,10 @@ public partial class MainWindow : Window
                 element,
                 "splinePath",
                 out var splinePath) ||
+            !TryReadBoolean(
+                element,
+                "isHeightSpline",
+                out var isHeightSpline) ||
             !TryReadInt32(
                 element,
                 "targetTileX",
@@ -4069,6 +4075,7 @@ public partial class MainWindow : Window
             new SplineLibraryInsertionRequest(
                 directoryName!,
                 splinePath!,
+                isHeightSpline,
                 targetTileX,
                 targetTileY,
                 x,
@@ -4448,6 +4455,7 @@ public partial class MainWindow : Window
     private sealed record SplineLibraryInsertionRequest(
         string DirectoryName,
         string SplinePath,
+        bool IsHeightSpline,
         int TargetTileX,
         int TargetTileY,
         double X,

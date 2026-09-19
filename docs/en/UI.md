@@ -310,8 +310,6 @@ The field list suggests currently loaded splines, but the host searches and vali
 
 The Explorer **Splines** tab scans `OMSI 2/Splines` on demand and searches up to 50,000 `.sli` files by name/path. At most 300 results are rendered.
 
-**Place** starts a new normal `[spline]`: preview uses the real `.sli` profile, starts detached, and exposes Z, rotation, length, radius and gradients before confirmation.
+Each file offers **Normal** and **Height**. Preview uses the real `.sli` profile, starts detached, and exposes Z, rotation, length, radius and gradients before confirmation.
 
-The UI does not invent header/cant/skew values. On **Confirm and save**, the host searches the full map for a real neutral `[spline]` with exactly five explicit numeric extras set to zero. If none exists, preview remains available but persistence is rejected with a missing-template message.
-
-Installed `[spline_h]` cannot yet be created freely; use **Place detached copy** on a real height spline.
+The UI does not invent header/cant/skew/delta_h values. On **Confirm and save**, the host searches the full map for a real neutral template of the selected type: five explicit numeric zero extras for normal `[spline]`, or six for `[spline_h]`. If none exists, preview remains available but persistence is rejected with a missing-template message.

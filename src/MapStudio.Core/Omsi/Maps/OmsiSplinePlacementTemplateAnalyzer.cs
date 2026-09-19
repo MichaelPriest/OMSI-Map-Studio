@@ -5,23 +5,31 @@ namespace MapStudio.Core.Omsi.Maps;
 public static class OmsiSplinePlacementTemplateAnalyzer
 {
     private const int NormalSplineExtraValueCount = 5;
+    private const int HeightSplineExtraValueCount = 6;
     private const double ZeroTolerance = 1e-12;
 
-    public static OmsiPlacedSpline? FindNeutralNormalTemplate(
-        IReadOnlyList<OmsiTileContent> contents)
+    public static OmsiPlacedSpline? FindNeutralTemplate(
+        IReadOnlyList<OmsiTileContent> contents,
+        bool isHeightSpline)
     {
         ArgumentNullException.ThrowIfNull(contents);
+
+        var expectedExtraCount =
+            isHeightSpline
+                ? HeightSplineExtraValueCount
+                : NormalSplineExtraValueCount;
 
         foreach (var spline in
             contents.SelectMany(
                 content => content.Splines))
         {
             if (
-                spline.IsHeightSpline ||
+                spline.IsHeightSpline !=
+                    isHeightSpline ||
                 string.IsNullOrWhiteSpace(
                     spline.HeaderValue) ||
                 spline.ExtraValues.Count !=
-                    NormalSplineExtraValueCount)
+                    expectedExtraCount)
             {
                 continue;
             }
@@ -54,4 +62,16 @@ public static class OmsiSplinePlacementTemplateAnalyzer
 
         return null;
     }
+
+    public static OmsiPlacedSpline? FindNeutralNormalTemplate(
+        IReadOnlyList<OmsiTileContent> contents) =>
+        FindNeutralTemplate(
+            contents,
+            isHeightSpline: false);
+
+    public static OmsiPlacedSpline? FindNeutralHeightTemplate(
+        IReadOnlyList<OmsiTileContent> contents) =>
+        FindNeutralTemplate(
+            contents,
+            isHeightSpline: true);
 }

@@ -307,6 +307,6 @@ Assim, apagar uma spline conectada libera as pontas recíprocas sem deixar IDs p
 
 A Biblioteca de Splines varre `OMSI 2/Splines` somente sob demanda, ignora reparse points/diretórios inacessíveis e limita o índice a 50.000 arquivos `.sli`. Os caminhos encontrados passam a integrar `_knownSplinePaths`, permitindo carregar o perfil real.
 
-Para criação persistente a partir de um `.sli` instalado, `OmsiSplinePlacementTemplateAnalyzer` exige um template `[spline]` normal real no mapa com exatamente cinco `ExtraValues` numéricos explícitos e todos iguais a zero. Isso representa cant inicial/final, skew inicial/final e a linha adicional de placement sem inventar dados.
+Para criação persistente a partir de um `.sli` instalado, `OmsiSplinePlacementTemplateAnalyzer` exige um template real neutro do mesmo tipo no mapa. `[spline]` normal precisa ter exatamente cinco `ExtraValues` numéricos explícitos zerados; `[spline_h]` precisa de seis, incluindo o `delta_h`. Isso evita inventar cant, skew ou dados de altura.
 
-O novo bloco usa o `HeaderValue` e os cinco extras do template, mas troca o caminho para o `.sli` escolhido, gera ID global novo e começa desconectado. `[spline_h]` não usa esse caminho porque possui estrutura extra própria.
+O novo bloco usa o `HeaderValue` e os extras do template do tipo escolhido, troca o caminho para o `.sli` instalado, gera ID global novo e começa desconectado.

@@ -260,6 +260,58 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void SplinePlacementTemplateAnalyzer_SelectsExplicitNeutralHeightTemplate()
+    {
+        var normal =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\Normal.sli",
+                20,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                20,
+                0,
+                0,
+                0,
+                false,
+                ["0", "0", "0", "0", "0"]);
+
+        var height =
+            normal with
+            {
+                SplinePath =
+                    @"Splines\Height.sli",
+                SplineId = 21,
+                IsHeightSpline = true,
+                ExtraValues =
+                    ["0", "0", "0", "0", "0", "0"]
+            };
+
+        var content =
+            new OmsiTileContent(
+                new OmsiTileSummary(
+                    true,
+                    0,
+                    2,
+                    0),
+                [],
+                [normal, height]);
+
+        var result =
+            OmsiSplinePlacementTemplateAnalyzer
+                .FindNeutralHeightTemplate(
+                    [content]);
+
+        Assert.Same(
+            height,
+            result);
+    }
+
+    [Fact]
     public void SplinePlacementTemplateAnalyzer_RejectsImplicitOrNonNeutralExtras()
     {
         var spline =

@@ -330,6 +330,7 @@ export function loadSplineLibrary() {
 export function insertSplineFromLibrary(
   directoryName: string,
   splinePath: string,
+  isHeightSpline: boolean,
   placement: {
     targetTileX: number;
     targetTileY: number;
@@ -347,6 +348,7 @@ export function insertSplineFromLibrary(
     type: "insertSplineFromLibrary",
     directoryName,
     splinePath,
+    isHeightSpline,
     ...placement
   });
 }

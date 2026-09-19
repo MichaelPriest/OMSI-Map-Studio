@@ -64,4 +64,4 @@ Architecture documentation:
 
 ### Spline Library
 
-Alpha.3 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. Free-form persistent creation is limited to normal `[spline]` entries when the map contains a real neutral template with all five explicit extra values set to zero; header and extras are copied from that template. `[spline_h]` still requires copying a real height spline.
+Alpha.3 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. The library offers **Normal** and **Height** creation. Persistence is enabled only when the map contains a real neutral template of the same type: five explicit zero extras for `[spline]` and six for `[spline_h]`. Header and extras are copied from that template.
