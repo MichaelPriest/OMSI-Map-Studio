@@ -525,3 +525,13 @@ A implementação mantém limites defensivos. Malhas protegidas com domínio de 
 O modo **Mapa completo** deixa de usar o teto de texturas pensado para o modo 3×3. O prefetch de objetos passa a aceitar até 1024 texturas e o de splines até 256, em lotes progressivos, com cache de até 1536 assets. O modo desempenho mantém os limites menores para preservar responsividade.
 
 O Inspetor e a barra de estado passam a separar texturas carregadas, falhas de resolução/leitura e requisições pendentes. Isso evita considerar uma geometria O3D corretamente aberta como visualmente concluída quando sua textura ainda não foi carregada.
+
+
+## Resolução de texturas compatível com conteúdo OMSI
+
+O resolvedor de texturas de objetos e splines passa a reproduzir dois comportamentos comuns do ecossistema OMSI que antes geravam `textureNotFound` falsos:
+
+- quando o arquivo declarado é BMP/TGA/PNG etc., um DDS de mesmo nome-base é aceito como substituto instalado;
+- diretórios `Texture` compartilhados em níveis-pai do pacote são pesquisados progressivamente.
+
+A busca continua confinada à raiz permitida de `Sceneryobjects` ou `Splines`; caminhos que escapem dessa raiz permanecem rejeitados.
