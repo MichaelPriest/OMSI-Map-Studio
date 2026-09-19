@@ -2437,25 +2437,30 @@ function createGeometryMeshes(
       const meshTransform =
         meshReference.transform;
 
+      // SCO per-mesh transforms are expressed in the model/O3D
+      // coordinate system, not in the map tile coordinate system.
+      // O3D is already Y-up, just like Babylon, so these transforms
+      // must stay on their native axes. Only the placed [object]
+      // container converts OMSI map Z-up coordinates to the viewport.
       mesh.position.set(
         meshTransform.positionX,
-        meshTransform.positionZ,
-        meshTransform.positionY
+        meshTransform.positionY,
+        meshTransform.positionZ
       );
 
       mesh.scaling.set(
         meshTransform.scaleX,
-        meshTransform.scaleZ,
-        meshTransform.scaleY
+        meshTransform.scaleY,
+        meshTransform.scaleZ
       );
 
       mesh.rotationQuaternion =
         Quaternion.RotationYawPitchRoll(
-          meshTransform.rotationZ *
+          meshTransform.rotationY *
             degreesToRadians,
           meshTransform.rotationX *
             degreesToRadians,
-          meshTransform.rotationY *
+          meshTransform.rotationZ *
             degreesToRadians
         );
 
