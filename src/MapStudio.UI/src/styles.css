@@ -322,6 +322,21 @@ code {
   width: 100%;
 }
 
+.wide {
+  width: 100%;
+}
+
+.danger-action {
+  border-color: #8f2f39;
+  background: linear-gradient(180deg, #7a2630, #5d1d25);
+  color: #ffe8ea;
+  font-weight: 700;
+}
+
+.danger-action:not(:disabled):hover {
+  background: linear-gradient(180deg, #922f3a, #6e222b);
+}
+
 .status-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

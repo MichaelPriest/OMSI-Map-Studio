@@ -236,3 +236,10 @@ Na aba **Geral** do inspetor, **Colocar cópia** inicia uma nova colocação usa
 O próximo clique no viewport define X/Y. Como ponto de partida, a cópia preserva Z, rotação, pitch e bank da seleção atual — inclusive quando a seleção já contém uma prévia de transformação ainda não salva.
 
 A confirmação reutiliza exatamente o mesmo pipeline seguro da Biblioteca: template real do mesmo `.sco`, novo ID global, backup do tile e escrita atômica. O comando não duplica texto antigo do tile nem cria um writer alternativo.
+
+
+## Excluir objeto
+
+A aba **Geral** do inspetor possui **Excluir objeto**. A exclusão é persistente e exige confirmação.
+
+Para evitar perda de trabalho, o comando fica bloqueado enquanto existir prévia de transformação não salva ou colocação de objeto em andamento. O host valida ordinal, ID e caminho `.sco` novamente no tile atual em disco e cria backup antes da troca atômica.

@@ -5,6 +5,7 @@ import {
   useState
 } from "react";
 import {
+  deleteObject,
   insertObject,
   isDesktopBridgeAvailable,
   loadMapFull,
@@ -127,6 +128,10 @@ const errorMessages: Record<string, string> = {
     "Não foi possível gerar um novo ID global para o objeto.",
   objectInsertError:
     "Não foi possível inserir o objeto com segurança. Nenhum tile deve ser sobrescrito sem backup.",
+  objectDeleteConflict:
+    "O objeto mudou no arquivo desde a leitura. A exclusão foi cancelada para proteger o mapa.",
+  objectDeleteError:
+    "Não foi possível excluir o objeto com segurança. O tile original foi preservado quando possível.",
   unknownTile:
     "O tile escolhido não pertence ao mapa aberto.",
   invalidTilePath:
@@ -404,6 +409,11 @@ export function App() {
   const [
     insertingObject,
     setInsertingObject
+  ] = useState(false);
+
+  const [
+    deletingObject,
+    setDeletingObject
   ] = useState(false);
 
   const [saving, setSaving] =
@@ -748,6 +758,30 @@ export function App() {
 
         if (
           message.type ===
+          "objectDeleted"
+        ) {
+          setDeletingObject(false);
+          setPreviewObjectTransforms({});
+          setUndoPreviewStack([]);
+          setRedoPreviewStack([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            `Objeto #${message.objectId} excluído. Backup: ${message.backupDirectory}`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+
+          return;
+        }
+
+        if (
+          message.type ===
           "objectTransformsSaved"
         ) {
           setSaving(false);
@@ -783,6 +817,7 @@ export function App() {
           setLoadingSceneryLibrary(false);
           setSaving(false);
           setInsertingObject(false);
+          setDeletingObject(false);
 
           setError(
             errorMessages[message.code] ??
@@ -2049,6 +2084,55 @@ export function App() {
       selectedMap
     ]);
 
+  const handleDeleteSelectedObject =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !selectedObject ||
+        deletingObject
+      ) {
+        return;
+      }
+
+      if (previewEditCount > 0) {
+        setError(
+          "Salve ou descarte as prévias de transformação antes de excluir um objeto."
+        );
+        return;
+      }
+
+      if (placementAsset) {
+        setError(
+          "Cancele a colocação atual antes de excluir um objeto."
+        );
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          `Excluir permanentemente o objeto #${selectedObject.objectId} deste mapa?\n\nUm backup do tile será criado antes da alteração.`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDeletingObject(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      deleteObject(
+        selectedMap.directoryName,
+        selectedObject
+      );
+    }, [
+      deletingObject,
+      placementAsset,
+      previewEditCount,
+      selectedMap,
+      selectedObject
+    ]);
+
   const handleExplorerPanelTab =
     useCallback(
       (tab: "map" | "library") => {
@@ -2113,6 +2197,7 @@ export function App() {
     selectingMap ||
     saving ||
     insertingObject ||
+    deletingObject ||
     loadingFullMap ||
     Boolean(loadingRegionKey);
 
@@ -2713,6 +2798,30 @@ export function App() {
               preserva inicialmente Z, rotação,
               pitch e bank da seleção atual.
             </div>
+
+            <button
+              type="button"
+              className="danger-action wide"
+              onClick={
+                handleDeleteSelectedObject
+              }
+              disabled={
+                busy ||
+                previewEditCount > 0 ||
+                Boolean(placementAsset)
+              }
+              title={
+                previewEditCount > 0
+                  ? "Salve ou descarte as prévias antes de excluir"
+                  : placementAsset
+                    ? "Cancele a colocação atual antes de excluir"
+                    : "Excluir o objeto do tile com backup automático"
+              }
+            >
+              {deletingObject
+                ? "Excluindo..."
+                : "Excluir objeto"}
+            </button>
           </>
         )}
 

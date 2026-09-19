@@ -37,7 +37,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Known limitations
 
 - Save only persists position/rotation/pitch/bank for existing `[object]` entries;
-- creation and copying only persist when a safe template of the same `.sco` exists; persistent deletion is not implemented yet;
+- creation and copying only persist when a safe template of the same `.sco` exists;
 - splines do not have persistent editing yet;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
@@ -78,3 +78,18 @@ Also choose an installed `.sco` that has never been used in the map. In Full map
 7. wait for the reload;
 8. verify the copy received a new global ID and the original object remained unchanged;
 9. verify the backup under `.mapstudio-backups/<timestamp>/`.
+
+
+## Safe deletion test
+
+1. select an existing object;
+2. verify **Delete object** is available with no pending previews;
+3. create a preview and verify deletion becomes disabled;
+4. discard the preview;
+5. click **Delete object** and confirm;
+6. wait for the reload;
+7. verify only the selected object disappeared;
+8. verify the backup under `.mapstudio-backups/<timestamp>/`;
+9. verify comments, blank lines and the following section were preserved in the tile.
+
+For a conflict test, externally change the object's ID or `.sco` path before confirmation. Deletion must be cancelled without overwriting the tile.

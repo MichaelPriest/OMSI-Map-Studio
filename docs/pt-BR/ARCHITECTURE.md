@@ -262,3 +262,12 @@ O novo ID é `maior ID encontrado + 1`. A leitura para conteúdo e análise de I
 Se não existir uma instância do mesmo `.sco` para servir como template, a gravação é recusada com `objectInsertTemplateUnavailable`.
 
 A escrita final reutiliza `SafeFileTransaction`, portanto o tile recebe backup em `.mapstudio-backups/<timestamp>/` antes da troca atômica.
+
+
+## Exclusão preservativa de objetos
+
+`OmsiTileObjectDeleter` remove somente a linha `[object]` e as linhas de dados funcionais da instância selecionada.
+
+Antes da remoção, o Core valida o ordinal da seção, o ID do objeto e o caminho `.sco`. Comentários e linhas em branco são preservados, inclusive quando o parser os associa ao corpo da seção; a seção seguinte nunca é removida.
+
+O host relê o tile diretamente do disco antes da exclusão, usa `SafeFileTransaction`, cria backup em `.mapstudio-backups/<timestamp>/` e invalida o cache após sucesso. Se a identidade mudou desde a leitura da UI, a operação é recusada como conflito.

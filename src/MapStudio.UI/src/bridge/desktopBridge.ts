@@ -180,6 +180,13 @@ export type HostMessage =
       backupDirectory: string;
     }
   | {
+      type: "objectDeleted";
+      directoryName: string;
+      objectId: number;
+      deletedObjects: number;
+      backupDirectory: string;
+    }
+  | {
       type: "mapFullLoadingStarted";
       directoryName: string;
       totalTiles: number;
@@ -291,6 +298,23 @@ export function insertObject(
     directoryName,
     sceneryObjectPath,
     ...placement
+  });
+}
+
+export function deleteObject(
+  directoryName: string,
+  placedObject: OmsiPlacedObject
+) {
+  getWebView()?.postMessage({
+    type: "deleteObject",
+    directoryName,
+    tileX: placedObject.tileX,
+    tileY: placedObject.tileY,
+    sourceSectionOrdinal:
+      placedObject.sourceSectionOrdinal,
+    sceneryObjectPath:
+      placedObject.sceneryObjectPath,
+    objectId: placedObject.objectId
   });
 }
 

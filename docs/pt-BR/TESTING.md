@@ -37,7 +37,7 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Limitações conhecidas
 
 - Salvar atua apenas em posição/rotação/pitch/bank de objetos `[object]` já existentes;
-- criação e cópia só gravam quando existe template seguro do mesmo `.sco`; exclusão persistente ainda não existe;
+- criação e cópia só gravam quando existe template seguro do mesmo `.sco`;
 - splines ainda não possuem edição persistente;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
@@ -78,3 +78,18 @@ Também escolha um `.sco` instalado que nunca foi usado no mapa. No modo Mapa co
 7. aguarde o recarregamento;
 8. confirme que a cópia recebeu um ID global novo e que o objeto original permaneceu intacto;
 9. verifique o backup em `.mapstudio-backups/<timestamp>/`.
+
+
+## Teste de exclusão segura
+
+1. selecione um objeto existente;
+2. confirme que **Excluir objeto** está disponível sem prévias pendentes;
+3. crie uma prévia e confirme que a exclusão fica bloqueada;
+4. descarte a prévia;
+5. clique **Excluir objeto** e confirme;
+6. aguarde o recarregamento;
+7. confirme que somente o objeto escolhido desapareceu;
+8. confira o backup em `.mapstudio-backups/<timestamp>/`;
+9. confirme no tile que comentários, linhas em branco e a seção seguinte foram preservados.
+
+Para testar conflito, altere externamente o ID ou caminho `.sco` do objeto antes da confirmação. A exclusão deve ser cancelada sem sobrescrever o tile.

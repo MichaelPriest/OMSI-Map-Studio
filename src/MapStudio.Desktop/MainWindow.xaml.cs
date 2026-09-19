@@ -208,6 +208,47 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "deleteObject":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var deleteDirectoryName) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var deleteTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var deleteTileY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "sourceSectionOrdinal",
+                            out var deleteSourceSectionOrdinal) &&
+                        TryReadString(
+                            message.RootElement,
+                            "sceneryObjectPath",
+                            out var deleteSceneryObjectPath) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "objectId",
+                            out var deleteObjectId))
+                    {
+                        await DeleteObjectAsync(
+                            deleteDirectoryName,
+                            deleteTileX,
+                            deleteTileY,
+                            deleteSourceSectionOrdinal,
+                            deleteSceneryObjectPath,
+                            deleteObjectId);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "saveObjectTransforms":
                     if (
                         TryReadString(
@@ -969,6 +1010,172 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "objectInsertError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task DeleteObjectAsync(
+        string? directoryName,
+        int tileX,
+        int tileY,
+        int sourceSectionOrdinal,
+        string? sceneryObjectPath,
+        int objectId)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                sceneryObjectPath))
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        var tile =
+            map.Tiles.FirstOrDefault(
+                candidate =>
+                    candidate.X == tileX &&
+                    candidate.Y == tileY);
+
+        if (tile is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+
+            return;
+        }
+
+        if (!OmsiMapPathResolver
+            .TryResolveTilePath(
+                map.DirectoryPath,
+                tile.RelativeMapPath,
+                out var tilePath) ||
+            !File.Exists(tilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTilePath"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        tilePath);
+
+            var result =
+                OmsiTileObjectDeleter
+                    .Remove(
+                        document,
+                        sourceSectionOrdinal,
+                        sceneryObjectPath,
+                        objectId);
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    tilePath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTilePath");
+            }
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var backupPath =
+                Path.Combine(
+                    backupRoot,
+                    relativePath);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            tilePath,
+                            backupPath,
+                            result.Bytes)
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    tilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type = "objectDeleted",
+                map.DirectoryName,
+                objectId,
+                deletedObjects =
+                    result.DeletedObjects,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "objectDeleteConflict",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = tilePath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "objectDeleteError",
                 detail = exception.Message
             });
         }

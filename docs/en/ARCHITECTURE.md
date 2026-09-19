@@ -262,3 +262,12 @@ The new ID is `largest ID found + 1`. Content parsing and ID analysis reuse the 
 If no instance of the same `.sco` exists to act as a template, persistence is rejected with `objectInsertTemplateUnavailable`.
 
 The final write reuses `SafeFileTransaction`, so the target tile is backed up under `.mapstudio-backups/<timestamp>/` before atomic replacement.
+
+
+## Preservation-safe object deletion
+
+`OmsiTileObjectDeleter` removes only the `[object]` keyword line and the selected instance's functional data lines.
+
+Before removal, Core validates the section ordinal, object ID and `.sco` path. Comments and blank lines are preserved even when the parser associates them with the section body; the following section is never removed.
+
+The host rereads the tile directly from disk before deletion, uses `SafeFileTransaction`, creates a backup under `.mapstudio-backups/<timestamp>/`, and invalidates the cache after success. If identity changed after the UI read, the operation is rejected as a conflict.

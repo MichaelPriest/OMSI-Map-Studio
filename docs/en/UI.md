@@ -236,3 +236,10 @@ In the inspector's **General** tab, **Place copy** starts a new placement using 
 The next viewport click defines X/Y. As its starting transform, the copy preserves Z, rotation, pitch and bank from the current selection — including an unsaved transform preview.
 
 Confirmation reuses the exact same safe pipeline as the Library: a real template of the same `.sco`, a new global ID, tile backup and atomic write. The command does not duplicate old tile text or introduce a second writer.
+
+
+## Delete object
+
+The inspector's **General** tab provides **Delete object**. Deletion is persistent and requires confirmation.
+
+To avoid losing work, the command is disabled while an unsaved transform preview or object placement is active. The host validates section ordinal, ID and `.sco` path again against the current tile on disk and creates a backup before atomically replacing the file.

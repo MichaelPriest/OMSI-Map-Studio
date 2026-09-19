@@ -101,6 +101,96 @@ public sealed class OmsiSafeEditingTests
     }
 
     [Fact]
+    public void ObjectDeleter_RemovesOnlyFunctionalObjectLines()
+    {
+        const string source =
+            "[version]\r\n14\r\n" +
+            "# keep-before-object\r\n" +
+            "[object]\r\n" +
+            "0\r\n" +
+            "# keep-object-comment\r\n" +
+            "Sceneryobjects\\Pack\\House.sco\r\n" +
+            "77\r\n" +
+            "10.5\r\n" +
+            "20.25\r\n" +
+            "1\r\n" +
+            "90\r\n" +
+            "0\r\n" +
+            "0\r\n" +
+            "future-extra\r\n" +
+            "# keep-after-data\r\n" +
+            "[future_section]\r\n" +
+            "keep-exactly\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var result =
+            OmsiTileObjectDeleter.Remove(
+                document,
+                0,
+                @"Sceneryobjects\Pack\House.sco",
+                77);
+
+        var text =
+            Encoding.UTF8.GetString(
+                result.Bytes);
+
+        Assert.Equal(
+            1,
+            result.DeletedObjects);
+
+        Assert.DoesNotContain(
+            "[object]",
+            text);
+
+        Assert.DoesNotContain(
+            @"Sceneryobjects\Pack\House.sco",
+            text);
+
+        Assert.DoesNotContain(
+            "future-extra",
+            text);
+
+        Assert.Contains(
+            "# keep-before-object\r\n",
+            text);
+
+        Assert.Contains(
+            "# keep-object-comment\r\n",
+            text);
+
+        Assert.Contains(
+            "# keep-after-data\r\n",
+            text);
+
+        Assert.Contains(
+            "[future_section]\r\nkeep-exactly\r\n",
+            text);
+    }
+
+    [Fact]
+    public void ObjectDeleter_RefusesChangedSourceIdentity()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[object]\n" +
+                "0\n" +
+                "Sceneryobjects\\A.sco\n" +
+                "5\n" +
+                "0\n0\n0\n0\n0\n0\n");
+
+        Assert.Throws<InvalidDataException>(
+            () =>
+                OmsiTileObjectDeleter.Remove(
+                    document,
+                    0,
+                    @"Sceneryobjects\B.sco",
+                    5));
+    }
+
+    [Fact]
     public async Task SafeTransaction_CreatesBackupAndReplacesTarget()
     {
         var root =
