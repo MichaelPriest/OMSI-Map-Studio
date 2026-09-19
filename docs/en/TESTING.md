@@ -604,3 +604,12 @@ In Grundorf, confirm `[tree]` billboards still render while the large gray panel
 3. confirm regular objects still use terrain + relative Z while `[absheight]` remains absolute;
 4. confirm loaded textures show their real colours without darkening from `diffuseColor` multiplication;
 5. compare with test.25 and record any specific object that still appears misplaced.
+
+
+## Axis/rotation validation — test.26
+
+1. open Grundorf and compare houses, garages, poles, and other objects against roads/splines;
+2. confirm main object rotation follows the same visual direction as splines;
+3. confirm bank/pitch objects no longer tilt around the wrong axis;
+4. confirm meshes using `[rot_x]`, `[rot_y]`, or `[rot_z]` keep the correct local orientation;
+5. rotate an object with the gizmo, save, and reopen to confirm orientation persists.
