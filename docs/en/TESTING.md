@@ -138,3 +138,12 @@ For a conflict test, externally change the source spline ID, path, type or links
 7. verify the backup and preservation of comments/unknown sections.
 
 Select a spline whose `previous` or `next` is not `-1` and verify deletion remains blocked.
+
+
+## Spline search test
+
+1. use Explorer search with a `.sli` filename;
+2. repeat using the spline ID and tile coordinate;
+3. click the result and verify the spline is selected and focused;
+4. create an edit preview and verify the **changed** marker in the list;
+5. search for a term matching both objects and splines and verify both sections.

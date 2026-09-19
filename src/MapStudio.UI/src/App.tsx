@@ -1260,6 +1260,53 @@ export function App() {
       objectsForViewport
     ]);
 
+  const filteredExplorerSplines =
+    useMemo(() => {
+      if (
+        splinesForViewport.length === 0
+      ) {
+        return [];
+      }
+
+      const filtered =
+        normalizedExplorerSearch
+          ? splinesForViewport.filter(
+              (placedSpline) => {
+                const searchable =
+                  [
+                    getObjectName(
+                      placedSpline
+                        .splinePath
+                    ),
+                    placedSpline
+                      .splinePath,
+                    placedSpline.splineId,
+                    `${placedSpline.tileX},${placedSpline.tileY}`,
+                    placedSpline.isHeightSpline
+                      ? "spline_h altura"
+                      : "spline"
+                  ]
+                    .join(" ")
+                    .toLocaleLowerCase(
+                      "pt-BR"
+                    );
+
+                return searchable.includes(
+                  normalizedExplorerSearch
+                );
+              }
+            )
+          : splinesForViewport;
+
+      return filtered.slice(
+        0,
+        250
+      );
+    }, [
+      normalizedExplorerSearch,
+      splinesForViewport
+    ]);
+
   const explorerObjectResultCount =
     useMemo(() => {
       if (
@@ -1474,6 +1521,47 @@ export function App() {
       normalizedLibrarySearch,
       sceneryLibrary
     ]);
+
+  const explorerSplineResultCount =
+    useMemo(() => {
+      if (
+        !normalizedExplorerSearch
+      ) {
+        return splinesForViewport.length;
+      }
+
+      return splinesForViewport.filter(
+        (placedSpline) => {
+          const searchable =
+            [
+              getObjectName(
+                placedSpline.splinePath
+              ),
+              placedSpline.splinePath,
+              placedSpline.splineId,
+              `${placedSpline.tileX},${placedSpline.tileY}`,
+              placedSpline.isHeightSpline
+                ? "spline_h altura"
+                : "spline"
+            ]
+              .join(" ")
+              .toLocaleLowerCase(
+                "pt-BR"
+              );
+
+          return searchable.includes(
+            normalizedExplorerSearch
+          );
+        }
+      ).length;
+    }, [
+      normalizedExplorerSearch,
+      splinesForViewport
+    ]);
+
+  const explorerResultCount =
+    explorerObjectResultCount +
+    explorerSplineResultCount;
 
   const placementHasKnownTemplate =
     useMemo(
@@ -4385,7 +4473,7 @@ export function App() {
               <div className="explorer-search">
                 <input
                   type="search"
-                  placeholder="Buscar objeto, ID ou tile..."
+                  placeholder="Buscar objeto, spline, ID ou tile..."
                   value={explorerSearch}
                   onChange={(event) =>
                     setExplorerSearch(
@@ -4394,15 +4482,20 @@ export function App() {
                   }
                 />
                 <span>
-                  {explorerObjectResultCount}
+                  {explorerResultCount}
                   {" "}resultado(s)
-                  {explorerObjectResultCount > 250
-                    ? " · mostrando 250"
+                  {explorerObjectResultCount > 250 ||
+                  explorerSplineResultCount > 250
+                    ? " · listas limitadas a 250"
                     : ""}
                 </span>
               </div>
   
               <div className="explorer-object-list">
+                <div className="explorer-section-label">
+                  Objetos · {explorerObjectResultCount}
+                </div>
+
                 {filteredExplorerObjects.map(
                   (placedObject) => {
                     const key =
@@ -4470,6 +4563,84 @@ export function App() {
                   0 && (
                   <div className="explorer-empty">
                     Nenhum objeto encontrado.
+                  </div>
+                )}
+
+                <div className="explorer-section-label">
+                  Splines · {explorerSplineResultCount}
+                </div>
+
+                {filteredExplorerSplines.map(
+                  (placedSpline) => {
+                    const key =
+                      getPlacedSplineKey(
+                        placedSpline
+                      );
+
+                    const isSelected =
+                      selectedSpline &&
+                      getPlacedSplineKey(
+                        selectedSpline
+                      ) === key;
+
+                    const hasPreview =
+                      Object.hasOwn(
+                        previewSplineTransforms,
+                        key
+                      );
+
+                    return (
+                      <button
+                        type="button"
+                        className={
+                          isSelected
+                            ? "explorer-object active"
+                            : "explorer-object"
+                        }
+                        key={key}
+                        onClick={() => {
+                          handleSplineSelection(
+                            placedSpline
+                          );
+
+                          requestCameraAction(
+                            "focus"
+                          );
+                        }}
+                      >
+                        <span
+                          className="explorer-object-name"
+                          title={
+                            placedSpline.splinePath
+                          }
+                        >
+                          {getObjectName(
+                            placedSpline
+                              .splinePath
+                          )}
+                        </span>
+                        <small>
+                          #{placedSpline.splineId}
+                          {" · "}
+                          {placedSpline.tileX},
+                          {placedSpline.tileY}
+                          {" · "}
+                          {placedSpline.isHeightSpline
+                            ? "altura"
+                            : "spline"}
+                          {hasPreview
+                            ? " · alterada"
+                            : ""}
+                        </small>
+                      </button>
+                    );
+                  }
+                )}
+
+                {filteredExplorerSplines.length ===
+                  0 && (
+                  <div className="explorer-empty">
+                    Nenhuma spline encontrada.
                   </div>
                 )}
   

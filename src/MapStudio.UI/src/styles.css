@@ -1297,3 +1297,17 @@ code {
 .spline-edit-actions > button {
   flex: 1;
 }
+
+
+.explorer-section-label {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px 8px 5px;
+  background: #081521;
+  color: #6f8ca6;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

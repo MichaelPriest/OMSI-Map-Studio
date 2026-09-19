@@ -138,3 +138,12 @@ Para testar conflito, altere externamente o ID, caminho, tipo ou vínculos da sp
 7. confira o backup e a preservação de comentários/seções desconhecidas.
 
 Selecione uma spline com `previous` ou `next` diferente de `-1` e confirme que a exclusão permanece bloqueada.
+
+
+## Teste de busca de splines
+
+1. use a busca do Explorer pelo nome de um arquivo `.sli`;
+2. repita usando o ID da spline e a coordenada do tile;
+3. clique no resultado e confirme que a spline é selecionada e focada;
+4. crie uma prévia de edição e confirme a marca **alterada** na lista;
+5. pesquise um termo que corresponda simultaneamente a objetos e splines e confirme as duas seções.

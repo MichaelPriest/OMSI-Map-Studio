@@ -288,3 +288,10 @@ A aba **Geral** permite excluir uma spline somente quando `previous = -1` e `nex
 O host relê o tile, valida ordinal, caminho `.sli`, ID, tipo e vínculos e remove somente a linha de comando e os dados funcionais da spline. Comentários, linhas em branco e seções desconhecidas são preservados. O tile recebe backup antes da troca atômica.
 
 Splines conectadas permanecem protegidas até existir edição transacional dos vínculos das vizinhas.
+
+
+## Busca de splines no Explorer
+
+A busca principal do Explorer agora pesquisa objetos e splines carregados. Para splines, a busca aceita nome do arquivo `.sli`, caminho completo, ID e coordenada do tile.
+
+Objetos e splines aparecem em seções separadas, cada uma limitada a 250 linhas renderizadas. Clicar em uma spline seleciona a instância real e foca a câmera; uma spline com prévia pendente aparece marcada como **alterada**.

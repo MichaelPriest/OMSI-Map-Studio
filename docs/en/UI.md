@@ -288,3 +288,10 @@ The **General** tab can delete a spline only when `previous = -1` and `next = -1
 The host rereads the tile, validates ordinal, `.sli` path, ID, type and links, and removes only the command line and functional spline data. Comments, blank lines and unknown sections are preserved. The tile is backed up before atomic replacement.
 
 Connected splines remain protected until transactional editing of neighboring links is implemented.
+
+
+## Spline search in Explorer
+
+The main Explorer search now searches loaded objects and splines. For splines, search accepts the `.sli` filename, full path, ID and tile coordinate.
+
+Objects and splines are shown in separate sections, each capped at 250 rendered rows. Clicking a spline selects the real instance and focuses the camera; a spline with a pending preview is marked **changed**.
