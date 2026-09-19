@@ -539,6 +539,27 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "loadSkyTextureAsset":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "requestKey",
+                            out var skyRequestKey) &&
+                        TryReadString(
+                            message.RootElement,
+                            "textureName",
+                            out var skyTextureName))
+                    {
+                        await LoadSkyTextureAssetAsync(
+                            skyRequestKey,
+                            skyTextureName);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadGroundTextureAsset":
                     if (
                         TryReadString(
@@ -3861,6 +3882,66 @@ public partial class MainWindow : Window
                     relativeMapPath,
                     layerIndex,
                     out var fullPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureNotFound");
+            return;
+        }
+
+        await LoadTextureAssetAsync(
+            requestKey,
+            fullPath);
+    }
+
+    private async Task LoadSkyTextureAssetAsync(
+        string? requestKey,
+        string? textureName)
+    {
+        if (
+            _omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(
+                requestKey) ||
+            string.IsNullOrWhiteSpace(
+                textureName))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "invalidTextureSource");
+            return;
+        }
+
+        var fileName =
+            Path.GetFileName(
+                textureName);
+
+        if (
+            !string.Equals(
+                fileName,
+                "himmel01.bmp",
+                StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(
+                fileName,
+                "himmel04.bmp",
+                StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(
+                fileName,
+                "himmel05.bmp",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "invalidTextureSource");
+            return;
+        }
+
+        var fullPath =
+            Path.Combine(
+                _omsiRootPath,
+                "Texture",
+                fileName);
+
+        if (!File.Exists(fullPath))
         {
             PostMissingTextureAsset(
                 requestKey,

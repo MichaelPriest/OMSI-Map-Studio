@@ -55,6 +55,7 @@ type ViewportProps = {
   showSplineProfiles: boolean;
   showAllSplineProfiles: boolean;
   nightPreviewEnabled: boolean;
+  skyTextureAsset?: OmsiTextureAsset;
   cameraAction?: {
     type:
       | "fit"
@@ -3112,6 +3113,71 @@ function createMapObjectGeometry(
 }
 
 
+function createOmsiSky(
+  scene: Scene,
+  asset:
+    | OmsiTextureAsset
+    | undefined,
+  radius: number
+) {
+  const texture =
+    createTextureFromAsset(
+      scene,
+      asset
+    );
+
+  if (!texture) {
+    return;
+  }
+
+  texture.hasAlpha = false;
+  texture.uScale = -1;
+  texture.uOffset = 1;
+  texture.wrapU =
+    Texture.WRAP_ADDRESSMODE;
+  texture.wrapV =
+    Texture.CLAMP_ADDRESSMODE;
+
+  const sky =
+    MeshBuilder.CreateSphere(
+      "omsi-sky",
+      {
+        diameter:
+          Math.max(
+            4000,
+            radius * 2.8
+          ),
+        segments: 32,
+        sideOrientation:
+          Mesh.BACKSIDE
+      },
+      scene
+    );
+
+  sky.infiniteDistance = true;
+  sky.isPickable = false;
+
+  const material =
+    new StandardMaterial(
+      "omsi-sky-material",
+      scene
+    );
+
+  material.diffuseColor =
+    Color3.Black();
+  material.specularColor =
+    Color3.Black();
+  material.emissiveColor =
+    Color3.White();
+  material.emissiveTexture =
+    texture;
+  material.disableLighting = true;
+  material.backFaceCulling = false;
+  material.disableDepthWrite = true;
+
+  sky.material = material;
+}
+
 export function Viewport({
   tiles,
   cameraStateKey,
@@ -3129,6 +3195,7 @@ export function Viewport({
   showSplineProfiles,
   showAllSplineProfiles,
   nightPreviewEnabled,
+  skyTextureAsset,
   cameraAction,
   placementAssetPath,
   placementGeometry,
@@ -3383,6 +3450,13 @@ export function Viewport({
       lastCameraActionTokenRef.current =
         cameraAction.token;
     }
+
+    createOmsiSky(
+      scene,
+      skyTextureAsset,
+      camera.upperRadiusLimit ??
+        radius * 4
+    );
 
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
     light.intensity = 0.9;
@@ -5004,6 +5078,7 @@ export function Viewport({
     showSplineProfiles,
     showAllSplineProfiles,
     nightPreviewEnabled,
+    skyTextureAsset,
     cameraAction,
     placementAssetPath,
     placementGeometry,

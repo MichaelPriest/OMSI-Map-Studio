@@ -9,6 +9,7 @@ import {
   deleteObject,
   deleteSpline,
   getGroundTextureAssetKey,
+  getSkyTextureAssetKey,
   getTerrainTextureMaskAssetKey,
   getSceneryTextureAssetKey,
   getSplineTextureAssetKey,
@@ -19,6 +20,7 @@ import {
   loadMapFull,
   loadMapRegion,
   loadGroundTextureAsset,
+  loadSkyTextureAsset,
   loadTerrainTextureMaskAsset,
   loadSceneryLibrary,
   loadSceneryTextureAsset,
@@ -1809,6 +1811,57 @@ export function App() {
     loadingRegionKey,
     mapLoadMode,
     selectedMap
+  ]);
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      !rootPath ||
+      !selectedMap
+    ) {
+      return;
+    }
+
+    const textureName =
+      nightPreviewEnabled
+        ? "himmel05.bmp"
+        : "himmel01.bmp";
+
+    const key =
+      getSkyTextureAssetKey(
+        textureName
+      );
+
+    if (
+      Object.hasOwn(
+        textureAssetsByKey,
+        key
+      ) ||
+      Object.hasOwn(
+        requestedTextureKeys,
+        key
+      )
+    ) {
+      return;
+    }
+
+    setRequestedTextureKeys(
+      (current) => ({
+        ...current,
+        [key]: true
+      })
+    );
+
+    loadSkyTextureAsset(
+      textureName
+    );
+  }, [
+    bridgeAvailable,
+    nightPreviewEnabled,
+    requestedTextureKeys,
+    rootPath,
+    selectedMap,
+    textureAssetsByKey
   ]);
 
   useEffect(() => {
@@ -8953,6 +9006,15 @@ export function App() {
               }
               nightPreviewEnabled={
                 nightPreviewEnabled
+              }
+              skyTextureAsset={
+                textureAssetsByKey[
+                  getSkyTextureAssetKey(
+                    nightPreviewEnabled
+                      ? "himmel05.bmp"
+                      : "himmel01.bmp"
+                  )
+                ]
               }
               cameraAction={cameraAction}
               placementAssetPath={

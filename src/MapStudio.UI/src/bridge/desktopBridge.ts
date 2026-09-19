@@ -728,6 +728,15 @@ export function getGroundTextureAssetKey(
   ].join("|");
 }
 
+export function getSkyTextureAssetKey(
+  textureName: string
+) {
+  return [
+    "sky",
+    textureName
+  ].join("|");
+}
+
 export const sceneryTreeTextureMeshToken =
   "__tree__";
 
@@ -773,6 +782,23 @@ export function loadTerrainTextureMaskAsset(
     directoryName,
     relativeMapPath,
     layerIndex
+  });
+
+  return requestKey;
+}
+
+export function loadSkyTextureAsset(
+  textureName: string
+) {
+  const requestKey =
+    getSkyTextureAssetKey(
+      textureName
+    );
+
+  getWebView()?.postMessage({
+    type: "loadSkyTextureAsset",
+    requestKey,
+    textureName
   });
 
   return requestKey;
