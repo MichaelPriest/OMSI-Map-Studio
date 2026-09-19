@@ -572,3 +572,12 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 3. aguarde até **pendentes = 0** e confirme que prédios/objetos antes pretos ou cinza recebem suas texturas quando os arquivos existem;
 4. verifique no Inspetor os contadores de texturas carregadas e falhas;
 5. se houver falhas, registre os códigos mostrados em **Falhas de textura** para separar arquivo ausente de formato/decodificação.
+
+
+## Validação textureNotFound — test.25
+
+1. abra Grundorf no modo 3×3 e compare com a test.24, que mostrou **177 carregadas / 81 textureNotFound / 0 pendentes**;
+2. confirme que referências legadas como `*.bmp` passam a usar `*.dds` de mesmo nome-base quando esse DDS existe;
+3. confirme que texturas em `Texture` de um diretório-pai do pacote também são localizadas;
+4. aguarde pendentes = 0 e registre o novo total de `textureNotFound`;
+5. confirme que o contador **Auto solicitadas** não aparece mais como uma fração impossível ao alternar entre Mapa completo e 3×3.
