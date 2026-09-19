@@ -2,7 +2,6 @@
 set -euo pipefail
 
 BUILD_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$BUILD_DIR/../.." && pwd)"
 WORKTREE="$BUILD_DIR/worktree"
 DOTNET_DIR="$BUILD_DIR/dotnet"
 NUGET_DIR="$BUILD_DIR/nuget"
@@ -13,8 +12,7 @@ PUBLIC_DIR="$BUILD_DIR/public"
 SOURCE_HEAD="b4f18fcf3e132a5780e5be6257539a3bcdc784e1"
 RELEASE="v0.1.0-alpha.3-test.1"
 SDK_VERSION="10.0.401"
-SDK_URL="https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.401/dotnet-sdk-10.0.401-linux-x64.tar.gz"
-SDK_SHA512="51c8b999af9e8dd9998c9edc5944e19a90788862068acd38694e098889054ce8c23d4f0c5cccfa16bf187d044562359e5ee69a9f8ad0bbe913ba90311fbce25b"
+DOTNET_INSTALL_URL="https://dot.net/v1/dotnet-install.sh"
 
 export MAPSTUDIO_SOURCE_HEAD="$SOURCE_HEAD"
 export MAPSTUDIO_RELEASE="$RELEASE"
@@ -34,24 +32,16 @@ node "$BUILD_DIR/reconstruct.mjs"
 rm -rf "$DOTNET_DIR" "$NUGET_DIR" "$PUBLISH_DIR" "$PUBLIC_DIR"
 mkdir -p "$DOTNET_DIR" "$NUGET_DIR" "$DOWNLOAD_DIR" "$PUBLISH_DIR" "$PUBLIC_DIR"
 
-SDK_ARCHIVE="$DOWNLOAD_DIR/dotnet-sdk-$SDK_VERSION-linux-x64.tar.gz"
-if [[ ! -f "$SDK_ARCHIVE" ]]; then
-  curl --fail --location --retry 3 --retry-delay 2 "$SDK_URL" --output "$SDK_ARCHIVE"
+INSTALL_SCRIPT="$DOWNLOAD_DIR/dotnet-install.sh"
+curl --fail --location --retry 3 --retry-delay 2 "$DOTNET_INSTALL_URL" --output "$INSTALL_SCRIPT"
+bash "$INSTALL_SCRIPT" --version "$SDK_VERSION" --install-dir "$DOTNET_DIR" --no-path
+
+ACTUAL_SDK_VERSION="$(dotnet --version)"
+if [[ "$ACTUAL_SDK_VERSION" != "$SDK_VERSION" ]]; then
+  echo "Expected .NET SDK $SDK_VERSION, got $ACTUAL_SDK_VERSION." >&2
+  exit 1
 fi
 
-node - "$SDK_ARCHIVE" "$SDK_SHA512" <<'NODE'
-const fs = require("fs");
-const crypto = require("crypto");
-const [file, expected] = process.argv.slice(2);
-const actual = crypto.createHash("sha512").update(fs.readFileSync(file)).digest("hex");
-if (actual !== expected) {
-  console.error(`SDK SHA-512 mismatch: expected ${expected}, got ${actual}`);
-  process.exit(1);
-}
-console.log("Verified .NET SDK SHA-512.");
-NODE
-
-tar -xzf "$SDK_ARCHIVE" -C "$DOTNET_DIR"
 dotnet --info
 
 cd "$WORKTREE"
