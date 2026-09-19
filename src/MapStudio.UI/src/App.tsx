@@ -27,6 +27,7 @@ import {
   saveSplineTransforms,
   selectMap,
   selectOmsiRoot,
+  setFullScreen,
   subscribeToHost,
   updateSplineLinks,
   type SceneryLibraryEntry,
@@ -399,6 +400,11 @@ export function App() {
   ] = useState<ViewportCameraAction>();
 
   const [
+    isFullScreen,
+    setIsFullScreen
+  ] = useState(false);
+
+  const [
     previewObjectTransforms,
     setPreviewObjectTransforms
   ] = useState<
@@ -710,6 +716,16 @@ export function App() {
   useEffect(
     () =>
       subscribeToHost((message) => {
+        if (
+          message.type ===
+          "fullScreenChanged"
+        ) {
+          setIsFullScreen(
+            message.enabled
+          );
+          return;
+        }
+
         if (
           message.type ===
           "omsiRootSelected"
@@ -4036,6 +4052,23 @@ export function App() {
           | HTMLElement
           | null;
 
+      if (event.key === "F11") {
+        event.preventDefault();
+        setFullScreen(
+          !isFullScreen
+        );
+        return;
+      }
+
+      if (
+        event.key === "Escape" &&
+        isFullScreen
+      ) {
+        event.preventDefault();
+        setFullScreen(false);
+        return;
+      }
+
       if (
         target?.isContentEditable ||
         target?.tagName === "INPUT" ||
@@ -4203,6 +4236,7 @@ export function App() {
     handleSavePreviewEdits,
     handleSaveSplinePreview,
     handleUndoPreview,
+    isFullScreen,
     previewEditCount,
     requestCameraAction,
     saving,
@@ -6174,6 +6208,27 @@ export function App() {
 
           <button
             type="button"
+            className={
+              isFullScreen
+                ? "tool active"
+                : "tool"
+            }
+            title={
+              isFullScreen
+                ? "Sair da tela cheia (F11 ou Esc)"
+                : "Tela cheia (F11)"
+            }
+            onClick={() =>
+              setFullScreen(
+                !isFullScreen
+              )
+            }
+          >
+            ⤢
+          </button>
+
+          <button
+            type="button"
             className="tool"
             title="Desfazer transformação (Ctrl+Z)"
             disabled={
@@ -6223,7 +6278,13 @@ export function App() {
             Global
           </span>
           <span className="toolbar-chip">
-            Q/W/E · 1/2 · N · F · Ctrl+Z/Y/S
+            Q/W/E · 1/2 · N · F · F11 · Ctrl+Z/Y/S
+          </span>
+          <span
+            className="toolbar-chip"
+            title="Navegação do viewport"
+          >
+            RMB orbita · MMB desloca · roda zoom · setas movem
           </span>
 
           <span className="toolbar-separator" />
@@ -6822,6 +6883,9 @@ export function App() {
           <section className="editor-viewport">
             <Viewport
               tiles={activeTiles}
+              cameraStateKey={
+                `${selectedMap.directoryName}:${mapLoadMode}`
+              }
               objects={
                 objectsForViewport
               }
