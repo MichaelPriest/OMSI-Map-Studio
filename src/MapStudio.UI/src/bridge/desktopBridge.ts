@@ -13,6 +13,12 @@ export type OmsiTerrainGrid = {
   heights: number[];
 };
 
+export type OmsiTerrainTextureMask = {
+  layerIndex: number;
+  fileName: string;
+  fileSize: number;
+};
+
 export type OmsiTerrainRenderDataSummary = {
   exists: boolean;
   isValid: boolean;
@@ -38,6 +44,7 @@ export type OmsiTile = {
   terrainFileSize: number;
   terrain?: OmsiTerrainGrid | null;
   terrainRenderData?: OmsiTerrainRenderDataSummary | null;
+  terrainTextureMasks?: OmsiTerrainTextureMask[];
 };
 
 export type OmsiGroundTexture = {
@@ -655,6 +662,19 @@ export function loadMapRegion(
   });
 }
 
+export function getTerrainTextureMaskAssetKey(
+  directoryName: string,
+  relativeMapPath: string,
+  layerIndex: number
+) {
+  return [
+    "terrain-mask",
+    directoryName,
+    relativeMapPath,
+    layerIndex
+  ].join("|");
+}
+
 export function getGroundTextureAssetKey(
   directoryName: string,
   texturePath: string
@@ -688,6 +708,29 @@ export function getSplineTextureAssetKey(
     splinePath,
     textureName
   ].join("|");
+}
+
+export function loadTerrainTextureMaskAsset(
+  directoryName: string,
+  relativeMapPath: string,
+  layerIndex: number
+) {
+  const requestKey =
+    getTerrainTextureMaskAssetKey(
+      directoryName,
+      relativeMapPath,
+      layerIndex
+    );
+
+  getWebView()?.postMessage({
+    type: "loadTerrainTextureMaskAsset",
+    requestKey,
+    directoryName,
+    relativeMapPath,
+    layerIndex
+  });
+
+  return requestKey;
 }
 
 export function loadGroundTextureAsset(
