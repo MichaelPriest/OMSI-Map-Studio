@@ -38,6 +38,7 @@ UninstallDisplayIcon={app}\\{#AppExeName}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+ChangesAssociations=yes
 CloseApplications=force
 RestartApplications=no
 VersionInfoDescription=OMSI Map Studio Setup
@@ -66,3 +67,28 @@ Name: "{autodesktop}\\OMSI Map Studio"; Filename: "{app}\\{#AppExeName}"; IconFi
 
 [Run]
 Filename: "{app}\\{#AppExeName}"; Description: "{cm:LaunchProgram,OMSI Map Studio}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+const
+  SHCNE_ASSOCCHANGED = $08000000;
+  SHCNF_IDLIST = $0000;
+
+procedure SHChangeNotify(wEventId: LongWord; uFlags: LongWord; dwItem1: LongInt; dwItem2: LongInt);
+  external 'SHChangeNotify@shell32.dll stdcall';
+
+procedure RefreshShellIcons;
+begin
+  SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, 0, 0);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    RefreshShellIcons;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+    RefreshShellIcons;
+end;

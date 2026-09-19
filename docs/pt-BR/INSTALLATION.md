@@ -29,3 +29,10 @@ O instalador cria um desinstalador próprio do OMSI Map Studio. Ele fica registr
 A desinstalação remove os arquivos instalados em `%LOCALAPPDATA%\Programs\OMSI Map Studio` e os atalhos criados pelo instalador. Arquivos de mapas do OMSI, backups `.mapstudio-backups` e outros arquivos externos ao diretório do aplicativo não são removidos.
 
 Logs e dados locais fora da pasta de instalação não são apagados automaticamente nesta etapa, para evitar perda de diagnóstico ou preferências durante a fase alpha.
+
+
+## Pacote de ícones multirresolução
+
+O `MapStudio.ico` agora contém imagens 32-bit com transparência nas resoluções 16, 20, 24, 32, 40, 48, 64, 128 e 256 px. Isso cobre barra de título, barra de tarefas, Menu Iniciar, atalhos, instalador e desinstalador sem depender de uma única imagem pequena ampliada pelo Windows.
+
+O instalador também solicita atualização do cache visual do Shell após instalar ou remover o aplicativo, reduzindo casos em que o Windows mantém o ícone antigo em cache.

@@ -29,3 +29,10 @@ The installer creates a dedicated OMSI Map Studio uninstaller. It is registered 
 Uninstalling removes files installed under `%LOCALAPPDATA%\Programs\OMSI Map Studio` and shortcuts created by the installer. OMSI map files, `.mapstudio-backups`, and other files outside the application install directory are never removed.
 
 Logs and local data outside the installation directory are intentionally preserved at this alpha stage to avoid losing diagnostics or preferences.
+
+
+## Multi-resolution icon package
+
+`MapStudio.ico` now contains transparent 32-bit images at 16, 20, 24, 32, 40, 48, 64, 128, and 256 px. This covers the title bar, taskbar, Start Menu, shortcuts, installer, and uninstaller without relying on Windows scaling a single small icon.
+
+The installer also requests a Shell visual-cache refresh after installation or removal, reducing cases where Windows keeps displaying an older cached icon.
