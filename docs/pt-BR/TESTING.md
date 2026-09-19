@@ -431,3 +431,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 O teste `GeometryReader_LongHeaderBoneSection_UsesShortBoneCount` cria um O3D mínimo com cabeçalho estendido, índices longos e uma seção de bone cuja contagem é UInt16. A leitura deve terminar com geometria renderizável e sem `invalidBoneSection`.
 
 Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente O3D renderizáveis, falhas, pendentes e os principais códigos de erro por malha. Perfis SLI também devem mostrar quantidade de arquivos lidos e total de superfícies efetivamente disponíveis.
+
+
+## Validação da animação única, terreno e ícone
+
+1. abra Grundorf e confirme que, após a leitura dos tiles, permanece uma única animação “Preparando recursos do mapa” até O3D/SLI/texturas estabilizarem;
+2. confirme que a animação não fecha e reabre para cada item;
+3. durante a animação, a interface de edição deve permanecer bloqueada;
+4. no Inspetor, confirme `Upload textura base: RGBA direto` e observe o campo `RGB médio`;
+5. confirme visualmente que `gras.bmp` aparece no terreno, agora pelo canal emissivo não iluminado;
+6. confirme que superfícies de spline texturizadas também deixam de ficar escuras apenas por iluminação desativada;
+7. instale a nova build pelo EXE e abra pelo Menu Iniciar e também diretamente pelo executável; o ícone do OMSI Map Studio deve aparecer na janela e na barra de tarefas.
