@@ -28,9 +28,37 @@ type ViewportProps = {
   showObjects: boolean;
   showSplines: boolean;
   cameraAction?: {
-    type: "fit" | "focus";
+    type:
+      | "fit"
+      | "focus"
+      | "perspective"
+      | "top";
     token: number;
   };
+  placementAssetPath?: string;
+  placementGeometry?: OmsiSceneryObjectGeometry;
+  pendingPlacement?: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    pitch: number;
+    bank: number;
+  };
+  onPlacementPoint?: (
+    placement: {
+      tileX: number;
+      tileY: number;
+      x: number;
+      y: number;
+      z: number;
+      rotation: number;
+      pitch: number;
+      bank: number;
+    }
+  ) => void;
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -949,6 +977,10 @@ export function Viewport({
   showObjects,
   showSplines,
   cameraAction,
+  placementAssetPath,
+  placementGeometry,
+  pendingPlacement,
+  onPlacementPoint,
   objects,
   splines,
   activeTile,
@@ -1284,6 +1316,72 @@ export function Viewport({
       ground.isPickable = false;
     }
 
+    let placementPreview:
+      OmsiPlacedObject | undefined;
+
+    if (
+      placementAssetPath &&
+      pendingPlacement &&
+      !usesWorldCoordinates
+    ) {
+      placementPreview = {
+        tileX:
+          pendingPlacement.tileX,
+        tileY:
+          pendingPlacement.tileY,
+        headerValue: "",
+        sceneryObjectPath:
+          placementAssetPath,
+        objectId: -1,
+        sourceSectionOrdinal: -1,
+        x: pendingPlacement.x,
+        y: pendingPlacement.y,
+        z: pendingPlacement.z,
+        rotation:
+          pendingPlacement.rotation,
+        pitch:
+          pendingPlacement.pitch,
+        bank:
+          pendingPlacement.bank
+      };
+
+      if (
+        showObjects &&
+        placementGeometry &&
+        hasRenderableGeometry(
+          placementGeometry
+        )
+      ) {
+        createSelectedGeometry(
+          scene,
+          placementPreview,
+          placementGeometry
+        );
+      }
+
+      const placementMarker =
+        MeshBuilder.CreateLineSystem(
+          "omsi-new-object-preview",
+          {
+            lines:
+              createSelectedMarkerLines(
+                placementPreview
+              )
+          },
+          scene
+        );
+
+      placementMarker.color =
+        new Color3(
+          1,
+          0.55,
+          0.15
+        );
+
+      placementMarker.isPickable =
+        false;
+    }
+
     if (
       showSplines &&
       !usesWorldCoordinates &&
@@ -1318,7 +1416,8 @@ export function Viewport({
     }
 
     showSelection(
-      showObjects
+      showObjects &&
+      !placementAssetPath
         ? selectedObject
         : undefined
     );
@@ -1327,6 +1426,7 @@ export function Viewport({
       TransformNode | undefined;
 
     if (
+      !placementAssetPath &&
       !usesWorldCoordinates &&
       selectedObject &&
       editorTool !== "select"
@@ -1502,6 +1602,101 @@ export function Viewport({
         false
       );
       const direction = ray.direction.normalizeToNew();
+
+      if (
+        placementAssetPath &&
+        onPlacementPoint
+      ) {
+        if (
+          Math.abs(direction.y) >
+          0.000001
+        ) {
+          const distanceToGround =
+            -ray.origin.y /
+            direction.y;
+
+          if (distanceToGround > 0) {
+            const groundPoint =
+              ray.origin.add(
+                direction.scale(
+                  distanceToGround
+                )
+              );
+
+            const tileX =
+              Math.floor(
+                groundPoint.x /
+                300
+              );
+
+            const tileY =
+              Math.floor(
+                groundPoint.z /
+                300
+              );
+
+            const tileExists =
+              tiles.some(
+                (tile) =>
+                  tile.x === tileX &&
+                  tile.y === tileY &&
+                  (!tile.detailsLoaded ||
+                    tile.fileExists)
+              );
+
+            if (tileExists) {
+              const rawX =
+                groundPoint.x -
+                tileX * 300;
+
+              const rawY =
+                groundPoint.z -
+                tileY * 300;
+
+              const snappedX =
+                snapEnabled &&
+                moveSnap > 0
+                  ? Math.round(
+                      rawX /
+                        moveSnap
+                    ) * moveSnap
+                  : rawX;
+
+              const snappedY =
+                snapEnabled &&
+                moveSnap > 0
+                  ? Math.round(
+                      rawY /
+                        moveSnap
+                    ) * moveSnap
+                  : rawY;
+
+              onPlacementPoint({
+                tileX,
+                tileY,
+                x: snappedX,
+                y: snappedY,
+                z: 0,
+                rotation: 0,
+                pitch: 0,
+                bank: 0
+              });
+
+              if (
+                onActiveTileChange
+              ) {
+                onActiveTileChange({
+                  x: tileX,
+                  y: tileY
+                });
+              }
+            }
+          }
+        }
+
+        return;
+      }
+
       const threshold = Math.max(2.5, Math.min(20, camera.radius * 0.004));
 
       let selected: OmsiPlacedObject | undefined;
@@ -1660,6 +1855,10 @@ export function Viewport({
     showObjects,
     showSplines,
     cameraAction,
+    placementAssetPath,
+    placementGeometry,
+    pendingPlacement,
+    onPlacementPoint,
     objects,
     splines,
     activeTile,
