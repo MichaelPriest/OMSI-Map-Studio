@@ -269,6 +269,21 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "insertSpline":
+                    if (
+                        TryReadSplineInsertionRequest(
+                            message.RootElement,
+                            out var splineInsertionRequest))
+                    {
+                        await InsertSplineAsync(
+                            splineInsertionRequest);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "saveSplineTransforms":
                     if (
                         TryReadString(
@@ -1468,6 +1483,314 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task InsertSplineAsync(
+        SplineInsertionRequest request)
+    {
+        if (
+            !_knownMaps.TryGetValue(
+                request.DirectoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (
+            _omsiRootPath is null ||
+            !_knownSplinePaths
+                .ContainsKey(
+                    request.SplinePath) ||
+            !OmsiSplinePathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    request.SplinePath,
+                    out var splineFullPath) ||
+            !File.Exists(splineFullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSplinePath"
+            });
+
+            return;
+        }
+
+        if (map.UsesWorldCoordinates)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "splineInsertionWorldCoordinatesUnsupported"
+            });
+
+            return;
+        }
+
+        var sourceTile =
+            map.Tiles.FirstOrDefault(
+                tile =>
+                    tile.X ==
+                        request.SourceTileX &&
+                    tile.Y ==
+                        request.SourceTileY);
+
+        var targetTile =
+            map.Tiles.FirstOrDefault(
+                tile =>
+                    tile.X ==
+                        request.TargetTileX &&
+                    tile.Y ==
+                        request.TargetTileY);
+
+        if (
+            sourceTile is null ||
+            targetTile is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+
+            return;
+        }
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    map.DirectoryPath,
+                    sourceTile.RelativeMapPath,
+                    out var sourceTilePath) ||
+            !File.Exists(sourceTilePath) ||
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    map.DirectoryPath,
+                    targetTile.RelativeMapPath,
+                    out var targetTilePath) ||
+            !File.Exists(targetTilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTilePath"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var snapshot =
+                await ReadMapInsertionSnapshotAsync(
+                    map);
+
+            if (
+                snapshot.MaxUsedId >=
+                    int.MaxValue)
+            {
+                throw new InvalidDataException(
+                    "splineIdExhausted");
+            }
+
+            var targetDocument =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        targetTilePath);
+
+            var sourceDocument =
+                string.Equals(
+                    sourceTilePath,
+                    targetTilePath,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? targetDocument
+                    : await OmsiConfigParser
+                        .ParseFileAsync(
+                            sourceTilePath);
+
+            var sourceSpline =
+                OmsiTileReader
+                    .ReadSplines(
+                        sourceDocument)
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate
+                                .SourceSectionOrdinal ==
+                            request
+                                .SourceSectionOrdinal);
+
+            if (
+                sourceSpline is null ||
+                sourceSpline.SplineId !=
+                    request.SplineId ||
+                sourceSpline.PreviousSplineId !=
+                    request.PreviousSplineId ||
+                sourceSpline.NextSplineId !=
+                    request.NextSplineId ||
+                sourceSpline.IsHeightSpline !=
+                    request.IsHeightSpline ||
+                !string.Equals(
+                    sourceSpline.SplinePath,
+                    request.SplinePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "splineSourceChanged");
+            }
+
+            var nextId =
+                checked(
+                    snapshot.MaxUsedId + 1);
+
+            var result =
+                OmsiTileSplineInserter
+                    .Append(
+                        targetDocument,
+                        new OmsiNewPlacedSpline(
+                            sourceSpline.HeaderValue,
+                            sourceSpline.SplinePath,
+                            nextId,
+                            -1,
+                            -1,
+                            request.X,
+                            request.Z,
+                            request.Y,
+                            request.Rotation,
+                            request.Length,
+                            request.Radius,
+                            request.GradientStart,
+                            request.GradientEnd,
+                            sourceSpline.IsHeightSpline,
+                            sourceSpline.ExtraValues));
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    targetTilePath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTilePath");
+            }
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var backupPath =
+                Path.Combine(
+                    backupRoot,
+                    relativePath);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            targetTilePath,
+                            backupPath,
+                            result.Bytes)
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    targetTilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type = "splineInserted",
+                map.DirectoryName,
+                backupDirectory =
+                    backupRoot,
+                placedSpline = new
+                {
+                    tileX =
+                        request.TargetTileX,
+                    tileY =
+                        request.TargetTileY,
+                    headerValue =
+                        sourceSpline.HeaderValue,
+                    splinePath =
+                        sourceSpline.SplinePath,
+                    splineId = nextId,
+                    sourceSectionOrdinal =
+                        result.SourceSectionOrdinal,
+                    previousSplineId = -1,
+                    nextSplineId = -1,
+                    x = request.X,
+                    z = request.Z,
+                    y = request.Y,
+                    rotation =
+                        request.Rotation,
+                    length =
+                        request.Length,
+                    radius =
+                        request.Radius,
+                    gradientStart =
+                        request.GradientStart,
+                    gradientEnd =
+                        request.GradientEnd,
+                    isHeightSpline =
+                        sourceSpline.IsHeightSpline
+                }
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "splineIdExhausted"
+                        ? "splineIdExhausted"
+                        : exception.Message ==
+                            "splineSourceChanged"
+                            ? "splineInsertConflict"
+                            : "splineInsertError",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = targetTilePath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "splineInsertError",
+                detail = exception.Message
+            });
+        }
+    }
+
     private async Task SaveSplineTransformsAsync(
         string? directoryName,
         IReadOnlyList<SplineTransformRequest> requests)
@@ -2495,6 +2818,119 @@ public partial class MainWindow : Window
         return result.Count > 0;
     }
 
+    private static bool TryReadSplineInsertionRequest(
+        JsonElement element,
+        out SplineInsertionRequest request)
+    {
+        request = default!;
+
+        if (
+            !TryReadString(
+                element,
+                "directoryName",
+                out var directoryName) ||
+            !TryReadInt32(
+                element,
+                "sourceTileX",
+                out var sourceTileX) ||
+            !TryReadInt32(
+                element,
+                "sourceTileY",
+                out var sourceTileY) ||
+            !TryReadInt32(
+                element,
+                "sourceSectionOrdinal",
+                out var sourceSectionOrdinal) ||
+            !TryReadString(
+                element,
+                "splinePath",
+                out var splinePath) ||
+            !TryReadInt32(
+                element,
+                "splineId",
+                out var splineId) ||
+            !TryReadInt32(
+                element,
+                "previousSplineId",
+                out var previousSplineId) ||
+            !TryReadInt32(
+                element,
+                "nextSplineId",
+                out var nextSplineId) ||
+            !TryReadBoolean(
+                element,
+                "isHeightSpline",
+                out var isHeightSpline) ||
+            !TryReadInt32(
+                element,
+                "targetTileX",
+                out var targetTileX) ||
+            !TryReadInt32(
+                element,
+                "targetTileY",
+                out var targetTileY) ||
+            !TryReadDouble(
+                element,
+                "x",
+                out var x) ||
+            !TryReadDouble(
+                element,
+                "y",
+                out var y) ||
+            !TryReadDouble(
+                element,
+                "z",
+                out var z) ||
+            !TryReadDouble(
+                element,
+                "rotation",
+                out var rotation) ||
+            !TryReadDouble(
+                element,
+                "length",
+                out var length) ||
+            length < 0 ||
+            !TryReadDouble(
+                element,
+                "radius",
+                out var radius) ||
+            !TryReadDouble(
+                element,
+                "gradientStart",
+                out var gradientStart) ||
+            !TryReadDouble(
+                element,
+                "gradientEnd",
+                out var gradientEnd))
+        {
+            return false;
+        }
+
+        request =
+            new SplineInsertionRequest(
+                directoryName!,
+                sourceTileX,
+                sourceTileY,
+                sourceSectionOrdinal,
+                splinePath!,
+                splineId,
+                previousSplineId,
+                nextSplineId,
+                isHeightSpline,
+                targetTileX,
+                targetTileY,
+                x,
+                y,
+                z,
+                rotation,
+                length,
+                radius,
+                gradientStart,
+                gradientEnd);
+
+        return true;
+    }
+
     private static bool TryReadSplineTransformRequests(
         JsonElement element,
         out IReadOnlyList<SplineTransformRequest> requests)
@@ -2680,6 +3116,27 @@ public partial class MainWindow : Window
         double Rotation,
         double Pitch,
         double Bank);
+
+    private sealed record SplineInsertionRequest(
+        string DirectoryName,
+        int SourceTileX,
+        int SourceTileY,
+        int SourceSectionOrdinal,
+        string SplinePath,
+        int SplineId,
+        int PreviousSplineId,
+        int NextSplineId,
+        bool IsHeightSpline,
+        int TargetTileX,
+        int TargetTileY,
+        double X,
+        double Y,
+        double Z,
+        double Rotation,
+        double Length,
+        double Radius,
+        double GradientStart,
+        double GradientEnd);
 
     private sealed record SplineTransformRequest(
         int TileX,

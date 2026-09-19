@@ -59,6 +59,28 @@ type ViewportProps = {
       bank: number;
     }
   ) => void;
+  splinePlacementTemplate?: OmsiPlacedSpline;
+  splinePlacementProfile?: OmsiSplineDefinition;
+  pendingSplinePlacement?: {
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    length: number;
+    radius: number;
+    gradientStart: number;
+    gradientEnd: number;
+  };
+  onSplinePlacementPoint?: (
+    point: {
+      targetTileX: number;
+      targetTileY: number;
+      x: number;
+      y: number;
+    }
+  ) => void;
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -1074,6 +1096,10 @@ export function Viewport({
   placementGeometry,
   pendingPlacement,
   onPlacementPoint,
+  splinePlacementTemplate,
+  splinePlacementProfile,
+  pendingSplinePlacement,
+  onSplinePlacementPoint,
   objects,
   splines,
   activeTile,
@@ -1486,6 +1512,78 @@ export function Viewport({
         false;
     }
 
+    let splinePlacementPreview:
+      OmsiPlacedSpline | undefined;
+
+    if (
+      splinePlacementTemplate &&
+      pendingSplinePlacement &&
+      !usesWorldCoordinates
+    ) {
+      splinePlacementPreview = {
+        ...splinePlacementTemplate,
+        tileX:
+          pendingSplinePlacement
+            .targetTileX,
+        tileY:
+          pendingSplinePlacement
+            .targetTileY,
+        splineId: -1,
+        sourceSectionOrdinal: -1,
+        previousSplineId: -1,
+        nextSplineId: -1,
+        x: pendingSplinePlacement.x,
+        y: pendingSplinePlacement.y,
+        z: pendingSplinePlacement.z,
+        rotation:
+          pendingSplinePlacement
+            .rotation,
+        length:
+          pendingSplinePlacement
+            .length,
+        radius:
+          pendingSplinePlacement
+            .radius,
+        gradientStart:
+          pendingSplinePlacement
+            .gradientStart,
+        gradientEnd:
+          pendingSplinePlacement
+            .gradientEnd
+      };
+
+      const points =
+        getSplineAxisLine(
+          splinePlacementPreview
+        );
+
+      if (points.length >= 2) {
+        const axis =
+          MeshBuilder.CreateLines(
+            "omsi-new-spline-preview",
+            { points },
+            scene
+          );
+
+        axis.color =
+          new Color3(
+            1,
+            0.55,
+            0.15
+          );
+
+        axis.isPickable = false;
+      }
+
+      if (splinePlacementProfile) {
+        createSelectedSplineProfile(
+          scene,
+          splinePlacementPreview,
+          splinePlacementProfile
+        );
+      }
+    }
+
     if (
       showSplines &&
       !usesWorldCoordinates &&
@@ -1757,8 +1855,14 @@ export function Viewport({
       const direction = ray.direction.normalizeToNew();
 
       if (
-        placementAssetPath &&
-        onPlacementPoint
+        (
+          placementAssetPath &&
+          onPlacementPoint
+        ) ||
+        (
+          splinePlacementTemplate &&
+          onSplinePlacementPoint
+        )
       ) {
         if (
           Math.abs(direction.y) >
@@ -1824,16 +1928,33 @@ export function Viewport({
                     ) * moveSnap
                   : rawY;
 
-              onPlacementPoint({
-                tileX,
-                tileY,
-                x: snappedX,
-                y: snappedY,
-                z: 0,
-                rotation: 0,
-                pitch: 0,
-                bank: 0
-              });
+              if (
+                placementAssetPath &&
+                onPlacementPoint
+              ) {
+                onPlacementPoint({
+                  tileX,
+                  tileY,
+                  x: snappedX,
+                  y: snappedY,
+                  z: 0,
+                  rotation: 0,
+                  pitch: 0,
+                  bank: 0
+                });
+              }
+
+              if (
+                splinePlacementTemplate &&
+                onSplinePlacementPoint
+              ) {
+                onSplinePlacementPoint({
+                  targetTileX: tileX,
+                  targetTileY: tileY,
+                  x: snappedX,
+                  y: snappedY
+                });
+              }
 
               if (
                 onActiveTileChange
@@ -2012,6 +2133,10 @@ export function Viewport({
     placementGeometry,
     pendingPlacement,
     onPlacementPoint,
+    splinePlacementTemplate,
+    splinePlacementProfile,
+    pendingSplinePlacement,
+    onSplinePlacementPoint,
     objects,
     splines,
     activeTile,

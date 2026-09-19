@@ -37,7 +37,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Known limitations
 
 - creation and copying only persist when a safe template of the same `.sco` exists;
-- spline creation and previous/next link editing are not implemented yet;
+- free-form spline creation and automatic previous/next link editing are not implemented yet; current creation is a detached copy of a real spline;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
 - `[worldcoordinates]` maps remain limited;
@@ -108,3 +108,20 @@ For a conflict test, externally change the object's ID or `.sco` path before con
 10. verify ID, previous/next, extras, comments and unknown sections were not changed in the tile.
 
 Externally change ID, `.sli` path, `[spline]`/ `[spline_h]` type or previous/next links before Save to verify the host cancels the write as a conflict.
+
+
+## Spline copy test
+
+1. select an existing spline;
+2. in **General**, click **Place detached copy**;
+3. click another point on the map;
+4. verify the preview preserves the source type, length, radius, rotation and gradients;
+5. adjust the desired values;
+6. confirm **Confirm and save**;
+7. wait for reload;
+8. verify the new spline received a new global ID;
+9. inspect the tile and verify the new spline has `previous = -1` and `next = -1`;
+10. verify the original spline and its links were not changed;
+11. verify the backup under `.mapstudio-backups/<timestamp>/`.
+
+For a conflict test, externally change the source spline ID, path, type or links after placement starts. Creation must be cancelled.

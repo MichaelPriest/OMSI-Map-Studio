@@ -200,6 +200,97 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void SplineInserter_AppendsDetachedCopyAndPreservesContent()
+    {
+        const string source =
+            "[version]\r\n14\r\n" +
+            "[future_section]\r\nkeep-me\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var result =
+            OmsiTileSplineInserter.Append(
+                document,
+                new OmsiNewPlacedSpline(
+                    "0",
+                    @"Splines\Roads\street.sli",
+                    121,
+                    -1,
+                    -1,
+                    12.5,
+                    1.25,
+                    22.75,
+                    45,
+                    50,
+                    -200,
+                    2,
+                    4,
+                    false,
+                    ["future-extra"]));
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(
+                    result.Bytes);
+
+        Assert.Equal(
+            0,
+            result.SourceSectionOrdinal);
+
+        Assert.StartsWith(
+            source,
+            text);
+
+        Assert.Contains(
+            "[spline]\r\n0\r\n" +
+            "Splines\\Roads\\street.sli\r\n" +
+            "121\r\n-1\r\n-1\r\n" +
+            "12.5\r\n1.25\r\n22.75\r\n" +
+            "45\r\n50\r\n-200\r\n2\r\n4\r\n" +
+            "future-extra\r\n",
+            text);
+    }
+
+    [Fact]
+    public void SplineInserter_UsesHeightKeyword()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[version]\n14\n");
+
+        var result =
+            OmsiTileSplineInserter.Append(
+                document,
+                new OmsiNewPlacedSpline(
+                    "0",
+                    @"Splines\Roads\hill.sli",
+                    2,
+                    -1,
+                    -1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    30,
+                    0,
+                    5,
+                    5,
+                    true,
+                    ["1.5"]));
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(
+                    result.Bytes);
+
+        Assert.Contains(
+            "[spline_h]\n",
+            text);
+    }
+
+    [Fact]
     public void ReadSplines_RecognizesHeightSpline()
     {
         const string source =

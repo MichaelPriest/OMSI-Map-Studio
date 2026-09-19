@@ -188,6 +188,12 @@ export type HostMessage =
       backupDirectory: string;
     }
   | {
+      type: "splineInserted";
+      directoryName: string;
+      backupDirectory: string;
+      placedSpline: OmsiPlacedSpline;
+    }
+  | {
       type: "splineTransformsSaved";
       directoryName: string;
       editsSaved: number;
@@ -354,6 +360,45 @@ export function saveObjectTransforms(
           placedObject.bank
       })
     )
+  });
+}
+
+export function insertSpline(
+  directoryName: string,
+  sourceSpline: OmsiPlacedSpline,
+  placement: {
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    length: number;
+    radius: number;
+    gradientStart: number;
+    gradientEnd: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertSpline",
+    directoryName,
+    sourceTileX:
+      sourceSpline.tileX,
+    sourceTileY:
+      sourceSpline.tileY,
+    sourceSectionOrdinal:
+      sourceSpline.sourceSectionOrdinal,
+    splinePath:
+      sourceSpline.splinePath,
+    splineId:
+      sourceSpline.splineId,
+    previousSplineId:
+      sourceSpline.previousSplineId,
+    nextSplineId:
+      sourceSpline.nextSplineId,
+    isHeightSpline:
+      sourceSpline.isHeightSpline,
+    ...placement
   });
 }
 

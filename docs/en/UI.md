@@ -262,3 +262,20 @@ With a spline selected, **W** enables the move gizmo and **E** enables the rotat
 The selected axis and profile follow the gizmo in real time. The change enters React preview state only when dragging ends, avoiding writes or React updates on every frame. Move/rotation snapping uses the same viewport toolbar values.
 
 The global **Save** button and `Ctrl+S` also save spline previews. The global ✕ button discards a spline preview when it is the pending edit. ↶/↷ remain object-history-only at this stage.
+
+
+## Place spline copy
+
+In a spline's **General** tab, **Place detached copy** uses the selected spline as a real template.
+
+Flow:
+
+1. select an existing spline;
+2. click **Place detached copy**;
+3. click a tile to choose the new start point;
+4. adjust Z, rotation, length, radius and gradients;
+5. confirm **Confirm and save**.
+
+The host rereads the source spline from disk and validates ordinal, `.sli` path, ID, type and links before creation. The copy preserves the source `HeaderValue`, `[spline]`/`[spline_h]` type and real extra values, receives a new global ID, and is created with `previous = -1` and `next = -1`.
+
+Starting detached is deliberate: this stage does not automatically rewrite neighboring spline chains.

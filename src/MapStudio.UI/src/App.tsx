@@ -7,6 +7,7 @@ import {
 import {
   deleteObject,
   insertObject,
+  insertSpline,
   isDesktopBridgeAvailable,
   loadMapFull,
   loadMapRegion,
@@ -86,6 +87,19 @@ const defaultPlacementTransform:
     bank: 0
   };
 
+type PendingSplinePlacement = {
+  targetTileX: number;
+  targetTileY: number;
+  x: number;
+  y: number;
+  z: number;
+  rotation: number;
+  length: number;
+  radius: number;
+  gradientStart: number;
+  gradientEnd: number;
+};
+
 type InspectorTab =
   | "general"
   | "transform"
@@ -133,6 +147,14 @@ const errorMessages: Record<string, string> = {
     "O objeto mudou no arquivo desde a leitura. A exclusão foi cancelada para proteger o mapa.",
   objectDeleteError:
     "Não foi possível excluir o objeto com segurança. O tile original foi preservado quando possível.",
+  splineInsertConflict:
+    "A spline de origem mudou no arquivo desde a leitura. A cópia foi cancelada.",
+  splineInsertError:
+    "Não foi possível inserir a cópia da spline com segurança.",
+  splineIdExhausted:
+    "Não há mais IDs inteiros disponíveis para criar uma nova spline.",
+  splineInsertionWorldCoordinatesUnsupported:
+    "A colocação de spline em mapas com [worldcoordinates] ainda não é suportada nesta alpha.",
   unknownTile:
     "O tile escolhido não pertence ao mapa aberto.",
   invalidTilePath:
@@ -454,6 +476,23 @@ export function App() {
   const [
     deletingObject,
     setDeletingObject
+  ] = useState(false);
+
+  const [
+    splinePlacementTemplate,
+    setSplinePlacementTemplate
+  ] = useState<OmsiPlacedSpline>();
+
+  const [
+    pendingSplinePlacement,
+    setPendingSplinePlacement
+  ] = useState<
+    PendingSplinePlacement
+  >();
+
+  const [
+    insertingSpline,
+    setInsertingSpline
   ] = useState(false);
 
   const [saving, setSaving] =
@@ -800,6 +839,32 @@ export function App() {
 
         if (
           message.type ===
+          "splineInserted"
+        ) {
+          setInsertingSpline(false);
+          setSplinePlacementTemplate(
+            undefined
+          );
+          setPendingSplinePlacement(
+            undefined
+          );
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            `Spline #${message.placedSpline.splineId} inserida desconectada. Backup: ${message.backupDirectory}`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+
+          return;
+        }
+
+        if (
+          message.type ===
           "splineTransformsSaved"
         ) {
           setSavingSpline(false);
@@ -884,6 +949,7 @@ export function App() {
           setInsertingObject(false);
           setDeletingObject(false);
           setSavingSpline(false);
+          setInsertingSpline(false);
 
           setError(
             errorMessages[message.code] ??
@@ -1898,6 +1964,140 @@ export function App() {
       ]
     );
 
+  const handleStartSplineCopy =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !selectedSpline
+      ) {
+        return;
+      }
+
+      if (
+        previewEditCount > 0 ||
+        splinePreviewEditCount > 0
+      ) {
+        setError(
+          "Salve ou descarte todas as prévias antes de criar uma cópia da spline."
+        );
+        return;
+      }
+
+      if (placementAsset) {
+        setError(
+          "Cancele a colocação de objeto atual antes de criar uma cópia da spline."
+        );
+        return;
+      }
+
+      if (
+        selectedMap
+          .usesWorldCoordinates
+      ) {
+        setError(
+          errorMessages
+            .splineInsertionWorldCoordinatesUnsupported
+        );
+        return;
+      }
+
+      setSplinePlacementTemplate(
+        selectedSpline
+      );
+      setPendingSplinePlacement(
+        undefined
+      );
+      setSelectedSpline(undefined);
+      setSelectedObject(undefined);
+      setEditorTool("select");
+      setShowSplines(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+    }, [
+      placementAsset,
+      previewEditCount,
+      selectedMap,
+      selectedSpline,
+      splinePreviewEditCount
+    ]);
+
+  const handleSplinePlacementPoint =
+    useCallback(
+      (
+        point: Pick<
+          PendingSplinePlacement,
+          | "targetTileX"
+          | "targetTileY"
+          | "x"
+          | "y"
+        >
+      ) => {
+        if (!splinePlacementTemplate) {
+          return;
+        }
+
+        setPendingSplinePlacement({
+          ...point,
+          z:
+            splinePlacementTemplate.z,
+          rotation:
+            splinePlacementTemplate
+              .rotation,
+          length:
+            splinePlacementTemplate
+              .length,
+          radius:
+            splinePlacementTemplate
+              .radius,
+          gradientStart:
+            splinePlacementTemplate
+              .gradientStart,
+          gradientEnd:
+            splinePlacementTemplate
+              .gradientEnd
+        });
+      },
+      [splinePlacementTemplate]
+    );
+
+  const handleCancelSplinePlacement =
+    useCallback(() => {
+      setSplinePlacementTemplate(
+        undefined
+      );
+      setPendingSplinePlacement(
+        undefined
+      );
+      setInsertingSpline(false);
+    }, []);
+
+  const handleConfirmSplinePlacement =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !splinePlacementTemplate ||
+        !pendingSplinePlacement ||
+        insertingSpline
+      ) {
+        return;
+      }
+
+      setInsertingSpline(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      insertSpline(
+        selectedMap.directoryName,
+        splinePlacementTemplate,
+        pendingSplinePlacement
+      );
+    }, [
+      insertingSpline,
+      pendingSplinePlacement,
+      selectedMap,
+      splinePlacementTemplate
+    ]);
+
   const handleDiscardSplinePreview =
     useCallback(() => {
       if (selectedSpline) {
@@ -2246,6 +2446,13 @@ export function App() {
           return;
         }
 
+        if (splinePlacementTemplate) {
+          setError(
+            "Cancele a colocação de spline atual antes de colocar um objeto."
+          );
+          return;
+        }
+
         if (
           selectedMap
             ?.usesWorldCoordinates
@@ -2282,6 +2489,7 @@ export function App() {
       [
         geometryByPath,
         selectedMap,
+        splinePlacementTemplate,
         splinePreviewEditCount
       ]
     );
@@ -2490,6 +2698,7 @@ export function App() {
     savingSpline ||
     insertingObject ||
     deletingObject ||
+    insertingSpline ||
     loadingFullMap ||
     Boolean(loadingRegionKey);
 
@@ -3390,11 +3599,12 @@ export function App() {
         </div>
 
         {inspectorTab === "general" && (
-          <dl className="property-list dense">
-            <div>
-              <dt>Arquivo</dt>
-              <dd>
-                {selectedSpline.splinePath}
+          <>
+            <dl className="property-list dense">
+              <div>
+                <dt>Arquivo</dt>
+                <dd>
+                  {selectedSpline.splinePath}
               </dd>
             </div>
             <div>
@@ -3417,15 +3627,40 @@ export function App() {
                 {selectedSpline.tileY}
               </dd>
             </div>
-            <div>
-              <dt>Tipo</dt>
-              <dd>
-                {selectedSpline.isHeightSpline
-                  ? "Spline de altura"
-                  : "Spline"}
-              </dd>
+              <div>
+                <dt>Tipo</dt>
+                <dd>
+                  {selectedSpline.isHeightSpline
+                    ? "Spline de altura"
+                    : "Spline"}
+                </dd>
+              </div>
+            </dl>
+
+            <button
+              type="button"
+              className="wide"
+              onClick={
+                handleStartSplineCopy
+              }
+              disabled={
+                busy ||
+                previewEditCount > 0 ||
+                splinePreviewEditCount > 0 ||
+                Boolean(placementAsset)
+              }
+              title="Criar uma nova spline desconectada usando esta spline real como template"
+            >
+              Colocar cópia desconectada
+            </button>
+
+            <div className="transform-help">
+              A nova spline copia tipo, header e
+              parâmetros extras reais. Os vínculos
+              anterior/próxima começam em -1 para
+              não alterar a cadeia existente.
             </div>
-          </dl>
+          </>
         )}
 
         {inspectorTab === "transform" && (
@@ -4230,6 +4465,23 @@ export function App() {
               onPlacementPoint={
                 handlePlacementPoint
               }
+              splinePlacementTemplate={
+                splinePlacementTemplate
+              }
+              splinePlacementProfile={
+                splinePlacementTemplate
+                  ? splineProfilesByPath[
+                      splinePlacementTemplate
+                        .splinePath
+                    ]
+                  : undefined
+              }
+              pendingSplinePlacement={
+                pendingSplinePlacement
+              }
+              onSplinePlacementPoint={
+                handleSplinePlacementPoint
+              }
               activeTile={activeTile}
               onActiveTileChange={
                 (tile) => {
@@ -4288,6 +4540,138 @@ export function App() {
                 handlePreviewSplineTransform
               }
             />
+
+            {splinePlacementTemplate && (
+              <div className="placement-bar">
+                <div>
+                  <strong>
+                    Copiando spline:{" "}
+                    {getObjectName(
+                      splinePlacementTemplate
+                        .splinePath
+                    )}
+                  </strong>
+                  <span>
+                    {pendingSplinePlacement
+                      ? `Tile ${pendingSplinePlacement.targetTileX},${pendingSplinePlacement.targetTileY} · X ${formatNumber(pendingSplinePlacement.x)} · Y ${formatNumber(pendingSplinePlacement.y)} · desconectada`
+                      : "Clique em um tile para posicionar o início da cópia."}
+                  </span>
+                </div>
+
+                {pendingSplinePlacement && (
+                  <>
+                    {(
+                      [
+                        ["z", "Z", 0.1],
+                        [
+                          "rotation",
+                          "Rot °",
+                          1
+                        ],
+                        [
+                          "length",
+                          "Comp.",
+                          0.1
+                        ],
+                        [
+                          "radius",
+                          "Raio",
+                          0.1
+                        ],
+                        [
+                          "gradientStart",
+                          "Grad. I",
+                          0.1
+                        ],
+                        [
+                          "gradientEnd",
+                          "Grad. F",
+                          0.1
+                        ]
+                      ] as const
+                    ).map(
+                      ([field, label, step]) => (
+                        <label
+                          className="placement-field"
+                          key={field}
+                        >
+                          <span>{label}</span>
+                          <input
+                            type="number"
+                            step={step}
+                            min={
+                              field === "length"
+                                ? 0
+                                : undefined
+                            }
+                            value={
+                              pendingSplinePlacement[
+                                field
+                              ]
+                            }
+                            onChange={(event) => {
+                              const value =
+                                event.currentTarget
+                                  .valueAsNumber;
+
+                              if (
+                                Number.isFinite(
+                                  value
+                                ) &&
+                                (
+                                  field !==
+                                    "length" ||
+                                  value >= 0
+                                )
+                              ) {
+                                setPendingSplinePlacement(
+                                  (current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          [field]:
+                                            value
+                                        }
+                                      : current
+                                );
+                              }
+                            }}
+                          />
+                        </label>
+                      )
+                    )}
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={
+                    !pendingSplinePlacement ||
+                    insertingSpline
+                  }
+                  onClick={
+                    handleConfirmSplinePlacement
+                  }
+                  title="Criar backup e inserir uma spline desconectada"
+                >
+                  {insertingSpline
+                    ? "Inserindo..."
+                    : "Confirmar e salvar"}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={insertingSpline}
+                  onClick={
+                    handleCancelSplinePlacement
+                  }
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
 
             {placementAsset && (
               <div className="placement-bar">

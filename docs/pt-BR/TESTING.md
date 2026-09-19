@@ -37,7 +37,7 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Limitações conhecidas
 
 - criação e cópia só gravam quando existe template seguro do mesmo `.sco`;
-- criação de splines e edição dos vínculos previous/next ainda não existem;
+- criação livre de splines e edição automática dos vínculos previous/next ainda não existem; a criação atual é por cópia desconectada de uma spline real;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
 - mapas `[worldcoordinates]` continuam limitados;
@@ -108,3 +108,20 @@ Para testar conflito, altere externamente o ID ou caminho `.sco` do objeto antes
 10. confira no tile que ID, previous/next, extras, comentários e seções desconhecidas não foram alterados.
 
 Altere externamente ID, caminho `.sli`, tipo `[spline]`/ `[spline_h]` ou vínculos previous/next antes do Save para validar que o host cancela a gravação como conflito.
+
+
+## Teste de cópia de spline
+
+1. selecione uma spline existente;
+2. na aba **Geral**, clique **Colocar cópia desconectada**;
+3. clique em outro ponto do mapa;
+4. confirme que a prévia mantém tipo, comprimento, raio, rotação e gradientes da fonte;
+5. ajuste os valores desejados;
+6. confirme **Confirmar e salvar**;
+7. aguarde o recarregamento;
+8. confirme que a nova spline recebeu um ID global novo;
+9. confira no tile que `previous` e `next` da nova spline são `-1`;
+10. confirme que a spline original e seus vínculos não foram alterados;
+11. confira o backup em `.mapstudio-backups/<timestamp>/`.
+
+Para testar conflito, altere externamente o ID, caminho, tipo ou vínculos da spline-fonte depois de iniciar a colocação. A criação deve ser cancelada.

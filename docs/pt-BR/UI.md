@@ -262,3 +262,20 @@ Com uma spline selecionada, **W** ativa o gizmo de movimento e **E** ativa o giz
 O eixo e o perfil selecionados acompanham o gizmo em tempo real. A alteração só entra no estado de prévia quando o arraste termina, evitando gravações ou atualizações React a cada frame. Snap de movimento/rotação usa os mesmos valores configurados na barra do viewport.
 
 O botão global **Salvar** e `Ctrl+S` também salvam prévias de spline. O botão global ✕ descarta a prévia de spline quando ela for a edição pendente. ↶/↷ continuam exclusivos do histórico de objetos nesta etapa.
+
+
+## Colocar cópia de spline
+
+Na aba **Geral** de uma spline, **Colocar cópia desconectada** usa a spline selecionada como template real.
+
+O fluxo:
+
+1. selecione uma spline existente;
+2. clique **Colocar cópia desconectada**;
+3. clique em um tile para escolher o novo ponto inicial;
+4. ajuste Z, rotação, comprimento, raio e gradientes;
+5. confirme **Confirmar e salvar**.
+
+O host relê a spline-fonte do disco e valida ordinal, caminho `.sli`, ID, tipo e vínculos antes da criação. A cópia preserva `HeaderValue`, tipo `[spline]`/`[spline_h]` e valores extras reais da fonte, recebe um novo ID global e é criada com `previous = -1` e `next = -1`.
+
+A decisão de iniciar desconectada é deliberada: esta etapa não reescreve automaticamente a cadeia de splines vizinhas.
