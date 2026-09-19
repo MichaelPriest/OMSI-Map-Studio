@@ -75,9 +75,17 @@ jobs:
           Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
           $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  OMSI-Map-Studio-v0.1.0-alpha.3-test.7-win-x64.zip" | Set-Content "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.7-win-x64.zip.sha256" -Encoding ascii
-          $pt = Get-Content "docs/pt-BR/releases/v0.1.0-alpha.3.md" -Raw
-          $en = Get-Content "docs/en/releases/v0.1.0-alpha.3.md" -Raw
-          $notes = "# OMSI Map Studio v0.1.0-alpha.3-test.7`r`n`r`nBuild de teste / Test build`r`n`r`nSource HEAD: 2c3339b370fb4d7d237e429e2e034c482454884c`r`n`r`nEsta prerelease valida máscaras DDS A8 de terreno com resolução, faixa alpha e cobertura reais; ignora máscaras vazias, otimiza máscaras 100% opacas e mantém a pintura numerada [groundtex], relevo real, O3D, tela cheia e navegação."
+          $notes = @"
+          # OMSI Map Studio v0.1.0-alpha.3-test.7
+
+          Build de teste / Test build
+
+          Source HEAD: 2c3339b370fb4d7d237e429e2e034c482454884c
+
+          Esta prerelease valida máscaras DDS A8 de terreno com resolução, faixa alpha e cobertura reais; ignora máscaras vazias, otimiza máscaras 100% opacas e mantém a pintura numerada [groundtex], relevo real, O3D, tela cheia e navegação.
+
+          This prerelease validates A8 DDS terrain masks with real resolution, alpha range and coverage; skips empty masks, optimizes fully opaque masks, and keeps numbered [groundtex] paint, real relief, O3D, fullscreen and navigation.
+          "@
           Set-Content "artifacts/release-notes.md" $notes -Encoding utf8
 
       - name: Upload build artifact
