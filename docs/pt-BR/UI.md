@@ -437,3 +437,11 @@ Controles de navegação:
 - **1 / 2**: perspectiva / topo.
 
 O botão esquerdo permanece reservado para seleção, posicionamento e gizmos de edição.
+
+## Terreno real do OMSI
+
+O sidecar `.map.terrain` agora é decodificado como a grade de altura real do OMSI. O formato validado usa um cabeçalho `uint32` little-endian com o número de células (normalmente 60), seguido por `(N+1)²` alturas `float32` little-endian. Para o formato padrão isso resulta em **61×61 pontos / 3.721 alturas / 14.888 bytes**.
+
+O viewport cria uma malha 3D usando esses valores reais e espaçamento derivado do tile de 300 m. A camada **Terreno** pode ser ligada/desligada. O material atual é neutro e serve apenas para visualizar a geometria; pintura/camadas `.rdy` ainda não são simuladas.
+
+O inspetor do mapa mostra se a malha foi decodificada, número de células/pontos e intervalo de altitude do tile ativo. Arquivos com tamanho/grade inválidos continuam visíveis como sidecars no diagnóstico, mas não recebem malha inventada.
