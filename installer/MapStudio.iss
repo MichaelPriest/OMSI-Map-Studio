@@ -50,6 +50,10 @@ MinVersion=10.0.17763
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\\BrazilianPortuguese.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
+[CustomMessages]
+brazilianportuguese.UninstallShortcut=Desinstalar OMSI Map Studio
+english.UninstallShortcut=Uninstall OMSI Map Studio
+
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
