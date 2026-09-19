@@ -365,3 +365,10 @@ Babylon applies the image as a spherical `reflectionTexture`. Preview strength i
 `[matl_transmap]` and `[matl_lightmap]` are detected within a static `[matl]` context, but preview does not execute them at this stage.
 
 `matl_transmap` may point to dynamic sources such as `\S:` and `matl_lightmap` is controlled by OMSI runtime/script state. Core preserves the reference for inspection without inventing a visual state.
+
+
+## Diagnostics for material commands not simulated yet
+
+Core records known per-material commands that do not yet have sufficiently faithful visual reproduction. At this stage: `[matl_envmap_mask]`, `[alphascale]`, and `[matl_allcolor]`.
+
+The information travels Core → host → bridge → React and appears in the inspector. None of these commands changes the material until a safe implementation exists.

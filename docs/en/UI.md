@@ -381,3 +381,10 @@ The **Materials** tab shows envmap file, state, and strength. Missing/unsafe ass
 The inspector identifies `Transmap` and `Lightmap` declarations from `.sco` and labels them **runtime not simulated**.
 
 This is intentional: `\S:`/script references and OMSI variable-controlled lightmaps are not treated as static files or automatically enabled.
+
+
+## Incomplete material diagnostics
+
+When a material uses recognized commands that are not simulated yet, **Materials** shows `Not simulated:` followed by the commands.
+
+This currently includes `[matl_envmap_mask]`, `[alphascale]`, and `[matl_allcolor]`. The goal is to expose fidelity gaps instead of silently ignoring OMSI/editor features.

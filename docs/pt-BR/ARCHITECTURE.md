@@ -365,3 +365,10 @@ No Babylon a imagem é aplicada como `reflectionTexture` em modo esférico. A in
 `[matl_transmap]` e `[matl_lightmap]` são detectados no contexto de `[matl]` estático, mas não são executados pelo preview nesta etapa.
 
 `matl_transmap` pode apontar para fontes dinâmicas como `\S:` e `matl_lightmap` é controlado por estado/script do OMSI. O Core preserva a referência para inspeção, sem convertê-la em um estado visual inventado.
+
+
+## Diagnóstico de comandos de material ainda não simulados
+
+O Core registra por material comandos conhecidos que ainda não têm reprodução visual suficientemente fiel. Nesta etapa: `[matl_envmap_mask]`, `[alphascale]` e `[matl_allcolor]`.
+
+A informação percorre Core → host → bridge → React e aparece no inspetor. Nenhum desses comandos altera o material até existir uma implementação segura.

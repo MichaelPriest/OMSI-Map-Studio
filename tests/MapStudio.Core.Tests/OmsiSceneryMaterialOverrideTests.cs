@@ -20,6 +20,13 @@ public sealed class OmsiSceneryMaterialOverrideTests
             "\\S:1\n" +
             "[matl_lightmap]\n" +
             "glass_light.dds\n" +
+            "[matl_envmap_mask]\n" +
+            "envmask.bmp\n" +
+            "[alphascale]\n" +
+            "alpha_var\n" +
+            "[matl_allcolor]\n" +
+            "1\n0.5\n0.25\n1\n" +
+            "0\n0\n0\n0\n0\n0\n0\n0\n0\n1\n" +
             "[matl_envmap]\n" +
             "envmap.bmp\n" +
             "0.4\n" +
@@ -81,6 +88,13 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Equal(
             "glass_light.dds",
             glass.LightMapTextureName);
+        Assert.Equal(
+            [
+                "[matl_envmap_mask]",
+                "[alphascale]",
+                "[matl_allcolor]"
+            ],
+            glass.UnsupportedCommands);
 
         var leaf =
             metadata.MaterialOverrides[1];
@@ -105,6 +119,8 @@ public sealed class OmsiSceneryMaterialOverrideTests
             leaf.TransMapSource);
         Assert.Null(
             leaf.LightMapTextureName);
+        Assert.Empty(
+            leaf.UnsupportedCommands);
     }
 
     [Fact]

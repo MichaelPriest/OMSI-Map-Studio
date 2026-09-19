@@ -381,3 +381,10 @@ A aba **Materiais** mostra arquivo, estado e força do envmap. Se o asset estive
 O inspetor identifica `Transmap` e `Lightmap` quando declarados no `.sco`, exibindo **runtime não simulado**.
 
 Isso é intencional: referências `\S:`/script e lightmaps controlados por variáveis do OMSI não são tratados como arquivos estáticos nem ligados automaticamente.
+
+
+## Diagnóstico de material incompleto
+
+Quando um material usa comandos reconhecidos mas ainda não simulados, a aba **Materiais** mostra `Não simulado:` seguido dos comandos.
+
+Atualmente isso inclui `[matl_envmap_mask]`, `[alphascale]` e `[matl_allcolor]`. O objetivo é tornar a diferença visível, em vez de silenciosamente ignorar recursos do editor/OMSI.

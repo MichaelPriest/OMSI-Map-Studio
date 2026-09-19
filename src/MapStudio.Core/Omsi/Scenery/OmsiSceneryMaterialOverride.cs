@@ -13,4 +13,5 @@ public sealed record OmsiSceneryMaterialOverride(
     string? EnvironmentMapTextureName,
     double? EnvironmentMapStrength,
     string? TransMapSource,
-    string? LightMapTextureName);
+    string? LightMapTextureName,
+    IReadOnlyList<string> UnsupportedCommands);

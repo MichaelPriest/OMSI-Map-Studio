@@ -249,3 +249,11 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 2. verify the reference appears in the inspector as **runtime not simulated**;
 3. open a material with `[matl_lightmap]` and verify the same warning;
 4. verify neither command triggers fake loading/application in the viewport.
+
+
+## Material diagnostics test
+
+1. open a `.sco` with `[matl_envmap_mask]`, `[alphascale]`, or `[matl_allcolor]`;
+2. verify the corresponding material shows `Not simulated:` in the inspector;
+3. verify repeated commands are not duplicated;
+4. verify these commands do not visually alter the material at this stage.

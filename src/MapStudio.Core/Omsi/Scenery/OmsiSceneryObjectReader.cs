@@ -284,6 +284,29 @@ public sealed class OmsiSceneryObjectReader
                 continue;
             }
 
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "matl_envmap_mask",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "alphascale",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "matl_allcolor",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current.UnsupportedCommands
+                    .Add(
+                        "[" +
+                        section.Keyword +
+                        "]");
+
+                continue;
+            }
+
             if (string.Equals(
                     section.Keyword,
                     "matl_noZwrite",
@@ -318,7 +341,11 @@ public sealed class OmsiSceneryObjectReader
                         builder.EnvironmentMapTextureName,
                         builder.EnvironmentMapStrength,
                         builder.TransMapSource,
-                        builder.LightMapTextureName))
+                        builder.LightMapTextureName,
+                        builder.UnsupportedCommands
+                            .Distinct(
+                                StringComparer.OrdinalIgnoreCase)
+                            .ToArray()))
             .ToArray();
     }
 
@@ -405,5 +432,9 @@ public sealed class OmsiSceneryObjectReader
         public string?
             LightMapTextureName
         { get; set; }
+
+        public List<string>
+            UnsupportedCommands
+        { get; } = [];
     }
 }

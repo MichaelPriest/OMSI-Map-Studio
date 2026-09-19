@@ -166,6 +166,7 @@ export type OmsiSceneryMaterialOverride = {
   environmentMapStrength: number | null;
   transMapSource: string | null;
   lightMapTextureName: string | null;
+  unsupportedCommands: string[];
 };
 
 export type OmsiSceneryObjectGeometry = {

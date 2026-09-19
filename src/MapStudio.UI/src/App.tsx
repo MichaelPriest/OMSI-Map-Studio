@@ -5269,6 +5269,16 @@ export function App() {
                               {" · runtime não simulado"}
                             </small>
                           )}
+                          {row.materialOverride
+                            .unsupportedCommands
+                            .length > 0 && (
+                            <small>
+                              Não simulado:{" "}
+                              {row.materialOverride
+                                .unsupportedCommands
+                                .join(", ")}
+                            </small>
+                          )}
                         </>
                       )}
                     </div>

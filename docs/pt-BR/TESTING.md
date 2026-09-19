@@ -249,3 +249,11 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 2. confirme a referência no inspetor com **runtime não simulado**;
 3. abra um material com `[matl_lightmap]` e confirme o mesmo aviso;
 4. valide que nenhum desses comandos dispara carregamento/aplicação fake no viewport.
+
+
+## Teste de diagnóstico de material
+
+1. abra um `.sco` com `[matl_envmap_mask]`, `[alphascale]` ou `[matl_allcolor]`;
+2. confirme que o material correspondente mostra `Não simulado:` no inspetor;
+3. valide que comandos repetidos não aparecem duplicados;
+4. confirme que esses comandos não alteram o material visualmente nesta etapa.
