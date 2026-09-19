@@ -2451,11 +2451,11 @@ function createGeometryMeshes(
 
       mesh.rotationQuaternion =
         Quaternion.RotationYawPitchRoll(
-          -meshTransform.rotationZ *
+          meshTransform.rotationZ *
             degreesToRadians,
-          -meshTransform.rotationX *
+          meshTransform.rotationX *
             degreesToRadians,
-          -meshTransform.rotationY *
+          meshTransform.rotationY *
             degreesToRadians
         );
 
@@ -2490,13 +2490,17 @@ function configureObjectRoot(
     )
   );
 
+  // OMSI map object rotations are stored in Z/Y/X order in a
+  // Z-up coordinate system. After mapping OMSI (X,Y,Z) to the
+  // Babylon viewport (X,Z,Y), the equivalent Babylon axes are:
+  // yaw(Y)=OMSI Z, pitch(X)=OMSI X, roll(Z)=OMSI Y.
   root.rotationQuaternion =
     Quaternion.RotationYawPitchRoll(
-      -placedObject.rotation *
+      placedObject.rotation *
         degreesToRadians,
-      -placedObject.bank *
+      placedObject.pitch *
         degreesToRadians,
-      -placedObject.pitch *
+      placedObject.bank *
         degreesToRadians
     );
 }
@@ -3882,13 +3886,13 @@ export function Viewport({
                 tiles
               ),
             rotation:
-              -euler.y /
+              euler.y /
               degreesToRadians,
             bank:
-              -euler.x /
+              euler.z /
               degreesToRadians,
             pitch:
-              -euler.z /
+              euler.x /
               degreesToRadians
           });
 
