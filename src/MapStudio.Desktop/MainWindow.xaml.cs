@@ -3981,13 +3981,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        // OMSI sky textures (himmel01/04/05) are legacy BMPs.
-        // Use the same raw-RGBA decode path already proven for terrain,
-        // rather than relying on browser BMP/PNG upload behavior.
+        // Keep terrain on the proven raw-RGBA path, but deliver sky BMPs
+        // through the browser-native PNG path. In WebView2 the raw sky
+        // upload could yield a valid texture object while rendering the
+        // dome almost completely white.
         await LoadTextureAssetAsync(
             requestKey,
             fullPath,
-            preferRawBmp: true);
+            preferRawBmp: false);
     }
 
     private async Task LoadGroundTextureAssetAsync(
@@ -4239,7 +4240,7 @@ public partial class MainWindow : Window
         catch
         {
             _textureAssetCache.TryRemove(
-                fullPath,
+                cacheKey,
                 out _);
 
             throw;
@@ -4358,6 +4359,7 @@ public partial class MainWindow : Window
 
         return new TextureAssetPayload(
             Exists: true,
+            ResolvedPath: fullPath,
             Base64Data: base64Data,
             Extension: extension,
             SourceExtension: sourceExtension,
@@ -4392,6 +4394,8 @@ public partial class MainWindow : Window
             asset = new
             {
                 exists = false,
+                resolvedPath =
+                    (string?)null,
                 base64Data =
                     (string?)null,
                 extension =
@@ -5714,6 +5718,7 @@ public partial class MainWindow : Window
 
     private sealed record TextureAssetPayload(
         bool Exists,
+        string? ResolvedPath,
         string? Base64Data,
         string? Extension,
         string? SourceExtension,
@@ -5733,6 +5738,7 @@ public partial class MainWindow : Window
                 string errorCode) =>
             new(
                 Exists: false,
+                ResolvedPath: null,
                 Base64Data: null,
                 Extension: null,
                 SourceExtension: null,
