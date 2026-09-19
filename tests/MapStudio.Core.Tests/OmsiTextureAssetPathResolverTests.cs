@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Textures;
+using Xunit;
 
 namespace MapStudio.Core.Tests;
 
