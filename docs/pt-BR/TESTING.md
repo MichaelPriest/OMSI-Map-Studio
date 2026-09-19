@@ -604,3 +604,12 @@ No Grundorf, confirme que as árvores `[tree]` continuam renderizadas, mas os gr
 3. confirme que objetos comuns continuam respeitando terrain + Z relativo e `[absheight]` continua absoluto;
 4. confirme que texturas carregadas mostram suas cores reais, sem escurecimento causado por multiplicação com `diffuseColor`;
 5. compare com a test.25 e registre qualquer objeto específico que ainda fique fora de posição.
+
+
+## Validação de eixos/rotação — test.26
+
+1. abra Grundorf e compare a orientação das casas, garagens, postes e demais objetos com ruas/splines;
+2. confirme que a rotação principal dos objetos acompanha o mesmo sentido visual das splines;
+3. confirme que objetos com bank/pitch deixam de aparecer inclinados no eixo errado;
+4. confirme que meshes com `[rot_x]`, `[rot_y]` ou `[rot_z]` mantêm a orientação local correta;
+5. rotacione um objeto com o gizmo, salve e reabra para confirmar que a orientação persiste.
