@@ -7,6 +7,11 @@ public sealed class OmsiTileReader
 {
     private readonly OmsiTerrainReader _terrainReader =
         new();
+
+    private readonly OmsiTerrainRenderDataReader
+        _terrainRenderDataReader =
+            new();
+
     public async Task<OmsiTileContent> ReadContentAsync(
         string tilePath,
         CancellationToken cancellationToken = default)
@@ -60,9 +65,22 @@ public sealed class OmsiTileReader
             }
         }
 
+        var terrainRenderDataPath =
+            terrainPath + "_0.rdy";
+
+        var terrainRenderData =
+            File.Exists(
+                terrainRenderDataPath)
+                ? _terrainRenderDataReader
+                    .Read(
+                        terrainRenderDataPath)
+                : null;
+
         return content with
         {
             Terrain = terrain,
+            TerrainRenderData =
+                terrainRenderData,
             Summary =
                 content.Summary with
                 {
