@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
 using System.IO;
+using System.Globalization;
 using System.Text.Json;
 using System.Windows;
+using MapStudio.Core.IO;
+using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
@@ -135,6 +138,26 @@ public partial class MainWindow : Window
 
                 case "selectMap":
                     await SelectMapAsync();
+                    break;
+
+                case "saveObjectTransforms":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var saveDirectoryName) &&
+                        TryReadObjectTransformRequests(
+                            message.RootElement,
+                            out var transformRequests))
+                    {
+                        await SaveObjectTransformsAsync(
+                            saveDirectoryName,
+                            transformRequests);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
                     break;
 
                 case "loadMapFull":
@@ -467,6 +490,200 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task SaveObjectTransformsAsync(
+        string? directoryName,
+        IReadOnlyList<ObjectTransformRequest> requests)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (requests.Count == 0)
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        try
+        {
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var writes =
+                new List<PendingFileWrite>();
+
+            var editedTilePaths =
+                new List<string>();
+
+            var appliedEdits = 0;
+
+            foreach (
+                var group in requests
+                    .GroupBy(request =>
+                        (
+                            request.TileX,
+                            request.TileY)))
+            {
+                var tile =
+                    map.Tiles.FirstOrDefault(
+                        candidate =>
+                            candidate.X ==
+                                group.Key.TileX &&
+                            candidate.Y ==
+                                group.Key.TileY);
+
+                if (tile is null)
+                {
+                    throw new InvalidDataException(
+                        "unknownTile");
+                }
+
+                if (!OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        map.DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            tilePath);
+
+                var edits =
+                    group.Select(
+                        request =>
+                            new OmsiObjectTransformEdit(
+                                request.SourceSectionOrdinal,
+                                request.SceneryObjectPath,
+                                request.ObjectId,
+                                request.X,
+                                request.Y,
+                                request.Z,
+                                request.Rotation,
+                                request.Pitch,
+                                request.Bank))
+                    .ToArray();
+
+                var result =
+                    OmsiTileObjectEditor
+                        .ApplyTransforms(
+                            document,
+                            edits);
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        tilePath);
+
+                if (
+                    relativePath.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relativePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var backupPath =
+                    Path.Combine(
+                        backupRoot,
+                        relativePath);
+
+                writes.Add(
+                    new PendingFileWrite(
+                        tilePath,
+                        backupPath,
+                        result.Bytes));
+
+                editedTilePaths.Add(
+                    tilePath);
+
+                appliedEdits +=
+                    result.AppliedEdits;
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    writes);
+
+            foreach (var tilePath in
+                editedTilePaths)
+            {
+                _tileContentCache
+                    .TryRemove(
+                        tilePath,
+                        out _);
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "objectTransformsSaved",
+                map.DirectoryName,
+                editsSaved =
+                    appliedEdits,
+                filesSaved =
+                    writes.Count,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "saveConflict",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = map.DirectoryPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "saveError",
+                detail = exception.Message
+            });
+        }
+    }
+
     private async Task LoadMapFullAsync(
         string? directoryName)
     {
@@ -578,6 +795,7 @@ public partial class MainWindow : Window
                         placedObject.HeaderValue,
                         placedObject.SceneryObjectPath,
                         placedObject.ObjectId,
+                        placedObject.SourceSectionOrdinal,
                         placedObject.X,
                         placedObject.Y,
                         placedObject.Z,
@@ -763,6 +981,7 @@ public partial class MainWindow : Window
                         placedObject.HeaderValue,
                         placedObject.SceneryObjectPath,
                         placedObject.ObjectId,
+                        placedObject.SourceSectionOrdinal,
                         placedObject.X,
                         placedObject.Y,
                         placedObject.Z,
@@ -1202,6 +1421,127 @@ public partial class MainWindow : Window
 
         return results;
     }
+
+    private static bool TryReadObjectTransformRequests(
+        JsonElement element,
+        out IReadOnlyList<ObjectTransformRequest> requests)
+    {
+        requests =
+            Array.Empty<ObjectTransformRequest>();
+
+        if (
+            !element.TryGetProperty(
+                "edits",
+                out var editsElement) ||
+            editsElement.ValueKind !=
+                JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var result =
+            new List<ObjectTransformRequest>();
+
+        foreach (var edit in
+            editsElement.EnumerateArray())
+        {
+            if (
+                !TryReadInt32(
+                    edit,
+                    "tileX",
+                    out var tileX) ||
+                !TryReadInt32(
+                    edit,
+                    "tileY",
+                    out var tileY) ||
+                !TryReadInt32(
+                    edit,
+                    "sourceSectionOrdinal",
+                    out var sourceSectionOrdinal) ||
+                !TryReadString(
+                    edit,
+                    "sceneryObjectPath",
+                    out var sceneryObjectPath) ||
+                !TryReadInt32(
+                    edit,
+                    "objectId",
+                    out var objectId) ||
+                !TryReadDouble(
+                    edit,
+                    "x",
+                    out var x) ||
+                !TryReadDouble(
+                    edit,
+                    "y",
+                    out var y) ||
+                !TryReadDouble(
+                    edit,
+                    "z",
+                    out var z) ||
+                !TryReadDouble(
+                    edit,
+                    "rotation",
+                    out var rotation) ||
+                !TryReadDouble(
+                    edit,
+                    "pitch",
+                    out var pitch) ||
+                !TryReadDouble(
+                    edit,
+                    "bank",
+                    out var bank))
+            {
+                return false;
+            }
+
+            result.Add(
+                new ObjectTransformRequest(
+                    tileX,
+                    tileY,
+                    sourceSectionOrdinal,
+                    sceneryObjectPath!,
+                    objectId,
+                    x,
+                    y,
+                    z,
+                    rotation,
+                    pitch,
+                    bank));
+        }
+
+        requests = result;
+        return result.Count > 0;
+    }
+
+    private static bool TryReadDouble(
+        JsonElement element,
+        string propertyName,
+        out double value)
+    {
+        value = 0;
+
+        return element.TryGetProperty(
+                propertyName,
+                out var property) &&
+            property.ValueKind ==
+                JsonValueKind.Number &&
+            property.TryGetDouble(
+                out value) &&
+            double.IsFinite(value);
+    }
+
+    private sealed record ObjectTransformRequest(
+        int TileX,
+        int TileY,
+        int SourceSectionOrdinal,
+        string SceneryObjectPath,
+        int ObjectId,
+        double X,
+        double Y,
+        double Z,
+        double Rotation,
+        double Pitch,
+        double Bank);
 
     private sealed class InlineProgress<T>(
         Action<T> handler) : IProgress<T>
