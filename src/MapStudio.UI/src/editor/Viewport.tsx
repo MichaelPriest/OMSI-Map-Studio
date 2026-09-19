@@ -6,6 +6,7 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { Material } from "@babylonjs/core/Materials/material";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import { RawTexture } from "@babylonjs/core/Materials/Textures/rawTexture";
 import "@babylonjs/core/Materials/Textures/Loaders/ddsTextureLoader";
 import "@babylonjs/core/Materials/Textures/Loaders/tgaTextureLoader";
 import { Color3, Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math";
@@ -270,15 +271,9 @@ function createMeshFromVertexData(
     texture.hasAlpha = false;
 
     material.diffuseColor =
-      Color3.Black();
-
-    material.diffuseTexture =
-      texture;
-
-    material.emissiveColor =
       Color3.White();
 
-    material.emissiveTexture =
+    material.diffuseTexture =
       texture;
 
     material.useAlphaFromDiffuseTexture =
@@ -687,15 +682,9 @@ function createTileSurface(
     }
 
     material.diffuseColor =
-      Color3.Black();
-
-    material.diffuseTexture =
-      mainTexture;
-
-    material.emissiveColor =
       Color3.White();
 
-    material.emissiveTexture =
+    material.diffuseTexture =
       mainTexture;
 
     // Terrain paint should display the source albedo and validated A8 mask,
@@ -1148,15 +1137,9 @@ function createSelectedSplineProfile(
 
       if (texture) {
         material.diffuseColor =
-          Color3.Black();
-
-        material.diffuseTexture =
-          texture;
-
-        material.emissiveColor =
           Color3.White();
 
-        material.emissiveTexture =
+        material.diffuseTexture =
           texture;
 
         material.useAlphaFromDiffuseTexture =
@@ -1304,6 +1287,64 @@ function createTextureFromAsset(
   const mimeType =
     asset.mimeType ??
     "application/octet-stream";
+
+  if (
+    asset.rgbaBase64 &&
+    asset.width &&
+    asset.height
+  ) {
+    try {
+      const binary =
+        window.atob(
+          asset.rgbaBase64
+        );
+
+      const pixels =
+        new Uint8Array(
+          binary.length
+        );
+
+      for (
+        let index = 0;
+        index < binary.length;
+        index += 1
+      ) {
+        pixels[index] =
+          binary.charCodeAt(index);
+      }
+
+      const rawTexture =
+        RawTexture.CreateRGBATexture(
+          pixels,
+          asset.width,
+          asset.height,
+          scene,
+          true,
+          false,
+          Texture.TRILINEAR_SAMPLINGMODE
+        );
+
+      rawTexture.name =
+        `raw-${asset.sourceExtension ?? asset.extension}-${asset.width}x${asset.height}`;
+
+      rawTexture.hasAlpha = false;
+
+      return rawTexture;
+    } catch (error) {
+      console.error(
+        "OMSI Map Studio: raw texture upload failed",
+        {
+          extension:
+            asset.extension,
+          sourceExtension:
+            asset.sourceExtension,
+          width: asset.width,
+          height: asset.height,
+          error
+        }
+      );
+    }
+  }
 
   const forcedExtension =
     asset.extension === ".dds" ||
