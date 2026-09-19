@@ -535,3 +535,10 @@ The object/spline texture resolver now reproduces two common OMSI content behavi
 - shared parent-pack `Texture` directories are searched progressively upward.
 
 Lookup remains confined to the allowed `Sceneryobjects` or `Splines` root; paths escaping that root are still rejected.
+
+
+## [tree] objects and helper meshes
+
+When an SCO contains `[tree]`, the map preview uses the real billboard defined by the tree block and does not render the SCO helper mesh at the same time. This prevents helpers such as `treehelper.x` from appearing as giant gray panels over the map.
+
+Helper geometry remains preserved by metadata/import; only the default map composition stops overlaying helper mesh + tree.
