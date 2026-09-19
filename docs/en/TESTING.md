@@ -572,3 +572,12 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 3. wait until **pending = 0** and confirm buildings/objects that were previously black or gray receive their textures when the files exist;
 4. check the Inspector counters for loaded and failed textures;
 5. if failures remain, record the codes shown under **Texture failures** to distinguish missing files from format/decoding issues.
+
+
+## textureNotFound validation — test.25
+
+1. open Grundorf in 3×3 mode and compare against test.24, which showed **177 loaded / 81 textureNotFound / 0 pending**;
+2. confirm legacy references such as `*.bmp` can use a same-basename installed `*.dds`;
+3. confirm textures stored in a parent pack's `Texture` directory are also resolved;
+4. wait for pending = 0 and record the new `textureNotFound` total;
+5. confirm **Auto requested** no longer appears as an impossible fraction after switching between Full map and 3×3.
