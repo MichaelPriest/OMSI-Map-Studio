@@ -955,3 +955,59 @@ code {
 .editor-save:disabled {
   opacity: 0.45;
 }
+
+
+.transform-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transform-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 0 12px;
+}
+
+.transform-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.transform-field span {
+  color: #7895ad;
+  font-size: 9px;
+}
+
+.transform-field input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid #1c4668;
+  border-radius: 5px;
+  outline: none;
+  background: #071725;
+  color: #dbe8f4;
+  font: inherit;
+  font-size: 10px;
+}
+
+.transform-field input:focus {
+  border-color: #4b9cf4;
+  box-shadow: 0 0 0 2px rgb(75 156 244 / 12%);
+}
+
+.transform-help {
+  margin: 0 12px 12px;
+  padding: 7px 8px;
+  border: 1px solid #173a57;
+  border-radius: 5px;
+  background: #091b2a;
+  color: #7895ad;
+  font-size: 9px;
+  line-height: 1.45;
+}

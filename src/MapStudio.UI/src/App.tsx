@@ -1256,6 +1256,36 @@ export function App() {
       redoPreviewStack
     ]);
 
+  const handleObjectNumericTransform =
+    useCallback(
+      (
+        field:
+          | "x"
+          | "y"
+          | "z"
+          | "rotation"
+          | "pitch"
+          | "bank",
+        value: number
+      ) => {
+        if (
+          !selectedObject ||
+          !Number.isFinite(value)
+        ) {
+          return;
+        }
+
+        handlePreviewObjectTransform({
+          ...selectedObject,
+          [field]: value
+        });
+      },
+      [
+        handlePreviewObjectTransform,
+        selectedObject
+      ]
+    );
+
   const handleDiscardPreviewEdits =
     useCallback(() => {
       if (selectedObject) {
@@ -2095,60 +2125,108 @@ export function App() {
         )}
 
         {inspectorTab === "transform" && (
-          <dl className="property-list dense">
-            <div>
-              <dt>Tile</dt>
-              <dd>
-                {selectedObject.tileX},{" "}
-                {selectedObject.tileY}
-              </dd>
-            </div>
-            <div>
-              <dt>Posição local X / Y / Z</dt>
-              <dd>
-                {formatNumber(selectedObject.x)} /{" "}
-                {formatNumber(selectedObject.y)} /{" "}
-                {formatNumber(selectedObject.z)}
-              </dd>
-            </div>
-            {selectedObjectGlobal && (
+          <div className="transform-inspector">
+            <dl className="property-list dense">
               <div>
-                <dt>
-                  Posição global X / Y / Z
-                </dt>
+                <dt>Tile</dt>
                 <dd>
-                  {formatNumber(
-                    selectedObjectGlobal.x
-                  )}{" / "}
-                  {formatNumber(
-                    selectedObjectGlobal.y
-                  )}{" / "}
-                  {formatNumber(
-                    selectedObjectGlobal.z
-                  )}
+                  {selectedObject.tileX},{" "}
+                  {selectedObject.tileY}
                 </dd>
               </div>
-            )}
-            <div>
-              <dt>Rotação</dt>
-              <dd>
-                {formatNumber(
-                  selectedObject.rotation
-                )}°
-              </dd>
+              {selectedObjectGlobal && (
+                <div>
+                  <dt>
+                    Global X / Y / Z
+                  </dt>
+                  <dd>
+                    {formatNumber(
+                      selectedObjectGlobal.x
+                    )}{" / "}
+                    {formatNumber(
+                      selectedObjectGlobal.y
+                    )}{" / "}
+                    {formatNumber(
+                      selectedObjectGlobal.z
+                    )}
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="transform-fields">
+              {(
+                [
+                  ["x", "X", selectedObject.x],
+                  ["y", "Y", selectedObject.y],
+                  ["z", "Z", selectedObject.z],
+                  [
+                    "rotation",
+                    "Rotação",
+                    selectedObject.rotation
+                  ],
+                  [
+                    "pitch",
+                    "Pitch",
+                    selectedObject.pitch
+                  ],
+                  [
+                    "bank",
+                    "Bank",
+                    selectedObject.bank
+                  ]
+                ] as const
+              ).map(
+                ([field, label, value]) => (
+                  <label
+                    key={field}
+                    className="transform-field"
+                  >
+                    <span>{label}</span>
+                    <input
+                      key={`${getPlacedObjectKey(
+                        selectedObject
+                      )}:${field}:${value}`}
+                      type="number"
+                      step="0.001"
+                      defaultValue={value}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key ===
+                          "Enter"
+                        ) {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      onBlur={(event) => {
+                        const next =
+                          event.currentTarget
+                            .valueAsNumber;
+
+                        if (
+                          Number.isFinite(
+                            next
+                          ) &&
+                          next !== value
+                        ) {
+                          handleObjectNumericTransform(
+                            field,
+                            next
+                          );
+                        }
+                      }}
+                    />
+                  </label>
+                )
+              )}
             </div>
-            <div>
-              <dt>Pitch / Bank</dt>
-              <dd>
-                {formatNumber(
-                  selectedObject.pitch
-                )}° /{" "}
-                {formatNumber(
-                  selectedObject.bank
-                )}°
-              </dd>
+
+            <div className="transform-help">
+              Alterações numéricas entram na
+              prévia ao pressionar Enter ou sair
+              do campo.
             </div>
-          </dl>
+          </div>
         )}
 
         {inspectorTab === "geometry" && (
