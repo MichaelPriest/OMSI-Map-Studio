@@ -194,6 +194,7 @@ export type OmsiTextureAsset = {
   base64Data: string | null;
   extension: string | null;
   sourceExtension?: string | null;
+  rgbaBase64?: string | null;
   mimeType: string | null;
   width: number | null;
   height: number | null;
