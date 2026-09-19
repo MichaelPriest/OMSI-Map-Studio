@@ -147,6 +147,67 @@ public partial class MainWindow : Window
                     await LoadSceneryLibraryAsync();
                     break;
 
+                case "insertObject":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var insertDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "sceneryObjectPath",
+                            out var insertSceneryObjectPath) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var insertTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var insertTileY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "x",
+                            out var insertX) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "y",
+                            out var insertY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "z",
+                            out var insertZ) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "rotation",
+                            out var insertRotation) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "pitch",
+                            out var insertPitch) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "bank",
+                            out var insertBank))
+                    {
+                        await InsertObjectAsync(
+                            insertDirectoryName,
+                            insertSceneryObjectPath,
+                            insertTileX,
+                            insertTileY,
+                            insertX,
+                            insertY,
+                            insertZ,
+                            insertRotation,
+                            insertPitch,
+                            insertBank);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "saveObjectTransforms":
                     if (
                         TryReadString(
@@ -634,6 +695,323 @@ public partial class MainWindow : Window
                     entry.SceneryObjectPath,
                 StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    private async Task InsertObjectAsync(
+        string? directoryName,
+        string? sceneryObjectPath,
+        int tileX,
+        int tileY,
+        double x,
+        double y,
+        double z,
+        double rotation,
+        double pitch,
+        double bank)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                sceneryObjectPath) ||
+            !_knownSceneryObjectPaths
+                .ContainsKey(
+                    sceneryObjectPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownSceneryObject"
+            });
+
+            return;
+        }
+
+        if (
+            _omsiRootPath is null ||
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    sceneryObjectPath,
+                    out var sceneryFullPath) ||
+            !File.Exists(
+                sceneryFullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSceneryObjectPath"
+            });
+
+            return;
+        }
+
+        if (
+            map.UsesWorldCoordinates)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "objectInsertionWorldCoordinatesUnsupported"
+            });
+
+            return;
+        }
+
+        var targetTile =
+            map.Tiles.FirstOrDefault(
+                tile =>
+                    tile.X == tileX &&
+                    tile.Y == tileY);
+
+        if (targetTile is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+
+            return;
+        }
+
+        if (!OmsiMapPathResolver
+            .TryResolveTilePath(
+                map.DirectoryPath,
+                targetTile.RelativeMapPath,
+                out var targetTilePath) ||
+            !File.Exists(
+                targetTilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTilePath"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var freshContents =
+                await ReadMapContentsFreshAsync(
+                    map);
+
+            var analysis =
+                OmsiObjectInsertionAnalyzer
+                    .Analyze(
+                        freshContents,
+                        sceneryObjectPath);
+
+            var template =
+                analysis
+                    .MatchingObjectTemplate;
+
+            if (template is null)
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "objectInsertTemplateUnavailable",
+                    detail =
+                        sceneryObjectPath
+                });
+
+                return;
+            }
+
+            var nextId =
+                analysis.GetNextId();
+
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        targetTilePath);
+
+            var result =
+                OmsiTileObjectInserter
+                    .Append(
+                        document,
+                        new OmsiNewPlacedObject(
+                            template.HeaderValue,
+                            sceneryObjectPath,
+                            nextId,
+                            x,
+                            y,
+                            z,
+                            rotation,
+                            pitch,
+                            bank,
+                            template.ExtraValues));
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    targetTilePath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTilePath");
+            }
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var backupPath =
+                Path.Combine(
+                    backupRoot,
+                    relativePath);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            targetTilePath,
+                            backupPath,
+                            result.Bytes)
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    targetTilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type = "objectInserted",
+                map.DirectoryName,
+                backupDirectory =
+                    backupRoot,
+                placedObject = new
+                {
+                    tileX,
+                    tileY,
+                    headerValue =
+                        template.HeaderValue,
+                    sceneryObjectPath,
+                    objectId = nextId,
+                    sourceSectionOrdinal =
+                        result.SourceSectionOrdinal,
+                    x,
+                    y,
+                    z,
+                    rotation,
+                    pitch,
+                    bank
+                }
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "objectIdExhausted"
+                        ? "objectIdExhausted"
+                        : "objectInsertError",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail =
+                    targetTilePath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "objectInsertError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task<IReadOnlyList<OmsiTileContent>>
+        ReadMapContentsFreshAsync(
+            OmsiMapDescriptor map)
+    {
+        using var semaphore =
+            new SemaphoreSlim(
+                Math.Min(
+                    MaxConcurrentTileReads,
+                    Math.Max(
+                        1,
+                        Environment
+                            .ProcessorCount)));
+
+        var tasks =
+            map.Tiles.Select(
+                async tile =>
+                {
+                    await semaphore
+                        .WaitAsync();
+
+                    try
+                    {
+                        if (!OmsiMapPathResolver
+                            .TryResolveTilePath(
+                                map.DirectoryPath,
+                                tile.RelativeMapPath,
+                                out var path))
+                        {
+                            return
+                                OmsiTileContent
+                                    .Missing;
+                        }
+
+                        return await _tileReader
+                            .ReadContentAsync(
+                                path);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                })
+                .ToArray();
+
+        return await Task.WhenAll(
+            tasks);
     }
 
     private async Task SaveObjectTransformsAsync(
