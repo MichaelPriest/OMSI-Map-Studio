@@ -5,7 +5,8 @@ public sealed record OmsiTileContent(
     IReadOnlyList<OmsiPlacedObject> Objects,
     IReadOnlyList<OmsiPlacedSpline> Splines,
     OmsiTerrainGrid? Terrain = null,
-    OmsiTerrainRenderDataSummary? TerrainRenderData = null)
+    OmsiTerrainRenderDataSummary? TerrainRenderData = null,
+    IReadOnlyList<OmsiTerrainTextureMask>? TerrainTextureMasks = null)
 {
     public static OmsiTileContent Missing { get; } = new(
         OmsiTileSummary.Missing,
