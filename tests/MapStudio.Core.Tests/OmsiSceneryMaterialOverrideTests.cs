@@ -48,6 +48,26 @@ public sealed class OmsiSceneryMaterialOverrideTests
     }
 
     [Fact]
+    public void ReadMetadata_RecognizesAbsoluteHeight()
+    {
+        const string source =
+            "[friendlyname]\n" +
+            "Absolute object\n" +
+            "[absheight]\n" +
+            "[mesh]\n" +
+            "model\\object.o3d\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.True(
+            metadata.UsesAbsoluteHeight);
+    }
+
+    [Fact]
     public void ReadMetadata_AssociatesStaticMaterialOverridesWithMeshOrdinal()
     {
         const string source =
