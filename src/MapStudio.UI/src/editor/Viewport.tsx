@@ -36,6 +36,7 @@ type ViewportProps = {
   moveSnap: number;
   rotationSnap: number;
   showGrid: boolean;
+  showTerrain: boolean;
   showObjects: boolean;
   showSplines: boolean;
   showSplineProfiles: boolean;
@@ -133,69 +134,52 @@ type ViewportProps = {
   ) => void;
 };
 
-function createTileSurface(
-  scene: Scene,
-  tiles: OmsiTile[],
+function hasRenderableTerrain(
+  tile: OmsiTile,
   tileSize: number
 ) {
-  if (tiles.length === 0) {
-    return;
-  }
+  const terrain = tile.terrain;
 
-  const positions: number[] = [];
-  const indices: number[] = [];
-
-  for (
-    let tileIndex = 0;
-    tileIndex < tiles.length;
-    tileIndex += 1
+  if (
+    tileSize !== 300 ||
+    !terrain ||
+    terrain.cellCount <= 0
   ) {
-    const tile = tiles[tileIndex];
-
-    if (
-      tile.detailsLoaded &&
-      !tile.fileExists
-    ) {
-      continue;
-    }
-
-    const x0 =
-      tile.x * tileSize;
-    const z0 =
-      tile.y * tileSize;
-    const x1 =
-      x0 + tileSize;
-    const z1 =
-      z0 + tileSize;
-
-    const vertexOffset =
-      positions.length / 3;
-
-    positions.push(
-      x0, -0.04, z0,
-      x1, -0.04, z0,
-      x1, -0.04, z1,
-      x0, -0.04, z1
-    );
-
-    indices.push(
-      vertexOffset,
-      vertexOffset + 2,
-      vertexOffset + 1,
-      vertexOffset,
-      vertexOffset + 3,
-      vertexOffset + 2
-    );
+    return false;
   }
 
-  if (positions.length === 0) {
+  const sampleCount =
+    terrain.cellCount + 1;
+
+  return (
+    terrain.heights.length ===
+      sampleCount * sampleCount &&
+    terrain.heights.every(
+      Number.isFinite
+    )
+  );
+}
+
+function createMeshFromVertexData(
+  scene: Scene,
+  name: string,
+  positions: number[],
+  indices: number[],
+  diffuseColor: Color3,
+  alpha = 1
+) {
+  if (
+    positions.length === 0 ||
+    indices.length === 0
+  ) {
     return;
   }
 
-  const mesh = new Mesh(
-    "omsi-editor-tile-surface",
-    scene
-  );
+  const mesh =
+    new Mesh(
+      name,
+      scene
+    );
 
   const vertexData =
     new VertexData();
@@ -219,24 +203,189 @@ function createTileSurface(
 
   const material =
     new StandardMaterial(
-      "omsi-editor-tile-surface-material",
+      `${name}-material`,
       scene
     );
 
   material.diffuseColor =
-    new Color3(
-      0.045,
-      0.095,
-      0.14
-    );
+    diffuseColor;
 
   material.specularColor =
     Color3.Black();
 
-  material.alpha = 0.92;
+  material.alpha = alpha;
 
   mesh.material = material;
   mesh.isPickable = false;
+}
+
+function createTileSurface(
+  scene: Scene,
+  tiles: OmsiTile[],
+  tileSize: number,
+  showFlatSurface: boolean,
+  showTerrain: boolean
+) {
+  if (tiles.length === 0) {
+    return;
+  }
+
+  const terrainPositions:
+    number[] = [];
+  const terrainIndices:
+    number[] = [];
+
+  const flatPositions:
+    number[] = [];
+  const flatIndices:
+    number[] = [];
+
+  for (const tile of tiles) {
+    if (
+      tile.detailsLoaded &&
+      !tile.fileExists
+    ) {
+      continue;
+    }
+
+    if (
+      showTerrain &&
+      hasRenderableTerrain(
+        tile,
+        tileSize
+      )
+    ) {
+      const terrain =
+        tile.terrain!;
+
+      const sampleCount =
+        terrain.cellCount + 1;
+
+      const spacing =
+        tileSize /
+        terrain.cellCount;
+
+      const vertexOffset =
+        terrainPositions.length / 3;
+
+      for (
+        let row = 0;
+        row < sampleCount;
+        row += 1
+      ) {
+        for (
+          let column = 0;
+          column < sampleCount;
+          column += 1
+        ) {
+          terrainPositions.push(
+            tile.x * tileSize +
+              column * spacing,
+            terrain.heights[
+              row * sampleCount +
+                column
+            ],
+            tile.y * tileSize +
+              row * spacing
+          );
+        }
+      }
+
+      for (
+        let row = 0;
+        row < terrain.cellCount;
+        row += 1
+      ) {
+        for (
+          let column = 0;
+          column < terrain.cellCount;
+          column += 1
+        ) {
+          const topLeft =
+            vertexOffset +
+            row * sampleCount +
+            column;
+
+          const topRight =
+            topLeft + 1;
+
+          const bottomLeft =
+            topLeft + sampleCount;
+
+          const bottomRight =
+            bottomLeft + 1;
+
+          terrainIndices.push(
+            topLeft,
+            bottomRight,
+            topRight,
+            topLeft,
+            bottomLeft,
+            bottomRight
+          );
+        }
+      }
+
+      continue;
+    }
+
+    if (!showFlatSurface) {
+      continue;
+    }
+
+    const x0 =
+      tile.x * tileSize;
+    const z0 =
+      tile.y * tileSize;
+    const x1 =
+      x0 + tileSize;
+    const z1 =
+      z0 + tileSize;
+
+    const vertexOffset =
+      flatPositions.length / 3;
+
+    flatPositions.push(
+      x0, -0.04, z0,
+      x1, -0.04, z0,
+      x1, -0.04, z1,
+      x0, -0.04, z1
+    );
+
+    flatIndices.push(
+      vertexOffset,
+      vertexOffset + 2,
+      vertexOffset + 1,
+      vertexOffset,
+      vertexOffset + 3,
+      vertexOffset + 2
+    );
+  }
+
+  createMeshFromVertexData(
+    scene,
+    "omsi-editor-terrain",
+    terrainPositions,
+    terrainIndices,
+    new Color3(
+      0.16,
+      0.24,
+      0.12
+    )
+  );
+
+  createMeshFromVertexData(
+    scene,
+    "omsi-editor-tile-surface",
+    flatPositions,
+    flatIndices,
+    new Color3(
+      0.045,
+      0.095,
+      0.14
+    ),
+    0.92
+  );
 }
 
 function createActiveTileOutline(
@@ -1782,6 +1931,7 @@ export function Viewport({
   moveSnap,
   rotationSnap,
   showGrid,
+  showTerrain,
   showObjects,
   showSplines,
   showSplineProfiles,
@@ -1864,10 +2014,37 @@ export function Viewport({
     const minY = tileYs.length ? Math.min(...tileYs) : 0;
     const maxY = tileYs.length ? Math.max(...tileYs) : 0;
 
+    const terrainHeights =
+      showTerrain &&
+      !usesWorldCoordinates
+        ? tiles.flatMap(
+            (tile) =>
+              hasRenderableTerrain(
+                tile,
+                tileSize
+              )
+                ? tile.terrain!
+                    .heights
+                : []
+          )
+        : [];
+
+    const terrainCenterHeight =
+      terrainHeights.length > 0
+        ? (
+            Math.min(
+              ...terrainHeights
+            ) +
+            Math.max(
+              ...terrainHeights
+            )
+          ) / 2
+        : 0;
+
     const target = tiles.length
       ? new Vector3(
           ((minX + maxX + 1) * tileSize) / 2,
-          0,
+          terrainCenterHeight,
           ((minY + maxY + 1) * tileSize) / 2
         )
       : Vector3.Zero();
@@ -2012,11 +2189,17 @@ export function Viewport({
     };
 
     if (tiles.length) {
-      if (showGrid) {
+      if (
+        showGrid ||
+        showTerrain
+      ) {
         createTileSurface(
           scene,
           tiles,
-          tileSize
+          tileSize,
+          showGrid,
+          showTerrain &&
+            !usesWorldCoordinates
         );
       }
 
@@ -3307,6 +3490,7 @@ export function Viewport({
     moveSnap,
     rotationSnap,
     showGrid,
+    showTerrain,
     showObjects,
     showSplines,
     showSplineProfiles,
