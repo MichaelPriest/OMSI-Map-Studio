@@ -157,6 +157,24 @@ export type HostMessage =
       target: "omsi" | "map";
     }
   | {
+      type: "mapFullLoadingStarted";
+      directoryName: string;
+      totalTiles: number;
+    }
+  | {
+      type: "mapFullLoadingProgress";
+      directoryName: string;
+      completedTiles: number;
+      totalTiles: number;
+    }
+  | {
+      type: "mapFullLoaded";
+      directoryName: string;
+      tiles: OmsiTile[];
+      objects: OmsiPlacedObject[];
+      splines: OmsiPlacedSpline[];
+    }
+  | {
       type: "mapRegionLoaded";
       directoryName: string;
       centerX: number;
@@ -222,6 +240,15 @@ export function selectOmsiRoot() {
 export function selectMap() {
   getWebView()?.postMessage({
     type: "selectMap"
+  });
+}
+
+export function loadMapFull(
+  directoryName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadMapFull",
+    directoryName
   });
 }
 

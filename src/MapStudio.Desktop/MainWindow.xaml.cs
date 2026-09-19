@@ -137,6 +137,21 @@ public partial class MainWindow : Window
                     await SelectMapAsync();
                     break;
 
+                case "loadMapFull":
+                    if (TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var fullMapDirectoryName))
+                    {
+                        await LoadMapFullAsync(
+                            fullMapDirectoryName);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadMapRegion":
                     if (TryReadString(
                             message.RootElement,
@@ -447,6 +462,201 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "mapOpenError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task LoadMapFullAsync(
+        string? directoryName)
+    {
+        if (string.IsNullOrWhiteSpace(directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var requestedTiles =
+                map.Tiles.ToArray();
+
+            var totalTiles =
+                requestedTiles.Length;
+
+            PostMessage(new
+            {
+                type = "mapFullLoadingStarted",
+                map.DirectoryName,
+                totalTiles
+            });
+
+            using var semaphore =
+                new SemaphoreSlim(
+                    Math.Min(
+                        MaxConcurrentTileReads,
+                        Math.Max(
+                            1,
+                            Environment.ProcessorCount)));
+
+            var completedTiles = 0;
+
+            var tasks = requestedTiles
+                .Select(async (tile, index) =>
+                {
+                    await semaphore.WaitAsync();
+
+                    try
+                    {
+                        var content =
+                            OmsiMapPathResolver
+                                .TryResolveTilePath(
+                                    map.DirectoryPath,
+                                    tile.RelativeMapPath,
+                                    out var tilePath)
+                            ? await ReadTileCachedAsync(
+                                tilePath)
+                            : OmsiTileContent.Missing;
+
+                        var completed =
+                            Interlocked.Increment(
+                                ref completedTiles);
+
+                        if (
+                            completed == totalTiles ||
+                            completed % 8 == 0)
+                        {
+                            PostMessage(new
+                            {
+                                type = "mapFullLoadingProgress",
+                                map.DirectoryName,
+                                completedTiles = completed,
+                                totalTiles
+                            });
+                        }
+
+                        return (
+                            Index: index,
+                            Tile: tile,
+                            Content: content);
+                    }
+                    finally
+                    {
+                        semaphore.Release();
+                    }
+                })
+                .ToArray();
+
+            var loadedTiles =
+                await Task.WhenAll(tasks);
+
+            var objects = new List<object>();
+            var splines = new List<object>();
+
+            foreach (var loaded in loadedTiles
+                .OrderBy(result => result.Index))
+            {
+                foreach (var placedObject in
+                    loaded.Content.Objects)
+                {
+                    _knownSceneryObjectPaths.TryAdd(
+                        placedObject.SceneryObjectPath,
+                        0);
+
+                    objects.Add(new
+                    {
+                        tileX = loaded.Tile.X,
+                        tileY = loaded.Tile.Y,
+                        placedObject.HeaderValue,
+                        placedObject.SceneryObjectPath,
+                        placedObject.ObjectId,
+                        placedObject.X,
+                        placedObject.Y,
+                        placedObject.Z,
+                        placedObject.Rotation,
+                        placedObject.Pitch,
+                        placedObject.Bank
+                    });
+                }
+
+                foreach (var placedSpline in
+                    loaded.Content.Splines)
+                {
+                    _knownSplinePaths.TryAdd(
+                        placedSpline.SplinePath,
+                        0);
+
+                    splines.Add(new
+                    {
+                        tileX = loaded.Tile.X,
+                        tileY = loaded.Tile.Y,
+                        placedSpline.HeaderValue,
+                        placedSpline.SplinePath,
+                        placedSpline.SplineId,
+                        placedSpline.PreviousSplineId,
+                        placedSpline.NextSplineId,
+                        placedSpline.X,
+                        placedSpline.Z,
+                        placedSpline.Y,
+                        placedSpline.Rotation,
+                        placedSpline.Length,
+                        placedSpline.Radius,
+                        placedSpline.GradientStart,
+                        placedSpline.GradientEnd,
+                        placedSpline.IsHeightSpline
+                    });
+                }
+            }
+
+            PostMessage(new
+            {
+                type = "mapFullLoaded",
+                map.DirectoryName,
+                tiles = loadedTiles
+                    .OrderBy(result => result.Index)
+                    .Select(loaded => new
+                    {
+                        loaded.Tile.X,
+                        loaded.Tile.Y,
+                        loaded.Tile.RelativeMapPath,
+                        detailsLoaded = true,
+                        fileExists =
+                            loaded.Content.Summary.Exists,
+                        objectCount =
+                            loaded.Content.Summary.ObjectCount,
+                        splineCount =
+                            loaded.Content.Summary.SplineCount,
+                        splineAttachmentCount =
+                            loaded.Content.Summary
+                                .SplineAttachmentCount
+                    }),
+                objects,
+                splines
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = map.DirectoryPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
                 detail = exception.Message
             });
         }
