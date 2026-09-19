@@ -409,3 +409,14 @@ Esses dados viajam no mesmo `OmsiTileSummary` usado pelo carregamento completo e
 Nos O3D com cabeçalho estendido, as contagens de vértices e triângulos podem usar 32 bits. A lista de bones é uma exceção: a quantidade de bones continua sendo armazenada em 16 bits. O reader dedicado agora trata explicitamente essa diferença, evitando desalinhamento do stream e falsos `invalidBoneSection` em modelos que possuem bones.
 
 O carregamento visual também distingue “resposta recebida” de geometria realmente renderizável. Um caminho O3D só é considerado renderizável quando pelo menos uma malha possui posições e índices válidos.
+
+
+## Pipeline de carregamento do mapa otimizado
+
+O aquecimento visual deixou de carregar uma geometria O3D e um perfil SLI por vez. O React agora dispara lotes de até 8 geometrias O3D e 8 perfis SLI em paralelo, enquanto o host limita a leitura pesada de O3D ao número seguro de CPUs disponíveis.
+
+Geometrias de scenery são mantidas em cache por caminho absoluto enquanto a raiz OMSI permanece a mesma. Texturas também são armazenadas em cache por arquivo físico: referências repetidas em vários materiais/objetos não provocam nova leitura, nova conversão nem novo Base64 do mesmo arquivo.
+
+BMPs usados pelo OMSI seguem diretamente como RGBA para a GPU. O host não gera mais um PNG redundante para o mesmo BMP, reduzindo CPU, memória e tráfego de mensagens WebView2.
+
+O modo desempenho 3×3 não possui mais limite artificial de 64 paths de objetos ou 48 paths de splines. Todos os assets realmente usados pelos tiles carregados entram na fila.
