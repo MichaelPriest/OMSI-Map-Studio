@@ -58,6 +58,7 @@ export type OmsiGroundTexture = {
   mainTexturePath: string;
   detailTexturePath: string;
   resolutionCode: number;
+  maskResolution: number | null;
   mainTextureRepeating: number;
   detailTextureRepeating: number;
 };
