@@ -3981,9 +3981,13 @@ public partial class MainWindow : Window
             return;
         }
 
+        // OMSI sky textures (himmel01/04/05) are legacy BMPs.
+        // Use the same raw-RGBA decode path already proven for terrain,
+        // rather than relying on browser BMP/PNG upload behavior.
         await LoadTextureAssetAsync(
             requestKey,
-            fullPath);
+            fullPath,
+            preferRawBmp: true);
     }
 
     private async Task LoadGroundTextureAssetAsync(

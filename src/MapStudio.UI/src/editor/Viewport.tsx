@@ -3156,6 +3156,8 @@ function createOmsiSky(
 
   sky.infiniteDistance = true;
   sky.isPickable = false;
+  sky.alwaysSelectAsActiveMesh = true;
+  sky.renderingGroupId = 0;
 
   const material =
     new StandardMaterial(
@@ -3174,8 +3176,10 @@ function createOmsiSky(
   material.disableLighting = true;
   material.backFaceCulling = false;
   material.disableDepthWrite = true;
+  material.depthFunction = Engine.LEQUAL;
 
   sky.material = material;
+  sky.freezeWorldMatrix();
 }
 
 export function Viewport({
