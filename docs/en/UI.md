@@ -455,3 +455,15 @@ Layer 0's main texture is resolved inside the real OMSI installation, loaded by 
 The detail texture from the same layer is also resolved and its state is exposed in the inspector, but **detail blending is not visually simulated yet**, because OMSI's exact blend mode/factor is still being validated. Additional [groundtex] layers remain available as real data but are not painted until their relationship with `.rdy` data is confirmed.
 
 The inspector shows [groundtex] layer count, main texture path/state and repeating, plus detail texture path/state and repeating.
+
+## Numbered terrain-paint masks
+
+Beyond the base layer, Map Studio now detects real `texture/map/<tile>.map.N.dds` files. Index **N** is associated with the `[groundtex]` entry at the same index in `global.cfg`.
+
+Each tile DDS mask is loaded only when needed and used as opacity over a copy of the same height mesh. Layer N's main texture uses its own repeating value. This allows areas painted by the OMSI editor to appear over layer 0 without replacing the real terrain relief.
+
+The inspector shows mask indices present on the active tile. Invalid paths, indices without a matching `[groundtex]`, or missing assets do not create fake layers.
+
+The `.terrain_0.rdy` file is also handled by a dedicated diagnostics reader. It validates vertex, triangle, material, and transform sections found in the render data, but **those coordinates do not replace the height mesh yet**, because `.rdy`-specific semantics are still being validated separately.
+
+The detail texture declared by `[groundtex]` remains loaded for diagnostics only; detail blending is not simulated yet.

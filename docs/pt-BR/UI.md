@@ -455,3 +455,15 @@ A textura principal da camada 0 é resolvida dentro da instalação real do OMSI
 A textura de detalhe da mesma camada também é resolvida e seu estado aparece no inspetor, mas **a mistura visual de detalhe ainda não é simulada**, pois o modo/fator de blend do OMSI ainda está sendo validado. As demais camadas [groundtex] permanecem disponíveis como dados reais, porém ainda não são pintadas sem a associação confirmada com os dados `.rdy`.
 
 O inspetor mostra quantidade de camadas [groundtex], caminho/estado da textura principal, repetição, caminho/estado da textura de detalhe e sua repetição.
+
+## Pintura de terreno por máscara numerada
+
+Além da camada base, o Map Studio agora detecta os arquivos reais `texture/map/<tile>.map.N.dds`. O índice **N** é associado à entrada `[groundtex]` de mesmo índice no `global.cfg`.
+
+Cada máscara DDS do tile é carregada somente quando necessária e aplicada como opacidade sobre uma cópia da mesma malha de altura. A textura principal da camada N usa o seu próprio valor de repetição. Assim, áreas pintadas pelo editor do OMSI podem aparecer sobre a camada 0 sem substituir o relevo real.
+
+O inspetor mostra os índices de máscara presentes no tile ativo. Caminhos inválidos, índices sem `[groundtex]` correspondente ou assets ausentes não geram camada falsa.
+
+O arquivo `.terrain_0.rdy` também passa por um reader específico de diagnóstico. O leitor valida as seções de vértices, triângulos, materiais e transform encontradas no render-data, mas **essas coordenadas ainda não substituem a malha de altura**, porque a semântica própria do `.rdy` continua sendo validada separadamente.
+
+A textura de detalhe declarada em `[groundtex]` continua carregada apenas para diagnóstico; o blend de detalhe ainda não é simulado.

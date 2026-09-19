@@ -331,3 +331,16 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 6. renomeie temporariamente uma textura base de um mapa de teste e confirme fallback para material neutro sem placeholder fake;
 7. teste um caminho com tentativa de saída da instalação e confirme que o host o rejeita;
 8. confirme que alternar **Terreno** continua ocultando/exibindo a malha sem alterar arquivos do mapa.
+
+## Teste das máscaras de pintura do terreno
+
+1. abra um mapa que possua arquivos `texture/map/tile_*.map.N.dds`;
+2. selecione um tile com máscara e confirme no inspetor a lista **Máscaras de terreno** com os índices encontrados;
+3. confirme que a camada 0 permanece como base e que cada índice N pinta somente a região indicada por sua máscara DDS;
+4. compare o índice N com a entrada `[groundtex]` correspondente e confirme a textura principal correta;
+5. valide que o valor de repetição de cada camada é respeitado;
+6. troque de tile no modo 3×3 e confirme que apenas as máscaras da nova área são carregadas/renderizadas;
+7. confirme que áreas transparentes da máscara deixam a camada inferior visível;
+8. valide um índice sem `[groundtex]` correspondente e confirme que nenhuma textura inventada é exibida;
+9. confirme no inspetor os dados do `.terrain_0.rdy` (validade, vértices, triângulos e transform) sem alterar nenhum arquivo;
+10. confirme que objetos, splines, relevo e navegação continuam funcionais sobre as camadas pintadas.

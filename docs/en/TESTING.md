@@ -331,3 +331,16 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 6. temporarily rename a base texture in a test map and verify fallback to the neutral material with no fake placeholder;
 7. test a path attempting to escape the OMSI installation and verify the host rejects it;
 8. verify toggling **Terrain** still hides/shows the mesh without modifying map files.
+
+## Terrain-paint mask test
+
+1. open a map containing `texture/map/tile_*.map.N.dds` files;
+2. select a tile with masks and verify the **Terrain masks** inspector entry lists the discovered indices;
+3. verify layer 0 remains the base and every index N paints only the region described by its DDS mask;
+4. compare index N against the corresponding `[groundtex]` entry and verify the correct main texture is used;
+5. verify each layer's repeating value is respected;
+6. change tiles in 3×3 mode and verify only masks for the newly active area are loaded/rendered;
+7. verify transparent mask areas leave lower layers visible;
+8. test an index without a matching `[groundtex]` and verify no invented texture is shown;
+9. verify `.terrain_0.rdy` diagnostics (validity, vertices, triangles, and transform) without modifying any file;
+10. verify objects, splines, relief, and navigation remain functional over painted terrain layers.
