@@ -204,6 +204,7 @@ export type OmsiO3dGeometry = {
 
 export type OmsiTextureAsset = {
   exists: boolean;
+  resolvedPath?: string | null;
   base64Data: string | null;
   extension: string | null;
   sourceExtension?: string | null;
