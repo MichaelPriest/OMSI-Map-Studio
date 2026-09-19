@@ -442,3 +442,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 5. confirme visualmente que `gras.bmp` aparece no terreno, agora pelo canal emissivo não iluminado;
 6. confirme que superfícies de spline texturizadas também deixam de ficar escuras apenas por iluminação desativada;
 7. instale a nova build pelo EXE e abra pelo Menu Iniciar e também diretamente pelo executável; o ícone do OMSI Map Studio deve aparecer na janela e na barra de tarefas.
+
+
+## Validação de árvores [tree]
+
+1. abra Grundorf em modo 3×3 e em mapa completo;
+2. confirme que `tree_medium_*.sco`, `Tree_Small_*.sco` e outros objetos com `[tree]` deixam de aparecer apenas como marcadores amarelos quando a textura existe;
+3. compare duas árvores da mesma espécie com alturas/proporções diferentes e confirme que o viewport preserva os valores gravados no `[object]`;
+4. selecione uma árvore e confirme no Inspetor a textura e a faixa declarada pelo `[tree]`;
+5. confirme que o helper `treehelper.x` não é contabilizado como falha O3D da árvore;
+6. confirme que os marcadores amarelos continuam visíveis apenas onde o asset real não pôde ser renderizado.
