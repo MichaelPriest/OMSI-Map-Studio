@@ -558,3 +558,14 @@ O binário O3D usa um sistema local diferente das coordenadas de posicionamento 
 A seção O3D `0x79` é preservada como metadata de transformação e não é mais aplicada isoladamente como inversa sobre os vértices de prévia. Aplicar apenas a inversa deslocava/rotacionava meshes sem reaplicar o transform de objeto correspondente.
 
 Quando existe textura difusa, o RGB da textura passa a ser usado diretamente como cor de superfície. O `diffuseColor` do material não multiplica mais a textura, evitando objetos OMSI escurecidos ou pretos.
+
+
+## Conversão correta dos eixos de rotação OMSI → viewport
+
+A rotação dos objetos de mapa passa a seguir a ordem usada pelo formato OMSI em coordenadas Z-up. Depois da conversão de coordenadas OMSI `(X,Y,Z)` para o viewport `(X,Z,Y)`, o mapeamento aplicado é:
+
+- rotação principal/Z do OMSI → yaw/Y do viewport;
+- pitch/X do OMSI → pitch/X do viewport;
+- bank/Y do OMSI → roll/Z do viewport.
+
+As transformações locais `[rot_x]`, `[rot_y]` e `[rot_z]` dos meshes SCO usam a mesma convenção de sinal. O gizmo de edição também converte de volta para os campos OMSI nessa ordem.
