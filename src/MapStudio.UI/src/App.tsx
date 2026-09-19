@@ -217,6 +217,25 @@ const formatNumber = (value: number) =>
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
+const formatFileSize = (
+  bytes: number
+) => {
+  if (bytes >= 1024 * 1024) {
+    return `${(
+      bytes /
+      (1024 * 1024)
+    ).toFixed(1)} MiB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${(
+      bytes / 1024
+    ).toFixed(1)} KiB`;
+  }
+
+  return `${bytes} B`;
+};
+
 const normalizeTextureFileName = (
   value: string
 ) =>
@@ -2740,16 +2759,51 @@ export function App() {
           tile.splineAttachmentCount,
         missingTiles:
           stats.missingTiles +
-          (tile.fileExists ? 0 : 1)
+          (tile.fileExists ? 0 : 1),
+        terrainMarkers:
+          stats.terrainMarkers +
+          (tile.terrainMarkerPresent
+            ? 1
+            : 0),
+        terrainFiles:
+          stats.terrainFiles +
+          (tile.terrainFileExists
+            ? 1
+            : 0),
+        terrainBytes:
+          stats.terrainBytes +
+          tile.terrainFileSize
       }),
       {
         objects: 0,
         splines: 0,
         attachments: 0,
-        missingTiles: 0
+        missingTiles: 0,
+        terrainMarkers: 0,
+        terrainFiles: 0,
+        terrainBytes: 0
       }
     );
   }, [activeTiles]);
+
+  const activeTileDetails =
+    useMemo(
+      () =>
+        selectedMap &&
+        activeTile
+          ? selectedMap.tiles.find(
+              (tile) =>
+                tile.x ===
+                  activeTile.x &&
+                tile.y ===
+                  activeTile.y
+            )
+          : undefined,
+      [
+        activeTile,
+        selectedMap
+      ]
+    );
 
   const selectedSplineProfile =
     selectedSpline
@@ -4865,6 +4919,51 @@ export function App() {
           </dt>
           <dd>
             {activeTiles.length}
+          </dd>
+        </div>
+        <div>
+          <dt>Tile ativo</dt>
+          <dd>
+            {activeTile
+              ? `${activeTile.x}, ${activeTile.y}`
+              : "—"}
+          </dd>
+        </div>
+        <div>
+          <dt>[terrain]</dt>
+          <dd>
+            {!activeTileDetails
+              ?.detailsLoaded
+              ? "Não carregado"
+              : activeTileDetails
+                  .terrainMarkerPresent
+                ? "Presente"
+                : "Ausente"}
+          </dd>
+        </div>
+        <div>
+          <dt>Sidecar terrain</dt>
+          <dd>
+            {!activeTileDetails
+              ?.detailsLoaded
+              ? "Não carregado"
+              : activeTileDetails
+                  .terrainFileExists
+                ? `Encontrado · ${formatFileSize(
+                    activeTileDetails
+                      .terrainFileSize
+                  )}`
+                : "Ausente"}
+          </dd>
+        </div>
+        <div>
+          <dt>Terrenos (área)</dt>
+          <dd>
+            {selectedStats
+              ? `${selectedStats.terrainFiles}/${selectedStats.terrainMarkers} sidecars/marcadores · ${formatFileSize(
+                  selectedStats.terrainBytes
+                )}`
+              : "Carregando..."}
           </dd>
         </div>
       </dl>

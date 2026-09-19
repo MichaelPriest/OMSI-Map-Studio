@@ -21,8 +21,35 @@ public sealed class OmsiTileReader
                 tilePath,
                 cancellationToken);
 
-        return ReadContent(
-            document);
+        var content =
+            ReadContent(
+                document);
+
+        var terrainPath =
+            tilePath + ".terrain";
+
+        var terrainFileExists =
+            File.Exists(
+                terrainPath);
+
+        var terrainFileSize =
+            terrainFileExists
+                ? new FileInfo(
+                    terrainPath)
+                    .Length
+                : 0;
+
+        return content with
+        {
+            Summary =
+                content.Summary with
+                {
+                    TerrainFileExists =
+                        terrainFileExists,
+                    TerrainFileSize =
+                        terrainFileSize
+                }
+        };
     }
 
     public static OmsiTileContent ReadContent(
@@ -46,7 +73,10 @@ public sealed class OmsiTileReader
             SplineCount:
                 splineCount,
             SplineAttachmentCount:
-                attachmentCount);
+                attachmentCount,
+            TerrainMarkerPresent:
+                document.FindFirstSection(
+                    "terrain") is not null);
 
         return new OmsiTileContent(
             summary,

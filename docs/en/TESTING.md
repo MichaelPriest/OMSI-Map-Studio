@@ -286,3 +286,12 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. verify real textures when available;
 5. change the active tile and verify the 3×3 window follows the new area;
 6. disable **Spline profiles** and verify immediate return to axis-only mode.
+
+
+## Terrain diagnostics test
+
+1. open a map tile containing `[terrain]` and a `.map.terrain` sidecar;
+2. verify **Present** + **Found** and the size in the inspector;
+3. test `[terrain]` without a sidecar and verify **Missing**;
+4. test an existing sidecar without the marker and verify the inconsistency is visible;
+5. verify no `.terrain` file is modified.

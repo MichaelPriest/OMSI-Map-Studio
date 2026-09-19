@@ -409,3 +409,10 @@ Na aba **Geometria**, cada mesh mostra **Global** ou o limiar correspondente, po
 A camada **Perfis spline** mostra as superfícies reais das splines próximas usando o perfil `.sli`, UVs, gradiente, curva e texturas já carregadas.
 
 A renderização é limitada ao entorno 3×3 do tile ativo e a 120 splines por cena. Desmarque **Perfis spline** para voltar ao modo leve somente com eixos.
+
+
+## Estado do terreno
+
+O inspetor do mapa mostra para o tile ativo: coordenadas, presença do marcador `[terrain]`, presença do sidecar `.map.terrain` e tamanho do arquivo.
+
+Também exibe um resumo da área carregada com `sidecars/marcadores`, facilitando detectar tiles inconsistentes antes de existir edição binária.

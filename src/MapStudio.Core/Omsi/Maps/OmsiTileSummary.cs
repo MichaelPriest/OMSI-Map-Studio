@@ -4,7 +4,10 @@ public sealed record OmsiTileSummary(
     bool Exists,
     int ObjectCount,
     int SplineCount,
-    int SplineAttachmentCount)
+    int SplineAttachmentCount,
+    bool TerrainMarkerPresent = false,
+    bool TerrainFileExists = false,
+    long TerrainFileSize = 0)
 {
     public static OmsiTileSummary Missing { get; } = new(
         Exists: false,

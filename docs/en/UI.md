@@ -409,3 +409,10 @@ In **Geometry**, every mesh is labeled **Global** or with its threshold, for exa
 The **Spline profiles** layer displays real nearby spline surfaces using `.sli` profile geometry, UVs, gradient, curvature, and already-loaded textures.
 
 Rendering is limited to the active tile's 3×3 area and 120 splines per scene. Disable **Spline profiles** to return to the lightweight axis-only view.
+
+
+## Terrain state
+
+The map inspector shows, for the active tile: coordinates, `[terrain]` marker presence, `.map.terrain` sidecar presence, and file size.
+
+It also shows a loaded-area `sidecars/markers` summary, making inconsistent tiles visible before binary editing exists.

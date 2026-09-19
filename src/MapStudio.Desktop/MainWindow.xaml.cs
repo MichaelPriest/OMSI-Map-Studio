@@ -755,7 +755,12 @@ public partial class MainWindow : Window
                             fileExists = false,
                             objectCount = 0,
                             splineCount = 0,
-                            splineAttachmentCount = 0
+                            splineAttachmentCount = 0,
+                            terrainMarkerPresent =
+                                false,
+                            terrainFileExists =
+                                false,
+                            terrainFileSize = 0
                         })
                 }
             });
@@ -3407,7 +3412,16 @@ public partial class MainWindow : Window
                             loaded.Content.Summary.SplineCount,
                         splineAttachmentCount =
                             loaded.Content.Summary
-                                .SplineAttachmentCount
+                                .SplineAttachmentCount,
+                        terrainMarkerPresent =
+                            loaded.Content.Summary
+                                .TerrainMarkerPresent,
+                        terrainFileExists =
+                            loaded.Content.Summary
+                                .TerrainFileExists,
+                        terrainFileSize =
+                            loaded.Content.Summary
+                                .TerrainFileSize
                     }),
                 objects,
                 splines
@@ -3597,7 +3611,16 @@ public partial class MainWindow : Window
                             loaded.Content.Summary.SplineCount,
                         splineAttachmentCount =
                             loaded.Content.Summary
-                                .SplineAttachmentCount
+                                .SplineAttachmentCount,
+                        terrainMarkerPresent =
+                            loaded.Content.Summary
+                                .TerrainMarkerPresent,
+                        terrainFileExists =
+                            loaded.Content.Summary
+                                .TerrainFileExists,
+                        terrainFileSize =
+                            loaded.Content.Summary
+                                .TerrainFileSize
                     }),
                 objects,
                 splines

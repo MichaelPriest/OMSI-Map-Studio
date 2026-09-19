@@ -17,6 +17,9 @@ export type OmsiTile = {
   objectCount: number;
   splineCount: number;
   splineAttachmentCount: number;
+  terrainMarkerPresent: boolean;
+  terrainFileExists: boolean;
+  terrainFileSize: number;
 };
 
 export type OmsiMap = {

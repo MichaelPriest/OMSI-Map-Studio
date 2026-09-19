@@ -395,3 +395,10 @@ The viewport selects the largest threshold less than or equal to the object's pr
 The viewport reuses real `.sli` profiles already present in `splineProfilesByPath` to extrude surfaces for splines near the active tile.
 
 The visual window is 3×3 tiles (radius 1) with a cap of 120 extruded splines per scene. The selected spline is excluded because it already has its own preview. Splines without a loaded profile remain visible through their axis.
+
+
+## Per-tile terrain diagnostics
+
+`OmsiTileReader.ReadContent` detects the `[terrain]` marker. `ReadContentAsync(tilePath)` also checks the real `<tile>.map.terrain` sidecar and records existence + byte size.
+
+These values travel through the same `OmsiTileSummary` used by full-map and 3×3 loading, without decoding or modifying the binary file.

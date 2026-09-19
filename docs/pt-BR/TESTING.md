@@ -286,3 +286,12 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. confirme texturas reais quando disponíveis;
 5. mude o tile ativo e confirme que a janela 3×3 acompanha a nova área;
 6. desligue **Perfis spline** e confirme retorno imediato ao modo de eixos.
+
+
+## Teste de diagnóstico de terreno
+
+1. abra um mapa com tile que possua `[terrain]` e `.map.terrain`;
+2. confirme **Presente** + **Encontrado** e tamanho no inspetor;
+3. teste tile com `[terrain]` mas sem sidecar e confirme **Ausente**;
+4. teste sidecar existente sem marcador e confirme que a inconsistência fica visível;
+5. confirme que nenhum arquivo `.terrain` é alterado.

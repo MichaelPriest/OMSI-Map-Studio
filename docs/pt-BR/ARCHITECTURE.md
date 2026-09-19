@@ -395,3 +395,10 @@ O viewport escolhe o maior limiar menor ou igual à fração projetada do objeto
 O viewport reutiliza os perfis `.sli` reais já presentes em `splineProfilesByPath` para extrudar superfícies das splines próximas ao tile ativo.
 
 A janela visual é 3×3 tiles (raio 1) e existe limite de 120 splines extrudadas por cena. A spline selecionada é excluída desse lote porque já possui preview próprio. Splines sem perfil carregado continuam exibidas pelo eixo.
+
+
+## Diagnóstico de terreno por tile
+
+`OmsiTileReader.ReadContent` detecta o marcador `[terrain]`. `ReadContentAsync(tilePath)` também verifica o sidecar real `<tile>.map.terrain` e registra existência + tamanho em bytes.
+
+Esses dados viajam no mesmo `OmsiTileSummary` usado pelo carregamento completo e pelo modo 3×3, sem decodificar nem modificar o binário.
