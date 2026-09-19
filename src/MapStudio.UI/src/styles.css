@@ -750,6 +750,34 @@ code {
   font-size: 10px;
 }
 
+
+.viewport-diagnostic {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  z-index: 4;
+  display: flex;
+  max-width: min(520px, calc(100% - 20px));
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid #28506f;
+  border-radius: 6px;
+  background: rgb(4 16 27 / 92%);
+  color: #aec7da;
+  font: 9px/1.35 Consolas, "Cascadia Mono", monospace;
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+  overflow-wrap: anywhere;
+}
+
+.viewport-diagnostic strong {
+  margin-bottom: 2px;
+  color: #d9ecfb;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 10px;
+}
+
 .interaction-locked .studio-sidebar,
 .interaction-locked .studio-main {
   pointer-events: none;
