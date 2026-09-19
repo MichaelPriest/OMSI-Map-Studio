@@ -542,3 +542,10 @@ A busca continua confinada à raiz permitida de `Sceneryobjects` ou `Splines`; c
 Quando um SCO possui `[tree]`, a visualização do mapa usa o billboard real definido pelo bloco de árvore e não renderiza, simultaneamente, o mesh auxiliar do mesmo SCO. Isso evita que helpers como `treehelper.x` apareçam como painéis cinza gigantes sobre o mapa.
 
 A geometria do helper continua preservada no metadata/importador; apenas a composição visual padrão do mapa deixa de sobrepor helper + árvore.
+
+
+## Posicionamento vertical de objetos conforme o OMSI
+
+Objetos comuns de mapa usam altura relativa ao terreno: a coordenada Z gravada no bloco `[object]` é somada à altura interpolada do terrain no ponto X/Y. Objetos cujo SCO contém `[absheight]` permanecem em altura absoluta e não recebem esse deslocamento.
+
+O mesmo cálculo é usado na renderização, seleção, foco da câmera, hit-test e gizmo de edição. Ao salvar um objeto relativo, o editor converte novamente a altura visual para o Z relativo do arquivo para não corromper a posição OMSI.
