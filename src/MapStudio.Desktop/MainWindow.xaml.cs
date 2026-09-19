@@ -68,6 +68,14 @@ public partial class MainWindow : Window
 
     private string? _omsiRootPath;
 
+    private bool _isFullScreen;
+    private WindowStyle _windowStyleBeforeFullScreen =
+        WindowStyle.SingleBorderWindow;
+    private WindowState _windowStateBeforeFullScreen =
+        WindowState.Normal;
+    private ResizeMode _resizeModeBeforeFullScreen =
+        ResizeMode.CanResize;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -141,6 +149,24 @@ public partial class MainWindow : Window
 
             switch (typeElement.GetString())
             {
+                case "setFullScreen":
+                    if (
+                        message.RootElement.TryGetProperty(
+                            "enabled",
+                            out var fullScreenElement) &&
+                        fullScreenElement.ValueKind is
+                            JsonValueKind.True or
+                            JsonValueKind.False)
+                    {
+                        SetFullScreen(
+                            fullScreenElement.GetBoolean());
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "selectOmsiRoot":
                     await SelectOmsiRootAsync();
                     break;
@@ -4907,6 +4933,57 @@ public partial class MainWindow : Window
         value = property.GetString();
 
         return !string.IsNullOrWhiteSpace(value);
+    }
+
+    private void SetFullScreen(
+        bool enabled)
+    {
+        if (_isFullScreen == enabled)
+        {
+            PostMessage(new
+            {
+                type = "fullScreenChanged",
+                enabled = _isFullScreen
+            });
+
+            return;
+        }
+
+        if (enabled)
+        {
+            _windowStyleBeforeFullScreen =
+                WindowStyle;
+            _windowStateBeforeFullScreen =
+                WindowState;
+            _resizeModeBeforeFullScreen =
+                ResizeMode;
+
+            WindowStyle =
+                WindowStyle.None;
+            ResizeMode =
+                ResizeMode.NoResize;
+            WindowState =
+                WindowState.Maximized;
+        }
+        else
+        {
+            WindowState =
+                WindowState.Normal;
+            WindowStyle =
+                _windowStyleBeforeFullScreen;
+            ResizeMode =
+                _resizeModeBeforeFullScreen;
+            WindowState =
+                _windowStateBeforeFullScreen;
+        }
+
+        _isFullScreen = enabled;
+
+        PostMessage(new
+        {
+            type = "fullScreenChanged",
+            enabled = _isFullScreen
+        });
     }
 
     private void PostInvalidMessage()
