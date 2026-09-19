@@ -581,3 +581,8 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 3. confirm textures stored in a parent pack's `Texture` directory are also resolved;
 4. wait for pending = 0 and record the new `textureNotFound` total;
 5. confirm **Auto requested** no longer appears as an impossible fraction after switching between Full map and 3×3.
+
+
+## Tree helper validation — test.25
+
+In Grundorf, confirm `[tree]` billboards still render while the large gray panels associated with tree helper meshes no longer appear over the map.
