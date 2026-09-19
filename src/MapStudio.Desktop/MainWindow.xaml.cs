@@ -4185,8 +4185,9 @@ public partial class MainWindow : Window
 
         if (
             extension == ".bmp" &&
-            TryDecodeBmpToRgba(
+            TryTranscodeBmpToPng(
                 bytes,
+                out var pngBytes,
                 out var rgbaBytes,
                 out var bitmapWidth,
                 out var bitmapHeight))
@@ -4197,13 +4198,16 @@ public partial class MainWindow : Window
                 GetRgbaDiagnosticLabel(
                     rgbaBytes);
             alphaOnly = false;
-            rgbaBase64 =
-                Convert.ToBase64String(
-                    rgbaBytes);
 
-            // Raw RGBA is consumed directly by Babylon.
-            // Do not also encode/send PNG for the same BMP.
-            extension = ".bmp";
+            // Use a browser-native PNG for the Babylon texture upload.
+            // Raw RGBA avoided one encoding pass, but real OMSI road
+            // surfaces made entirely from legacy BMPs could render black
+            // in WebView2. The texture cache keeps this transcode one-time.
+            base64Data =
+                Convert.ToBase64String(
+                    pngBytes);
+            rgbaBase64 = null;
+            extension = ".png";
         }
         else
         {
@@ -4364,12 +4368,14 @@ public partial class MainWindow : Window
     }
 
     private static bool
-        TryDecodeBmpToRgba(
+        TryTranscodeBmpToPng(
             byte[] source,
+            out byte[] pngBytes,
             out byte[] rgbaBytes,
             out int width,
             out int height)
     {
+        pngBytes = Array.Empty<byte>();
         rgbaBytes = Array.Empty<byte>();
         width = 0;
         height = 0;
@@ -4444,14 +4450,33 @@ public partial class MainWindow : Window
                     bgra[index + 3];
             }
 
-            return rgbaBytes.Length ==
-                checked(
-                    width *
-                    height *
-                    4);
+            var encoder =
+                new PngBitmapEncoder();
+
+            encoder.Frames.Add(
+                BitmapFrame.Create(
+                    converted));
+
+            using var output =
+                new MemoryStream();
+
+            encoder.Save(output);
+            pngBytes = output.ToArray();
+
+            return
+                pngBytes.Length > 0 &&
+                rgbaBytes.Length ==
+                    checked(
+                        width *
+                        height *
+                        4);
         }
         catch
         {
+            pngBytes = Array.Empty<byte>();
+            rgbaBytes = Array.Empty<byte>();
+            width = 0;
+            height = 0;
             return false;
         }
     }
