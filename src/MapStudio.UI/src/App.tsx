@@ -3521,6 +3521,96 @@ export function App() {
         loadedMapGeometryCount
     );
 
+  const treePlacementDiagnostics =
+    useMemo(() => {
+      let detected = 0;
+      let exact = 0;
+      let textureReady = 0;
+
+      for (const placedObject of
+        objectsForViewport) {
+        const geometry =
+          geometryByPath[
+            placedObject
+              .sceneryObjectPath
+          ];
+
+        if (!geometry?.tree) {
+          continue;
+        }
+
+        detected += 1;
+
+        const values =
+          placedObject.extraValues;
+
+        if (
+          !values ||
+          values.length < 4
+        ) {
+          continue;
+        }
+
+        const valueCount =
+          Number.parseInt(
+            values[0],
+            10
+          );
+
+        const textureName =
+          values[1]?.trim();
+
+        const height =
+          Number.parseFloat(
+            values[2]
+          );
+
+        const aspect =
+          Number.parseFloat(
+            values[3]
+          );
+
+        if (
+          valueCount < 4 ||
+          !textureName ||
+          !Number.isFinite(height) ||
+          !Number.isFinite(aspect) ||
+          height <= 0 ||
+          aspect <= 0
+        ) {
+          continue;
+        }
+
+        exact += 1;
+
+        const key =
+          getSceneryTextureAssetKey(
+            placedObject
+              .sceneryObjectPath,
+            sceneryTreeTextureMeshToken,
+            textureName
+          );
+
+        if (
+          textureAssetsByKey[
+            key
+          ]?.exists
+        ) {
+          textureReady += 1;
+        }
+      }
+
+      return {
+        detected,
+        exact,
+        textureReady
+      };
+    }, [
+      geometryByPath,
+      objectsForViewport,
+      textureAssetsByKey
+    ]);
+
   const o3dErrorSummary =
     useMemo(() => {
       const counts =
@@ -6185,6 +6275,12 @@ export function App() {
             {mapLoadMode === "full"
               ? `${renderableMapGeometryCount}/${mapObjectPaths.length} · falhas ${failedMapGeometryCount} · pendentes ${unresolvedMapGeometryCount}`
               : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length} carregados na área`}
+          </dd>
+        </div>
+        <div>
+          <dt>Árvores [tree]</dt>
+          <dd>
+            {`${treePlacementDiagnostics.textureReady}/${treePlacementDiagnostics.detected} renderizadas · dados exatos ${treePlacementDiagnostics.exact}`}
           </dd>
         </div>
         <div>
