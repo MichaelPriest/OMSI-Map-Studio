@@ -1297,8 +1297,11 @@ function createTextureFromAsset(
 ) {
   if (
     !asset?.exists ||
-    !asset.base64Data ||
-    !asset.extension
+    !asset.extension ||
+    (
+      !asset.rgbaBase64 &&
+      !asset.base64Data
+    )
   ) {
     return undefined;
   }
@@ -1364,6 +1367,10 @@ function createTextureFromAsset(
         }
       );
     }
+  }
+
+  if (!asset.base64Data) {
+    return undefined;
   }
 
   const forcedExtension =
