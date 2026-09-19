@@ -943,3 +943,15 @@ code {
 .tool.active {
   box-shadow: 0 0 0 1px rgb(83 160 255 / 24%);
 }
+
+
+.editor-save {
+  min-width: 92px;
+  height: 30px;
+  padding: 0 13px;
+  font-size: 10px;
+}
+
+.editor-save:disabled {
+  opacity: 0.45;
+}

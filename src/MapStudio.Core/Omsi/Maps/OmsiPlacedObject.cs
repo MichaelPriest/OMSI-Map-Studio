@@ -14,15 +14,3 @@ public sealed record OmsiPlacedObject(
 {
     public int SourceSectionOrdinal { get; init; } = -1;
 }
-
-public static class OmsiPlacedObjectSource
-{
-    public static OmsiPlacedObject WithSectionOrdinal(
-        this OmsiPlacedObject placedObject,
-        int sourceSectionOrdinal) =>
-        placedObject with
-        {
-            SourceSectionOrdinal =
-                sourceSectionOrdinal
-        };
-}

@@ -562,15 +562,10 @@ export function App() {
             `${message.editsSaved} alteração(ões) salva(s) em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
           );
 
-          if (mapLoadMode === "full") {
-            setLoadedFullMapFor(undefined);
-            setObjects([]);
-            setSplines([]);
-          } else {
-            setLoadedRegionKey(undefined);
-            setObjects([]);
-            setSplines([]);
-          }
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
 
           return;
         }
