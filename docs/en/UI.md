@@ -521,3 +521,12 @@ Explorer and Inspector remain available as temporary floating drawers without pe
 Real BMP textures delivered by the host are transcoded in memory to PNG before reaching the WebView. This preserves the visual texture content while avoiding variable BMP support in the browser/Babylon texture path. The original OMSI file is never modified.
 
 In full-map mode, every spline path actually used by the map enters the real SLI-profile loading queue instead of limiting preparation to a few types near the active tile. The viewport can render up to 500 spline surfaces in full-map mode; performance mode keeps profile rendering near the active area. Spline materials are shown as albedo so editor lighting cannot make them artificially dark.
+
+
+## Real GPU texture upload
+
+Grundorf visual diagnostics showed that the host was already transcoding `gras.bmp` to PNG and the Inspector received the asset correctly, but that did not prove the texture had been successfully created inside Babylon/WebGL.
+
+Browser-decodable image formats now explicitly use `Texture.CreateFromBase64String`, Babylon's path intended for Base64 payloads, instead of relying on a generic `data:` URL. DDS/TGA remain on their dedicated loader path. Upload failures are logged with source extension, MIME type, and the Babylon error.
+
+For terrain and real spline surfaces, the preview also uses the real texture as an unlit emissive/albedo source. This removes editor lighting/material multiplication as a cause of an almost-black surface without inventing a replacement texture. The real OMSI file remains the only visual source.

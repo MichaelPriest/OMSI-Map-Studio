@@ -270,9 +270,15 @@ function createMeshFromVertexData(
     texture.hasAlpha = false;
 
     material.diffuseColor =
-      Color3.White();
+      Color3.Black();
 
     material.diffuseTexture =
+      texture;
+
+    material.emissiveColor =
+      Color3.White();
+
+    material.emissiveTexture =
       texture;
 
     material.useAlphaFromDiffuseTexture =
@@ -281,6 +287,7 @@ function createMeshFromVertexData(
     material.transparencyMode =
       Material.MATERIAL_OPAQUE;
 
+    material.backFaceCulling = false;
     material.disableLighting = true;
   }
 
@@ -679,11 +686,21 @@ function createTileSurface(
         Texture.CLAMP_ADDRESSMODE;
     }
 
+    material.diffuseColor =
+      Color3.Black();
+
     material.diffuseTexture =
+      mainTexture;
+
+    material.emissiveColor =
+      Color3.White();
+
+    material.emissiveTexture =
       mainTexture;
 
     // Terrain paint should display the source albedo and validated A8 mask,
     // not an approximation produced by the editor light.
+    material.backFaceCulling = false;
     material.disableLighting = true;
 
     if (maskTexture) {
@@ -1130,8 +1147,18 @@ function createSelectedSplineProfile(
         );
 
       if (texture) {
+        material.diffuseColor =
+          Color3.Black();
+
         material.diffuseTexture =
           texture;
+
+        material.emissiveColor =
+          Color3.White();
+
+        material.emissiveTexture =
+          texture;
+
         material.useAlphaFromDiffuseTexture =
           true;
       }
@@ -1284,16 +1311,41 @@ function createTextureFromAsset(
       ? asset.extension
       : undefined;
 
+  const textureName =
+    `inline-${asset.extension}-${asset.base64Data.length}-${asset.base64Data.slice(0, 16)}`;
+
   const texture =
-    new Texture(
-      `data:${mimeType};base64,${asset.base64Data}`,
-      scene,
-      forcedExtension
-        ? {
+    forcedExtension
+      ? new Texture(
+          `data:${mimeType};base64,${asset.base64Data}`,
+          scene,
+          {
             forcedExtension
           }
-        : undefined
-    );
+        )
+      : Texture.CreateFromBase64String(
+          asset.base64Data,
+          textureName,
+          scene,
+          false,
+          false,
+          Texture.TRILINEAR_SAMPLINGMODE,
+          undefined,
+          (message, exception) => {
+            console.error(
+              "OMSI Map Studio: texture upload failed",
+              {
+                extension:
+                  asset.extension,
+                sourceExtension:
+                  asset.sourceExtension,
+                mimeType,
+                message,
+                exception
+              }
+            );
+          }
+        );
 
   texture.hasAlpha = true;
 

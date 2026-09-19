@@ -402,3 +402,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 6. em modo mapa completo, aguarde a fila de perfis SLI e confirme que as superfícies de spline aparecem pelo mapa inteiro, não apenas no entorno 3×3;
 7. alterne para modo desempenho e confirme que a limitação espacial de perfis continua ativa;
 8. confirme que nenhum arquivo BMP/SLI do OMSI é modificado pela visualização.
+
+
+## Validação de upload GPU de textura
+
+1. abra Grundorf e aguarde o bloqueio de carregamento terminar;
+2. confirme no Inspetor que `gras.bmp` aparece como `PNG (origem BMP)`;
+3. confirme visualmente que a textura base do terreno aparece sobre os tiles e não apenas o fundo escuro do viewport;
+4. ligue/desligue Terreno e confirme que a superfície texturizada desaparece e retorna;
+5. ligue Perfis spline e confirme que as superfícies reais das splines usam suas texturas carregadas;
+6. se uma textura continuar ausente, abra o console WebView2 e procure por `OMSI Map Studio: texture upload failed`, registrando extensão/MIME e erro;
+7. confirme que nenhum arquivo do OMSI foi modificado durante o teste.

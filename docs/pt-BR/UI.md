@@ -521,3 +521,12 @@ Explorador e Inspetor continuam disponíveis como painéis flutuantes temporári
 Texturas BMP reais entregues pelo host são convertidas em memória para PNG antes de chegar ao WebView. A conversão preserva o conteúdo visual da textura e evita depender do suporte variável a BMP no caminho de textura do navegador/Babylon. O arquivo original no OMSI não é alterado.
 
 Em mapa completo, todos os caminhos de spline realmente usados no mapa entram na fila de leitura de perfis SLI, em vez de limitar a preparação aos poucos tipos próximos ao tile ativo. O viewport pode renderizar até 500 superfícies de spline no mapa completo; o modo desempenho continua limitando perfis à área próxima. Materiais de spline são exibidos como albedo para não ficarem artificialmente escuros pela iluminação do editor.
+
+
+## Upload real de textura para GPU
+
+O diagnóstico visual do Grundorf mostrou que o host já convertia `gras.bmp` para PNG e o Inspetor recebia o asset corretamente, mas isso ainda não comprovava que a textura tinha sido criada com sucesso dentro do Babylon/WebGL.
+
+Formatos de imagem decodificáveis pelo navegador agora usam explicitamente `Texture.CreateFromBase64String`, o caminho do Babylon destinado a payload Base64, em vez de depender de um URL `data:` genérico. DDS/TGA continuam no loader dedicado. Falhas de upload são registradas no console com extensão de origem, MIME e erro retornado pelo Babylon.
+
+Para terreno e superfície real de spline, o preview usa a textura também como emissiva/albedo não iluminado. Isso elimina iluminação/material como causa de uma superfície quase preta sem inventar uma textura substituta. O arquivo real do OMSI continua sendo a única fonte visual.

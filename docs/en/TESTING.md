@@ -402,3 +402,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 6. in full-map mode, wait for the SLI-profile queue and verify spline surfaces appear across the whole map rather than only around the 3×3 area;
 7. switch to performance mode and verify nearby profile limits remain active;
 8. verify no OMSI BMP/SLI file is modified by preview rendering.
+
+
+## GPU texture upload validation
+
+1. open Grundorf and wait for the blocking load to finish;
+2. verify the Inspector reports `gras.bmp` as `PNG (source BMP)`;
+3. visually verify the base terrain texture is visible across the tiles rather than only the dark viewport background;
+4. toggle Terrain off/on and verify the textured surface disappears and returns;
+5. enable Spline profiles and verify real spline surfaces use their loaded textures;
+6. if a texture is still missing, open the WebView2 console and look for `OMSI Map Studio: texture upload failed`, recording extension/MIME and error;
+7. verify no OMSI file was modified during the test.
