@@ -1,0 +1,121 @@
+name: alpha3 test24 prerelease with EXE
+
+on:
+  push:
+    branches:
+      - publish/alpha3-test24
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpha3-test24-prerelease
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: 2e6baace85b1922d607303d01fcde0cd6de0edb5
+          fetch-depth: 1
+
+      - name: Verify exact source HEAD
+        shell: pwsh
+        run: |
+          $expected = "2e6baace85b1922d607303d01fcde0cd6de0edb5"
+          $actual = (git rev-parse HEAD).Trim()
+          Write-Host "Expected: $expected"
+          Write-Host "Actual:   $actual"
+          if ($actual -ne $expected) { throw "Source HEAD mismatch." }
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Test Core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release
+
+      - name: Install UI dependencies
+        working-directory: src/MapStudio.UI
+        run: npm install --no-audit --no-fund
+
+      - name: Build React UI
+        working-directory: src/MapStudio.UI
+        run: npm run build
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows EXE installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version "0.1.0-alpha.3-test.24" -SkipUiBuild
+
+      - name: Package portable ZIP and checksums
+        shell: pwsh
+        run: |
+          $publishDir = "artifacts/publish/win-x64"
+          $zipPath = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.24-win-x64.zip"
+          if (-not (Test-Path "$publishDir/OMSI Map Studio.exe")) { throw "Desktop EXE missing." }
+          if (-not (Test-Path "$publishDir/ui/index.html")) { throw "React UI missing." }
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
+          $zipHash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$zipHash  OMSI-Map-Studio-v0.1.0-alpha.3-test.24-win-x64.zip" | Set-Content "$zipPath.sha256" -Encoding ascii
+
+          $installerPath = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.24-win-x64.exe"
+          $installerHashPath = "$installerPath.sha256"
+          if (-not (Test-Path $installerPath)) { throw "Installer EXE missing: $installerPath" }
+          if (-not (Test-Path $installerHashPath)) { throw "Installer checksum missing: $installerHashPath" }
+
+          $notes = @"
+          # OMSI Map Studio v0.1.0-alpha.3-test.24
+
+          Build de teste / Test build
+
+          Source HEAD: 2e6baace85b1922d607303d01fcde0cd6de0edb5
+
+          Esta prerelease parte da validação bem-sucedida do importador O3D em Grundorf (108/108 malhas renderizáveis, 0 falhas) e corrige o próximo gargalo: o modo Mapa completo não fica mais preso ao teto de 128 texturas de objetos. O prefetch completo agora usa lotes maiores, cache ampliado e novos diagnósticos de texturas carregadas, falhas e pendências.
+
+          This prerelease builds on the successful native O3D validation in Grundorf (108/108 renderable meshes, 0 failures) and fixes the next bottleneck: Full map mode is no longer capped at 128 object textures. Full prefetch now uses larger progressive batches, an expanded cache, and new diagnostics for loaded, failed, and pending textures.
+          "@
+          Set-Content "artifacts/release-notes.md" $notes -Encoding utf8
+
+      - name: Upload EXE and portable artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-v0.1.0-alpha.3-test.24-windows
+          path: |
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.24-win-x64.exe
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.24-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.24-win-x64.zip
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.24-win-x64.zip.sha256
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.0-alpha.3-test.24"
+          $sourceHead = "2e6baace85b1922d607303d01fcde0cd6de0edb5"
+          $installer = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.24-win-x64.exe"
+          $installerSha = "$installer.sha256"
+          $zip = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.24-win-x64.zip"
+          $zipSha = "$zip.sha256"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; refusing to overwrite." }
+
+          gh release create $tag $installer $installerSha $zip $zipSha --target $sourceHead --title "OMSI Map Studio $tag" --notes-file "artifacts/release-notes.md" --prerelease
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
