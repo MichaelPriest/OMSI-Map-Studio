@@ -271,3 +271,10 @@ The final write reuses `SafeFileTransaction`, so the target tile is backed up un
 Before removal, Core validates the section ordinal, object ID and `.sco` path. Comments and blank lines are preserved even when the parser associates them with the section body; the following section is never removed.
 
 The host rereads the tile directly from disk before deletion, uses `SafeFileTransaction`, creates a backup under `.mapstudio-backups/<timestamp>/`, and invalidates the cache after success. If identity changed after the UI read, the operation is rejected as a conflict.
+
+
+## Preservation-safe editing of existing splines
+
+Each `[spline]` / `[spline_h]` gets a stable `SourceSectionOrdinal` in tile order. `OmsiTileSplineEditor` can change only X, Z, Y, rotation, length, radius and start/end gradients.
+
+Before writing, the editor validates ordinal, `spline`/ `spline_h` type, `.sli` path, ID and `previous/next` links. Those links are not editable at this stage. The host rereads the current tile, preserves extras/comments/unknown sections, and uses the same backup + atomic replacement flow as object transforms.

@@ -269,6 +269,26 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "saveSplineTransforms":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var splineSaveDirectoryName) &&
+                        TryReadSplineTransformRequests(
+                            message.RootElement,
+                            out var splineTransformRequests))
+                    {
+                        await SaveSplineTransformsAsync(
+                            splineSaveDirectoryName,
+                            splineTransformRequests);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadMapFull":
                     if (TryReadString(
                             message.RootElement,
@@ -1448,6 +1468,202 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task SaveSplineTransformsAsync(
+        string? directoryName,
+        IReadOnlyList<SplineTransformRequest> requests)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (requests.Count == 0)
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        try
+        {
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var writes =
+                new List<PendingFileWrite>();
+
+            var editedTilePaths =
+                new List<string>();
+
+            var appliedEdits = 0;
+
+            foreach (
+                var group in requests
+                    .GroupBy(request =>
+                        (
+                            request.TileX,
+                            request.TileY)))
+            {
+                var tile =
+                    map.Tiles.FirstOrDefault(
+                        candidate =>
+                            candidate.X ==
+                                group.Key.TileX &&
+                            candidate.Y ==
+                                group.Key.TileY);
+
+                if (tile is null)
+                {
+                    throw new InvalidDataException(
+                        "unknownTile");
+                }
+
+                if (!OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        map.DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            tilePath);
+
+                var edits =
+                    group.Select(
+                        request =>
+                            new OmsiSplineTransformEdit(
+                                request.SourceSectionOrdinal,
+                                request.SplinePath,
+                                request.SplineId,
+                                request.PreviousSplineId,
+                                request.NextSplineId,
+                                request.IsHeightSpline,
+                                request.X,
+                                request.Z,
+                                request.Y,
+                                request.Rotation,
+                                request.Length,
+                                request.Radius,
+                                request.GradientStart,
+                                request.GradientEnd))
+                    .ToArray();
+
+                var result =
+                    OmsiTileSplineEditor
+                        .ApplyTransforms(
+                            document,
+                            edits);
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        tilePath);
+
+                if (
+                    relativePath.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relativePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        tilePath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        result.Bytes));
+
+                editedTilePaths.Add(
+                    tilePath);
+
+                appliedEdits +=
+                    result.AppliedEdits;
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    writes);
+
+            foreach (var tilePath in
+                editedTilePaths)
+            {
+                _tileContentCache
+                    .TryRemove(
+                        tilePath,
+                        out _);
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "splineTransformsSaved",
+                map.DirectoryName,
+                editsSaved =
+                    appliedEdits,
+                filesSaved =
+                    writes.Count,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "saveConflict",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = map.DirectoryPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "saveError",
+                detail = exception.Message
+            });
+        }
+    }
+
     private async Task LoadMapFullAsync(
         string? directoryName)
     {
@@ -1583,6 +1799,7 @@ public partial class MainWindow : Window
                         placedSpline.HeaderValue,
                         placedSpline.SplinePath,
                         placedSpline.SplineId,
+                        placedSpline.SourceSectionOrdinal,
                         placedSpline.PreviousSplineId,
                         placedSpline.NextSplineId,
                         placedSpline.X,
@@ -1769,6 +1986,7 @@ public partial class MainWindow : Window
                         placedSpline.HeaderValue,
                         placedSpline.SplinePath,
                         placedSpline.SplineId,
+                        placedSpline.SourceSectionOrdinal,
                         placedSpline.PreviousSplineId,
                         placedSpline.NextSplineId,
                         placedSpline.X,
@@ -2277,6 +2495,154 @@ public partial class MainWindow : Window
         return result.Count > 0;
     }
 
+    private static bool TryReadSplineTransformRequests(
+        JsonElement element,
+        out IReadOnlyList<SplineTransformRequest> requests)
+    {
+        requests =
+            Array.Empty<SplineTransformRequest>();
+
+        if (
+            !element.TryGetProperty(
+                "edits",
+                out var editsElement) ||
+            editsElement.ValueKind !=
+                JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var result =
+            new List<SplineTransformRequest>();
+
+        foreach (var edit in
+            editsElement.EnumerateArray())
+        {
+            if (
+                !TryReadInt32(
+                    edit,
+                    "tileX",
+                    out var tileX) ||
+                !TryReadInt32(
+                    edit,
+                    "tileY",
+                    out var tileY) ||
+                !TryReadInt32(
+                    edit,
+                    "sourceSectionOrdinal",
+                    out var sourceSectionOrdinal) ||
+                !TryReadString(
+                    edit,
+                    "splinePath",
+                    out var splinePath) ||
+                !TryReadInt32(
+                    edit,
+                    "splineId",
+                    out var splineId) ||
+                !TryReadInt32(
+                    edit,
+                    "previousSplineId",
+                    out var previousSplineId) ||
+                !TryReadInt32(
+                    edit,
+                    "nextSplineId",
+                    out var nextSplineId) ||
+                !TryReadBoolean(
+                    edit,
+                    "isHeightSpline",
+                    out var isHeightSpline) ||
+                !TryReadDouble(
+                    edit,
+                    "x",
+                    out var x) ||
+                !TryReadDouble(
+                    edit,
+                    "z",
+                    out var z) ||
+                !TryReadDouble(
+                    edit,
+                    "y",
+                    out var y) ||
+                !TryReadDouble(
+                    edit,
+                    "rotation",
+                    out var rotation) ||
+                !TryReadDouble(
+                    edit,
+                    "length",
+                    out var length) ||
+                !TryReadDouble(
+                    edit,
+                    "radius",
+                    out var radius) ||
+                !TryReadDouble(
+                    edit,
+                    "gradientStart",
+                    out var gradientStart) ||
+                !TryReadDouble(
+                    edit,
+                    "gradientEnd",
+                    out var gradientEnd))
+            {
+                return false;
+            }
+
+            result.Add(
+                new SplineTransformRequest(
+                    tileX,
+                    tileY,
+                    sourceSectionOrdinal,
+                    splinePath!,
+                    splineId,
+                    previousSplineId,
+                    nextSplineId,
+                    isHeightSpline,
+                    x,
+                    z,
+                    y,
+                    rotation,
+                    length,
+                    radius,
+                    gradientStart,
+                    gradientEnd));
+        }
+
+        requests = result;
+        return result.Count > 0;
+    }
+
+    private static bool TryReadBoolean(
+        JsonElement element,
+        string propertyName,
+        out bool value)
+    {
+        value = false;
+
+        if (!element.TryGetProperty(
+                propertyName,
+                out var property))
+        {
+            return false;
+        }
+
+        if (
+            property.ValueKind ==
+                JsonValueKind.True)
+        {
+            value = true;
+            return true;
+        }
+
+        if (
+            property.ValueKind ==
+                JsonValueKind.False)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     private static bool TryReadDouble(
         JsonElement element,
         string propertyName,
@@ -2314,6 +2680,24 @@ public partial class MainWindow : Window
         double Rotation,
         double Pitch,
         double Bank);
+
+    private sealed record SplineTransformRequest(
+        int TileX,
+        int TileY,
+        int SourceSectionOrdinal,
+        string SplinePath,
+        int SplineId,
+        int PreviousSplineId,
+        int NextSplineId,
+        bool IsHeightSpline,
+        double X,
+        double Z,
+        double Y,
+        double Rotation,
+        double Length,
+        double Radius,
+        double GradientStart,
+        double GradientEnd);
 
     private sealed class InlineProgress<T>(
         Action<T> handler) : IProgress<T>

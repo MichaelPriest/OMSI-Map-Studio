@@ -44,6 +44,7 @@ export type OmsiPlacedSpline = {
   headerValue: string;
   splinePath: string;
   splineId: number;
+  sourceSectionOrdinal: number;
   previousSplineId: number;
   nextSplineId: number;
   x: number;
@@ -184,6 +185,13 @@ export type HostMessage =
       directoryName: string;
       objectId: number;
       deletedObjects: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "splineTransformsSaved";
+      directoryName: string;
+      editsSaved: number;
+      filesSaved: number;
       backupDirectory: string;
     }
   | {
@@ -344,6 +352,47 @@ export function saveObjectTransforms(
           placedObject.pitch,
         bank:
           placedObject.bank
+      })
+    )
+  });
+}
+
+export function saveSplineTransforms(
+  directoryName: string,
+  edits: OmsiPlacedSpline[]
+) {
+  getWebView()?.postMessage({
+    type: "saveSplineTransforms",
+    directoryName,
+    edits: edits.map(
+      (placedSpline) => ({
+        tileX: placedSpline.tileX,
+        tileY: placedSpline.tileY,
+        sourceSectionOrdinal:
+          placedSpline.sourceSectionOrdinal,
+        splinePath:
+          placedSpline.splinePath,
+        splineId:
+          placedSpline.splineId,
+        previousSplineId:
+          placedSpline.previousSplineId,
+        nextSplineId:
+          placedSpline.nextSplineId,
+        isHeightSpline:
+          placedSpline.isHeightSpline,
+        x: placedSpline.x,
+        z: placedSpline.z,
+        y: placedSpline.y,
+        rotation:
+          placedSpline.rotation,
+        length:
+          placedSpline.length,
+        radius:
+          placedSpline.radius,
+        gradientStart:
+          placedSpline.gradientStart,
+        gradientEnd:
+          placedSpline.gradientEnd
       })
     )
   });

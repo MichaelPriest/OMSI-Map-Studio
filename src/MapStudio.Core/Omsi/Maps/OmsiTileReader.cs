@@ -142,6 +142,8 @@ public sealed class OmsiTileReader
         var splines =
             new List<OmsiPlacedSpline>();
 
+        var sourceSectionOrdinal = 0;
+
         foreach (var section in document.Sections)
         {
             var isSpline =
@@ -160,6 +162,9 @@ public sealed class OmsiTileReader
             {
                 continue;
             }
+
+            var currentSectionOrdinal =
+                sourceSectionOrdinal++;
 
             var values =
                 section.DataLines.ToArray();
@@ -218,7 +223,11 @@ public sealed class OmsiTileReader
                 GradientEnd: gradientEnd,
                 IsHeightSpline: isHeightSpline,
                 ExtraValues:
-                    values.Skip(13).ToArray()));
+                    values.Skip(13).ToArray())
+                {
+                    SourceSectionOrdinal =
+                        currentSectionOrdinal
+                });
         }
 
         return splines;

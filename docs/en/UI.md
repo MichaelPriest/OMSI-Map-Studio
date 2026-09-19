@@ -243,3 +243,10 @@ Confirmation reuses the exact same safe pipeline as the Library: a real template
 The inspector's **General** tab provides **Delete object**. Deletion is persistent and requires confirmation.
 
 To avoid losing work, the command is disabled while an unsaved transform preview or object placement is active. The host validates section ordinal, ID and `.sco` path again against the current tile on disk and creates a backup before atomically replacing the file.
+
+
+## Numeric spline editing
+
+When a spline is selected, the **Path** tab can preview X, Y, Z, rotation, length, radius and start/end gradient changes.
+
+**Save spline** persists the preview with an automatic backup. IDs and **Previous / Next** links remain read-only at this stage. Spline preview is separate from the object undo/redo history and has its own **Discard preview** action.

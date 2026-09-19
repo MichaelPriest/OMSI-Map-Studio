@@ -93,3 +93,19 @@ Also choose an installed `.sco` that has never been used in the map. In Full map
 9. verify comments, blank lines and the following section were preserved in the tile.
 
 For a conflict test, externally change the object's ID or `.sco` path before confirmation. Deletion must be cancelled without overwriting the tile.
+
+
+## Spline editing test
+
+1. select an existing spline;
+2. open **Path**;
+3. change X/Y/Z, rotation, length, radius or a gradient;
+4. verify the selected geometry uses the preview;
+5. click **Discard preview** and verify original values return;
+6. repeat a change and click **Save spline**;
+7. wait for reload;
+8. verify the change persisted;
+9. verify the backup under `.mapstudio-backups/<timestamp>/`;
+10. verify ID, previous/next, extras, comments and unknown sections were not changed in the tile.
+
+Externally change ID, `.sli` path, `[spline]`/ `[spline_h]` type or previous/next links before Save to verify the host cancels the write as a conflict.

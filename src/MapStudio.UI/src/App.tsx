@@ -15,6 +15,7 @@ import {
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
   saveObjectTransforms,
+  saveSplineTransforms,
   selectMap,
   selectOmsiRoot,
   subscribeToHost,
@@ -175,6 +176,33 @@ const sameObjectTransform = (
   left.pitch === right.pitch &&
   left.bank === right.bank;
 
+const getPlacedSplineKey = (
+  placedSpline: OmsiPlacedSpline
+) =>
+  [
+    placedSpline.tileX,
+    placedSpline.tileY,
+    placedSpline.splineId,
+    placedSpline.sourceSectionOrdinal,
+    placedSpline.splinePath,
+    placedSpline.isHeightSpline
+  ].join("|");
+
+const sameSplineTransform = (
+  left: OmsiPlacedSpline,
+  right: OmsiPlacedSpline
+) =>
+  left.x === right.x &&
+  left.y === right.y &&
+  left.z === right.z &&
+  left.rotation === right.rotation &&
+  left.length === right.length &&
+  left.radius === right.radius &&
+  left.gradientStart ===
+    right.gradientStart &&
+  left.gradientEnd ===
+    right.gradientEnd;
+
 const clamp01 = (value: number) =>
   Math.min(1, Math.max(0, value));
 
@@ -245,6 +273,18 @@ export function App() {
   ] = useState<
     Record<string, OmsiPlacedObject>
   >({});
+
+  const [
+    previewSplineTransforms,
+    setPreviewSplineTransforms
+  ] = useState<
+    Record<string, OmsiPlacedSpline>
+  >({});
+
+  const [
+    savingSpline,
+    setSavingSpline
+  ] = useState(false);
 
   const [
     undoPreviewStack,
@@ -439,6 +479,7 @@ export function App() {
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setEditorTool("select");
@@ -483,6 +524,7 @@ export function App() {
           setEditorTool("select");
           setCameraMode("perspective");
           setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setLoadingRegionKey(undefined);
@@ -758,10 +800,32 @@ export function App() {
 
         if (
           message.type ===
+          "splineTransformsSaved"
+        ) {
+          setSavingSpline(false);
+          setPreviewSplineTransforms({});
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            `${message.editsSaved} spline(s) salva(s) em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+
+          return;
+        }
+
+        if (
+          message.type ===
           "objectDeleted"
         ) {
           setDeletingObject(false);
           setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setSelectedObject(undefined);
@@ -786,6 +850,7 @@ export function App() {
         ) {
           setSaving(false);
           setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setSelectedObject(undefined);
@@ -818,6 +883,7 @@ export function App() {
           setSaving(false);
           setInsertingObject(false);
           setDeletingObject(false);
+          setSavingSpline(false);
 
           setError(
             errorMessages[message.code] ??
@@ -1011,6 +1077,22 @@ export function App() {
     ]
   );
 
+  const splinesForViewport = useMemo(
+    () =>
+      splines.map(
+        (placedSpline) =>
+          previewSplineTransforms[
+            getPlacedSplineKey(
+              placedSpline
+            )
+          ] ?? placedSpline
+      ),
+    [
+      previewSplineTransforms,
+      splines
+    ]
+  );
+
   const normalizedExplorerSearch =
     explorerSearch
       .trim()
@@ -1117,6 +1199,11 @@ export function App() {
   const previewEditCount =
     Object.keys(
       previewObjectTransforms
+    ).length;
+
+  const splinePreviewEditCount =
+    Object.keys(
+      previewSplineTransforms
     ).length;
 
   const mapObjectPaths = useMemo(() => {
@@ -1480,8 +1567,17 @@ export function App() {
           | OmsiPlacedSpline
           | undefined
       ) => {
-        setSelectedSpline(
+        const selected =
           placedSpline
+            ? previewSplineTransforms[
+                getPlacedSplineKey(
+                  placedSpline
+                )
+              ] ?? placedSpline
+            : undefined;
+
+        setSelectedSpline(
+          selected
         );
 
         if (placedSpline) {
@@ -1491,7 +1587,9 @@ export function App() {
 
         setError(undefined);
       },
-      []
+      [
+        previewSplineTransforms
+      ]
     );
 
   const handlePreviewObjectTransform =
@@ -1500,6 +1598,15 @@ export function App() {
         placedObject:
           OmsiPlacedObject
       ) => {
+        if (
+          splinePreviewEditCount > 0
+        ) {
+          setError(
+            "Salve ou descarte a prévia de spline antes de transformar objetos."
+          );
+          return;
+        }
+
         const key =
           getPlacedObjectKey(
             placedObject
@@ -1568,7 +1675,8 @@ export function App() {
       },
       [
         objects,
-        previewObjectTransforms
+        previewObjectTransforms,
+        splinePreviewEditCount
       ]
     );
 
@@ -1690,6 +1798,153 @@ export function App() {
         selectedObject
       ]
     );
+
+  const handleSplineNumericTransform =
+    useCallback(
+      (
+        field:
+          | "x"
+          | "y"
+          | "z"
+          | "rotation"
+          | "length"
+          | "radius"
+          | "gradientStart"
+          | "gradientEnd",
+        value: number
+      ) => {
+        if (
+          !selectedSpline ||
+          !Number.isFinite(value)
+        ) {
+          return;
+        }
+
+        if (previewEditCount > 0) {
+          setError(
+            "Salve ou descarte as prévias de objetos antes de editar uma spline."
+          );
+          return;
+        }
+
+        const updated = {
+          ...selectedSpline,
+          [field]: value
+        };
+
+        const key =
+          getPlacedSplineKey(
+            selectedSpline
+          );
+
+        const original =
+          splines.find(
+            (candidate) =>
+              getPlacedSplineKey(
+                candidate
+              ) === key
+          );
+
+        setPreviewSplineTransforms(
+          (current) => {
+            const next = {
+              ...current
+            };
+
+            if (
+              original &&
+              sameSplineTransform(
+                original,
+                updated
+              )
+            ) {
+              delete next[key];
+            } else {
+              next[key] = updated;
+            }
+
+            return next;
+          }
+        );
+
+        setSelectedSpline(
+          original &&
+          sameSplineTransform(
+            original,
+            updated
+          )
+            ? original
+            : updated
+        );
+
+        setError(undefined);
+      },
+      [
+        previewEditCount,
+        selectedSpline,
+        splines
+      ]
+    );
+
+  const handleDiscardSplinePreview =
+    useCallback(() => {
+      if (selectedSpline) {
+        const key =
+          getPlacedSplineKey(
+            selectedSpline
+          );
+
+        const original =
+          splines.find(
+            (candidate) =>
+              getPlacedSplineKey(
+                candidate
+              ) === key
+          );
+
+        setSelectedSpline(
+          original
+        );
+      }
+
+      setPreviewSplineTransforms({});
+      setError(undefined);
+    }, [
+      selectedSpline,
+      splines
+    ]);
+
+  const handleSaveSplinePreview =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        savingSpline
+      ) {
+        return;
+      }
+
+      const edits =
+        Object.values(
+          previewSplineTransforms
+        );
+
+      if (edits.length === 0) {
+        return;
+      }
+
+      setSavingSpline(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      saveSplineTransforms(
+        selectedMap.directoryName,
+        edits
+      );
+    }, [
+      previewSplineTransforms,
+      savingSpline,
+      selectedMap
+    ]);
 
   const handleDiscardPreviewEdits =
     useCallback(() => {
@@ -2196,6 +2451,7 @@ export function App() {
     selectingRoot ||
     selectingMap ||
     saving ||
+    savingSpline ||
     insertingObject ||
     deletingObject ||
     loadingFullMap ||
@@ -3135,62 +3391,123 @@ export function App() {
         )}
 
         {inspectorTab === "transform" && (
-          <dl className="property-list dense">
-            <div>
-              <dt>Posição X / Y / Z</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.x
-                )}{" / "}
-                {formatNumber(
-                  selectedSpline.y
-                )}{" / "}
-                {formatNumber(
-                  selectedSpline.z
-                )}
-              </dd>
+          <div className="transform-inspector">
+            <div className="transform-fields">
+              {(
+                [
+                  ["x", "X", selectedSpline.x],
+                  ["y", "Y", selectedSpline.y],
+                  ["z", "Z", selectedSpline.z],
+                  [
+                    "rotation",
+                    "Rotação",
+                    selectedSpline.rotation
+                  ],
+                  [
+                    "length",
+                    "Comprimento",
+                    selectedSpline.length
+                  ],
+                  [
+                    "radius",
+                    "Raio",
+                    selectedSpline.radius
+                  ],
+                  [
+                    "gradientStart",
+                    "Gradiente inicial",
+                    selectedSpline.gradientStart
+                  ],
+                  [
+                    "gradientEnd",
+                    "Gradiente final",
+                    selectedSpline.gradientEnd
+                  ]
+                ] as const
+              ).map(
+                ([field, label, value]) => (
+                  <label
+                    key={field}
+                    className="transform-field"
+                  >
+                    <span>{label}</span>
+                    <input
+                      key={`${getPlacedSplineKey(
+                        selectedSpline
+                      )}:${field}:${value}`}
+                      type="number"
+                      step="0.001"
+                      defaultValue={value}
+                      onKeyDown={(event) => {
+                        if (
+                          event.key ===
+                          "Enter"
+                        ) {
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      onBlur={(event) => {
+                        const next =
+                          event.currentTarget
+                            .valueAsNumber;
+
+                        if (
+                          Number.isFinite(
+                            next
+                          ) &&
+                          next !== value
+                        ) {
+                          handleSplineNumericTransform(
+                            field,
+                            next
+                          );
+                        }
+                      }}
+                    />
+                  </label>
+                )
+              )}
             </div>
-            <div>
-              <dt>Rotação</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.rotation
-                )}°
-              </dd>
+
+            <div className="transform-help">
+              Esta etapa não altera IDs nem
+              vínculos anterior/próxima. O Save
+              relê o tile e valida a identidade
+              da spline antes de gravar.
             </div>
-            <div>
-              <dt>Comprimento</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.length
-                )} m
-              </dd>
+
+            <div className="spline-edit-actions">
+              <button
+                type="button"
+                className="primary-button"
+                onClick={
+                  handleSaveSplinePreview
+                }
+                disabled={
+                  splinePreviewEditCount === 0 ||
+                  savingSpline
+                }
+              >
+                {savingSpline
+                  ? "Salvando..."
+                  : "Salvar spline"}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={
+                  handleDiscardSplinePreview
+                }
+                disabled={
+                  splinePreviewEditCount === 0 ||
+                  savingSpline
+                }
+              >
+                Descartar prévia
+              </button>
             </div>
-            <div>
-              <dt>Raio</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.radius
-                )} m
-              </dd>
-            </div>
-            <div>
-              <dt>Gradiente inicial</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.gradientStart
-                )}%
-              </dd>
-            </div>
-            <div>
-              <dt>Gradiente final</dt>
-              <dd>
-                {formatNumber(
-                  selectedSpline.gradientEnd
-                )}%
-              </dd>
-            </div>
-          </dl>
+          </div>
         )}
 
         {inspectorTab === "geometry" && (
@@ -3821,7 +4138,9 @@ export function App() {
               objects={
                 objectsForViewport
               }
-              splines={splines}
+              splines={
+                splinesForViewport
+              }
               editorTool={editorTool}
               snapEnabled={snapEnabled}
               moveSnap={moveSnap}
@@ -4214,8 +4533,15 @@ export function App() {
 
               {previewEditCount > 0 && (
                 <span className="preview-warning">
-                  Prévia não salva ·{" "}
+                  Prévia objeto ·{" "}
                   {previewEditCount}
+                </span>
+              )}
+
+              {splinePreviewEditCount > 0 && (
+                <span className="preview-warning">
+                  Prévia spline ·{" "}
+                  {splinePreviewEditCount}
                 </span>
               )}
             </div>

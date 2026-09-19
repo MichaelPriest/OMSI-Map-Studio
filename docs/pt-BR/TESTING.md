@@ -93,3 +93,19 @@ Também escolha um `.sco` instalado que nunca foi usado no mapa. No modo Mapa co
 9. confirme no tile que comentários, linhas em branco e a seção seguinte foram preservados.
 
 Para testar conflito, altere externamente o ID ou caminho `.sco` do objeto antes da confirmação. A exclusão deve ser cancelada sem sobrescrever o tile.
+
+
+## Teste de edição de spline
+
+1. selecione uma spline existente;
+2. abra **Traçado**;
+3. altere X/Y/Z, rotação, comprimento, raio ou um gradiente;
+4. confirme que a geometria selecionada usa a prévia;
+5. clique **Descartar prévia** e confirme o retorno aos valores originais;
+6. repita uma alteração e clique **Salvar spline**;
+7. aguarde o recarregamento;
+8. confirme que a alteração persistiu;
+9. confira o backup em `.mapstudio-backups/<timestamp>/`;
+10. confira no tile que ID, previous/next, extras, comentários e seções desconhecidas não foram alterados.
+
+Altere externamente ID, caminho `.sli`, tipo `[spline]`/ `[spline_h]` ou vínculos previous/next antes do Save para validar que o host cancela a gravação como conflito.

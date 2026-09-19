@@ -243,3 +243,10 @@ A confirmação reutiliza exatamente o mesmo pipeline seguro da Biblioteca: temp
 A aba **Geral** do inspetor possui **Excluir objeto**. A exclusão é persistente e exige confirmação.
 
 Para evitar perda de trabalho, o comando fica bloqueado enquanto existir prévia de transformação não salva ou colocação de objeto em andamento. O host valida ordinal, ID e caminho `.sco` novamente no tile atual em disco e cria backup antes da troca atômica.
+
+
+## Edição numérica de spline
+
+Ao selecionar uma spline, a aba **Traçado** permite criar uma prévia para X, Y, Z, rotação, comprimento, raio e gradientes inicial/final.
+
+**Salvar spline** persiste a prévia com backup automático. IDs e vínculos **Anterior / Próxima** permanecem somente leitura nesta etapa. A prévia da spline é independente do histórico de desfazer/refazer de objetos e possui **Descartar prévia** próprio.
