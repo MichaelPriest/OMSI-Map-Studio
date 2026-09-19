@@ -3487,7 +3487,10 @@ public partial class MainWindow : Window
                                     heights =
                                         loaded.Content.Terrain
                                             .Heights
-                                }
+                                },
+                        terrainRenderData =
+                            loaded.Content
+                                .TerrainRenderData
                     }),
                 objects,
                 splines
@@ -3698,7 +3701,10 @@ public partial class MainWindow : Window
                                     heights =
                                         loaded.Content.Terrain
                                             .Heights
-                                }
+                                },
+                        terrainRenderData =
+                            loaded.Content
+                                .TerrainRenderData
                     }),
                 objects,
                 splines
