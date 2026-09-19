@@ -631,6 +631,20 @@ export function App() {
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
           setInsertingObject(false);
+          setDeletingObject(false);
+          setSplinePlacementTemplate(
+            undefined
+          );
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
+          setPendingSplinePlacement(
+            undefined
+          );
+          setInsertingSpline(false);
+          setDeletingSpline(false);
+          setSavingSpline(false);
+          setSavingSplineLinks(false);
           setError(undefined);
           setView("map");
           return;
@@ -671,6 +685,20 @@ export function App() {
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
           setInsertingObject(false);
+          setDeletingObject(false);
+          setSplinePlacementTemplate(
+            undefined
+          );
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
+          setPendingSplinePlacement(
+            undefined
+          );
+          setInsertingSpline(false);
+          setDeletingSpline(false);
+          setSavingSpline(false);
+          setSavingSplineLinks(false);
           setError(undefined);
           setView("editor");
           return;
