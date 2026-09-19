@@ -1,0 +1,11 @@
+{
+  "name": "omsi-map-studio-alpha3-external-build",
+  "private": true,
+  "version": "0.0.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "vercel-build": "bash .build/alpha3-test1/build.sh"
+  }
+}
