@@ -471,6 +471,32 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "loadGroundTextureAsset":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "requestKey",
+                            out var groundTextureRequestKey) &&
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var groundTextureDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "texturePath",
+                            out var groundTexturePath))
+                    {
+                        await LoadGroundTextureAssetAsync(
+                            groundTextureRequestKey,
+                            groundTextureDirectoryName,
+                            groundTexturePath);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadSceneryTextureAsset":
                     if (
                         TryReadString(
@@ -771,6 +797,8 @@ public partial class MainWindow : Window
                     map.DirectoryPath,
                     map.GlobalConfigPath,
                     map.UsesWorldCoordinates,
+                    groundTextures =
+                        map.GroundTextures,
                     tiles = map.Tiles.Select(
                         tile => new
                         {
@@ -3718,6 +3746,61 @@ public partial class MainWindow : Window
 
             throw;
         }
+    }
+
+    private async Task LoadGroundTextureAssetAsync(
+        string? requestKey,
+        string? directoryName,
+        string? texturePath)
+    {
+        if (
+            _omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(
+                requestKey) ||
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                texturePath) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "invalidTextureSource");
+            return;
+        }
+
+        var declared =
+            map.GroundTextures.Any(
+                layer =>
+                    string.Equals(
+                        layer.MainTexturePath,
+                        texturePath,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        layer.DetailTexturePath,
+                        texturePath,
+                        StringComparison.OrdinalIgnoreCase));
+
+        if (
+            !declared ||
+            !OmsiTextureAssetPathResolver
+                .TryResolveGroundTexture(
+                    _omsiRootPath,
+                    map.DirectoryPath,
+                    texturePath,
+                    out var fullPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureNotFound");
+            return;
+        }
+
+        await LoadTextureAssetAsync(
+            requestKey,
+            fullPath);
     }
 
     private async Task LoadSceneryTextureAssetAsync(
