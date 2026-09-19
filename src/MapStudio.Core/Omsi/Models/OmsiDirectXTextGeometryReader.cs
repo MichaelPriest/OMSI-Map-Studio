@@ -1233,13 +1233,15 @@ public sealed class OmsiDirectXTextGeometryReader
             var token =
                 NextMeaningful();
 
+            var value = 0;
+
             if (
                 token is null ||
                 !int.TryParse(
                     token,
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var value))
+                    out value))
             {
                 Throw(errorCode);
             }
@@ -1253,13 +1255,15 @@ public sealed class OmsiDirectXTextGeometryReader
             var token =
                 NextMeaningful();
 
+            var value = 0f;
+
             if (
                 token is null ||
                 !float.TryParse(
                     token,
                     NumberStyles.Float,
                     CultureInfo.InvariantCulture,
-                    out var value) ||
+                    out value) ||
                 !float.IsFinite(value))
             {
                 Throw(errorCode);
