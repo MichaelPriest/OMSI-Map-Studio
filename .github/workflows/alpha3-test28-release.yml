@@ -1,0 +1,121 @@
+name: alpha3 test28 prerelease with EXE
+
+on:
+  push:
+    branches:
+      - publish/alpha3-test28
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpha3-test28-prerelease
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout exact source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: 52b398852f2827d6d78dca0bb7c46bb2ae22d22f
+          fetch-depth: 1
+
+      - name: Verify exact source HEAD
+        shell: pwsh
+        run: |
+          $expected = "52b398852f2827d6d78dca0bb7c46bb2ae22d22f"
+          $actual = (git rev-parse HEAD).Trim()
+          Write-Host "Expected: $expected"
+          Write-Host "Actual:   $actual"
+          if ($actual -ne $expected) { throw "Source HEAD mismatch." }
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Test Core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release
+
+      - name: Install UI dependencies
+        working-directory: src/MapStudio.UI
+        run: npm install --no-audit --no-fund
+
+      - name: Build React UI
+        working-directory: src/MapStudio.UI
+        run: npm run build
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows EXE installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version "0.1.0-alpha.3-test.28" -SkipUiBuild
+
+      - name: Package portable ZIP and checksums
+        shell: pwsh
+        run: |
+          $publishDir = "artifacts/publish/win-x64"
+          $zipPath = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.28-win-x64.zip"
+          if (-not (Test-Path "$publishDir/OMSI Map Studio.exe")) { throw "Desktop EXE missing." }
+          if (-not (Test-Path "$publishDir/ui/index.html")) { throw "React UI missing." }
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
+          $zipHash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$zipHash  OMSI-Map-Studio-v0.1.0-alpha.3-test.28-win-x64.zip" | Set-Content "$zipPath.sha256" -Encoding ascii
+
+          $installerPath = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.28-win-x64.exe"
+          $installerHashPath = "$installerPath.sha256"
+          if (-not (Test-Path $installerPath)) { throw "Installer EXE missing: $installerPath" }
+          if (-not (Test-Path $installerHashPath)) { throw "Installer checksum missing: $installerHashPath" }
+
+          $notes = @"
+          # OMSI Map Studio v0.1.0-alpha.3-test.28
+
+          Build de teste / Test build
+
+          Source HEAD: 52b398852f2827d6d78dca0bb7c46bb2ae22d22f
+
+          Esta prerelease mantém as correções da test.27 e corrige a camada interna dos objetos compostos SCO: [new_pos], [scale], [rot_x], [rot_y] e [rot_z] passam a permanecer nos eixos locais nativos X/Y/Z do modelo O3D. A conversão do sistema Z-up do mapa OMSI para o Y-up do Babylon fica restrita ao container [object]. Isso evita deslocamento de partes do objeto e rotações locais no eixo errado sem alterar tile*300, altura relativa ao terrain ou [absheight].
+
+          This prerelease keeps the test.27 fixes and corrects the internal transform layer of compound SCO objects: [new_pos], [scale], [rot_x], [rot_y], and [rot_z] now stay on the native local X/Y/Z axes of the O3D model. OMSI map Z-up to Babylon Y-up conversion is restricted to the placed [object] container. This prevents displaced object parts and local rotations around the wrong axis without changing tile*300 placement, terrain-relative height, or [absheight].
+          "@
+          Set-Content "artifacts/release-notes.md" $notes -Encoding utf8
+
+      - name: Upload EXE and portable artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-v0.1.0-alpha.3-test.28-windows
+          path: |
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.28-win-x64.exe
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.28-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.28-win-x64.zip
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.28-win-x64.zip.sha256
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.0-alpha.3-test.28"
+          $sourceHead = "52b398852f2827d6d78dca0bb7c46bb2ae22d22f"
+          $installer = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.28-win-x64.exe"
+          $installerSha = "$installer.sha256"
+          $zip = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.28-win-x64.zip"
+          $zipSha = "$zip.sha256"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; refusing to overwrite." }
+
+          gh release create $tag $installer $installerSha $zip $zipSha --target $sourceHead --title "OMSI Map Studio $tag" --notes-file "artifacts/release-notes.md" --prerelease
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
