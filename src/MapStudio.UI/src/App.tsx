@@ -492,6 +492,11 @@ export function App() {
   ] = useState(false);
 
   const [
+    assetWarmupActive,
+    setAssetWarmupActive
+  ] = useState(false);
+
+  const [
     fullMapProgress,
     setFullMapProgress
   ] = useState<{
@@ -787,7 +792,8 @@ export function App() {
     loadingFullMap ||
     Boolean(loadingRegionKey) ||
     loadingSceneryLibrary ||
-    loadingSplineLibrary;
+    loadingSplineLibrary ||
+    assetWarmupActive;
 
   useEffect(() => {
     if (!interactionLocked) {
@@ -889,6 +895,7 @@ export function App() {
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
           setLoadingFullMap(false);
+          setAssetWarmupActive(false);
           setFullMapProgress(undefined);
           setLoadedFullMapFor(undefined);
           setSaving(false);
@@ -965,6 +972,7 @@ export function App() {
           setLoadingRegionKey(undefined);
           setLoadedRegionKey(undefined);
           setLoadingFullMap(false);
+          setAssetWarmupActive(true);
           setFullMapProgress(undefined);
           setLoadedFullMapFor(undefined);
           setInspectorTab("general");
@@ -1028,6 +1036,7 @@ export function App() {
           "mapFullLoadingStarted"
         ) {
           setLoadingFullMap(true);
+          setAssetWarmupActive(true);
           setFullMapProgress({
             completed: 0,
             total: message.totalTiles
@@ -1678,6 +1687,7 @@ export function App() {
       }
 
       setLoadingFullMap(true);
+      setAssetWarmupActive(true);
       setFullMapProgress({
         completed: 0,
         total:
@@ -1710,6 +1720,7 @@ export function App() {
     setLoadingRegionKey(
       regionKey
     );
+    setAssetWarmupActive(true);
 
     loadMapRegion(
       selectedMap.directoryName,
@@ -3308,6 +3319,141 @@ export function App() {
       loadedMapGeometryCount -
         renderableMapGeometryCount
     );
+
+  const geometryWarmupTotal =
+    mapLoadMode === "full"
+      ? mapObjectPaths.length
+      : nearbyObjectPaths.length;
+
+  const geometryWarmupCompleted =
+    mapLoadMode === "full"
+      ? loadedMapGeometryCount
+      : loadedNearbyGeometryCount;
+
+  const pendingTextureAssetCount =
+    useMemo(
+      () =>
+        Object.keys(
+          requestedTextureKeys
+        ).filter(
+          (key) =>
+            !Object.hasOwn(
+              textureAssetsByKey,
+              key
+            )
+        ).length,
+      [
+        requestedTextureKeys,
+        textureAssetsByKey
+      ]
+    );
+
+  const pendingGroundTextureAssetCount =
+    useMemo(
+      () =>
+        Object.keys(
+          requestedGroundTextureKeys
+        ).filter(
+          (key) =>
+            !Object.hasOwn(
+              groundTextureAssetsByKey,
+              key
+            )
+        ).length,
+      [
+        groundTextureAssetsByKey,
+        requestedGroundTextureKeys
+      ]
+    );
+
+  const pendingTerrainMaskAssetCount =
+    useMemo(
+      () =>
+        Object.keys(
+          requestedTerrainMaskKeys
+        ).filter(
+          (key) =>
+            !Object.hasOwn(
+              terrainMaskAssetsByKey,
+              key
+            )
+        ).length,
+      [
+        requestedTerrainMaskKeys,
+        terrainMaskAssetsByKey
+      ]
+    );
+
+  const requestedVisualAssetCount =
+    Object.keys(
+      requestedTextureKeys
+    ).length +
+    Object.keys(
+      requestedGroundTextureKeys
+    ).length +
+    Object.keys(
+      requestedTerrainMaskKeys
+    ).length;
+
+  const completedVisualAssetCount =
+    requestedVisualAssetCount -
+    pendingTextureAssetCount -
+    pendingGroundTextureAssetCount -
+    pendingTerrainMaskAssetCount;
+
+  const assetWarmupProgress = {
+    completed:
+      geometryWarmupCompleted +
+      loadedSplineProfileCount +
+      completedVisualAssetCount,
+    total:
+      geometryWarmupTotal +
+      splinePathsForPreload.length +
+      requestedVisualAssetCount
+  };
+
+  const assetWarmupHasPendingWork =
+    geometryWarmupCompleted <
+      geometryWarmupTotal ||
+    loadedSplineProfileCount <
+      splinePathsForPreload.length ||
+    pendingTextureAssetCount > 0 ||
+    pendingGroundTextureAssetCount > 0 ||
+    pendingTerrainMaskAssetCount > 0 ||
+    Boolean(preloadingGeometryFor) ||
+    Boolean(preloadingSplineProfileFor) ||
+    Boolean(loadingGeometryFor) ||
+    Boolean(loadingSplineFor);
+
+  useEffect(() => {
+    if (
+      !assetWarmupActive ||
+      loadingFullMap ||
+      Boolean(loadingRegionKey) ||
+      assetWarmupHasPendingWork
+    ) {
+      return;
+    }
+
+    const handle =
+      window.setTimeout(
+        () =>
+          setAssetWarmupActive(
+            false
+          ),
+        650
+      );
+
+    return () =>
+      window.clearTimeout(
+        handle
+      );
+  }, [
+    assetWarmupActive,
+    assetWarmupHasPendingWork,
+    loadingFullMap,
+    loadingRegionKey
+  ]);
 
   const unresolvedMapGeometryCount =
     Math.max(
@@ -5459,6 +5605,25 @@ export function App() {
       };
     }
 
+    if (
+      assetWarmupActive &&
+      selectedMap
+    ) {
+      return {
+        title:
+          "Preparando recursos do mapa",
+        detail:
+          `O3D ${geometryWarmupCompleted}/${geometryWarmupTotal} · SLI ${loadedSplineProfileCount}/${splinePathsForPreload.length} · recursos visuais ${completedVisualAssetCount}/${requestedVisualAssetCount}. Uma única etapa contínua, sem abrir um carregamento por item.`,
+        completed:
+          assetWarmupProgress.completed,
+        total:
+          Math.max(
+            1,
+            assetWarmupProgress.total
+          )
+      };
+    }
+
     if (loadingSceneryLibrary) {
       return {
         title: "Carregando biblioteca de objetos",
@@ -7574,6 +7739,7 @@ export function App() {
                 return;
               }
 
+              setAssetWarmupActive(true);
               setMapLoadMode("full");
               setLoadedFullMapFor(
                 undefined
@@ -7609,6 +7775,7 @@ export function App() {
                 return;
               }
 
+              setAssetWarmupActive(true);
               setMapLoadMode(
                 "performance"
               );
