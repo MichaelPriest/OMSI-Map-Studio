@@ -504,3 +504,10 @@ A seção de bones `0x54` volta a respeitar a largura do cabeçalho O3D: arquivo
 O aquecimento de malhas, perfis SLI e texturas volta a exibir uma animação contínua após a leitura estrutural. Nessa fase visual, a animação é informativa e não bloqueia a interação com o editor.
 
 No modo desempenho 3×3, o inspetor passa a mostrar malhas realmente renderizáveis, falhas e pendências da área ativa, em vez de tratar apenas a presença de um payload como sucesso visual.
+
+
+## Prévia segura de O3D protegido
+
+Quando um mesh `.o3d` protegido não pode ser lido diretamente, o host procura somente um arquivo-fonte DirectX `.x` de mesmo nome já existente ao lado do asset instalado. Se esse `.x` real existir e for legível, ele é usado para a prévia; nenhum arquivo é convertido, descriptografado ou alterado.
+
+A interface separa malhas realmente renderizáveis de assets protegidos. Marcadores de O3D protegido usam cor distinta dos marcadores de asset ausente/inválido, e o status informa quantos tipos de objeto e quantas malhas continuam protegidos.
