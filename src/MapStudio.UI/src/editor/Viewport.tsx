@@ -26,7 +26,8 @@ import type {
 } from "../bridge/desktopBridge";
 import {
   getSceneryTextureAssetKey,
-  getSplineTextureAssetKey
+  getSplineTextureAssetKey,
+  sceneryTreeTextureMeshToken
 } from "../bridge/desktopBridge";
 
 type ViewportProps = {
@@ -1646,6 +1647,229 @@ type ObjectLodInstance = {
   thresholds: number[];
 };
 
+function getPlacedTreeVisual(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined
+) {
+  if (!geometry?.tree) {
+    return undefined;
+  }
+
+  const values =
+    placedObject.extraValues;
+
+  if (
+    !values ||
+    values.length < 4
+  ) {
+    return undefined;
+  }
+
+  const valueCount =
+    Number.parseInt(
+      values[0],
+      10
+    );
+
+  const textureName =
+    values[1]?.trim();
+
+  const height =
+    Number.parseFloat(
+      values[2]
+    );
+
+  const aspect =
+    Number.parseFloat(
+      values[3]
+    );
+
+  if (
+    valueCount < 4 ||
+    !textureName ||
+    !Number.isFinite(height) ||
+    !Number.isFinite(aspect) ||
+    height <= 0 ||
+    aspect <= 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    textureName,
+    height,
+    aspect,
+    width:
+      height * aspect
+  };
+}
+
+function getTreeTextureAsset(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
+) {
+  const tree =
+    getPlacedTreeVisual(
+      placedObject,
+      geometry
+    );
+
+  if (!tree) {
+    return undefined;
+  }
+
+  return textureAssetsByKey[
+    getSceneryTextureAssetKey(
+      placedObject.sceneryObjectPath,
+      sceneryTreeTextureMeshToken,
+      tree.textureName
+    )
+  ];
+}
+
+function hasRenderableTree(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
+) {
+  const tree =
+    getPlacedTreeVisual(
+      placedObject,
+      geometry
+    );
+
+  const asset =
+    getTreeTextureAsset(
+      placedObject,
+      geometry,
+      textureAssetsByKey
+    );
+
+  return Boolean(
+    tree &&
+    asset?.exists &&
+    asset.base64Data
+  );
+}
+
+function createPlacedTree(
+  scene: Scene,
+  name: string,
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
+) {
+  const tree =
+    getPlacedTreeVisual(
+      placedObject,
+      geometry
+    );
+
+  const asset =
+    getTreeTextureAsset(
+      placedObject,
+      geometry,
+      textureAssetsByKey
+    );
+
+  if (
+    !tree ||
+    !asset?.exists ||
+    !asset.base64Data
+  ) {
+    return undefined;
+  }
+
+  const texture =
+    createTextureFromAsset(
+      scene,
+      asset
+    );
+
+  if (!texture) {
+    return undefined;
+  }
+
+  texture.hasAlpha = true;
+
+  const material =
+    new StandardMaterial(
+      `${name}-material`,
+      scene
+    );
+
+  material.diffuseColor =
+    Color3.Black();
+
+  material.diffuseTexture =
+    texture;
+
+  material.emissiveColor =
+    Color3.White();
+
+  material.emissiveTexture =
+    texture;
+
+  material.useAlphaFromDiffuseTexture =
+    true;
+
+  material.transparencyMode =
+    Material.MATERIAL_ALPHATESTANDBLEND;
+
+  material.alphaCutOff = 0.25;
+  material.backFaceCulling = false;
+  material.disableLighting = true;
+
+  const mesh =
+    MeshBuilder.CreatePlane(
+      name,
+      {
+        width: tree.width,
+        height: tree.height
+      },
+      scene
+    );
+
+  mesh.position.y =
+    tree.height / 2;
+
+  mesh.billboardMode =
+    Mesh.BILLBOARDMODE_Y;
+
+  mesh.material = material;
+  mesh.isPickable = false;
+  mesh.metadata = {
+    ...(mesh.metadata ?? {}),
+    mapStudioTree: true,
+    treeTexture:
+      tree.textureName,
+    treeHeight:
+      tree.height,
+    treeAspect:
+      tree.aspect
+  };
+
+  return mesh;
+}
+
 function getGeometryRadius(
   geometry: OmsiSceneryObjectGeometry
 ) {
@@ -2158,6 +2382,28 @@ function hasRenderableGeometry(
   );
 }
 
+function hasRenderableObjectVisual(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
+) {
+  return (
+    hasRenderableGeometry(
+      geometry
+    ) ||
+    hasRenderableTree(
+      placedObject,
+      geometry,
+      textureAssetsByKey
+    )
+  );
+}
+
 function createSelectedGeometry(
   scene: Scene,
   placedObject: OmsiPlacedObject,
@@ -2189,6 +2435,19 @@ function createSelectedGeometry(
       textureAssetsByKey,
       nightPreviewEnabled
     );
+
+  const tree =
+    createPlacedTree(
+      scene,
+      "selected-object-tree",
+      placedObject,
+      geometry,
+      textureAssetsByKey
+    );
+
+  if (tree) {
+    tree.parent = root;
+  }
 
   for (const mesh of meshes) {
     mesh.parent = root;
@@ -2258,8 +2517,14 @@ function createMapObjectGeometry(
 
     if (
       placements.length === 0 ||
-      !hasRenderableGeometry(
-        geometry
+      !geometry ||
+      !placements.some(
+        (placedObject) =>
+          hasRenderableObjectVisual(
+            placedObject,
+            geometry,
+            textureAssetsByKey
+          )
       )
     ) {
       continue;
@@ -2288,6 +2553,20 @@ function createMapObjectGeometry(
 
     for (const source of sourceMeshes) {
       source.parent = sourceRoot;
+    }
+
+    const sourceTree =
+      createPlacedTree(
+        scene,
+        `map-tree-${sceneryObjectPath}-0`,
+        placements[0],
+        geometry,
+        textureAssetsByKey
+      );
+
+    if (sourceTree) {
+      sourceTree.parent =
+        sourceRoot;
     }
 
     const sourceLodInstance =
@@ -2350,6 +2629,21 @@ function createMapObjectGeometry(
           clone.isPickable = false;
           cloneMeshes.push(clone);
         }
+      }
+
+      const tree =
+        createPlacedTree(
+          scene,
+          `map-tree-${sceneryObjectPath}-${placementIndex}`,
+          placements[
+            placementIndex
+          ],
+          geometry,
+          textureAssetsByKey
+        );
+
+      if (tree) {
+        tree.parent = root;
       }
 
       const lodInstance =
@@ -2846,11 +3140,13 @@ export function Viewport({
         const markerObjects =
           objects.filter(
             (placedObject) =>
-              !hasRenderableGeometry(
+              !hasRenderableObjectVisual(
+                placedObject,
                 objectGeometryByPath[
                   placedObject
                     .sceneryObjectPath
-                ]
+                ],
+                textureAssetsByKey
               )
           );
 
@@ -3056,11 +3352,13 @@ export function Viewport({
       !usesWorldCoordinates &&
       selectedObject &&
       selectedGeometry &&
-      !hasRenderableGeometry(
+      !hasRenderableObjectVisual(
+        selectedObject,
         objectGeometryByPath[
           selectedObject
             .sceneryObjectPath
-        ]
+        ],
+        textureAssetsByKey
       )
     ) {
       createSelectedGeometry(
@@ -3093,8 +3391,10 @@ export function Viewport({
     ) {
       if (
         selectedGeometry &&
-        hasRenderableGeometry(
-          selectedGeometry
+        hasRenderableObjectVisual(
+          selectedObject,
+          selectedGeometry,
+          textureAssetsByKey
         )
       ) {
         editRoot =
