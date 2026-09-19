@@ -549,3 +549,12 @@ Helper geometry remains preserved by metadata/import; only the default map compo
 Regular map objects use terrain-relative height: the Z value stored in an `[object]` block is added to the interpolated terrain height at the object's X/Y position. SCO files containing `[absheight]` remain at absolute height and do not receive that offset.
 
 The same calculation is used for rendering, selection, camera focus, hit testing, and the edit gizmo. When a relative-height object is saved, the editor converts the visual height back to the file's relative Z value so OMSI placement is preserved.
+
+
+## Native O3D axes and texture colour
+
+O3D binary mesh coordinates use a local axis convention that differs from map/SCO placement coordinates. For the Babylon Y-up viewport, O3D vertices now stay in their native render axes; map X/Y/Z conversion remains confined to scene composition.
+
+O3D section `0x79` is preserved as transform metadata and is no longer baked into preview vertices as an isolated inverse transform. Applying only the inverse displaced/rotated meshes without re-applying the corresponding object transform.
+
+When a diffuse texture exists, its RGB is now used directly as the surface colour. Material `diffuseColor` no longer multiplies the texture, preventing valid OMSI textures from becoming dark or black.
