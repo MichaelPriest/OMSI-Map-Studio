@@ -162,6 +162,8 @@ export type OmsiSceneryMaterialOverride = {
   bumpMapTextureName: string | null;
   bumpMapStrength: number | null;
   nightMapTextureName: string | null;
+  environmentMapTextureName: string | null;
+  environmentMapStrength: number | null;
 };
 
 export type OmsiSceneryObjectGeometry = {

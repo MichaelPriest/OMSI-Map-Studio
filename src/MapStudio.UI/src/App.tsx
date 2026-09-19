@@ -1547,6 +1547,12 @@ export function App() {
             ?.bumpMapTextureName
         );
 
+        queueTexture(
+          mesh.declaredPath,
+          materialOverride
+            ?.environmentMapTextureName
+        );
+
         if (nightPreviewEnabled) {
           queueTexture(
             mesh.declaredPath,
@@ -2019,6 +2025,12 @@ export function App() {
             mesh.declaredPath,
             materialOverride
               ?.bumpMapTextureName
+          );
+
+          queueObjectTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.environmentMapTextureName
           );
 
           if (nightPreviewEnabled) {
@@ -2775,6 +2787,18 @@ export function App() {
                   )
                 : undefined;
 
+            const environmentTextureKey =
+              materialOverride
+                ?.environmentMapTextureName
+                ? getSceneryTextureAssetKey(
+                    selectedObject
+                      .sceneryObjectPath,
+                    mesh.declaredPath,
+                    materialOverride
+                      .environmentMapTextureName
+                  )
+                : undefined;
+
             return {
               mesh: getObjectName(
                 mesh.declaredPath
@@ -2823,6 +2847,20 @@ export function App() {
                   ? Boolean(
                       requestedTextureKeys[
                         nightTextureKey
+                      ]
+                    )
+                  : false,
+              environmentTextureAsset:
+                environmentTextureKey
+                  ? textureAssetsByKey[
+                      environmentTextureKey
+                    ]
+                  : undefined,
+              environmentTextureRequested:
+                environmentTextureKey
+                  ? Boolean(
+                      requestedTextureKeys[
+                        environmentTextureKey
                       ]
                     )
                   : false
@@ -5188,6 +5226,29 @@ export function App() {
                                     row.nightTextureRequested
                                   ).label
                                 : "preview desligado"}
+                            </small>
+                          )}
+                          {row.materialOverride
+                            .environmentMapTextureName && (
+                            <small>
+                              Envmap:{" "}
+                              {row.materialOverride
+                                .environmentMapTextureName}
+                              {" · "}
+                              {getTextureState(
+                                row.materialOverride
+                                  .environmentMapTextureName,
+                                row.environmentTextureAsset,
+                                row.environmentTextureRequested
+                              ).label}
+                              {row.materialOverride
+                                .environmentMapStrength !=
+                              null
+                                ? ` · força ${formatNumber(
+                                    row.materialOverride
+                                      .environmentMapStrength
+                                  )}`
+                                : ""}
                             </small>
                           )}
                         </>

@@ -9,4 +9,6 @@ public sealed record OmsiSceneryMaterialOverride(
     bool NoZCheck,
     string? BumpMapTextureName,
     double? BumpMapStrength,
-    string? NightMapTextureName);
+    string? NightMapTextureName,
+    string? EnvironmentMapTextureName,
+    double? EnvironmentMapStrength);

@@ -16,6 +16,9 @@ public sealed class OmsiSceneryMaterialOverrideTests
             "1\n" +
             "[matl_alpha]\n" +
             "2\n" +
+            "[matl_envmap]\n" +
+            "envmap.bmp\n" +
+            "0.4\n" +
             "[matl_nightmap]\n" +
             "glass_night.dds\n" +
             "[matl_bumpmap]\n" +
@@ -62,6 +65,12 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Equal(
             "glass_night.dds",
             glass.NightMapTextureName);
+        Assert.Equal(
+            "envmap.bmp",
+            glass.EnvironmentMapTextureName);
+        Assert.Equal(
+            0.4,
+            glass.EnvironmentMapStrength);
 
         var leaf =
             metadata.MaterialOverrides[1];
@@ -78,6 +87,10 @@ public sealed class OmsiSceneryMaterialOverrideTests
             leaf.BumpMapStrength);
         Assert.Null(
             leaf.NightMapTextureName);
+        Assert.Null(
+            leaf.EnvironmentMapTextureName);
+        Assert.Null(
+            leaf.EnvironmentMapStrength);
     }
 
     [Fact]

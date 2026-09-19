@@ -351,3 +351,10 @@ The bump file uses the same `OmsiTextureAssetPathResolver`, so it remains restri
 `[matl_nightmap]` is stored only for static `[matl]` entries. The asset is not loaded automatically in day mode.
 
 When **Nightmap** is enabled, the safe resolver loads the file and Babylon applies it as `emissiveTexture`. This is manual inspection, not a simulation of OMSI time, `NightMapMode`, or scripts.
+
+
+## Static environment maps
+
+`[matl_envmap]` provides a real file and reflection strength. Core stores both in the static override and the asset uses the same safe `Sceneryobjects` resolver.
+
+Babylon applies the image as a spherical `reflectionTexture`. Preview strength is clamped to 0–1, matching the documented OMSI range.

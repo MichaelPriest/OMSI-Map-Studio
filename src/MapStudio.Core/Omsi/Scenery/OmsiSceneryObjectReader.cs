@@ -159,6 +159,42 @@ public sealed class OmsiSceneryObjectReader
 
             if (string.Equals(
                     section.Keyword,
+                    "matl_envmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    !string.IsNullOrWhiteSpace(
+                        values[0]))
+                {
+                    current
+                        .EnvironmentMapTextureName =
+                        values[0];
+                }
+
+                if (
+                    values.Length > 1 &&
+                    double.TryParse(
+                        values[1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var strength) &&
+                    double.IsFinite(strength))
+                {
+                    current
+                        .EnvironmentMapStrength =
+                        strength;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
                     "matl_nightmap",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -240,7 +276,9 @@ public sealed class OmsiSceneryObjectReader
                         builder.NoZCheck,
                         builder.BumpMapTextureName,
                         builder.BumpMapStrength,
-                        builder.NightMapTextureName))
+                        builder.NightMapTextureName,
+                        builder.EnvironmentMapTextureName,
+                        builder.EnvironmentMapStrength))
             .ToArray();
     }
 
@@ -310,6 +348,14 @@ public sealed class OmsiSceneryObjectReader
 
         public string?
             NightMapTextureName
+        { get; set; }
+
+        public string?
+            EnvironmentMapTextureName
+        { get; set; }
+
+        public double?
+            EnvironmentMapStrength
         { get; set; }
     }
 }

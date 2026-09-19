@@ -367,3 +367,10 @@ Assim como a textura difusa, bump ausente ou inseguro não recebe placeholder: o
 O viewport possui a camada **Nightmap**. Desligada, mantém o preview diurno. Ligada, materiais estáticos com `[matl_nightmap]` carregam a textura real como emissão.
 
 O inspetor mostra o arquivo e o estado; com a camada desligada exibe **preview desligado**.
+
+
+## Reflexão por envmap
+
+Materiais estáticos com `[matl_envmap]` agora carregam a textura de reflexão real e respeitam a força definida no `.sco`.
+
+A aba **Materiais** mostra arquivo, estado e força do envmap. Se o asset estiver ausente/inseguro, o material permanece sem reflexão adicional.

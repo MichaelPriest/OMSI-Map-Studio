@@ -367,3 +367,10 @@ Like the diffuse texture, a missing or unsafe bump asset gets no placeholder: th
 The viewport now has a **Nightmap** layer. Off keeps the daytime preview. On loads real static `[matl_nightmap]` assets as emission.
 
 The inspector shows the file and state; when disabled it shows **preview off**.
+
+
+## Envmap reflections
+
+Static materials with `[matl_envmap]` now load the real reflection texture and respect the strength defined by the `.sco`.
+
+The **Materials** tab shows envmap file, state, and strength. Missing/unsafe assets simply leave the material without the extra reflection.

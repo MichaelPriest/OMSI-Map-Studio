@@ -232,3 +232,12 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. confirme emissão sem substituir a textura difusa;
 5. desmarque e confirme retorno ao preview diurno;
 6. confirme que `[matl_change]` continua sem ser executado.
+
+
+## Teste de envmap
+
+1. selecione um objeto com `[matl_envmap]` estático;
+2. confirme arquivo e força no inspetor;
+3. confirme carregamento da textura real;
+4. compare a reflexão visual com o mesmo material sem envmap;
+5. valide forças 0, 0.4 e 1 e confirme que valores externos são limitados no preview.

@@ -789,6 +789,9 @@ function createPreviewMaterial(
   nightTextureAsset:
     | OmsiTextureAsset
     | undefined,
+  environmentTextureAsset:
+    | OmsiTextureAsset
+    | undefined,
   nightPreviewEnabled: boolean
 ) {
   const material = new StandardMaterial(
@@ -890,6 +893,33 @@ function createPreviewMaterial(
       materialOverride
         ?.bumpMapStrength ??
       1;
+  }
+
+  if (
+    materialOverride
+      ?.environmentMapTextureName
+  ) {
+    const environmentTexture =
+      createTextureFromAsset(
+        scene,
+        environmentTextureAsset
+      );
+
+    if (environmentTexture) {
+      environmentTexture
+        .coordinatesMode =
+        Texture.SPHERICAL_MODE;
+
+      environmentTexture.level =
+        clamp01(
+          materialOverride
+            .environmentMapStrength ??
+          1
+        );
+
+      material.reflectionTexture =
+        environmentTexture;
+    }
   }
 
   if (
@@ -1109,6 +1139,36 @@ function createGeometryMeshes(
                 const textureName =
                   materialOverride
                     ?.nightMapTextureName;
+
+                if (!textureName) {
+                  return undefined;
+                }
+
+                return textureAssetsByKey[
+                  getSceneryTextureAssetKey(
+                    sceneryObjectPath,
+                    meshReference
+                      .declaredPath,
+                    textureName
+                  )
+                ];
+              })()
+            : undefined,
+          materialIndex >= 0
+            ? (() => {
+                const materialOverride =
+                  findMaterialOverride(
+                    meshReference
+                      .materialOverrides,
+                    materialIndex,
+                    meshGeometry.materials[
+                      materialIndex
+                    ]?.textureName
+                  );
+
+                const textureName =
+                  materialOverride
+                    ?.environmentMapTextureName;
 
                 if (!textureName) {
                   return undefined;

@@ -232,3 +232,12 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. verify emission without replacing the diffuse texture;
 5. disable it and verify daytime preview returns;
 6. verify `[matl_change]` is still not executed.
+
+
+## Envmap test
+
+1. select an object with static `[matl_envmap]`;
+2. verify file and strength in the inspector;
+3. verify the real texture loads;
+4. compare reflection against the same material without envmap;
+5. validate strengths 0, 0.4, and 1 and confirm out-of-range values are clamped in preview.
