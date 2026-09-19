@@ -86,6 +86,7 @@ export type OmsiPlacedObject = {
   rotation: number;
   pitch: number;
   bank: number;
+  extraValues?: string[];
 };
 
 export type OmsiPlacedSpline = {
