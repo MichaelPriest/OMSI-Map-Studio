@@ -13,6 +13,17 @@ export type OmsiTerrainGrid = {
   heights: number[];
 };
 
+export type OmsiTerrainRenderDataSummary = {
+  exists: boolean;
+  isValid: boolean;
+  fileSize: number;
+  vertexCount: number;
+  triangleCount: number;
+  materialCount: number;
+  hasTransform: boolean;
+  errorCode: string | null;
+};
+
 export type OmsiTile = {
   x: number;
   y: number;
@@ -26,6 +37,7 @@ export type OmsiTile = {
   terrainFileExists: boolean;
   terrainFileSize: number;
   terrain?: OmsiTerrainGrid | null;
+  terrainRenderData?: OmsiTerrainRenderDataSummary | null;
 };
 
 export type OmsiGroundTexture = {
