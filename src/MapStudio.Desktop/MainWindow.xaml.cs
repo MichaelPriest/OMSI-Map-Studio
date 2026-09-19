@@ -57,6 +57,9 @@ public partial class MainWindow : Window
         _splineDefinitionCache =
             new(StringComparer.OrdinalIgnoreCase);
 
+    private IReadOnlyList<SceneryLibraryEntry>?
+        _sceneryLibraryCache;
+
     private string? _omsiRootPath;
 
     public MainWindow()
@@ -138,6 +141,10 @@ public partial class MainWindow : Window
 
                 case "selectMap":
                     await SelectMapAsync();
+                    break;
+
+                case "loadSceneryLibrary":
+                    await LoadSceneryLibraryAsync();
                     break;
 
                 case "saveObjectTransforms":
@@ -316,6 +323,7 @@ public partial class MainWindow : Window
         _knownSplinePaths.Clear();
         _tileContentCache.Clear();
         _splineDefinitionCache.Clear();
+        _sceneryLibraryCache = null;
 
         PostMessage(new
         {
@@ -485,6 +493,124 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "mapOpenError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task LoadSceneryLibraryAsync()
+    {
+        if (_omsiRootPath is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "omsiRootRequired"
+            });
+
+            return;
+        }
+
+        try
+        {
+            if (_sceneryLibraryCache is null)
+            {
+                var root =
+                    Path.Combine(
+                        _omsiRootPath,
+                        "Sceneryobjects");
+
+                if (!Directory.Exists(root))
+                {
+                    _sceneryLibraryCache =
+                        Array.Empty<SceneryLibraryEntry>();
+                }
+                else
+                {
+                    var options =
+                        new EnumerationOptions
+                        {
+                            RecurseSubdirectories = true,
+                            IgnoreInaccessible = true,
+                            MatchCasing =
+                                MatchCasing.CaseInsensitive,
+                            AttributesToSkip =
+                                FileAttributes.ReparsePoint
+                        };
+
+                    var entries =
+                        new List<SceneryLibraryEntry>();
+
+                    foreach (var filePath in
+                        Directory.EnumerateFiles(
+                            root,
+                            "*.sco",
+                            options))
+                    {
+                        if (entries.Count >= 50000)
+                        {
+                            break;
+                        }
+
+                        var relative =
+                            Path.GetRelativePath(
+                                root,
+                                filePath)
+                            .Replace(
+                                Path.DirectorySeparatorChar,
+                                '\\');
+
+                        var declaredPath =
+                            "Sceneryobjects\\" +
+                            relative;
+
+                        entries.Add(
+                            new SceneryLibraryEntry(
+                                declaredPath,
+                                Path.GetFileName(
+                                    filePath)));
+
+                        _knownSceneryObjectPaths
+                            .TryAdd(
+                                declaredPath,
+                                0);
+                    }
+
+                    _sceneryLibraryCache =
+                        entries
+                            .OrderBy(
+                                entry =>
+                                    entry.SceneryObjectPath,
+                                StringComparer.OrdinalIgnoreCase)
+                            .ToArray();
+                }
+            }
+
+            await Task.Yield();
+
+            PostMessage(new
+            {
+                type =
+                    "sceneryLibraryLoaded",
+                entries =
+                    _sceneryLibraryCache
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = "Sceneryobjects"
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
                 detail = exception.Message
             });
         }
@@ -1529,6 +1655,10 @@ public partial class MainWindow : Window
                 out value) &&
             double.IsFinite(value);
     }
+
+    private sealed record SceneryLibraryEntry(
+        string SceneryObjectPath,
+        string FileName);
 
     private sealed record ObjectTransformRequest(
         int TileX,

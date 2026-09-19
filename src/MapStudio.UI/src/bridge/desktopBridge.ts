@@ -1,3 +1,8 @@
+export type SceneryLibraryEntry = {
+  sceneryObjectPath: string;
+  fileName: string;
+};
+
 export type OmsiTile = {
   x: number;
   y: number;
@@ -158,6 +163,10 @@ export type HostMessage =
       target: "omsi" | "map";
     }
   | {
+      type: "sceneryLibraryLoaded";
+      entries: SceneryLibraryEntry[];
+    }
+  | {
       type: "objectTransformsSaved";
       directoryName: string;
       editsSaved: number;
@@ -248,6 +257,12 @@ export function selectOmsiRoot() {
 export function selectMap() {
   getWebView()?.postMessage({
     type: "selectMap"
+  });
+}
+
+export function loadSceneryLibrary() {
+  getWebView()?.postMessage({
+    type: "loadSceneryLibrary"
   });
 }
 
