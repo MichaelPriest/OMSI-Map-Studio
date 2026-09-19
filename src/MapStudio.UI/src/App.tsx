@@ -35,6 +35,16 @@ type MapLoadMode =
   | "full"
   | "performance";
 
+type EditorTool =
+  | "select"
+  | "move"
+  | "rotate";
+
+type ViewportCameraAction = {
+  type: "fit" | "focus";
+  token: number;
+};
+
 type InspectorTab =
   | "general"
   | "transform"
@@ -83,6 +93,16 @@ const formatNumber = (value: number) =>
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 
+const getPlacedObjectKey = (
+  placedObject: OmsiPlacedObject
+) =>
+  [
+    placedObject.tileX,
+    placedObject.tileY,
+    placedObject.objectId,
+    placedObject.sceneryObjectPath
+  ].join("|");
+
 const clamp01 = (value: number) =>
   Math.min(1, Math.max(0, value));
 
@@ -113,6 +133,30 @@ export function App() {
 
   const [mapLoadMode, setMapLoadMode] =
     useState<MapLoadMode>("full");
+
+  const [editorTool, setEditorTool] =
+    useState<EditorTool>("select");
+
+  const [showGrid, setShowGrid] =
+    useState(true);
+
+  const [showObjects, setShowObjects] =
+    useState(true);
+
+  const [showSplines, setShowSplines] =
+    useState(true);
+
+  const [
+    cameraAction,
+    setCameraAction
+  ] = useState<ViewportCameraAction>();
+
+  const [
+    previewObjectTransforms,
+    setPreviewObjectTransforms
+  ] = useState<
+    Record<string, OmsiPlacedObject>
+  >({});
 
   const [
     loadingFullMap,
@@ -226,6 +270,8 @@ export function App() {
           setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
+          setPreviewObjectTransforms({});
+          setEditorTool("select");
           setPreloadingGeometryFor(undefined);
           setSelectingRoot(false);
           setSelectingMap(false);
@@ -254,6 +300,8 @@ export function App() {
           setPreloadingGeometryFor(undefined);
           setSelectingMap(false);
           setMapLoadMode("full");
+          setEditorTool("select");
+          setPreviewObjectTransforms({});
           setLoadingRegionKey(undefined);
           setLoadedRegionKey(undefined);
           setLoadingFullMap(false);
@@ -671,6 +719,27 @@ export function App() {
     selectedObject
   ]);
 
+  const objectsForViewport = useMemo(
+    () =>
+      objects.map(
+        (placedObject) =>
+          previewObjectTransforms[
+            getPlacedObjectKey(
+              placedObject
+            )
+          ] ?? placedObject
+      ),
+    [
+      objects,
+      previewObjectTransforms
+    ]
+  );
+
+  const previewEditCount =
+    Object.keys(
+      previewObjectTransforms
+    ).length;
+
   const mapObjectPaths = useMemo(() => {
     if (
       mapLoadMode !== "full" ||
@@ -946,6 +1015,75 @@ export function App() {
         }
 
         setError(undefined);
+      },
+      []
+    );
+
+  const handlePreviewObjectTransform =
+    useCallback(
+      (
+        placedObject:
+          OmsiPlacedObject
+      ) => {
+        setPreviewObjectTransforms(
+          (current) => ({
+            ...current,
+            [getPlacedObjectKey(
+              placedObject
+            )]: placedObject
+          })
+        );
+
+        setSelectedObject(
+          placedObject
+        );
+
+        setError(undefined);
+      },
+      []
+    );
+
+  const handleDiscardPreviewEdits =
+    useCallback(() => {
+      if (selectedObject) {
+        const selectedKey =
+          getPlacedObjectKey(
+            selectedObject
+          );
+
+        const original =
+          objects.find(
+            (placedObject) =>
+              getPlacedObjectKey(
+                placedObject
+              ) === selectedKey
+          );
+
+        setSelectedObject(
+          original
+        );
+      }
+
+      setPreviewObjectTransforms(
+        {}
+      );
+
+      setEditorTool("select");
+    }, [
+      objects,
+      selectedObject
+    ]);
+
+  const requestCameraAction =
+    useCallback(
+      (type: "fit" | "focus") => {
+        setCameraAction(
+          (current) => ({
+            type,
+            token:
+              (current?.token ?? 0) + 1
+          })
+        );
       },
       []
     );
@@ -1985,24 +2123,45 @@ export function App() {
         <div className="editor-toolbar">
           <button
             type="button"
-            className="tool active"
-            title="Seleção"
+            className={
+              editorTool === "select"
+                ? "tool active"
+                : "tool"
+            }
+            title="Selecionar (Q)"
+            onClick={() =>
+              setEditorTool("select")
+            }
           >
             ↖
           </button>
           <button
             type="button"
-            className="tool"
-            disabled
-            title="Mover"
+            className={
+              editorTool === "move"
+                ? "tool active"
+                : "tool"
+            }
+            disabled={!selectedObject}
+            title="Mover objeto em prévia (W)"
+            onClick={() =>
+              setEditorTool("move")
+            }
           >
             ✥
           </button>
           <button
             type="button"
-            className="tool"
-            disabled
-            title="Rotacionar"
+            className={
+              editorTool === "rotate"
+                ? "tool active"
+                : "tool"
+            }
+            disabled={!selectedObject}
+            title="Rotacionar objeto em prévia (E)"
+            onClick={() =>
+              setEditorTool("rotate")
+            }
           >
             ⟳
           </button>
@@ -2010,9 +2169,53 @@ export function App() {
             type="button"
             className="tool"
             disabled
-            title="Escala"
+            title="Escala — ainda não suportada pelo formato de objeto OMSI nesta etapa"
           >
             ◫
+          </button>
+
+          <span className="toolbar-separator" />
+
+          <button
+            type="button"
+            className="tool"
+            title="Enquadrar mapa"
+            onClick={() =>
+              requestCameraAction("fit")
+            }
+          >
+            ⛶
+          </button>
+
+          <button
+            type="button"
+            className="tool"
+            title="Focar seleção"
+            disabled={
+              !selectedObject &&
+              !selectedSpline
+            }
+            onClick={() =>
+              requestCameraAction(
+                "focus"
+              )
+            }
+          >
+            ◎
+          </button>
+
+          <button
+            type="button"
+            className="tool"
+            title="Descartar transformações temporárias"
+            disabled={
+              previewEditCount === 0
+            }
+            onClick={
+              handleDiscardPreviewEdits
+            }
+          >
+            ↶
           </button>
 
           <span className="toolbar-separator" />
@@ -2210,8 +2413,15 @@ export function App() {
           <section className="editor-viewport">
             <Viewport
               tiles={activeTiles}
-              objects={objects}
+              objects={
+                objectsForViewport
+              }
               splines={splines}
+              editorTool={editorTool}
+              showGrid={showGrid}
+              showObjects={showObjects}
+              showSplines={showSplines}
+              cameraAction={cameraAction}
               activeTile={activeTile}
               onActiveTileChange={
                 (tile) => {
@@ -2263,37 +2473,63 @@ export function App() {
               onSelectSpline={
                 handleSplineSelection
               }
+              onPreviewObjectTransform={
+                handlePreviewObjectTransform
+              }
             />
 
             <div className="viewport-toolbar">
               <span>Perspectiva</span>
-              <span>Iluminação</span>
+              <span>
+                Ferramenta:{" "}
+                {editorTool === "select"
+                  ? "Selecionar"
+                  : editorTool === "move"
+                    ? "Mover"
+                    : "Rotacionar"}
+              </span>
+              {previewEditCount > 0 && (
+                <span className="preview-warning">
+                  Prévia não salva ·{" "}
+                  {previewEditCount}
+                </span>
+              )}
             </div>
 
             <div className="viewport-layers">
               <label>
                 <input
                   type="checkbox"
-                  checked
-                  readOnly
+                  checked={showGrid}
+                  onChange={(event) =>
+                    setShowGrid(
+                      event.target.checked
+                    )
+                  }
                 />
-                {mapLoadMode === "full"
-                  ? "Mapa completo"
-                  : "Área ativa 3×3"}
+                Grade / tiles
               </label>
               <label>
                 <input
                   type="checkbox"
-                  checked
-                  readOnly
+                  checked={showObjects}
+                  onChange={(event) =>
+                    setShowObjects(
+                      event.target.checked
+                    )
+                  }
                 />
                 Objetos
               </label>
               <label>
                 <input
                   type="checkbox"
-                  checked
-                  readOnly
+                  checked={showSplines}
+                  onChange={(event) =>
+                    setShowSplines(
+                      event.target.checked
+                    )
+                  }
                 />
                 Splines
               </label>
@@ -2371,6 +2607,9 @@ export function App() {
             {mapLoadMode === "full"
               ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
               : "sob demanda"}
+            <b>·</b>
+            Prévia:{" "}
+            {previewEditCount}
             <b>·</b>
             Tiles:{" "}
             {activeTiles.length}/
