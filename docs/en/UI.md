@@ -467,3 +467,13 @@ The inspector shows mask indices present on the active tile. Invalid paths, indi
 The `.terrain_0.rdy` file is also handled by a dedicated diagnostics reader. It validates vertex, triangle, material, and transform sections found in the render data, but **those coordinates do not replace the height mesh yet**, because `.rdy`-specific semantics are still being validated separately.
 
 The detail texture declared by `[groundtex]` remains loaded for diagnostics only; detail blending is not simulated yet.
+
+## Terrain-layer controls and validation
+
+The inspector now lists every map `[groundtex]` entry with an individual visibility control. Layer 0 can be hidden to compare against the neutral base; numbered layers can be disabled without modifying masks or `global.cfg`.
+
+The viewport layer panel separates **Terrain** from **Terrain paint**. Disabling terrain paint keeps the height/base mesh available and removes only numbered-mask paint layers.
+
+The host reads DDS headers and reports width, height, pixel format, and whether the texture is alpha-only. At this stage, a numbered mask is rendered only after it is validated as **DDS A8 alpha-only**. Other formats remain visible in diagnostics as **not rendered** instead of being guessed.
+
+Terrain caches are bounded to **32 [groundtex] textures** and **96 DDS masks**. **Clear cache** removes object, spline, terrain, and mask textures without unloading the map.

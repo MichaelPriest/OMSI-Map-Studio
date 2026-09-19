@@ -344,3 +344,16 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 8. valide um índice sem `[groundtex]` correspondente e confirme que nenhuma textura inventada é exibida;
 9. confirme no inspetor os dados do `.terrain_0.rdy` (validade, vértices, triângulos e transform) sem alterar nenhum arquivo;
 10. confirme que objetos, splines, relevo e navegação continuam funcionais sobre as camadas pintadas.
+
+## Teste dos controles e validação de camadas
+
+1. abra um mapa com várias entradas `[groundtex]` e selecione um tile com máscaras numeradas;
+2. no inspetor, desligue uma camada por vez e confirme que somente a pintura correspondente desaparece;
+3. desligue a camada 0 e confirme retorno ao material neutro do relevo sem ocultar a malha;
+4. desligue **Pintura terreno** e confirme que todas as camadas numeradas desaparecem, mantendo o relevo/base;
+5. reative **Pintura terreno** e confirme restauração das camadas habilitadas;
+6. confirme que máscaras A8 mostram dimensão/formato e estado **validada**;
+7. use um DDS de formato diferente em mapa de teste e confirme estado **não renderizada** sem aplicação visual;
+8. navegue por tiles suficientes para exceder o cache de máscaras e confirme que o editor continua estável, recarregando assets removidos quando necessário;
+9. clique **Limpar cache** e confirme repovoamento progressivo sem descarregar o mapa;
+10. confirme que nenhum `.dds`, `.terrain`, `.rdy` ou `global.cfg` é modificado.

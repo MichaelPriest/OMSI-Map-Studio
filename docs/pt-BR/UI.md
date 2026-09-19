@@ -467,3 +467,13 @@ O inspetor mostra os índices de máscara presentes no tile ativo. Caminhos inv�
 O arquivo `.terrain_0.rdy` também passa por um reader específico de diagnóstico. O leitor valida as seções de vértices, triângulos, materiais e transform encontradas no render-data, mas **essas coordenadas ainda não substituem a malha de altura**, porque a semântica própria do `.rdy` continua sendo validada separadamente.
 
 A textura de detalhe declarada em `[groundtex]` continua carregada apenas para diagnóstico; o blend de detalhe ainda não é simulado.
+
+## Controle e validação das camadas de terreno
+
+O inspetor agora lista todas as entradas `[groundtex]` do mapa com um controle de visibilidade individual. A camada 0 pode ser ocultada para comparar a base neutra; camadas numeradas podem ser desligadas sem alterar as máscaras ou o `global.cfg`.
+
+O painel do viewport separa **Terreno** de **Pintura terreno**. Desligar a pintura mantém a malha de altura/base disponível e remove somente as camadas controladas pelas máscaras numeradas.
+
+O host lê o cabeçalho DDS e informa largura, altura, formato de pixel e se a textura é alpha-only. Nesta etapa, uma máscara numerada só é usada no render quando foi validada como **DDS A8 alpha-only**. Formatos diferentes permanecem visíveis no diagnóstico como **não renderizados**, em vez de serem interpretados no chute.
+
+Os caches de terreno são limitados: até **32 texturas [groundtex]** e **96 máscaras DDS**. O botão **Limpar cache** remove texturas de objetos, splines, terreno e máscaras sem descarregar o mapa.

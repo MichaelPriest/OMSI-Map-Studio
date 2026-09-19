@@ -344,3 +344,16 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 8. test an index without a matching `[groundtex]` and verify no invented texture is shown;
 9. verify `.terrain_0.rdy` diagnostics (validity, vertices, triangles, and transform) without modifying any file;
 10. verify objects, splines, relief, and navigation remain functional over painted terrain layers.
+
+## Terrain-layer controls and validation test
+
+1. open a map with multiple `[groundtex]` entries and select a tile containing numbered masks;
+2. disable one layer at a time in the inspector and verify only the matching painted area disappears;
+3. disable layer 0 and verify the relief falls back to its neutral material without hiding the mesh;
+4. disable **Terrain paint** and verify all numbered layers disappear while relief/base stays visible;
+5. re-enable **Terrain paint** and verify enabled layers return;
+6. verify A8 masks show dimensions/format and the **validated** state;
+7. use a different DDS format in a test map and verify **not rendered** is shown with no visual application;
+8. navigate through enough tiles to exceed the mask cache and verify the editor remains stable and reloads evicted assets when needed;
+9. click **Clear cache** and verify progressive repopulation without unloading the map;
+10. verify no `.dds`, `.terrain`, `.rdy`, or `global.cfg` file is modified.
