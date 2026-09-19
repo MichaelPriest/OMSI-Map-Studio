@@ -2441,6 +2441,20 @@ function hasRenderableGeometry(
   );
 }
 
+function hasProtectedGeometry(
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined
+) {
+  return Boolean(
+    geometry?.meshes.some(
+      (meshReference) =>
+        meshReference.geometry
+          .errorCode === "encrypted"
+    )
+  );
+}
+
 function hasRenderableObjectVisual(
   placedObject: OmsiPlacedObject,
   geometry:
@@ -3218,27 +3232,75 @@ export function Viewport({
           );
 
         if (markerObjects.length) {
-          const objectMarkers =
-            MeshBuilder.CreateLineSystem(
-              "omsi-object-markers",
-              {
-                lines:
-                  createObjectMarkerLines(
-                    markerObjects
-                  )
-              },
-              scene
+          const protectedMarkers =
+            markerObjects.filter(
+              (placedObject) =>
+                hasProtectedGeometry(
+                  objectGeometryByPath[
+                    placedObject
+                      .sceneryObjectPath
+                  ]
+                )
             );
 
-          objectMarkers.color =
-            new Color3(
-              0.95,
-              0.78,
-              0.38
+          const missingMarkers =
+            markerObjects.filter(
+              (placedObject) =>
+                !hasProtectedGeometry(
+                  objectGeometryByPath[
+                    placedObject
+                      .sceneryObjectPath
+                  ]
+                )
             );
 
-          objectMarkers.isPickable =
-            false;
+          if (protectedMarkers.length) {
+            const objectMarkers =
+              MeshBuilder.CreateLineSystem(
+                "omsi-protected-object-markers",
+                {
+                  lines:
+                    createObjectMarkerLines(
+                      protectedMarkers
+                    )
+                },
+                scene
+              );
+
+            objectMarkers.color =
+              new Color3(
+                0.48,
+                0.66,
+                0.82
+              );
+
+            objectMarkers.isPickable =
+              false;
+          }
+
+          if (missingMarkers.length) {
+            const objectMarkers =
+              MeshBuilder.CreateLineSystem(
+                "omsi-missing-object-markers",
+                {
+                  lines:
+                    createObjectMarkerLines(
+                      missingMarkers
+                    )
+                },
+                scene
+              );
+
+            objectMarkers.color =
+              new Color3(
+                0.95,
+                0.78,
+                0.38
+              );
+
+            objectMarkers.isPickable =
+              false;
+          }
         }
       }
     } else {
