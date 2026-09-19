@@ -289,10 +289,21 @@ const findSceneryMaterialOverride = (
       textureName
     );
 
+  const occurrenceIndex =
+    mesh.geometry.materials
+      .slice(0, materialIndex + 1)
+      .filter(
+        (material) =>
+          material.textureName &&
+          normalizeTextureFileName(
+            material.textureName
+          ) === normalized
+      ).length - 1;
+
   return mesh.materialOverrides.find(
     (override) =>
       override.materialIndex ===
-        materialIndex &&
+        occurrenceIndex &&
       normalizeTextureFileName(
         override.textureName
       ) === normalized

@@ -1588,6 +1588,8 @@ function normalizeTextureFileName(
 function findMaterialOverride(
   overrides:
     OmsiSceneryMaterialOverride[],
+  materials:
+    OmsiSceneryObjectGeometry["meshes"][number]["geometry"]["materials"],
   materialIndex: number,
   textureName:
     | string
@@ -1606,10 +1608,21 @@ function findMaterialOverride(
       textureName
     );
 
+  const occurrenceIndex =
+    materials
+      .slice(0, materialIndex + 1)
+      .filter(
+        (material) =>
+          material.textureName &&
+          normalizeTextureFileName(
+            material.textureName
+          ) === normalized
+      ).length - 1;
+
   return overrides.find(
     (override) =>
       override.materialIndex ===
-        materialIndex &&
+        occurrenceIndex &&
       normalizeTextureFileName(
         override.textureName
       ) === normalized
@@ -2361,6 +2374,7 @@ function createGeometryMeshes(
             ? findMaterialOverride(
                 meshReference
                   .materialOverrides,
+                meshGeometry.materials,
                 materialIndex,
                 meshGeometry.materials[
                   materialIndex
@@ -2373,6 +2387,7 @@ function createGeometryMeshes(
                   findMaterialOverride(
                     meshReference
                       .materialOverrides,
+                    meshGeometry.materials,
                     materialIndex,
                     meshGeometry.materials[
                       materialIndex
@@ -2403,6 +2418,7 @@ function createGeometryMeshes(
                   findMaterialOverride(
                     meshReference
                       .materialOverrides,
+                    meshGeometry.materials,
                     materialIndex,
                     meshGeometry.materials[
                       materialIndex
@@ -2433,6 +2449,7 @@ function createGeometryMeshes(
                   findMaterialOverride(
                     meshReference
                       .materialOverrides,
+                    meshGeometry.materials,
                     materialIndex,
                     meshGeometry.materials[
                       materialIndex
@@ -2463,6 +2480,7 @@ function createGeometryMeshes(
                   findMaterialOverride(
                     meshReference
                       .materialOverrides,
+                    meshGeometry.materials,
                     materialIndex,
                     meshGeometry.materials[
                       materialIndex
