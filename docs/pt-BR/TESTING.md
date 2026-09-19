@@ -547,11 +547,10 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 6. confirme que um modelo com bones não vira marcador amarelo apenas por desalinhamento da seção `0x54`.
 
 
-## Validação de O3D protegido e fallback .x
+## Validação de O3D protegido
 
 1. em Grundorf, confirme que o contador do Explorador mostra **Malhas reais** e não conta payload protegido como renderizado;
 2. confirme que `encrypted` aparece como **O3D protegido** no Inspetor;
 3. confirme que o status final informa a quantidade de tipos de objeto e malhas protegidas;
-4. se existir um `.x` real de mesmo nome ao lado de um `.o3d` protegido, confirme que a prévia usa esse arquivo sem alterar o original;
-5. confirme que, sem `.x` correspondente, o asset continua explicitamente protegido e não recebe geometria fictícia;
-6. confirme que marcadores de O3D protegido têm cor diferente dos marcadores de arquivo ausente/inválido.
+4. confirme que um O3D protegido não recebe geometria fictícia nem substituição automática por outro formato;
+5. confirme que marcadores de O3D protegido têm cor diferente dos marcadores de arquivo ausente/inválido.
