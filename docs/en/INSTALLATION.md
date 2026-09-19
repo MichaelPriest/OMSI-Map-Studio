@@ -20,3 +20,12 @@ The package is self-contained for the .NET runtime. Windows still needs the Micr
 ## Release rule
 
 The EXE installer should be published alongside the portable ZIP and its SHA-256 file. Test releases remain prereleases and should only be produced after Core, React, and Desktop validation passes.
+
+
+## Uninstallation
+
+The installer creates a dedicated OMSI Map Studio uninstaller. It is registered in Windows **Installed apps** and also gets an **Uninstall OMSI Map Studio** shortcut in the Start Menu.
+
+Uninstalling removes files installed under `%LOCALAPPDATA%\Programs\OMSI Map Studio` and shortcuts created by the installer. OMSI map files, `.mapstudio-backups`, and other files outside the application install directory are never removed.
+
+Logs and local data outside the installation directory are intentionally preserved at this alpha stage to avoid losing diagnostics or preferences.
