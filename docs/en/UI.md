@@ -493,3 +493,9 @@ Base-layer (index 0) visibility is also honored by the editor preview. These vis
 Each `[groundtex]` resolution code is now converted to the expected real paint-mask dimension. For paintable layers, the validated relationship is a power of two: **6 → 64 px**, **7 → 128 px**, **8 → 256 px**, **9 → 512 px**, and **10 → 1024 px**. Layer 0 still has no paint mask of its own and uses code 0.
 
 When loading `tile.map.N.dds`, the editor compares the real width/height against layer N's expected resolution. A valid A8 mask with incompatible dimensions is reported as incompatible in the inspector and is not rendered. This prevents accidentally applying a mask from another map/layer.
+
+## Base-terrain texture fidelity
+
+The terrain base layer uses the real texture declared by `[groundtex]` as **albedo**. Formats decoded directly by the WebView/Chromium path, such as BMP, PNG, JPEG, GIF, and WebP, are no longer forced through Babylon's texture-loader path; only DDS and TGA continue to use dedicated loaders.
+
+Layer 0 is treated as opaque and the terrain material no longer multiplies the source texture by arbitrary editor lighting. This prevents a real loaded texture from appearing almost black because of loader/material/lighting interaction. UV orientation and repeating values continue to come from the known real data; no detail-texture blend is invented at this stage.
