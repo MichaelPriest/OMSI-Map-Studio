@@ -108,8 +108,10 @@ const nearbyObjectPathLimit = 64;
 const nearbySplinePathLimit = 48;
 const autoObjectTextureLimit = 128;
 const autoSplineTextureLimit = 96;
-const autoObjectTextureBatch = 8;
-const autoSplineTextureBatch = 6;
+const autoObjectTextureBatch = 12;
+const autoSplineTextureBatch = 8;
+const geometryPreloadBatchSize = 8;
+const splineProfilePreloadBatchSize = 8;
 const autoTextureLimit =
   autoObjectTextureLimit +
   autoSplineTextureLimit;
@@ -683,6 +685,16 @@ export function App() {
     Record<string, true>
   >({});
 
+  const requestedGeometryPathsRef =
+    useRef<Set<string>>(
+      new Set()
+    );
+
+  const requestedSplineProfilePathsRef =
+    useRef<Set<string>>(
+      new Set()
+    );
+
   const textureCacheOrderRef =
     useRef<string[]>([]);
 
@@ -958,6 +970,8 @@ export function App() {
           setAutoPrefetchedTextureKeys({});
           textureCacheOrderRef.current =
             [];
+          requestedGeometryPathsRef.current.clear();
+          requestedSplineProfilePathsRef.current.clear();
           setPreloadingGeometryFor(undefined);
           setPreloadingSplineProfileFor(
             undefined
@@ -1398,6 +1412,10 @@ export function App() {
             })
           );
 
+          requestedSplineProfilePathsRef.current.delete(
+            message.splinePath
+          );
+
           setLoadingSplineFor(
             (current) =>
               current ===
@@ -1449,6 +1467,10 @@ export function App() {
             [message.sceneryObjectPath]:
               message.geometry
           }));
+
+          requestedGeometryPathsRef.current.delete(
+            message.sceneryObjectPath
+          );
 
           setLoadingGeometryFor((current) =>
             current ===
@@ -1755,10 +1777,17 @@ export function App() {
       loadingSplineFor ===
         splinePath ||
       preloadingSplineProfileFor ===
+        splinePath ||
+      requestedSplineProfilePathsRef.current.has(
         splinePath
+      )
     ) {
       return;
     }
+
+    requestedSplineProfilePathsRef.current.add(
+      splinePath
+    );
 
     setLoadingSplineFor(
       splinePath
@@ -1822,10 +1851,17 @@ export function App() {
       loadingGeometryFor ===
         sceneryObjectPath ||
       preloadingGeometryFor ===
+        sceneryObjectPath ||
+      requestedGeometryPathsRef.current.has(
         sceneryObjectPath
+      )
     ) {
       return;
     }
+
+    requestedGeometryPathsRef.current.add(
+      sceneryObjectPath
+    );
 
     setLoadingGeometryFor(
       sceneryObjectPath
@@ -2581,41 +2617,43 @@ export function App() {
       !bridgeAvailable ||
       mapLoadMode !== "performance" ||
       Boolean(loadingRegionKey) ||
-      loadingGeometryFor ||
-      preloadingGeometryFor ||
       nearbyObjectPaths.length === 0
     ) {
       return;
     }
 
-    const nextPath =
-      nearbyObjectPaths.find(
-        (path) =>
-          !Object.hasOwn(
-            geometryByPath,
-            path
-          )
+    const batch =
+      nearbyObjectPaths
+        .filter(
+          (path) =>
+            !Object.hasOwn(
+              geometryByPath,
+              path
+            ) &&
+            !requestedGeometryPathsRef.current.has(
+              path
+            )
+        )
+        .slice(
+          0,
+          geometryPreloadBatchSize
+        );
+
+    for (const path of batch) {
+      requestedGeometryPathsRef.current.add(
+        path
       );
 
-    if (!nextPath) {
-      return;
+      loadSceneryObjectGeometry(
+        path
+      );
     }
-
-    setPreloadingGeometryFor(
-      nextPath
-    );
-
-    loadSceneryObjectGeometry(
-      nextPath
-    );
   }, [
     bridgeAvailable,
     geometryByPath,
-    loadingGeometryFor,
     loadingRegionKey,
     mapLoadMode,
-    nearbyObjectPaths,
-    preloadingGeometryFor
+    nearbyObjectPaths
   ]);
 
   const nearbySplinePaths =
@@ -2755,36 +2793,38 @@ export function App() {
     ]);
 
   useEffect(() => {
-    if (
-      !bridgeAvailable ||
-      loadingSplineFor ||
-      preloadingSplineProfileFor
-    ) {
+    if (!bridgeAvailable) {
       return;
     }
 
-    const nextPath =
-      splinePathsForPreload.find(
-        (path) =>
-          !Object.hasOwn(
-            splineProfilesByPath,
-            path
-          )
+    const batch =
+      splinePathsForPreload
+        .filter(
+          (path) =>
+            !Object.hasOwn(
+              splineProfilesByPath,
+              path
+            ) &&
+            !requestedSplineProfilePathsRef.current.has(
+              path
+            )
+        )
+        .slice(
+          0,
+          splineProfilePreloadBatchSize
+        );
+
+    for (const path of batch) {
+      requestedSplineProfilePathsRef.current.add(
+        path
       );
 
-    if (!nextPath) {
-      return;
+      loadSplineProfile(
+        path
+      );
     }
-
-    setPreloadingSplineProfileFor(
-      nextPath
-    );
-
-    loadSplineProfile(nextPath);
   }, [
     bridgeAvailable,
-    loadingSplineFor,
-    preloadingSplineProfileFor,
     splinePathsForPreload,
     splineProfilesByPath
   ]);
@@ -3681,41 +3721,43 @@ export function App() {
       !bridgeAvailable ||
       mapLoadMode !== "full" ||
       loadingFullMap ||
-      preloadingGeometryFor ||
       mapObjectPaths.length === 0
     ) {
       return;
     }
 
-    const nextPath =
-      mapObjectPaths.find(
-        (path) =>
-          !Object.hasOwn(
-            geometryByPath,
-            path
-          ) &&
-          loadingGeometryFor !== path
+    const batch =
+      mapObjectPaths
+        .filter(
+          (path) =>
+            !Object.hasOwn(
+              geometryByPath,
+              path
+            ) &&
+            !requestedGeometryPathsRef.current.has(
+              path
+            )
+        )
+        .slice(
+          0,
+          geometryPreloadBatchSize
+        );
+
+    for (const path of batch) {
+      requestedGeometryPathsRef.current.add(
+        path
       );
 
-    if (!nextPath) {
-      return;
+      loadSceneryObjectGeometry(
+        path
+      );
     }
-
-    setPreloadingGeometryFor(
-      nextPath
-    );
-
-    loadSceneryObjectGeometry(
-      nextPath
-    );
   }, [
     bridgeAvailable,
     geometryByPath,
     loadingFullMap,
-    loadingGeometryFor,
     mapLoadMode,
-    mapObjectPaths,
-    preloadingGeometryFor
+    mapObjectPaths
   ]);
 
   const normalizedLibrarySearch =
