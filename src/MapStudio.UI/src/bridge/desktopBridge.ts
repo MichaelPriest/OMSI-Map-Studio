@@ -186,6 +186,10 @@ export type OmsiTextureAsset = {
   base64Data: string | null;
   extension: string | null;
   mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  pixelFormat: string | null;
+  alphaOnly: boolean | null;
   errorCode: string | null;
 };
 
