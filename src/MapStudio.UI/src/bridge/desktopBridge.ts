@@ -8,6 +8,11 @@ export type SplineLibraryEntry = {
   fileName: string;
 };
 
+export type OmsiTerrainGrid = {
+  cellCount: number;
+  heights: number[];
+};
+
 export type OmsiTile = {
   x: number;
   y: number;
@@ -20,6 +25,7 @@ export type OmsiTile = {
   terrainMarkerPresent: boolean;
   terrainFileExists: boolean;
   terrainFileSize: number;
+  terrain?: OmsiTerrainGrid | null;
 };
 
 export type OmsiMap = {
