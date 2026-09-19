@@ -471,6 +471,37 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "loadTerrainTextureMaskAsset":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "requestKey",
+                            out var terrainMaskRequestKey) &&
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var terrainMaskDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "relativeMapPath",
+                            out var terrainMaskRelativeMapPath) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "layerIndex",
+                            out var terrainMaskLayerIndex))
+                    {
+                        await LoadTerrainTextureMaskAssetAsync(
+                            terrainMaskRequestKey,
+                            terrainMaskDirectoryName,
+                            terrainMaskRelativeMapPath,
+                            terrainMaskLayerIndex);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadGroundTextureAsset":
                     if (
                         TryReadString(
@@ -3490,7 +3521,12 @@ public partial class MainWindow : Window
                                 },
                         terrainRenderData =
                             loaded.Content
-                                .TerrainRenderData
+                                .TerrainRenderData,
+                        terrainTextureMasks =
+                            loaded.Content
+                                .TerrainTextureMasks ??
+                            Array.Empty<
+                                OmsiTerrainTextureMask>()
                     }),
                 objects,
                 splines
@@ -3704,7 +3740,12 @@ public partial class MainWindow : Window
                                 },
                         terrainRenderData =
                             loaded.Content
-                                .TerrainRenderData
+                                .TerrainRenderData,
+                        terrainTextureMasks =
+                            loaded.Content
+                                .TerrainTextureMasks ??
+                            Array.Empty<
+                                OmsiTerrainTextureMask>()
                     }),
                 objects,
                 splines
@@ -3752,6 +3793,49 @@ public partial class MainWindow : Window
 
             throw;
         }
+    }
+
+    private async Task LoadTerrainTextureMaskAssetAsync(
+        string? requestKey,
+        string? directoryName,
+        string? relativeMapPath,
+        int layerIndex)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                requestKey) ||
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                relativeMapPath) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map) ||
+            layerIndex <= 0 ||
+            layerIndex >=
+                map.GroundTextures.Count ||
+            !map.Tiles.Any(
+                tile =>
+                    string.Equals(
+                        tile.RelativeMapPath,
+                        relativeMapPath,
+                        StringComparison.OrdinalIgnoreCase)) ||
+            !OmsiTextureAssetPathResolver
+                .TryResolveTerrainTextureMask(
+                    map.DirectoryPath,
+                    relativeMapPath,
+                    layerIndex,
+                    out var fullPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureNotFound");
+            return;
+        }
+
+        await LoadTextureAssetAsync(
+            requestKey,
+            fullPath);
     }
 
     private async Task LoadGroundTextureAssetAsync(
