@@ -610,7 +610,7 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
-    public void O3dGeometryReader_RejectsEncryptedGeometry()
+    public void O3dGeometryReader_ProtectedHeaderWithoutSections_IsNotRenderable()
     {
         var path = Path.Combine(
             Path.GetTempPath(),
@@ -637,7 +637,7 @@ public sealed class OmsiConfigParserTests
 
             Assert.False(geometry.IsLoaded);
             Assert.Equal(
-                "encrypted",
+                "noRenderableGeometry",
                 geometry.ErrorCode);
         }
         finally
