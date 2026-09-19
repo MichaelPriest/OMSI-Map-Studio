@@ -601,3 +601,11 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 - `[spline]`, `[spline_h]`, and `[splineAbschnitt]` are treated as editable splines when their version-specific fields are supported.
 - Real object geometry and spline-profile geometry are pickable in the viewport. Single click selects; double click selects and focuses the camera on the item.
 - Legacy BMP textures are decoded by the host and transcoded once to cached PNG before being sent to Babylon. This avoids raw-RGBA upload regressions on road/junction surfaces.
+
+
+### Spline alpha and viewport picking
+
+- Spline surfaces are opaque by default. Texture alpha participates only when the `.sli` explicitly declares `[matl_alpha]`, matching OMSI semantics.
+- Spline materials use a small preview-only `zOffset` to reduce depth fighting with terrain without changing persisted coordinates.
+- Low, predominantly horizontal object meshes such as junctions may receive a small render-only lift/zOffset; the `.map` file is not changed.
+- Object/spline selection happens on viewport `pointerdown`, resolves metadata up the mesh parent chain, and stores second-click state in `useRef` so it survives the React/Babylon scene rebuild after the first selection.

@@ -601,3 +601,11 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 - `[spline]`, `[spline_h]` e `[splineAbschnitt]` são tratados como splines editáveis quando a versão suportar seus campos.
 - A geometria real de objetos e perfis de spline é selecionável no viewport. Clique simples seleciona; duplo clique seleciona e centraliza a câmera no item.
 - Texturas BMP legadas são decodificadas no host e transcodificadas uma vez para PNG, com cache, antes de serem enviadas ao Babylon. Isso evita regressões do upload RGBA bruto em superfícies de ruas/cruzamentos.
+
+
+### Alpha de splines e seleção no viewport
+
+- Superfícies de spline são opacas por padrão. O canal alpha da textura só participa quando o `.sli` declara `[matl_alpha]`, seguindo a semântica do OMSI.
+- Materiais de spline usam pequeno `zOffset` somente no preview para reduzir disputa de profundidade com o terreno, sem alterar as coordenadas persistidas.
+- Meshes baixos e predominantemente horizontais de objetos, como cruzamentos, podem receber um pequeno lift/zOffset apenas de renderização; o `.map` não é modificado por isso.
+- A seleção de objetos/splines ocorre no `pointerdown` do viewport, resolve metadata também pela cadeia de pais do mesh e mantém o estado do segundo clique em `useRef`, para sobreviver à recriação da cena React/Babylon após a primeira seleção.
