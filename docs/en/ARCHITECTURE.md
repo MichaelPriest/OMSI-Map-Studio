@@ -221,3 +221,10 @@ The rest of the document remains preserved, including encoding, BOM, newline sty
 6. keeps backups even if an error occurs.
 
 The host never writes from stale cached tile content: Save reopens the current tile from disk, applies the minimal mutation and only then executes the transaction.
+
+
+### Sceneryobjects library
+
+The `loadSceneryLibrary` command is only triggered on demand. The host walks `Sceneryobjects` on a background task using `EnumerationOptions`, without following reparse points and while ignoring inaccessible directories.
+
+Only relative `Sceneryobjects\\...\\file.sco` paths and filenames are sent to React. Discovered paths are also added to the host's known-object allowlist. Results remain cached until the OMSI installation changes.

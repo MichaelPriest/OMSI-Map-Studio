@@ -158,3 +158,45 @@ As transformações temporárias possuem histórico de até 100 ações:
 - após um Save confirmado, o histórico temporário é limpo.
 
 Na aba **Transformação** do inspetor, X, Y, Z, rotação, pitch e bank também podem ser digitados diretamente. O valor entra na prévia ao pressionar Enter ou sair do campo, usando o mesmo histórico de desfazer/refazer do gizmo.
+
+
+## Navegação de câmera e Snap
+
+O viewport oferece dois modos rápidos de câmera:
+
+- **Perspectiva (1)**;
+- **Topo (2)**.
+
+O botão **Snap (N)** ativa/desativa quantização das transformações. Os valores padrão são:
+
+- movimento: **0,5 m**;
+- rotação: **5°**.
+
+Os dois valores podem ser alterados diretamente na barra do viewport e são aplicados aos gizmos Babylon.
+
+## Busca de objetos posicionados
+
+O Explorador possui busca real sobre os objetos carregados. É possível localizar uma instância por:
+
+- nome do arquivo `.sco`;
+- caminho completo;
+- ID do objeto;
+- coordenada do tile (`x,y`).
+
+A lista exibe no máximo 250 linhas por vez para manter a interface leve. Clicar em uma entrada seleciona o objeto e foca a câmera. Objetos com transformação pendente aparecem marcados como **alterado**.
+
+## Biblioteca de objetos
+
+A aba **Biblioteca** lista arquivos `.sco` reais encontrados em `OMSI 2/Sceneryobjects`.
+
+A varredura:
+
+- só começa quando a aba Biblioteca é aberta;
+- ignora reparse points;
+- ignora diretórios inacessíveis;
+- roda fora da thread principal da interface;
+- fica em cache enquanto a mesma instalação OMSI permanece selecionada;
+- possui limite de segurança de 50.000 entradas;
+- mostra no máximo 300 resultados por vez na interface.
+
+A busca aceita nome e caminho do arquivo. O botão **Inserir** permanece desabilitado até existir escrita segura para criação de novos blocos `[object]` e geração de IDs compatíveis.

@@ -158,3 +158,45 @@ Temporary transforms keep up to 100 history actions:
 - after a confirmed Save, temporary history is cleared.
 
 In the inspector's **Transform** tab, X, Y, Z, rotation, pitch and bank can also be entered directly. The value becomes a preview when Enter is pressed or the field loses focus, using the same undo/redo history as gizmo edits.
+
+
+## Camera navigation and snapping
+
+The viewport provides two quick camera modes:
+
+- **Perspective (1)**;
+- **Top (2)**.
+
+The **Snap (N)** button toggles transform snapping. Defaults are:
+
+- movement: **0.5 m**;
+- rotation: **5°**.
+
+Both values can be changed directly in the viewport toolbar and are applied to Babylon gizmos.
+
+## Placed-object search
+
+Explorer provides real search over loaded placed objects. An instance can be found by:
+
+- `.sco` filename;
+- full path;
+- object ID;
+- tile coordinate (`x,y`).
+
+The list renders at most 250 rows at once to keep the UI responsive. Clicking an entry selects the object and focuses the camera. Objects with pending transforms are marked as **changed**.
+
+## Object library
+
+The **Library** tab lists real `.sco` files found under `OMSI 2/Sceneryobjects`.
+
+Scanning:
+
+- starts only when the Library tab is opened;
+- skips reparse points;
+- ignores inaccessible directories;
+- runs off the main UI thread;
+- is cached while the same OMSI installation remains selected;
+- has a safety limit of 50,000 entries;
+- renders at most 300 results at once in the UI.
+
+Search accepts file name and path. **Insert** remains disabled until preservation-safe creation of new `[object]` blocks and compatible ID generation are implemented.

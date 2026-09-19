@@ -221,3 +221,10 @@ O restante do documento permanece byte-equivalente dentro das limitações das l
 6. mantém os backups mesmo quando ocorre erro.
 
 O host nunca grava usando o conteúdo antigo do cache: no Save ele reabre o tile atual do disco, aplica a mutação mínima e só então executa a transação.
+
+
+### Biblioteca de Sceneryobjects
+
+O comando `loadSceneryLibrary` é disparado apenas sob demanda. O host percorre `Sceneryobjects` em uma tarefa de background usando `EnumerationOptions`, sem seguir reparse points e ignorando diretórios inacessíveis.
+
+Somente caminhos relativos `Sceneryobjects\\...\\arquivo.sco` e nomes de arquivo são enviados ao React. Os caminhos descobertos também entram na whitelist de objetos conhecidos pelo host. O resultado fica em cache até a instalação OMSI ser alterada.
