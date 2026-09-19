@@ -134,7 +134,7 @@ public sealed class OmsiO3dMaterialTests
                 writer.Write((ushort)1);
 
                 var boneName =
-                    Encoding.GetEncoding(1252)
+                    Encoding.ASCII
                         .GetBytes("root");
 
                 writer.Write(
