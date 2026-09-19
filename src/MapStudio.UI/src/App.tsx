@@ -114,6 +114,8 @@ const autoTextureLimit =
   autoSplineTextureLimit;
 
 const maxTextureCacheEntries = 64;
+const maxGroundTextureCacheEntries = 32;
+const maxTerrainMaskCacheEntries = 96;
 
 type PendingSplinePlacement = {
   targetTileX: number;
@@ -660,6 +662,12 @@ export function App() {
   const textureCacheOrderRef =
     useRef<string[]>([]);
 
+  const groundTextureCacheOrderRef =
+    useRef<string[]>([]);
+
+  const terrainMaskCacheOrderRef =
+    useRef<string[]>([]);
+
   const [
     autoPrefetchedTextureKeys,
     setAutoPrefetchedTextureKeys
@@ -774,6 +782,7 @@ export function App() {
         ) {
           setRootPath(message.rootPath);
           setSelectedMap(undefined);
+          setHiddenTerrainLayerIndices({});
           setObjects([]);
           setSplines([]);
           setSelectedObject(undefined);
@@ -786,6 +795,10 @@ export function App() {
           setRequestedGroundTextureKeys({});
           setTerrainMaskAssetsByKey({});
           setRequestedTerrainMaskKeys({});
+          groundTextureCacheOrderRef.current =
+            [];
+          terrainMaskCacheOrderRef.current =
+            [];
           setRequestedTextureKeys({});
           setAutoPrefetchedTextureKeys({});
           textureCacheOrderRef.current =
@@ -1103,11 +1116,44 @@ export function App() {
           );
 
           setTerrainMaskAssetsByKey(
-            (current) => ({
-              ...current,
-              [message.requestKey]:
-                message.asset
-            })
+            (current) => {
+              const next = {
+                ...current,
+                [message.requestKey]:
+                  message.asset
+              };
+
+              const order =
+                terrainMaskCacheOrderRef
+                  .current
+                  .filter(
+                    (key) =>
+                      key !==
+                      message.requestKey
+                  );
+
+              order.push(
+                message.requestKey
+              );
+
+              while (
+                order.length >
+                maxTerrainMaskCacheEntries
+              ) {
+                const evicted =
+                  order.shift();
+
+                if (evicted) {
+                  delete next[evicted];
+                }
+              }
+
+              terrainMaskCacheOrderRef
+                .current =
+                  order;
+
+              return next;
+            }
           );
 
           return;
@@ -1144,11 +1190,44 @@ export function App() {
           );
 
           setGroundTextureAssetsByKey(
-            (current) => ({
-              ...current,
-              [message.requestKey]:
-                message.asset
-            })
+            (current) => {
+              const next = {
+                ...current,
+                [message.requestKey]:
+                  message.asset
+              };
+
+              const order =
+                groundTextureCacheOrderRef
+                  .current
+                  .filter(
+                    (key) =>
+                      key !==
+                      message.requestKey
+                  );
+
+              order.push(
+                message.requestKey
+              );
+
+              while (
+                order.length >
+                maxGroundTextureCacheEntries
+              ) {
+                const evicted =
+                  order.shift();
+
+                if (evicted) {
+                  delete next[evicted];
+                }
+              }
+
+              groundTextureCacheOrderRef
+                .current =
+                  order;
+
+              return next;
+            }
           );
 
           return;
@@ -8300,6 +8379,18 @@ export function App() {
                   ).length === 0 &&
                   Object.keys(
                     requestedTextureKeys
+                  ).length === 0 &&
+                  Object.keys(
+                    groundTextureAssetsByKey
+                  ).length === 0 &&
+                  Object.keys(
+                    requestedGroundTextureKeys
+                  ).length === 0 &&
+                  Object.keys(
+                    terrainMaskAssetsByKey
+                  ).length === 0 &&
+                  Object.keys(
+                    requestedTerrainMaskKeys
                   ).length === 0
                 }
                 onClick={() => {
@@ -8308,10 +8399,26 @@ export function App() {
                   setAutoPrefetchedTextureKeys(
                     {}
                   );
+                  setGroundTextureAssetsByKey(
+                    {}
+                  );
+                  setRequestedGroundTextureKeys(
+                    {}
+                  );
+                  setTerrainMaskAssetsByKey(
+                    {}
+                  );
+                  setRequestedTerrainMaskKeys(
+                    {}
+                  );
                   textureCacheOrderRef.current =
                     [];
+                  groundTextureCacheOrderRef
+                    .current = [];
+                  terrainMaskCacheOrderRef
+                    .current = [];
                 }}
-                title="Limpar texturas carregadas e reiniciar o orçamento automático"
+                title="Limpar texturas de objetos, splines, terreno e máscaras sem descarregar o mapa"
               >
                 Limpar cache
               </button>
