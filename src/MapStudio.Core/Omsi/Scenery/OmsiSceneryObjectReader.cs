@@ -34,7 +34,7 @@ public sealed class OmsiSceneryObjectReader
             .FirstOrDefault();
 
         var groups = ReadGroups(document);
-        var meshes = ReadSingleValueSections(document, "mesh");
+        var meshes = ReadMeshes(document);
         var collisionMeshes = ReadSingleValueSections(
             document,
             "collision_mesh");
@@ -47,10 +47,84 @@ public sealed class OmsiSceneryObjectReader
             Exists: true,
             FriendlyName: friendlyName,
             Groups: groups,
-            MeshPaths: meshes,
+            MeshPaths: meshes.Paths,
+            MeshLodThresholds:
+                meshes.LodThresholds,
             CollisionMeshPaths: collisionMeshes,
             MaterialOverrides:
                 materialOverrides);
+    }
+
+    private static MeshReadResult
+        ReadMeshes(
+            OmsiConfigDocument document)
+    {
+        var paths =
+            new List<string>();
+
+        var lodThresholds =
+            new List<double?>();
+
+        double? currentLodThreshold =
+            null;
+
+        foreach (var section in
+            document.Sections)
+        {
+            if (string.Equals(
+                    section.Keyword,
+                    "LOD",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                currentLodThreshold =
+                    null;
+
+                var value =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (
+                    double.TryParse(
+                        value,
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var threshold) &&
+                    double.IsFinite(threshold) &&
+                    threshold >= 0)
+                {
+                    currentLodThreshold =
+                        threshold;
+                }
+
+                continue;
+            }
+
+            if (!string.Equals(
+                    section.Keyword,
+                    "mesh",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var path =
+                section.DataLines
+                    .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(
+                    path))
+            {
+                continue;
+            }
+
+            paths.Add(path);
+            lodThresholds.Add(
+                currentLodThreshold);
+        }
+
+        return new MeshReadResult(
+            paths,
+            lodThresholds);
     }
 
     private static IReadOnlyList<
@@ -384,6 +458,10 @@ public sealed class OmsiSceneryObjectReader
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value!)
             .ToArray();
+
+    private sealed record MeshReadResult(
+        IReadOnlyList<string> Paths,
+        IReadOnlyList<double?> LodThresholds);
 
     private sealed class MaterialOverrideBuilder(
         int meshOrdinal,

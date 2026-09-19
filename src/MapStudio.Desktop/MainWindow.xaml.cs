@@ -4071,6 +4071,15 @@ public partial class MainWindow : Window
                     metadata.MeshPaths[
                         meshOrdinal];
 
+                var lodThreshold =
+                    metadata.MeshLodThresholds
+                        .Count >
+                    meshOrdinal
+                        ? metadata
+                            .MeshLodThresholds[
+                                meshOrdinal]
+                        : null;
+
                 var materialOverrides =
                     metadata.MaterialOverrides
                         .Where(
@@ -4089,6 +4098,7 @@ public partial class MainWindow : Window
                     meshes.Add(new
                     {
                         declaredPath,
+                        lodThreshold,
                         materialOverrides,
                         geometry =
                             OmsiO3dGeometry.Error(
@@ -4105,6 +4115,7 @@ public partial class MainWindow : Window
                     meshes.Add(new
                     {
                         declaredPath,
+                        lodThreshold,
                         materialOverrides,
                         geometry =
                             OmsiO3dGeometry.Error(
@@ -4116,6 +4127,7 @@ public partial class MainWindow : Window
                 meshes.Add(new
                 {
                     declaredPath,
+                    lodThreshold,
                     materialOverrides,
                     geometry =
                         _o3dGeometryReader.Read(

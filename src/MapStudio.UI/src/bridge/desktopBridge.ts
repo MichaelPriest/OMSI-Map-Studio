@@ -172,6 +172,7 @@ export type OmsiSceneryMaterialOverride = {
 export type OmsiSceneryObjectGeometry = {
   meshes: Array<{
     declaredPath: string;
+    lodThreshold: number | null;
     materialOverrides:
       OmsiSceneryMaterialOverride[];
     geometry: OmsiO3dGeometry;

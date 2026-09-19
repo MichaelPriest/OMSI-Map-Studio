@@ -124,6 +124,74 @@ public sealed class OmsiSceneryMaterialOverrideTests
     }
 
     [Fact]
+    public void ReadMetadata_PreservesLodThresholdsByMeshOrder()
+    {
+        const string source =
+            "[mesh]\n" +
+            "model\\always.o3d\n" +
+            "[LOD]\n" +
+            "0.6\n" +
+            "[mesh]\n" +
+            "model\\near.o3d\n" +
+            "[LOD]\n" +
+            "0.2\n" +
+            "[mesh]\n" +
+            "model\\medium.o3d\n" +
+            "[LOD]\n" +
+            "0\n" +
+            "[mesh]\n" +
+            "model\\far.o3d\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            [
+                @"model\always.o3d",
+                @"model\near.o3d",
+                @"model\medium.o3d",
+                @"model\far.o3d"
+            ],
+            metadata.MeshPaths);
+
+        Assert.Equal(
+            [
+                null,
+                0.6,
+                0.2,
+                0.0
+            ],
+            metadata.MeshLodThresholds);
+    }
+
+    [Fact]
+    public void ReadMetadata_InvalidLodDoesNotReusePreviousThreshold()
+    {
+        const string source =
+            "[LOD]\n" +
+            "0.4\n" +
+            "[mesh]\n" +
+            "model\\near.o3d\n" +
+            "[LOD]\n" +
+            "invalid\n" +
+            "[mesh]\n" +
+            "model\\global.o3d\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            [0.4, null],
+            metadata.MeshLodThresholds);
+    }
+
+    [Fact]
     public void ReadMetadata_DoesNotTreatDynamicMaterialChangeAsStaticOverride()
     {
         const string source =
