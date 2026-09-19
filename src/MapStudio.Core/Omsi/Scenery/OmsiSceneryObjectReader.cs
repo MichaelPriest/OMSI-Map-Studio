@@ -58,6 +58,9 @@ public sealed class OmsiSceneryObjectReader
             CollisionMeshPaths: collisionMeshes,
             MaterialOverrides:
                 materialOverrides,
+            UsesAbsoluteHeight:
+                document.FindFirstSection(
+                    "absheight") is not null,
             Tree: tree);
     }
 
