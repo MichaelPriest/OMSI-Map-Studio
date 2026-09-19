@@ -155,12 +155,21 @@ export type OmsiSceneryMeshReference = {
   structure: OmsiO3dStructureSummary | null;
 };
 
+export type OmsiSceneryTreeDefinition = {
+  textureName: string;
+  minimumHeight: number;
+  maximumHeight: number;
+  minimumAspect: number;
+  maximumAspect: number;
+};
+
 export type OmsiSceneryObjectMetadata = {
   exists: boolean;
   friendlyName: string | null;
   groups: string[];
   meshes: OmsiSceneryMeshReference[];
   collisionMeshes: OmsiSceneryMeshReference[];
+  tree: OmsiSceneryTreeDefinition | null;
 };
 
 export type OmsiO3dMaterial = {
@@ -699,6 +708,9 @@ export function getGroundTextureAssetKey(
     texturePath
   ].join("|");
 }
+
+export const sceneryTreeTextureMeshToken =
+  "__tree__";
 
 export function getSceneryTextureAssetKey(
   sceneryObjectPath: string,
