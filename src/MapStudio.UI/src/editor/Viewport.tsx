@@ -2629,15 +2629,21 @@ function createMapObjectGeometry(
       placements[0]
     );
 
+    // OMSI [tree] scenery uses its generated billboard as the
+    // actual visual. Packs commonly include treehelper.x only as an
+    // editor helper; rendering it together with the billboard creates
+    // the large gray helper planes seen in the map preview.
     const sourceMeshes =
-      createGeometryMeshes(
-        scene,
-        `map-object-${sceneryObjectPath}`,
-        sceneryObjectPath,
-        geometry,
-        textureAssetsByKey,
-        nightPreviewEnabled
-      );
+      geometry.tree
+        ? []
+        : createGeometryMeshes(
+            scene,
+            `map-object-${sceneryObjectPath}`,
+            sceneryObjectPath,
+            geometry,
+            textureAssetsByKey,
+            nightPreviewEnabled
+          );
 
     for (const source of sourceMeshes) {
       source.parent = sourceRoot;
