@@ -3141,6 +3141,7 @@ export function App() {
     geometryByPath,
     nightPreviewEnabled,
     objectPathsForTexturePreload,
+    objectsForViewport,
     requestedTextureKeys,
     splinePathsForPreload,
     splineProfilesByPath,
