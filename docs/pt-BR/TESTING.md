@@ -581,3 +581,8 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 3. confirme que texturas em `Texture` de um diretório-pai do pacote também são localizadas;
 4. aguarde pendentes = 0 e registre o novo total de `textureNotFound`;
 5. confirme que o contador **Auto solicitadas** não aparece mais como uma fração impossível ao alternar entre Mapa completo e 3×3.
+
+
+## Validação dos helpers de árvore — test.25
+
+No Grundorf, confirme que as árvores `[tree]` continuam renderizadas, mas os grandes painéis cinza associados a helpers de árvore não aparecem mais sobre o mapa.
