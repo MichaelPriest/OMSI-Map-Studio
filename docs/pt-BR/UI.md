@@ -493,3 +493,9 @@ A visibilidade da camada base (índice 0) também é respeitada no preview do ed
 O código de resolução de cada entrada `[groundtex]` agora é convertido para a dimensão real esperada da máscara de pintura. Para camadas pintáveis, a relação validada é potência de dois: **6 → 64 px**, **7 → 128 px**, **8 → 256 px**, **9 → 512 px** e **10 → 1024 px**. A camada 0 continua sem máscara própria e usa código 0.
 
 Ao carregar `tile.map.N.dds`, o editor compara largura/altura reais com a resolução esperada da camada N. Uma máscara A8 válida, mas com dimensão incompatível, é mostrada no inspetor como incompatível e não é renderizada. Isso evita aplicar uma máscara de outro mapa/camada por engano.
+
+## Fidelidade da textura base do terreno
+
+A camada base do terreno usa a textura real declarada em `[groundtex]` como **albedo**. Formatos decodificados diretamente pelo WebView/Chromium, como BMP, PNG, JPEG, GIF e WebP, não são mais forçados pelo caminho de loaders de textura do Babylon; somente DDS e TGA continuam usando os loaders dedicados.
+
+A camada 0 é tratada como opaca e o material do terreno não multiplica a textura pela iluminação arbitrária do editor. Isso evita que uma textura real carregada seja apresentada quase preta por uma combinação de loader/material/iluminação. A orientação UV e os valores de repetição continuam vindo dos dados reais já conhecidos; nenhum blend de textura de detalhe é inventado nesta etapa.
