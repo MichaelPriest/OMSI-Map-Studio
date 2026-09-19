@@ -1187,3 +1187,61 @@ code {
   color: #5d7589;
   font-size: 8px;
 }
+
+
+.scenery-library-entry.active {
+  border-color: #ff8a1c;
+  background: #2b1a0d;
+}
+
+.scenery-library-entry button:not(:disabled) {
+  border-color: #356d96;
+  color: #cce5f7;
+  cursor: pointer;
+}
+
+.placement-bar {
+  position: absolute;
+  z-index: 7;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(720px, calc(100% - 40px));
+  padding: 8px 10px;
+  border: 1px solid #9a5b1e;
+  border-radius: 7px;
+  background: rgb(31 20 10 / 94%);
+  box-shadow: 0 8px 26px rgb(0 0 0 / 28%);
+  transform: translateX(-50%);
+}
+
+.placement-bar > div {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.placement-bar strong {
+  overflow: hidden;
+  color: #ffe2bb;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.placement-bar span {
+  color: #b8946d;
+  font-size: 8px;
+}
+
+.placement-bar .primary-button,
+.placement-bar .secondary-action {
+  flex: 0 0 auto;
+  height: 27px;
+  padding: 0 9px;
+  font-size: 8px;
+}

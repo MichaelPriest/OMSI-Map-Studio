@@ -5,6 +5,7 @@ import {
   useState
 } from "react";
 import {
+  insertObject,
   isDesktopBridgeAvailable,
   loadMapFull,
   loadMapRegion,
@@ -59,6 +60,17 @@ type PreviewTransformHistoryEntry = {
   hadPreviewBefore: boolean;
 };
 
+type PendingObjectPlacement = {
+  tileX: number;
+  tileY: number;
+  x: number;
+  y: number;
+  z: number;
+  rotation: number;
+  pitch: number;
+  bank: number;
+};
+
 type InspectorTab =
   | "general"
   | "transform"
@@ -94,6 +106,18 @@ const errorMessages: Record<string, string> = {
     "O arquivo do mapa mudou ou o objeto não corresponde mais à versão aberta. O salvamento foi cancelado para proteger o mapa.",
   saveError:
     "Não foi possível salvar as alterações. O backup criado foi mantido quando possível.",
+  objectInsertTemplateUnavailable:
+    "Nesta alpha, um objeto novo só pode ser gravado se o mesmo arquivo .sco já existir no mapa. A prévia continua disponível.",
+  objectInsertionWorldCoordinatesUnsupported:
+    "Inserção de objetos ainda não está disponível em mapas com [worldcoordinates].",
+  objectIdExhausted:
+    "Não foi possível gerar um novo ID global para o objeto.",
+  objectInsertError:
+    "Não foi possível inserir o objeto com segurança. Nenhum tile deve ser sobrescrito sem backup.",
+  unknownTile:
+    "O tile escolhido não pertence ao mapa aberto.",
+  invalidTilePath:
+    "O arquivo do tile não pôde ser resolvido com segurança.",
   mapOpenError:
     "Não foi possível abrir esse mapa.",
   unexpectedHostError:
@@ -343,6 +367,25 @@ export function App() {
     setLoadingSceneryLibrary
   ] = useState(false);
 
+  const [
+    placementAsset,
+    setPlacementAsset
+  ] = useState<
+    SceneryLibraryEntry
+  >();
+
+  const [
+    pendingPlacement,
+    setPendingPlacement
+  ] = useState<
+    PendingObjectPlacement
+  >();
+
+  const [
+    insertingObject,
+    setInsertingObject
+  ] = useState(false);
+
   const [saving, setSaving] =
     useState(false);
 
@@ -383,6 +426,9 @@ export function App() {
           setSceneryLibrary([]);
           setLibrarySearch("");
           setLoadingSceneryLibrary(false);
+          setPlacementAsset(undefined);
+          setPendingPlacement(undefined);
+          setInsertingObject(false);
           setError(undefined);
           setView("map");
           return;
@@ -419,6 +465,9 @@ export function App() {
           setSaveNotice(undefined);
           setExplorerSearch("");
           setExplorerPanelTab("map");
+          setPlacementAsset(undefined);
+          setPendingPlacement(undefined);
+          setInsertingObject(false);
           setError(undefined);
           setView("editor");
           return;
@@ -658,6 +707,27 @@ export function App() {
 
         if (
           message.type ===
+          "objectInserted"
+        ) {
+          setInsertingObject(false);
+          setPlacementAsset(undefined);
+          setPendingPlacement(undefined);
+          setEditorTool("select");
+          setSaveNotice(
+            `Objeto #${message.placedObject.objectId} inserido. Backup: ${message.backupDirectory}`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          return;
+        }
+
+        if (
+          message.type ===
           "objectTransformsSaved"
         ) {
           setSaving(false);
@@ -692,6 +762,7 @@ export function App() {
           setPreloadingGeometryFor(undefined);
           setLoadingSceneryLibrary(false);
           setSaving(false);
+          setInsertingObject(false);
 
           setError(
             errorMessages[message.code] ??
@@ -1791,6 +1862,81 @@ export function App() {
     selectedSpline
   ]);
 
+  const handleSelectPlacementAsset =
+    useCallback(
+      (
+        entry:
+          SceneryLibraryEntry
+      ) => {
+        if (
+          selectedMap
+            ?.usesWorldCoordinates
+        ) {
+          setError(
+            errorMessages
+              .objectInsertionWorldCoordinatesUnsupported
+          );
+          return;
+        }
+
+        setPlacementAsset(entry);
+        setPendingPlacement(undefined);
+        setEditorTool("select");
+        setShowObjects(true);
+        setError(undefined);
+
+        if (
+          !Object.hasOwn(
+            geometryByPath,
+            entry.sceneryObjectPath
+          )
+        ) {
+          loadSceneryObjectGeometry(
+            entry.sceneryObjectPath
+          );
+        }
+      },
+      [
+        geometryByPath,
+        selectedMap
+      ]
+    );
+
+  const handleCancelPlacement =
+    useCallback(() => {
+      setPlacementAsset(undefined);
+      setPendingPlacement(undefined);
+      setInsertingObject(false);
+    }, []);
+
+  const handleConfirmPlacement =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !placementAsset ||
+        !pendingPlacement ||
+        insertingObject
+      ) {
+        return;
+      }
+
+      setInsertingObject(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      insertObject(
+        selectedMap.directoryName,
+        placementAsset
+          .sceneryObjectPath,
+        pendingPlacement
+      );
+    }, [
+      insertingObject,
+      pendingPlacement,
+      placementAsset,
+      selectedMap
+    ]);
+
   const handleExplorerPanelTab =
     useCallback(
       (tab: "map" | "library") => {
@@ -1854,6 +2000,7 @@ export function App() {
     selectingRoot ||
     selectingMap ||
     saving ||
+    insertingObject ||
     loadingFullMap ||
     Boolean(loadingRegionKey);
 
@@ -3368,7 +3515,13 @@ export function App() {
                   {filteredSceneryLibrary.map(
                     (entry) => (
                       <div
-                        className="scenery-library-entry"
+                        className={
+                          placementAsset
+                            ?.sceneryObjectPath ===
+                          entry.sceneryObjectPath
+                            ? "scenery-library-entry active"
+                            : "scenery-library-entry"
+                        }
                         key={
                           entry.sceneryObjectPath
                         }
@@ -3385,10 +3538,17 @@ export function App() {
                         </span>
                         <button
                           type="button"
-                          disabled
-                          title="Inserção de novos objetos será habilitada após a escrita segura de novos blocos [object]."
+                          onClick={() =>
+                            handleSelectPlacementAsset(
+                              entry
+                            )
+                          }
+                          disabled={
+                            insertingObject
+                          }
+                          title="Selecionar para colocação no mapa"
                         >
-                          Inserir
+                          Colocar
                         </button>
                       </div>
                     )
@@ -3424,6 +3584,24 @@ export function App() {
               showObjects={showObjects}
               showSplines={showSplines}
               cameraAction={cameraAction}
+              placementAssetPath={
+                placementAsset
+                  ?.sceneryObjectPath
+              }
+              placementGeometry={
+                placementAsset
+                  ? geometryByPath[
+                      placementAsset
+                        .sceneryObjectPath
+                    ]
+                  : undefined
+              }
+              pendingPlacement={
+                pendingPlacement
+              }
+              onPlacementPoint={
+                setPendingPlacement
+              }
               activeTile={activeTile}
               onActiveTileChange={
                 (tile) => {
@@ -3479,6 +3657,49 @@ export function App() {
                 handlePreviewObjectTransform
               }
             />
+
+            {placementAsset && (
+              <div className="placement-bar">
+                <div>
+                  <strong>
+                    Colocando:{" "}
+                    {placementAsset.fileName}
+                  </strong>
+                  <span>
+                    {pendingPlacement
+                      ? `Tile ${pendingPlacement.tileX},${pendingPlacement.tileY} · X ${formatNumber(pendingPlacement.x)} · Y ${formatNumber(pendingPlacement.y)} · Z 0`
+                      : "Clique em um tile para posicionar a prévia em Z=0."}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={
+                    !pendingPlacement ||
+                    insertingObject
+                  }
+                  onClick={
+                    handleConfirmPlacement
+                  }
+                >
+                  {insertingObject
+                    ? "Inserindo..."
+                    : "Confirmar e salvar"}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={insertingObject}
+                  onClick={
+                    handleCancelPlacement
+                  }
+                >
+                  Cancelar
+                </button>
+              </div>
+            )}
 
             <div className="viewport-toolbar">
               <button
@@ -3683,8 +3904,10 @@ export function App() {
           <span>
             {error
               ? "Erro"
-              : saving
-                ? "Salvando com backup..."
+              : insertingObject
+                ? "Inserindo objeto com backup..."
+                : saving
+                  ? "Salvando com backup..."
                 : saveNotice
                   ? saveNotice
                   : loadingFullMap

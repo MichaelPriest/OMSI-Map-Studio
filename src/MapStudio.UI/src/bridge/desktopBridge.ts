@@ -167,6 +167,12 @@ export type HostMessage =
       entries: SceneryLibraryEntry[];
     }
   | {
+      type: "objectInserted";
+      directoryName: string;
+      backupDirectory: string;
+      placedObject: OmsiPlacedObject;
+    }
+  | {
       type: "objectTransformsSaved";
       directoryName: string;
       editsSaved: number;
@@ -263,6 +269,28 @@ export function selectMap() {
 export function loadSceneryLibrary() {
   getWebView()?.postMessage({
     type: "loadSceneryLibrary"
+  });
+}
+
+export function insertObject(
+  directoryName: string,
+  sceneryObjectPath: string,
+  placement: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    pitch: number;
+    bank: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertObject",
+    directoryName,
+    sceneryObjectPath,
+    ...placement
   });
 }
 
