@@ -609,3 +609,15 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 - Materiais de spline usam pequeno `zOffset` somente no preview para reduzir disputa de profundidade com o terreno, sem alterar as coordenadas persistidas.
 - Meshes baixos e predominantemente horizontais de objetos, como cruzamentos, podem receber um pequeno lift/zOffset apenas de renderização; o `.map` não é modificado por isso.
 - A seleção de objetos/splines ocorre no `pointerdown` do viewport, resolve metadata também pela cadeia de pais do mesh e mantém o estado do segundo clique em `useRef`, para sobreviver à recriação da cena React/Babylon após a primeira seleção.
+
+
+## Diagnóstico de material, céu e seleção — pós-test.33
+
+- superfícies SLI deixam de depender de uma cópia emissiva da textura: o albedo real é aplicado diretamente em material não iluminado, preservando UV, alpha declarado e coordenadas OMSI;
+- meshes O3D horizontais já detectados como rua/cruzamento mantêm o mesmo `render lift` existente; quando possuem textura real, o preview ignora apenas a iluminação do editor para evitar superfícies pretas causadas por normais de pacote;
+- não foram adicionados novos offsets arbitrários;
+- `himmel01.bmp` / `himmel04.bmp` / `himmel05.bmp` passam pelo caminho BMP → PNG já validado para WebView2, enquanto terreno BMP continua no caminho RGBA bruto;
+- clique real em mesh seleciona no `pointerdown` e o mesmo clique deixa de ser reprocessado no `pointerup`, evitando que a seleção válida seja apagada antes do segundo clique rápido;
+- o segundo clique rápido no mesmo objeto/spline continua centralizando a câmera;
+- o viewport exibe diagnóstico real da seleção com objeto/spline, mesh/material, textura declarada e caminho físico resolvido, faixa UV, posição mundial final, `render lift` e origem SCO/SLI/O3D;
+- o caminho físico resolvido da textura é enviado pelo host somente para diagnóstico local do editor, sem criar dados fake/mock.
