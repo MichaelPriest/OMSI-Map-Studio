@@ -44,6 +44,7 @@ type ViewportProps = {
     tileY: number;
     layerIndex: number;
     textureRepeating: number;
+    maskIsFull: boolean;
     textureAsset?: OmsiTextureAsset;
     maskAsset?: OmsiTextureAsset;
   }>;
@@ -288,6 +289,7 @@ function createTileSurface(
     tileY: number;
     layerIndex: number;
     textureRepeating: number;
+    maskIsFull: boolean;
     textureAsset?: OmsiTextureAsset;
     maskAsset?: OmsiTextureAsset;
   }>
@@ -459,11 +461,12 @@ function createTileSurface(
     if (
       !overlay.textureAsset
         ?.exists ||
-      !overlay.maskAsset?.exists ||
-      overlay.maskAsset
-        .alphaOnly !== true ||
-      !overlay.maskAsset.width ||
-      !overlay.maskAsset.height
+      (!overlay.maskIsFull &&
+        (!overlay.maskAsset?.exists ||
+          overlay.maskAsset
+            .alphaOnly !== true ||
+          !overlay.maskAsset.width ||
+          !overlay.maskAsset.height))
     ) {
       continue;
     }
@@ -624,14 +627,17 @@ function createTileSurface(
       );
 
     const maskTexture =
-      createTextureFromAsset(
-        scene,
-        overlay.maskAsset
-      );
+      overlay.maskIsFull
+        ? undefined
+        : createTextureFromAsset(
+            scene,
+            overlay.maskAsset
+          );
 
     if (
       !mainTexture ||
-      !maskTexture
+      (!overlay.maskIsFull &&
+        !maskTexture)
     ) {
       mesh.dispose();
       continue;
@@ -647,22 +653,27 @@ function createTileSurface(
     mainTexture.wrapV =
       Texture.WRAP_ADDRESSMODE;
 
-    maskTexture.hasAlpha = true;
-    maskTexture.uScale = 1;
-    maskTexture.vScale = 1;
-    maskTexture.wrapU =
-      Texture.CLAMP_ADDRESSMODE;
-    maskTexture.wrapV =
-      Texture.CLAMP_ADDRESSMODE;
+    if (maskTexture) {
+      maskTexture.hasAlpha = true;
+      maskTexture.uScale = 1;
+      maskTexture.vScale = 1;
+      maskTexture.wrapU =
+        Texture.CLAMP_ADDRESSMODE;
+      maskTexture.wrapV =
+        Texture.CLAMP_ADDRESSMODE;
+    }
 
     material.diffuseTexture =
       mainTexture;
-    material.opacityTexture =
-      maskTexture;
-    material.transparencyMode =
-      Material.MATERIAL_ALPHABLEND;
-    material.disableDepthWrite =
-      true;
+
+    if (maskTexture) {
+      material.opacityTexture =
+        maskTexture;
+      material.transparencyMode =
+        Material.MATERIAL_ALPHABLEND;
+      material.disableDepthWrite =
+        true;
+    }
 
     mesh.material = material;
     mesh.isPickable = false;
