@@ -448,3 +448,21 @@ O código `encrypted` é reservado para O3D de cabeçalho estendido cuja chave d
 Referências `[mesh]` terminadas em `.x` passam a ser classificadas como `legacyDirectXMesh`, em vez do genérico `unsupportedFormat`. Isso permite separar objetos que dependem do formato DirectX legado de formatos realmente desconhecidos.
 
 Também foi alinhado o leitor estrutural ao leitor de geometria: a contagem da lista de bones da seção `0x54` permanece `UInt16` mesmo em O3D com cabeçalho estendido. Assim, um O3D longo válido com bones não é mais deslocado incorretamente pelo diagnóstico estrutural.
+
+
+## Mesh DirectX `.x` texto
+
+O host possui agora um leitor próprio para o formato legado DirectX `.x` em codificação **texto** (`xof ... txt ...`). Ele alimenta o mesmo payload de geometria real usado pelo viewport para O3D, portanto texturas e overrides estáticos continuam passando pelo pipeline normal do editor.
+
+A primeira implementação cobre:
+
+- blocos `Mesh` com vértices e faces poligonais;
+- triangulação em leque para faces com quatro ou mais vértices;
+- `MeshTextureCoords`;
+- `MeshMaterialList`, materiais inline/referenciados já conhecidos e `TextureFilename`;
+- `Frame` e `FrameTransformMatrix`;
+- múltiplos meshes no mesmo arquivo;
+- normais calculadas a partir da geometria final;
+- limites de arquivo, vértices, faces, triângulos e materiais.
+
+Arquivos `.x` binários ou comprimidos (`bin`, `tzip`, `bzip`) não são interpretados como texto e retornam `legacyDirectXUnsupportedEncoding`. O editor não cria geometria falsa quando a variante não é suportada.

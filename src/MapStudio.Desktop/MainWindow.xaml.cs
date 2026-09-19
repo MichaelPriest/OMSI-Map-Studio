@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
     private readonly OmsiO3dStructureReader _o3dStructureReader = new();
     private readonly OmsiO3dGeometryReader _o3dGeometryReader = new();
+    private readonly OmsiDirectXTextGeometryReader _directXGeometryReader = new();
     private readonly OmsiSplineDefinitionReader _splineDefinitionReader = new();
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
@@ -4792,18 +4793,22 @@ public partial class MainWindow : Window
             Path.GetExtension(
                 meshFullPath);
 
-        if (!string.Equals(
+        var isO3d =
+            string.Equals(
                 extension,
                 ".o3d",
-                StringComparison.OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase);
+
+        var isDirectX =
+            string.Equals(
+                extension,
+                ".x",
+                StringComparison.OrdinalIgnoreCase);
+
+        if (!isO3d && !isDirectX)
         {
             return OmsiO3dGeometry.Error(
-                string.Equals(
-                    extension,
-                    ".x",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? "legacyDirectXMesh"
-                    : "unsupportedFormat");
+                "unsupportedFormat");
         }
 
         var lazy =
@@ -4812,8 +4817,11 @@ public partial class MainWindow : Window
                 path =>
                     new Lazy<OmsiO3dGeometry>(
                         () =>
-                            _o3dGeometryReader.Read(
-                                path),
+                            isO3d
+                                ? _o3dGeometryReader
+                                    .Read(path)
+                                : _directXGeometryReader
+                                    .Read(path),
                         LazyThreadSafetyMode
                             .ExecutionAndPublication));
 

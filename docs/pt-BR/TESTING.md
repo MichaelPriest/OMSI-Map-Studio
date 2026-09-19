@@ -493,3 +493,15 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 3. abra um `.sco` cujo `[mesh]` aponte para `.x` e confirme `legacyDirectXMesh` no diagnóstico;
 4. use uma extensão de mesh desconhecida e confirme que ela continua como `unsupportedFormat`;
 5. confirme que objetos `[tree]` com `treehelper.x` continuam fora da contagem de falhas, pois são renderizados pela definição real de árvore.
+
+
+## Validação de mesh DirectX `.x`
+
+1. abra um `.sco` com `[mesh]` apontando para um `.x` iniciado por `xof 0303txt 0032`;
+2. confirme que o objeto entra em **Malhas renderizáveis** e deixa de aparecer como `legacyDirectXMesh`;
+3. valide um quad/polígono e confirme triangulação sem buracos;
+4. valide UV + `MeshMaterialList` + `TextureFilename` e confirme a textura real no viewport;
+5. valide um arquivo com `FrameTransformMatrix` e confirme deslocamento/orientação local coerente;
+6. valide múltiplos `Mesh` no mesmo arquivo;
+7. use variantes `bin`, `tzip` e `bzip` e confirme `legacyDirectXUnsupportedEncoding`, sem travamento e sem fallback fictício;
+8. confirme que o cache por arquivo físico também é reutilizado para `.x`.

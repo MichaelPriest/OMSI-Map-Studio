@@ -448,3 +448,21 @@ The `encrypted` code is reserved for extended-header O3D files whose encryption 
 `[mesh]` references ending in `.x` are now classified as `legacyDirectXMesh` instead of the generic `unsupportedFormat`. This separates objects that depend on the legacy DirectX mesh format from genuinely unknown formats.
 
 The structure reader is now aligned with the geometry reader as well: the section `0x54` bone-list count remains `UInt16` even for extended-header O3D files. A valid long-header O3D with bones therefore no longer becomes misaligned during structural diagnostics.
+
+
+## Text DirectX `.x` meshes
+
+The host now has its own reader for the legacy DirectX `.x` **text** encoding (`xof ... txt ...`). It feeds the same real-geometry payload used by the O3D viewport path, so textures and static overrides continue through the normal editor pipeline.
+
+The initial implementation covers:
+
+- `Mesh` blocks with vertices and polygon faces;
+- fan triangulation for faces with four or more vertices;
+- `MeshTextureCoords`;
+- `MeshMaterialList`, inline/already-known referenced materials, and `TextureFilename`;
+- `Frame` and `FrameTransformMatrix`;
+- multiple meshes in one file;
+- normals computed from final geometry;
+- file, vertex, face, triangle, and material guardrails.
+
+Binary or compressed `.x` files (`bin`, `tzip`, `bzip`) are never interpreted as text and return `legacyDirectXUnsupportedEncoding`. The editor creates no fake geometry for unsupported variants.

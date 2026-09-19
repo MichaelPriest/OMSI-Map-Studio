@@ -6307,7 +6307,7 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>O3D renderizáveis</dt>
+          <dt>Malhas renderizáveis</dt>
           <dd>
             {mapLoadMode === "full"
               ? `${renderableMapGeometryCount}/${mapObjectPaths.length} · falhas ${failedMapGeometryCount} · pendentes ${unresolvedMapGeometryCount}`
@@ -6321,7 +6321,7 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Falhas de malha (código)</dt>
+          <dt>Falhas de malha (O3D/.x)</dt>
           <dd>
             {o3dErrorSummary.length > 0
               ? o3dErrorSummary
@@ -9478,7 +9478,7 @@ export function App() {
             {selectedStats?.splines ??
               splines.length}
             <b>·</b>
-            O3D reais:{" "}
+            Malhas reais:{" "}
             {mapLoadMode === "full"
               ? `${renderableMapGeometryCount}/${mapObjectPaths.length}`
               : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}

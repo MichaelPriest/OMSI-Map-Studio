@@ -461,7 +461,7 @@ public sealed class OmsiConfigParserTests
                 writer.Write((byte)0);
 
                 writer.Write((byte)0x54);
-                writer.Write((uint)0);
+                writer.Write((ushort)0);
 
                 writer.Write((byte)0x79);
                 writer.Write(new byte[64]);

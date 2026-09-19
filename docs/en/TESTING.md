@@ -493,3 +493,15 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 3. open a `.sco` whose `[mesh]` points to `.x` and confirm `legacyDirectXMesh` in diagnostics;
 4. use an unknown mesh extension and confirm it remains `unsupportedFormat`;
 5. confirm `[tree]` objects using `treehelper.x` remain excluded from failure counts because they are rendered from their real tree definition.
+
+
+## DirectX `.x` mesh validation
+
+1. open a `.sco` whose `[mesh]` points to a `.x` beginning with `xof 0303txt 0032`;
+2. confirm the object enters **Renderable meshes** and no longer reports `legacyDirectXMesh`;
+3. validate a quad/polygon and confirm fan triangulation without holes;
+4. validate UV + `MeshMaterialList` + `TextureFilename` and confirm the real texture in the viewport;
+5. validate a file containing `FrameTransformMatrix` and confirm coherent local placement/orientation;
+6. validate multiple `Mesh` blocks in one file;
+7. use `bin`, `tzip`, and `bzip` variants and confirm `legacyDirectXUnsupportedEncoding` without crashes or fake fallback;
+8. confirm the physical-file cache is reused for `.x` as well.
