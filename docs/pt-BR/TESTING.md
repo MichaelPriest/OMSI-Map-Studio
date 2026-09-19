@@ -563,3 +563,12 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 3. confirme que triângulos, materiais e transform continuam sendo processados pelo pipeline O3D normal;
 4. em Grundorf, compare o total de **Malhas reais** com a test.21: os objetos anteriormente marcados como `encrypted` devem migrar para renderizáveis quando estiverem dentro do domínio suportado;
 5. se uma malha protegida exceder o domínio validado, confirme o erro explícito `protectedVertexCountUnsupported`.
+
+
+## Validação de texturas após abertura O3D
+
+1. abra Grundorf em **Mapa completo** e confirme que as 21 tiles e as malhas reais continuam carregando;
+2. compare a barra de estado com a test.23: o total de texturas solicitadas deve ultrapassar o antigo teto de 128 texturas de objetos quando o mapa exigir mais;
+3. aguarde até **pendentes = 0** e confirme que prédios/objetos antes pretos ou cinza recebem suas texturas quando os arquivos existem;
+4. verifique no Inspetor os contadores de texturas carregadas e falhas;
+5. se houver falhas, registre os códigos mostrados em **Falhas de textura** para separar arquivo ausente de formato/decodificação.
