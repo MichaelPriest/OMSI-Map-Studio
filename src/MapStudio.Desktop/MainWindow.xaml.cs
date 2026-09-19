@@ -3445,7 +3445,9 @@ public partial class MainWindow : Window
                         placedObject.Z,
                         placedObject.Rotation,
                         placedObject.Pitch,
-                        placedObject.Bank
+                        placedObject.Bank,
+                        extraValues =
+                            placedObject.ExtraValues
                     });
                 }
 
@@ -3661,7 +3663,9 @@ public partial class MainWindow : Window
                         placedObject.Z,
                         placedObject.Rotation,
                         placedObject.Pitch,
-                        placedObject.Bank
+                        placedObject.Bank,
+                        extraValues =
+                            placedObject.ExtraValues
                     });
                 }
 
