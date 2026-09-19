@@ -1331,7 +1331,7 @@ function createTextureFromAsset(
           false,
           Texture.TRILINEAR_SAMPLINGMODE,
           undefined,
-          (message, exception) => {
+          () => {
             console.error(
               "OMSI Map Studio: texture upload failed",
               {
@@ -1339,9 +1339,7 @@ function createTextureFromAsset(
                   asset.extension,
                 sourceExtension:
                   asset.sourceExtension,
-                mimeType,
-                message,
-                exception
+                mimeType
               }
             );
           }
