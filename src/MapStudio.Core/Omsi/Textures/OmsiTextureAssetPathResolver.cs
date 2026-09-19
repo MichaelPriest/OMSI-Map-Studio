@@ -17,6 +17,84 @@ public static class OmsiTextureAssetPathResolver
                 ],
                 StringComparer.OrdinalIgnoreCase);
 
+    public static bool TryResolveTerrainTextureMask(
+        string mapDirectory,
+        string relativeMapPath,
+        int layerIndex,
+        out string fullPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            mapDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            relativeMapPath);
+
+        fullPath = string.Empty;
+
+        if (layerIndex <= 0)
+        {
+            return false;
+        }
+
+        if (
+            !Omsi.Maps.OmsiMapPathResolver
+                .TryResolveTilePath(
+                    mapDirectory,
+                    relativeMapPath,
+                    out var tilePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var mapRoot =
+                Path.GetFullPath(
+                    mapDirectory)
+                .TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar);
+
+            var requiredPrefix =
+                mapRoot +
+                Path.DirectorySeparatorChar;
+
+            var candidate =
+                Path.GetFullPath(
+                    Path.Combine(
+                        mapRoot,
+                        "texture",
+                        "map",
+                        Path.GetFileName(
+                            tilePath) +
+                        "." +
+                        layerIndex
+                            .ToString(
+                                System.Globalization
+                                    .CultureInfo
+                                    .InvariantCulture) +
+                        ".dds"));
+
+            if (
+                !candidate.StartsWith(
+                    requiredPrefix,
+                    StringComparison.OrdinalIgnoreCase) ||
+                !File.Exists(candidate))
+            {
+                return false;
+            }
+
+            fullPath = candidate;
+            return true;
+        }
+        catch (Exception exception) when (
+            exception is ArgumentException or
+            NotSupportedException or
+            PathTooLongException)
+        {
+            return false;
+        }
+    }
+
     public static bool TryResolveGroundTexture(
         string omsiRoot,
         string mapDirectory,
