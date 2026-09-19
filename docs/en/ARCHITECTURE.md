@@ -569,3 +569,13 @@ Map-object rotation now follows the OMSI Z-up storage order. After converting OM
 - OMSI Y bank → viewport Z roll.
 
 Local SCO mesh transforms `[rot_x]`, `[rot_y]`, and `[rot_z]` use the same sign convention. The edit gizmo converts back to OMSI fields in that same order.
+
+## Separating map axes from local SCO/O3D axes
+
+There are two distinct coordinate conversions and they must not be mixed:
+
+- map `[object]` placement: OMSI map coordinates are Z-up, so the viewport converts `(X,Y,Z)` into Babylon `(X,Z,Y)`;
+- mesh transforms inside an SCO: `[new_pos]`, `[scale]`, `[rot_x]`, `[rot_y]`, and `[rot_z]` belong to the local model/O3D coordinate system, which is already Y-up for Babylon composition.
+
+Local mesh transforms therefore stay on their native X/Y/Z axes. Swapping Y/Z at this layer displaces parts of compound objects and rotates them around the wrong local axis. Z-up → Y-up conversion happens only on the map-placement object container.
+

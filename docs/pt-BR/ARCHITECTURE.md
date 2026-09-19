@@ -569,3 +569,13 @@ A rotação dos objetos de mapa passa a seguir a ordem usada pelo formato OMSI e
 - bank/Y do OMSI → roll/Z do viewport.
 
 As transformações locais `[rot_x]`, `[rot_y]` e `[rot_z]` dos meshes SCO usam a mesma convenção de sinal. O gizmo de edição também converte de volta para os campos OMSI nessa ordem.
+
+## Separação entre eixos do mapa e eixos locais SCO/O3D
+
+Há duas conversões diferentes e elas não devem ser misturadas:
+
+- colocação `[object]` no mapa: OMSI usa mapa Z-up, então o viewport converte `(X,Y,Z)` para Babylon `(X,Z,Y)`;
+- transform de mesh dentro do SCO: `[new_pos]`, `[scale]`, `[rot_x]`, `[rot_y]` e `[rot_z]` pertencem ao sistema local do modelo/O3D, que já é Y-up para a composição no Babylon.
+
+Portanto, transforms locais de mesh permanecem em X/Y/Z nativos. Trocar Y/Z nessa camada desloca componentes de objetos compostos e faz rotações locais acontecerem no eixo errado. A conversão Z-up → Y-up ocorre somente no container de colocação do objeto no mapa.
+
