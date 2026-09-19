@@ -506,8 +506,8 @@ Mesh, SLI profile, and texture warmup once again displays a continuous loading a
 In 3×3 performance mode, the Inspector now reports actually renderable meshes, failures, and pending geometry for the active area instead of treating payload presence alone as visual success.
 
 
-## Safe preview fallback for protected O3D
+## Protected O3D in the standalone editor
 
-When a protected `.o3d` mesh cannot be read directly, the host only looks for a same-name DirectX `.x` source file that is already present next to the installed asset. If that real `.x` file exists and is readable, it is used for preview; no file is converted, decrypted, or modified.
+OMSI Map Studio is an independent editor and does not depend on alternate source files to replace protected assets. A protected `.o3d` remains explicitly identified until a real compatibility path with the installed OMSI runtime exists.
 
-The UI now separates actually renderable meshes from protected assets. Protected O3D markers use a distinct color from missing/invalid asset markers, and the status reports how many object types and meshes remain protected.
+The UI separates actually renderable meshes from protected assets. Protected O3D markers use a distinct color from missing/invalid asset markers, and the status reports how many object types and meshes remain protected.
