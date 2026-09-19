@@ -1902,6 +1902,34 @@ export function App() {
     textureAssetsByKey
   ]);
 
+  const activeTiles = useMemo(() => {
+    if (!selectedMap) {
+      return [];
+    }
+
+    if (mapLoadMode === "full") {
+      return selectedMap.tiles;
+    }
+
+    if (!activeTile) {
+      return [];
+    }
+
+    return selectedMap.tiles.filter(
+      (tile) =>
+        Math.abs(
+          tile.x - activeTile.x
+        ) <= tileStreamRadius &&
+        Math.abs(
+          tile.y - activeTile.y
+        ) <= tileStreamRadius
+    );
+  }, [
+    activeTile,
+    mapLoadMode,
+    selectedMap
+  ]);
+
   const baseGroundTexture =
     selectedMap?.groundTextures[0];
 
@@ -2996,34 +3024,6 @@ export function App() {
     mapLoadMode,
     mapObjectPaths,
     preloadingGeometryFor
-  ]);
-
-  const activeTiles = useMemo(() => {
-    if (!selectedMap) {
-      return [];
-    }
-
-    if (mapLoadMode === "full") {
-      return selectedMap.tiles;
-    }
-
-    if (!activeTile) {
-      return [];
-    }
-
-    return selectedMap.tiles.filter(
-      (tile) =>
-        Math.abs(
-          tile.x - activeTile.x
-        ) <= tileStreamRadius &&
-        Math.abs(
-          tile.y - activeTile.y
-        ) <= tileStreamRadius
-    );
-  }, [
-    activeTile,
-    mapLoadMode,
-    selectedMap
   ]);
 
   const normalizedLibrarySearch =
