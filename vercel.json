@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "echo Skipping root dependency install",
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": ".build/alpha3-test1/public"
+}
