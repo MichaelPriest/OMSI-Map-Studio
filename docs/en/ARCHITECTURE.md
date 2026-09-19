@@ -542,3 +542,10 @@ Lookup remains confined to the allowed `Sceneryobjects` or `Splines` root; paths
 When an SCO contains `[tree]`, the map preview uses the real billboard defined by the tree block and does not render the SCO helper mesh at the same time. This prevents helpers such as `treehelper.x` from appearing as giant gray panels over the map.
 
 Helper geometry remains preserved by metadata/import; only the default map composition stops overlaying helper mesh + tree.
+
+
+## OMSI-correct vertical object placement
+
+Regular map objects use terrain-relative height: the Z value stored in an `[object]` block is added to the interpolated terrain height at the object's X/Y position. SCO files containing `[absheight]` remain at absolute height and do not receive that offset.
+
+The same calculation is used for rendering, selection, camera focus, hit testing, and the edit gizmo. When a relative-height object is saved, the editor converts the visual height back to the file's relative Z value so OMSI placement is preserved.
