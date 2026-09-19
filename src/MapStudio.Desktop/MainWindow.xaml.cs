@@ -81,6 +81,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        try
+        {
+            Icon =
+                BitmapFrame.Create(
+                    new Uri(
+                        "pack://application:,,,/MapStudio.Desktop;component/Assets/MapStudio.ico",
+                        UriKind.Absolute));
+        }
+        catch
+        {
+            // The compiled Win32 icon remains the fallback.
+        }
+
         Loaded += OnLoaded;
     }
 
@@ -4056,7 +4070,9 @@ public partial class MainWindow : Window
                 extension = ".png";
                 width = bitmapWidth;
                 height = bitmapHeight;
-                pixelFormat = "BMP→PNG+RGBA";
+                pixelFormat =
+                    GetRgbaDiagnosticLabel(
+                        rgbaBytes);
                 alphaOnly = false;
                 rgbaBase64 =
                     Convert.ToBase64String(
@@ -4251,6 +4267,55 @@ public partial class MainWindow : Window
         {
             return false;
         }
+    }
+
+    private static string
+        GetRgbaDiagnosticLabel(
+            byte[] rgbaBytes)
+    {
+        if (rgbaBytes.Length < 4)
+        {
+            return "BMP→PNG+RGBA";
+        }
+
+        long red = 0;
+        long green = 0;
+        long blue = 0;
+        var samples = 0;
+
+        var pixelCount =
+            rgbaBytes.Length / 4;
+
+        var stride =
+            Math.Max(
+                1,
+                pixelCount / 4096);
+
+        for (
+            var pixel = 0;
+            pixel < pixelCount;
+            pixel += stride)
+        {
+            var offset =
+                pixel * 4;
+
+            red +=
+                rgbaBytes[offset];
+            green +=
+                rgbaBytes[offset + 1];
+            blue +=
+                rgbaBytes[offset + 2];
+            samples += 1;
+        }
+
+        if (samples == 0)
+        {
+            return "BMP→PNG+RGBA";
+        }
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"BMP→PNG+RGBA · RGB médio {red / samples}/{green / samples}/{blue / samples}");
     }
 
     private static string
