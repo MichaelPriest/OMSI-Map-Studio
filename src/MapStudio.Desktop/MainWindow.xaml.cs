@@ -69,6 +69,12 @@ public partial class MainWindow : Window
         _sceneryGeometryCache =
             new(StringComparer.OrdinalIgnoreCase);
 
+    private readonly ConcurrentDictionary<
+        string,
+        Task<TextureAssetPayload>>
+        _textureAssetCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
     private IReadOnlyList<SceneryLibraryEntry>?
         _sceneryLibraryCache;
 
@@ -706,6 +712,7 @@ public partial class MainWindow : Window
         _tileContentCache.Clear();
         _splineDefinitionCache.Clear();
         _sceneryGeometryCache.Clear();
+        _textureAssetCache.Clear();
         _sceneryLibraryCache = null;
         _splineLibraryCache = null;
 
@@ -4048,90 +4055,15 @@ public partial class MainWindow : Window
     {
         try
         {
-            var info =
-                new FileInfo(fullPath);
-
-            if (
-                !info.Exists ||
-                info.Length >
-                    MaxTextureAssetBytes)
-            {
-                PostMissingTextureAsset(
-                    requestKey,
-                    info.Exists
-                        ? "textureTooLarge"
-                        : "textureNotFound");
-                return;
-            }
-
-            var bytes =
-                await File.ReadAllBytesAsync(
+            var payload =
+                await ReadTextureAssetCachedAsync(
                     fullPath);
-
-            var extension =
-                Path.GetExtension(fullPath)
-                    .ToLowerInvariant();
-
-            var sourceExtension =
-                extension;
-
-            var ddsMetadata =
-                extension == ".dds"
-                    ? OmsiDdsTextureMetadataReader
-                        .TryRead(bytes)
-                    : null;
-
-            int? width = ddsMetadata?.Width;
-            int? height = ddsMetadata?.Height;
-            string? pixelFormat = ddsMetadata?.Format;
-            bool? alphaOnly = ddsMetadata?.AlphaOnly;
-            string? rgbaBase64 = null;
-
-            if (
-                extension == ".bmp" &&
-                TryTranscodeBmpToPng(
-                    bytes,
-                    out var pngBytes,
-                    out var rgbaBytes,
-                    out var bitmapWidth,
-                    out var bitmapHeight))
-            {
-                bytes = pngBytes;
-                extension = ".png";
-                width = bitmapWidth;
-                height = bitmapHeight;
-                pixelFormat =
-                    GetRgbaDiagnosticLabel(
-                        rgbaBytes);
-                alphaOnly = false;
-                rgbaBase64 =
-                    Convert.ToBase64String(
-                        rgbaBytes);
-            }
 
             PostMessage(new
             {
                 type = "textureAssetLoaded",
                 requestKey,
-                asset = new
-                {
-                    exists = true,
-                    base64Data =
-                        Convert.ToBase64String(
-                            bytes),
-                    extension,
-                    sourceExtension,
-                    rgbaBase64,
-                    mimeType =
-                        GetTextureMimeType(
-                            extension),
-                    width,
-                    height,
-                    pixelFormat,
-                    alphaOnly,
-                    errorCode =
-                        (string?)null
-                }
+                asset = payload
             });
         }
         catch (UnauthorizedAccessException)
@@ -4146,6 +4078,122 @@ public partial class MainWindow : Window
                 requestKey,
                 "textureReadError");
         }
+    }
+
+    private async Task<TextureAssetPayload>
+        ReadTextureAssetCachedAsync(
+            string fullPath)
+    {
+        var task =
+            _textureAssetCache.GetOrAdd(
+                fullPath,
+                path =>
+                    Task.Run(
+                        async () =>
+                            await BuildTextureAssetAsync(
+                                path)));
+
+        try
+        {
+            return await task;
+        }
+        catch
+        {
+            _textureAssetCache.TryRemove(
+                fullPath,
+                out _);
+
+            throw;
+        }
+    }
+
+    private static async Task<TextureAssetPayload>
+        BuildTextureAssetAsync(
+            string fullPath)
+    {
+        var info =
+            new FileInfo(fullPath);
+
+        if (
+            !info.Exists ||
+            info.Length >
+                MaxTextureAssetBytes)
+        {
+            return TextureAssetPayload.Missing(
+                info.Exists
+                    ? "textureTooLarge"
+                    : "textureNotFound");
+        }
+
+        var bytes =
+            await File.ReadAllBytesAsync(
+                fullPath);
+
+        var extension =
+            Path.GetExtension(fullPath)
+                .ToLowerInvariant();
+
+        var sourceExtension =
+            extension;
+
+        var ddsMetadata =
+            extension == ".dds"
+                ? OmsiDdsTextureMetadataReader
+                    .TryRead(bytes)
+                : null;
+
+        int? width = ddsMetadata?.Width;
+        int? height = ddsMetadata?.Height;
+        string? pixelFormat =
+            ddsMetadata?.Format;
+        bool? alphaOnly =
+            ddsMetadata?.AlphaOnly;
+        string? rgbaBase64 = null;
+        string? base64Data = null;
+
+        if (
+            extension == ".bmp" &&
+            TryDecodeBmpToRgba(
+                bytes,
+                out var rgbaBytes,
+                out var bitmapWidth,
+                out var bitmapHeight))
+        {
+            width = bitmapWidth;
+            height = bitmapHeight;
+            pixelFormat =
+                GetRgbaDiagnosticLabel(
+                    rgbaBytes);
+            alphaOnly = false;
+            rgbaBase64 =
+                Convert.ToBase64String(
+                    rgbaBytes);
+
+            // Raw RGBA is consumed directly by Babylon.
+            // Do not also encode/send PNG for the same BMP.
+            extension = ".bmp";
+        }
+        else
+        {
+            base64Data =
+                Convert.ToBase64String(
+                    bytes);
+        }
+
+        return new TextureAssetPayload(
+            Exists: true,
+            Base64Data: base64Data,
+            Extension: extension,
+            SourceExtension: sourceExtension,
+            RgbaBase64: rgbaBase64,
+            MimeType:
+                GetTextureMimeType(
+                    extension),
+            Width: width,
+            Height: height,
+            PixelFormat: pixelFormat,
+            AlphaOnly: alphaOnly,
+            ErrorCode: null);
     }
 
     private void PostMissingTextureAsset(
@@ -4189,14 +4237,12 @@ public partial class MainWindow : Window
     }
 
     private static bool
-        TryTranscodeBmpToPng(
+        TryDecodeBmpToRgba(
             byte[] source,
-            out byte[] pngBytes,
             out byte[] rgbaBytes,
             out int width,
             out int height)
     {
-        pngBytes = source;
         rgbaBytes = Array.Empty<byte>();
         width = 0;
         height = 0;
@@ -4271,27 +4317,11 @@ public partial class MainWindow : Window
                     bgra[index + 3];
             }
 
-            var encoder =
-                new PngBitmapEncoder();
-
-            encoder.Frames.Add(
-                BitmapFrame.Create(
-                    converted));
-
-            using var output =
-                new MemoryStream();
-
-            encoder.Save(output);
-
-            pngBytes = output.ToArray();
-
-            return
-                pngBytes.Length > 0 &&
-                rgbaBytes.Length ==
-                    checked(
-                        width *
-                        height *
-                        4);
+            return rgbaBytes.Length ==
+                checked(
+                    width *
+                    height *
+                    4);
         }
         catch
         {
@@ -5289,6 +5319,36 @@ public partial class MainWindow : Window
     private sealed record SceneryLibraryEntry(
         string SceneryObjectPath,
         string FileName);
+
+    private sealed record TextureAssetPayload(
+        bool Exists,
+        string? Base64Data,
+        string? Extension,
+        string? SourceExtension,
+        string? RgbaBase64,
+        string? MimeType,
+        int? Width,
+        int? Height,
+        string? PixelFormat,
+        bool? AlphaOnly,
+        string? ErrorCode)
+    {
+        public static TextureAssetPayload
+            Missing(
+                string errorCode) =>
+            new(
+                Exists: false,
+                Base64Data: null,
+                Extension: null,
+                SourceExtension: null,
+                RgbaBase64: null,
+                MimeType: null,
+                Width: null,
+                Height: null,
+                PixelFormat: null,
+                AlphaOnly: null,
+                ErrorCode: errorCode);
+    }
 
     private sealed record SceneryGeometryPayload(
         IReadOnlyList<SceneryMeshGeometryPayload> Meshes,
