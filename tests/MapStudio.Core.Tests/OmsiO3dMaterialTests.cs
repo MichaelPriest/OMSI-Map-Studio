@@ -176,11 +176,11 @@ public sealed class OmsiO3dMaterialTests
                 geometry.Positions[0],
                 4);
             Assert.Equal(
-                3.75f,
+                2.5f,
                 geometry.Positions[1],
                 4);
             Assert.Equal(
-                2.5f,
+                3.75f,
                 geometry.Positions[2],
                 4);
 
@@ -189,11 +189,11 @@ public sealed class OmsiO3dMaterialTests
                 geometry.Normals[0],
                 4);
             Assert.Equal(
-                0.6f,
+                0.4f,
                 geometry.Normals[1],
                 4);
             Assert.Equal(
-                0.4f,
+                0.6f,
                 geometry.Normals[2],
                 4);
 
@@ -213,7 +213,7 @@ public sealed class OmsiO3dMaterialTests
     }
 
     [Fact]
-    public void GeometryReader_AppliesInverseO3dTransform()
+    public void GeometryReader_PreservesRenderCoordinatesWhenTransformMetadataExists()
     {
         var path = Path.Combine(
             Path.GetTempPath(),
@@ -272,14 +272,18 @@ public sealed class OmsiO3dMaterialTests
                 geometry.ErrorCode);
 
             Assert.Equal(
-                1f,
+                11f,
                 geometry.Positions[0],
                 4);
 
             Assert.Equal(
-                2f,
+                12f,
                 geometry.Positions[3],
                 4);
+
+            Assert.Equal(
+                new uint[] { 0, 1, 2 },
+                geometry.Indices);
         }
         finally
         {
