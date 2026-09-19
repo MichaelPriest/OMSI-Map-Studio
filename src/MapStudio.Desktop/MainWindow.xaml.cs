@@ -3943,6 +3943,38 @@ public partial class MainWindow : Window
 
         if (!File.Exists(fullPath))
         {
+            var enhancedFileName =
+                fileName.ToLowerInvariant() switch
+                {
+                    "himmel01.bmp" =>
+                        "day01.bmp",
+                    "himmel04.bmp" =>
+                        "sunset01.bmp",
+                    "himmel05.bmp" =>
+                        "night01.bmp",
+                    _ => string.Empty
+                };
+
+            if (!string.IsNullOrWhiteSpace(
+                    enhancedFileName))
+            {
+                var enhancedPath =
+                    Path.Combine(
+                        _omsiRootPath,
+                        "Texture",
+                        "skybox",
+                        enhancedFileName);
+
+                if (File.Exists(enhancedPath))
+                {
+                    fullPath =
+                        enhancedPath;
+                }
+            }
+        }
+
+        if (!File.Exists(fullPath))
+        {
             PostMissingTextureAsset(
                 requestKey,
                 "textureNotFound");
