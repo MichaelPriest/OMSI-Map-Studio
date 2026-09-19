@@ -556,3 +556,12 @@ Quando a textura base real chega como RGBA, o material do terreno usa o mesmo as
 ## Ícone Windows
 
 O aplicativo voltou a usar a identidade padrão do próprio executável no shell do Windows, evitando um AppUserModelID personalizado não registrado quando o EXE é aberto diretamente. A janela usa URI de recurso explícita e também aplica o `MapStudio.ico` em runtime, mantendo o `ApplicationIcon` compilado como fallback.
+
+
+## Árvores especiais do OMSI ([tree])
+
+O editor agora trata os objetos especiais de árvore do OMSI separadamente do helper `.x` usado apenas pelo editor original. O bloco real `[tree]` do `.sco` fornece a definição da árvore, enquanto cada colocação `[object]` do mapa fornece em `ExtraValues` a textura efetivamente escolhida, a altura e a razão largura/altura.
+
+No viewport, a árvore é desenhada como billboard vertical não iluminado com a textura, altura e proporção gravadas na própria colocação do mapa. Portanto, árvores com dimensões diferentes continuam diferentes no Map Studio, sem substituir os valores por médias ou mocks.
+
+As texturas repetidas de árvores compartilham material dentro da mesma cena para evitar criar uma cópia GPU por árvore. Marcadores amarelos permanecem somente para objetos que ainda não possuem representação renderizável.
