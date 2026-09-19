@@ -174,3 +174,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 7. em mapa com template `[spline]` neutro explícito (5 extras zero), confirme novo ID global, `previous=-1`, `next=-1` e backup;
 8. repita com **Altura** em mapa que possua template `[spline_h]` neutro explícito (6 extras zero);
 9. em mapa sem template neutro compatível do tipo escolhido, confirme que a prévia funciona mas a gravação é bloqueada.
+
+
+## Teste de texturas reais
+
+1. selecione um objeto O3D conhecido por usar BMP/PNG/JPG, DDS ou TGA;
+2. confirme que a geometria continua aparecendo imediatamente com as cores-base e recebe a textura quando o asset chega;
+3. selecione uma spline cujo `.sli` declare `[texture]` e confirme a textura no perfil extrudado;
+4. inicie uma colocação de objeto e uma colocação de spline e confirme o reaproveitamento das texturas em cache;
+5. use uma referência de textura ausente e confirme fallback para a cor do material, sem placeholder fake;
+6. valide que caminhos que escapam de `Sceneryobjects`/`Splines` não são carregados.

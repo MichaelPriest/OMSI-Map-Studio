@@ -313,3 +313,12 @@ A guia **Splines** no Explorer varre `OMSI 2/Splines` sob demanda e permite busc
 Cada arquivo oferece **Normal** e **Altura**. A prévia usa o perfil real do `.sli`, começa desconectada e oferece Z, rotação, comprimento, raio e gradientes antes da confirmação.
 
 A UI não inventa header/cant/skew/delta_h. No **Confirmar e salvar**, o host procura no mapa completo um template real neutro do tipo escolhido: cinco extras numéricos explícitos zerados para `[spline]` normal ou seis para `[spline_h]`. Se não existir, a prévia continua utilizável, mas a gravação é recusada com mensagem de template indisponível.
+
+
+## Texturas O3D e de splines
+
+Ao selecionar um objeto com material O3D texturizado, o Map Studio solicita somente as texturas usadas pelos meshes daquela seleção. O mesmo vale para as texturas declaradas em `[texture]` do perfil de uma spline selecionada ou em colocação.
+
+BMP, PNG, JPG/JPEG, GIF, WebP, DDS e TGA são resolvidos dentro da instalação real do OMSI. DDS/TGA usam os loaders do Babylon. Arquivo ausente, caminho inseguro ou textura acima de 16 MiB mantém o material com a cor O3D/perfil já existente em vez de criar uma imagem fake.
+
+As texturas carregadas ficam em cache no React e podem aparecer também em outras instâncias do mesmo objeto/spline enquanto a sessão estiver aberta.

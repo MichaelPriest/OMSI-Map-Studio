@@ -7,6 +7,8 @@ import {
 import {
   deleteObject,
   deleteSpline,
+  getSceneryTextureAssetKey,
+  getSplineTextureAssetKey,
   insertObject,
   insertSpline,
   insertSplineFromLibrary,
@@ -14,7 +16,9 @@ import {
   loadMapFull,
   loadMapRegion,
   loadSceneryLibrary,
+  loadSceneryTextureAsset,
   loadSplineLibrary,
+  loadSplineTextureAsset,
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
@@ -31,7 +35,8 @@ import {
   type OmsiPlacedSpline,
   type OmsiSplineDefinition,
   type OmsiSceneryObjectGeometry,
-  type OmsiSceneryObjectMetadata
+  type OmsiSceneryObjectMetadata,
+  type OmsiTextureAsset
 } from "./bridge/desktopBridge";
 import { Viewport } from "./editor/Viewport";
 
@@ -505,6 +510,20 @@ export function App() {
   ] = useState(false);
 
   const [
+    textureAssetsByKey,
+    setTextureAssetsByKey
+  ] = useState<
+    Record<string, OmsiTextureAsset>
+  >({});
+
+  const [
+    requestedTextureKeys,
+    setRequestedTextureKeys
+  ] = useState<
+    Record<string, true>
+  >({});
+
+  const [
     splineLibrary,
     setSplineLibrary
   ] = useState<
@@ -608,6 +627,8 @@ export function App() {
           setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
+          setTextureAssetsByKey({});
+          setRequestedTextureKeys({});
           setPreviewObjectTransforms({});
           setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
@@ -643,12 +664,6 @@ export function App() {
           setSplinePlacementTemplate(
             undefined
           );
-          setSplineLibraryPlacementAsset(
-            undefined
-          );
-          setSplineLibraryPlacementIsHeight(
-            false
-          );
           setPendingSplinePlacement(
             undefined
           );
@@ -674,6 +689,8 @@ export function App() {
           setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
+          setTextureAssetsByKey({});
+          setRequestedTextureKeys({});
           setPreloadingGeometryFor(undefined);
           setSelectingMap(false);
           setMapLoadMode("full");
@@ -886,6 +903,20 @@ export function App() {
             return current;
           });
 
+          return;
+        }
+
+        if (
+          message.type ===
+          "textureAssetLoaded"
+        ) {
+          setTextureAssetsByKey(
+            (current) => ({
+              ...current,
+              [message.requestKey]:
+                message.asset
+            })
+          );
           return;
         }
 
@@ -1324,6 +1355,198 @@ export function App() {
     preloadingGeometryFor,
     selectedMap,
     selectedObject
+  ]);
+
+  useEffect(() => {
+    if (!bridgeAvailable) {
+      return;
+    }
+
+    const sceneryObjectPath =
+      selectedObject
+        ?.sceneryObjectPath ??
+      placementAsset
+        ?.sceneryObjectPath;
+
+    if (!sceneryObjectPath) {
+      return;
+    }
+
+    const geometry =
+      geometryByPath[
+        sceneryObjectPath
+      ];
+
+    if (!geometry) {
+      return;
+    }
+
+    const requests:
+      Array<{
+        key: string;
+        meshPath: string;
+        textureName: string;
+      }> = [];
+
+    for (const mesh of
+      geometry.meshes) {
+      for (const material of
+        mesh.geometry.materials) {
+        const textureName =
+          material.textureName;
+
+        if (!textureName) {
+          continue;
+        }
+
+        const key =
+          getSceneryTextureAssetKey(
+            sceneryObjectPath,
+            mesh.declaredPath,
+            textureName
+          );
+
+        if (
+          Object.hasOwn(
+            textureAssetsByKey,
+            key
+          ) ||
+          Object.hasOwn(
+            requestedTextureKeys,
+            key
+          )
+        ) {
+          continue;
+        }
+
+        requests.push({
+          key,
+          meshPath:
+            mesh.declaredPath,
+          textureName
+        });
+      }
+    }
+
+    if (requests.length === 0) {
+      return;
+    }
+
+    setRequestedTextureKeys(
+      (current) => {
+        const next = {
+          ...current
+        };
+
+        for (const request of
+          requests) {
+          next[request.key] = true;
+        }
+
+        return next;
+      }
+    );
+
+    for (const request of
+      requests) {
+      loadSceneryTextureAsset(
+        request.key,
+        sceneryObjectPath,
+        request.meshPath,
+        request.textureName
+      );
+    }
+  }, [
+    bridgeAvailable,
+    geometryByPath,
+    placementAsset,
+    requestedTextureKeys,
+    selectedObject,
+    textureAssetsByKey
+  ]);
+
+  useEffect(() => {
+    if (!bridgeAvailable) {
+      return;
+    }
+
+    const placedSpline =
+      selectedSpline ??
+      splinePlacementTemplate;
+
+    if (!placedSpline) {
+      return;
+    }
+
+    const definition =
+      splineProfilesByPath[
+        placedSpline.splinePath
+      ];
+
+    if (!definition) {
+      return;
+    }
+
+    const requests =
+      definition.textures
+        .filter(
+          (textureName) =>
+            Boolean(textureName)
+        )
+        .map((textureName) => ({
+          textureName,
+          key:
+            getSplineTextureAssetKey(
+              placedSpline.splinePath,
+              textureName
+            )
+        }))
+        .filter(
+          (request) =>
+            !Object.hasOwn(
+              textureAssetsByKey,
+              request.key
+            ) &&
+            !Object.hasOwn(
+              requestedTextureKeys,
+              request.key
+            )
+        );
+
+    if (requests.length === 0) {
+      return;
+    }
+
+    setRequestedTextureKeys(
+      (current) => {
+        const next = {
+          ...current
+        };
+
+        for (const request of
+          requests) {
+          next[request.key] = true;
+        }
+
+        return next;
+      }
+    );
+
+    for (const request of
+      requests) {
+      loadSplineTextureAsset(
+        request.key,
+        placedSpline.splinePath,
+        request.textureName
+      );
+    }
+  }, [
+    bridgeAvailable,
+    requestedTextureKeys,
+    selectedSpline,
+    splinePlacementTemplate,
+    splineProfilesByPath,
+    textureAssetsByKey
   ]);
 
   const objectsForViewport = useMemo(
@@ -5498,6 +5721,9 @@ export function App() {
               selectedGeometry={selectedGeometry}
               objectGeometryByPath={
                 geometryByPath
+              }
+              textureAssetsByKey={
+                textureAssetsByKey
               }
               selectedSpline={selectedSpline}
               selectedSplineProfile={

@@ -9,6 +9,7 @@ using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Textures;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 
@@ -18,6 +19,8 @@ public partial class MainWindow : Window
 {
     private const int MaxConcurrentTileReads = 4;
     private const int MaxTileStreamRadius = 2;
+    private const long MaxTextureAssetBytes =
+        16L * 1024L * 1024L;
 
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
@@ -435,6 +438,63 @@ public partial class MainWindow : Window
                             centerX,
                             centerY,
                             radius);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "loadSceneryTextureAsset":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "requestKey",
+                            out var sceneryTextureRequestKey) &&
+                        TryReadString(
+                            message.RootElement,
+                            "sceneryObjectPath",
+                            out var textureSceneryObjectPath) &&
+                        TryReadString(
+                            message.RootElement,
+                            "declaredMeshPath",
+                            out var textureDeclaredMeshPath) &&
+                        TryReadString(
+                            message.RootElement,
+                            "textureName",
+                            out var sceneryTextureName))
+                    {
+                        await LoadSceneryTextureAssetAsync(
+                            sceneryTextureRequestKey,
+                            textureSceneryObjectPath,
+                            textureDeclaredMeshPath,
+                            sceneryTextureName);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "loadSplineTextureAsset":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "requestKey",
+                            out var splineTextureRequestKey) &&
+                        TryReadString(
+                            message.RootElement,
+                            "splinePath",
+                            out var textureSplinePath) &&
+                        TryReadString(
+                            message.RootElement,
+                            "textureName",
+                            out var splineTextureName))
+                    {
+                        await LoadSplineTextureAssetAsync(
+                            splineTextureRequestKey,
+                            textureSplinePath,
+                            splineTextureName);
                     }
                     else
                     {
@@ -3586,6 +3646,219 @@ public partial class MainWindow : Window
             throw;
         }
     }
+
+    private async Task LoadSceneryTextureAssetAsync(
+        string? requestKey,
+        string? sceneryObjectPath,
+        string? declaredMeshPath,
+        string? textureName)
+    {
+        if (
+            _omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(
+                requestKey) ||
+            string.IsNullOrWhiteSpace(
+                sceneryObjectPath) ||
+            string.IsNullOrWhiteSpace(
+                declaredMeshPath) ||
+            string.IsNullOrWhiteSpace(
+                textureName) ||
+            !_knownSceneryObjectPaths
+                .ContainsKey(
+                    sceneryObjectPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "invalidTextureSource");
+            return;
+        }
+
+        if (
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    sceneryObjectPath,
+                    out var sceneryObjectFullPath) ||
+            !OmsiSceneryMeshPathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    sceneryObjectFullPath,
+                    declaredMeshPath,
+                    out var meshFullPath) ||
+            !OmsiTextureAssetPathResolver
+                .TryResolveSceneryTexture(
+                    _omsiRootPath,
+                    sceneryObjectFullPath,
+                    meshFullPath,
+                    textureName,
+                    out var textureFullPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureNotFound");
+            return;
+        }
+
+        await LoadTextureAssetAsync(
+            requestKey,
+            textureFullPath);
+    }
+
+    private async Task LoadSplineTextureAssetAsync(
+        string? requestKey,
+        string? splinePath,
+        string? textureName)
+    {
+        if (
+            _omsiRootPath is null ||
+            string.IsNullOrWhiteSpace(
+                requestKey) ||
+            string.IsNullOrWhiteSpace(
+                splinePath) ||
+            string.IsNullOrWhiteSpace(
+                textureName) ||
+            !_knownSplinePaths.ContainsKey(
+                splinePath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "invalidTextureSource");
+            return;
+        }
+
+        if (
+            !OmsiSplinePathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    splinePath,
+                    out var splineFullPath) ||
+            !OmsiTextureAssetPathResolver
+                .TryResolveSplineTexture(
+                    _omsiRootPath,
+                    splineFullPath,
+                    textureName,
+                    out var textureFullPath))
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureNotFound");
+            return;
+        }
+
+        await LoadTextureAssetAsync(
+            requestKey,
+            textureFullPath);
+    }
+
+    private async Task LoadTextureAssetAsync(
+        string requestKey,
+        string fullPath)
+    {
+        try
+        {
+            var info =
+                new FileInfo(fullPath);
+
+            if (
+                !info.Exists ||
+                info.Length >
+                    MaxTextureAssetBytes)
+            {
+                PostMissingTextureAsset(
+                    requestKey,
+                    info.Exists
+                        ? "textureTooLarge"
+                        : "textureNotFound");
+                return;
+            }
+
+            var bytes =
+                await File.ReadAllBytesAsync(
+                    fullPath);
+
+            var extension =
+                Path.GetExtension(fullPath)
+                    .ToLowerInvariant();
+
+            PostMessage(new
+            {
+                type = "textureAssetLoaded",
+                requestKey,
+                asset = new
+                {
+                    exists = true,
+                    base64Data =
+                        Convert.ToBase64String(
+                            bytes),
+                    extension,
+                    mimeType =
+                        GetTextureMimeType(
+                            extension),
+                    errorCode =
+                        (string?)null
+                }
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "accessDenied");
+        }
+        catch (IOException)
+        {
+            PostMissingTextureAsset(
+                requestKey,
+                "textureReadError");
+        }
+    }
+
+    private void PostMissingTextureAsset(
+        string? requestKey,
+        string errorCode)
+    {
+        if (string.IsNullOrWhiteSpace(
+                requestKey))
+        {
+            return;
+        }
+
+        PostMessage(new
+        {
+            type = "textureAssetLoaded",
+            requestKey,
+            asset = new
+            {
+                exists = false,
+                base64Data =
+                    (string?)null,
+                extension =
+                    (string?)null,
+                mimeType =
+                    (string?)null,
+                errorCode
+            }
+        });
+    }
+
+    private static string
+        GetTextureMimeType(
+            string extension) =>
+        extension.ToLowerInvariant() switch
+        {
+            ".bmp" => "image/bmp",
+            ".gif" => "image/gif",
+            ".jpeg" => "image/jpeg",
+            ".jpg" => "image/jpeg",
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".dds" =>
+                "application/octet-stream",
+            ".tga" =>
+                "application/octet-stream",
+            _ =>
+                "application/octet-stream"
+        };
 
     private async Task LoadSplineProfileAsync(
         string? splinePath)

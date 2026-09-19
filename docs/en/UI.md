@@ -313,3 +313,12 @@ The Explorer **Splines** tab scans `OMSI 2/Splines` on demand and searches up to
 Each file offers **Normal** and **Height**. Preview uses the real `.sli` profile, starts detached, and exposes Z, rotation, length, radius and gradients before confirmation.
 
 The UI does not invent header/cant/skew/delta_h values. On **Confirm and save**, the host searches the full map for a real neutral template of the selected type: five explicit numeric zero extras for normal `[spline]`, or six for `[spline_h]`. If none exists, preview remains available but persistence is rejected with a missing-template message.
+
+
+## O3D and spline textures
+
+When a selected object uses textured O3D materials, Map Studio requests only textures used by that selection's meshes. The same applies to `[texture]` entries from a selected or placement spline profile.
+
+BMP, PNG, JPG/JPEG, GIF, WebP, DDS and TGA are resolved inside the real OMSI installation. DDS/TGA use Babylon loaders. A missing file, unsafe path, or texture larger than 16 MiB leaves the existing O3D/profile material color in place instead of inventing a fake image.
+
+Loaded textures are cached in React and can also appear on other instances of the same object/spline during the session.

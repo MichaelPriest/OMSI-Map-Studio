@@ -310,3 +310,12 @@ The Spline Library scans `OMSI 2/Splines` only on demand, skips reparse points/i
 For persistent creation from an installed `.sli`, `OmsiSplinePlacementTemplateAnalyzer` requires a real neutral template of the same type in the map. A normal `[spline]` requires exactly five explicit numeric zero `ExtraValues`; `[spline_h]` requires six, including `delta_h`. This avoids inventing cant, skew, or height data.
 
 The new block reuses the selected type's template `HeaderValue` and extras, replaces the path with the installed `.sli`, allocates a new global ID, and starts detached.
+
+
+## Real on-demand textures
+
+Textures are not preloaded for the whole map. When a selected object, spline, or placement preview needs one, React sends the real owner, mesh (for O3D), and declared texture name to the host.
+
+`OmsiTextureAssetPathResolver` resolves only supported extensions inside `Sceneryobjects` or `Splines`, rejecting absolute/out-of-root paths. The host caps each texture at 16 MiB and returns Base64 bytes, extension and MIME. React caches by owner/mesh/name.
+
+Babylon receives the forced extension when creating `Texture`; DDS and TGA loaders are registered explicitly. At this stage loading is on demand for selections and previews, avoiding transfer of every texture in a large map.

@@ -310,3 +310,12 @@ A Biblioteca de Splines varre `OMSI 2/Splines` somente sob demanda, ignora repar
 Para criação persistente a partir de um `.sli` instalado, `OmsiSplinePlacementTemplateAnalyzer` exige um template real neutro do mesmo tipo no mapa. `[spline]` normal precisa ter exatamente cinco `ExtraValues` numéricos explícitos zerados; `[spline_h]` precisa de seis, incluindo o `delta_h`. Isso evita inventar cant, skew ou dados de altura.
 
 O novo bloco usa o `HeaderValue` e os extras do template do tipo escolhido, troca o caminho para o `.sli` instalado, gera ID global novo e começa desconectado.
+
+
+## Texturas reais sob demanda
+
+Texturas não são pré-carregadas para o mapa inteiro. Quando um objeto, spline ou prévia de colocação precisa de uma textura, o React envia ao host o owner real, mesh (para O3D) e nome declarado.
+
+`OmsiTextureAssetPathResolver` resolve somente extensões suportadas dentro de `Sceneryobjects` ou `Splines`, rejeitando caminhos absolutos/fora da raiz. O host limita cada textura a 16 MiB e devolve bytes Base64, extensão e MIME. O React mantém cache por owner/mesh/nome.
+
+Babylon recebe a extensão forçada na criação de `Texture`; loaders DDS e TGA são registrados explicitamente. Nesta etapa, o carregamento é sob demanda para seleção e prévias, evitando transferir todas as texturas de um mapa grande.

@@ -4,6 +4,9 @@ import { Engine } from "@babylonjs/core/Engines/engine";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import { Texture } from "@babylonjs/core/Materials/Textures/texture";
+import "@babylonjs/core/Materials/Textures/Loaders/ddsTextureLoader";
+import "@babylonjs/core/Materials/Textures/Loaders/tgaTextureLoader";
 import { Color3, Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
@@ -15,7 +18,12 @@ import type {
   OmsiPlacedSpline,
   OmsiSplineDefinition,
   OmsiSceneryObjectGeometry,
+  OmsiTextureAsset,
   OmsiTile
+} from "../bridge/desktopBridge";
+import {
+  getSceneryTextureAssetKey,
+  getSplineTextureAssetKey
 } from "../bridge/desktopBridge";
 
 type ViewportProps = {
@@ -99,6 +107,10 @@ type ViewportProps = {
   objectGeometryByPath: Record<
     string,
     OmsiSceneryObjectGeometry
+  >;
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
   >;
   selectedSpline?: OmsiPlacedSpline;
   selectedSplineProfile?: OmsiSplineDefinition;
@@ -445,6 +457,10 @@ function createSelectedSplineProfile(
   scene: Scene,
   placedSpline: OmsiPlacedSpline,
   definition: OmsiSplineDefinition,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >,
   parent?: TransformNode
 ) {
   const length =
@@ -614,6 +630,29 @@ function createSelectedSplineProfile(
     material.twoSidedLighting =
       true;
 
+    if (surface.textureName) {
+      const asset =
+        textureAssetsByKey[
+          getSplineTextureAssetKey(
+            placedSpline.splinePath,
+            surface.textureName
+          )
+        ];
+
+      const texture =
+        createTextureFromAsset(
+          scene,
+          asset
+        );
+
+      if (texture) {
+        material.diffuseTexture =
+          texture;
+        material.useAlphaFromDiffuseTexture =
+          true;
+      }
+    }
+
     mesh.material = material;
     mesh.isPickable = false;
 
@@ -650,6 +689,39 @@ function clamp01(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
+function createTextureFromAsset(
+  scene: Scene,
+  asset:
+    | OmsiTextureAsset
+    | undefined
+) {
+  if (
+    !asset?.exists ||
+    !asset.base64Data ||
+    !asset.extension
+  ) {
+    return undefined;
+  }
+
+  const mimeType =
+    asset.mimeType ??
+    "application/octet-stream";
+
+  const texture =
+    new Texture(
+      `data:${mimeType};base64,${asset.base64Data}`,
+      scene,
+      {
+        forcedExtension:
+          asset.extension
+      }
+    );
+
+  texture.hasAlpha = true;
+
+  return texture;
+}
+
 function createPreviewMaterial(
   scene: Scene,
   namePrefix: string,
@@ -657,6 +729,9 @@ function createPreviewMaterial(
   materialIndex: number,
   materialData:
     | OmsiSceneryObjectGeometry["meshes"][number]["geometry"]["materials"][number]
+    | undefined,
+  textureAsset:
+    | OmsiTextureAsset
     | undefined
 ) {
   const material = new StandardMaterial(
@@ -701,13 +776,31 @@ function createPreviewMaterial(
     materialData.specularPower
   );
 
+  const texture =
+    createTextureFromAsset(
+      scene,
+      textureAsset
+    );
+
+  if (texture) {
+    material.diffuseTexture =
+      texture;
+    material.useAlphaFromDiffuseTexture =
+      true;
+  }
+
   return material;
 }
 
 function createGeometryMeshes(
   scene: Scene,
   namePrefix: string,
-  geometry: OmsiSceneryObjectGeometry
+  sceneryObjectPath: string,
+  geometry: OmsiSceneryObjectGeometry,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
 ) {
   const meshes: Mesh[] = [];
 
@@ -807,6 +900,26 @@ function createGeometryMeshes(
             ? meshGeometry.materials[
                 materialIndex
               ]
+            : undefined,
+          materialIndex >= 0
+            ? (() => {
+                const materialData =
+                  meshGeometry.materials[
+                    materialIndex
+                  ];
+
+                if (!materialData?.textureName) {
+                  return undefined;
+                }
+
+                return textureAssetsByKey[
+                  getSceneryTextureAssetKey(
+                    sceneryObjectPath,
+                    meshReference.declaredPath,
+                    materialData.textureName
+                  )
+                ];
+              })()
             : undefined
         );
 
@@ -856,7 +969,11 @@ function createSplineEditRoot(
   placedSpline: OmsiPlacedSpline,
   definition:
     | OmsiSplineDefinition
-    | undefined
+    | undefined,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
 ) {
   const root =
     new TransformNode(
@@ -917,6 +1034,7 @@ function createSplineEditRoot(
       scene,
       localSpline,
       definition,
+      textureAssetsByKey,
       root
     );
   }
@@ -944,7 +1062,11 @@ function hasRenderableGeometry(
 function createSelectedGeometry(
   scene: Scene,
   placedObject: OmsiPlacedObject,
-  geometry: OmsiSceneryObjectGeometry
+  geometry: OmsiSceneryObjectGeometry,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
 ) {
   const root = new TransformNode(
     "selected-object-geometry-root",
@@ -960,7 +1082,9 @@ function createSelectedGeometry(
     createGeometryMeshes(
       scene,
       "selected-object",
-      geometry
+      placedObject.sceneryObjectPath,
+      geometry,
+      textureAssetsByKey
     );
 
   for (const mesh of meshes) {
@@ -976,6 +1100,10 @@ function createMapObjectGeometry(
   geometryByPath: Record<
     string,
     OmsiSceneryObjectGeometry
+  >,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
   >
 ) {
   const placementsByPath =
@@ -1033,7 +1161,9 @@ function createMapObjectGeometry(
       createGeometryMeshes(
         scene,
         `map-object-${sceneryObjectPath}`,
-        geometry
+        sceneryObjectPath,
+        geometry,
+        textureAssetsByKey
       );
 
     for (const source of sourceMeshes) {
@@ -1108,6 +1238,7 @@ export function Viewport({
   selectedObject,
   selectedGeometry,
   objectGeometryByPath,
+  textureAssetsByKey,
   selectedSpline,
   selectedSplineProfile,
   onSelectObject,
@@ -1393,7 +1524,8 @@ export function Viewport({
         createMapObjectGeometry(
           scene,
           objects,
-          objectGeometryByPath
+          objectGeometryByPath,
+          textureAssetsByKey
         );
 
         const markerObjects =
@@ -1485,7 +1617,8 @@ export function Viewport({
         createSelectedGeometry(
           scene,
           placementPreview,
-          placementGeometry
+          placementGeometry,
+          textureAssetsByKey
         );
       }
 
@@ -1579,7 +1712,8 @@ export function Viewport({
         createSelectedSplineProfile(
           scene,
           splinePlacementPreview,
-          splinePlacementProfile
+          splinePlacementProfile,
+          textureAssetsByKey
         );
       }
     }
@@ -1594,7 +1728,8 @@ export function Viewport({
       createSelectedSplineProfile(
         scene,
         selectedSpline,
-        selectedSplineProfile
+        selectedSplineProfile,
+        textureAssetsByKey
       );
     }
 
@@ -1614,7 +1749,8 @@ export function Viewport({
       createSelectedGeometry(
         scene,
         selectedObject,
-        selectedGeometry
+        selectedGeometry,
+        textureAssetsByKey
       );
     }
 
@@ -1646,7 +1782,8 @@ export function Viewport({
           createSelectedGeometry(
             scene,
             selectedObject,
-            selectedGeometry
+            selectedGeometry,
+            textureAssetsByKey
           );
       } else {
         editRoot =
@@ -1671,7 +1808,8 @@ export function Viewport({
         createSplineEditRoot(
           scene,
           selectedSpline,
-          selectedSplineProfile
+          selectedSplineProfile,
+          textureAssetsByKey
         );
 
       editingSpline = true;
@@ -2145,6 +2283,7 @@ export function Viewport({
     selectedObject,
     selectedGeometry,
     objectGeometryByPath,
+    textureAssetsByKey,
     selectedSpline,
     selectedSplineProfile,
     onSelectObject,

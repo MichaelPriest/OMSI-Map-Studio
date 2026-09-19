@@ -39,7 +39,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 - creation and copying only persist when a safe template of the same `.sco` exists;
 - installed `[spline]`/`[spline_h]` creation requires a real neutral template of the same type in the map;
 - binary `.terrain` is not interpreted/edited yet;
-- spline/O3D image textures are not applied yet;
+- O3D/spline textures load on demand for selections/previews; whole-map texture preloading is not implemented yet;
 - `[worldcoordinates]` maps remain limited;
 - encrypted O3D and `.x` files remain without geometry previews.
 
@@ -174,3 +174,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 7. on a map with an explicit neutral normal `[spline]` template (5 zero extras), verify a new global ID, `previous=-1`, `next=-1`, and backup;
 8. repeat with **Height** on a map containing an explicit neutral `[spline_h]` template (6 zero extras);
 9. on a map without a compatible neutral template of the selected type, verify preview works but persistence is blocked.
+
+
+## Real texture test
+
+1. select an O3D object known to use BMP/PNG/JPG, DDS or TGA;
+2. verify geometry appears immediately with base colors and receives the real texture when the asset arrives;
+3. select a spline whose `.sli` declares `[texture]` and verify the extruded profile is textured;
+4. start object and spline placements and verify cached textures are reused;
+5. use a missing texture reference and verify fallback to material color without a fake placeholder;
+6. verify paths escaping `Sceneryobjects`/`Splines` are never loaded.

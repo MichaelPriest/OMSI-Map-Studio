@@ -144,6 +144,14 @@ export type OmsiO3dGeometry = {
   materials: OmsiO3dMaterial[];
 };
 
+export type OmsiTextureAsset = {
+  exists: boolean;
+  base64Data: string | null;
+  extension: string | null;
+  mimeType: string | null;
+  errorCode: string | null;
+};
+
 export type OmsiSceneryObjectGeometry = {
   meshes: Array<{
     declaredPath: string;
@@ -255,6 +263,11 @@ export type HostMessage =
       tiles: OmsiTile[];
       objects: OmsiPlacedObject[];
       splines: OmsiPlacedSpline[];
+    }
+  | {
+      type: "textureAssetLoaded";
+      requestKey: string;
+      asset: OmsiTextureAsset;
     }
   | {
       type: "splineProfileLoaded";
@@ -576,6 +589,58 @@ export function loadMapRegion(
     centerX,
     centerY,
     radius
+  });
+}
+
+export function getSceneryTextureAssetKey(
+  sceneryObjectPath: string,
+  declaredMeshPath: string,
+  textureName: string
+) {
+  return [
+    "scenery",
+    sceneryObjectPath,
+    declaredMeshPath,
+    textureName
+  ].join("|");
+}
+
+export function getSplineTextureAssetKey(
+  splinePath: string,
+  textureName: string
+) {
+  return [
+    "spline",
+    splinePath,
+    textureName
+  ].join("|");
+}
+
+export function loadSceneryTextureAsset(
+  requestKey: string,
+  sceneryObjectPath: string,
+  declaredMeshPath: string,
+  textureName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSceneryTextureAsset",
+    requestKey,
+    sceneryObjectPath,
+    declaredMeshPath,
+    textureName
+  });
+}
+
+export function loadSplineTextureAsset(
+  requestKey: string,
+  splinePath: string,
+  textureName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSplineTextureAsset",
+    requestKey,
+    splinePath,
+    textureName
   });
 }
 
