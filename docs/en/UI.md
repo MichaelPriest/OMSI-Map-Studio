@@ -109,3 +109,23 @@ After all map tiles are read, the UI identifies unique `.sco` paths used by plac
 Progress is shown as **loaded O3D models / unique models**. While a model has not been read yet, its placements remain visible as markers. As soon as geometry arrives, every object using that same model is rendered.
 
 Babylon reuses geometry and materials per model and creates transformed clones/instances for each map placement. This avoids duplicating vertex buffers for hundreds of identical objects.
+
+
+## Essential editor tools
+
+The active toolbar currently provides:
+
+- **Select (Q)** — selects objects and splines;
+- **Move (W)** — enables the position gizmo for the selected object;
+- **Rotate (E)** — enables the rotation gizmo for the selected object;
+- **Focus selection (F)** — centers the camera on the selected object or spline;
+- **Frame map (Home)** — returns the camera to the full-map framing;
+- **Grid (G)** — toggles tile surfaces/bounds;
+- **Objects (O)** — toggles objects;
+- **Splines (L)** — toggles splines.
+
+Move and rotate are **temporary in-memory previews**. The inspector reflects the new values, but no `.map` file is changed.
+
+The UI shows **Unsaved preview** while temporary transforms exist. The ↶ button discards all temporary transforms from the current session.
+
+Scale remains disabled at this stage because standard OMSI placed objects do not expose a general scale field equivalent to the position/rotation fields used by the editor.

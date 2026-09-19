@@ -1088,6 +1088,110 @@ export function App() {
       []
     );
 
+  useEffect(() => {
+    const handleKeyDown = (
+      event: KeyboardEvent
+    ) => {
+      const target =
+        event.target as
+          | HTMLElement
+          | null;
+
+      if (
+        target?.isContentEditable ||
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+
+      const key =
+        event.key.toLowerCase();
+
+      if (key === "q") {
+        setEditorTool("select");
+        return;
+      }
+
+      if (
+        key === "w" &&
+        selectedObject
+      ) {
+        setEditorTool("move");
+        return;
+      }
+
+      if (
+        key === "e" &&
+        selectedObject
+      ) {
+        setEditorTool("rotate");
+        return;
+      }
+
+      if (
+        key === "f" &&
+        (selectedObject ||
+          selectedSpline)
+      ) {
+        event.preventDefault();
+        requestCameraAction(
+          "focus"
+        );
+        return;
+      }
+
+      if (event.key === "Home") {
+        event.preventDefault();
+        requestCameraAction(
+          "fit"
+        );
+        return;
+      }
+
+      if (key === "g") {
+        setShowGrid(
+          (current) => !current
+        );
+        return;
+      }
+
+      if (key === "o") {
+        setShowObjects(
+          (current) => !current
+        );
+        return;
+      }
+
+      if (key === "l") {
+        setShowSplines(
+          (current) => !current
+        );
+        return;
+      }
+
+      if (event.key === "Escape") {
+        setEditorTool("select");
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+  }, [
+    requestCameraAction,
+    selectedObject,
+    selectedSpline
+  ]);
+
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
       setError(
@@ -2224,7 +2328,7 @@ export function App() {
             Global
           </span>
           <span className="toolbar-chip">
-            Perspectiva
+            Q/W/E · F · Home
           </span>
 
           <span className="toolbar-separator" />

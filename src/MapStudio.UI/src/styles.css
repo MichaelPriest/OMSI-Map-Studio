@@ -932,3 +932,14 @@ code {
   background: linear-gradient(180deg, #b85212, #82380f);
   color: #fff4e8;
 }
+
+
+.preview-warning {
+  border: 1px solid #a7611c;
+  background: #3b2411 !important;
+  color: #ffc778 !important;
+}
+
+.tool.active {
+  box-shadow: 0 0 0 1px rgb(83 160 255 / 24%);
+}

@@ -109,3 +109,23 @@ Depois que os tiles do mapa inteiro são lidos, a interface identifica os caminh
 O progresso aparece como **Modelos O3D carregados / modelos únicos**. Enquanto um modelo ainda não foi lido, suas posições continuam representadas por marcadores. Assim que a geometria chega, todos os objetos que usam aquele mesmo modelo passam a ser renderizados.
 
 O Babylon reutiliza a geometria e os materiais por modelo e cria clones/instâncias transformadas para cada posição do mapa. Isso evita duplicar buffers de vértices para centenas de objetos idênticos.
+
+
+## Ferramentas essenciais do editor
+
+A barra de ferramentas ativa nesta etapa possui:
+
+- **Selecionar (Q)** — seleciona objetos e splines;
+- **Mover (W)** — ativa o gizmo de posição para o objeto selecionado;
+- **Rotacionar (E)** — ativa o gizmo de rotação para o objeto selecionado;
+- **Focar seleção (F)** — centraliza a câmera no objeto ou spline selecionada;
+- **Enquadrar mapa (Home)** — retorna a câmera para o enquadramento geral;
+- **Grade (G)** — mostra/oculta a superfície e os limites dos tiles;
+- **Objetos (O)** — mostra/oculta objetos;
+- **Splines (L)** — mostra/oculta splines.
+
+Mover e rotacionar funcionam como **prévia temporária em memória**. O inspetor reflete os novos valores, mas nenhum arquivo `.map` é alterado.
+
+A interface mostra **Prévia não salva** enquanto houver transformações temporárias. O botão ↶ descarta todas as transformações temporárias da sessão atual.
+
+Escala continua desabilitada nesta etapa porque objetos posicionados do OMSI não possuem um campo geral de escala equivalente aos campos de posição/rotação usados pelo editor.
