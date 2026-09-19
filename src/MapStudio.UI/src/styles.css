@@ -1084,3 +1084,49 @@ code {
   color: #66849e;
   font-size: 9px;
 }
+
+
+.viewport-mode {
+  height: 23px;
+  padding: 0 7px;
+  border: 1px solid #173a57;
+  border-radius: 4px;
+  background: #081a28;
+  color: #7895ad;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.viewport-mode:hover {
+  border-color: #2b628d;
+  color: #cbdbea;
+}
+
+.viewport-mode.active {
+  border-color: #3278ad;
+  background: #0d2a40;
+  color: #d9ebfb;
+}
+
+.snap-field {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #6f8ca5;
+  font-size: 8px;
+}
+
+.snap-field input {
+  width: 45px;
+  height: 23px;
+  padding: 0 4px;
+  border: 1px solid #173a57;
+  border-radius: 4px;
+  background: #071725;
+  color: #c9dae9;
+  font-size: 8px;
+}
+
+.viewport-tool-state {
+  color: #7895ad;
+}

@@ -42,7 +42,11 @@ type EditorTool =
   | "rotate";
 
 type ViewportCameraAction = {
-  type: "fit" | "focus";
+  type:
+    | "fit"
+    | "focus"
+    | "perspective"
+    | "top";
   token: number;
 };
 
@@ -169,6 +173,22 @@ export function App() {
 
   const [showSplines, setShowSplines] =
     useState(true);
+
+  const [
+    cameraMode,
+    setCameraMode
+  ] = useState<
+    "perspective" | "top"
+  >("perspective");
+
+  const [snapEnabled, setSnapEnabled] =
+    useState(true);
+
+  const [moveSnap, setMoveSnap] =
+    useState(0.5);
+
+  const [rotationSnap, setRotationSnap] =
+    useState(5);
 
   const [
     cameraAction,
@@ -355,6 +375,7 @@ export function App() {
           setSelectingMap(false);
           setMapLoadMode("full");
           setEditorTool("select");
+          setCameraMode("perspective");
           setPreviewObjectTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
@@ -1470,7 +1491,13 @@ export function App() {
 
   const requestCameraAction =
     useCallback(
-      (type: "fit" | "focus") => {
+      (
+        type:
+          | "fit"
+          | "focus"
+          | "perspective"
+          | "top"
+      ) => {
         setCameraAction(
           (current) => ({
             type,
@@ -1543,6 +1570,29 @@ export function App() {
           handleSavePreviewEdits();
         }
 
+        return;
+      }
+
+      if (key === "1") {
+        setCameraMode(
+          "perspective"
+        );
+        requestCameraAction(
+          "perspective"
+        );
+        return;
+      }
+
+      if (key === "2") {
+        setCameraMode("top");
+        requestCameraAction("top");
+        return;
+      }
+
+      if (key === "n") {
+        setSnapEnabled(
+          (current) => !current
+        );
         return;
       }
 
@@ -2847,7 +2897,7 @@ export function App() {
             Global
           </span>
           <span className="toolbar-chip">
-            Q/W/E · F · Home · Ctrl+Z/Y/S
+            Q/W/E · 1/2 · N · F · Ctrl+Z/Y/S
           </span>
 
           <span className="toolbar-separator" />
@@ -3142,6 +3192,11 @@ export function App() {
               }
               splines={splines}
               editorTool={editorTool}
+              snapEnabled={snapEnabled}
+              moveSnap={moveSnap}
+              rotationSnap={
+                rotationSnap
+              }
               showGrid={showGrid}
               showObjects={showObjects}
               showSplines={showSplines}
@@ -3203,8 +3258,114 @@ export function App() {
             />
 
             <div className="viewport-toolbar">
-              <span>Perspectiva</span>
-              <span>
+              <button
+                type="button"
+                className={
+                  cameraMode ===
+                  "perspective"
+                    ? "viewport-mode active"
+                    : "viewport-mode"
+                }
+                onClick={() => {
+                  setCameraMode(
+                    "perspective"
+                  );
+                  requestCameraAction(
+                    "perspective"
+                  );
+                }}
+              >
+                Perspectiva · 1
+              </button>
+
+              <button
+                type="button"
+                className={
+                  cameraMode === "top"
+                    ? "viewport-mode active"
+                    : "viewport-mode"
+                }
+                onClick={() => {
+                  setCameraMode("top");
+                  requestCameraAction(
+                    "top"
+                  );
+                }}
+              >
+                Topo · 2
+              </button>
+
+              <button
+                type="button"
+                className={
+                  snapEnabled
+                    ? "viewport-mode active"
+                    : "viewport-mode"
+                }
+                onClick={() =>
+                  setSnapEnabled(
+                    (current) =>
+                      !current
+                  )
+                }
+                title="Alternar snap (N)"
+              >
+                Snap · N
+              </button>
+
+              <label className="snap-field">
+                <span>m</span>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.1"
+                  value={moveSnap}
+                  onChange={(event) => {
+                    const value =
+                      event.currentTarget
+                        .valueAsNumber;
+
+                    if (
+                      Number.isFinite(
+                        value
+                      ) &&
+                      value > 0
+                    ) {
+                      setMoveSnap(
+                        value
+                      );
+                    }
+                  }}
+                />
+              </label>
+
+              <label className="snap-field">
+                <span>°</span>
+                <input
+                  type="number"
+                  min="0.1"
+                  step="1"
+                  value={rotationSnap}
+                  onChange={(event) => {
+                    const value =
+                      event.currentTarget
+                        .valueAsNumber;
+
+                    if (
+                      Number.isFinite(
+                        value
+                      ) &&
+                      value > 0
+                    ) {
+                      setRotationSnap(
+                        value
+                      );
+                    }
+                  }}
+                />
+              </label>
+
+              <span className="viewport-tool-state">
                 Ferramenta:{" "}
                 {editorTool === "select"
                   ? "Selecionar"
@@ -3212,6 +3373,7 @@ export function App() {
                     ? "Mover"
                     : "Rotacionar"}
               </span>
+
               {previewEditCount > 0 && (
                 <span className="preview-warning">
                   Prévia não salva ·{" "}

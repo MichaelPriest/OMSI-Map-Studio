@@ -21,6 +21,9 @@ import type {
 type ViewportProps = {
   tiles: OmsiTile[];
   editorTool: "select" | "move" | "rotate";
+  snapEnabled: boolean;
+  moveSnap: number;
+  rotationSnap: number;
   showGrid: boolean;
   showObjects: boolean;
   showSplines: boolean;
@@ -939,6 +942,9 @@ function createMapObjectGeometry(
 export function Viewport({
   tiles,
   editorTool,
+  snapEnabled,
+  moveSnap,
+  rotationSnap,
   showGrid,
   showObjects,
   showSplines,
@@ -1005,6 +1011,21 @@ export function Viewport({
     camera.attachControl(canvas, true);
 
     if (
+      cameraAction?.type ===
+        "perspective"
+    ) {
+      camera.alpha =
+        -Math.PI / 2;
+      camera.beta =
+        Math.PI / 3;
+    } else if (
+      cameraAction?.type === "top"
+    ) {
+      camera.alpha =
+        -Math.PI / 2;
+      camera.beta =
+        0.01;
+    } else if (
       cameraAction?.type === "focus"
     ) {
       if (selectedObject) {
@@ -1355,6 +1376,31 @@ export function Viewport({
         .rotationGizmoEnabled =
         editorTool === "rotate";
 
+      if (
+        gizmoManager.gizmos
+          .positionGizmo
+      ) {
+        gizmoManager.gizmos
+          .positionGizmo
+          .snapDistance =
+          snapEnabled
+            ? moveSnap
+            : 0;
+      }
+
+      if (
+        gizmoManager.gizmos
+          .rotationGizmo
+      ) {
+        gizmoManager.gizmos
+          .rotationGizmo
+          .snapDistance =
+          snapEnabled
+            ? rotationSnap *
+              degreesToRadians
+            : 0;
+      }
+
       gizmoManager.attachToNode(
         editRoot
       );
@@ -1607,6 +1653,9 @@ export function Viewport({
   }, [
     tiles,
     editorTool,
+    snapEnabled,
+    moveSnap,
+    rotationSnap,
     showGrid,
     showObjects,
     showSplines,
