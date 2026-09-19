@@ -362,6 +362,9 @@ export function App() {
   const [showGrid, setShowGrid] =
     useState(true);
 
+  const [showTerrain, setShowTerrain] =
+    useState(true);
+
   const [showObjects, setShowObjects] =
     useState(true);
 
@@ -2846,7 +2849,10 @@ export function App() {
             : 0),
         terrainBytes:
           stats.terrainBytes +
-          tile.terrainFileSize
+          tile.terrainFileSize,
+        terrainDecoded:
+          stats.terrainDecoded +
+          (tile.terrain ? 1 : 0)
       }),
       {
         objects: 0,
@@ -2855,7 +2861,8 @@ export function App() {
         missingTiles: 0,
         terrainMarkers: 0,
         terrainFiles: 0,
-        terrainBytes: 0
+        terrainBytes: 0,
+        terrainDecoded: 0
       }
     );
   }, [activeTiles]);
@@ -2878,6 +2885,45 @@ export function App() {
         selectedMap
       ]
     );
+
+  const activeTerrainRange =
+    useMemo(() => {
+      const terrain =
+        activeTileDetails?.terrain;
+
+      if (
+        !terrain ||
+        terrain.heights.length === 0
+      ) {
+        return undefined;
+      }
+
+      let minimum =
+        Number.POSITIVE_INFINITY;
+      let maximum =
+        Number.NEGATIVE_INFINITY;
+
+      for (const height of
+        terrain.heights) {
+        minimum =
+          Math.min(
+            minimum,
+            height
+          );
+        maximum =
+          Math.max(
+            maximum,
+            height
+          );
+      }
+
+      return {
+        minimum,
+        maximum
+      };
+    }, [
+      activeTileDetails?.terrain
+    ]);
 
   const selectedSplineProfile =
     selectedSpline
@@ -5049,10 +5095,33 @@ export function App() {
           </dd>
         </div>
         <div>
+          <dt>Malha terrain</dt>
+          <dd>
+            {!activeTileDetails
+              ?.detailsLoaded
+              ? "Não carregado"
+              : activeTileDetails
+                  .terrain
+                ? `${activeTileDetails.terrain.cellCount}×${activeTileDetails.terrain.cellCount} células · ${activeTileDetails.terrain.heights.length} alturas`
+                : activeTileDetails
+                    .terrainFileExists
+                  ? "Formato não decodificado"
+                  : "Ausente"}
+          </dd>
+        </div>
+        <div>
+          <dt>Altitude terrain</dt>
+          <dd>
+            {activeTerrainRange
+              ? `${formatNumber(activeTerrainRange.minimum)} a ${formatNumber(activeTerrainRange.maximum)} m`
+              : "—"}
+          </dd>
+        </div>
+        <div>
           <dt>Terrenos (área)</dt>
           <dd>
             {selectedStats
-              ? `${selectedStats.terrainFiles}/${selectedStats.terrainMarkers} sidecars/marcadores · ${formatFileSize(
+              ? `${selectedStats.terrainDecoded}/${selectedStats.terrainFiles} malhas/sidecars · ${selectedStats.terrainMarkers} marcadores · ${formatFileSize(
                   selectedStats.terrainBytes
                 )}`
               : "Carregando..."}
@@ -6498,10 +6567,17 @@ export function App() {
                   </strong>
                 </div>
   
-                <div className="tree-node disabled">
+                <div className="tree-node">
                   <span>▧</span>
                   Terreno
-                  <small>em desenvolvimento</small>
+                  <strong>
+                    {activeTiles.filter(
+                      (tile) =>
+                        Boolean(
+                          tile.terrain
+                        )
+                    ).length}
+                  </strong>
                 </div>
   
                 <div className="tree-node disabled">
@@ -6899,6 +6975,7 @@ export function App() {
                 rotationSnap
               }
               showGrid={showGrid}
+              showTerrain={showTerrain}
               showObjects={showObjects}
               showSplines={showSplines}
               showSplineProfiles={
@@ -7535,10 +7612,19 @@ export function App() {
                 />
                 Nightmap
               </label>
-              <label className="muted">
+              <label>
                 <input
                   type="checkbox"
-                  disabled
+                  checked={showTerrain}
+                  disabled={
+                    selectedMap
+                      .usesWorldCoordinates
+                  }
+                  onChange={(event) =>
+                    setShowTerrain(
+                      event.target.checked
+                    )
+                  }
                 />
                 Terreno
               </label>
