@@ -56,6 +56,30 @@ public sealed class OmsiGroundTextureTests
             textures[1]);
     }
 
+    [Theory]
+    [InlineData(0, null)]
+    [InlineData(6, 64)]
+    [InlineData(7, 128)]
+    [InlineData(8, 256)]
+    [InlineData(9, 512)]
+    [InlineData(10, 1024)]
+    public void GroundTexture_ExposesExpectedMaskResolution(
+        int resolutionCode,
+        int? expected)
+    {
+        var texture =
+            new OmsiGroundTexture(
+                "main.bmp",
+                "detail.bmp",
+                resolutionCode,
+                1,
+                1);
+
+        Assert.Equal(
+            expected,
+            texture.MaskResolution);
+    }
+
     [Fact]
     public void ReadGroundTextures_SkipsMalformedLayer()
     {
