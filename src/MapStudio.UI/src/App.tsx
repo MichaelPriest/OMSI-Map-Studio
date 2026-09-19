@@ -202,6 +202,11 @@ export function App() {
     setLoadingGeometryFor
   ] = useState<string>();
 
+  const [
+    preloadingGeometryFor,
+    setPreloadingGeometryFor
+  ] = useState<string>();
+
   const [error, setError] =
     useState<string>();
 
@@ -221,6 +226,7 @@ export function App() {
           setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
+          setPreloadingGeometryFor(undefined);
           setSelectingRoot(false);
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
@@ -245,6 +251,7 @@ export function App() {
           setSplineProfilesByPath({});
           setSceneryMetadataByPath({});
           setGeometryByPath({});
+          setPreloadingGeometryFor(undefined);
           setSelectingMap(false);
           setMapLoadMode("full");
           setLoadingRegionKey(undefined);
@@ -466,6 +473,14 @@ export function App() {
               : current
           );
 
+          setPreloadingGeometryFor(
+            (current) =>
+              current ===
+              message.sceneryObjectPath
+                ? undefined
+                : current
+          );
+
           return;
         }
 
@@ -478,6 +493,7 @@ export function App() {
           setLoadingSplineFor(undefined);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
+          setPreloadingGeometryFor(undefined);
 
           setError(
             errorMessages[message.code] ??
@@ -632,6 +648,8 @@ export function App() {
         sceneryObjectPath
       ) ||
       loadingGeometryFor ===
+        sceneryObjectPath ||
+      preloadingGeometryFor ===
         sceneryObjectPath
     ) {
       return;
@@ -648,8 +666,88 @@ export function App() {
     bridgeAvailable,
     geometryByPath,
     loadingGeometryFor,
+    preloadingGeometryFor,
     selectedMap,
     selectedObject
+  ]);
+
+  const mapObjectPaths = useMemo(() => {
+    if (
+      mapLoadMode !== "full" ||
+      objects.length === 0
+    ) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(
+        objects.map(
+          (placedObject) =>
+            placedObject.sceneryObjectPath
+        )
+      )
+    );
+  }, [
+    mapLoadMode,
+    objects
+  ]);
+
+  const loadedMapGeometryCount =
+    useMemo(
+      () =>
+        mapObjectPaths.filter(
+          (path) =>
+            Object.hasOwn(
+              geometryByPath,
+              path
+            )
+        ).length,
+      [
+        geometryByPath,
+        mapObjectPaths
+      ]
+    );
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      mapLoadMode !== "full" ||
+      loadingFullMap ||
+      preloadingGeometryFor ||
+      mapObjectPaths.length === 0
+    ) {
+      return;
+    }
+
+    const nextPath =
+      mapObjectPaths.find(
+        (path) =>
+          !Object.hasOwn(
+            geometryByPath,
+            path
+          ) &&
+          loadingGeometryFor !== path
+      );
+
+    if (!nextPath) {
+      return;
+    }
+
+    setPreloadingGeometryFor(
+      nextPath
+    );
+
+    loadSceneryObjectGeometry(
+      nextPath
+    );
+  }, [
+    bridgeAvailable,
+    geometryByPath,
+    loadingFullMap,
+    loadingGeometryFor,
+    mapLoadMode,
+    mapObjectPaths,
+    preloadingGeometryFor
   ]);
 
   const activeTiles = useMemo(() => {
@@ -2051,6 +2149,17 @@ export function App() {
                 </strong>
               </div>
 
+              {mapLoadMode === "full" && (
+                <div className="tree-node">
+                  <span>◈</span>
+                  Modelos O3D
+                  <strong>
+                    {loadedMapGeometryCount}/
+                    {mapObjectPaths.length}
+                  </strong>
+                </div>
+              )}
+
               <div className="tree-node">
                 <span>⌇</span>
                 {mapLoadMode === "full"
@@ -2141,6 +2250,9 @@ export function App() {
               }
               selectedObject={selectedObject}
               selectedGeometry={selectedGeometry}
+              objectGeometryByPath={
+                geometryByPath
+              }
               selectedSpline={selectedSpline}
               selectedSplineProfile={
                 selectedSplineProfile
@@ -2230,8 +2342,10 @@ export function App() {
                 ? "Carregando mapa completo..."
                 : Boolean(loadingRegionKey)
                   ? "Carregando área..."
-                : loadingSplineFor
-                  ? "Lendo SLI..."
+                : preloadingGeometryFor
+                  ? `Carregando modelos O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}...`
+                  : loadingSplineFor
+                    ? "Lendo SLI..."
                   : loadingMetadataFor
                     ? "Lendo SCO..."
                     : loadingGeometryFor
@@ -2252,6 +2366,11 @@ export function App() {
             Splines:{" "}
             {selectedStats?.splines ??
               splines.length}
+            <b>·</b>
+            O3D:{" "}
+            {mapLoadMode === "full"
+              ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
+              : "sob demanda"}
             <b>·</b>
             Tiles:{" "}
             {activeTiles.length}/
