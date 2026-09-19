@@ -786,19 +786,8 @@ export function App() {
     selectingMap ||
     loadingFullMap ||
     Boolean(loadingRegionKey) ||
-    Boolean(loadingSplineFor) ||
-    Boolean(preloadingSplineProfileFor) ||
-    Boolean(loadingMetadataFor) ||
-    Boolean(loadingGeometryFor) ||
-    Boolean(preloadingGeometryFor) ||
     loadingSceneryLibrary ||
-    loadingSplineLibrary ||
-    Object.keys(
-      requestedGroundTextureKeys
-    ).length > 0 ||
-    Object.keys(
-      requestedTerrainMaskKeys
-    ).length > 0;
+    loadingSplineLibrary;
 
   useEffect(() => {
     if (!interactionLocked) {
@@ -3228,6 +3217,35 @@ export function App() {
       ]
     );
 
+  const renderableMapGeometryCount =
+    useMemo(
+      () =>
+        mapObjectPaths.filter(
+          (path) =>
+            geometryByPath[
+              path
+            ]?.meshes.some(
+              (mesh) =>
+                mesh.geometry.isLoaded &&
+                mesh.geometry.positions.length >
+                  0 &&
+                mesh.geometry.indices.length >
+                  0
+            )
+        ).length,
+      [
+        geometryByPath,
+        mapObjectPaths
+      ]
+    );
+
+  const failedMapGeometryCount =
+    Math.max(
+      0,
+      loadedMapGeometryCount -
+        renderableMapGeometryCount
+    );
+
   useEffect(() => {
     if (
       !bridgeAvailable ||
@@ -5312,75 +5330,6 @@ export function App() {
         title: "Carregando área ativa",
         detail:
           "Atualizando os tiles do modo desempenho 3×3. A edição será liberada quando a área estiver consistente."
-      };
-    }
-
-    if (preloadingGeometryFor) {
-      const fullMode =
-        mapLoadMode === "full";
-      const completed =
-        fullMode
-          ? loadedMapGeometryCount
-          : loadedNearbyGeometryCount;
-      const total =
-        fullMode
-          ? mapObjectPaths.length
-          : nearbyObjectPaths.length;
-
-      return {
-        title: "Preparando modelos 3D",
-        detail:
-          "Carregando a geometria O3D real necessária para o viewport.",
-        completed,
-        total
-      };
-    }
-
-    if (loadingGeometryFor) {
-      return {
-        title: "Carregando geometria O3D",
-        detail:
-          "Aguarde a leitura do modelo real antes de continuar a edição."
-      };
-    }
-
-    if (loadingMetadataFor) {
-      return {
-        title: "Lendo objeto SCO",
-        detail:
-          "Validando metadados e referências reais do objeto selecionado."
-      };
-    }
-
-    if (
-      loadingSplineFor ||
-      preloadingSplineProfileFor
-    ) {
-      return {
-        title: "Preparando perfis de spline",
-        detail:
-          mapLoadMode === "full"
-            ? "Lendo todos os perfis SLI reais usados pelo mapa completo."
-            : "Lendo os perfis SLI reais necessários para a área ativa.",
-        completed:
-          loadedSplineProfileCount,
-        total:
-          splinePathsForPreload.length
-      };
-    }
-
-    if (
-      Object.keys(
-        requestedGroundTextureKeys
-      ).length > 0 ||
-      Object.keys(
-        requestedTerrainMaskKeys
-      ).length > 0
-    ) {
-      return {
-        title: "Carregando terreno",
-        detail:
-          "Preparando texturas reais [groundtex] e máscaras DDS do terreno antes de liberar a edição."
       };
     }
 
@@ -8934,17 +8883,22 @@ export function App() {
                   ? "Carregando área..."
                 : preloadingGeometryFor
                   ? mapLoadMode === "full"
-                    ? `Carregando modelos O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}...`
-                    : `Carregando modelos O3D da área ${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}...`
-                  : loadingSplineFor
-                    ? "Lendo SLI..."
-                  : preloadingSplineProfileFor
-                    ? "Preparando perfis SLI próximos..."
-                  : loadingMetadataFor
-                    ? "Lendo SCO..."
-                    : loadingGeometryFor
-                    ? "Lendo geometria..."
-                    : "Pronto"}
+                    ? `Preparando recursos em segundo plano · O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}`
+                    : `Preparando recursos da área · O3D ${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`
+                  : loadingSplineFor ||
+                    preloadingSplineProfileFor
+                    ? `Preparando recursos em segundo plano · SLI ${loadedSplineProfileCount}/${splinePathsForPreload.length}`
+                  : loadingMetadataFor ||
+                    loadingGeometryFor
+                    ? "Preparando recurso selecionado em segundo plano..."
+                    : Object.keys(
+                          requestedGroundTextureKeys
+                        ).length > 0 ||
+                        Object.keys(
+                          requestedTerrainMaskKeys
+                        ).length > 0
+                      ? "Preparando texturas de terreno em segundo plano..."
+                      : "Pronto"}
           </span>
 
           <span>
@@ -8961,10 +8915,14 @@ export function App() {
             {selectedStats?.splines ??
               splines.length}
             <b>·</b>
-            O3D:{" "}
+            O3D reais:{" "}
             {mapLoadMode === "full"
-              ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
+              ? `${renderableMapGeometryCount}/${mapObjectPaths.length}`
               : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}
+            {mapLoadMode === "full" &&
+              failedMapGeometryCount > 0
+              ? ` (falhas: ${failedMapGeometryCount})`
+              : ""}
             <b>·</b>
             Perfis SLI:{" "}
             {Object.keys(
