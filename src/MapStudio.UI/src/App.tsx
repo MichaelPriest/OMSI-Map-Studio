@@ -8,6 +8,7 @@ import {
   isDesktopBridgeAvailable,
   loadMapFull,
   loadMapRegion,
+  loadSceneryLibrary,
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
@@ -15,6 +16,7 @@ import {
   selectMap,
   selectOmsiRoot,
   subscribeToHost,
+  type SceneryLibraryEntry,
   type OmsiMap,
   type OmsiPlacedObject,
   type OmsiPlacedSpline,
@@ -317,6 +319,30 @@ export function App() {
     setExplorerSearch
   ] = useState("");
 
+  const [
+    explorerPanelTab,
+    setExplorerPanelTab
+  ] = useState<
+    "map" | "library"
+  >("map");
+
+  const [
+    sceneryLibrary,
+    setSceneryLibrary
+  ] = useState<
+    SceneryLibraryEntry[]
+  >([]);
+
+  const [
+    librarySearch,
+    setLibrarySearch
+  ] = useState("");
+
+  const [
+    loadingSceneryLibrary,
+    setLoadingSceneryLibrary
+  ] = useState(false);
+
   const [saving, setSaving] =
     useState(false);
 
@@ -353,6 +379,10 @@ export function App() {
           setSaving(false);
           setSaveNotice(undefined);
           setExplorerSearch("");
+          setExplorerPanelTab("map");
+          setSceneryLibrary([]);
+          setLibrarySearch("");
+          setLoadingSceneryLibrary(false);
           setError(undefined);
           setView("map");
           return;
@@ -388,8 +418,22 @@ export function App() {
           setSaving(false);
           setSaveNotice(undefined);
           setExplorerSearch("");
+          setExplorerPanelTab("map");
           setError(undefined);
           setView("editor");
+          return;
+        }
+
+        if (
+          message.type ===
+          "sceneryLibraryLoaded"
+        ) {
+          setSceneryLibrary(
+            message.entries
+          );
+          setLoadingSceneryLibrary(
+            false
+          );
           return;
         }
 
@@ -646,6 +690,7 @@ export function App() {
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
           setPreloadingGeometryFor(undefined);
+          setLoadingSceneryLibrary(false);
           setSaving(false);
 
           setError(
@@ -1054,6 +1099,68 @@ export function App() {
     mapLoadMode,
     selectedMap
   ]);
+
+  const normalizedLibrarySearch =
+    librarySearch
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+
+  const filteredSceneryLibrary =
+    useMemo(() => {
+      const entries =
+        normalizedLibrarySearch
+          ? sceneryLibrary.filter(
+              (entry) =>
+                entry.fileName
+                  .toLocaleLowerCase(
+                    "pt-BR"
+                  )
+                  .includes(
+                    normalizedLibrarySearch
+                  ) ||
+                entry.sceneryObjectPath
+                  .toLocaleLowerCase(
+                    "pt-BR"
+                  )
+                  .includes(
+                    normalizedLibrarySearch
+                  )
+            )
+          : sceneryLibrary;
+
+      return entries.slice(
+        0,
+        300
+      );
+    }, [
+      normalizedLibrarySearch,
+      sceneryLibrary
+    ]);
+
+  const sceneryLibraryResultCount =
+    useMemo(() => {
+      if (!normalizedLibrarySearch) {
+        return sceneryLibrary.length;
+      }
+
+      return sceneryLibrary.filter(
+        (entry) =>
+          (
+            entry.fileName +
+            " " +
+            entry.sceneryObjectPath
+          )
+            .toLocaleLowerCase(
+              "pt-BR"
+            )
+            .includes(
+              normalizedLibrarySearch
+            )
+      ).length;
+    }, [
+      normalizedLibrarySearch,
+      sceneryLibrary
+    ]);
 
   const selectedStats = useMemo(() => {
     if (
@@ -1683,6 +1790,38 @@ export function App() {
     selectedObject,
     selectedSpline
   ]);
+
+  const handleExplorerPanelTab =
+    useCallback(
+      (tab: "map" | "library") => {
+        setExplorerPanelTab(tab);
+
+        if (
+          tab === "library" &&
+          sceneryLibrary.length === 0 &&
+          !loadingSceneryLibrary
+        ) {
+          if (!bridgeAvailable) {
+            setError(
+              "Abra a Biblioteca pelo aplicativo desktop OMSI Map Studio."
+            );
+            return;
+          }
+
+          setLoadingSceneryLibrary(
+            true
+          );
+
+          setError(undefined);
+          loadSceneryLibrary();
+        }
+      },
+      [
+        bridgeAvailable,
+        loadingSceneryLibrary,
+        sceneryLibrary.length
+      ]
+    );
 
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
@@ -3005,15 +3144,35 @@ export function App() {
             <div className="explorer-tabs">
               <button
                 type="button"
-                className="active"
+                className={
+                  explorerPanelTab ===
+                  "map"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  handleExplorerPanelTab(
+                    "map"
+                  )
+                }
               >
                 Explorador
               </button>
               <button
                 type="button"
-                disabled
+                className={
+                  explorerPanelTab ===
+                  "library"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  handleExplorerPanelTab(
+                    "library"
+                  )
+                }
               >
-                Camadas
+                Biblioteca
               </button>
               <button
                 type="button"
@@ -3023,164 +3182,228 @@ export function App() {
               </button>
             </div>
 
-            <div className="explorer-tree">
-              <div className="tree-root">
-                <span>▾</span>
-                <strong>
-                  {selectedMap.displayName}
-                </strong>
-              </div>
-
-              <div className="tree-node active">
-                <span>▣</span>
-                {mapLoadMode === "full"
-                  ? "Objetos"
-                  : "Objetos (área)"}
-                <strong>
-                  {selectedStats?.objects ??
-                    objects.length}
-                </strong>
-              </div>
-
-              {mapLoadMode === "full" && (
-                <div className="tree-node">
-                  <span>◈</span>
-                  Modelos O3D
+            {explorerPanelTab === "map" ? (
+              <>
+              <div className="explorer-tree">
+                <div className="tree-root">
+                  <span>▾</span>
                   <strong>
-                    {loadedMapGeometryCount}/
-                    {mapObjectPaths.length}
+                    {selectedMap.displayName}
                   </strong>
                 </div>
-              )}
-
-              <div className="tree-node">
-                <span>⌇</span>
-                {mapLoadMode === "full"
-                  ? "Splines"
-                  : "Splines (área)"}
-                <strong>
-                  {selectedStats?.splines ??
-                    splines.length}
-                </strong>
+  
+                <div className="tree-node active">
+                  <span>▣</span>
+                  {mapLoadMode === "full"
+                    ? "Objetos"
+                    : "Objetos (área)"}
+                  <strong>
+                    {selectedStats?.objects ??
+                      objects.length}
+                  </strong>
+                </div>
+  
+                {mapLoadMode === "full" && (
+                  <div className="tree-node">
+                    <span>◈</span>
+                    Modelos O3D
+                    <strong>
+                      {loadedMapGeometryCount}/
+                      {mapObjectPaths.length}
+                    </strong>
+                  </div>
+                )}
+  
+                <div className="tree-node">
+                  <span>⌇</span>
+                  {mapLoadMode === "full"
+                    ? "Splines"
+                    : "Splines (área)"}
+                  <strong>
+                    {selectedStats?.splines ??
+                      splines.length}
+                  </strong>
+                </div>
+  
+                <div className="tree-node disabled">
+                  <span>▧</span>
+                  Terreno
+                  <small>em desenvolvimento</small>
+                </div>
+  
+                <div className="tree-node disabled">
+                  <span>◩</span>
+                  Texturas
+                  <small>em desenvolvimento</small>
+                </div>
+  
+                <div className="tree-node disabled">
+                  <span>◎</span>
+                  Rotas
+                  <small>em desenvolvimento</small>
+                </div>
+  
+                <div className="tree-node">
+                  <span>□</span>
+                  Tiles totais
+                  <strong>
+                    {selectedMap.tiles.length}
+                  </strong>
+                </div>
               </div>
-
-              <div className="tree-node disabled">
-                <span>▧</span>
-                Terreno
-                <small>em desenvolvimento</small>
+  
+              <div className="explorer-search">
+                <input
+                  type="search"
+                  placeholder="Buscar objeto, ID ou tile..."
+                  value={explorerSearch}
+                  onChange={(event) =>
+                    setExplorerSearch(
+                      event.target.value
+                    )
+                  }
+                />
+                <span>
+                  {explorerObjectResultCount}
+                  {" "}resultado(s)
+                  {explorerObjectResultCount > 250
+                    ? " · mostrando 250"
+                    : ""}
+                </span>
               </div>
-
-              <div className="tree-node disabled">
-                <span>◩</span>
-                Texturas
-                <small>em desenvolvimento</small>
-              </div>
-
-              <div className="tree-node disabled">
-                <span>◎</span>
-                Rotas
-                <small>em desenvolvimento</small>
-              </div>
-
-              <div className="tree-node">
-                <span>□</span>
-                Tiles totais
-                <strong>
-                  {selectedMap.tiles.length}
-                </strong>
-              </div>
-            </div>
-
-            <div className="explorer-search">
-              <input
-                type="search"
-                placeholder="Buscar objeto, ID ou tile..."
-                value={explorerSearch}
-                onChange={(event) =>
-                  setExplorerSearch(
-                    event.target.value
-                  )
-                }
-              />
-              <span>
-                {explorerObjectResultCount}
-                {" "}resultado(s)
-                {explorerObjectResultCount > 250
-                  ? " · mostrando 250"
-                  : ""}
-              </span>
-            </div>
-
-            <div className="explorer-object-list">
-              {filteredExplorerObjects.map(
-                (placedObject) => {
-                  const key =
-                    getPlacedObjectKey(
-                      placedObject
+  
+              <div className="explorer-object-list">
+                {filteredExplorerObjects.map(
+                  (placedObject) => {
+                    const key =
+                      getPlacedObjectKey(
+                        placedObject
+                      );
+  
+                    const isSelected =
+                      selectedObject &&
+                      getPlacedObjectKey(
+                        selectedObject
+                      ) === key;
+  
+                    const hasPreview =
+                      Object.hasOwn(
+                        previewObjectTransforms,
+                        key
+                      );
+  
+                    return (
+                      <button
+                        type="button"
+                        className={
+                          isSelected
+                            ? "explorer-object active"
+                            : "explorer-object"
+                        }
+                        key={key}
+                        onClick={() => {
+                          handleObjectSelection(
+                            placedObject
+                          );
+  
+                          requestCameraAction(
+                            "focus"
+                          );
+                        }}
+                      >
+                        <span
+                          className="explorer-object-name"
+                          title={
+                            placedObject.sceneryObjectPath
+                          }
+                        >
+                          {getObjectName(
+                            placedObject
+                              .sceneryObjectPath
+                          )}
+                        </span>
+                        <small>
+                          #{placedObject.objectId}
+                          {" · "}
+                          {placedObject.tileX},
+                          {placedObject.tileY}
+                          {hasPreview
+                            ? " · alterado"
+                            : ""}
+                        </small>
+                      </button>
                     );
+                  }
+                )}
+  
+                {filteredExplorerObjects.length ===
+                  0 && (
+                  <div className="explorer-empty">
+                    Nenhum objeto encontrado.
+                  </div>
+                )}
+  
+              </>
+            ) : (
+              <div className="scenery-library-panel">
+                <div className="explorer-search">
+                  <input
+                    type="search"
+                    placeholder="Buscar .sco na instalação..."
+                    value={librarySearch}
+                    onChange={(event) =>
+                      setLibrarySearch(
+                        event.target.value
+                      )
+                    }
+                  />
+                  <span>
+                    {loadingSceneryLibrary
+                      ? "Lendo Sceneryobjects..."
+                      : `${sceneryLibraryResultCount} objeto(s)${sceneryLibraryResultCount > 300 ? " · mostrando 300" : ""}`}
+                  </span>
+                </div>
 
-                  const isSelected =
-                    selectedObject &&
-                    getPlacedObjectKey(
-                      selectedObject
-                    ) === key;
-
-                  const hasPreview =
-                    Object.hasOwn(
-                      previewObjectTransforms,
-                      key
-                    );
-
-                  return (
-                    <button
-                      type="button"
-                      className={
-                        isSelected
-                          ? "explorer-object active"
-                          : "explorer-object"
-                      }
-                      key={key}
-                      onClick={() => {
-                        handleObjectSelection(
-                          placedObject
-                        );
-
-                        requestCameraAction(
-                          "focus"
-                        );
-                      }}
-                    >
-                      <span
-                        className="explorer-object-name"
-                        title={
-                          placedObject.sceneryObjectPath
+                <div className="scenery-library-list">
+                  {filteredSceneryLibrary.map(
+                    (entry) => (
+                      <div
+                        className="scenery-library-entry"
+                        key={
+                          entry.sceneryObjectPath
                         }
                       >
-                        {getObjectName(
-                          placedObject
-                            .sceneryObjectPath
-                        )}
-                      </span>
-                      <small>
-                        #{placedObject.objectId}
-                        {" · "}
-                        {placedObject.tileX},
-                        {placedObject.tileY}
-                        {hasPreview
-                          ? " · alterado"
-                          : ""}
-                      </small>
-                    </button>
-                  );
-                }
-              )}
+                        <strong
+                          title={
+                            entry.sceneryObjectPath
+                          }
+                        >
+                          {entry.fileName}
+                        </strong>
+                        <span>
+                          {entry.sceneryObjectPath}
+                        </span>
+                        <button
+                          type="button"
+                          disabled
+                          title="Inserção de novos objetos será habilitada após a escrita segura de novos blocos [object]."
+                        >
+                          Inserir
+                        </button>
+                      </div>
+                    )
+                  )}
 
-              {filteredExplorerObjects.length ===
-                0 && (
-                <div className="explorer-empty">
-                  Nenhum objeto encontrado.
+                  {!loadingSceneryLibrary &&
+                    filteredSceneryLibrary.length ===
+                      0 && (
+                      <div className="explorer-empty">
+                        Nenhum arquivo .sco encontrado.
+                      </div>
+                    )}
                 </div>
-              )}
+              </div>
+            )}
             </div>
           </aside>
 
