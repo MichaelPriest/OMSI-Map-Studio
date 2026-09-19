@@ -808,15 +808,23 @@ public partial class MainWindow : Window
 
         try
         {
-            var freshContents =
-                await ReadMapContentsFreshAsync(
+            var snapshot =
+                await ReadMapInsertionSnapshotAsync(
                     map);
 
-            var analysis =
+            var contentAnalysis =
                 OmsiObjectInsertionAnalyzer
                     .Analyze(
-                        freshContents,
+                        snapshot.Contents,
                         sceneryObjectPath);
+
+            var analysis =
+                new OmsiObjectInsertionAnalysis(
+                    Math.Max(
+                        contentAnalysis.MaxUsedId,
+                        snapshot.MaxUsedId),
+                    contentAnalysis
+                        .MatchingObjectTemplate);
 
             var template =
                 analysis
@@ -966,8 +974,8 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task<IReadOnlyList<OmsiTileContent>>
-        ReadMapContentsFreshAsync(
+    private async Task<MapInsertionSnapshot>
+        ReadMapInsertionSnapshotAsync(
             OmsiMapDescriptor map)
     {
         using var semaphore =
@@ -992,16 +1000,30 @@ public partial class MainWindow : Window
                             .TryResolveTilePath(
                                 map.DirectoryPath,
                                 tile.RelativeMapPath,
-                                out var path))
+                                out var path) ||
+                            !File.Exists(path))
                         {
-                            return
-                                OmsiTileContent
-                                    .Missing;
+                            return (
+                                Content:
+                                    OmsiTileContent
+                                        .Missing,
+                                MaxUsedId: 0);
                         }
 
-                        return await _tileReader
-                            .ReadContentAsync(
-                                path);
+                        var document =
+                            await OmsiConfigParser
+                                .ParseFileAsync(
+                                    path);
+
+                        return (
+                            Content:
+                                OmsiTileReader
+                                    .ReadContent(
+                                        document),
+                            MaxUsedId:
+                                OmsiTileElementIdScanner
+                                    .FindMaxUsedId(
+                                        document));
                     }
                     finally
                     {
@@ -1010,8 +1032,19 @@ public partial class MainWindow : Window
                 })
                 .ToArray();
 
-        return await Task.WhenAll(
-            tasks);
+        var results =
+            await Task.WhenAll(
+                tasks);
+
+        return new MapInsertionSnapshot(
+            results
+                .Select(result =>
+                    result.Content)
+                .ToArray(),
+            results.Length == 0
+                ? 0
+                : results.Max(result =>
+                    result.MaxUsedId));
     }
 
     private async Task SaveObjectTransformsAsync(
@@ -2053,6 +2086,10 @@ public partial class MainWindow : Window
                 out value) &&
             double.IsFinite(value);
     }
+
+    private sealed record MapInsertionSnapshot(
+        IReadOnlyList<OmsiTileContent> Contents,
+        int MaxUsedId);
 
     private sealed record SceneryLibraryEntry(
         string SceneryObjectPath,

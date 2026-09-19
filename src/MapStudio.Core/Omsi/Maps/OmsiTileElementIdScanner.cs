@@ -15,7 +15,9 @@ public static class OmsiTileElementIdScanner
                 ["object"] = 2,
                 ["attachObj"] = 2,
                 ["splineAttachement"] = 2,
+                ["splineAttachment"] = 2,
                 ["splineAttachement_repeater"] = 4,
+                ["splineAttachment_repeater"] = 4,
                 ["spline"] = 2,
                 ["spline_h"] = 2
             };

@@ -21,6 +21,16 @@ public sealed class OmsiTileReader
                 tilePath,
                 cancellationToken);
 
+        return ReadContent(
+            document);
+    }
+
+    public static OmsiTileContent ReadContent(
+        OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
         var attachmentCount =
             document.FindSections("splineAttachement").Count() +
             document.FindSections("splineAttachment").Count();
