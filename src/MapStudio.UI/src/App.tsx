@@ -5803,7 +5803,9 @@ export function App() {
                             ? "base"
                             : activeMask
                               ? maskAsset?.exists
-                                ? `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"}`
+                                ? maskAsset.alphaOnly === true
+                                  ? `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"} · validada`
+                                  : `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"} · não renderizada`
                                 : "máscara presente"
                               : "sem máscara no tile"}
                         </small>
