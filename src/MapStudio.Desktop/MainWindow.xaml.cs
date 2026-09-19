@@ -35,6 +35,15 @@ public partial class MainWindow : Window
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
+    private readonly SemaphoreSlim
+        _geometryReadSemaphore =
+            new(
+                Math.Min(
+                    MaxConcurrentGeometryReads,
+                    Math.Max(
+                        1,
+                        Environment.ProcessorCount)));
+
     private IReadOnlyDictionary<string, OmsiMapDescriptor> _knownMaps =
         new Dictionary<string, OmsiMapDescriptor>(
             StringComparer.OrdinalIgnoreCase);
@@ -4633,8 +4642,22 @@ public partial class MainWindow : Window
                 path =>
                     Task.Run(
                         async () =>
-                            await BuildSceneryGeometryAsync(
-                                path)));
+                        {
+                            await _geometryReadSemaphore
+                                .WaitAsync();
+
+                            try
+                            {
+                                return await
+                                    BuildSceneryGeometryAsync(
+                                        path);
+                            }
+                            finally
+                            {
+                                _geometryReadSemaphore
+                                    .Release();
+                            }
+                        }));
 
         try
         {
