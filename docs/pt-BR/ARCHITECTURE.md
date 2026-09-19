@@ -579,3 +579,16 @@ Há duas conversões diferentes e elas não devem ser misturadas:
 
 Portanto, transforms locais de mesh permanecem em X/Y/Z nativos. Trocar Y/Z nessa camada desloca componentes de objetos compostos e faz rotações locais acontecerem no eixo errado. A conversão Z-up → Y-up ocorre somente no container de colocação do objeto no mapa.
 
+
+
+## Overrides de material OMSI e transparência
+
+O preview deve reproduzir a forma como o OMSI associa comandos `[matl]` aos materiais do O3D:
+
+- o nome da textura é a chave principal;
+- o segundo valor de `[matl]` é o índice da ocorrência daquela mesma textura, começando em zero, e não o índice absoluto do slot de material O3D;
+- `[matl_alpha]` usa o canal alpha da textura difusa conforme o modo 0/1/2;
+- `[matl_transmap]` estático deve ser carregado como máscara de opacidade separada;
+- referências dinâmicas como `\S:1` não são nomes de arquivo e não devem gerar `textureNotFound`.
+
+Essa distinção é necessária para objetos com materiais repetidos, cruzamentos, placas, vegetação de fundo e outros planos recortados por alpha.

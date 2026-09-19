@@ -579,3 +579,16 @@ There are two distinct coordinate conversions and they must not be mixed:
 
 Local mesh transforms therefore stay on their native X/Y/Z axes. Swapping Y/Z at this layer displaces parts of compound objects and rotates them around the wrong local axis. Z-up → Y-up conversion happens only on the map-placement object container.
 
+
+
+## OMSI material overrides and transparency
+
+The preview must reproduce the way OMSI associates `[matl]` commands with O3D materials:
+
+- the texture name is the primary key;
+- the second `[matl]` value is the zero-based occurrence index of that same texture name, not the absolute O3D material-slot index;
+- `[matl_alpha]` uses the diffuse texture alpha channel according to mode 0/1/2;
+- a static `[matl_transmap]` must be loaded as a separate opacity mask;
+- dynamic references such as `\S:1` are not file names and must not produce `textureNotFound`.
+
+This distinction is required for repeated-material objects, crossings, signs, forest backdrops, and other alpha-cutout planes.
