@@ -198,7 +198,8 @@ public sealed class OmsiMapCatalog
             directory,
             globalConfigPath,
             UsesWorldCoordinates(document),
-            ReadTiles(document));
+            ReadTiles(document),
+            ReadGroundTextures(document));
     }
 
     private static bool IsRecoverableMapError(
@@ -215,6 +216,69 @@ public sealed class OmsiMapCatalog
 
         return document.FindFirstSection(
             "worldcoordinates") is not null;
+    }
+
+    public static IReadOnlyList<OmsiGroundTexture>
+        ReadGroundTextures(
+            OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        var textures =
+            new List<OmsiGroundTexture>();
+
+        foreach (
+            var section in
+                document.FindSections(
+                    "groundtex"))
+        {
+            var values =
+                section.DataLines
+                    .Take(5)
+                    .ToArray();
+
+            if (
+                values.Length < 5 ||
+                string.IsNullOrWhiteSpace(
+                    values[0]) ||
+                string.IsNullOrWhiteSpace(
+                    values[1]) ||
+                !int.TryParse(
+                    values[2],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var resolutionCode) ||
+                !double.TryParse(
+                    values[3],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var mainRepeating) ||
+                !double.IsFinite(
+                    mainRepeating) ||
+                mainRepeating <= 0 ||
+                !double.TryParse(
+                    values[4],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var detailRepeating) ||
+                !double.IsFinite(
+                    detailRepeating) ||
+                detailRepeating <= 0)
+            {
+                continue;
+            }
+
+            textures.Add(
+                new OmsiGroundTexture(
+                    values[0],
+                    values[1],
+                    resolutionCode,
+                    mainRepeating,
+                    detailRepeating));
+        }
+
+        return textures;
     }
 
     public static IReadOnlyList<OmsiTileReference> ReadTiles(
