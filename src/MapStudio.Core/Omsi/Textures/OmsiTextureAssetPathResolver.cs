@@ -352,23 +352,70 @@ public static class OmsiTextureAssetPathResolver
             foreach (var baseDirectory in
                 baseDirectories)
             {
-                var candidate =
-                    Path.GetFullPath(
-                        Path.Combine(
-                            baseDirectory,
-                            normalized));
-
-                if (
-                    !candidate.StartsWith(
+                if (TryResolveFromBaseDirectory(
+                        root,
                         requiredPrefix,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    !File.Exists(candidate))
+                        baseDirectory,
+                        normalized,
+                        out fullPath))
                 {
-                    continue;
+                    return true;
                 }
+            }
 
-                fullPath = candidate;
-                return true;
+            // OMSI content frequently references a legacy BMP/TGA name
+            // while shipping a DDS replacement. It also commonly stores
+            // shared textures in a parent pack's Texture directory.
+            // Walk upward, but never outside the selected OMSI asset root.
+            foreach (var baseDirectory in
+                baseDirectories)
+            {
+                var current =
+                    Path.GetFullPath(
+                        baseDirectory);
+
+                while (
+                    IsInsideRoot(
+                        current,
+                        root,
+                        requiredPrefix))
+                {
+                    if (
+                        TryResolveFromBaseDirectory(
+                            root,
+                            requiredPrefix,
+                            current,
+                            normalized,
+                            out fullPath) ||
+                        TryResolveFromBaseDirectory(
+                            root,
+                            requiredPrefix,
+                            Path.Combine(
+                                current,
+                                "Texture"),
+                            normalized,
+                            out fullPath))
+                    {
+                        return true;
+                    }
+
+                    var parent =
+                        Directory.GetParent(
+                            current);
+
+                    if (
+                        parent is null ||
+                        string.Equals(
+                            parent.FullName,
+                            current,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        break;
+                    }
+
+                    current =
+                        parent.FullName;
+                }
             }
 
             return false;
@@ -381,4 +428,96 @@ public static class OmsiTextureAssetPathResolver
             return false;
         }
     }
+
+    private static bool
+        TryResolveFromBaseDirectory(
+            string root,
+            string requiredPrefix,
+            string baseDirectory,
+            string normalizedTextureName,
+            out string fullPath)
+    {
+        fullPath = string.Empty;
+
+        var exactCandidate =
+            Path.GetFullPath(
+                Path.Combine(
+                    baseDirectory,
+                    normalizedTextureName));
+
+        if (
+            TryAcceptCandidate(
+                root,
+                requiredPrefix,
+                exactCandidate,
+                out fullPath))
+        {
+            return true;
+        }
+
+        var extension =
+            Path.GetExtension(
+                normalizedTextureName);
+
+        if (
+            string.Equals(
+                extension,
+                ".dds",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var ddsName =
+            Path.ChangeExtension(
+                normalizedTextureName,
+                ".dds");
+
+        var ddsCandidate =
+            Path.GetFullPath(
+                Path.Combine(
+                    baseDirectory,
+                    ddsName));
+
+        return TryAcceptCandidate(
+            root,
+            requiredPrefix,
+            ddsCandidate,
+            out fullPath);
+    }
+
+    private static bool
+        TryAcceptCandidate(
+            string root,
+            string requiredPrefix,
+            string candidate,
+            out string fullPath)
+    {
+        fullPath = string.Empty;
+
+        if (
+            !IsInsideRoot(
+                candidate,
+                root,
+                requiredPrefix) ||
+            !File.Exists(candidate))
+        {
+            return false;
+        }
+
+        fullPath = candidate;
+        return true;
+    }
+
+    private static bool IsInsideRoot(
+        string candidate,
+        string root,
+        string requiredPrefix) =>
+        string.Equals(
+            candidate,
+            root,
+            StringComparison.OrdinalIgnoreCase) ||
+        candidate.StartsWith(
+            requiredPrefix,
+            StringComparison.OrdinalIgnoreCase);
 }
