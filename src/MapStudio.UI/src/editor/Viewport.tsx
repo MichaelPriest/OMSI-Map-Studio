@@ -261,11 +261,26 @@ function createMeshFromVertexData(
     texture.wrapV =
       Texture.WRAP_ADDRESSMODE;
 
+    // Ground layer 0 is opaque. Browser-decodable formats such as
+    // BMP/PNG/JPEG must not be forced through Babylon's plugin loader path;
+    // createTextureFromAsset only forces DDS/TGA now. Keep the terrain
+    // preview albedo-oriented so an arbitrary editor light cannot darken the
+    // real OMSI texture into an almost black surface.
+    texture.hasAlpha = false;
+
     material.diffuseColor =
       Color3.White();
 
     material.diffuseTexture =
       texture;
+
+    material.useAlphaFromDiffuseTexture =
+      false;
+
+    material.transparencyMode =
+      Material.MATERIAL_OPAQUE;
+
+    material.disableLighting = true;
   }
 
   mesh.material = material;
@@ -665,6 +680,10 @@ function createTileSurface(
 
     material.diffuseTexture =
       mainTexture;
+
+    // Terrain paint should display the source albedo and validated A8 mask,
+    // not an approximation produced by the editor light.
+    material.disableLighting = true;
 
     if (maskTexture) {
       material.opacityTexture =
@@ -1254,14 +1273,21 @@ function createTextureFromAsset(
     asset.mimeType ??
     "application/octet-stream";
 
+  const forcedExtension =
+    asset.extension === ".dds" ||
+    asset.extension === ".tga"
+      ? asset.extension
+      : undefined;
+
   const texture =
     new Texture(
       `data:${mimeType};base64,${asset.base64Data}`,
       scene,
-      {
-        forcedExtension:
-          asset.extension
-      }
+      forcedExtension
+        ? {
+            forcedExtension
+          }
+        : undefined
     );
 
   texture.hasAlpha = true;
