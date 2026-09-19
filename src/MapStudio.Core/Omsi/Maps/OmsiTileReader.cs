@@ -186,11 +186,10 @@ public sealed class OmsiTileReader
             }
 
             masks.Add(
-                new OmsiTerrainTextureMask(
-                    layerIndex,
-                    fileName,
-                    new FileInfo(
-                        path).Length));
+                new OmsiTerrainTextureMaskReader()
+                    .Read(
+                        layerIndex,
+                        path));
         }
 
         return masks
