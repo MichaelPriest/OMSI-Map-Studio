@@ -308,6 +308,10 @@ export type HostMessage =
       geometry: OmsiSceneryObjectGeometry;
     }
   | {
+      type: "fullScreenChanged";
+      enabled: boolean;
+    }
+  | {
       type: "hostError";
       code: string;
       detail?: string;
@@ -348,6 +352,15 @@ export function selectOmsiRoot() {
 export function selectMap() {
   getWebView()?.postMessage({
     type: "selectMap"
+  });
+}
+
+export function setFullScreen(
+  enabled: boolean
+) {
+  getWebView()?.postMessage({
+    type: "setFullScreen",
+    enabled
   });
 }
 
