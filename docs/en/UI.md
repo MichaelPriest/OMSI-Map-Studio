@@ -322,3 +322,12 @@ When a selected object uses textured O3D materials, Map Studio requests only tex
 BMP, PNG, JPG/JPEG, GIF, WebP, DDS and TGA are resolved inside the real OMSI installation. DDS/TGA use Babylon loaders. A missing file, unsafe path, or texture larger than 16 MiB leaves the existing O3D/profile material color in place instead of inventing a fake image.
 
 Loaded textures are cached in React and can also appear on other instances of the same object/spline during the session.
+
+
+## Texture state in the inspector
+
+The object **Materials** tab now shows the real asset state per material: **Loaded**, **Loading**, **Missing file**, **Over 16 MiB**, **Access denied**, **Read failure**, or **No texture**. When loaded, the real file extension is also shown.
+
+The spline **Profile** panel exposes the same state next to every surface. This makes it possible to distinguish geometry with no declared texture from a texture declared by O3D/`.sli` that could not be resolved.
+
+Old “Read only” UI labels were removed: Alpha.3 operates in **preservation-safe editing** mode within the documented limitations.

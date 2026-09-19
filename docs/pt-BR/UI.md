@@ -322,3 +322,12 @@ Ao selecionar um objeto com material O3D texturizado, o Map Studio solicita some
 BMP, PNG, JPG/JPEG, GIF, WebP, DDS e TGA são resolvidos dentro da instalação real do OMSI. DDS/TGA usam os loaders do Babylon. Arquivo ausente, caminho inseguro ou textura acima de 16 MiB mantém o material com a cor O3D/perfil já existente em vez de criar uma imagem fake.
 
 As texturas carregadas ficam em cache no React e podem aparecer também em outras instâncias do mesmo objeto/spline enquanto a sessão estiver aberta.
+
+
+## Estado das texturas no inspetor
+
+A aba **Materiais** de objetos mostra agora o estado do asset real por material: **Carregada**, **Carregando**, **Arquivo ausente**, **Acima de 16 MiB**, **Acesso negado**, **Falha de leitura** ou **Sem textura**. Quando carregada, a extensão real também aparece.
+
+O painel **Perfil** de splines apresenta o mesmo estado ao lado de cada superfície. Isso permite distinguir imediatamente uma geometria sem textura declarada de uma textura que existe no `.sli`/O3D mas não pôde ser resolvida.
+
+Os textos antigos de “Somente leitura” foram removidos da interface: a Alpha.3 trabalha em modo de **edição preservativa** dentro das limitações documentadas.

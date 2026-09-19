@@ -184,3 +184,12 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. start object and spline placements and verify cached textures are reused;
 5. use a missing texture reference and verify fallback to material color without a fake placeholder;
 6. verify paths escaping `Sceneryobjects`/`Splines` are never loaded.
+
+
+## Material-state test
+
+1. select an object with multiple materials;
+2. open **Materials** and verify every declared texture shows its own state;
+3. validate a found real texture and confirm **Loaded · EXT**;
+4. test a missing reference and confirm **Missing file** without breaking geometry;
+5. select a textured spline and verify the same state appears in **Profile**.

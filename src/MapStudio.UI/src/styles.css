@@ -1341,3 +1341,48 @@ code {
 .library-entry-actions > button {
   flex: 1;
 }
+
+
+.texture-state {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 5px;
+  border: 1px solid #284760;
+  border-radius: 999px;
+  background: #0b1d2b;
+  color: #7592aa !important;
+  font-size: 8px !important;
+  line-height: 1.2;
+}
+
+.texture-state.loaded {
+  border-color: #286b44;
+  background: #0c2a1b;
+  color: #72d99a !important;
+}
+
+.texture-state.loading {
+  border-color: #315d88;
+  background: #0b243a;
+  color: #85b9ec !important;
+}
+
+.texture-state.error {
+  border-color: #7c3d45;
+  background: #30171b;
+  color: #eaa0a7 !important;
+}
+
+.spline-surface-row > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spline-surface-row small {
+  color: #6b8aa4;
+  font-size: 8px;
+}

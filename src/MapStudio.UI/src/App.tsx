@@ -2135,23 +2135,122 @@ export function App() {
   }, [selectedGeometry]);
 
   const materialRows = useMemo(() => {
-    if (!selectedGeometry) {
+    if (
+      !selectedGeometry ||
+      !selectedObject
+    ) {
       return [];
     }
 
     return selectedGeometry.meshes.flatMap(
       (mesh) =>
         mesh.geometry.materials.map(
-          (material, index) => ({
-            mesh: getObjectName(
-              mesh.declaredPath
-            ),
-            index,
-            material
-          })
+          (material, index) => {
+            const textureKey =
+              material.textureName
+                ? getSceneryTextureAssetKey(
+                    selectedObject
+                      .sceneryObjectPath,
+                    mesh.declaredPath,
+                    material.textureName
+                  )
+                : undefined;
+
+            return {
+              mesh: getObjectName(
+                mesh.declaredPath
+              ),
+              meshPath:
+                mesh.declaredPath,
+              index,
+              material,
+              textureAsset:
+                textureKey
+                  ? textureAssetsByKey[
+                      textureKey
+                    ]
+                  : undefined,
+              textureRequested:
+                textureKey
+                  ? Boolean(
+                      requestedTextureKeys[
+                        textureKey
+                      ]
+                    )
+                  : false
+            };
+          }
         )
     );
-  }, [selectedGeometry]);
+  }, [
+    requestedTextureKeys,
+    selectedGeometry,
+    selectedObject,
+    textureAssetsByKey
+  ]);
+
+  const getTextureState = useCallback(
+    (
+      textureName: string | null,
+      textureAsset:
+        | OmsiTextureAsset
+        | undefined,
+      requested: boolean
+    ) => {
+      if (!textureName) {
+        return {
+          label: "Sem textura",
+          tone: "neutral"
+        } as const;
+      }
+
+      if (textureAsset?.exists) {
+        const extension =
+          textureAsset.extension
+            ?.replace(".", "")
+            .toUpperCase();
+
+        return {
+          label: extension
+            ? `Carregada · ${extension}`
+            : "Carregada",
+          tone: "loaded"
+        } as const;
+      }
+
+      if (textureAsset) {
+        const label =
+          textureAsset.errorCode ===
+          "textureNotFound"
+            ? "Arquivo ausente"
+            : textureAsset.errorCode ===
+                "textureTooLarge"
+              ? "Acima de 16 MiB"
+              : textureAsset.errorCode ===
+                  "accessDenied"
+                ? "Acesso negado"
+                : textureAsset.errorCode ===
+                    "textureReadError"
+                  ? "Falha de leitura"
+                  : "Bloqueada";
+
+        return {
+          label,
+          tone: "error"
+        } as const;
+      }
+
+      return {
+        label: requested
+          ? "Carregando..."
+          : "Aguardando",
+        tone: requested
+          ? "loading"
+          : "neutral"
+      } as const;
+    },
+    []
+  );
 
   const selectedDisplayName =
     selectedMetadata?.friendlyName ??
@@ -3655,7 +3754,7 @@ export function App() {
 
       <div className="sidebar-footer">
         <span>v{appVersion}</span>
-        <span>Somente leitura</span>
+        <span>Edição preservativa</span>
       </div>
     </aside>
   );
@@ -3669,8 +3768,8 @@ export function App() {
         <h1>Editor de mapas moderno para OMSI 2</h1>
         <p>
           Abra sua instalação, escolha manualmente
-          o mapa e explore os dados reais sem
-          modificar os arquivos do jogo.
+          o mapa e edite dados reais com validação,
+          backup e gravação preservativa.
         </p>
       </div>
 
@@ -4344,33 +4443,53 @@ export function App() {
                   : "Nenhum material O3D disponível."}
               </div>
             ) : (
-              materialRows.map((row) => (
-                <div
-                  className="material-row"
-                  key={`${row.mesh}-${row.index}`}
-                >
-                  <span
-                    className="material-swatch"
-                    style={{
-                      background: toRgb(
-                        row.material.diffuseR,
-                        row.material.diffuseG,
-                        row.material.diffuseB
-                      )
-                    }}
-                  />
-                  <div>
-                    <strong>
-                      Material {row.index + 1}
-                    </strong>
-                    <span>{row.mesh}</span>
-                    <small>
-                      {row.material.textureName ??
-                        "Sem textura declarada"}
-                    </small>
+              materialRows.map((row) => {
+                const textureState =
+                  getTextureState(
+                    row.material.textureName,
+                    row.textureAsset,
+                    row.textureRequested
+                  );
+
+                return (
+                  <div
+                    className="material-row"
+                    key={`${row.meshPath}-${row.index}`}
+                  >
+                    <span
+                      className="material-swatch"
+                      style={{
+                        background: toRgb(
+                          row.material.diffuseR,
+                          row.material.diffuseG,
+                          row.material.diffuseB
+                        )
+                      }}
+                    />
+                    <div>
+                      <strong>
+                        Material {row.index + 1}
+                      </strong>
+                      <span>{row.mesh}</span>
+                      <small
+                        title={
+                          row.material
+                            .textureName ??
+                          undefined
+                        }
+                      >
+                        {row.material.textureName ??
+                          "Sem textura declarada"}
+                      </small>
+                      <span
+                        className={`texture-state ${textureState.tone}`}
+                      >
+                        {textureState.label}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -4821,25 +4940,61 @@ export function App() {
 
                 <div className="mesh-list">
                   {profile.surfaces.map(
-                    (surface, index) => (
-                      <div
-                        className="mesh-row"
-                        key={`${surface.textureIndex}-${index}`}
-                      >
-                        <strong>
-                          {surface.textureName ??
-                            `Material ${surface.textureIndex}`}
-                        </strong>
-                        <span>
-                          {formatNumber(
-                            surface.from.x
-                          )} →{" "}
-                          {formatNumber(
-                            surface.to.x
-                          )} m
-                        </span>
-                      </div>
-                    )
+                    (surface, index) => {
+                      const textureKey =
+                        surface.textureName
+                          ? getSplineTextureAssetKey(
+                              selectedSpline
+                                .splinePath,
+                              surface
+                                .textureName
+                            )
+                          : undefined;
+
+                      const textureState =
+                        getTextureState(
+                          surface.textureName,
+                          textureKey
+                            ? textureAssetsByKey[
+                                textureKey
+                              ]
+                            : undefined,
+                          textureKey
+                            ? Boolean(
+                                requestedTextureKeys[
+                                  textureKey
+                                ]
+                              )
+                            : false
+                        );
+
+                      return (
+                        <div
+                          className="mesh-row spline-surface-row"
+                          key={`${surface.textureIndex}-${index}`}
+                        >
+                          <div>
+                            <strong>
+                              {surface.textureName ??
+                                `Material ${surface.textureIndex}`}
+                            </strong>
+                            <small>
+                              {formatNumber(
+                                surface.from.x
+                              )} →{" "}
+                              {formatNumber(
+                                surface.to.x
+                              )} m
+                            </small>
+                          </div>
+                          <span
+                            className={`texture-state ${textureState.tone}`}
+                          >
+                            {textureState.label}
+                          </span>
+                        </div>
+                      );
+                    }
                   )}
                 </div>
               </>

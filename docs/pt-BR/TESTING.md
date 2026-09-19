@@ -184,3 +184,12 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. inicie uma colocação de objeto e uma colocação de spline e confirme o reaproveitamento das texturas em cache;
 5. use uma referência de textura ausente e confirme fallback para a cor do material, sem placeholder fake;
 6. valide que caminhos que escapam de `Sceneryobjects`/`Splines` não são carregados.
+
+
+## Teste do estado de material
+
+1. selecione um objeto com múltiplos materiais;
+2. abra **Materiais** e confirme que cada textura declarada mostra estado individual;
+3. valide uma textura real encontrada e confirme **Carregada · EXT**;
+4. teste uma referência ausente e confirme **Arquivo ausente** sem quebrar a geometria;
+5. selecione uma spline texturizada e confirme o mesmo estado no painel **Perfil**.
