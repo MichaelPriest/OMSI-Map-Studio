@@ -842,6 +842,54 @@ code {
   font-size: 10px;
 }
 
+
+.property-list.dense .terrain-layer-control-row {
+  align-items: start;
+}
+
+.terrain-layer-list {
+  display: flex;
+  max-height: 180px;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.terrain-layer-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 5px 6px;
+  border: 1px solid #173a57;
+  border-radius: 5px;
+  background: #091b2a;
+  cursor: pointer;
+}
+
+.terrain-layer-item input {
+  margin-top: 2px;
+}
+
+.terrain-layer-item span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.terrain-layer-item strong {
+  overflow: hidden;
+  color: #cfe0ed;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terrain-layer-item small {
+  color: #6f8ca5;
+  font-size: 8px;
+}
+
 .inspector-stack {
   padding-top: 3px;
 }
