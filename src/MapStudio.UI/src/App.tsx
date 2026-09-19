@@ -8,6 +8,7 @@ import {
 import {
   deleteObject,
   deleteSpline,
+  getGroundTextureAssetKey,
   getSceneryTextureAssetKey,
   getSplineTextureAssetKey,
   insertObject,
@@ -16,6 +17,7 @@ import {
   isDesktopBridgeAvailable,
   loadMapFull,
   loadMapRegion,
+  loadGroundTextureAsset,
   loadSceneryLibrary,
   loadSceneryTextureAsset,
   loadSplineLibrary,
@@ -612,6 +614,20 @@ export function App() {
   >({});
 
   const [
+    groundTextureAssetsByKey,
+    setGroundTextureAssetsByKey
+  ] = useState<
+    Record<string, OmsiTextureAsset>
+  >({});
+
+  const [
+    requestedGroundTextureKeys,
+    setRequestedGroundTextureKeys
+  ] = useState<
+    Record<string, true>
+  >({});
+
+  const [
     requestedTextureKeys,
     setRequestedTextureKeys
   ] = useState<
@@ -743,6 +759,8 @@ export function App() {
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setTextureAssetsByKey({});
+          setGroundTextureAssetsByKey({});
+          setRequestedGroundTextureKeys({});
           setRequestedTextureKeys({});
           setAutoPrefetchedTextureKeys({});
           textureCacheOrderRef.current =
@@ -1029,6 +1047,47 @@ export function App() {
 
             return current;
           });
+
+          return;
+        }
+
+        if (
+          message.type ===
+          "textureAssetLoaded" &&
+          message.requestKey.startsWith(
+            "ground|"
+          )
+        ) {
+          setRequestedGroundTextureKeys(
+            (current) => {
+              if (
+                !Object.hasOwn(
+                  current,
+                  message.requestKey
+                )
+              ) {
+                return current;
+              }
+
+              const next = {
+                ...current
+              };
+
+              delete next[
+                message.requestKey
+              ];
+
+              return next;
+            }
+          );
+
+          setGroundTextureAssetsByKey(
+            (current) => ({
+              ...current,
+              [message.requestKey]:
+                message.asset
+            })
+          );
 
           return;
         }
@@ -1791,6 +1850,109 @@ export function App() {
     splinePlacementTemplate,
     splineProfilesByPath,
     textureAssetsByKey
+  ]);
+
+  const baseGroundTexture =
+    selectedMap?.groundTextures[0];
+
+  const baseGroundMainKey =
+    selectedMap &&
+    baseGroundTexture
+      ? getGroundTextureAssetKey(
+          selectedMap.directoryName,
+          baseGroundTexture
+            .mainTexturePath
+        )
+      : undefined;
+
+  const baseGroundDetailKey =
+    selectedMap &&
+    baseGroundTexture
+      ? getGroundTextureAssetKey(
+          selectedMap.directoryName,
+          baseGroundTexture
+            .detailTexturePath
+        )
+      : undefined;
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      !selectedMap ||
+      !baseGroundTexture
+    ) {
+      return;
+    }
+
+    const paths =
+      Array.from(
+        new Set([
+          baseGroundTexture
+            .mainTexturePath,
+          baseGroundTexture
+            .detailTexturePath
+        ])
+      );
+
+    const requests =
+      paths.filter(
+        (texturePath) => {
+          const key =
+            getGroundTextureAssetKey(
+              selectedMap.directoryName,
+              texturePath
+            );
+
+          return (
+            !Object.hasOwn(
+              groundTextureAssetsByKey,
+              key
+            ) &&
+            !Object.hasOwn(
+              requestedGroundTextureKeys,
+              key
+            )
+          );
+        }
+      );
+
+    if (requests.length === 0) {
+      return;
+    }
+
+    setRequestedGroundTextureKeys(
+      (current) => {
+        const next = {
+          ...current
+        };
+
+        for (const texturePath of
+          requests) {
+          next[
+            getGroundTextureAssetKey(
+              selectedMap.directoryName,
+              texturePath
+            )
+          ] = true;
+        }
+
+        return next;
+      }
+    );
+
+    for (const texturePath of
+      requests) {
+      loadGroundTextureAsset(
+        selectedMap.directoryName,
+        texturePath
+      );
+    }
+  }, [
+    baseGroundTexture,
+    bridgeAvailable,
+    groundTextureAssetsByKey,
+    requestedGroundTextureKeys,
+    selectedMap
   ]);
 
   const objectsForViewport = useMemo(
@@ -2924,6 +3086,20 @@ export function App() {
     }, [
       activeTileDetails?.terrain
     ]);
+
+  const baseGroundMainAsset =
+    baseGroundMainKey
+      ? groundTextureAssetsByKey[
+          baseGroundMainKey
+        ]
+      : undefined;
+
+  const baseGroundDetailAsset =
+    baseGroundDetailKey
+      ? groundTextureAssetsByKey[
+          baseGroundDetailKey
+        ]
+      : undefined;
 
   const selectedSplineProfile =
     selectedSpline
@@ -6976,6 +7152,20 @@ export function App() {
               }
               showGrid={showGrid}
               showTerrain={showTerrain}
+              terrainMainTextureAsset={
+                baseGroundMainAsset
+              }
+              terrainDetailTextureAsset={
+                baseGroundDetailAsset
+              }
+              terrainMainTextureRepeating={
+                baseGroundTexture
+                  ?.mainTextureRepeating
+              }
+              terrainDetailTextureRepeating={
+                baseGroundTexture
+                  ?.detailTextureRepeating
+              }
               showObjects={showObjects}
               showSplines={showSplines}
               showSplineProfiles={
