@@ -592,3 +592,12 @@ The preview must reproduce the way OMSI associates `[matl]` commands with O3D ma
 - dynamic references such as `\S:1` are not file names and must not produce `textureNotFound`.
 
 This distinction is required for repeated-material objects, crossings, signs, forest backdrops, and other alpha-cutout planes.
+
+
+## Legacy meshes, spline compatibility and picking
+
+- O3D and legacy DirectX text `.x` meshes use local Y-up model axes in the preview. The map Z-up to Babylon Y-up conversion belongs only to the placed map-object container.
+- Spline parsing must honor the tile `[version]`. Older tiles do not necessarily contain the same fields as modern tiles; in particular, `nextID` must not be assumed for earlier versions.
+- `[spline]`, `[spline_h]`, and `[splineAbschnitt]` are treated as editable splines when their version-specific fields are supported.
+- Real object geometry and spline-profile geometry are pickable in the viewport. Single click selects; double click selects and focuses the camera on the item.
+- Legacy BMP textures are decoded by the host and transcoded once to cached PNG before being sent to Babylon. This avoids raw-RGBA upload regressions on road/junction surfaces.

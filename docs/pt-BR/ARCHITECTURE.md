@@ -592,3 +592,12 @@ O preview deve reproduzir a forma como o OMSI associa comandos `[matl]` aos mate
 - referências dinâmicas como `\S:1` não são nomes de arquivo e não devem gerar `textureNotFound`.
 
 Essa distinção é necessária para objetos com materiais repetidos, cruzamentos, placas, vegetação de fundo e outros planos recortados por alpha.
+
+
+## Compatibilidade de meshes legados, splines e seleção
+
+- Meshes O3D e DirectX texto `.x` usam eixos locais de modelo Y-up no preview. A conversão Z-up do mapa para Y-up do Babylon deve ocorrer somente no contêiner do objeto colocado no mapa.
+- O leitor de splines deve respeitar a `[version]` do tile. Tiles antigos podem não ter os mesmos campos dos tiles modernos; em especial o `nextID` não deve ser presumido em versões anteriores.
+- `[spline]`, `[spline_h]` e `[splineAbschnitt]` são tratados como splines editáveis quando a versão suportar seus campos.
+- A geometria real de objetos e perfis de spline é selecionável no viewport. Clique simples seleciona; duplo clique seleciona e centraliza a câmera no item.
+- Texturas BMP legadas são decodificadas no host e transcodificadas uma vez para PNG, com cache, antes de serem enviadas ao Babylon. Isso evita regressões do upload RGBA bruto em superfícies de ruas/cruzamentos.
