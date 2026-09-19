@@ -462,3 +462,14 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 4. clique no viewport e teste `A/D` para esquerda/direita e `W/S` para frente/trás;
 5. repita com `Shift` para movimento acelerado;
 6. confirme que botão do meio e `Shift + botão direito` continuam fazendo pan sem selecionar objetos.
+
+
+## Validação de desempenho de carregamento
+
+1. abra Grundorf em modo mapa completo e cronometre da seleção do mapa até o fim de “Preparando recursos do mapa”;
+2. repita a abertura sem trocar a raiz OMSI e confirme reaproveitamento dos caches do host durante a sessão;
+3. no modo desempenho 3×3, confirme que o contador O3D pode ultrapassar 64 quando a região realmente usa mais de 64 paths únicos;
+4. confirme que todos os perfis SLI usados na região entram na fila, sem corte em 48;
+5. confirme que BMPs mostram upload RGBA direto e que não existe segunda carga PNG do mesmo arquivo;
+6. compare objetos O3D que possuem seção de transformação 0x79 e confirme posição/orientação interna correta após aplicação da transformação inversa;
+7. confirme que a interface não congela durante parse pesado de O3D, pois a leitura ocorre fora da thread de UI.
