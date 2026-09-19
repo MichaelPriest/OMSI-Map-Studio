@@ -60,3 +60,8 @@ Architecture documentation:
 
 - [Architecture — English](docs/en/ARCHITECTURE.md)
 - [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
+
+
+### Spline Library
+
+Alpha.3 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. Free-form persistent creation is limited to normal `[spline]` entries when the map contains a real neutral template with all five explicit extra values set to zero; header and extras are copied from that template. `[spline_h]` still requires copying a real height spline.

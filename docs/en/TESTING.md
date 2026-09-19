@@ -37,7 +37,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Known limitations
 
 - creation and copying only persist when a safe template of the same `.sco` exists;
-- free-form creation from any installed `.sli` is not implemented yet; current creation starts from a real spline already present in the map;
+- free-form installed `[spline_h]` creation is not implemented yet; height splines still require a real template;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
 - `[worldcoordinates]` maps remain limited;
@@ -161,3 +161,16 @@ For a conflict test, externally change a neighbor link before confirming deletio
 8. verify backups for every modified tile share the same timestamp.
 
 Conflict test: try linking to an occupied endpoint or externally change a link before Save. No tile may be left partially modified.
+
+
+## Spline Library test
+
+1. open the Explorer **Splines** tab;
+2. verify `OMSI 2/Splines` is scanned on demand;
+3. search for a `.sli` not currently used in the map;
+4. click **Place**, choose a tile and verify the real profile preview;
+5. adjust Z, rotation, length, radius and gradients;
+6. confirm **Confirm and save**;
+7. on a map with an explicit neutral normal `[spline]` template, verify a new global ID, `previous=-1`, `next=-1`, and backup;
+8. on a map without a compatible neutral template, verify preview works but persistence is blocked;
+9. verify a height spline is still created only by copying a real `[spline_h]`.

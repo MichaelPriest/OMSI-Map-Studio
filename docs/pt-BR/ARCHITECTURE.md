@@ -301,3 +301,12 @@ A exclusão de spline reutiliza `OmsiSplineLinkPlanner` com alvo `previous = -1`
 Os vizinhos são editados antes da remoção da seção fonte. Quando vizinho e fonte ficam no mesmo tile, o host aplica os edits de vínculo em memória, reabre esses bytes com `OmsiConfigParser.ParseBytes` e só então remove a seção fonte. Todos os tiles afetados entram em uma única `SafeFileTransaction`.
 
 Assim, apagar uma spline conectada libera as pontas recíprocas sem deixar IDs pendurados; conflito em qualquer tile cancela o lote inteiro.
+
+
+## Biblioteca de Splines instalada
+
+A Biblioteca de Splines varre `OMSI 2/Splines` somente sob demanda, ignora reparse points/diretórios inacessíveis e limita o índice a 50.000 arquivos `.sli`. Os caminhos encontrados passam a integrar `_knownSplinePaths`, permitindo carregar o perfil real.
+
+Para criação persistente a partir de um `.sli` instalado, `OmsiSplinePlacementTemplateAnalyzer` exige um template `[spline]` normal real no mapa com exatamente cinco `ExtraValues` numéricos explícitos e todos iguais a zero. Isso representa cant inicial/final, skew inicial/final e a linha adicional de placement sem inventar dados.
+
+O novo bloco usa o `HeaderValue` e os cinco extras do template, mas troca o caminho para o `.sli` escolhido, gera ID global novo e começa desconectado. `[spline_h]` não usa esse caminho porque possui estrutura extra própria.

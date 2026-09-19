@@ -9,10 +9,12 @@ import {
   deleteSpline,
   insertObject,
   insertSpline,
+  insertSplineFromLibrary,
   isDesktopBridgeAvailable,
   loadMapFull,
   loadMapRegion,
   loadSceneryLibrary,
+  loadSplineLibrary,
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
@@ -23,6 +25,7 @@ import {
   subscribeToHost,
   updateSplineLinks,
   type SceneryLibraryEntry,
+  type SplineLibraryEntry,
   type OmsiMap,
   type OmsiPlacedObject,
   type OmsiPlacedSpline,
@@ -152,7 +155,9 @@ const errorMessages: Record<string, string> = {
   splineInsertConflict:
     "A spline de origem mudou no arquivo desde a leitura. A cópia foi cancelada.",
   splineInsertError:
-    "Não foi possível inserir a cópia da spline com segurança.",
+    "Não foi possível inserir a spline com segurança.",
+  splineInsertTemplateUnavailable:
+    "A prévia é válida, mas este mapa não possui um template [spline] normal neutro e explícito para derivar com segurança header/cant/skew. A gravação foi bloqueada.",
   splineIdExhausted:
     "Não há mais IDs inteiros disponíveis para criar uma nova spline.",
   splineInsertionWorldCoordinatesUnsupported:
@@ -479,7 +484,7 @@ export function App() {
     explorerPanelTab,
     setExplorerPanelTab
   ] = useState<
-    "map" | "library"
+    "map" | "library" | "splineLibrary"
   >("map");
 
   const [
@@ -498,6 +503,30 @@ export function App() {
     loadingSceneryLibrary,
     setLoadingSceneryLibrary
   ] = useState(false);
+
+  const [
+    splineLibrary,
+    setSplineLibrary
+  ] = useState<
+    SplineLibraryEntry[]
+  >([]);
+
+  const [
+    splineLibrarySearch,
+    setSplineLibrarySearch
+  ] = useState("");
+
+  const [
+    loadingSplineLibrary,
+    setLoadingSplineLibrary
+  ] = useState(false);
+
+  const [
+    splineLibraryPlacementAsset,
+    setSplineLibraryPlacementAsset
+  ] = useState<
+    SplineLibraryEntry
+  >();
 
   const [
     placementAsset,
@@ -593,6 +622,12 @@ export function App() {
           setSceneryLibrary([]);
           setLibrarySearch("");
           setLoadingSceneryLibrary(false);
+          setSplineLibrary([]);
+          setSplineLibrarySearch("");
+          setLoadingSplineLibrary(false);
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
           setInsertingObject(false);
@@ -649,6 +684,19 @@ export function App() {
             message.entries
           );
           setLoadingSceneryLibrary(
+            false
+          );
+          return;
+        }
+
+        if (
+          message.type ===
+          "splineLibraryLoaded"
+        ) {
+          setSplineLibrary(
+            message.entries
+          );
+          setLoadingSplineLibrary(
             false
           );
           return;
@@ -923,6 +971,9 @@ export function App() {
           setSplinePlacementTemplate(
             undefined
           );
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
           setPendingSplinePlacement(
             undefined
           );
@@ -1045,6 +1096,7 @@ export function App() {
           setLoadingGeometryFor(undefined);
           setPreloadingGeometryFor(undefined);
           setLoadingSceneryLibrary(false);
+          setLoadingSplineLibrary(false);
           setSaving(false);
           setInsertingObject(false);
           setDeletingObject(false);
@@ -1588,6 +1640,67 @@ export function App() {
     }, [
       normalizedLibrarySearch,
       sceneryLibrary
+    ]);
+
+  const normalizedSplineLibrarySearch =
+    splineLibrarySearch
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+
+  const filteredSplineLibrary =
+    useMemo(() => {
+      const entries =
+        normalizedSplineLibrarySearch
+          ? splineLibrary.filter(
+              (entry) =>
+                (
+                  entry.fileName +
+                  " " +
+                  entry.splinePath
+                )
+                  .toLocaleLowerCase(
+                    "pt-BR"
+                  )
+                  .includes(
+                    normalizedSplineLibrarySearch
+                  )
+            )
+          : splineLibrary;
+
+      return entries.slice(
+        0,
+        300
+      );
+    }, [
+      normalizedSplineLibrarySearch,
+      splineLibrary
+    ]);
+
+  const splineLibraryResultCount =
+    useMemo(() => {
+      if (
+        !normalizedSplineLibrarySearch
+      ) {
+        return splineLibrary.length;
+      }
+
+      return splineLibrary.filter(
+        (entry) =>
+          (
+            entry.fileName +
+            " " +
+            entry.splinePath
+          )
+            .toLocaleLowerCase(
+              "pt-BR"
+            )
+            .includes(
+              normalizedSplineLibrarySearch
+            )
+      ).length;
+    }, [
+      normalizedSplineLibrarySearch,
+      splineLibrary
     ]);
 
   const explorerSplineResultCount =
@@ -2308,6 +2421,10 @@ export function App() {
         return;
       }
 
+      setSplineLibraryPlacementAsset(
+        undefined
+      );
+
       setSplinePlacementTemplate(
         selectedSpline
       );
@@ -2327,6 +2444,103 @@ export function App() {
       selectedSpline,
       splinePreviewEditCount
     ]);
+
+  const handleSelectSplineLibraryAsset =
+    useCallback(
+      (
+        entry:
+          SplineLibraryEntry
+      ) => {
+        if (!selectedMap) {
+          return;
+        }
+
+        if (
+          previewEditCount > 0 ||
+          splinePreviewEditCount > 0
+        ) {
+          setError(
+            "Salve ou descarte todas as prévias antes de colocar uma spline da biblioteca."
+          );
+          return;
+        }
+
+        if (placementAsset) {
+          setError(
+            "Cancele a colocação de objeto atual antes de colocar uma spline."
+          );
+          return;
+        }
+
+        if (
+          selectedMap
+            .usesWorldCoordinates
+        ) {
+          setError(
+            errorMessages
+              .splineInsertionWorldCoordinatesUnsupported
+          );
+          return;
+        }
+
+        setSplineLibraryPlacementAsset(
+          entry
+        );
+
+        setSplinePlacementTemplate({
+          tileX: 0,
+          tileY: 0,
+          headerValue: "",
+          splinePath:
+            entry.splinePath,
+          splineId: -1,
+          sourceSectionOrdinal: -1,
+          previousSplineId: -1,
+          nextSplineId: -1,
+          x: 0,
+          y: 0,
+          z: 0,
+          rotation: 0,
+          length: 20,
+          radius: 0,
+          gradientStart: 0,
+          gradientEnd: 0,
+          isHeightSpline: false
+        });
+
+        setPendingSplinePlacement(
+          undefined
+        );
+        setSelectedSpline(undefined);
+        setSelectedObject(undefined);
+        setEditorTool("select");
+        setShowSplines(true);
+        setSaveNotice(undefined);
+        setError(undefined);
+
+        if (
+          !Object.hasOwn(
+            splineProfilesByPath,
+            entry.splinePath
+          )
+        ) {
+          setLoadingSplineFor(
+            entry.splinePath
+          );
+
+          loadSplineProfile(
+            entry.splinePath
+          );
+        }
+      },
+      [
+        placementAsset,
+        previewEditCount,
+        selectedMap,
+        splinePreviewEditCount,
+        splineProfilesByPath
+      ]
+    );
 
   const handleSplinePlacementPoint =
     useCallback(
@@ -2372,6 +2586,9 @@ export function App() {
       setSplinePlacementTemplate(
         undefined
       );
+      setSplineLibraryPlacementAsset(
+        undefined
+      );
       setPendingSplinePlacement(
         undefined
       );
@@ -2393,15 +2610,27 @@ export function App() {
       setSaveNotice(undefined);
       setError(undefined);
 
-      insertSpline(
-        selectedMap.directoryName,
-        splinePlacementTemplate,
-        pendingSplinePlacement
-      );
+      if (
+        splineLibraryPlacementAsset
+      ) {
+        insertSplineFromLibrary(
+          selectedMap.directoryName,
+          splineLibraryPlacementAsset
+            .splinePath,
+          pendingSplinePlacement
+        );
+      } else {
+        insertSpline(
+          selectedMap.directoryName,
+          splinePlacementTemplate,
+          pendingSplinePlacement
+        );
+      }
     }, [
       insertingSpline,
       pendingSplinePlacement,
       selectedMap,
+      splineLibraryPlacementAsset,
       splinePlacementTemplate
     ]);
 
@@ -2941,7 +3170,12 @@ export function App() {
 
   const handleExplorerPanelTab =
     useCallback(
-      (tab: "map" | "library") => {
+      (
+        tab:
+          | "map"
+          | "library"
+          | "splineLibrary"
+      ) => {
         setExplorerPanelTab(tab);
 
         if (
@@ -2963,11 +3197,33 @@ export function App() {
           setError(undefined);
           loadSceneryLibrary();
         }
+
+        if (
+          tab === "splineLibrary" &&
+          splineLibrary.length === 0 &&
+          !loadingSplineLibrary
+        ) {
+          if (!bridgeAvailable) {
+            setError(
+              "Abra a Biblioteca de Splines pelo aplicativo desktop OMSI Map Studio."
+            );
+            return;
+          }
+
+          setLoadingSplineLibrary(
+            true
+          );
+
+          setError(undefined);
+          loadSplineLibrary();
+        }
       },
       [
         bridgeAvailable,
         loadingSceneryLibrary,
-        sceneryLibrary.length
+        loadingSplineLibrary,
+        sceneryLibrary.length,
+        splineLibrary.length
       ]
     );
 
@@ -4649,9 +4905,19 @@ export function App() {
               </button>
               <button
                 type="button"
-                disabled
+                className={
+                  explorerPanelTab ===
+                  "splineLibrary"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  handleExplorerPanelTab(
+                    "splineLibrary"
+                  )
+                }
               >
-                Favoritos
+                Splines
               </button>
             </div>
 
@@ -4900,7 +5166,8 @@ export function App() {
                 )}
   
               </>
-            ) : (
+            ) : explorerPanelTab ===
+              "library" ? (
               <div className="scenery-library-panel">
                 <div className="explorer-search">
                   <input
@@ -4970,6 +5237,89 @@ export function App() {
                         Nenhum arquivo .sco encontrado.
                       </div>
                     )}
+                </div>
+              </div>
+            ) : (
+              <div className="scenery-library-panel">
+                <div className="explorer-search">
+                  <input
+                    type="search"
+                    placeholder="Buscar .sli na instalação..."
+                    value={
+                      splineLibrarySearch
+                    }
+                    onChange={(event) =>
+                      setSplineLibrarySearch(
+                        event.target.value
+                      )
+                    }
+                  />
+                  <span>
+                    {loadingSplineLibrary
+                      ? "Lendo Splines..."
+                      : `${splineLibraryResultCount} spline(s)${splineLibraryResultCount > 300 ? " · mostrando 300" : ""}`}
+                  </span>
+                </div>
+
+                <div className="scenery-library-list">
+                  {filteredSplineLibrary.map(
+                    (entry) => (
+                      <div
+                        className={
+                          splineLibraryPlacementAsset
+                            ?.splinePath ===
+                          entry.splinePath
+                            ? "scenery-library-entry active"
+                            : "scenery-library-entry"
+                        }
+                        key={
+                          entry.splinePath
+                        }
+                      >
+                        <strong
+                          title={
+                            entry.splinePath
+                          }
+                        >
+                          {entry.fileName}
+                        </strong>
+                        <span>
+                          {entry.splinePath}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleSelectSplineLibraryAsset(
+                              entry
+                            )
+                          }
+                          disabled={
+                            insertingSpline
+                          }
+                          title="Criar uma nova [spline] normal usando este .sli"
+                        >
+                          Colocar
+                        </button>
+                      </div>
+                    )
+                  )}
+
+                  {!loadingSplineLibrary &&
+                    filteredSplineLibrary.length ===
+                      0 && (
+                      <div className="explorer-empty">
+                        Nenhum arquivo .sli encontrado.
+                      </div>
+                    )}
+                </div>
+
+                <div className="library-safety-note">
+                  A prévia usa o .sli real.
+                  Ao salvar, o host exige um
+                  template [spline] normal neutro
+                  já existente no mapa para copiar
+                  header e extras sem inventar
+                  metadados.
                 </div>
               </div>
             )}
@@ -5093,7 +5443,9 @@ export function App() {
               <div className="placement-bar">
                 <div>
                   <strong>
-                    Copiando spline:{" "}
+                    {splineLibraryPlacementAsset
+                      ? "Nova spline: "
+                      : "Copiando spline: "}
                     {getObjectName(
                       splinePlacementTemplate
                         .splinePath
@@ -5102,7 +5454,9 @@ export function App() {
                   <span>
                     {pendingSplinePlacement
                       ? `Tile ${pendingSplinePlacement.targetTileX},${pendingSplinePlacement.targetTileY} · X ${formatNumber(pendingSplinePlacement.x)} · Y ${formatNumber(pendingSplinePlacement.y)} · desconectada`
-                      : "Clique em um tile para posicionar o início da cópia."}
+                      : splineLibraryPlacementAsset
+                        ? "Clique em um tile para posicionar a nova spline normal."
+                        : "Clique em um tile para posicionar o início da cópia."}
                   </span>
                 </div>
 

@@ -200,6 +200,103 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void SplinePlacementTemplateAnalyzer_SelectsExplicitNeutralNormalTemplate()
+    {
+        var neutral =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\Neutral.sli",
+                10,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                20,
+                0,
+                0,
+                0,
+                false,
+                ["0", "0.0", "0", "-0", "0"]);
+
+        var nonNeutral =
+            neutral with
+            {
+                SplineId = 11,
+                ExtraValues =
+                    ["0", "0", "1", "0", "0"]
+            };
+
+        var height =
+            neutral with
+            {
+                SplineId = 12,
+                IsHeightSpline = true
+            };
+
+        var content =
+            new OmsiTileContent(
+                new OmsiTileSummary(
+                    true,
+                    0,
+                    3,
+                    0),
+                [],
+                [
+                    nonNeutral,
+                    height,
+                    neutral
+                ]);
+
+        var result =
+            OmsiSplinePlacementTemplateAnalyzer
+                .FindNeutralNormalTemplate(
+                    [content]);
+
+        Assert.Same(
+            neutral,
+            result);
+    }
+
+    [Fact]
+    public void SplinePlacementTemplateAnalyzer_RejectsImplicitOrNonNeutralExtras()
+    {
+        var spline =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\A.sli",
+                1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                20,
+                0,
+                0,
+                0,
+                false,
+                ["0", "0", "0"]);
+
+        var content =
+            new OmsiTileContent(
+                new OmsiTileSummary(
+                    true,
+                    0,
+                    1,
+                    0),
+                [],
+                [spline]);
+
+        Assert.Null(
+            OmsiSplinePlacementTemplateAnalyzer
+                .FindNeutralNormalTemplate(
+                    [content]));
+    }
+
+    [Fact]
     public void SplineInserter_AppendsDetachedCopyAndPreservesContent()
     {
         const string source =

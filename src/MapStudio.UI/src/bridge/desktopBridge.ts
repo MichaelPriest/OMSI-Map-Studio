@@ -3,6 +3,11 @@ export type SceneryLibraryEntry = {
   fileName: string;
 };
 
+export type SplineLibraryEntry = {
+  splinePath: string;
+  fileName: string;
+};
+
 export type OmsiTile = {
   x: number;
   y: number;
@@ -168,6 +173,10 @@ export type HostMessage =
       entries: SceneryLibraryEntry[];
     }
   | {
+      type: "splineLibraryLoaded";
+      entries: SplineLibraryEntry[];
+    }
+  | {
       type: "objectInserted";
       directoryName: string;
       backupDirectory: string;
@@ -309,6 +318,36 @@ export function selectMap() {
 export function loadSceneryLibrary() {
   getWebView()?.postMessage({
     type: "loadSceneryLibrary"
+  });
+}
+
+export function loadSplineLibrary() {
+  getWebView()?.postMessage({
+    type: "loadSplineLibrary"
+  });
+}
+
+export function insertSplineFromLibrary(
+  directoryName: string,
+  splinePath: string,
+  placement: {
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    length: number;
+    radius: number;
+    gradientStart: number;
+    gradientEnd: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertSplineFromLibrary",
+    directoryName,
+    splinePath,
+    ...placement
   });
 }
 

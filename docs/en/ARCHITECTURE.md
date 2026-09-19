@@ -301,3 +301,12 @@ Spline deletion reuses `OmsiSplineLinkPlanner` with target `previous = -1` / `ne
 Neighbor links are edited before removing the source section. When a neighbor and source share a tile, the host applies link edits in memory, reparses those bytes with `OmsiConfigParser.ParseBytes`, then removes the source section. Every affected tile is submitted through one `SafeFileTransaction`.
 
 This lets a connected spline be deleted while releasing reciprocal endpoints without leaving dangling IDs; a conflict in any tile cancels the entire batch.
+
+
+## Installed Spline Library
+
+The Spline Library scans `OMSI 2/Splines` only on demand, skips reparse points/inaccessible directories, and caps the index at 50,000 `.sli` files. Found paths become part of `_knownSplinePaths`, allowing the real profile to load.
+
+For persistent creation from an installed `.sli`, `OmsiSplinePlacementTemplateAnalyzer` requires a real normal `[spline]` template in the map with exactly five explicit numeric `ExtraValues`, all zero. This covers start/end cant, start/end skew, and the additional placement line without inventing data.
+
+The new block reuses the template `HeaderValue` and five extras, replaces the path with the selected `.sli`, allocates a new global ID, and starts detached. `[spline_h]` does not use this path because it has its own extra structure.

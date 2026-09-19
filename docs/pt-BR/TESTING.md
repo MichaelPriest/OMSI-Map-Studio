@@ -37,7 +37,7 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Limitações conhecidas
 
 - criação e cópia só gravam quando existe template seguro do mesmo `.sco`;
-- criação livre baseada em qualquer `.sli` instalado ainda não existe; a criação atual parte de uma spline real do mapa;
+- criação livre de `[spline_h]` instalada ainda não existe; spline de altura continua exigindo template real;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
 - mapas `[worldcoordinates]` continuam limitados;
@@ -161,3 +161,16 @@ Para testar conflito, altere externamente um vínculo do vizinho antes de confir
 8. confira backups de todos os tiles alterados no mesmo timestamp.
 
 Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um vínculo antes do Save. Nenhum dos tiles deve ficar parcialmente alterado.
+
+
+## Teste da Biblioteca de Splines
+
+1. abra a guia **Splines** no Explorer;
+2. confirme a leitura sob demanda da pasta `OMSI 2/Splines`;
+3. busque um `.sli` que não esteja usado no mapa;
+4. clique **Colocar**, escolha um tile e confirme a prévia do perfil real;
+5. ajuste Z, rotação, comprimento, raio e gradientes;
+6. confirme **Confirmar e salvar**;
+7. em mapa com template `[spline]` neutro explícito, confirme novo ID global, `previous=-1`, `next=-1` e backup;
+8. em mapa sem template neutro compatível, confirme que a prévia funciona mas a gravação é bloqueada;
+9. valide que uma spline de altura continua sendo criada apenas por cópia de uma `[spline_h]` real.

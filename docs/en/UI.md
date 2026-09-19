@@ -304,3 +304,14 @@ In the spline **General** tab, **Chain links** lets you enter previous and next 
 The field list suggests currently loaded splines, but the host searches and validates IDs across the full map. On save it also updates reciprocal endpoints on old and new neighbors. If a new endpoint is already occupied, a neighbor disappeared, or the current chain is inconsistent, no part of the transaction is written.
 
 **Disconnect draft** only puts `-1/-1` into the fields; persistence happens only after **Save links**.
+
+
+## Installed Spline Library
+
+The Explorer **Splines** tab scans `OMSI 2/Splines` on demand and searches up to 50,000 `.sli` files by name/path. At most 300 results are rendered.
+
+**Place** starts a new normal `[spline]`: preview uses the real `.sli` profile, starts detached, and exposes Z, rotation, length, radius and gradients before confirmation.
+
+The UI does not invent header/cant/skew values. On **Confirm and save**, the host searches the full map for a real neutral `[spline]` with exactly five explicit numeric extras set to zero. If none exists, preview remains available but persistence is rejected with a missing-template message.
+
+Installed `[spline_h]` cannot yet be created freely; use **Place detached copy** on a real height spline.

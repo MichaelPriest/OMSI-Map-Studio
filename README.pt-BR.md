@@ -60,3 +60,8 @@ Documentação de arquitetura:
 
 - [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
 - [Architecture — English](docs/en/ARCHITECTURE.md)
+
+
+### Biblioteca de Splines
+
+A Alpha.3 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A criação persistente livre está limitada a `[spline]` normal quando o mapa contém um template real neutro com os cinco extras explícitos zerados; header e extras são copiados desse template. `[spline_h]` continua exigindo cópia de uma spline de altura real.

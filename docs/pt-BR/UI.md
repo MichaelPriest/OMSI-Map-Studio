@@ -304,3 +304,14 @@ Na aba **Geral** da spline, **Vínculos da cadeia** permite informar o ID anteri
 A lista do campo sugere splines atualmente carregadas, mas o host pesquisa e valida IDs no mapa completo. Ao salvar, ele também altera reciprocamente as pontas dos vizinhos antigos e novos. Se uma ponta nova já estiver ocupada, se um vizinho tiver desaparecido ou se a cadeia atual estiver inconsistente, nenhuma parte da transação é gravada.
 
 **Desconectar rascunho** apenas coloca `-1/-1` nos campos; a alteração só é persistida ao clicar **Salvar vínculos**.
+
+
+## Biblioteca de Splines instaladas
+
+A guia **Splines** no Explorer varre `OMSI 2/Splines` sob demanda e permite buscar até 50.000 arquivos `.sli` por nome/caminho. A lista renderiza no máximo 300 resultados.
+
+**Colocar** inicia uma nova `[spline]` normal: a prévia usa o perfil real do `.sli`, começa desconectada e oferece Z, rotação, comprimento, raio e gradientes antes da confirmação.
+
+A UI não inventa header/cant/skew. No **Confirmar e salvar**, o host procura no mapa completo um `[spline]` real neutro com exatamente cinco extras numéricos explícitos zerados. Se não existir, a prévia continua utilizável, mas a gravação é recusada com mensagem de template indisponível.
+
+`[spline_h]` instalada ainda não pode ser criada livremente; use **Colocar cópia desconectada** sobre uma spline de altura real.
