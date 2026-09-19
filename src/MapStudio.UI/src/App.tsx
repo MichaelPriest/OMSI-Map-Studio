@@ -5577,6 +5577,34 @@ export function App() {
           </dd>
         </div>
         <div>
+          <dt>Máscaras de terreno</dt>
+          <dd>
+            {!activeTileDetails
+              ?.detailsLoaded
+              ? "Não carregado"
+              : (
+                    activeTileDetails
+                      .terrainTextureMasks
+                      ?.length ?? 0
+                  ) > 0
+                ? `Camadas ${activeTileDetails.terrainTextureMasks!
+                    .map(
+                      (mask) =>
+                        mask.layerIndex
+                    )
+                    .join(", ")} · ${formatFileSize(
+                    activeTileDetails.terrainTextureMasks!
+                      .reduce(
+                        (total, mask) =>
+                          total +
+                          mask.fileSize,
+                        0
+                      )
+                  )}`
+                : "Nenhuma"}
+          </dd>
+        </div>
+        <div>
           <dt>Camadas [groundtex]</dt>
           <dd>
             {selectedMap
