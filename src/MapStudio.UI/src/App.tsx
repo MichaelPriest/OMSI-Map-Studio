@@ -1920,7 +1920,9 @@ export function App() {
 
     queueTexture(
       sceneryTreeTextureMeshToken,
-      geometry.tree?.textureName
+      selectedObject
+        ?.extraValues?.[1] ??
+        geometry.tree?.textureName
     );
 
     for (const mesh of
@@ -2915,10 +2917,49 @@ export function App() {
         });
       };
 
-      queueObjectTexture(
-        sceneryTreeTextureMeshToken,
-        geometry.tree?.textureName
-      );
+      if (geometry.tree) {
+        const placedTreeTextures =
+          Array.from(
+            new Set(
+              objectsForViewport
+                .filter(
+                  (placedObject) =>
+                    placedObject
+                      .sceneryObjectPath ===
+                    sceneryObjectPath
+                )
+                .map(
+                  (placedObject) =>
+                    placedObject
+                      .extraValues?.[1]
+                        ?.trim()
+                )
+                .filter(
+                  (
+                    value
+                  ): value is string =>
+                    Boolean(value)
+                )
+            )
+          );
+
+        if (
+          placedTreeTextures.length === 0
+        ) {
+          queueObjectTexture(
+            sceneryTreeTextureMeshToken,
+            geometry.tree.textureName
+          );
+        } else {
+          for (const textureName of
+            placedTreeTextures) {
+            queueObjectTexture(
+              sceneryTreeTextureMeshToken,
+              textureName
+            );
+          }
+        }
+      }
 
       for (const mesh of
         geometry.meshes) {
