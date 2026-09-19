@@ -98,7 +98,7 @@ const defaultPlacementTransform:
     bank: 0
   };
 
-const nearbyObjectPathLimit = 20;
+const nearbyObjectPathLimit = 64;
 const nearbySplinePathLimit = 12;
 const autoObjectTextureLimit = 16;
 const autoSplineTextureLimit = 8;
@@ -1864,6 +1864,64 @@ export function App() {
       activeTile,
       objectsForViewport
     ]);
+
+  const loadedNearbyGeometryCount =
+    useMemo(
+      () =>
+        nearbyObjectPaths.filter(
+          (path) =>
+            Object.hasOwn(
+              geometryByPath,
+              path
+            )
+        ).length,
+      [
+        geometryByPath,
+        nearbyObjectPaths
+      ]
+    );
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      mapLoadMode !== "performance" ||
+      Boolean(loadingRegionKey) ||
+      loadingGeometryFor ||
+      preloadingGeometryFor ||
+      nearbyObjectPaths.length === 0
+    ) {
+      return;
+    }
+
+    const nextPath =
+      nearbyObjectPaths.find(
+        (path) =>
+          !Object.hasOwn(
+            geometryByPath,
+            path
+          )
+      );
+
+    if (!nextPath) {
+      return;
+    }
+
+    setPreloadingGeometryFor(
+      nextPath
+    );
+
+    loadSceneryObjectGeometry(
+      nextPath
+    );
+  }, [
+    bridgeAvailable,
+    geometryByPath,
+    loadingGeometryFor,
+    loadingRegionKey,
+    mapLoadMode,
+    nearbyObjectPaths,
+    preloadingGeometryFor
+  ]);
 
   const nearbySplinePaths =
     useMemo(() => {
@@ -6356,16 +6414,17 @@ export function App() {
                   </strong>
                 </div>
   
-                {mapLoadMode === "full" && (
-                  <div className="tree-node">
-                    <span>◈</span>
-                    Modelos O3D
-                    <strong>
-                      {loadedMapGeometryCount}/
-                      {mapObjectPaths.length}
-                    </strong>
-                  </div>
-                )}
+                <div className="tree-node">
+                  <span>◈</span>
+                  {mapLoadMode === "full"
+                    ? "Modelos O3D"
+                    : "Modelos O3D (área)"}
+                  <strong>
+                    {mapLoadMode === "full"
+                      ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
+                      : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}
+                  </strong>
+                </div>
   
                 <div className="tree-node">
                   <span>⌇</span>
@@ -7489,7 +7548,9 @@ export function App() {
                 : Boolean(loadingRegionKey)
                   ? "Carregando área..."
                 : preloadingGeometryFor
-                  ? `Carregando modelos O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}...`
+                  ? mapLoadMode === "full"
+                    ? `Carregando modelos O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}...`
+                    : `Carregando modelos O3D da área ${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}...`
                   : loadingSplineFor
                     ? "Lendo SLI..."
                   : preloadingSplineProfileFor
@@ -7518,7 +7579,7 @@ export function App() {
             O3D:{" "}
             {mapLoadMode === "full"
               ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
-              : "sob demanda"}
+              : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}
             <b>·</b>
             Perfis SLI:{" "}
             {Object.keys(
