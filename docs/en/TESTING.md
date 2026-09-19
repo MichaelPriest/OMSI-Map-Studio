@@ -442,3 +442,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 5. visually verify `gras.bmp` is visible on terrain through the unlit emissive path;
 6. verify textured spline surfaces are no longer dark merely because lighting is disabled;
 7. install the new build through the EXE and launch both from Start Menu and directly from the executable; the OMSI Map Studio icon should appear in the window and taskbar.
+
+
+## [tree] validation
+
+1. open Grundorf in both 3×3 and full-map modes;
+2. verify that `tree_medium_*.sco`, `Tree_Small_*.sco`, and other `[tree]` objects no longer appear only as yellow markers when their texture exists;
+3. compare two placements of the same tree type with different stored heights/ratios and verify the viewport preserves the values written in the map `[object]`;
+4. select a tree and verify the Inspector shows its texture and the range declared by `[tree]`;
+5. verify the `treehelper.x` editor helper is not counted as an O3D failure for the tree;
+6. verify yellow fallback markers remain only where the real asset could not be rendered.
