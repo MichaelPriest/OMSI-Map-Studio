@@ -34,6 +34,10 @@ type ViewportProps = {
   usesWorldCoordinates: boolean;
   selectedObject?: OmsiPlacedObject;
   selectedGeometry?: OmsiSceneryObjectGeometry;
+  objectGeometryByPath: Record<
+    string,
+    OmsiSceneryObjectGeometry
+  >;
   selectedSpline?: OmsiPlacedSpline;
   selectedSplineProfile?: OmsiSplineDefinition;
   onSelectObject: (placedObject: OmsiPlacedObject | undefined) => void;
@@ -575,6 +579,7 @@ function clamp01(value: number) {
 
 function createPreviewMaterial(
   scene: Scene,
+  namePrefix: string,
   meshIndex: number,
   materialIndex: number,
   materialData:
@@ -582,7 +587,7 @@ function createPreviewMaterial(
     | undefined
 ) {
   const material = new StandardMaterial(
-    `selected-object-material-${meshIndex}-${materialIndex}`,
+    `${namePrefix}-material-${meshIndex}-${materialIndex}`,
     scene
   );
 
@@ -626,26 +631,12 @@ function createPreviewMaterial(
   return material;
 }
 
-function createSelectedGeometry(
+function createGeometryMeshes(
   scene: Scene,
-  placedObject: OmsiPlacedObject,
+  namePrefix: string,
   geometry: OmsiSceneryObjectGeometry
 ) {
-  const root = new TransformNode(
-    "selected-object-geometry-root",
-    scene
-  );
-
-  root.position.copyFrom(
-    getObjectWorldPosition(placedObject)
-  );
-
-  root.rotationQuaternion =
-    Quaternion.RotationYawPitchRoll(
-      -placedObject.rotation * degreesToRadians,
-      -placedObject.bank * degreesToRadians,
-      -placedObject.pitch * degreesToRadians
-    );
+  const meshes: Mesh[] = [];
 
   for (const [meshIndex, meshReference]
     of geometry.meshes.entries()) {
@@ -709,7 +700,7 @@ function createSelectedGeometry(
       groupedIndices
     ] of groups) {
       const mesh = new Mesh(
-        `selected-o3d-${meshIndex}-material-${materialIndex}`,
+        `${namePrefix}-mesh-${meshIndex}-${materialIndex}`,
         scene
       );
 
@@ -736,6 +727,7 @@ function createSelectedGeometry(
       mesh.material =
         createPreviewMaterial(
           scene,
+          namePrefix,
           meshIndex,
           materialIndex,
           materialIndex >= 0
@@ -745,8 +737,186 @@ function createSelectedGeometry(
             : undefined
         );
 
-      mesh.parent = root;
       mesh.isPickable = false;
+      meshes.push(mesh);
+    }
+  }
+
+  return meshes;
+}
+
+function configureObjectRoot(
+  root: TransformNode,
+  placedObject: OmsiPlacedObject
+) {
+  root.position.copyFrom(
+    getObjectWorldPosition(
+      placedObject
+    )
+  );
+
+  root.rotationQuaternion =
+    Quaternion.RotationYawPitchRoll(
+      -placedObject.rotation *
+        degreesToRadians,
+      -placedObject.bank *
+        degreesToRadians,
+      -placedObject.pitch *
+        degreesToRadians
+    );
+}
+
+function hasRenderableGeometry(
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined
+) {
+  return Boolean(
+    geometry?.meshes.some(
+      (meshReference) =>
+        meshReference.geometry.isLoaded &&
+        meshReference.geometry
+          .positions.length > 0 &&
+        meshReference.geometry
+          .indices.length > 0
+    )
+  );
+}
+
+function createSelectedGeometry(
+  scene: Scene,
+  placedObject: OmsiPlacedObject,
+  geometry: OmsiSceneryObjectGeometry
+) {
+  const root = new TransformNode(
+    "selected-object-geometry-root",
+    scene
+  );
+
+  configureObjectRoot(
+    root,
+    placedObject
+  );
+
+  const meshes =
+    createGeometryMeshes(
+      scene,
+      "selected-object",
+      geometry
+    );
+
+  for (const mesh of meshes) {
+    mesh.parent = root;
+  }
+}
+
+function createMapObjectGeometry(
+  scene: Scene,
+  objects: OmsiPlacedObject[],
+  geometryByPath: Record<
+    string,
+    OmsiSceneryObjectGeometry
+  >
+) {
+  const placementsByPath =
+    new Map<
+      string,
+      OmsiPlacedObject[]
+    >();
+
+  for (const placedObject of objects) {
+    const current =
+      placementsByPath.get(
+        placedObject.sceneryObjectPath
+      ) ?? [];
+
+    current.push(
+      placedObject
+    );
+
+    placementsByPath.set(
+      placedObject.sceneryObjectPath,
+      current
+    );
+  }
+
+  for (const [
+    sceneryObjectPath,
+    placements
+  ] of placementsByPath) {
+    const geometry =
+      geometryByPath[
+        sceneryObjectPath
+      ];
+
+    if (
+      placements.length === 0 ||
+      !hasRenderableGeometry(
+        geometry
+      )
+    ) {
+      continue;
+    }
+
+    const sourceRoot =
+      new TransformNode(
+        `map-object-root-${sceneryObjectPath}-0`,
+        scene
+      );
+
+    configureObjectRoot(
+      sourceRoot,
+      placements[0]
+    );
+
+    const sourceMeshes =
+      createGeometryMeshes(
+        scene,
+        `map-object-${sceneryObjectPath}`,
+        geometry
+      );
+
+    for (const source of sourceMeshes) {
+      source.parent = sourceRoot;
+    }
+
+    for (
+      let placementIndex = 1;
+      placementIndex <
+        placements.length;
+      placementIndex += 1
+    ) {
+      const root =
+        new TransformNode(
+          `map-object-root-${sceneryObjectPath}-${placementIndex}`,
+          scene
+        );
+
+      configureObjectRoot(
+        root,
+        placements[
+          placementIndex
+        ]
+      );
+
+      for (
+        let meshIndex = 0;
+        meshIndex <
+          sourceMeshes.length;
+        meshIndex += 1
+      ) {
+        const clone =
+          sourceMeshes[
+            meshIndex
+          ].clone(
+            `map-object-instance-${placementIndex}-${meshIndex}`,
+            root
+          );
+
+        if (clone) {
+          clone.isPickable = false;
+        }
+      }
     }
   }
 }
@@ -761,6 +931,7 @@ export function Viewport({
   usesWorldCoordinates,
   selectedObject,
   selectedGeometry,
+  objectGeometryByPath,
   selectedSpline,
   selectedSplineProfile,
   onSelectObject,
@@ -964,14 +1135,50 @@ export function Viewport({
         );
       }
 
-      if (!usesWorldCoordinates && objects.length) {
-        const objectMarkers = MeshBuilder.CreateLineSystem(
-          "omsi-object-markers",
-          { lines: createObjectMarkerLines(objects) },
-          scene
+      if (
+        !usesWorldCoordinates &&
+        objects.length
+      ) {
+        createMapObjectGeometry(
+          scene,
+          objects,
+          objectGeometryByPath
         );
-        objectMarkers.color = new Color3(0.95, 0.78, 0.38);
-        objectMarkers.isPickable = false;
+
+        const markerObjects =
+          objects.filter(
+            (placedObject) =>
+              !hasRenderableGeometry(
+                objectGeometryByPath[
+                  placedObject
+                    .sceneryObjectPath
+                ]
+              )
+          );
+
+        if (markerObjects.length) {
+          const objectMarkers =
+            MeshBuilder.CreateLineSystem(
+              "omsi-object-markers",
+              {
+                lines:
+                  createObjectMarkerLines(
+                    markerObjects
+                  )
+              },
+              scene
+            );
+
+          objectMarkers.color =
+            new Color3(
+              0.95,
+              0.78,
+              0.38
+            );
+
+          objectMarkers.isPickable =
+            false;
+        }
       }
     } else {
       const ground = MeshBuilder.CreateGround(
@@ -1003,7 +1210,13 @@ export function Viewport({
     if (
       !usesWorldCoordinates &&
       selectedObject &&
-      selectedGeometry
+      selectedGeometry &&
+      !hasRenderableGeometry(
+        objectGeometryByPath[
+          selectedObject
+            .sceneryObjectPath
+        ]
+      )
     ) {
       createSelectedGeometry(
         scene,
@@ -1212,6 +1425,7 @@ export function Viewport({
     usesWorldCoordinates,
     selectedObject,
     selectedGeometry,
+    objectGeometryByPath,
     selectedSpline,
     selectedSplineProfile,
     onSelectObject,
