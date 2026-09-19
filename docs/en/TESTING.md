@@ -309,3 +309,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 9. trigger progressive loading of several O3D models/textures, move the camera while loading, and verify position/target/zoom do not jump back to the initial fit;
 10. verify left-click selection and edit gizmos still work;
 11. validate **F**, **Home**, **1**, and **2** after manual navigation.
+
+## Terrain-mesh test
+
+1. open Grundorf and wait for tile loading;
+2. verify **Terrain** is enabled and the flat background is replaced by the height mesh where a valid `.map.terrain` exists;
+3. in the inspector, verify **60×60 cells**, **3,721 heights**, and a plausible altitude range for the active tile;
+4. change the active tile in 3×3 mode and verify terrain meshes follow the loaded region;
+5. disable **Terrain** and verify height geometry disappears without affecting objects/splines;
+6. re-enable it and verify camera fitting respects terrain elevation instead of snapping to Y=0 on elevated maps;
+7. test an invalid/truncated sidecar and verify the map still opens, diagnostics still expose the file, and no fake mesh is created;
+8. verify no `.terrain` file is modified.
