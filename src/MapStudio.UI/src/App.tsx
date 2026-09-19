@@ -158,9 +158,9 @@ const errorMessages: Record<string, string> = {
   splineInsertionWorldCoordinatesUnsupported:
     "A colocação de spline em mapas com [worldcoordinates] ainda não é suportada nesta alpha.",
   splineDeleteLinked:
-    "Esta spline ainda possui vínculo anterior ou próximo. Nesta etapa, somente splines desconectadas podem ser excluídas.",
+    "Não foi possível validar com segurança os vínculos da spline antes da exclusão.",
   splineDeleteConflict:
-    "A spline mudou no arquivo desde a leitura. A exclusão foi cancelada para proteger os vínculos.",
+    "A spline ou um de seus vizinhos mudou no arquivo. A exclusão foi cancelada sem deixar a cadeia parcialmente alterada.",
   splineDeleteError:
     "Não foi possível excluir a spline com segurança.",
   splineLinkTargetBusy:
@@ -904,7 +904,7 @@ export function App() {
           setEditorTool("select");
 
           setSaveNotice(
-            `Spline #${message.splineId} excluída. Backup: ${message.backupDirectory}`
+            `Spline #${message.splineId} excluída; ${message.unlinkedSplines} vizinha(s) atualizada(s) em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
           );
 
           setLoadedFullMapFor(undefined);
@@ -2233,17 +2233,6 @@ export function App() {
       }
 
       if (
-        selectedSpline.previousSplineId != -1 ||
-        selectedSpline.nextSplineId != -1
-      ) {
-        setError(
-          errorMessages
-            .splineDeleteLinked
-        );
-        return;
-      }
-
-      if (
         previewEditCount > 0 ||
         splinePreviewEditCount > 0 ||
         placementAsset ||
@@ -2257,7 +2246,7 @@ export function App() {
 
       const confirmed =
         window.confirm(
-          `Excluir permanentemente a spline desconectada #${selectedSpline.splineId}?\n\nUm backup do tile será criado antes da alteração.`
+          `Excluir permanentemente a spline #${selectedSpline.splineId}?\n\nOs vínculos recíprocos dos vizinhos serão liberados na mesma transação e todos os tiles alterados receberão backup.`
         );
 
       if (!confirmed) {
@@ -4125,23 +4114,16 @@ export function App() {
               }
               disabled={
                 busy ||
-                selectedSpline.previousSplineId !== -1 ||
-                selectedSpline.nextSplineId !== -1 ||
                 previewEditCount > 0 ||
                 splinePreviewEditCount > 0 ||
                 Boolean(placementAsset) ||
                 Boolean(splinePlacementTemplate)
               }
-              title={
-                selectedSpline.previousSplineId !== -1 ||
-                selectedSpline.nextSplineId !== -1
-                  ? "Somente splines desconectadas podem ser excluídas nesta etapa"
-                  : "Excluir spline desconectada com backup automático"
-              }
+              title="Excluir spline e liberar os vínculos recíprocos dos vizinhos na mesma transação"
             >
               {deletingSpline
                 ? "Excluindo..."
-                : "Excluir spline desconectada"}
+                : "Excluir spline"}
             </button>
           </>
         )}

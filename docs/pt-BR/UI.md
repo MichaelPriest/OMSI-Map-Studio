@@ -281,13 +281,13 @@ O host relê a spline-fonte do disco e valida ordinal, caminho `.sli`, ID, tipo 
 A decisão de iniciar desconectada é deliberada: esta etapa não reescreve automaticamente a cadeia de splines vizinhas.
 
 
-## Excluir spline desconectada
+## Excluir spline
 
-A aba **Geral** permite excluir uma spline somente quando `previous = -1` e `next = -1`.
+A aba **Geral** permite excluir splines desconectadas ou conectadas.
 
-O host relê o tile, valida ordinal, caminho `.sli`, ID, tipo e vínculos e remove somente a linha de comando e os dados funcionais da spline. Comentários, linhas em branco e seções desconhecidas são preservados. O tile recebe backup antes da troca atômica.
+Para uma spline conectada, o host valida a reciprocidade dos vizinhos, libera as pontas que apontam para a spline e remove a seção fonte no mesmo lote transacional. Todos os tiles afetados recebem backup sob o mesmo timestamp.
 
-Splines conectadas permanecem protegidas até existir edição transacional dos vínculos das vizinhas.
+Se qualquer spline vizinha mudou, desapareceu ou deixou de apontar reciprocamente para a fonte, a exclusão inteira é cancelada. Comentários, linhas em branco e seções desconhecidas continuam preservados.
 
 
 ## Busca de splines no Explorer

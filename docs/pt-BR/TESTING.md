@@ -129,15 +129,15 @@ Para testar conflito, altere externamente o ID, caminho, tipo ou vínculos da sp
 
 ## Teste de exclusão de spline
 
-1. crie uma cópia desconectada de uma spline;
-2. selecione a nova spline;
-3. confirme que **Excluir spline desconectada** está disponível;
-4. confirme a exclusão;
-5. aguarde o recarregamento;
-6. verifique que somente a spline escolhida foi removida;
-7. confira o backup e a preservação de comentários/seções desconhecidas.
+1. crie uma cópia desconectada de uma spline e valide que **Excluir spline** a remove;
+2. escolha uma spline conectada cuja anterior/próxima seja fácil de identificar;
+3. clique **Excluir spline** e confirme;
+4. após o recarregamento, confirme que a fonte desapareceu;
+5. confirme que os vizinhos que apontavam para ela agora possuem a ponta correspondente em `-1`;
+6. confira que todos os tiles alterados possuem backup sob o mesmo timestamp;
+7. verifique preservação de comentários/seções desconhecidas.
 
-Selecione uma spline com `previous` ou `next` diferente de `-1` e confirme que a exclusão permanece bloqueada.
+Para testar conflito, altere externamente um vínculo do vizinho antes de confirmar a exclusão. Nenhum tile deve ser parcialmente modificado.
 
 
 ## Teste de busca de splines

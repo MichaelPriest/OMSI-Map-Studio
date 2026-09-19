@@ -281,13 +281,13 @@ The host rereads the source spline from disk and validates ordinal, `.sli` path,
 Starting detached is deliberate: this stage does not automatically rewrite neighboring spline chains.
 
 
-## Delete detached spline
+## Delete spline
 
-The **General** tab can delete a spline only when `previous = -1` and `next = -1`.
+The **General** tab can delete detached or connected splines.
 
-The host rereads the tile, validates ordinal, `.sli` path, ID, type and links, and removes only the command line and functional spline data. Comments, blank lines and unknown sections are preserved. The tile is backed up before atomic replacement.
+For a connected spline, the host validates reciprocal neighbors, releases endpoints pointing to the source spline, and removes the source section in the same transaction. Every affected tile receives a backup under the same timestamp.
 
-Connected splines remain protected until transactional editing of neighboring links is implemented.
+If any neighbor changed, disappeared, or no longer points reciprocally to the source, the entire deletion is cancelled. Comments, blank lines and unknown sections remain preserved.
 
 
 ## Spline search in Explorer

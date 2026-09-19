@@ -129,15 +129,15 @@ For a conflict test, externally change the source spline ID, path, type or links
 
 ## Spline deletion test
 
-1. create a detached spline copy;
-2. select the new spline;
-3. verify **Delete detached spline** is available;
-4. confirm deletion;
-5. wait for reload;
-6. verify only the selected spline was removed;
-7. verify the backup and preservation of comments/unknown sections.
+1. create a detached spline copy and verify **Delete spline** removes it;
+2. choose a connected spline with easy-to-identify previous/next neighbors;
+3. click **Delete spline** and confirm;
+4. after reload, verify the source disappeared;
+5. verify neighbors that pointed at it now have the corresponding endpoint set to `-1`;
+6. verify every modified tile has a backup under the same timestamp;
+7. verify comments/unknown sections remain preserved.
 
-Select a spline whose `previous` or `next` is not `-1` and verify deletion remains blocked.
+For a conflict test, externally change a neighbor link before confirming deletion. No tile may be partially modified.
 
 
 ## Spline search test

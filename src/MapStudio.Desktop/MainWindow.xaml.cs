@@ -1588,69 +1588,122 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (
-            previousSplineId != -1 ||
-            nextSplineId != -1)
-        {
-            PostMessage(new
-            {
-                type = "hostError",
-                code = "splineDeleteLinked"
-            });
-
-            return;
-        }
-
-        var tile =
-            map.Tiles.FirstOrDefault(
-                candidate =>
-                    candidate.X == tileX &&
-                    candidate.Y == tileY);
-
-        if (tile is null)
-        {
-            PostMessage(new
-            {
-                type = "hostError",
-                code = "unknownTile"
-            });
-
-            return;
-        }
-
-        if (!OmsiMapPathResolver
-            .TryResolveTilePath(
-                map.DirectoryPath,
-                tile.RelativeMapPath,
-                out var tilePath) ||
-            !File.Exists(tilePath))
-        {
-            PostMessage(new
-            {
-                type = "hostError",
-                code = "invalidTilePath"
-            });
-
-            return;
-        }
-
         try
         {
-            var document =
-                await OmsiConfigParser
-                    .ParseFileAsync(
-                        tilePath);
+            var snapshot =
+                await ReadMapInsertionSnapshotAsync(
+                    map);
 
-            var result =
-                OmsiTileSplineDeleter
-                    .Remove(
-                        document,
-                        sourceSectionOrdinal,
-                        splinePath,
+            var entries =
+                new List<SplineMapEntry>();
+
+            var count =
+                Math.Min(
+                    map.Tiles.Count,
+                    snapshot.Contents.Count);
+
+            for (
+                var index = 0;
+                index < count;
+                index++)
+            {
+                var tile =
+                    map.Tiles[index];
+
+                foreach (var spline in
+                    snapshot
+                        .Contents[index]
+                        .Splines)
+                {
+                    entries.Add(
+                        new SplineMapEntry(
+                            tile.X,
+                            tile.Y,
+                            tile.RelativeMapPath,
+                            spline));
+                }
+            }
+
+            if (
+                entries
+                    .GroupBy(entry =>
+                        entry.Spline.SplineId)
+                    .Any(group =>
+                        group.Count() > 1))
+            {
+                throw new InvalidDataException(
+                    "duplicateSplineId");
+            }
+
+            var byId =
+                entries.ToDictionary(
+                    entry =>
+                        entry.Spline.SplineId);
+
+            if (
+                !byId.TryGetValue(
+                    splineId,
+                    out var source) ||
+                source.TileX != tileX ||
+                source.TileY != tileY ||
+                source.Spline
+                    .SourceSectionOrdinal !=
+                    sourceSectionOrdinal ||
+                source.Spline
+                    .PreviousSplineId !=
+                    previousSplineId ||
+                source.Spline
+                    .NextSplineId !=
+                    nextSplineId ||
+                source.Spline
+                    .IsHeightSpline !=
+                    isHeightSpline ||
+                !string.Equals(
+                    source.Spline.SplinePath,
+                    splinePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "splineSourceChanged");
+            }
+
+            var states =
+                byId.ToDictionary(
+                    pair => pair.Key,
+                    pair =>
+                        new OmsiSplineLinkState(
+                            pair.Key,
+                            pair.Value
+                                .Spline
+                                .PreviousSplineId,
+                            pair.Value
+                                .Spline
+                                .NextSplineId));
+
+            var unlinkPlan =
+                OmsiSplineLinkPlanner
+                    .Plan(
+                        states,
                         splineId,
                         previousSplineId,
                         nextSplineId,
-                        isHeightSpline);
+                        -1,
+                        -1);
+
+            var affectedEntries =
+                unlinkPlan.Keys
+                    .Where(id =>
+                        id != splineId)
+                    .Select(id =>
+                        byId[id])
+                    .Append(source)
+                    .GroupBy(entry =>
+                        (
+                            TileX: entry.TileX,
+                            TileY: entry.TileY,
+                            RelativeMapPath:
+                                entry.RelativeMapPath))
+                    .ToArray();
 
             var timestamp =
                 DateTimeOffset.UtcNow
@@ -1658,54 +1711,169 @@ public partial class MainWindow : Window
                         "yyyyMMdd-HHmmssfff'Z'",
                         CultureInfo.InvariantCulture);
 
-            var relativePath =
-                Path.GetRelativePath(
-                    map.DirectoryPath,
-                    tilePath);
-
-            if (
-                relativePath.StartsWith(
-                    "..",
-                    StringComparison.Ordinal) ||
-                Path.IsPathRooted(
-                    relativePath))
-            {
-                throw new InvalidDataException(
-                    "invalidTilePath");
-            }
-
             var backupRoot =
                 Path.Combine(
                     map.DirectoryPath,
                     ".mapstudio-backups",
                     timestamp);
 
-            var backupPath =
-                Path.Combine(
-                    backupRoot,
-                    relativePath);
+            var writes =
+                new List<PendingFileWrite>();
+
+            var editedTilePaths =
+                new List<string>();
+
+            var unlinkedSplines = 0;
+
+            foreach (var group in
+                affectedEntries)
+            {
+                if (!OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        map.DirectoryPath,
+                        group.Key
+                            .RelativeMapPath,
+                        out var tilePath) ||
+                    !File.Exists(tilePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            tilePath);
+
+                var linkEdits =
+                    group
+                        .Where(entry =>
+                            entry.Spline.SplineId !=
+                                splineId &&
+                            unlinkPlan.ContainsKey(
+                                entry.Spline
+                                    .SplineId))
+                        .Select(entry =>
+                        {
+                            var target =
+                                unlinkPlan[
+                                    entry.Spline
+                                        .SplineId];
+
+                            return new OmsiSplineLinkEdit(
+                                entry.Spline
+                                    .SourceSectionOrdinal,
+                                entry.Spline
+                                    .SplinePath,
+                                entry.Spline
+                                    .SplineId,
+                                entry.Spline
+                                    .PreviousSplineId,
+                                entry.Spline
+                                    .NextSplineId,
+                                entry.Spline
+                                    .IsHeightSpline,
+                                target
+                                    .PreviousSplineId,
+                                target
+                                    .NextSplineId);
+                        })
+                        .ToArray();
+
+                if (linkEdits.Length > 0)
+                {
+                    var linkResult =
+                        OmsiTileSplineLinkEditor
+                            .ApplyLinks(
+                                document,
+                                linkEdits);
+
+                    unlinkedSplines +=
+                        linkResult.AppliedEdits;
+
+                    document =
+                        OmsiConfigParser
+                            .ParseBytes(
+                                linkResult.Bytes);
+                }
+
+                byte[] bytes;
+
+                if (
+                    group.Any(entry =>
+                        entry.Spline.SplineId ==
+                            splineId))
+                {
+                    var deleteResult =
+                        OmsiTileSplineDeleter
+                            .Remove(
+                                document,
+                                sourceSectionOrdinal,
+                                splinePath,
+                                splineId,
+                                previousSplineId,
+                                nextSplineId,
+                                isHeightSpline);
+
+                    bytes =
+                        deleteResult.Bytes;
+                }
+                else
+                {
+                    bytes =
+                        document.ToBytes();
+                }
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        tilePath);
+
+                if (
+                    relativePath.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relativePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        tilePath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        bytes));
+
+                editedTilePaths.Add(
+                    tilePath);
+            }
 
             await SafeFileTransaction
                 .WriteAllAsync(
-                    [
-                        new PendingFileWrite(
-                            tilePath,
-                            backupPath,
-                            result.Bytes)
-                    ]);
+                    writes);
 
-            _tileContentCache
-                .TryRemove(
-                    tilePath,
-                    out _);
+            foreach (var tilePath in
+                editedTilePaths)
+            {
+                _tileContentCache
+                    .TryRemove(
+                        tilePath,
+                        out _);
+            }
 
             PostMessage(new
             {
                 type = "splineDeleted",
                 map.DirectoryName,
                 splineId,
-                deletedSplines =
-                    result.DeletedSplines,
+                deletedSplines = 1,
+                unlinkedSplines,
+                filesSaved =
+                    writes.Count,
                 backupDirectory =
                     backupRoot
             });
@@ -1715,11 +1883,7 @@ public partial class MainWindow : Window
             PostMessage(new
             {
                 type = "hostError",
-                code =
-                    exception.Message ==
-                        "splineStillLinked"
-                        ? "splineDeleteLinked"
-                        : "splineDeleteConflict",
+                code = "splineDeleteConflict",
                 detail = exception.Message
             });
         }
@@ -1729,7 +1893,7 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "accessDenied",
-                detail = tilePath
+                detail = map.DirectoryPath
             });
         }
         catch (IOException exception)
@@ -2226,9 +2390,10 @@ public partial class MainWindow : Window
                     .Select(id => byId[id])
                     .GroupBy(entry =>
                         (
-                            entry.TileX,
-                            entry.TileY,
-                            entry.RelativeMapPath)))
+                            TileX: entry.TileX,
+                            TileY: entry.TileY,
+                            RelativeMapPath:
+                                entry.RelativeMapPath)))
             {
                 if (!OmsiMapPathResolver
                     .TryResolveTilePath(

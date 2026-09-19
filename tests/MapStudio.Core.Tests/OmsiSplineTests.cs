@@ -350,22 +350,76 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
-    public void SplineDeleter_RefusesLinkedSpline()
+    public void SplineDeleter_RemovesExactLinkedSplineAfterGraphValidation()
     {
         var document =
             OmsiConfigParser.Parse(
                 "[spline]\n0\nSplines\\A.sli\n5\n4\n6\n0\n0\n0\n0\n10\n0\n0\n0\n");
 
-        Assert.Throws<InvalidDataException>(
-            () =>
-                OmsiTileSplineDeleter.Remove(
-                    document,
-                    0,
-                    @"Splines\A.sli",
+        var result =
+            OmsiTileSplineDeleter.Remove(
+                document,
+                0,
+                @"Splines\A.sli",
+                5,
+                4,
+                6,
+                false);
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(
+                    result.Bytes);
+
+        Assert.DoesNotContain(
+            "[spline]",
+            text);
+    }
+
+    [Fact]
+    public void SplineLinkPlanner_DisconnectsBothNeighborsForDeletion()
+    {
+        var states =
+            new Dictionary<
+                int,
+                OmsiSplineLinkState>
+            {
+                [4] = new(
+                    4,
+                    -1,
+                    5),
+                [5] = new(
                     5,
                     4,
+                    6),
+                [6] = new(
                     6,
-                    false));
+                    5,
+                    -1)
+            };
+
+        var plan =
+            OmsiSplineLinkPlanner.Plan(
+                states,
+                5,
+                4,
+                6,
+                -1,
+                -1);
+
+        Assert.Equal(
+            -1,
+            plan[4].NextSplineId);
+
+        Assert.Equal(
+            -1,
+            plan[6].PreviousSplineId);
+
+        Assert.Equal(
+            new OmsiSplineLinkTarget(
+                -1,
+                -1),
+            plan[5]);
     }
 
     [Fact]

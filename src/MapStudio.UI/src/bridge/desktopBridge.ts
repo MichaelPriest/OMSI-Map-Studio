@@ -192,6 +192,8 @@ export type HostMessage =
       directoryName: string;
       splineId: number;
       deletedSplines: number;
+      unlinkedSplines: number;
+      filesSaved: number;
       backupDirectory: string;
     }
   | {

@@ -18,14 +18,6 @@ public static class OmsiTileSplineDeleter
         ArgumentException.ThrowIfNullOrWhiteSpace(
             splinePath);
 
-        if (
-            previousSplineId != -1 ||
-            nextSplineId != -1)
-        {
-            throw new InvalidDataException(
-                "splineStillLinked");
-        }
-
         var splineSections =
             document.Sections
                 .Where(

@@ -292,3 +292,12 @@ When changing `previous` or `next`:
 - inconsistency between the source and its current neighbors cancels the batch.
 
 `OmsiTileSplineLinkEditor` changes only the two link lines. The host groups edits by tile, rereads only affected tiles and sends every file through one `SafeFileTransaction`, which restores already replaced files if a later replacement fails.
+
+
+## Transactional deletion of connected splines
+
+Spline deletion reuses `OmsiSplineLinkPlanner` with target `previous = -1` / `next = -1`, validating current reciprocal neighbors first.
+
+Neighbor links are edited before removing the source section. When a neighbor and source share a tile, the host applies link edits in memory, reparses those bytes with `OmsiConfigParser.ParseBytes`, then removes the source section. Every affected tile is submitted through one `SafeFileTransaction`.
+
+This lets a connected spline be deleted while releasing reciprocal endpoints without leaving dangling IDs; a conflict in any tile cancels the entire batch.

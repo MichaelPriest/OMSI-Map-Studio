@@ -292,3 +292,12 @@ Ao trocar `previous` ou `next`:
 - inconsistência entre a fonte e seus vizinhos atuais cancela o lote.
 
 `OmsiTileSplineLinkEditor` altera somente as duas linhas de vínculo. O host agrupa os edits por tile, relê apenas os tiles afetados e envia todos os arquivos para uma única `SafeFileTransaction`, que restaura os já substituídos se uma troca posterior falhar.
+
+
+## Exclusão transacional de splines conectadas
+
+A exclusão de spline reutiliza `OmsiSplineLinkPlanner` com alvo `previous = -1` / `next = -1`. Isso valida primeiro a reciprocidade dos vizinhos atuais.
+
+Os vizinhos são editados antes da remoção da seção fonte. Quando vizinho e fonte ficam no mesmo tile, o host aplica os edits de vínculo em memória, reabre esses bytes com `OmsiConfigParser.ParseBytes` e só então remove a seção fonte. Todos os tiles afetados entram em uma única `SafeFileTransaction`.
+
+Assim, apagar uma spline conectada libera as pontas recíprocas sem deixar IDs pendurados; conflito em qualquer tile cancela o lote inteiro.
