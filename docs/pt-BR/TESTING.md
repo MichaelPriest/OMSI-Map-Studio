@@ -473,3 +473,14 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 5. confirme que BMPs mostram upload RGBA direto e que não existe segunda carga PNG do mesmo arquivo;
 6. compare objetos O3D que possuem seção de transformação 0x79 e confirme posição/orientação interna correta após aplicação da transformação inversa;
 7. confirme que a interface não congela durante parse pesado de O3D, pois a leitura ocorre fora da thread de UI.
+
+
+## Validação de carregamento estrutural prioritário
+
+1. abra Grundorf em **Mapa completo** e cronometre separadamente o fim da leitura dos tiles e o momento em que todas as texturas terminam;
+2. confirme que, depois que os tiles estão consistentes, o viewport fica utilizável enquanto O3D/SLI/texturas restantes continuam progredindo na barra de status;
+3. confirme que o prefetch amplo de texturas não começa antes de os caminhos O3D e SLI estruturais terem recebido resposta;
+4. reabra o mapa sem trocar a raiz do OMSI e confirme reutilização dos caches de `.sco` e de meshes físicos `.o3d`;
+5. use dois `.sco` que referenciem o mesmo arquivo `.o3d` e confirme que a geometria continua idêntica, sem leitura/parsing duplicado perceptível;
+6. altere para o modo 3×3 e confirme que a troca de região ainda bloqueia edição somente durante a leitura consistente dos novos tiles;
+7. confirme que erros reais como `encrypted` e `unsupportedFormat` continuam aparecendo no diagnóstico e não são convertidos em geometria fictícia.

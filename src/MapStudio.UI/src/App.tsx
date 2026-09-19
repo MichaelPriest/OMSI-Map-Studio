@@ -108,8 +108,8 @@ const autoObjectTextureLimit = 128;
 const autoSplineTextureLimit = 96;
 const autoObjectTextureBatch = 12;
 const autoSplineTextureBatch = 8;
-const geometryPreloadBatchSize = 8;
-const splineProfilePreloadBatchSize = 8;
+const geometryPreloadBatchSize = 12;
+const splineProfilePreloadBatchSize = 12;
 const autoTextureLimit =
   autoObjectTextureLimit +
   autoSplineTextureLimit;
@@ -803,8 +803,7 @@ export function App() {
     loadingFullMap ||
     Boolean(loadingRegionKey) ||
     loadingSceneryLibrary ||
-    loadingSplineLibrary ||
-    assetWarmupActive;
+    loadingSplineLibrary;
 
   useEffect(() => {
     if (!interactionLocked) {
@@ -2821,6 +2820,31 @@ export function App() {
 
   useEffect(() => {
     if (!bridgeAvailable) {
+      return;
+    }
+
+    const geometryReadyForTexturePrefetch =
+      objectPathsForTexturePreload.every(
+        (path) =>
+          Object.hasOwn(
+            geometryByPath,
+            path
+          )
+      );
+
+    const splinesReadyForTexturePrefetch =
+      splinePathsForPreload.every(
+        (path) =>
+          Object.hasOwn(
+            splineProfilesByPath,
+            path
+          )
+      );
+
+    if (
+      !geometryReadyForTexturePrefetch ||
+      !splinesReadyForTexturePrefetch
+    ) {
       return;
     }
 
@@ -5792,25 +5816,6 @@ export function App() {
         title: "Carregando área ativa",
         detail:
           "Atualizando os tiles do modo desempenho 3×3. A edição será liberada quando a área estiver consistente."
-      };
-    }
-
-    if (
-      assetWarmupActive &&
-      selectedMap
-    ) {
-      return {
-        title:
-          "Preparando recursos do mapa",
-        detail:
-          `O3D ${geometryWarmupCompleted}/${geometryWarmupTotal} · SLI ${loadedSplineProfileCount}/${splinePathsForPreload.length} · recursos visuais ${completedVisualAssetCount}/${requestedVisualAssetCount}. Uma única etapa contínua, sem abrir um carregamento por item.`,
-        completed:
-          assetWarmupProgress.completed,
-        total:
-          Math.max(
-            1,
-            assetWarmupProgress.total
-          )
       };
     }
 

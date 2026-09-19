@@ -420,3 +420,22 @@ Scenery geometry is cached by absolute path while the OMSI root remains unchange
 OMSI BMP textures are sent directly to the GPU as RGBA. The host no longer creates a redundant PNG for the same BMP, reducing CPU, memory, and WebView2 message traffic.
 
 Performance 3×3 mode no longer has an artificial 64-object-path or 48-spline-path cap. Every asset actually used by the loaded tiles enters the preload queue.
+
+
+## Structural-first loading and physical caches
+
+Map opening now separates two phases: **structure required for editing** and **background visual refinement**. The UI still loads real O3D, SLI profiles, and textures, but automatic texture prefetch no longer competes with the initial structural reads.
+
+During a session for the same OMSI installation, the host keeps independent caches for:
+
+- parsed `.sco` metadata;
+- geometry payload by `.sco`;
+- geometry by physical `.o3d` file;
+- `.sli` profiles;
+- texture assets.
+
+The physical-mesh cache prevents the same O3D from being reopened and reparsed when different `.sco` files reference it. A thread-safe `Lazy<T>` entry guarantees a single materialization even when multiple object requests arrive concurrently.
+
+Geometry and SLI preload use bounded batches, while broad texture prefetch only starts after the structural paths for the current region (or full map) have received responses. Terrain/base resources remain priority paths and do not depend on that prefetch.
+
+Editing is no longer kept locked solely because automatic textures are still arriving. Locking remains active while selecting the installation/map, reading tiles, switching regions, and running explicit library scans.

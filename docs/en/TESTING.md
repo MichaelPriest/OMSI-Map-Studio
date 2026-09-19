@@ -473,3 +473,14 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 5. verify BMP textures use direct RGBA upload without a second PNG payload for the same file;
 6. inspect O3D objects containing transform section 0x79 and verify correct internal placement after applying the inverse transform;
 7. verify heavy O3D parsing no longer freezes the UI thread.
+
+
+## Structural-first loading validation
+
+1. open Grundorf in **Full map** mode and time tile completion separately from the point where every texture finishes;
+2. confirm that once tiles are consistent the viewport becomes usable while remaining O3D/SLI/textures continue progressing in the status bar;
+3. confirm broad texture prefetch does not start before structural O3D and SLI paths have received responses;
+4. reopen the map without changing the OMSI root and confirm reuse of parsed `.sco` and physical `.o3d` mesh caches;
+5. use two `.sco` files that reference the same `.o3d` and confirm identical geometry without perceptible duplicate reading/parsing;
+6. switch to 3×3 mode and confirm region changes still lock editing only while the new tiles are being read consistently;
+7. confirm real errors such as `encrypted` and `unsupportedFormat` remain visible in diagnostics and are never replaced by fake geometry.

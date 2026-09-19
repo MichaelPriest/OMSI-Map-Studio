@@ -20,7 +20,7 @@ namespace MapStudio.Desktop;
 public partial class MainWindow : Window
 {
     private const int MaxConcurrentTileReads = 4;
-    private const int MaxConcurrentGeometryReads = 8;
+    private const int MaxConcurrentGeometryReads = 12;
     private const int MaxTileStreamRadius = 2;
     private const long MaxTextureAssetBytes =
         16L * 1024L * 1024L;
@@ -76,6 +76,18 @@ public partial class MainWindow : Window
         string,
         Task<SceneryGeometryPayload>>
         _sceneryGeometryCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        Task<OmsiSceneryObjectMetadata>>
+        _sceneryMetadataCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        Lazy<OmsiO3dGeometry>>
+        _meshGeometryCache =
             new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ConcurrentDictionary<
@@ -721,6 +733,8 @@ public partial class MainWindow : Window
         _tileContentCache.Clear();
         _splineDefinitionCache.Clear();
         _sceneryGeometryCache.Clear();
+        _sceneryMetadataCache.Clear();
+        _meshGeometryCache.Clear();
         _textureAssetCache.Clear();
         _sceneryLibraryCache = null;
         _splineLibraryCache = null;
@@ -4520,7 +4534,7 @@ public partial class MainWindow : Window
         try
         {
             var metadata =
-                await _sceneryObjectReader.ReadMetadataAsync(
+                await ReadSceneryMetadataCachedAsync(
                     fullPath);
 
             var meshes =
@@ -4632,6 +4646,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task<OmsiSceneryObjectMetadata>
+        ReadSceneryMetadataCachedAsync(
+            string sceneryObjectFullPath)
+    {
+        var task =
+            _sceneryMetadataCache.GetOrAdd(
+                sceneryObjectFullPath,
+                path =>
+                    _sceneryObjectReader
+                        .ReadMetadataAsync(path));
+
+        try
+        {
+            return await task;
+        }
+        catch
+        {
+            _sceneryMetadataCache.TryRemove(
+                sceneryObjectFullPath,
+                out _);
+
+            throw;
+        }
+    }
+
     private async Task<SceneryGeometryPayload>
         ReadSceneryGeometryCachedAsync(
             string sceneryObjectFullPath)
@@ -4678,7 +4717,7 @@ public partial class MainWindow : Window
             string sceneryObjectFullPath)
     {
         var metadata =
-            await _sceneryObjectReader.ReadMetadataAsync(
+            await ReadSceneryMetadataCachedAsync(
                 sceneryObjectFullPath);
 
         var meshes =
@@ -4725,20 +4764,10 @@ public partial class MainWindow : Window
                     OmsiO3dGeometry.Error(
                         "invalidMeshPath");
             }
-            else if (!string.Equals(
-                         Path.GetExtension(
-                             meshFullPath),
-                         ".o3d",
-                         StringComparison.OrdinalIgnoreCase))
-            {
-                geometry =
-                    OmsiO3dGeometry.Error(
-                        "unsupportedFormat");
-            }
             else
             {
                 geometry =
-                    _o3dGeometryReader.Read(
+                    ReadMeshGeometryCached(
                         meshFullPath);
             }
 
@@ -4753,6 +4782,45 @@ public partial class MainWindow : Window
         return new SceneryGeometryPayload(
             meshes,
             metadata.Tree);
+    }
+
+    private OmsiO3dGeometry
+        ReadMeshGeometryCached(
+            string meshFullPath)
+    {
+        if (!string.Equals(
+                Path.GetExtension(
+                    meshFullPath),
+                ".o3d",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return OmsiO3dGeometry.Error(
+                "unsupportedFormat");
+        }
+
+        var lazy =
+            _meshGeometryCache.GetOrAdd(
+                meshFullPath,
+                path =>
+                    new Lazy<OmsiO3dGeometry>(
+                        () =>
+                            _o3dGeometryReader.Read(
+                                path),
+                        LazyThreadSafetyMode
+                            .ExecutionAndPublication));
+
+        try
+        {
+            return lazy.Value;
+        }
+        catch
+        {
+            _meshGeometryCache.TryRemove(
+                meshFullPath,
+                out _);
+
+            throw;
+        }
     }
 
     private async Task<IReadOnlyList<object>>

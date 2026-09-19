@@ -420,3 +420,22 @@ Geometrias de scenery são mantidas em cache por caminho absoluto enquanto a rai
 BMPs usados pelo OMSI seguem diretamente como RGBA para a GPU. O host não gera mais um PNG redundante para o mesmo BMP, reduzindo CPU, memória e tráfego de mensagens WebView2.
 
 O modo desempenho 3×3 não possui mais limite artificial de 64 paths de objetos ou 48 paths de splines. Todos os assets realmente usados pelos tiles carregados entram na fila.
+
+
+## Carregamento estrutural prioritário e caches físicos
+
+A abertura do mapa separa agora duas fases: **estrutura necessária para editar** e **acabamento visual em segundo plano**. A interface continua carregando O3D, perfis SLI e texturas reais, mas o prefetch automático de texturas não compete com a leitura estrutural inicial.
+
+O host mantém, durante a sessão da mesma instalação do OMSI, caches independentes para:
+
+- metadados `.sco` já parseados;
+- payload de geometria por `.sco`;
+- geometria por arquivo físico `.o3d`;
+- perfis `.sli`;
+- assets de textura.
+
+O cache por mesh físico evita reabrir e reprocessar o mesmo O3D quando arquivos `.sco` diferentes apontam para ele. A entrada usa `Lazy<T>` thread-safe para garantir uma única materialização mesmo quando vários objetos chegam em paralelo.
+
+O preloading de geometria e SLI usa lotes limitados, enquanto o prefetch amplo de texturas só começa depois que os caminhos estruturais do recorte atual (ou do mapa completo) receberam resposta. Terreno/base continuam prioritários e não dependem desse prefetch.
+
+A edição deixa de permanecer bloqueada apenas porque texturas automáticas ainda estão chegando. O bloqueio continua existindo durante seleção da instalação/mapa, leitura dos tiles, troca de região e varreduras explícitas de biblioteca.
