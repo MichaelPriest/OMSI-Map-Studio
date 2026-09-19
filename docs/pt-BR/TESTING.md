@@ -595,3 +595,12 @@ No Grundorf, confirme que as árvores `[tree]` continuam renderizadas, mas os gr
 3. confirme que SCOs com `[absheight]` continuam usando a altura absoluta gravada no mapa;
 4. mova verticalmente um objeto comum, salve e reabra o mapa: o valor salvo deve continuar relativo ao terreno;
 5. confirme que seleção, foco e gizmo ficam sobre a geometria visual corrigida.
+
+
+## Validação de eixos O3D e cores — test.26
+
+1. abra Grundorf e compare as casas/objetos com ruas e splines;
+2. confirme que edifícios não ficam deitados, girados no eixo errado ou deslocados pelo transform interno do O3D;
+3. confirme que objetos comuns continuam respeitando terrain + Z relativo e `[absheight]` continua absoluto;
+4. confirme que texturas carregadas mostram suas cores reais, sem escurecimento causado por multiplicação com `diffuseColor`;
+5. compare com a test.25 e registre qualquer objeto específico que ainda fique fora de posição.
