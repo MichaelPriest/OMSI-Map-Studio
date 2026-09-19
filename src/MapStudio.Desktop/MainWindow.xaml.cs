@@ -4901,7 +4901,8 @@ public partial class MainWindow : Window
 
         return new SceneryGeometryPayload(
             meshes,
-            metadata.Tree);
+            metadata.Tree,
+            metadata.UsesAbsoluteHeight);
     }
 
     private OmsiO3dGeometry
@@ -5584,7 +5585,8 @@ public partial class MainWindow : Window
 
     private sealed record SceneryGeometryPayload(
         IReadOnlyList<SceneryMeshGeometryPayload> Meshes,
-        OmsiSceneryTreeDefinition? Tree);
+        OmsiSceneryTreeDefinition? Tree,
+        bool UsesAbsoluteHeight);
 
     private sealed record SceneryMeshGeometryPayload(
         string DeclaredPath,
