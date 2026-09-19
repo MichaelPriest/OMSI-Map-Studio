@@ -331,3 +331,12 @@ A aba **Materiais** de objetos mostra agora o estado do asset real por material:
 O painel **Perfil** de splines apresenta o mesmo estado ao lado de cada superfície. Isso permite distinguir imediatamente uma geometria sem textura declarada de uma textura que existe no `.sli`/O3D mas não pôde ser resolvida.
 
 Os textos antigos de “Somente leitura” foram removidos da interface: a Alpha.3 trabalha em modo de **edição preservativa** dentro das limitações documentadas.
+
+
+## Texturas progressivas no mapa
+
+O mapa agora pode receber texturas reais progressivamente mesmo sem selecionar cada instância. O prefetch prioriza tipos de objetos e splines mais próximos do tile ativo.
+
+O limite automático é de **24 texturas por mapa/sessão**: 16 de objetos e 8 de splines. A barra inferior mostra `Texturas auto: X/24`. Seleções e prévias continuam carregando suas texturas independentemente desse limite.
+
+Perfis `.sli` próximos também são preparados progressivamente, um por vez, para permitir que superfícies de spline recebam textura sem disparar leitura maciça.

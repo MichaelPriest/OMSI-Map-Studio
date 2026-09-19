@@ -193,3 +193,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 3. validate a found real texture and confirm **Loaded · EXT**;
 4. test a missing reference and confirm **Missing file** without breaking geometry;
 5. select a textured spline and verify the same state appears in **Profile**.
+
+
+## Visual-prefetch test
+
+1. open a full map with several textured object types;
+2. without selecting objects, verify some materials near the active tile receive textures progressively;
+3. verify `Auto textures: X/24` in the status bar and ensure X never exceeds 24;
+4. change the active tile and verify new nearby resources can use any remaining budget;
+5. select an object whose texture was outside the budget and verify selection still loads it normally;
+6. verify nearby spline profiles load one at a time and the same asset is not requested twice.

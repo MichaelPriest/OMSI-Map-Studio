@@ -331,3 +331,12 @@ The object **Materials** tab now shows the real asset state per material: **Load
 The spline **Profile** panel exposes the same state next to every surface. This makes it possible to distinguish geometry with no declared texture from a texture declared by O3D/`.sli` that could not be resolved.
 
 Old “Read only” UI labels were removed: Alpha.3 operates in **preservation-safe editing** mode within the documented limitations.
+
+
+## Progressive map textures
+
+The map can now receive real textures progressively without selecting every instance. Prefetch prioritizes object and spline types closest to the active tile.
+
+The automatic limit is **24 textures per map/session**: 16 object textures and 8 spline textures. The bottom status bar shows `Auto textures: X/24`. Selections and previews still load their textures independently of this limit.
+
+Nearby `.sli` profiles are also prepared progressively, one at a time, so spline surfaces can become textured without triggering a massive read.

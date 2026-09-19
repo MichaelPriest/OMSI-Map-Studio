@@ -319,3 +319,12 @@ Textures are not preloaded for the whole map. When a selected object, spline, or
 `OmsiTextureAssetPathResolver` resolves only supported extensions inside `Sceneryobjects` or `Splines`, rejecting absolute/out-of-root paths. The host caps each texture at 16 MiB and returns Base64 bytes, extension and MIME. React caches by owner/mesh/name.
 
 Babylon receives the forced extension when creating `Texture`; DDS and TGA loaders are registered explicitly. At this stage loading is on demand for selections and previews, avoiding transfer of every texture in a large map.
+
+
+## Bounded visual prefetch
+
+In addition to priority loading for selection/placement previews, the UI keeps a resource window around the active tile. Up to 20 object paths and 12 spline paths are considered for prefetch.
+
+Nearby `.sli` profiles load one at a time. Textures use separate budgets of 16 automatic object assets + 8 spline assets (24 total), in small batches of 4 + 2 per cycle. The cache and `requestedTextureKeys` prevent duplicate requests.
+
+Selection and placement preview do not consume this automatic budget: they remain priority paths and may request their own assets.

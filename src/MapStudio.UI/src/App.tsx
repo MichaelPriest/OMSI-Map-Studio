@@ -97,6 +97,16 @@ const defaultPlacementTransform:
     bank: 0
   };
 
+const nearbyObjectPathLimit = 20;
+const nearbySplinePathLimit = 12;
+const autoObjectTextureLimit = 16;
+const autoSplineTextureLimit = 8;
+const autoObjectTextureBatch = 4;
+const autoSplineTextureBatch = 2;
+const autoTextureLimit =
+  autoObjectTextureLimit +
+  autoSplineTextureLimit;
+
 type PendingSplinePlacement = {
   targetTileX: number;
   targetTileY: number;
@@ -162,7 +172,7 @@ const errorMessages: Record<string, string> = {
   splineInsertError:
     "Não foi possível inserir a spline com segurança.",
   splineInsertTemplateUnavailable:
-    "A prévia é válida, mas este mapa não possui um template [spline] normal neutro e explícito para derivar com segurança header/cant/skew. A gravação foi bloqueada.",
+    "A prévia é válida, mas este mapa não possui um template neutro explícito do mesmo tipo ([spline] ou [spline_h]) para derivar com segurança header e extras. A gravação foi bloqueada.",
   splineIdExhausted:
     "Não há mais IDs inteiros disponíveis para criar uma nova spline.",
   splineInsertionWorldCoordinatesUnsupported:
@@ -463,6 +473,11 @@ export function App() {
   ] = useState<string>();
 
   const [
+    preloadingSplineProfileFor,
+    setPreloadingSplineProfileFor
+  ] = useState<string>();
+
+  const [
     loadingMetadataFor,
     setLoadingMetadataFor
   ] = useState<string>();
@@ -519,6 +534,13 @@ export function App() {
   const [
     requestedTextureKeys,
     setRequestedTextureKeys
+  ] = useState<
+    Record<string, true>
+  >({});
+
+  const [
+    autoPrefetchedTextureKeys,
+    setAutoPrefetchedTextureKeys
   ] = useState<
     Record<string, true>
   >({});
@@ -629,12 +651,16 @@ export function App() {
           setGeometryByPath({});
           setTextureAssetsByKey({});
           setRequestedTextureKeys({});
+          setAutoPrefetchedTextureKeys({});
           setPreviewObjectTransforms({});
           setPreviewSplineTransforms({});
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setEditorTool("select");
           setPreloadingGeometryFor(undefined);
+          setPreloadingSplineProfileFor(
+            undefined
+          );
           setSelectingRoot(false);
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
@@ -691,7 +717,11 @@ export function App() {
           setGeometryByPath({});
           setTextureAssetsByKey({});
           setRequestedTextureKeys({});
+          setAutoPrefetchedTextureKeys({});
           setPreloadingGeometryFor(undefined);
+          setPreloadingSplineProfileFor(
+            undefined
+          );
           setSelectingMap(false);
           setMapLoadMode("full");
           setEditorTool("select");
@@ -940,6 +970,14 @@ export function App() {
                 : current
           );
 
+          setPreloadingSplineProfileFor(
+            (current) =>
+              current ===
+              message.splinePath
+                ? undefined
+                : current
+          );
+
           return;
         }
 
@@ -1168,9 +1206,15 @@ export function App() {
           setLoadingFullMap(false);
           setFullMapProgress(undefined);
           setLoadingSplineFor(undefined);
+          setPreloadingSplineProfileFor(
+            undefined
+          );
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
           setPreloadingGeometryFor(undefined);
+          setPreloadingSplineProfileFor(
+            undefined
+          );
           setLoadingSceneryLibrary(false);
           setLoadingSplineLibrary(false);
           setSaving(false);
@@ -1270,6 +1314,8 @@ export function App() {
         splinePath
       ) ||
       loadingSplineFor ===
+        splinePath ||
+      preloadingSplineProfileFor ===
         splinePath
     ) {
       return;
@@ -1285,6 +1331,7 @@ export function App() {
   }, [
     bridgeAvailable,
     loadingSplineFor,
+    preloadingSplineProfileFor,
     selectedSpline,
     splineProfilesByPath
   ]);
@@ -1580,6 +1627,417 @@ export function App() {
       splines
     ]
   );
+
+  const nearbyObjectPaths =
+    useMemo(() => {
+      const byPath =
+        new Map<string, number>();
+
+      for (const placedObject of
+        objectsForViewport) {
+        const distance =
+          activeTile
+            ? Math.max(
+                Math.abs(
+                  placedObject.tileX -
+                    activeTile.x
+                ),
+                Math.abs(
+                  placedObject.tileY -
+                    activeTile.y
+                )
+              )
+            : 0;
+
+        const current =
+          byPath.get(
+            placedObject
+              .sceneryObjectPath
+          );
+
+        if (
+          current === undefined ||
+          distance < current
+        ) {
+          byPath.set(
+            placedObject
+              .sceneryObjectPath,
+            distance
+          );
+        }
+      }
+
+      return Array.from(
+        byPath.entries()
+      )
+        .sort(
+          (left, right) =>
+            left[1] - right[1] ||
+            left[0].localeCompare(
+              right[0]
+            )
+        )
+        .slice(
+          0,
+          nearbyObjectPathLimit
+        )
+        .map(([path]) => path);
+    }, [
+      activeTile,
+      objectsForViewport
+    ]);
+
+  const nearbySplinePaths =
+    useMemo(() => {
+      const byPath =
+        new Map<string, number>();
+
+      for (const placedSpline of
+        splinesForViewport) {
+        const distance =
+          activeTile
+            ? Math.max(
+                Math.abs(
+                  placedSpline.tileX -
+                    activeTile.x
+                ),
+                Math.abs(
+                  placedSpline.tileY -
+                    activeTile.y
+                )
+              )
+            : 0;
+
+        const current =
+          byPath.get(
+            placedSpline.splinePath
+          );
+
+        if (
+          current === undefined ||
+          distance < current
+        ) {
+          byPath.set(
+            placedSpline.splinePath,
+            distance
+          );
+        }
+      }
+
+      return Array.from(
+        byPath.entries()
+      )
+        .sort(
+          (left, right) =>
+            left[1] - right[1] ||
+            left[0].localeCompare(
+              right[0]
+            )
+        )
+        .slice(
+          0,
+          nearbySplinePathLimit
+        )
+        .map(([path]) => path);
+    }, [
+      activeTile,
+      splinesForViewport
+    ]);
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      loadingSplineFor ||
+      preloadingSplineProfileFor
+    ) {
+      return;
+    }
+
+    const nextPath =
+      nearbySplinePaths.find(
+        (path) =>
+          !Object.hasOwn(
+            splineProfilesByPath,
+            path
+          )
+      );
+
+    if (!nextPath) {
+      return;
+    }
+
+    setPreloadingSplineProfileFor(
+      nextPath
+    );
+
+    loadSplineProfile(nextPath);
+  }, [
+    bridgeAvailable,
+    loadingSplineFor,
+    nearbySplinePaths,
+    preloadingSplineProfileFor,
+    splineProfilesByPath
+  ]);
+
+  useEffect(() => {
+    if (!bridgeAvailable) {
+      return;
+    }
+
+    const autoKeys =
+      Object.keys(
+        autoPrefetchedTextureKeys
+      );
+
+    const usedObject =
+      autoKeys.filter(
+        (key) =>
+          key.startsWith(
+            "scenery|"
+          )
+      ).length;
+
+    const usedSpline =
+      autoKeys.filter(
+        (key) =>
+          key.startsWith(
+            "spline|"
+          )
+      ).length;
+
+    const objectBudget =
+      Math.min(
+        autoObjectTextureBatch,
+        Math.max(
+          0,
+          autoObjectTextureLimit -
+            usedObject
+        )
+      );
+
+    const splineBudget =
+      Math.min(
+        autoSplineTextureBatch,
+        Math.max(
+          0,
+          autoSplineTextureLimit -
+            usedSpline
+        )
+      );
+
+    const objectRequests:
+      Array<{
+        kind: "scenery";
+        key: string;
+        sceneryObjectPath: string;
+        meshPath: string;
+        textureName: string;
+      }> = [];
+
+    for (const sceneryObjectPath of
+      nearbyObjectPaths) {
+      if (
+        objectRequests.length >=
+          objectBudget
+      ) {
+        break;
+      }
+
+      const geometry =
+        geometryByPath[
+          sceneryObjectPath
+        ];
+
+      if (!geometry) {
+        continue;
+      }
+
+      for (const mesh of
+        geometry.meshes) {
+        for (const material of
+          mesh.geometry.materials) {
+          if (
+            objectRequests.length >=
+              objectBudget
+          ) {
+            break;
+          }
+
+          const textureName =
+            material.textureName;
+
+          if (!textureName) {
+            continue;
+          }
+
+          const key =
+            getSceneryTextureAssetKey(
+              sceneryObjectPath,
+              mesh.declaredPath,
+              textureName
+            );
+
+          if (
+            Object.hasOwn(
+              textureAssetsByKey,
+              key
+            ) ||
+            Object.hasOwn(
+              requestedTextureKeys,
+              key
+            )
+          ) {
+            continue;
+          }
+
+          objectRequests.push({
+            kind: "scenery",
+            key,
+            sceneryObjectPath,
+            meshPath:
+              mesh.declaredPath,
+            textureName
+          });
+        }
+      }
+    }
+
+    const splineRequests:
+      Array<{
+        kind: "spline";
+        key: string;
+        splinePath: string;
+        textureName: string;
+      }> = [];
+
+    for (const splinePath of
+      nearbySplinePaths) {
+      if (
+        splineRequests.length >=
+          splineBudget
+      ) {
+        break;
+      }
+
+      const definition =
+        splineProfilesByPath[
+          splinePath
+        ];
+
+      if (!definition) {
+        continue;
+      }
+
+      for (const textureName of
+        definition.textures) {
+        if (
+          splineRequests.length >=
+            splineBudget
+        ) {
+          break;
+        }
+
+        if (!textureName) {
+          continue;
+        }
+
+        const key =
+          getSplineTextureAssetKey(
+            splinePath,
+            textureName
+          );
+
+        if (
+          Object.hasOwn(
+            textureAssetsByKey,
+            key
+          ) ||
+          Object.hasOwn(
+            requestedTextureKeys,
+            key
+          )
+        ) {
+          continue;
+        }
+
+        splineRequests.push({
+          kind: "spline",
+          key,
+          splinePath,
+          textureName
+        });
+      }
+    }
+
+    const requests = [
+      ...objectRequests,
+      ...splineRequests
+    ];
+
+    if (requests.length === 0) {
+      return;
+    }
+
+    setRequestedTextureKeys(
+      (current) => {
+        const next = {
+          ...current
+        };
+
+        for (const request of
+          requests) {
+          next[request.key] = true;
+        }
+
+        return next;
+      }
+    );
+
+    setAutoPrefetchedTextureKeys(
+      (current) => {
+        const next = {
+          ...current
+        };
+
+        for (const request of
+          requests) {
+          next[request.key] = true;
+        }
+
+        return next;
+      }
+    );
+
+    for (const request of
+      requests) {
+      if (
+        request.kind ===
+        "scenery"
+      ) {
+        loadSceneryTextureAsset(
+          request.key,
+          request.sceneryObjectPath,
+          request.meshPath,
+          request.textureName
+        );
+      } else {
+        loadSplineTextureAsset(
+          request.key,
+          request.splinePath,
+          request.textureName
+        );
+      }
+    }
+  }, [
+    autoPrefetchedTextureKeys,
+    bridgeAvailable,
+    geometryByPath,
+    nearbyObjectPaths,
+    nearbySplinePaths,
+    requestedTextureKeys,
+    splineProfilesByPath,
+    textureAssetsByKey
+  ]);
 
   const normalizedExplorerSearch =
     explorerSearch
@@ -6451,6 +6909,8 @@ export function App() {
                   ? `Carregando modelos O3D ${loadedMapGeometryCount}/${mapObjectPaths.length}...`
                   : loadingSplineFor
                     ? "Lendo SLI..."
+                  : preloadingSplineProfileFor
+                    ? "Preparando perfis SLI próximos..."
                   : loadingMetadataFor
                     ? "Lendo SCO..."
                     : loadingGeometryFor
@@ -6476,6 +6936,12 @@ export function App() {
             {mapLoadMode === "full"
               ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
               : "sob demanda"}
+            <b>·</b>
+            Texturas auto:{" "}
+            {Object.keys(
+              autoPrefetchedTextureKeys
+            ).length}/
+            {autoTextureLimit}
             <b>·</b>
             Prévia:{" "}
             {previewEditCount}

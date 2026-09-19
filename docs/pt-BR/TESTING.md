@@ -193,3 +193,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 3. valide uma textura real encontrada e confirme **Carregada · EXT**;
 4. teste uma referência ausente e confirme **Arquivo ausente** sem quebrar a geometria;
 5. selecione uma spline texturizada e confirme o mesmo estado no painel **Perfil**.
+
+
+## Teste de prefetch visual
+
+1. abra um mapa completo com vários tipos de objetos texturizados;
+2. sem selecionar objetos, confirme que alguns materiais próximos ao tile ativo recebem textura progressivamente;
+3. confirme `Texturas auto: X/24` na barra de status e que X nunca passa de 24;
+4. altere o tile ativo e confirme que novos recursos próximos podem ocupar o orçamento ainda disponível;
+5. selecione um objeto cuja textura não entrou no orçamento e confirme que a seleção ainda carrega a textura normalmente;
+6. confirme que perfis de spline próximos são carregados um por vez e que não há pedidos duplicados do mesmo asset.

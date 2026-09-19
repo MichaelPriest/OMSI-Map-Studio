@@ -319,3 +319,12 @@ Texturas não são pré-carregadas para o mapa inteiro. Quando um objeto, spline
 `OmsiTextureAssetPathResolver` resolve somente extensões suportadas dentro de `Sceneryobjects` ou `Splines`, rejeitando caminhos absolutos/fora da raiz. O host limita cada textura a 16 MiB e devolve bytes Base64, extensão e MIME. O React mantém cache por owner/mesh/nome.
 
 Babylon recebe a extensão forçada na criação de `Texture`; loaders DDS e TGA são registrados explicitamente. Nesta etapa, o carregamento é sob demanda para seleção e prévias, evitando transferir todas as texturas de um mapa grande.
+
+
+## Prefetch visual limitado
+
+Além do carregamento prioritário da seleção/prévia, a UI mantém uma janela de recursos próximos ao tile ativo. Até 20 caminhos de objeto e 12 caminhos de spline são considerados para prefetch.
+
+Perfis `.sli` próximos são carregados um por vez. As texturas usam orçamento separado de 16 assets automáticos de objetos + 8 de splines (24 no total), em pequenos lotes de 4 + 2 por ciclo. O cache e `requestedTextureKeys` impedem pedidos duplicados.
+
+A seleção e a prévia não consomem esse orçamento automático: continuam tendo prioridade e podem solicitar seus próprios assets.
