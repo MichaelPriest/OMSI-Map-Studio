@@ -7,7 +7,8 @@ public sealed record OmsiSceneryObjectMetadata(
     IReadOnlyList<string> MeshPaths,
     IReadOnlyList<double?> MeshLodThresholds,
     IReadOnlyList<string> CollisionMeshPaths,
-    IReadOnlyList<OmsiSceneryMaterialOverride> MaterialOverrides)
+    IReadOnlyList<OmsiSceneryMaterialOverride> MaterialOverrides,
+    OmsiSceneryTreeDefinition? Tree)
 {
     public static OmsiSceneryObjectMetadata Missing { get; } = new(
         Exists: false,
@@ -18,5 +19,6 @@ public sealed record OmsiSceneryObjectMetadata(
             Array.Empty<double?>(),
         CollisionMeshPaths: Array.Empty<string>(),
         MaterialOverrides:
-            Array.Empty<OmsiSceneryMaterialOverride>());
+            Array.Empty<OmsiSceneryMaterialOverride>(),
+        Tree: null);
 }
