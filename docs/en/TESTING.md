@@ -37,7 +37,7 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Known limitations
 
 - Save only persists position/rotation/pitch/bank for existing `[object]` entries;
-- creating, duplicating or deleting objects is not persisted yet;
+- creation and copying only persist when a safe template of the same `.sco` exists; persistent deletion is not implemented yet;
 - splines do not have persistent editing yet;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
@@ -65,3 +65,16 @@ Start with a `.sco` that already appears in the test map:
 10. reopen the map in OMSI and validate placement.
 
 Also choose an installed `.sco` that has never been used in the map. In Full map mode the preview should work, while persistent confirmation must stay blocked with the missing-template explanation.
+
+
+## Selected-object copy test
+
+1. select an existing object with easy-to-recognize Z/rotation/pitch/bank values;
+2. optionally create an unsaved numeric transform preview;
+3. in the **General** tab, click **Place copy**;
+4. click a different point on an existing tile;
+5. verify X/Y came from the new click while Z/rotation/pitch/bank started from the selected object values;
+6. confirm **Confirm and save**;
+7. wait for the reload;
+8. verify the copy received a new global ID and the original object remained unchanged;
+9. verify the backup under `.mapstudio-backups/<timestamp>/`.

@@ -37,7 +37,7 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Limitações conhecidas
 
 - Salvar atua apenas em posição/rotação/pitch/bank de objetos `[object]` já existentes;
-- criar, duplicar ou excluir objetos ainda não grava;
+- criação e cópia só gravam quando existe template seguro do mesmo `.sco`; exclusão persistente ainda não existe;
 - splines ainda não possuem edição persistente;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
@@ -65,3 +65,16 @@ Use primeiro um `.sco` que já apareça no mapa de teste:
 10. reabra o mapa no OMSI e valide a colocação.
 
 Também escolha um `.sco` instalado que nunca foi usado no mapa. No modo Mapa completo, a prévia deve funcionar, mas a confirmação persistente deve permanecer bloqueada com a explicação de template indisponível.
+
+
+## Teste de cópia do objeto selecionado
+
+1. selecione um objeto existente com Z/rotação/pitch/bank fáceis de reconhecer;
+2. opcionalmente crie uma prévia numérica sem salvar;
+3. na aba **Geral**, clique **Colocar cópia**;
+4. clique em outro ponto de um tile existente;
+5. confirme que X/Y vieram do novo clique e que Z/rotação/pitch/bank começaram com os valores da seleção;
+6. confirme **Confirmar e salvar**;
+7. aguarde o recarregamento;
+8. confirme que a cópia recebeu um ID global novo e que o objeto original permaneceu intacto;
+9. verifique o backup em `.mapstudio-backups/<timestamp>/`.

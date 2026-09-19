@@ -71,6 +71,19 @@ type PendingObjectPlacement = {
   bank: number;
 };
 
+type PlacementTransformDefaults = Pick<
+  PendingObjectPlacement,
+  "z" | "rotation" | "pitch" | "bank"
+>;
+
+const defaultPlacementTransform:
+  PlacementTransformDefaults = {
+    z: 0,
+    rotation: 0,
+    pitch: 0,
+    bank: 0
+  };
+
 type InspectorTab =
   | "general"
   | "transform"
@@ -380,6 +393,13 @@ export function App() {
   ] = useState<
     PendingObjectPlacement
   >();
+
+  const [
+    placementTransformDefaults,
+    setPlacementTransformDefaults
+  ] = useState<
+    PlacementTransformDefaults
+  >(defaultPlacementTransform);
 
   const [
     insertingObject,
@@ -1900,7 +1920,10 @@ export function App() {
     useCallback(
       (
         entry:
-          SceneryLibraryEntry
+          SceneryLibraryEntry,
+        transformDefaults:
+          PlacementTransformDefaults =
+            defaultPlacementTransform
       ) => {
         if (
           selectedMap
@@ -1913,6 +1936,9 @@ export function App() {
           return;
         }
 
+        setPlacementTransformDefaults(
+          transformDefaults
+        );
         setPlacementAsset(entry);
         setPendingPlacement(undefined);
         setSelectedObject(undefined);
@@ -1938,10 +1964,58 @@ export function App() {
       ]
     );
 
+  const handlePlaceSelectedObjectCopy =
+    useCallback(() => {
+      if (!selectedObject) {
+        return;
+      }
+
+      handleSelectPlacementAsset(
+        {
+          sceneryObjectPath:
+            selectedObject
+              .sceneryObjectPath,
+          fileName: getObjectName(
+            selectedObject
+              .sceneryObjectPath
+          )
+        },
+        {
+          z: selectedObject.z,
+          rotation:
+            selectedObject.rotation,
+          pitch: selectedObject.pitch,
+          bank: selectedObject.bank
+        }
+      );
+    }, [
+      handleSelectPlacementAsset,
+      selectedObject
+    ]);
+
+  const handlePlacementPoint =
+    useCallback(
+      (
+        placement:
+          PendingObjectPlacement
+      ) => {
+        setPendingPlacement({
+          ...placement,
+          ...placementTransformDefaults
+        });
+      },
+      [
+        placementTransformDefaults
+      ]
+    );
+
   const handleCancelPlacement =
     useCallback(() => {
       setPlacementAsset(undefined);
       setPendingPlacement(undefined);
+      setPlacementTransformDefaults(
+        defaultPlacementTransform
+      );
       setInsertingObject(false);
     }, []);
 
@@ -2249,7 +2323,9 @@ export function App() {
         </div>
         <div>
           <span>Modo</span>
-          <strong>Somente leitura</strong>
+          <strong>
+            Edição preservativa (alpha)
+          </strong>
         </div>
       </div>
     </section>
@@ -2583,36 +2659,61 @@ export function App() {
         </div>
 
         {inspectorTab === "general" && (
-          <dl className="property-list dense">
-            <div>
-              <dt>Arquivo</dt>
-              <dd>
-                {getObjectName(
-                  selectedObject.sceneryObjectPath
-                )}
-              </dd>
+          <>
+            <dl className="property-list dense">
+              <div>
+                <dt>Arquivo</dt>
+                <dd>
+                  {getObjectName(
+                    selectedObject.sceneryObjectPath
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt>Caminho</dt>
+                <dd>
+                  {selectedObject.sceneryObjectPath}
+                </dd>
+              </div>
+              <div>
+                <dt>ID</dt>
+                <dd>{selectedObject.objectId}</dd>
+              </div>
+              <div>
+                <dt>Grupos</dt>
+                <dd>
+                  {selectedMetadata?.groups.length
+                    ? selectedMetadata.groups.join(" › ")
+                    : loadingMetadataFor
+                      ? "Carregando..."
+                      : "Não informado"}
+                </dd>
+              </div>
+            </dl>
+
+            <button
+              type="button"
+              className="wide"
+              onClick={
+                handlePlaceSelectedObjectCopy
+              }
+              disabled={
+                busy ||
+                selectedMap
+                  ?.usesWorldCoordinates
+              }
+              title="Criar uma nova colocação usando o mesmo .sco e a transformação atual como base"
+            >
+              Colocar cópia
+            </button>
+
+            <div className="transform-help">
+              A cópia usa o mesmo .sco real.
+              O próximo clique define X/Y e
+              preserva inicialmente Z, rotação,
+              pitch e bank da seleção atual.
             </div>
-            <div>
-              <dt>Caminho</dt>
-              <dd>
-                {selectedObject.sceneryObjectPath}
-              </dd>
-            </div>
-            <div>
-              <dt>ID</dt>
-              <dd>{selectedObject.objectId}</dd>
-            </div>
-            <div>
-              <dt>Grupos</dt>
-              <dd>
-                {selectedMetadata?.groups.length
-                  ? selectedMetadata.groups.join(" › ")
-                  : loadingMetadataFor
-                    ? "Carregando..."
-                    : "Não informado"}
-              </dd>
-            </div>
-          </dl>
+          </>
         )}
 
         {inspectorTab === "transform" && (
@@ -3638,7 +3739,7 @@ export function App() {
                 pendingPlacement
               }
               onPlacementPoint={
-                setPendingPlacement
+                handlePlacementPoint
               }
               activeTile={activeTile}
               onActiveTileChange={

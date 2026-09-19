@@ -199,7 +199,7 @@ Scanning:
 - has a safety limit of 50,000 entries;
 - renders at most 300 results at once in the UI.
 
-Search accepts file name and path. **Insert** remains disabled until preservation-safe creation of new `[object]` blocks and compatible ID generation are implemented.
+Search accepts file name and path. The **Place** action uses the preservation-safe insertion flow and only allows confirmation when the `[object]` block parameters can be derived safely.
 
 
 ## Placing objects from the Library
@@ -227,3 +227,12 @@ This is intentional: `[object]` blocks may contain a variable number of extra va
 An installed `.sco` that has never been used in the map can still be selected and previewed, but **Confirm and save** remains blocked in Full map mode. In performance mode, the host performs the global verification on confirmation.
 
 The target tile is automatically backed up before the new object is written.
+
+
+## Safe copy of the selected object
+
+In the inspector's **General** tab, **Place copy** starts a new placement using the selected object's real `.sco` file.
+
+The next viewport click defines X/Y. As its starting transform, the copy preserves Z, rotation, pitch and bank from the current selection — including an unsaved transform preview.
+
+Confirmation reuses the exact same safe pipeline as the Library: a real template of the same `.sco`, a new global ID, tile backup and atomic write. The command does not duplicate old tile text or introduce a second writer.

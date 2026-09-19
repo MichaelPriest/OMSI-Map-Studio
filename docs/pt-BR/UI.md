@@ -199,7 +199,7 @@ A varredura:
 - possui limite de segurança de 50.000 entradas;
 - mostra no máximo 300 resultados por vez na interface.
 
-A busca aceita nome e caminho do arquivo. O botão **Inserir** permanece desabilitado até existir escrita segura para criação de novos blocos `[object]` e geração de IDs compatíveis.
+A busca aceita nome e caminho do arquivo. A ação **Colocar** usa o fluxo preservativo de inserção e só permite confirmação quando os parâmetros do bloco `[object]` podem ser derivados com segurança.
 
 
 ## Colocação de objetos pela Biblioteca
@@ -227,3 +227,12 @@ Isso é intencional: blocos `[object]` podem possuir valores extras cuja quantid
 Um `.sco` instalado mas nunca usado no mapa pode ser selecionado e pré-visualizado, porém **Confirmar e salvar** fica bloqueado no modo Mapa completo. Em modo desempenho, o host faz a verificação global ao confirmar.
 
 O novo objeto recebe backup automático do tile antes da gravação.
+
+
+## Cópia segura do objeto selecionado
+
+Na aba **Geral** do inspetor, **Colocar cópia** inicia uma nova colocação usando o mesmo arquivo `.sco` real do objeto selecionado.
+
+O próximo clique no viewport define X/Y. Como ponto de partida, a cópia preserva Z, rotação, pitch e bank da seleção atual — inclusive quando a seleção já contém uma prévia de transformação ainda não salva.
+
+A confirmação reutiliza exatamente o mesmo pipeline seguro da Biblioteca: template real do mesmo `.sco`, novo ID global, backup do tile e escrita atômica. O comando não duplica texto antigo do tile nem cria um writer alternativo.
