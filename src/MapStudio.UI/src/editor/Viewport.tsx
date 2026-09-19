@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
+import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Color3, Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math";
@@ -19,6 +20,14 @@ import type {
 
 type ViewportProps = {
   tiles: OmsiTile[];
+  editorTool: "select" | "move" | "rotate";
+  showGrid: boolean;
+  showObjects: boolean;
+  showSplines: boolean;
+  cameraAction?: {
+    type: "fit" | "focus";
+    token: number;
+  };
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -42,6 +51,9 @@ type ViewportProps = {
   selectedSplineProfile?: OmsiSplineDefinition;
   onSelectObject: (placedObject: OmsiPlacedObject | undefined) => void;
   onSelectSpline: (placedSpline: OmsiPlacedSpline | undefined) => void;
+  onPreviewObjectTransform: (
+    placedObject: OmsiPlacedObject
+  ) => void;
 };
 
 function createTileSurface(
@@ -808,6 +820,8 @@ function createSelectedGeometry(
   for (const mesh of meshes) {
     mesh.parent = root;
   }
+
+  return root;
 }
 
 function createMapObjectGeometry(
@@ -924,6 +938,11 @@ function createMapObjectGeometry(
 
 export function Viewport({
   tiles,
+  editorTool,
+  showGrid,
+  showObjects,
+  showSplines,
+  cameraAction,
   objects,
   splines,
   activeTile,
@@ -935,7 +954,8 @@ export function Viewport({
   selectedSpline,
   selectedSplineProfile,
   onSelectObject,
-  onSelectSpline
+  onSelectSpline,
+  onPreviewObjectTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -984,6 +1004,45 @@ export function Viewport({
     camera.upperRadiusLimit = Math.max(usesWorldCoordinates ? 50 : 900, radius * 4);
     camera.attachControl(canvas, true);
 
+    if (
+      cameraAction?.type === "focus"
+    ) {
+      if (selectedObject) {
+        camera.setTarget(
+          getObjectWorldPosition(
+            selectedObject
+          )
+        );
+        camera.radius =
+          usesWorldCoordinates
+            ? 4
+            : 55;
+      } else if (selectedSpline) {
+        camera.setTarget(
+          getSplineFrame(
+            selectedSpline,
+            selectedSpline.length / 2
+          ).center
+        );
+        camera.radius =
+          usesWorldCoordinates
+            ? 4
+            : Math.max(
+                40,
+                Math.min(
+                  180,
+                  selectedSpline.length *
+                    1.5
+                )
+              );
+      }
+    } else if (
+      cameraAction?.type === "fit"
+    ) {
+      camera.setTarget(target);
+      camera.radius = radius;
+    }
+
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
     light.intensity = 0.9;
 
@@ -1007,19 +1066,23 @@ export function Viewport({
     };
 
     if (tiles.length) {
-      createTileSurface(
-        scene,
-        tiles,
-        tileSize
-      );
+      if (showGrid) {
+        createTileSurface(
+          scene,
+          tiles,
+          tileSize
+        );
+      }
 
-      const existingLines = tiles
+      const existingLines = showGrid
+        ? tiles
         .filter(
           (tile) =>
             !tile.detailsLoaded ||
             tile.fileExists
         )
-        .map((tile) => createTileOutline(tile, tileSize));
+        .map((tile) => createTileOutline(tile, tileSize))
+        : [];
 
       if (existingLines.length) {
         const existingGrid = MeshBuilder.CreateLineSystem(
@@ -1031,13 +1094,15 @@ export function Viewport({
         existingGrid.isPickable = false;
       }
 
-      const missingLines = tiles
+      const missingLines = showGrid
+        ? tiles
         .filter(
           (tile) =>
             tile.detailsLoaded &&
             !tile.fileExists
         )
-        .map((tile) => createTileOutline(tile, tileSize));
+        .map((tile) => createTileOutline(tile, tileSize))
+        : [];
 
       if (missingLines.length) {
         const missingGrid = MeshBuilder.CreateLineSystem(
@@ -1050,6 +1115,7 @@ export function Viewport({
       }
 
       if (
+        showGrid &&
         activeTile &&
         !usesWorldCoordinates
       ) {
@@ -1078,6 +1144,7 @@ export function Viewport({
       }
 
       if (
+        showSplines &&
         !usesWorldCoordinates &&
         splines.length
       ) {
@@ -1136,6 +1203,7 @@ export function Viewport({
       }
 
       if (
+        showObjects &&
         !usesWorldCoordinates &&
         objects.length
       ) {
@@ -1196,6 +1264,7 @@ export function Viewport({
     }
 
     if (
+      showSplines &&
       !usesWorldCoordinates &&
       selectedSpline &&
       selectedSplineProfile
@@ -1208,6 +1277,8 @@ export function Viewport({
     }
 
     if (
+      showObjects &&
+      editorTool === "select" &&
       !usesWorldCoordinates &&
       selectedObject &&
       selectedGeometry &&
@@ -1225,7 +1296,116 @@ export function Viewport({
       );
     }
 
-    showSelection(selectedObject);
+    showSelection(
+      showObjects
+        ? selectedObject
+        : undefined
+    );
+
+    let editRoot:
+      TransformNode | undefined;
+
+    if (
+      !usesWorldCoordinates &&
+      selectedObject &&
+      editorTool !== "select"
+    ) {
+      if (
+        selectedGeometry &&
+        hasRenderableGeometry(
+          selectedGeometry
+        )
+      ) {
+        editRoot =
+          createSelectedGeometry(
+            scene,
+            selectedObject,
+            selectedGeometry
+          );
+      } else {
+        editRoot =
+          new TransformNode(
+            "preview-edit-anchor",
+            scene
+          );
+
+        configureObjectRoot(
+          editRoot,
+          selectedObject
+        );
+      }
+    }
+
+    let gizmoManager:
+      GizmoManager | undefined;
+
+    if (editRoot) {
+      gizmoManager =
+        new GizmoManager(scene);
+
+      gizmoManager
+        .usePointerToAttachGizmos =
+        false;
+
+      gizmoManager
+        .positionGizmoEnabled =
+        editorTool === "move";
+
+      gizmoManager
+        .rotationGizmoEnabled =
+        editorTool === "rotate";
+
+      gizmoManager.attachToNode(
+        editRoot
+      );
+
+      const commitPreview = () => {
+        if (
+          !selectedObject ||
+          !editRoot
+        ) {
+          return;
+        }
+
+        const euler =
+          editRoot
+            .rotationQuaternion
+            ?.toEulerAngles() ??
+          editRoot.rotation;
+
+        onPreviewObjectTransform({
+          ...selectedObject,
+          x:
+            editRoot.position.x -
+            selectedObject.tileX *
+              300,
+          y:
+            editRoot.position.z -
+            selectedObject.tileY *
+              300,
+          z: editRoot.position.y,
+          rotation:
+            -euler.y /
+            degreesToRadians,
+          bank:
+            -euler.x /
+            degreesToRadians,
+          pitch:
+            -euler.z /
+            degreesToRadians
+        });
+      };
+
+      gizmoManager.gizmos
+        .positionGizmo
+        ?.onDragEndObservable
+        .add(commitPreview);
+
+      gizmoManager.gizmos
+        .rotationGizmo
+        ?.onDragEndObservable
+        .add(commitPreview);
+    }
 
     let pointerStart: { x: number; y: number } | undefined;
 
@@ -1282,7 +1462,12 @@ export function Viewport({
       let bestDistance = threshold;
       let bestDepth = Number.POSITIVE_INFINITY;
 
-      for (const placedObject of objects) {
+      for (
+        const placedObject of
+          showObjects
+            ? objects
+            : []
+      ) {
         const position = getObjectWorldPosition(placedObject);
         const offset = position.subtract(ray.origin);
         const depth = Vector3.Dot(offset, direction);
@@ -1311,7 +1496,8 @@ export function Viewport({
       }
 
       const splinePick =
-        scene.pick(
+        showSplines
+          ? scene.pick(
           pointerX,
           pointerY,
           (mesh) =>
@@ -1320,7 +1506,8 @@ export function Viewport({
             "spline",
           false,
           camera
-        );
+        )
+          : undefined;
 
       if (
         splinePick?.hit &&
@@ -1413,11 +1600,17 @@ export function Viewport({
       canvas.removeEventListener("pointerup", handlePointerUp);
       canvas.removeEventListener("pointercancel", handlePointerCancel);
       window.removeEventListener("resize", resize);
+      gizmoManager?.dispose();
       scene.dispose();
       engine.dispose();
     };
   }, [
     tiles,
+    editorTool,
+    showGrid,
+    showObjects,
+    showSplines,
+    cameraAction,
     objects,
     splines,
     activeTile,
@@ -1429,7 +1622,8 @@ export function Viewport({
     selectedSpline,
     selectedSplineProfile,
     onSelectObject,
-    onSelectSpline
+    onSelectSpline,
+    onPreviewObjectTransform
   ]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;
