@@ -369,6 +369,13 @@ export function App() {
   const [showTerrain, setShowTerrain] =
     useState(true);
 
+  const [
+    hiddenTerrainLayerIndices,
+    setHiddenTerrainLayerIndices
+  ] = useState<
+    Record<number, true>
+  >({});
+
   const [showObjects, setShowObjects] =
     useState(true);
 
@@ -835,6 +842,11 @@ export function App() {
 
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
+          setHiddenTerrainLayerIndices({});
+          setGroundTextureAssetsByKey({});
+          setRequestedGroundTextureKeys({});
+          setTerrainMaskAssetsByKey({});
+          setRequestedTerrainMaskKeys({});
           setActiveTile(
             message.initialTile ??
               undefined
@@ -2050,7 +2062,13 @@ export function App() {
                 mask.layerIndex
               ];
 
-            if (!groundTexture) {
+            if (
+              !groundTexture ||
+              Object.hasOwn(
+                hiddenTerrainLayerIndices,
+                mask.layerIndex
+              )
+            ) {
               return [];
             }
 
@@ -2090,6 +2108,7 @@ export function App() {
       );
     }, [
       activeTiles,
+      hiddenTerrainLayerIndices,
       selectedMap
     ]);
 
@@ -5612,6 +5631,101 @@ export function App() {
               0}
           </dd>
         </div>
+        <div className="terrain-layer-control-row">
+          <dt>Visibilidade</dt>
+          <dd>
+            <div className="terrain-layer-list">
+              {selectedMap?.groundTextures.map(
+                (layer, index) => {
+                  const activeMask =
+                    activeTileDetails
+                      ?.terrainTextureMasks
+                      ?.find(
+                        (mask) =>
+                          mask.layerIndex ===
+                          index
+                      );
+
+                  const maskKey =
+                    selectedMap &&
+                    activeTileDetails &&
+                    index > 0
+                      ? getTerrainTextureMaskAssetKey(
+                          selectedMap.directoryName,
+                          activeTileDetails.relativeMapPath,
+                          index
+                        )
+                      : undefined;
+
+                  const maskAsset =
+                    maskKey
+                      ? terrainMaskAssetsByKey[
+                          maskKey
+                        ]
+                      : undefined;
+
+                  return (
+                    <label
+                      key={index}
+                      className="terrain-layer-item"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          !Object.hasOwn(
+                            hiddenTerrainLayerIndices,
+                            index
+                          )
+                        }
+                        onChange={(event) =>
+                          setHiddenTerrainLayerIndices(
+                            (current) => {
+                              const next = {
+                                ...current
+                              };
+
+                              if (
+                                event.target
+                                  .checked
+                              ) {
+                                delete next[
+                                  index
+                                ];
+                              } else {
+                                next[
+                                  index
+                                ] = true;
+                              }
+
+                              return next;
+                            }
+                          )
+                        }
+                      />
+                      <span>
+                        <strong>
+                          {index}:{" "}
+                          {getObjectName(
+                            layer.mainTexturePath
+                          )}
+                        </strong>
+                        <small>
+                          {index === 0
+                            ? "base"
+                            : activeMask
+                              ? maskAsset?.exists
+                                ? `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"}`
+                                : "máscara presente"
+                              : "sem máscara no tile"}
+                        </small>
+                      </span>
+                    </label>
+                  );
+                }
+              )}
+            </div>
+          </dd>
+        </div>
         <div>
           <dt>Textura base</dt>
           <dd>
@@ -7510,7 +7624,12 @@ export function App() {
               showGrid={showGrid}
               showTerrain={showTerrain}
               terrainMainTextureAsset={
-                baseGroundMainAsset
+                Object.hasOwn(
+                  hiddenTerrainLayerIndices,
+                  0
+                )
+                  ? undefined
+                  : baseGroundMainAsset
               }
               terrainMainTextureRepeating={
                 baseGroundTexture
