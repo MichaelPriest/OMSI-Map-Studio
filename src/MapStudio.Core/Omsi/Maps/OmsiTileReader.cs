@@ -76,11 +76,17 @@ public sealed class OmsiTileReader
                         terrainRenderDataPath)
                 : null;
 
+        var terrainTextureMasks =
+            ReadTerrainTextureMasks(
+                tilePath);
+
         return content with
         {
             Terrain = terrain,
             TerrainRenderData =
                 terrainRenderData,
+            TerrainTextureMasks =
+                terrainTextureMasks,
             Summary =
                 content.Summary with
                 {
@@ -90,6 +96,108 @@ public sealed class OmsiTileReader
                         terrainFileSize
                 }
         };
+    }
+
+    public static IReadOnlyList<OmsiTerrainTextureMask>
+        ReadTerrainTextureMasks(
+            string tilePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            tilePath);
+
+        var mapDirectory =
+            Path.GetDirectoryName(
+                Path.GetFullPath(
+                    tilePath));
+
+        if (
+            string.IsNullOrWhiteSpace(
+                mapDirectory))
+        {
+            return Array.Empty<
+                OmsiTerrainTextureMask>();
+        }
+
+        var textureMapDirectory =
+            Path.Combine(
+                mapDirectory,
+                "texture",
+                "map");
+
+        if (
+            !Directory.Exists(
+                textureMapDirectory))
+        {
+            return Array.Empty<
+                OmsiTerrainTextureMask>();
+        }
+
+        var tileFileName =
+            Path.GetFileName(
+                tilePath);
+
+        var prefix =
+            tileFileName + ".";
+
+        var masks =
+            new List<
+                OmsiTerrainTextureMask>();
+
+        foreach (
+            var path in Directory
+                .EnumerateFiles(
+                    textureMapDirectory,
+                    tileFileName +
+                        ".*.dds",
+                    SearchOption
+                        .TopDirectoryOnly))
+        {
+            var fileName =
+                Path.GetFileName(
+                    path);
+
+            if (
+                !fileName.StartsWith(
+                    prefix,
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                !fileName.EndsWith(
+                    ".dds",
+                    StringComparison
+                        .OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var layerText =
+                fileName[
+                    prefix.Length..
+                    ^4];
+
+            if (
+                !int.TryParse(
+                    layerText,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var layerIndex) ||
+                layerIndex <= 0)
+            {
+                continue;
+            }
+
+            masks.Add(
+                new OmsiTerrainTextureMask(
+                    layerIndex,
+                    fileName,
+                    new FileInfo(
+                        path).Length));
+        }
+
+        return masks
+            .OrderBy(
+                mask =>
+                    mask.LayerIndex)
+            .ToArray();
     }
 
     public static OmsiTileContent ReadContent(
