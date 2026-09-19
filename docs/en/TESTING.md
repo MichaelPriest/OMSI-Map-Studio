@@ -595,3 +595,12 @@ In Grundorf, confirm `[tree]` billboards still render while the large gray panel
 3. confirm SCO files with `[absheight]` keep the absolute height stored in the map;
 4. move a regular object vertically, save, and reopen the map: the saved value must remain terrain-relative;
 5. confirm selection, focus, and gizmos align with the corrected visual geometry.
+
+
+## O3D axis and colour validation — test.26
+
+1. open Grundorf and compare houses/objects against roads and splines;
+2. confirm buildings are no longer lying on the wrong axis, rotated incorrectly, or displaced by the internal O3D transform;
+3. confirm regular objects still use terrain + relative Z while `[absheight]` remains absolute;
+4. confirm loaded textures show their real colours without darkening from `diffuseColor` multiplication;
+5. compare with test.25 and record any specific object that still appears misplaced.
