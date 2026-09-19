@@ -57,8 +57,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "{#SourceDir}\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\\OMSI Map Studio"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\{#AppExeName}"; AppUserModelID: "MichaelPriest.OMSIMapStudio"
-Name: "{autodesktop}\\OMSI Map Studio"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\{#AppExeName}"; AppUserModelID: "MichaelPriest.OMSIMapStudio"; Tasks: desktopicon
+Name: "{autoprograms}\\OMSI Map Studio"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\{#AppExeName}"
+Name: "{autodesktop}\\OMSI Map Studio"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\\{#AppExeName}"; Description: "{cm:LaunchProgram,OMSI Map Studio}"; Flags: nowait postinstall skipifsilent
