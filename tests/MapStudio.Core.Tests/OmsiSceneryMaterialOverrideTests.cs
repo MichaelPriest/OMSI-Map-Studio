@@ -7,6 +7,47 @@ namespace MapStudio.Core.Tests;
 public sealed class OmsiSceneryMaterialOverrideTests
 {
     [Fact]
+    public void ReadMetadata_ParsesTreeDefinition()
+    {
+        const string source =
+            "[friendlyname]\n" +
+            "Tree Medium 09\n" +
+            "[tree]\n" +
+            "Tree_Medium_09.tga\n" +
+            "12\n" +
+            "18\n" +
+            "1.1\n" +
+            "1.5\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        var tree =
+            Assert.IsType<
+                OmsiSceneryTreeDefinition>(
+                metadata.Tree);
+
+        Assert.Equal(
+            "Tree_Medium_09.tga",
+            tree.TextureName);
+        Assert.Equal(
+            12,
+            tree.MinimumHeight);
+        Assert.Equal(
+            18,
+            tree.MaximumHeight);
+        Assert.Equal(
+            1.1,
+            tree.MinimumAspect);
+        Assert.Equal(
+            1.5,
+            tree.MaximumAspect);
+    }
+
+    [Fact]
     public void ReadMetadata_AssociatesStaticMaterialOverridesWithMeshOrdinal()
     {
         const string source =
