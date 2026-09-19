@@ -213,7 +213,7 @@ Flow:
 3. click **Place**;
 4. click an existing tile in the viewport;
 5. X/Y are calculated in tile-local coordinates and respect snapping;
-6. adjust **Z** and **Rotation** in the placement bar;
+6. adjust **Z**, **Rotation**, **Pitch** and **Bank** in the placement bar;
 7. confirm with **Confirm and save**.
 
 The preview uses real O3D geometry when available. If O3D geometry cannot be interpreted, the placement point remains visible as a marker.

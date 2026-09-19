@@ -57,7 +57,7 @@ Use primeiro um `.sco` que já apareça no mapa de teste:
 2. clique **Colocar**;
 3. clique em um tile;
 4. confirme que a prévia aparece no ponto clicado;
-5. altere Z e rotação;
+5. altere Z, rotação, pitch e bank;
 6. confirme **Confirmar e salvar**;
 7. aguarde o recarregamento;
 8. confira que o novo objeto recebeu um ID diferente de todos os objetos/splines existentes;

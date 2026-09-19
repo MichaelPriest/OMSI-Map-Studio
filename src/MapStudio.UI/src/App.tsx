@@ -3885,6 +3885,70 @@ export function App() {
                         }}
                       />
                     </label>
+
+                    <label className="placement-field">
+                      <span>Pitch °</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={
+                          pendingPlacement.pitch
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPendingPlacement(
+                              (current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      pitch: value
+                                    }
+                                  : current
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+
+                    <label className="placement-field">
+                      <span>Bank °</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={
+                          pendingPlacement.bank
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPendingPlacement(
+                              (current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      bank: value
+                                    }
+                                  : current
+                            );
+                          }
+                        }}
+                      />
+                    </label>
                   </>
                 )}
 

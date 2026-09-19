@@ -57,7 +57,7 @@ Start with a `.sco` that already appears in the test map:
 2. click **Place**;
 3. click a tile;
 4. verify the preview appears at the clicked point;
-5. change Z and rotation;
+5. change Z, rotation, pitch and bank;
 6. confirm **Confirm and save**;
 7. wait for the reload;
 8. verify the new object received an ID different from all existing object/spline IDs;

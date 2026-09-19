@@ -213,7 +213,7 @@ Fluxo:
 3. clique **Colocar**;
 4. clique em um tile existente no viewport;
 5. a posição X/Y é calculada em coordenadas locais do tile e respeita o Snap;
-6. ajuste **Z** e **Rotação** na barra de colocação;
+6. ajuste **Z**, **Rotação**, **Pitch** e **Bank** na barra de colocação;
 7. confirme com **Confirmar e salvar**.
 
 A prévia usa a geometria O3D real quando disponível. Se o O3D não puder ser interpretado, o ponto de colocação continua visível como marcador.
