@@ -172,7 +172,7 @@ public sealed class OmsiO3dMaterialTests
     }
 
     [Fact]
-    public void GeometryReader_LongHeaderBoneSection_UsesShortBoneCount()
+    public void GeometryReader_LongHeaderBoneSection_UsesLongBoneCount()
     {
         var path = Path.Combine(
             Path.GetTempPath(),
@@ -206,7 +206,7 @@ public sealed class OmsiO3dMaterialTests
                 writer.Write((ushort)0);
 
                 writer.Write((byte)0x54);
-                writer.Write((ushort)1);
+                writer.Write((uint)1);
 
                 var boneName =
                     Encoding.ASCII
@@ -243,7 +243,7 @@ public sealed class OmsiO3dMaterialTests
     }
 
     [Fact]
-    public void StructureReader_LongHeaderBoneSection_UsesShortBoneCount()
+    public void StructureReader_LongHeaderBoneSection_UsesLongBoneCount()
     {
         var path = Path.Combine(
             Path.GetTempPath(),
@@ -277,7 +277,7 @@ public sealed class OmsiO3dMaterialTests
                 writer.Write((ushort)0);
 
                 writer.Write((byte)0x54);
-                writer.Write((ushort)1);
+                writer.Write((uint)1);
 
                 var boneName =
                     Encoding.ASCII

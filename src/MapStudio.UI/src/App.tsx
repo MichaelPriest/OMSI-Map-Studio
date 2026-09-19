@@ -3577,6 +3577,54 @@ export function App() {
         loadedMapGeometryCount
     );
 
+  const geometryDiagnosticPaths =
+    mapLoadMode === "full"
+      ? mapObjectPaths
+      : nearbyObjectPaths;
+
+  const loadedDiagnosticGeometryCount =
+    geometryDiagnosticPaths.filter(
+      (path) =>
+        Object.hasOwn(
+          geometryByPath,
+          path
+        )
+    ).length;
+
+  const renderableDiagnosticGeometryCount =
+    geometryDiagnosticPaths.filter(
+      (path) =>
+        Boolean(
+          geometryByPath[path]?.tree
+        ) ||
+        Boolean(
+          geometryByPath[
+            path
+          ]?.meshes.some(
+            (mesh) =>
+              mesh.geometry.isLoaded &&
+              mesh.geometry.positions.length >
+                0 &&
+              mesh.geometry.indices.length >
+                0
+          )
+        )
+    ).length;
+
+  const failedDiagnosticGeometryCount =
+    Math.max(
+      0,
+      loadedDiagnosticGeometryCount -
+        renderableDiagnosticGeometryCount
+    );
+
+  const unresolvedDiagnosticGeometryCount =
+    Math.max(
+      0,
+      geometryDiagnosticPaths.length -
+        loadedDiagnosticGeometryCount
+    );
+
   const treePlacementDiagnostics =
     useMemo(() => {
       let detected = 0;
@@ -3673,7 +3721,7 @@ export function App() {
         new Map<string, number>();
 
       for (const path of
-        mapObjectPaths) {
+        geometryDiagnosticPaths) {
         const geometry =
           geometryByPath[path];
 
@@ -3729,7 +3777,7 @@ export function App() {
         .slice(0, 5);
     }, [
       geometryByPath,
-      mapObjectPaths
+      geometryDiagnosticPaths
     ]);
 
   useEffect(() => {
@@ -5821,6 +5869,20 @@ export function App() {
       };
     }
 
+    if (assetWarmupActive) {
+      return {
+        title: "Finalizando renderização do mapa",
+        detail:
+          mapLoadMode === "full"
+            ? "Carregando malhas O3D/.x, perfis SLI e texturas reais do mapa completo."
+            : "Carregando malhas O3D/.x, perfis SLI e texturas reais da área 3×3.",
+        completed:
+          assetWarmupProgress.completed,
+        total:
+          assetWarmupProgress.total
+      };
+    }
+
     if (loadingSceneryLibrary) {
       return {
         title: "Carregando biblioteca de objetos",
@@ -6313,7 +6375,7 @@ export function App() {
           <dd>
             {mapLoadMode === "full"
               ? `${renderableMapGeometryCount}/${mapObjectPaths.length} · falhas ${failedMapGeometryCount} · pendentes ${unresolvedMapGeometryCount}`
-              : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length} carregados na área`}
+              : `${renderableDiagnosticGeometryCount}/${nearbyObjectPaths.length} · falhas ${failedDiagnosticGeometryCount} · pendentes ${unresolvedDiagnosticGeometryCount}`}
           </dd>
         </div>
         <div>
@@ -6332,7 +6394,7 @@ export function App() {
                       `${code}: ${count}`
                   )
                   .join(" · ")
-              : loadedMapGeometryCount > 0
+              : loadedDiagnosticGeometryCount > 0
                 ? "Nenhum erro conhecido"
                 : "Aguardando leitura"}
           </dd>
@@ -9524,10 +9586,9 @@ export function App() {
             Malhas reais:{" "}
             {mapLoadMode === "full"
               ? `${renderableMapGeometryCount}/${mapObjectPaths.length}`
-              : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}
-            {mapLoadMode === "full" &&
-              failedMapGeometryCount > 0
-              ? ` (falhas: ${failedMapGeometryCount})`
+              : `${renderableDiagnosticGeometryCount}/${nearbyObjectPaths.length}`}
+            {failedDiagnosticGeometryCount > 0
+              ? ` (falhas: ${failedDiagnosticGeometryCount})`
               : ""}
             <b>·</b>
             Perfis SLI:{" "}
@@ -9655,10 +9716,13 @@ export function App() {
         </div>
       </section>
 
-      {interactionLocked &&
-        loadingOverlay && (
+      {loadingOverlay && (
           <div
-            className="global-loading-lock"
+            className={
+              interactionLocked
+                ? "global-loading-lock"
+                : "global-loading-lock visual-warmup"
+            }
             role="status"
             aria-live="polite"
             aria-label={
@@ -9736,8 +9800,9 @@ export function App() {
                     : `${loadingPercentage}%`}
                 </span>
                 <span>
-                  Interações bloqueadas até
-                  concluir
+                  {interactionLocked
+                    ? "Interações bloqueadas até concluir"
+                    : "Recursos reais continuam carregando em segundo plano"}
                 </span>
               </div>
             </div>

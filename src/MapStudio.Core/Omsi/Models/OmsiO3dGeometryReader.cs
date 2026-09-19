@@ -13,6 +13,7 @@ public sealed class OmsiO3dGeometryReader
 
     private const uint MaxVertices = 150_000;
     private const uint MaxTriangles = 300_000;
+    private const uint MaxBones = 1_000_000;
     private const ushort MaxMaterials = 4_096;
 
     private static readonly Encoding Windows1252 =
@@ -226,6 +227,7 @@ public sealed class OmsiO3dGeometryReader
                         if (!SkipBones(
                                 reader,
                                 stream,
+                                longHeader,
                                 longTriangleIndices))
                         {
                             return OmsiO3dGeometry.Error(
@@ -467,17 +469,17 @@ public sealed class OmsiO3dGeometryReader
     private static bool SkipBones(
         BinaryReader reader,
         Stream stream,
+        bool longHeader,
         bool longTriangleIndices)
     {
-        // OMSI keeps the bone-list count at UInt16 even when
-        // vertex/triangle sections use the extended long header.
-        if (!HasRemaining(stream, 2))
+        if (!TryReadCount(
+                reader,
+                longHeader,
+                out var boneCount) ||
+            boneCount > MaxBones)
         {
             return false;
         }
-
-        var boneCount =
-            (uint)reader.ReadUInt16();
 
         for (var index = 0U;
              index < boneCount;

@@ -495,3 +495,12 @@ The same approach is used for `.sco` metadata and `.sli` profile parsing. The UI
 Full-map and region loading now allow up to 8 tiles concurrently regardless of a low runtime CPU count. O3D parsing remains bounded but guarantees at least 4 workers up to the existing ceiling of 12.
 
 Within each tile, asynchronous `.terrain` reading starts before `.rdy` diagnostics and mask discovery, overlapping I/O with metadata work.
+
+
+## Long-header O3D correction and visual warmup feedback
+
+Bone section `0x54` now follows the O3D header width again: extended-header files use a `UInt32` bone count, while legacy files use `UInt16`. The per-bone weight count remains `UInt16`.
+
+Mesh, SLI profile, and texture warmup once again displays a continuous loading animation after structural map loading. During this visual phase the animation is informational and does not block editor interaction.
+
+In 3×3 performance mode, the Inspector now reports actually renderable meshes, failures, and pending geometry for the active area instead of treating payload presence alone as visual success.

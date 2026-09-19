@@ -770,6 +770,20 @@ code {
   cursor: progress;
 }
 
+.global-loading-lock.visual-warmup {
+  pointer-events: none;
+  place-items: end center;
+  padding-bottom: 42px;
+  background:
+    linear-gradient(to top, rgb(2 9 15 / 42%), transparent 34%);
+  backdrop-filter: none;
+  cursor: default;
+}
+
+.global-loading-lock.visual-warmup .loading-lock-card {
+  width: min(520px, calc(100vw - 40px));
+}
+
 .loading-lock-card {
   display: grid;
   width: min(430px, calc(100vw - 40px));

@@ -535,3 +535,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 4. reopen the same installation/map and confirm tile cache reuse;
 5. confirm SLI profiles and SCO metadata return the same real data after moving parsing to workers;
 6. validate terrain, RDY, and masks on a tile containing all sidecars and confirm results remain identical.
+
+
+## O3D bone-section and loading-animation validation
+
+1. open Grundorf and confirm the animation remains visible while O3D/.x meshes, SLI profiles, and textures are still warming up;
+2. after structural loading, confirm the visual warmup animation does not block editor mouse/keyboard interaction;
+3. in 3×3 performance mode, confirm the Inspector reports `renderable / total`, failures, and pending geometry for the active area;
+4. validate an extended-header O3D containing section `0x54` with a `UInt32` bone count;
+5. validate a legacy O3D with a `UInt16` bone count;
+6. confirm a model with bones no longer becomes a yellow marker merely because section `0x54` was misaligned.

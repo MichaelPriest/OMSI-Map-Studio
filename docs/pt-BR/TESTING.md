@@ -535,3 +535,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 4. abra a mesma instalação/mapa novamente e confirme reaproveitamento do cache de tiles;
 5. confirme que perfis SLI e metadata SCO continuam retornando os mesmos dados reais após a mudança para workers;
 6. valide terrain, RDY e máscaras em um tile com todos os sidecars presentes e confirme resultado idêntico ao anterior.
+
+
+## Validação de O3D com bones e animação de carregamento
+
+1. abra Grundorf e confirme que a animação continua visível enquanto malhas O3D/.x, perfis SLI e texturas ainda estão aquecendo;
+2. confirme que, depois da leitura estrutural, a animação de aquecimento não bloqueia mouse/teclado do editor;
+3. em modo desempenho 3×3, confirme que o Inspetor mostra `renderizáveis / total`, falhas e pendentes da área ativa;
+4. valide um O3D de cabeçalho estendido com seção `0x54` e contagem de bones em `UInt32`;
+5. valide um O3D legado com contagem de bones em `UInt16`;
+6. confirme que um modelo com bones não vira marcador amarelo apenas por desalinhamento da seção `0x54`.

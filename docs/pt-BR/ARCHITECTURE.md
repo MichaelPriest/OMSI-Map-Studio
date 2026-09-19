@@ -495,3 +495,12 @@ O mesmo princípio foi aplicado ao parse de metadata `.sco` e perfis `.sli`. A U
 A leitura de mapa completo e região permite até 8 tiles simultâneos, independentemente de o runtime expor poucas CPUs. O parse O3D continua limitado, mas garante pelo menos 4 workers e respeita o teto de 12.
 
 Dentro de cada tile, a leitura assíncrona do `.terrain` é iniciada antes do diagnóstico `.rdy` e da descoberta de máscaras, permitindo sobrepor I/O e trabalho de metadata.
+
+
+## Correção de O3D long-header e feedback de aquecimento visual
+
+A seção de bones `0x54` volta a respeitar a largura do cabeçalho O3D: arquivos com cabeçalho estendido usam contagem de bones em `UInt32`, enquanto arquivos antigos usam `UInt16`. A contagem interna de pesos de cada bone continua em `UInt16`.
+
+O aquecimento de malhas, perfis SLI e texturas volta a exibir uma animação contínua após a leitura estrutural. Nessa fase visual, a animação é informativa e não bloqueia a interação com o editor.
+
+No modo desempenho 3×3, o inspetor passa a mostrar malhas realmente renderizáveis, falhas e pendências da área ativa, em vez de tratar apenas a presença de um payload como sucesso visual.

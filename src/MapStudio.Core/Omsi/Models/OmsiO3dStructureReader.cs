@@ -7,6 +7,7 @@ public sealed class OmsiO3dStructureReader
     private const byte MaterialSection = 0x26;
     private const byte BoneSection = 0x54;
     private const byte TransformSection = 0x79;
+    private const uint MaxBones = 1_000_000;
 
     public OmsiO3dStructureSummary Read(
         string path)
@@ -146,17 +147,15 @@ public sealed class OmsiO3dStructureReader
                     break;
 
                 case BoneSection:
-                    // OMSI keeps the bone-list count at UInt16
-                    // even when vertex/triangle sections use the
-                    // extended long header.
-                    if (!HasRemaining(stream, 2))
+                    if (!TryReadCount(
+                            reader,
+                            longHeader,
+                            out boneCount) ||
+                        boneCount > MaxBones)
                     {
                         return OmsiO3dStructureSummary.Invalid(
                             "invalidBoneSection");
                     }
-
-                    boneCount =
-                        reader.ReadUInt16();
 
                     for (uint index = 0;
                          index < boneCount;
