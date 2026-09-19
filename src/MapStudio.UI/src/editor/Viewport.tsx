@@ -1502,8 +1502,11 @@ function createPreviewMaterial(
     clamp01(materialData.diffuseB)
   );
 
-  material.alpha =
-    clamp01(materialData.diffuseA);
+  // OMSI scenery transparency is controlled by the SCO material
+  // directives such as [matl_alpha]. The embedded O3D diffuse alpha
+  // is not used as a blanket object opacity by the reference importer.
+  // Keeping it at 1 avoids valid O3D meshes disappearing completely.
+  material.alpha = 1;
 
   material.specularColor = new Color3(
     clamp01(materialData.specularR),
@@ -2012,7 +2015,8 @@ function updateObjectLod(
       (threshold) =>
         screenFraction >=
         threshold
-    );
+    ) ??
+    instance.thresholds[0];
 
   for (const mesh of
     instance.meshes) {
@@ -3802,21 +3806,30 @@ export function Viewport({
         | Vector3
         | undefined;
 
-      if (event.key === "ArrowUp") {
+      const key =
+        event.key.toLowerCase();
+
+      if (
+        event.key === "ArrowUp" ||
+        key === "w"
+      ) {
         offset =
           forward.scale(step);
       } else if (
-        event.key === "ArrowDown"
+        event.key === "ArrowDown" ||
+        key === "s"
       ) {
         offset =
           forward.scale(-step);
       } else if (
-        event.key === "ArrowLeft"
+        event.key === "ArrowLeft" ||
+        key === "a"
       ) {
         offset =
           right.scale(-step);
       } else if (
-        event.key === "ArrowRight"
+        event.key === "ArrowRight" ||
+        key === "d"
       ) {
         offset =
           right.scale(step);
@@ -3844,6 +3857,7 @@ export function Viewport({
 
       if (offset) {
         event.preventDefault();
+        event.stopPropagation();
         camera.setTarget(
           camera.target.add(offset)
         );
@@ -4340,7 +4354,7 @@ export function Viewport({
       className="viewport-canvas"
       tabIndex={0}
       aria-label="Viewport 3D do editor"
-      title="Navegação: botão direito orbita · botão do meio desloca · Shift acelera · roda aproxima/afasta · setas deslocam"
+      title="Navegação: botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem para frente/trás/laterais · Shift acelera · roda aproxima/afasta"
     />
   );
 }

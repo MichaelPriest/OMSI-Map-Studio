@@ -452,3 +452,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 4. selecione uma árvore e confirme no Inspetor a textura e a faixa declarada pelo `[tree]`;
 5. confirme que o helper `treehelper.x` não é contabilizado como falha O3D da árvore;
 6. confirme que os marcadores amarelos continuam visíveis apenas onde o asset real não pôde ser renderizado.
+
+
+## Validação de O3D, SLI e pan lateral
+
+1. abra Grundorf em modo 3×3 e confirme que os objetos O3D deixam de desaparecer por alfa difuso ou por ausência de correspondência de LOD;
+2. compare objetos que possuem múltiplos blocos `[LOD]` e confirme que pelo menos um LOD real permanece visível em qualquer distância do editor;
+3. abra uma spline com mais de dois `[profilepnt]` e confirme que todas as faixas da seção transversal aparecem, incluindo rua/calçada quando declaradas;
+4. clique no viewport e teste `A/D` para esquerda/direita e `W/S` para frente/trás;
+5. repita com `Shift` para movimento acelerado;
+6. confirme que botão do meio e `Shift + botão direito` continuam fazendo pan sem selecionar objetos.

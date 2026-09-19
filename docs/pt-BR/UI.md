@@ -565,3 +565,16 @@ O editor agora trata os objetos especiais de árvore do OMSI separadamente do he
 No viewport, a árvore é desenhada como billboard vertical não iluminado com a textura, altura e proporção gravadas na própria colocação do mapa. Portanto, árvores com dimensões diferentes continuam diferentes no Map Studio, sem substituir os valores por médias ou mocks.
 
 As texturas repetidas de árvores compartilham material dentro da mesma cena para evitar criar uma cópia GPU por árvore. Marcadores amarelos permanecem somente para objetos que ainda não possuem representação renderizável.
+
+
+## Objetos O3D e splines completos
+
+A visualização de O3D não usa mais o alfa difuso embutido no material como opacidade global do objeto. A transparência segue as diretivas reais do SCO, como `[matl_alpha]`, evitando que malhas válidas desapareçam quando o canal alfa do O3D não representa transparência de objeto.
+
+O seletor de LOD do editor também passa a manter um LOD real visível mesmo quando o limiar recebido do SCO não encontra correspondência direta com a fração de tela calculada pelo preview. Isso evita o estado em que todos os meshes LOD eram desativados ao mesmo tempo.
+
+Perfis `.sli` com três ou mais `[profilepnt]` agora geram todas as faixas entre pontos consecutivos. Antes, somente o primeiro par era usado, o que podia mostrar apenas uma parte da rua/calçada.
+
+## Navegação lateral
+
+Com o viewport focado, `A/D` e as setas esquerda/direita deslocam a câmera lateralmente; `W/S` e as setas cima/baixo deslocam para frente/trás. `Shift` acelera. O botão do meio continua fazendo pan e `Shift + botão direito` também desloca em vez de orbitar.

@@ -78,13 +78,11 @@ public sealed class OmsiSplineDefinitionReader
             }
 
             var points =
-                new List<OmsiSplineProfilePoint>(
-                    capacity: 2);
+                new List<OmsiSplineProfilePoint>();
 
             for (
                 var nextIndex = index + 1;
-                nextIndex < document.Sections.Count &&
-                points.Count < 2;
+                nextIndex < document.Sections.Count;
                 nextIndex++)
             {
                 var next =
@@ -115,23 +113,32 @@ public sealed class OmsiSplineDefinitionReader
                 }
             }
 
-            if (points.Count != 2)
+            if (points.Count < 2)
             {
                 continue;
             }
 
-            surfaces.Add(
-                new OmsiSplineSurface(
-                    TextureIndex:
-                        textureIndex,
-                    TextureName:
-                        textureIndex <
-                            textures.Length
-                            ? textures[
-                                textureIndex]
-                            : null,
-                    From: points[0],
-                    To: points[1]));
+            for (
+                var pointIndex = 0;
+                pointIndex + 1 < points.Count;
+                pointIndex++)
+            {
+                surfaces.Add(
+                    new OmsiSplineSurface(
+                        TextureIndex:
+                            textureIndex,
+                        TextureName:
+                            textureIndex <
+                                textures.Length
+                                ? textures[
+                                    textureIndex]
+                                : null,
+                        From:
+                            points[pointIndex],
+                        To:
+                            points[
+                                pointIndex + 1]));
+            }
         }
 
         return new OmsiSplineDefinition(

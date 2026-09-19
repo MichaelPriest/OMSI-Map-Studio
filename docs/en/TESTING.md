@@ -452,3 +452,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 4. select a tree and verify the Inspector shows its texture and the range declared by `[tree]`;
 5. verify the `treehelper.x` editor helper is not counted as an O3D failure for the tree;
 6. verify yellow fallback markers remain only where the real asset could not be rendered.
+
+
+## O3D, SLI, and lateral pan validation
+
+1. open Grundorf in 3×3 mode and verify O3D objects no longer disappear because of embedded diffuse alpha or an unmatched LOD threshold;
+2. inspect objects with multiple `[LOD]` blocks and verify at least one real LOD remains visible at every editor distance;
+3. open a spline with more than two `[profilepnt]` entries and verify every cross-section strip is rendered, including road/sidewalk strips when declared;
+4. focus the viewport and test `A/D` for left/right and `W/S` for forward/backward movement;
+5. repeat with `Shift` for faster movement;
+6. verify middle mouse and `Shift + right mouse` still pan without selecting objects.

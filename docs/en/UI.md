@@ -565,3 +565,16 @@ The editor now handles OMSI special tree objects separately from the `.x` helper
 The viewport renders the tree as an unlit vertical billboard using the texture, height, and ratio stored by that exact map placement. Trees with different dimensions therefore remain different in Map Studio instead of being replaced by averages or mock values.
 
 Repeated tree textures share a material inside the same scene to avoid creating one GPU texture copy per tree. Yellow fallback markers remain only for objects that still have no renderable representation.
+
+
+## Complete O3D objects and spline profiles
+
+O3D preview no longer uses the embedded material diffuse alpha as a global object opacity. Transparency follows real SCO directives such as `[matl_alpha]`, preventing valid meshes from disappearing when O3D diffuse alpha is not object transparency.
+
+The editor LOD selector also keeps one real LOD visible when no raw SCO threshold directly matches the preview screen fraction. This prevents the previous state where all LOD meshes could become disabled at once.
+
+`.sli` profiles containing three or more `[profilepnt]` entries now generate every strip between consecutive points. Previously only the first pair was used, which could render only part of a road or sidewalk profile.
+
+## Lateral navigation
+
+With the viewport focused, `A/D` and left/right arrows pan sideways; `W/S` and up/down arrows move forward/backward. `Shift` accelerates movement. Middle mouse still pans, and `Shift + right mouse` pans instead of orbiting.

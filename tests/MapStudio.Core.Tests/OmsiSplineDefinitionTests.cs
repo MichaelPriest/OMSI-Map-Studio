@@ -89,6 +89,50 @@ public sealed class OmsiSplineDefinitionTests
     }
 
     [Fact]
+    public void Reader_ExpandsMultiPointProfileIntoAllAdjacentSurfaces()
+    {
+        const string source =
+            "[texture]\n" +
+            "Road.bmp\n" +
+            "[profile]\n" +
+            "0\n" +
+            "[profilepnt]\n" +
+            "-5\n0\n0\n0.25\n" +
+            "[profilepnt]\n" +
+            "0\n0.1\n0.5\n0.25\n" +
+            "[profilepnt]\n" +
+            "5\n0\n1\n0.25\n";
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    MapStudio.Core.Omsi.Config
+                        .OmsiConfigParser.Parse(
+                            source));
+
+        Assert.Equal(
+            2,
+            definition.Surfaces.Count);
+
+        Assert.Equal(
+            -5,
+            definition.Surfaces[0]
+                .From.X);
+        Assert.Equal(
+            0,
+            definition.Surfaces[0]
+                .To.X);
+        Assert.Equal(
+            0,
+            definition.Surfaces[1]
+                .From.X);
+        Assert.Equal(
+            5,
+            definition.Surfaces[1]
+                .To.X);
+    }
+
+    [Fact]
     public void PathResolver_StaysInsideOmsiSplines()
     {
         var root = Path.Combine(
