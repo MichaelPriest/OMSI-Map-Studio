@@ -5294,6 +5294,40 @@ export function App() {
           </dd>
         </div>
         <div>
+          <dt>Render data .rdy</dt>
+          <dd>
+            {!activeTileDetails
+              ?.detailsLoaded
+              ? "Não carregado"
+              : !activeTileDetails
+                  .terrainRenderData
+                ? "Ausente"
+                : activeTileDetails
+                    .terrainRenderData
+                    .isValid
+                  ? `${activeTileDetails.terrainRenderData.vertexCount} vértices · ${activeTileDetails.terrainRenderData.triangleCount} triângulos · ${activeTileDetails.terrainRenderData.materialCount} material(is) · ${formatFileSize(
+                      activeTileDetails.terrainRenderData.fileSize
+                    )}`
+                  : `Inválido · ${activeTileDetails.terrainRenderData.errorCode ?? "erro desconhecido"} · ${formatFileSize(
+                      activeTileDetails.terrainRenderData.fileSize
+                    )}`}
+          </dd>
+        </div>
+        <div>
+          <dt>Transform .rdy</dt>
+          <dd>
+            {activeTileDetails
+              ?.terrainRenderData
+              ?.isValid
+              ? activeTileDetails
+                  .terrainRenderData
+                  .hasTransform
+                ? "Presente"
+                : "Ausente"
+              : "—"}
+          </dd>
+        </div>
+        <div>
           <dt>Camadas [groundtex]</dt>
           <dd>
             {selectedMap
