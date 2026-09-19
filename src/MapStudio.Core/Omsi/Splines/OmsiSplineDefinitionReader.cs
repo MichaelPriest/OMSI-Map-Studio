@@ -44,6 +44,55 @@ public sealed class OmsiSplineDefinitionReader
                         value!)
                 .ToArray();
 
+        var alphaModes =
+            new int[textures.Length];
+
+        var currentTextureIndex = -1;
+
+        foreach (var section in
+            document.Sections)
+        {
+            if (string.Equals(
+                    section.Keyword,
+                    "texture",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                currentTextureIndex++;
+                continue;
+            }
+
+            if (
+                currentTextureIndex < 0 ||
+                currentTextureIndex >=
+                    alphaModes.Length ||
+                !string.Equals(
+                    section.Keyword,
+                    "matl_alpha",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value =
+                section.DataLines
+                    .FirstOrDefault();
+
+            if (
+                int.TryParse(
+                    value,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var alphaMode))
+            {
+                alphaModes[
+                    currentTextureIndex] =
+                    Math.Clamp(
+                        alphaMode,
+                        0,
+                        2);
+            }
+        }
+
         var surfaces =
             new List<OmsiSplineSurface>();
 
@@ -133,6 +182,12 @@ public sealed class OmsiSplineDefinitionReader
                                 ? textures[
                                     textureIndex]
                                 : null,
+                        AlphaMode:
+                            textureIndex <
+                                alphaModes.Length
+                                ? alphaModes[
+                                    textureIndex]
+                                : 0,
                         From:
                             points[pointIndex],
                         To:

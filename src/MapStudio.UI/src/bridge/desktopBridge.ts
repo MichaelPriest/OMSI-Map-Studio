@@ -120,6 +120,7 @@ export type OmsiSplineProfilePoint = {
 export type OmsiSplineSurface = {
   textureIndex: number;
   textureName: string | null;
+  alphaMode: number;
   from: OmsiSplineProfilePoint;
   to: OmsiSplineProfilePoint;
 };

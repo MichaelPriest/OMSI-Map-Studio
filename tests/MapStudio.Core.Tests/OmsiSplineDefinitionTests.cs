@@ -63,6 +63,10 @@ public sealed class OmsiSplineDefinitionTests
                 surface.TextureName);
 
             Assert.Equal(
+                0,
+                surface.AlphaMode);
+
+            Assert.Equal(
                 -4,
                 surface.From.X);
 
@@ -86,6 +90,35 @@ public sealed class OmsiSplineDefinitionTests
         {
             File.Delete(path);
         }
+    }
+
+    [Fact]
+    public void Reader_AssignsExplicitMaterialAlphaToTextureSurfaces()
+    {
+        const string source =
+            "[texture]\n" +
+            "Marking.tga\n" +
+            "[matl_alpha]\n" +
+            "1\n" +
+            "[profile]\n" +
+            "0\n" +
+            "[profilepnt]\n" +
+            "-0.1\n0.1\n0\n1\n" +
+            "[profilepnt]\n" +
+            "0.1\n0.1\n1\n1\n";
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    MapStudio.Core.Omsi.Config
+                        .OmsiConfigParser.Parse(
+                            source));
+
+        Assert.Equal(
+            1,
+            Assert.Single(
+                definition.Surfaces)
+                .AlphaMode);
     }
 
     [Fact]

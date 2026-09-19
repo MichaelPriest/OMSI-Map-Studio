@@ -1173,7 +1173,7 @@ function createSelectedSplineProfile(
             .add(
               new Vector3(
                 0,
-                point.z + 0.08,
+                point.z + 0.12,
                 0
               )
             );
@@ -1277,6 +1277,10 @@ function createSelectedSplineProfile(
 
     material.disableLighting = true;
 
+    // Keep road/profile geometry in front of the terrain depth plane
+    // without changing the actual OMSI spline coordinates.
+    material.zOffset = -2;
+
     if (surface.textureName) {
       const asset =
         textureAssetsByKey[
@@ -1305,8 +1309,27 @@ function createSelectedSplineProfile(
         material.emissiveTexture =
           texture;
 
-        material.useAlphaFromDiffuseTexture =
-          true;
+        if (surface.alphaMode === 1) {
+          texture.hasAlpha = true;
+          material.useAlphaFromDiffuseTexture =
+            true;
+          material.transparencyMode =
+            Material.MATERIAL_ALPHATEST;
+          material.alphaCutOff = 0.4;
+        } else if (
+          surface.alphaMode === 2
+        ) {
+          texture.hasAlpha = true;
+          material.useAlphaFromDiffuseTexture =
+            true;
+          material.transparencyMode =
+            Material.MATERIAL_ALPHABLEND;
+        } else {
+          material.useAlphaFromDiffuseTexture =
+            false;
+          material.transparencyMode =
+            Material.MATERIAL_OPAQUE;
+        }
       }
     }
 
@@ -2285,10 +2308,10 @@ function getHorizontalSurfaceRenderLift(
     );
 
   return (
-    verticalSpan <= 0.12 &&
+    verticalSpan <= 0.35 &&
     horizontalSpan >= 2
   )
-    ? 0.06
+    ? 0.10
     : 0;
 }
 
@@ -2592,6 +2615,13 @@ function createGeometryMeshes(
           mapStudioRenderLift:
             renderLift
         };
+
+        if (
+          mesh.material instanceof
+            StandardMaterial
+        ) {
+          mesh.material.zOffset = -2;
+        }
       }
 
       mesh.scaling.set(
@@ -2959,6 +2989,11 @@ function createMapObjectGeometry(
       tiles
     );
 
+    sourceRoot.metadata = {
+      mapStudioKind: "object",
+      placedObject: placements[0]
+    };
+
     // OMSI [tree] scenery uses its generated billboard as the
     // actual visual. Packs commonly include treehelper.x only as an
     // editor helper; rendering it together with the billboard creates
@@ -3039,6 +3074,12 @@ function createMapObjectGeometry(
         geometry,
         tiles
       );
+
+      root.metadata = {
+        mapStudioKind: "object",
+        placedObject:
+          placements[placementIndex]
+      };
 
       const cloneMeshes:
         Mesh[] = [];
@@ -3246,6 +3287,16 @@ export function Viewport({
     useRef<number | undefined>(
       undefined
     );
+
+  const lastMapItemClickRef =
+    useRef<
+      | {
+          kind: "object" | "spline";
+          key: string;
+          at: number;
+        }
+      | undefined
+    >(undefined);
 
   const cameraStateKeyRef =
     useRef(cameraStateKey);
@@ -4184,15 +4235,29 @@ export function Viewport({
       | { x: number; y: number }
       | undefined;
 
-    let lastMapItemClick:
-      | {
-          kind: "object" | "spline";
-          item:
-            | OmsiPlacedObject
-            | OmsiPlacedSpline;
-          at: number;
-        }
-      | undefined;
+    const getMapItemClickKey = (
+      kind: "object" | "spline",
+      item:
+        | OmsiPlacedObject
+        | OmsiPlacedSpline
+    ) =>
+      kind === "object"
+        ? [
+            "object",
+            (item as OmsiPlacedObject).tileX,
+            (item as OmsiPlacedObject).tileY,
+            (item as OmsiPlacedObject).objectId,
+            (item as OmsiPlacedObject)
+              .sourceSectionOrdinal
+          ].join(":")
+        : [
+            "spline",
+            (item as OmsiPlacedSpline).tileX,
+            (item as OmsiPlacedSpline).tileY,
+            (item as OmsiPlacedSpline).splineId,
+            (item as OmsiPlacedSpline)
+              .sourceSectionOrdinal
+          ].join(":");
 
     const isRepeatedMapItemClick = (
       kind: "object" | "spline",
@@ -4201,16 +4266,24 @@ export function Viewport({
         | OmsiPlacedSpline
     ) => {
       const now = performance.now();
+      const key =
+        getMapItemClickKey(
+          kind,
+          item
+        );
 
       const repeated =
-        lastMapItemClick?.kind === kind &&
-        lastMapItemClick.item === item &&
-        now - lastMapItemClick.at <=
-          450;
+        lastMapItemClickRef.current
+          ?.kind === kind &&
+        lastMapItemClickRef.current
+          ?.key === key &&
+        now -
+          lastMapItemClickRef.current.at <=
+          500;
 
-      lastMapItemClick = {
+      lastMapItemClickRef.current = {
         kind,
-        item,
+        key,
         at: now
       };
 
@@ -4532,6 +4605,132 @@ export function Viewport({
       event.preventDefault();
     };
 
+    const getPickedMapItem = (
+      event: PointerEvent
+    ) => {
+      if (
+        usesWorldCoordinates ||
+        placementAssetPath ||
+        splinePlacementTemplate
+      ) {
+        return undefined;
+      }
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const pointerX =
+        (event.clientX - rect.left) *
+        (engine.getRenderWidth() /
+          rect.width);
+
+      const pointerY =
+        (event.clientY - rect.top) *
+        (engine.getRenderHeight() /
+          rect.height);
+
+      const pick =
+        scene.pick(
+          pointerX,
+          pointerY,
+          (mesh) => mesh.isPickable,
+          false,
+          camera
+        );
+
+      let node =
+        pick?.hit
+          ? pick.pickedMesh
+          : null;
+
+      while (node) {
+        const metadata =
+          node.metadata;
+
+        if (
+          metadata?.mapStudioKind ===
+            "object" &&
+          metadata.placedObject
+        ) {
+          return {
+            kind: "object" as const,
+            item:
+              metadata.placedObject as
+                OmsiPlacedObject
+          };
+        }
+
+        if (
+          metadata?.mapStudioKind ===
+            "spline" &&
+          metadata.placedSpline
+        ) {
+          return {
+            kind: "spline" as const,
+            item:
+              metadata.placedSpline as
+                OmsiPlacedSpline
+          };
+        }
+
+        node = node.parent as
+          typeof node;
+      }
+
+      return undefined;
+    };
+
+    const selectPickedMapItem = (
+      event: PointerEvent
+    ) => {
+      const picked =
+        getPickedMapItem(event);
+
+      if (!picked) {
+        return false;
+      }
+
+      if (picked.kind === "object") {
+        const shouldFocus =
+          isRepeatedMapItemClick(
+            "object",
+            picked.item
+          );
+
+        onSelectSpline(undefined);
+        onSelectObject(
+          picked.item
+        );
+
+        if (shouldFocus) {
+          focusPlacedObject(
+            picked.item
+          );
+        }
+
+        return true;
+      }
+
+      const shouldFocus =
+        isRepeatedMapItemClick(
+          "spline",
+          picked.item
+        );
+
+      onSelectObject(undefined);
+      onSelectSpline(
+        picked.item
+      );
+
+      if (shouldFocus) {
+        focusPlacedSpline(
+          picked.item
+        );
+      }
+
+      return true;
+    };
+
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -4547,6 +4746,14 @@ export function Viewport({
         x: event.clientX,
         y: event.clientY
       };
+
+      if (
+        editorTool === "select"
+      ) {
+        selectPickedMapItem(
+          event
+        );
+      }
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -4703,84 +4910,9 @@ export function Viewport({
         return;
       }
 
-      const directPick =
-        scene.pick(
-          pointerX,
-          pointerY,
-          (mesh) =>
-            mesh.isPickable &&
-            (
-              mesh.metadata?.mapStudioKind ===
-                "object" ||
-              mesh.metadata?.mapStudioKind ===
-                "spline"
-            ),
-          false,
-          camera
-        );
-
-      if (
-        directPick?.hit &&
-        directPick.pickedMesh?.metadata
-          ?.mapStudioKind === "object"
-      ) {
-        const placedObject =
-          directPick.pickedMesh.metadata
-            .placedObject as
-              | OmsiPlacedObject
-              | undefined;
-
-        if (placedObject) {
-          const shouldFocus =
-            isRepeatedMapItemClick(
-              "object",
-              placedObject
-            );
-
-          onSelectSpline(undefined);
-          onSelectObject(placedObject);
-
-          if (shouldFocus) {
-            focusPlacedObject(
-              placedObject
-            );
-          }
-
-          return;
-        }
-      }
-
-      if (
-        directPick?.hit &&
-        directPick.pickedMesh?.metadata
-          ?.mapStudioKind === "spline"
-      ) {
-        const placedSpline =
-          directPick.pickedMesh.metadata
-            .placedSpline as
-              | OmsiPlacedSpline
-              | undefined;
-
-        if (placedSpline) {
-          const shouldFocus =
-            isRepeatedMapItemClick(
-              "spline",
-              placedSpline
-            );
-
-          onSelectObject(undefined);
-          onSelectSpline(placedSpline);
-
-          if (shouldFocus) {
-            focusPlacedSpline(
-              placedSpline
-            );
-          }
-
-          return;
-        }
-      }
-
+      // Selection is handled on pointerdown so React can rebuild the
+      // selected-item scene before pointerup. Keep the geometric
+      // proximity fallback below for objects without pickable meshes.
       const threshold = Math.max(2.5, Math.min(20, camera.radius * 0.004));
 
       let selected: OmsiPlacedObject | undefined;
@@ -4823,21 +4955,8 @@ export function Viewport({
       }
 
       if (selected) {
-        const shouldFocus =
-          isRepeatedMapItemClick(
-            "object",
-            selected
-          );
-
         onSelectSpline(undefined);
         onSelectObject(selected);
-
-        if (shouldFocus) {
-          focusPlacedObject(
-            selected
-          );
-        }
-
         return;
       }
 
