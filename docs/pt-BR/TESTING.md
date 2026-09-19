@@ -320,3 +320,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 6. reative a camada e confirme que a câmera enquadra a altitude do terreno, sem voltar para Y=0 em mapas elevados;
 7. valide um sidecar inválido/truncado e confirme que o mapa continua abrindo, o diagnóstico mantém o arquivo visível e nenhuma malha falsa é criada;
 8. confirme que nenhum arquivo `.terrain` é modificado.
+
+## Teste da textura base do terreno
+
+1. abra um mapa cujo `global.cfg` tenha uma ou mais entradas `[groundtex]`;
+2. confirme no inspetor a quantidade de camadas declaradas;
+3. valide que a primeira textura principal real é carregada e substitui o material neutro da malha;
+4. confira que a repetição visual acompanha o valor `Repeating` da camada 0;
+5. confirme que a textura de detalhe mostra estado de carregamento no inspetor, mas não é misturada visualmente nesta etapa;
+6. renomeie temporariamente uma textura base de um mapa de teste e confirme fallback para material neutro sem placeholder fake;
+7. teste um caminho com tentativa de saída da instalação e confirme que o host o rejeita;
+8. confirme que alternar **Terreno** continua ocultando/exibindo a malha sem alterar arquivos do mapa.

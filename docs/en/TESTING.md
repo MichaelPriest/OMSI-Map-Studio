@@ -320,3 +320,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 6. re-enable it and verify camera fitting respects terrain elevation instead of snapping to Y=0 on elevated maps;
 7. test an invalid/truncated sidecar and verify the map still opens, diagnostics still expose the file, and no fake mesh is created;
 8. verify no `.terrain` file is modified.
+
+## Base terrain-texture test
+
+1. open a map whose `global.cfg` contains one or more `[groundtex]` entries;
+2. verify the declared layer count in the inspector;
+3. verify the first real main texture loads and replaces the terrain mesh's neutral material;
+4. verify visual tiling follows layer 0's `Repeating` value;
+5. verify the detail texture reports its loading state in the inspector but is not visually blended at this stage;
+6. temporarily rename a base texture in a test map and verify fallback to the neutral material with no fake placeholder;
+7. test a path attempting to escape the OMSI installation and verify the host rejects it;
+8. verify toggling **Terrain** still hides/shows the mesh without modifying map files.

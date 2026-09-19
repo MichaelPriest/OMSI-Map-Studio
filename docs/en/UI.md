@@ -445,3 +445,13 @@ The `.map.terrain` sidecar is now decoded as OMSI's real height grid. The valida
 The viewport builds a 3D mesh from those real values with spacing derived from the 300 m tile. The **Terrain** layer can be enabled/disabled. Its current material is neutral and only visualizes geometry; `.rdy` paint/layer data is not simulated yet.
 
 The map inspector shows whether the mesh decoded successfully, cell/point counts, and the active tile altitude range. Sidecars with an invalid size/grid remain visible in diagnostics but do not receive invented geometry.
+
+## Real base terrain texture
+
+The map now reads real **[groundtex]** entries from `global.cfg` in declaration order. Layer 0 provides the main and detail textures used as the terrain base.
+
+Layer 0's main texture is resolved inside the real OMSI installation, loaded by the host, and applied to the height mesh. The repeating value declared in `global.cfg` is applied to the texture UVs. If the asset is missing or the path is unsafe, the mesh keeps its neutral material instead of inventing an asset.
+
+The detail texture from the same layer is also resolved and its state is exposed in the inspector, but **detail blending is not visually simulated yet**, because OMSI's exact blend mode/factor is still being validated. Additional [groundtex] layers remain available as real data but are not painted until their relationship with `.rdy` data is confirmed.
+
+The inspector shows [groundtex] layer count, main texture path/state and repeating, plus detail texture path/state and repeating.

@@ -445,3 +445,13 @@ O sidecar `.map.terrain` agora é decodificado como a grade de altura real do OM
 O viewport cria uma malha 3D usando esses valores reais e espaçamento derivado do tile de 300 m. A camada **Terreno** pode ser ligada/desligada. O material atual é neutro e serve apenas para visualizar a geometria; pintura/camadas `.rdy` ainda não são simuladas.
 
 O inspetor do mapa mostra se a malha foi decodificada, número de células/pontos e intervalo de altitude do tile ativo. Arquivos com tamanho/grade inválidos continuam visíveis como sidecars no diagnóstico, mas não recebem malha inventada.
+
+## Textura base real do terreno
+
+O mapa agora lê as entradas **[groundtex]** reais do `global.cfg` na ordem declarada. A camada 0 fornece a textura principal e a textura de detalhe usadas como base do terreno.
+
+A textura principal da camada 0 é resolvida dentro da instalação real do OMSI, carregada pelo host e aplicada à malha de altura. O valor de repetição declarado no `global.cfg` é aplicado ao UV da textura. Se o arquivo estiver ausente ou o caminho for inseguro, a malha mantém o material neutro em vez de inventar um asset.
+
+A textura de detalhe da mesma camada também é resolvida e seu estado aparece no inspetor, mas **a mistura visual de detalhe ainda não é simulada**, pois o modo/fator de blend do OMSI ainda está sendo validado. As demais camadas [groundtex] permanecem disponíveis como dados reais, porém ainda não são pintadas sem a associação confirmada com os dados `.rdy`.
+
+O inspetor mostra quantidade de camadas [groundtex], caminho/estado da textura principal, repetição, caminho/estado da textura de detalhe e sua repetição.
