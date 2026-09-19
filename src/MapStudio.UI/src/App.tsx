@@ -6,6 +6,7 @@ import {
 } from "react";
 import {
   isDesktopBridgeAvailable,
+  loadMapFull,
   loadMapRegion,
   loadSplineProfile,
   loadSceneryObjectGeometry,
@@ -29,6 +30,10 @@ type AppView =
   | "editor"
   | "tools"
   | "settings";
+
+type MapLoadMode =
+  | "full"
+  | "performance";
 
 type InspectorTab =
   | "general"
@@ -105,6 +110,27 @@ export function App() {
 
   const [selectedMap, setSelectedMap] =
     useState<OmsiMap>();
+
+  const [mapLoadMode, setMapLoadMode] =
+    useState<MapLoadMode>("full");
+
+  const [
+    loadingFullMap,
+    setLoadingFullMap
+  ] = useState(false);
+
+  const [
+    fullMapProgress,
+    setFullMapProgress
+  ] = useState<{
+    completed: number;
+    total: number;
+  }>();
+
+  const [
+    loadedFullMapFor,
+    setLoadedFullMapFor
+  ] = useState<string>();
 
   const [activeTile, setActiveTile] =
     useState<{
@@ -198,6 +224,9 @@ export function App() {
           setSelectingRoot(false);
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
+          setLoadingFullMap(false);
+          setFullMapProgress(undefined);
+          setLoadedFullMapFor(undefined);
           setError(undefined);
           setView("map");
           return;
@@ -217,11 +246,73 @@ export function App() {
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setSelectingMap(false);
+          setMapLoadMode("full");
           setLoadingRegionKey(undefined);
           setLoadedRegionKey(undefined);
+          setLoadingFullMap(false);
+          setFullMapProgress(undefined);
+          setLoadedFullMapFor(undefined);
           setInspectorTab("general");
           setError(undefined);
           setView("editor");
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapFullLoadingStarted"
+        ) {
+          setLoadingFullMap(true);
+          setFullMapProgress({
+            completed: 0,
+            total: message.totalTiles
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapFullLoadingProgress"
+        ) {
+          setLoadingFullMap(true);
+          setFullMapProgress({
+            completed:
+              message.completedTiles,
+            total:
+              message.totalTiles
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapFullLoaded"
+        ) {
+          setSelectedMap((current) =>
+            current?.directoryName ===
+            message.directoryName
+              ? {
+                  ...current,
+                  tiles: message.tiles
+                }
+              : current
+          );
+
+          setObjects(
+            message.objects
+          );
+
+          setSplines(
+            message.splines
+          );
+
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setLoadingFullMap(false);
+          setFullMapProgress(undefined);
+          setLoadedFullMapFor(
+            message.directoryName
+          );
           return;
         }
 
@@ -382,6 +473,8 @@ export function App() {
           setSelectingRoot(false);
           setSelectingMap(false);
           setLoadingRegionKey(undefined);
+          setLoadingFullMap(false);
+          setFullMapProgress(undefined);
           setLoadingSplineFor(undefined);
           setLoadingMetadataFor(undefined);
           setLoadingGeometryFor(undefined);
@@ -398,9 +491,35 @@ export function App() {
   useEffect(() => {
     if (
       !bridgeAvailable ||
-      !selectedMap ||
-      !activeTile
+      !selectedMap
     ) {
+      return;
+    }
+
+    if (mapLoadMode === "full") {
+      if (
+        loadingFullMap ||
+        loadedFullMapFor ===
+          selectedMap.directoryName
+      ) {
+        return;
+      }
+
+      setLoadingFullMap(true);
+      setFullMapProgress({
+        completed: 0,
+        total:
+          selectedMap.tiles.length
+      });
+
+      loadMapFull(
+        selectedMap.directoryName
+      );
+
+      return;
+    }
+
+    if (!activeTile) {
       return;
     }
 
@@ -429,8 +548,11 @@ export function App() {
   }, [
     activeTile,
     bridgeAvailable,
+    loadedFullMapFor,
     loadedRegionKey,
+    loadingFullMap,
     loadingRegionKey,
+    mapLoadMode,
     selectedMap
   ]);
 
@@ -531,10 +653,15 @@ export function App() {
   ]);
 
   const activeTiles = useMemo(() => {
-    if (
-      !selectedMap ||
-      !activeTile
-    ) {
+    if (!selectedMap) {
+      return [];
+    }
+
+    if (mapLoadMode === "full") {
+      return selectedMap.tiles;
+    }
+
+    if (!activeTile) {
       return [];
     }
 
@@ -549,6 +676,7 @@ export function App() {
     );
   }, [
     activeTile,
+    mapLoadMode,
     selectedMap
   ]);
 
@@ -754,6 +882,7 @@ export function App() {
   const busy =
     selectingRoot ||
     selectingMap ||
+    loadingFullMap ||
     Boolean(loadingRegionKey);
 
   const renderNav = () => (
@@ -1778,6 +1907,75 @@ export function App() {
             Perspectiva
           </span>
 
+          <span className="toolbar-separator" />
+
+          <button
+            type="button"
+            className={
+              mapLoadMode === "full"
+                ? "secondary-action active-mode"
+                : "secondary-action"
+            }
+            onClick={() => {
+              if (
+                mapLoadMode === "full"
+              ) {
+                return;
+              }
+
+              setMapLoadMode("full");
+              setLoadedFullMapFor(
+                undefined
+              );
+              setLoadedRegionKey(
+                undefined
+              );
+              setSelectedObject(
+                undefined
+              );
+              setSelectedSpline(
+                undefined
+              );
+            }}
+          >
+            Mapa completo
+          </button>
+
+          <button
+            type="button"
+            className={
+              mapLoadMode ===
+              "performance"
+                ? "secondary-action active-mode"
+                : "secondary-action"
+            }
+            onClick={() => {
+              if (
+                mapLoadMode ===
+                "performance"
+              ) {
+                return;
+              }
+
+              setMapLoadMode(
+                "performance"
+              );
+              setLoadedRegionKey(
+                undefined
+              );
+              setObjects([]);
+              setSplines([]);
+              setSelectedObject(
+                undefined
+              );
+              setSelectedSpline(
+                undefined
+              );
+            }}
+          >
+            Modo desempenho 3×3
+          </button>
+
           <span className="toolbar-spacer" />
 
           <button
@@ -1892,12 +2090,19 @@ export function App() {
                     return;
                   }
 
-                  setLoadedRegionKey(
-                    undefined
-                  );
                   setActiveTile(tile);
-                  setObjects([]);
-                  setSplines([]);
+
+                  if (
+                    mapLoadMode ===
+                    "performance"
+                  ) {
+                    setLoadedRegionKey(
+                      undefined
+                    );
+                    setObjects([]);
+                    setSplines([]);
+                  }
+
                   setSelectedObject(
                     undefined
                   );
@@ -1935,7 +2140,9 @@ export function App() {
                   checked
                   readOnly
                 />
-                Área ativa 3×3
+                {mapLoadMode === "full"
+                  ? "Mapa completo"
+                  : "Área ativa 3×3"}
               </label>
               <label>
                 <input
@@ -1962,9 +2169,12 @@ export function App() {
               </label>
             </div>
 
-            {Boolean(loadingRegionKey) && (
+            {(loadingFullMap ||
+              Boolean(loadingRegionKey)) && (
               <div className="viewport-loading">
-                Carregando área ativa...
+                {loadingFullMap
+                  ? `Carregando mapa completo${fullMapProgress ? ` · ${fullMapProgress.completed}/${fullMapProgress.total} tiles` : ""}...`
+                  : "Carregando área ativa..."}
               </div>
             )}
           </section>
@@ -1991,8 +2201,10 @@ export function App() {
           <span>
             {error
               ? "Erro"
-              : Boolean(loadingRegionKey)
-                ? "Carregando mapa..."
+              : loadingFullMap
+                ? "Carregando mapa completo..."
+                : Boolean(loadingRegionKey)
+                  ? "Carregando área..."
                 : loadingSplineFor
                   ? "Lendo SLI..."
                   : loadingMetadataFor
@@ -2003,20 +2215,21 @@ export function App() {
           </span>
 
           <span>
-            Tile ativo:{" "}
-            {activeTile
-              ? `${activeTile.x}, ${activeTile.y}`
-              : "—"}
+            Modo:{" "}
+            {mapLoadMode === "full"
+              ? "Mapa completo"
+              : "Desempenho 3×3"}
             <b>·</b>
-            Objetos (área):{" "}
+            Objetos:{" "}
             {selectedStats?.objects ??
               objects.length}
             <b>·</b>
-            Splines (área):{" "}
+            Splines:{" "}
             {selectedStats?.splines ??
               splines.length}
             <b>·</b>
-            Tiles totais:{" "}
+            Tiles:{" "}
+            {activeTiles.length}/
             {selectedMap.tiles.length}
           </span>
         </footer>
