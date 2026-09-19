@@ -437,3 +437,11 @@ Navigation controls:
 - **1 / 2**: perspective / top view.
 
 The left mouse button remains reserved for selection, placement, and edit gizmos.
+
+## Real OMSI terrain
+
+The `.map.terrain` sidecar is now decoded as OMSI's real height grid. The validated format uses a little-endian `uint32` cell count header (normally 60), followed by `(N+1)²` little-endian `float32` heights. The standard format therefore contains **61×61 points / 3,721 heights / 14,888 bytes**.
+
+The viewport builds a 3D mesh from those real values with spacing derived from the 300 m tile. The **Terrain** layer can be enabled/disabled. Its current material is neutral and only visualizes geometry; `.rdy` paint/layer data is not simulated yet.
+
+The map inspector shows whether the mesh decoded successfully, cell/point counts, and the active tile altitude range. Sidecars with an invalid size/grid remain visible in diagnostics but do not receive invented geometry.
