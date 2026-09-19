@@ -4881,7 +4881,10 @@ export function Viewport({
             item,
             diagnostic:
               buildPickedDiagnostic(
-                pick?.pickedMesh ?? null,
+                pick?.pickedMesh instanceof
+                  Mesh
+                  ? pick.pickedMesh
+                  : null,
                 "object",
                 item
               )
@@ -4902,7 +4905,10 @@ export function Viewport({
             item,
             diagnostic:
               buildPickedDiagnostic(
-                pick?.pickedMesh ?? null,
+                pick?.pickedMesh instanceof
+                  Mesh
+                  ? pick.pickedMesh
+                  : null,
                 "spline",
                 item
               )
