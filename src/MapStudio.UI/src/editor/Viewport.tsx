@@ -1696,6 +1696,13 @@ function createPreviewMaterial(
     material.diffuseTexture =
       texture;
 
+    // OMSI/O3D rendering uses the diffuse texture RGB as the
+    // surface colour when a main texture is present. Babylon's
+    // StandardMaterial multiplies diffuseTexture by diffuseColor,
+    // which was making valid OMSI textures appear dark/black.
+    material.diffuseColor =
+      Color3.White();
+
     const alphaMode =
       materialOverride?.alphaMode;
 
