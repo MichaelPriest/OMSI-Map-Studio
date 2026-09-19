@@ -37,6 +37,8 @@ type ViewportProps = {
   rotationSnap: number;
   showGrid: boolean;
   showTerrain: boolean;
+  terrainMainTextureAsset?: OmsiTextureAsset;
+  terrainMainTextureRepeating?: number;
   showObjects: boolean;
   showSplines: boolean;
   showSplineProfiles: boolean;
@@ -166,7 +168,10 @@ function createMeshFromVertexData(
   positions: number[],
   indices: number[],
   diffuseColor: Color3,
-  alpha = 1
+  alpha = 1,
+  uvs?: number[],
+  textureAsset?: OmsiTextureAsset,
+  textureRepeating?: number
 ) {
   if (
     positions.length === 0 ||
@@ -189,6 +194,14 @@ function createMeshFromVertexData(
 
   vertexData.indices =
     indices;
+
+  if (
+    uvs &&
+    uvs.length ===
+      (positions.length / 3) * 2
+  ) {
+    vertexData.uvs = uvs;
+  }
 
   VertexData.ComputeNormals(
     positions,
@@ -215,6 +228,37 @@ function createMeshFromVertexData(
 
   material.alpha = alpha;
 
+  const texture =
+    createTextureFromAsset(
+      scene,
+      textureAsset
+    );
+
+  if (texture) {
+    const repeating =
+      typeof textureRepeating ===
+        "number" &&
+      Number.isFinite(
+        textureRepeating
+      ) &&
+      textureRepeating > 0
+        ? textureRepeating
+        : 1;
+
+    texture.uScale = repeating;
+    texture.vScale = repeating;
+    texture.wrapU =
+      Texture.WRAP_ADDRESSMODE;
+    texture.wrapV =
+      Texture.WRAP_ADDRESSMODE;
+
+    material.diffuseColor =
+      Color3.White();
+
+    material.diffuseTexture =
+      texture;
+  }
+
   mesh.material = material;
   mesh.isPickable = false;
 }
@@ -224,7 +268,13 @@ function createTileSurface(
   tiles: OmsiTile[],
   tileSize: number,
   showFlatSurface: boolean,
-  showTerrain: boolean
+  showTerrain: boolean,
+  terrainMainTextureAsset:
+    | OmsiTextureAsset
+    | undefined,
+  terrainMainTextureRepeating:
+    | number
+    | undefined
 ) {
   if (tiles.length === 0) {
     return;
@@ -233,6 +283,9 @@ function createTileSurface(
   const terrainPositions:
     number[] = [];
   const terrainIndices:
+    number[] = [];
+
+  const terrainUvs:
     number[] = [];
 
   const flatPositions:
@@ -287,6 +340,13 @@ function createTileSurface(
             ],
             tile.y * tileSize +
               row * spacing
+          );
+
+          terrainUvs.push(
+            column /
+              terrain.cellCount,
+            row /
+              terrain.cellCount
           );
         }
       }
@@ -371,7 +431,11 @@ function createTileSurface(
       0.16,
       0.24,
       0.12
-    )
+    ),
+    1,
+    terrainUvs,
+    terrainMainTextureAsset,
+    terrainMainTextureRepeating
   );
 
   createMeshFromVertexData(
@@ -1932,6 +1996,8 @@ export function Viewport({
   rotationSnap,
   showGrid,
   showTerrain,
+  terrainMainTextureAsset,
+  terrainMainTextureRepeating,
   showObjects,
   showSplines,
   showSplineProfiles,
@@ -2222,7 +2288,9 @@ export function Viewport({
           tileSize,
           showGrid,
           showTerrain &&
-            !usesWorldCoordinates
+            !usesWorldCoordinates,
+          terrainMainTextureAsset,
+          terrainMainTextureRepeating
         );
       }
 
@@ -3514,6 +3582,8 @@ export function Viewport({
     rotationSnap,
     showGrid,
     showTerrain,
+    terrainMainTextureAsset,
+    terrainMainTextureRepeating,
     showObjects,
     showSplines,
     showSplineProfiles,
