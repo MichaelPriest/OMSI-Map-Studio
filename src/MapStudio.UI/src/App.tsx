@@ -6,6 +6,7 @@ import {
 } from "react";
 import {
   deleteObject,
+  deleteSpline,
   insertObject,
   insertSpline,
   isDesktopBridgeAvailable,
@@ -155,6 +156,12 @@ const errorMessages: Record<string, string> = {
     "Não há mais IDs inteiros disponíveis para criar uma nova spline.",
   splineInsertionWorldCoordinatesUnsupported:
     "A colocação de spline em mapas com [worldcoordinates] ainda não é suportada nesta alpha.",
+  splineDeleteLinked:
+    "Esta spline ainda possui vínculo anterior ou próximo. Nesta etapa, somente splines desconectadas podem ser excluídas.",
+  splineDeleteConflict:
+    "A spline mudou no arquivo desde a leitura. A exclusão foi cancelada para proteger os vínculos.",
+  splineDeleteError:
+    "Não foi possível excluir a spline com segurança.",
   unknownTile:
     "O tile escolhido não pertence ao mapa aberto.",
   invalidTilePath:
@@ -493,6 +500,11 @@ export function App() {
   const [
     insertingSpline,
     setInsertingSpline
+  ] = useState(false);
+
+  const [
+    deletingSpline,
+    setDeletingSpline
   ] = useState(false);
 
   const [saving, setSaving] =
@@ -839,6 +851,27 @@ export function App() {
 
         if (
           message.type ===
+          "splineDeleted"
+        ) {
+          setDeletingSpline(false);
+          setPreviewSplineTransforms({});
+          setSelectedSpline(undefined);
+          setEditorTool("select");
+
+          setSaveNotice(
+            `Spline #${message.splineId} excluída. Backup: ${message.backupDirectory}`
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+
+          return;
+        }
+
+        if (
+          message.type ===
           "splineInserted"
         ) {
           setInsertingSpline(false);
@@ -950,6 +983,7 @@ export function App() {
           setDeletingObject(false);
           setSavingSpline(false);
           setInsertingSpline(false);
+          setDeletingSpline(false);
 
           setError(
             errorMessages[message.code] ??
@@ -1964,6 +1998,66 @@ export function App() {
       ]
     );
 
+  const handleDeleteSelectedSpline =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !selectedSpline ||
+        deletingSpline
+      ) {
+        return;
+      }
+
+      if (
+        selectedSpline.previousSplineId != -1 ||
+        selectedSpline.nextSplineId != -1
+      ) {
+        setError(
+          errorMessages
+            .splineDeleteLinked
+        );
+        return;
+      }
+
+      if (
+        previewEditCount > 0 ||
+        splinePreviewEditCount > 0 ||
+        placementAsset ||
+        splinePlacementTemplate
+      ) {
+        setError(
+          "Salve, descarte ou cancele as edições pendentes antes de excluir a spline."
+        );
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          `Excluir permanentemente a spline desconectada #${selectedSpline.splineId}?\n\nUm backup do tile será criado antes da alteração.`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setDeletingSpline(true);
+      setSaveNotice(undefined);
+      setError(undefined);
+
+      deleteSpline(
+        selectedMap.directoryName,
+        selectedSpline
+      );
+    }, [
+      deletingSpline,
+      placementAsset,
+      previewEditCount,
+      selectedMap,
+      selectedSpline,
+      splinePlacementTemplate,
+      splinePreviewEditCount
+    ]);
+
   const handleStartSplineCopy =
     useCallback(() => {
       if (
@@ -2699,6 +2793,7 @@ export function App() {
     insertingObject ||
     deletingObject ||
     insertingSpline ||
+    deletingSpline ||
     loadingFullMap ||
     Boolean(loadingRegionKey);
 
@@ -3660,6 +3755,33 @@ export function App() {
               anterior/próxima começam em -1 para
               não alterar a cadeia existente.
             </div>
+
+            <button
+              type="button"
+              className="danger-action wide"
+              onClick={
+                handleDeleteSelectedSpline
+              }
+              disabled={
+                busy ||
+                selectedSpline.previousSplineId !== -1 ||
+                selectedSpline.nextSplineId !== -1 ||
+                previewEditCount > 0 ||
+                splinePreviewEditCount > 0 ||
+                Boolean(placementAsset) ||
+                Boolean(splinePlacementTemplate)
+              }
+              title={
+                selectedSpline.previousSplineId !== -1 ||
+                selectedSpline.nextSplineId !== -1
+                  ? "Somente splines desconectadas podem ser excluídas nesta etapa"
+                  : "Excluir spline desconectada com backup automático"
+              }
+            >
+              {deletingSpline
+                ? "Excluindo..."
+                : "Excluir spline desconectada"}
+            </button>
           </>
         )}
 

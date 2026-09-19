@@ -269,6 +269,62 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "deleteSpline":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var deleteSplineDirectoryName) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var deleteSplineTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var deleteSplineTileY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "sourceSectionOrdinal",
+                            out var deleteSplineSourceSectionOrdinal) &&
+                        TryReadString(
+                            message.RootElement,
+                            "splinePath",
+                            out var deleteSplinePath) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "splineId",
+                            out var deleteSplineId) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "previousSplineId",
+                            out var deleteSplinePreviousId) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "nextSplineId",
+                            out var deleteSplineNextId) &&
+                        TryReadBoolean(
+                            message.RootElement,
+                            "isHeightSpline",
+                            out var deleteSplineIsHeight))
+                    {
+                        await DeleteSplineAsync(
+                            deleteSplineDirectoryName,
+                            deleteSplineTileX,
+                            deleteSplineTileY,
+                            deleteSplineSourceSectionOrdinal,
+                            deleteSplinePath,
+                            deleteSplineId,
+                            deleteSplinePreviousId,
+                            deleteSplineNextId,
+                            deleteSplineIsHeight);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "insertSpline":
                     if (
                         TryReadSplineInsertionRequest(
@@ -1478,6 +1534,195 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "saveError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task DeleteSplineAsync(
+        string? directoryName,
+        int tileX,
+        int tileY,
+        int sourceSectionOrdinal,
+        string? splinePath,
+        int splineId,
+        int previousSplineId,
+        int nextSplineId,
+        bool isHeightSpline)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                splinePath))
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        if (
+            previousSplineId != -1 ||
+            nextSplineId != -1)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "splineDeleteLinked"
+            });
+
+            return;
+        }
+
+        var tile =
+            map.Tiles.FirstOrDefault(
+                candidate =>
+                    candidate.X == tileX &&
+                    candidate.Y == tileY);
+
+        if (tile is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+
+            return;
+        }
+
+        if (!OmsiMapPathResolver
+            .TryResolveTilePath(
+                map.DirectoryPath,
+                tile.RelativeMapPath,
+                out var tilePath) ||
+            !File.Exists(tilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTilePath"
+            });
+
+            return;
+        }
+
+        try
+        {
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        tilePath);
+
+            var result =
+                OmsiTileSplineDeleter
+                    .Remove(
+                        document,
+                        sourceSectionOrdinal,
+                        splinePath,
+                        splineId,
+                        previousSplineId,
+                        nextSplineId,
+                        isHeightSpline);
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    tilePath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTilePath");
+            }
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var backupPath =
+                Path.Combine(
+                    backupRoot,
+                    relativePath);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            tilePath,
+                            backupPath,
+                            result.Bytes)
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    tilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type = "splineDeleted",
+                map.DirectoryName,
+                splineId,
+                deletedSplines =
+                    result.DeletedSplines,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "splineStillLinked"
+                        ? "splineDeleteLinked"
+                        : "splineDeleteConflict",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = tilePath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "splineDeleteError",
                 detail = exception.Message
             });
         }

@@ -279,3 +279,12 @@ O fluxo:
 O host relê a spline-fonte do disco e valida ordinal, caminho `.sli`, ID, tipo e vínculos antes da criação. A cópia preserva `HeaderValue`, tipo `[spline]`/`[spline_h]` e valores extras reais da fonte, recebe um novo ID global e é criada com `previous = -1` e `next = -1`.
 
 A decisão de iniciar desconectada é deliberada: esta etapa não reescreve automaticamente a cadeia de splines vizinhas.
+
+
+## Excluir spline desconectada
+
+A aba **Geral** permite excluir uma spline somente quando `previous = -1` e `next = -1`.
+
+O host relê o tile, valida ordinal, caminho `.sli`, ID, tipo e vínculos e remove somente a linha de comando e os dados funcionais da spline. Comentários, linhas em branco e seções desconhecidas são preservados. O tile recebe backup antes da troca atômica.
+
+Splines conectadas permanecem protegidas até existir edição transacional dos vínculos das vizinhas.

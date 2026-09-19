@@ -188,6 +188,13 @@ export type HostMessage =
       backupDirectory: string;
     }
   | {
+      type: "splineDeleted";
+      directoryName: string;
+      splineId: number;
+      deletedSplines: number;
+      backupDirectory: string;
+    }
+  | {
       type: "splineInserted";
       directoryName: string;
       backupDirectory: string;
@@ -360,6 +367,30 @@ export function saveObjectTransforms(
           placedObject.bank
       })
     )
+  });
+}
+
+export function deleteSpline(
+  directoryName: string,
+  placedSpline: OmsiPlacedSpline
+) {
+  getWebView()?.postMessage({
+    type: "deleteSpline",
+    directoryName,
+    tileX: placedSpline.tileX,
+    tileY: placedSpline.tileY,
+    sourceSectionOrdinal:
+      placedSpline.sourceSectionOrdinal,
+    splinePath:
+      placedSpline.splinePath,
+    splineId:
+      placedSpline.splineId,
+    previousSplineId:
+      placedSpline.previousSplineId,
+    nextSplineId:
+      placedSpline.nextSplineId,
+    isHeightSpline:
+      placedSpline.isHeightSpline
   });
 }
 

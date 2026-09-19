@@ -125,3 +125,16 @@ Altere externamente ID, caminho `.sli`, tipo `[spline]`/ `[spline_h]` ou víncul
 11. confira o backup em `.mapstudio-backups/<timestamp>/`.
 
 Para testar conflito, altere externamente o ID, caminho, tipo ou vínculos da spline-fonte depois de iniciar a colocação. A criação deve ser cancelada.
+
+
+## Teste de exclusão de spline
+
+1. crie uma cópia desconectada de uma spline;
+2. selecione a nova spline;
+3. confirme que **Excluir spline desconectada** está disponível;
+4. confirme a exclusão;
+5. aguarde o recarregamento;
+6. verifique que somente a spline escolhida foi removida;
+7. confira o backup e a preservação de comentários/seções desconhecidas.
+
+Selecione uma spline com `previous` ou `next` diferente de `-1` e confirme que a exclusão permanece bloqueada.

@@ -291,6 +291,84 @@ public sealed class OmsiSplineTests
     }
 
     [Fact]
+    public void SplineDeleter_RemovesDetachedSplineAndPreservesComments()
+    {
+        const string source =
+            "[spline]\r\n" +
+            "0\r\n" +
+            "# keep-inside\r\n" +
+            "Splines\\Roads\\street.sli\r\n" +
+            "121\r\n-1\r\n-1\r\n" +
+            "12.5\r\n1.25\r\n22.75\r\n" +
+            "45\r\n50\r\n-200\r\n2\r\n4\r\n" +
+            "future-extra\r\n" +
+            "# keep-after-data\r\n" +
+            "[future_section]\r\nkeep-me\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var result =
+            OmsiTileSplineDeleter.Remove(
+                document,
+                0,
+                @"Splines\Roads\street.sli",
+                121,
+                -1,
+                -1,
+                false);
+
+        var text =
+            System.Text.Encoding.UTF8
+                .GetString(
+                    result.Bytes);
+
+        Assert.Equal(
+            1,
+            result.DeletedSplines);
+
+        Assert.DoesNotContain(
+            "[spline]",
+            text);
+
+        Assert.DoesNotContain(
+            "future-extra",
+            text);
+
+        Assert.Contains(
+            "# keep-inside\r\n",
+            text);
+
+        Assert.Contains(
+            "# keep-after-data\r\n",
+            text);
+
+        Assert.Contains(
+            "[future_section]\r\nkeep-me\r\n",
+            text);
+    }
+
+    [Fact]
+    public void SplineDeleter_RefusesLinkedSpline()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[spline]\n0\nSplines\\A.sli\n5\n4\n6\n0\n0\n0\n0\n10\n0\n0\n0\n");
+
+        Assert.Throws<InvalidDataException>(
+            () =>
+                OmsiTileSplineDeleter.Remove(
+                    document,
+                    0,
+                    @"Splines\A.sli",
+                    5,
+                    4,
+                    6,
+                    false));
+    }
+
+    [Fact]
     public void ReadSplines_RecognizesHeightSpline()
     {
         const string source =

@@ -279,3 +279,12 @@ Flow:
 The host rereads the source spline from disk and validates ordinal, `.sli` path, ID, type and links before creation. The copy preserves the source `HeaderValue`, `[spline]`/`[spline_h]` type and real extra values, receives a new global ID, and is created with `previous = -1` and `next = -1`.
 
 Starting detached is deliberate: this stage does not automatically rewrite neighboring spline chains.
+
+
+## Delete detached spline
+
+The **General** tab can delete a spline only when `previous = -1` and `next = -1`.
+
+The host rereads the tile, validates ordinal, `.sli` path, ID, type and links, and removes only the command line and functional spline data. Comments, blank lines and unknown sections are preserved. The tile is backed up before atomic replacement.
+
+Connected splines remain protected until transactional editing of neighboring links is implemented.

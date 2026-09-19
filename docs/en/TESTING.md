@@ -125,3 +125,16 @@ Externally change ID, `.sli` path, `[spline]`/ `[spline_h]` type or previous/nex
 11. verify the backup under `.mapstudio-backups/<timestamp>/`.
 
 For a conflict test, externally change the source spline ID, path, type or links after placement starts. Creation must be cancelled.
+
+
+## Spline deletion test
+
+1. create a detached spline copy;
+2. select the new spline;
+3. verify **Delete detached spline** is available;
+4. confirm deletion;
+5. wait for reload;
+6. verify only the selected spline was removed;
+7. verify the backup and preservation of comments/unknown sections.
+
+Select a spline whose `previous` or `next` is not `-1` and verify deletion remains blocked.
