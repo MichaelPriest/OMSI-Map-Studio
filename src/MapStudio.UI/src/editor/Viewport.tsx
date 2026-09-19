@@ -30,6 +30,7 @@ import {
 
 type ViewportProps = {
   tiles: OmsiTile[];
+  cameraStateKey: string;
   editorTool: "select" | "move" | "rotate";
   snapEnabled: boolean;
   moveSnap: number;
@@ -1775,6 +1776,7 @@ function createMapObjectGeometry(
 
 export function Viewport({
   tiles,
+  cameraStateKey,
   editorTool,
   snapEnabled,
   moveSnap,
@@ -1811,6 +1813,34 @@ export function Viewport({
   onPreviewSplineTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const cameraStateRef = useRef<{
+    alpha: number;
+    beta: number;
+    radius: number;
+    target: {
+      x: number;
+      y: number;
+      z: number;
+    };
+  }>();
+
+  const lastCameraActionTokenRef =
+    useRef<number>();
+
+  const cameraStateKeyRef =
+    useRef(cameraStateKey);
+
+  if (
+    cameraStateKeyRef.current !==
+    cameraStateKey
+  ) {
+    cameraStateKeyRef.current =
+      cameraStateKey;
+    cameraStateRef.current = undefined;
+    lastCameraActionTokenRef.current =
+      undefined;
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1853,11 +1883,46 @@ export function Viewport({
       scene
     );
 
-    camera.lowerRadiusLimit = usesWorldCoordinates ? 0.5 : 5;
-    camera.upperRadiusLimit = Math.max(usesWorldCoordinates ? 50 : 900, radius * 4);
-    camera.attachControl(canvas, true);
+    camera.lowerRadiusLimit =
+      usesWorldCoordinates ? 0.5 : 5;
+    camera.upperRadiusLimit =
+      Math.max(
+        usesWorldCoordinates ? 50 : 900,
+        radius * 4
+      );
+
+    const hasNewCameraAction =
+      cameraAction !== undefined &&
+      cameraAction.token !==
+        lastCameraActionTokenRef.current;
 
     if (
+      !hasNewCameraAction &&
+      cameraStateRef.current
+    ) {
+      const state =
+        cameraStateRef.current;
+
+      camera.alpha = state.alpha;
+      camera.beta = state.beta;
+      camera.radius =
+        Math.min(
+          camera.upperRadiusLimit ??
+            state.radius,
+          Math.max(
+            camera.lowerRadiusLimit ??
+              state.radius,
+            state.radius
+          )
+        );
+      camera.setTarget(
+        new Vector3(
+          state.target.x,
+          state.target.y,
+          state.target.z
+        )
+      );
+    } else if (
       cameraAction?.type ===
         "perspective"
     ) {
@@ -1909,6 +1974,11 @@ export function Viewport({
     ) {
       camera.setTarget(target);
       camera.radius = radius;
+    }
+
+    if (cameraAction) {
+      lastCameraActionTokenRef.current =
+        cameraAction.token;
     }
 
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
@@ -2528,9 +2598,275 @@ export function Viewport({
         .add(commitPreview);
     }
 
-    let pointerStart: { x: number; y: number } | undefined;
+    let pointerStart:
+      | { x: number; y: number }
+      | undefined;
 
-    const handlePointerDown = (event: PointerEvent) => {
+    let navigationPointer:
+      | {
+          pointerId: number;
+          button: number;
+          lastX: number;
+          lastY: number;
+        }
+      | undefined;
+
+    const clampCameraRadius = (
+      nextRadius: number
+    ) =>
+      Math.min(
+        camera.upperRadiusLimit ??
+          nextRadius,
+        Math.max(
+          camera.lowerRadiusLimit ??
+            nextRadius,
+          nextRadius
+        )
+      );
+
+    const getHorizontalCameraAxes = () => ({
+      right: new Vector3(
+        -Math.sin(camera.alpha),
+        0,
+        Math.cos(camera.alpha)
+      ),
+      forward: new Vector3(
+        -Math.cos(camera.alpha),
+        0,
+        -Math.sin(camera.alpha)
+      )
+    });
+
+    const panCamera = (
+      horizontalPixels: number,
+      verticalPixels: number,
+      multiplier = 1
+    ) => {
+      const scale =
+        Math.max(
+          usesWorldCoordinates
+            ? 0.002
+            : 0.12,
+          camera.radius *
+            (usesWorldCoordinates
+              ? 0.0008
+              : 0.0015)
+        ) *
+        multiplier;
+
+      const { right, forward } =
+        getHorizontalCameraAxes();
+
+      const nextTarget =
+        camera.target
+          .add(
+            right.scale(
+              -horizontalPixels * scale
+            )
+          )
+          .add(
+            forward.scale(
+              verticalPixels * scale
+            )
+          );
+
+      camera.setTarget(nextTarget);
+    };
+
+    const handleNavigationPointerDown = (
+      event: PointerEvent
+    ) => {
+      if (
+        event.button !== 1 &&
+        event.button !== 2
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      canvas.focus({
+        preventScroll: true
+      });
+
+      navigationPointer = {
+        pointerId: event.pointerId,
+        button: event.button,
+        lastX: event.clientX,
+        lastY: event.clientY
+      };
+
+      canvas.setPointerCapture(
+        event.pointerId
+      );
+    };
+
+    const handlePointerMove = (
+      event: PointerEvent
+    ) => {
+      if (
+        !navigationPointer ||
+        navigationPointer.pointerId !==
+          event.pointerId
+      ) {
+        return;
+      }
+
+      const deltaX =
+        event.clientX -
+        navigationPointer.lastX;
+      const deltaY =
+        event.clientY -
+        navigationPointer.lastY;
+
+      navigationPointer.lastX =
+        event.clientX;
+      navigationPointer.lastY =
+        event.clientY;
+
+      if (
+        navigationPointer.button === 2 &&
+        !event.shiftKey
+      ) {
+        camera.alpha -=
+          deltaX * 0.005;
+        camera.beta =
+          Math.min(
+            Math.PI / 2 - 0.015,
+            Math.max(
+              0.01,
+              camera.beta -
+                deltaY * 0.005
+            )
+          );
+      } else {
+        panCamera(
+          deltaX,
+          deltaY,
+          event.shiftKey ? 2.5 : 1
+        );
+      }
+    };
+
+    const finishNavigationPointer = (
+      event: PointerEvent
+    ) => {
+      if (
+        !navigationPointer ||
+        navigationPointer.pointerId !==
+          event.pointerId
+      ) {
+        return;
+      }
+
+      if (
+        canvas.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        canvas.releasePointerCapture(
+          event.pointerId
+        );
+      }
+
+      navigationPointer = undefined;
+    };
+
+    const handleWheel = (
+      event: WheelEvent
+    ) => {
+      event.preventDefault();
+
+      const factor =
+        Math.exp(
+          event.deltaY * 0.0012
+        );
+
+      camera.radius =
+        clampCameraRadius(
+          camera.radius * factor
+        );
+    };
+
+    const handleViewportKeyDown = (
+      event: KeyboardEvent
+    ) => {
+      const step =
+        Math.max(
+          usesWorldCoordinates
+            ? 0.25
+            : 5,
+          camera.radius * 0.025
+        ) *
+        (event.shiftKey ? 3 : 1);
+
+      const { right, forward } =
+        getHorizontalCameraAxes();
+
+      let offset:
+        | Vector3
+        | undefined;
+
+      if (event.key === "ArrowUp") {
+        offset =
+          forward.scale(step);
+      } else if (
+        event.key === "ArrowDown"
+      ) {
+        offset =
+          forward.scale(-step);
+      } else if (
+        event.key === "ArrowLeft"
+      ) {
+        offset =
+          right.scale(-step);
+      } else if (
+        event.key === "ArrowRight"
+      ) {
+        offset =
+          right.scale(step);
+      } else if (
+        event.key === "+" ||
+        event.key === "="
+      ) {
+        camera.radius =
+          clampCameraRadius(
+            camera.radius * 0.85
+          );
+        event.preventDefault();
+        return;
+      } else if (
+        event.key === "-" ||
+        event.key === "_"
+      ) {
+        camera.radius =
+          clampCameraRadius(
+            camera.radius * 1.15
+          );
+        event.preventDefault();
+        return;
+      }
+
+      if (offset) {
+        event.preventDefault();
+        camera.setTarget(
+          camera.target.add(offset)
+        );
+      }
+    };
+
+    const handleContextMenu = (
+      event: MouseEvent
+    ) => {
+      event.preventDefault();
+    };
+
+    const handlePointerDown = (
+      event: PointerEvent
+    ) => {
+      canvas.focus({
+        preventScroll: true
+      });
+
       if (event.button !== 0) {
         return;
       }
@@ -2821,13 +3157,50 @@ export function Viewport({
       }
     };
 
-    const handlePointerCancel = () => {
+    const handlePointerCancel = (
+      event: PointerEvent
+    ) => {
       pointerStart = undefined;
+      finishNavigationPointer(event);
     };
 
-    canvas.addEventListener("pointerdown", handlePointerDown);
-    canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("pointercancel", handlePointerCancel);
+    canvas.addEventListener(
+      "pointerdown",
+      handleNavigationPointerDown
+    );
+    canvas.addEventListener(
+      "pointerdown",
+      handlePointerDown
+    );
+    canvas.addEventListener(
+      "pointermove",
+      handlePointerMove
+    );
+    canvas.addEventListener(
+      "pointerup",
+      finishNavigationPointer
+    );
+    canvas.addEventListener(
+      "pointerup",
+      handlePointerUp
+    );
+    canvas.addEventListener(
+      "pointercancel",
+      handlePointerCancel
+    );
+    canvas.addEventListener(
+      "wheel",
+      handleWheel,
+      { passive: false }
+    );
+    canvas.addEventListener(
+      "keydown",
+      handleViewportKeyDown
+    );
+    canvas.addEventListener(
+      "contextmenu",
+      handleContextMenu
+    );
 
     const refreshObjectLods =
       () => {
@@ -2862,9 +3235,53 @@ export function Viewport({
     window.addEventListener("resize", resize);
 
     return () => {
-      canvas.removeEventListener("pointerdown", handlePointerDown);
-      canvas.removeEventListener("pointerup", handlePointerUp);
-      canvas.removeEventListener("pointercancel", handlePointerCancel);
+      cameraStateRef.current = {
+        alpha: camera.alpha,
+        beta: camera.beta,
+        radius: camera.radius,
+        target: {
+          x: camera.target.x,
+          y: camera.target.y,
+          z: camera.target.z
+        }
+      };
+
+      canvas.removeEventListener(
+        "pointerdown",
+        handleNavigationPointerDown
+      );
+      canvas.removeEventListener(
+        "pointerdown",
+        handlePointerDown
+      );
+      canvas.removeEventListener(
+        "pointermove",
+        handlePointerMove
+      );
+      canvas.removeEventListener(
+        "pointerup",
+        finishNavigationPointer
+      );
+      canvas.removeEventListener(
+        "pointerup",
+        handlePointerUp
+      );
+      canvas.removeEventListener(
+        "pointercancel",
+        handlePointerCancel
+      );
+      canvas.removeEventListener(
+        "wheel",
+        handleWheel
+      );
+      canvas.removeEventListener(
+        "keydown",
+        handleViewportKeyDown
+      );
+      canvas.removeEventListener(
+        "contextmenu",
+        handleContextMenu
+      );
       window.removeEventListener("resize", resize);
 
       if (lodObserver) {
@@ -2879,6 +3296,7 @@ export function Viewport({
     };
   }, [
     tiles,
+    cameraStateKey,
     editorTool,
     snapEnabled,
     moveSnap,
@@ -2915,5 +3333,13 @@ export function Viewport({
     onPreviewSplineTransform
   ]);
 
-  return <canvas ref={canvasRef} className="viewport-canvas" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="viewport-canvas"
+      tabIndex={0}
+      aria-label="Viewport 3D do editor"
+      title="Navegação: botão direito orbita · botão do meio desloca · Shift acelera · roda aproxima/afasta · setas deslocam"
+    />
+  );
 }
