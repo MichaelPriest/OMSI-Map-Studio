@@ -3780,21 +3780,36 @@ export function App() {
       geometryDiagnosticPaths
     ]);
 
-  const encryptedMeshCount =
-    o3dErrorSummary.find(
-      ([code]) =>
-        code === "encrypted"
-    )?.[1] ?? 0;
+  const protectedMeshCount =
+    o3dErrorSummary
+      .filter(
+        ([code]) =>
+          code === "encrypted" ||
+          code.startsWith("protected")
+      )
+      .reduce(
+        (total, [, count]) =>
+          total + count,
+        0
+      );
 
-  const encryptedObjectPathCount =
+  const protectedObjectPathCount =
     geometryDiagnosticPaths.filter(
       (path) =>
         geometryByPath[
           path
         ]?.meshes.some(
-          (mesh) =>
-            mesh.geometry.errorCode ===
-            "encrypted"
+          (mesh) => {
+            const code =
+              mesh.geometry.errorCode;
+
+            return Boolean(
+              code === "encrypted" ||
+              code?.startsWith(
+                "protected"
+              )
+            );
+          }
         )
     ).length;
 
@@ -6409,7 +6424,7 @@ export function App() {
               ? o3dErrorSummary
                   .map(
                     ([code, count]) =>
-                      `${code === "encrypted" ? "O3D protegido" : code}: ${count}`
+                      `${code === "encrypted" || code.startsWith("protected") ? "O3D protegido" : code}: ${count}`
                   )
                   .join(" · ")
               : loadedDiagnosticGeometryCount > 0
@@ -6417,11 +6432,11 @@ export function App() {
                 : "Aguardando leitura"}
           </dd>
         </div>
-        {encryptedMeshCount > 0 && (
+        {protectedMeshCount > 0 && (
           <div>
             <dt>O3D protegidos</dt>
             <dd>
-              {encryptedObjectPathCount} tipos de objeto · {encryptedMeshCount} malhas
+              {protectedObjectPathCount} tipos de objeto · {protectedMeshCount} malhas
             </dd>
           </div>
         )}
@@ -9592,9 +9607,9 @@ export function App() {
                           requestedTerrainMaskKeys
                         ).length > 0
                       ? "Preparando texturas de terreno em segundo plano..."
-                      : encryptedMeshCount > 0 &&
+                      : protectedMeshCount > 0 &&
                         failedDiagnosticGeometryCount > 0
-                        ? `Carregamento concluído · ${encryptedObjectPathCount} tipos usam O3D protegido (${encryptedMeshCount} malhas)`
+                        ? `Carregamento concluído · ${protectedObjectPathCount} tipos usam O3D protegido (${protectedMeshCount} malhas)`
                         : failedDiagnosticGeometryCount > 0
                           ? `Carregamento concluído com ${failedDiagnosticGeometryCount} tipo(s) sem prévia real`
                           : "Pronto"}
