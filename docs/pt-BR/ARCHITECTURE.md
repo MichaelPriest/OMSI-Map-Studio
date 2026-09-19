@@ -535,3 +535,10 @@ O resolvedor de texturas de objetos e splines passa a reproduzir dois comportame
 - diretórios `Texture` compartilhados em níveis-pai do pacote são pesquisados progressivamente.
 
 A busca continua confinada à raiz permitida de `Sceneryobjects` ou `Splines`; caminhos que escapem dessa raiz permanecem rejeitados.
+
+
+## Objetos [tree] e meshes auxiliares
+
+Quando um SCO possui `[tree]`, a visualização do mapa usa o billboard real definido pelo bloco de árvore e não renderiza, simultaneamente, o mesh auxiliar do mesmo SCO. Isso evita que helpers como `treehelper.x` apareçam como painéis cinza gigantes sobre o mapa.
+
+A geometria do helper continua preservada no metadata/importador; apenas a composição visual padrão do mapa deixa de sobrepor helper + árvore.
