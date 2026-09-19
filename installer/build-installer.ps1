@@ -54,13 +54,29 @@ $uiIndex = Join-Path $publishDirectory "ui/index.html"
 if (-not (Test-Path $exePath)) { throw "Expected desktop executable not found: $exePath" }
 if (-not (Test-Path $uiIndex)) { throw "React UI output not found: $uiIndex" }
 
+$isccFromPath =
+    Get-Command ISCC.exe -ErrorAction SilentlyContinue |
+    Select-Object -First 1 -ExpandProperty Source
+
+$programFilesX86 =
+    [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::ProgramFilesX86
+    )
+
 $isccCandidates = @(
     $env:ISCC_PATH,
-    "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
-) | Where-Object { $_ -and (Test-Path $_) }
+    $isccFromPath,
+    (Join-Path $programFilesX86 "Inno Setup 6\ISCC.exe"),
+    (Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"),
+    (Join-Path $env:ChocolateyInstall "bin\ISCC.exe")
+) | Where-Object {
+    $_ -and (Test-Path $_)
+} | Select-Object -Unique
 
-if ($isccCandidates.Count -eq 0) { throw "Inno Setup 6 not found. Install it or set ISCC_PATH." }
+if ($isccCandidates.Count -eq 0) {
+    throw "Inno Setup 6 not found. Install it or set ISCC_PATH."
+}
+
 $iscc = $isccCandidates[0]
 
 & $iscc "/DAppVersion=$Version" "/DSourceDir=$publishDirectory" "/DOutputDir=$outputDirectory" $installerScript
