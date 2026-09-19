@@ -2,56 +2,46 @@
 
 [English](../en/TESTING.md) · **Português (Brasil)**
 
-A **v0.1.0-alpha.3** continua deliberadamente **somente leitura**.
+A **v0.1.0-alpha.3** agora permite salvar apenas **transformações de objetos posicionados**. As demais operações de edição continuam bloqueadas.
 
 ## Instalação
 
-1. Baixe `OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip`.
-2. Extraia o ZIP.
-3. Execute `OMSI Map Studio.exe`.
-4. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2.
-5. Clique em **Abrir mapa** e escolha manualmente uma pasta dentro de `maps`.
-
-O pacote é self-contained para .NET 10. O Microsoft Edge WebView2 Runtime precisa estar disponível no Windows.
-
-## O que mudou nesta alpha
-
-- nova interface baseada no conceito visual aprovado;
-- nenhum mapa é listado ou aberto automaticamente;
-- streaming de mapa por **tile ativo + área 3×3**;
-- cache de tiles já lidos;
-- superfície-base neutra para tiles existentes;
-- leitura e desenho dos eixos reais de `[spline]` e `[spline_h]`;
-- seleção direta de splines no viewport;
-- inspetor de spline com IDs, posição, rotação, comprimento, raio e gradientes;
-- leitura sob demanda de arquivos `.sli`;
-- leitura de `[texture]`, `[profile]` e `[profilepnt]`;
-- extrusão do perfil real da spline selecionada;
-- materiais O3D embutidos aplicados no preview do objeto selecionado.
+1. Baixe e extraia o pacote da Alpha.3.
+2. Execute `OMSI Map Studio.exe`.
+3. Clique em **Abrir OMSI** e selecione a pasta raiz do OMSI 2.
+4. Clique em **Abrir mapa** e escolha manualmente uma pasta dentro de `maps`.
 
 ## Roteiro principal
 
-- abra um mapa grande e confirme que apenas a região 3×3 é carregada;
-- clique em outro tile visível e confirme que ele vira o tile ativo;
-- volte para uma área visitada e observe se a troca é rápida por causa do cache;
-- clique em um eixo azul de spline;
-- confira no inspetor o caminho `.sli`, ID, comprimento, raio e gradientes;
-- abra a aba **Perfil**;
-- em splines com `[profile]` válido, confira se a faixa/superfície aparece sobre o eixo;
-- selecione um objeto e confirme que a seleção de spline é limpa, e vice-versa;
-- selecione um objeto O3D não criptografado e valide geometria/materiais.
+- abra Grundorf ou outro mapa de teste;
+- confirme que **Mapa completo** é o modo padrão;
+- valide carregamento de tiles, objetos O3D e splines;
+- selecione um objeto;
+- pressione **W**, mova o gizmo e confirme **Prévia não salva**;
+- pressione **E**, rotacione o objeto;
+- pressione **F** para focar a seleção;
+- use **G**, **O** e **L** para alternar grade, objetos e splines;
+- clique em ↶ e confirme que a prévia volta ao valor original;
+- repita uma transformação e clique **Salvar** ou use `Ctrl+S`;
+- aguarde o recarregamento do mapa;
+- confirme que a nova posição/rotação permanece após recarregar;
+- confira a criação da pasta `.mapstudio-backups/<timestamp>/` no mapa;
+- abra o tile salvo em editor de texto e confirme que seções desconhecidas/comentários não foram removidos.
+
+## Teste de conflito
+
+Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[object]` (por exemplo ID ou caminho `.sco`) antes de clicar Salvar. O Map Studio deve cancelar o lote e mostrar um erro de conflito, sem sobrescrever silenciosamente o tile.
 
 ## Limitações conhecidas
 
-- salvar, criar e editar mapas continuam desabilitados;
-- a geometria detalhada de spline é carregada somente para a spline selecionada;
-- texturas de imagem da spline ainda não são aplicadas;
-- `[patchwork_chain]` e extensões avançadas de material de spline ainda não são renderizadas;
-- terreno binário `.terrain` ainda não é interpretado;
-- mapas `[worldcoordinates]` continuam esquemáticos;
-- O3D criptografado e arquivos `.x` continuam sem preview geométrico;
-- texturas O3D ainda não são aplicadas.
+- Salvar atua apenas em posição/rotação/pitch/bank de objetos `[object]` já existentes;
+- criar, duplicar ou excluir objetos ainda não grava;
+- splines ainda não possuem edição persistente;
+- terreno binário `.terrain` ainda não é interpretado/editado;
+- texturas de imagem de splines e O3D ainda não são aplicadas;
+- mapas `[worldcoordinates]` continuam limitados;
+- O3D criptografado e arquivos `.x` continuam sem preview geométrico.
 
 ## Segurança
 
-Esta alpha não possui operação de escrita de mapas. O botão **Salvar** continua desabilitado.
+Nunca use o único exemplar de um mapa importante durante esta alpha. Apesar do backup automático e da escrita preservativa, a funcionalidade de Save ainda é experimental.

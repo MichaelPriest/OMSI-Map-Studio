@@ -2,56 +2,46 @@
 
 **English** · [Português (Brasil)](../pt-BR/TESTING.md)
 
-**v0.1.0-alpha.3** deliberately remains **read-only**.
+**v0.1.0-alpha.3** can now save only **placed-object transforms**. Other editing operations remain blocked.
 
 ## Installation
 
-1. Download `OMSI-Map-Studio-v0.1.0-alpha.3-win-x64.zip`.
-2. Extract the ZIP.
-3. Run `OMSI Map Studio.exe`.
-4. Click **Open OMSI** and select the OMSI 2 root directory.
-5. Click **Open map** and manually choose a directory inside `maps`.
+1. Download and extract the Alpha.3 package.
+2. Run `OMSI Map Studio.exe`.
+3. Click **Open OMSI** and select the OMSI 2 root directory.
+4. Click **Open map** and manually choose a folder inside `maps`.
 
-The package is self-contained for .NET 10. Microsoft Edge WebView2 Runtime must be available on Windows.
+## Main checklist
 
-## What's new in this alpha
+- open Grundorf or another test map;
+- confirm **Full map** is the default mode;
+- validate tile, O3D object and spline loading;
+- select an object;
+- press **W**, drag the gizmo and confirm **Unsaved preview**;
+- press **E** and rotate the object;
+- press **F** to focus selection;
+- use **G**, **O** and **L** to toggle grid, objects and splines;
+- click ↶ and verify the preview returns to the source transform;
+- repeat a transform and click **Save** or press `Ctrl+S`;
+- wait for the map to reload;
+- verify the new position/rotation remains after reload;
+- verify a `.mapstudio-backups/<timestamp>/` directory was created under the map;
+- inspect the saved tile as text and verify unknown sections/comments were not removed.
 
-- redesigned UI based on the approved visual concept;
-- maps are no longer listed or opened automatically;
-- map streaming using an **active tile + 3×3 region**;
-- cache for previously read tiles;
-- neutral base surface for existing tiles;
-- reading and drawing real `[spline]` / `[spline_h]` axes;
-- direct spline selection in the viewport;
-- spline inspector with IDs, position, rotation, length, radius and gradients;
-- on-demand `.sli` reading;
-- `[texture]`, `[profile]` and `[profilepnt]` parsing;
-- extrusion of the selected spline's real profile;
-- embedded O3D materials applied to selected-object previews.
+## Conflict test
 
-## Main test checklist
-
-- open a large map and confirm only the 3×3 region is loaded;
-- click another visible tile and confirm it becomes the active tile;
-- return to a previously visited area and check that cached loading is fast;
-- click a blue spline axis;
-- verify the `.sli` path, ID, length, radius and gradients in the inspector;
-- open the **Profile** tab;
-- for splines with a valid `[profile]`, verify that a strip/surface appears over the axis;
-- select an object and verify spline selection is cleared, and vice versa;
-- select an unencrypted O3D object and validate geometry/material preview.
+With an unsaved preview pending, externally change the identity of that same `[object]` block (for example its ID or `.sco` path) before Save. Map Studio must cancel the batch and show a conflict instead of silently overwriting the tile.
 
 ## Known limitations
 
-- saving, map creation and editing remain disabled;
-- detailed spline geometry is loaded only for the selected spline;
-- spline image textures are not applied yet;
-- `[patchwork_chain]` and advanced spline material extensions are not rendered yet;
-- binary `.terrain` is not interpreted yet;
-- `[worldcoordinates]` maps remain schematic;
-- encrypted O3D and `.x` files remain without geometry previews;
-- O3D image textures are not applied yet.
+- Save only persists position/rotation/pitch/bank for existing `[object]` entries;
+- creating, duplicating or deleting objects is not persisted yet;
+- splines do not have persistent editing yet;
+- binary `.terrain` is not interpreted/edited yet;
+- spline/O3D image textures are not applied yet;
+- `[worldcoordinates]` maps remain limited;
+- encrypted O3D and `.x` files remain without geometry previews.
 
 ## Safety
 
-This alpha has no map write operation. **Save** remains disabled.
+Do not use the only copy of an important map during this alpha. Automatic backups and preservation-safe writes are implemented, but Save is still experimental.

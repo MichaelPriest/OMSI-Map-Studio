@@ -124,8 +124,25 @@ A barra de ferramentas ativa nesta etapa possui:
 - **Objetos (O)** — mostra/oculta objetos;
 - **Splines (L)** — mostra/oculta splines.
 
-Mover e rotacionar funcionam como **prévia temporária em memória**. O inspetor reflete os novos valores, mas nenhum arquivo `.map` é alterado.
+Mover e rotacionar começam como **prévia temporária em memória**. O inspetor reflete os novos valores e a interface mostra **Prévia não salva** enquanto houver transformações pendentes.
 
-A interface mostra **Prévia não salva** enquanto houver transformações temporárias. O botão ↶ descarta todas as transformações temporárias da sessão atual.
+O botão **Salvar** (ou `Ctrl+S`) grava somente essas transformações de objetos. Antes de substituir qualquer tile, o host cria uma cópia em `.mapstudio-backups/<timestamp>/` dentro da pasta do mapa. O botão ↶ descarta todas as transformações temporárias ainda não salvas.
 
 Escala continua desabilitada nesta etapa porque objetos posicionados do OMSI não possuem um campo geral de escala equivalente aos campos de posição/rotação usados pelo editor.
+
+
+## Salvamento seguro de transformações
+
+O salvamento desta etapa é intencionalmente restrito a objetos `[object]` já existentes.
+
+Para cada objeto alterado, o editor preserva a identificação original da seção no tile. Ao salvar:
+
+1. o host reabre o arquivo `.map` atual diretamente do disco;
+2. confirma que a seção, ID e caminho `.sco` ainda correspondem ao objeto editado;
+3. altera somente as linhas de X, Y, Z, rotação, pitch e bank;
+4. preserva comentários, seções desconhecidas, valores extras, encoding, BOM e estilo de quebra de linha;
+5. cria backups de todos os tiles envolvidos;
+6. somente depois faz a substituição atômica dos arquivos;
+7. invalida o cache e recarrega o mapa gravado.
+
+Se a identidade do objeto mudou desde a abertura do mapa, o lote é cancelado com conflito em vez de sobrescrever o arquivo.

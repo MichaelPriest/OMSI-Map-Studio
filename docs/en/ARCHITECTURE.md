@@ -143,7 +143,7 @@ The inspector displays real `.map` values and, when available, real `.sco` metad
 
 Dragging the camera is not treated as selection. Clicking an area without an object clears the selection.
 
-At this stage selection is read-only. When available, the selected object's real O3D geometry is displayed using embedded O3D materials: diffuse color, alpha, specular and emission. Each triangle keeps its material index and the embedded texture name is preserved for the next image-loading stage. The editor does not modify or save transforms yet.
+Selected objects can be moved and rotated as previews. When available, real O3D geometry is displayed using embedded O3D materials: diffuse color, alpha, specular and emission. Each triangle keeps its material index. Only transforms of existing placed objects can be persisted at this stage; creation/deletion and other edit types remain blocked.
 
 ## Compatibility strategy
 
@@ -192,3 +192,32 @@ The viewport groups placements by `sceneryObjectPath`. For each model with valid
 4. keeps markers only for models that are still loading or unsupported.
 
 This displays a complete map without rereading the same O3D for every instance.
+
+
+## Preservation-safe writes and backups
+
+`OmsiTileObjectEditor` receives an already parsed document plus a list of object transform edits. Each object has a `SourceSectionOrdinal` assigned by `OmsiTileReader`, together with its object ID and `.sco` path.
+
+Before changing any line, the editor verifies all three identifiers. This protects against external changes that alter tile structure between load and save.
+
+Only six data lines inside the `[object]` block are replaced:
+
+- X;
+- Y;
+- Z;
+- rotation;
+- pitch;
+- bank.
+
+The rest of the document remains preserved, including encoding, BOM, newline style, comments, unknown commands and `ExtraValues`.
+
+`SafeFileTransaction` prepares the whole batch before touching destination files:
+
+1. validates unique existing targets;
+2. creates backups under `.mapstudio-backups/<timestamp>/`;
+3. writes each new version to a temporary file beside its tile;
+4. replaces destinations using file replacement;
+5. on failure, attempts to restore already replaced files from backups;
+6. keeps backups even if an error occurs.
+
+The host never writes from stale cached tile content: Save reopens the current tile from disk, applies the minimal mutation and only then executes the transaction.

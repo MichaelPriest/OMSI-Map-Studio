@@ -124,8 +124,25 @@ The active toolbar currently provides:
 - **Objects (O)** — toggles objects;
 - **Splines (L)** — toggles splines.
 
-Move and rotate are **temporary in-memory previews**. The inspector reflects the new values, but no `.map` file is changed.
+Move and rotate start as **temporary in-memory previews**. The inspector reflects the new values and the UI shows **Unsaved preview** while changes are pending.
 
-The UI shows **Unsaved preview** while temporary transforms exist. The ↶ button discards all temporary transforms from the current session.
+The **Save** button (or `Ctrl+S`) persists only those object transforms. Before replacing any tile, the host creates a copy under `.mapstudio-backups/<timestamp>/` inside the map directory. The ↶ button discards all unsaved temporary transforms.
 
 Scale remains disabled at this stage because standard OMSI placed objects do not expose a general scale field equivalent to the position/rotation fields used by the editor.
+
+
+## Safe transform saving
+
+Saving at this stage is intentionally restricted to existing `[object]` entries.
+
+For every changed object, the editor keeps the original section identity inside its tile. On save:
+
+1. the host reopens the current `.map` file directly from disk;
+2. it verifies that the section, object ID and `.sco` path still match the edited object;
+3. only X, Y, Z, rotation, pitch and bank lines are changed;
+4. comments, unknown sections, extra values, encoding, BOM and newline style are preserved;
+5. backups are created for every affected tile;
+6. only then are files atomically replaced;
+7. tile caches are invalidated and saved state is reloaded.
+
+If the object's source identity changed since the map was opened, the batch is cancelled as a conflict instead of overwriting the file.

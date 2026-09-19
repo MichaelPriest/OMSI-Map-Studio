@@ -143,7 +143,7 @@ O inspetor exibe dados reais do `.map` e, quando disponível, metadados reais do
 
 Arrastar a câmera não é tratado como seleção. Clicar em uma área sem objeto limpa a seleção.
 
-Nesta fase a seleção é somente leitura. Quando disponível, a geometria O3D real do objeto selecionado é exibida usando os materiais embutidos no O3D: cor difusa, alpha, especular e emissão. Cada triângulo mantém seu índice de material e o nome da textura embutida é preservado para o próximo estágio de carregamento de imagens. O editor ainda não altera nem grava transformações.
+Objetos selecionados podem ser movidos e rotacionados em prévia. Quando disponível, a geometria O3D real é exibida usando os materiais embutidos no O3D: cor difusa, alpha, especular e emissão. Cada triângulo mantém seu índice de material. Somente transformações de objetos existentes possuem gravação nesta etapa; criação/exclusão e outros tipos de edição continuam bloqueados.
 
 ## Estratégia de compatibilidade
 
@@ -192,3 +192,32 @@ O viewport agrupa colocações por `sceneryObjectPath`. Para cada modelo com geo
 4. mantém marcadores apenas para modelos ainda não carregados ou formatos não suportados.
 
 Isso permite exibir o mapa completo sem reler o mesmo O3D para cada instância.
+
+
+## Escrita preservativa e backups
+
+`OmsiTileObjectEditor` recebe um documento já parseado e uma lista de transformações de objetos. Cada objeto possui um `SourceSectionOrdinal` atribuído por `OmsiTileReader`, além de ID e caminho `.sco`.
+
+Antes de alterar uma linha, o editor confirma os três identificadores. Isso protege contra alterações externas que mudem a estrutura do tile entre leitura e salvamento.
+
+Somente seis linhas de dados do bloco `[object]` são substituídas:
+
+- X;
+- Y;
+- Z;
+- rotação;
+- pitch;
+- bank.
+
+O restante do documento permanece byte-equivalente dentro das limitações das linhas modificadas, preservando encoding, BOM, newline, comentários, comandos desconhecidos e `ExtraValues`.
+
+`SafeFileTransaction` prepara todo o lote antes de tocar nos arquivos de destino:
+
+1. valida destinos únicos e existentes;
+2. cria backups em `.mapstudio-backups/<timestamp>/`;
+3. grava cada nova versão em arquivo temporário no mesmo diretório do tile;
+4. substitui os destinos usando troca de arquivo;
+5. em falha, tenta restaurar os arquivos já substituídos a partir dos backups;
+6. mantém os backups mesmo quando ocorre erro.
+
+O host nunca grava usando o conteúdo antigo do cache: no Save ele reabre o tile atual do disco, aplica a mutação mínima e só então executa a transação.
