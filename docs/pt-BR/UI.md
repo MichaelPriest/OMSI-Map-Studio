@@ -395,3 +395,10 @@ Atualmente isso inclui `[matl_envmap_mask]`, `[alphascale]` e `[matl_allcolor]`.
 A barra inferior mostra `Cache: X/64`. O cache de assets reais é limitado a 64 entradas e remove automaticamente a textura menos recente quando necessário.
 
 A área de camadas ganhou **Limpar cache**, que remove texturas carregadas, cancela o histórico de requisições em andamento e reinicia o orçamento automático de prefetch sem descarregar o mapa.
+
+
+## LOD real de objetos
+
+Objetos `.sco` com vários blocos `[LOD]` não exibem mais todos os níveis de detalhe ao mesmo tempo. O nível ativo muda conforme o tamanho projetado na tela.
+
+Na aba **Geometria**, cada mesh mostra **Global** ou o limiar correspondente, por exemplo **LOD 0,6**, facilitando a validação.

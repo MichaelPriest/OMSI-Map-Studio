@@ -5163,23 +5163,37 @@ export function App() {
 
             <div className="mesh-list">
               {selectedMetadata?.meshes.map(
-                (mesh) => (
-                  <div
-                    className="mesh-row"
-                    key={mesh.declaredPath}
-                  >
-                    <strong>
-                      {getObjectName(
-                        mesh.declaredPath
-                      )}
-                    </strong>
-                    <span>
-                      {mesh.fileExists
-                        ? "Encontrado"
-                        : "Ausente"}
-                    </span>
-                  </div>
-                )
+                (mesh, meshIndex) => {
+                  const lodThreshold =
+                    selectedGeometry
+                      ?.meshes[
+                        meshIndex
+                      ]?.lodThreshold;
+
+                  return (
+                    <div
+                      className="mesh-row"
+                      key={`${mesh.declaredPath}-${meshIndex}`}
+                    >
+                      <strong>
+                        {getObjectName(
+                          mesh.declaredPath
+                        )}
+                      </strong>
+                      <span>
+                        {mesh.fileExists
+                          ? "Encontrado"
+                          : "Ausente"}
+                        {" · "}
+                        {lodThreshold == null
+                          ? "Global"
+                          : `LOD ${formatNumber(
+                              lodThreshold
+                            )}`}
+                      </span>
+                    </div>
+                  );
+                }
               )}
             </div>
           </div>

@@ -266,3 +266,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 3. return to an object whose old texture was evicted and verify it can be requested again;
 4. click **Clear cache** and verify `Cache: 0/64` and `Auto textures: 0/24` before progressive repopulation;
 5. verify the map stays loaded and only texture assets are discarded.
+
+
+## Object LOD test
+
+1. select an object with `[LOD] 0.6`, `[LOD] 0.2`, and `[LOD] 0`;
+2. verify the LOD labels in **Geometry**;
+3. move the camera close and verify the highest-threshold group;
+4. move away and verify switching to 0.2 and 0;
+5. verify only one LOD group is active at a time;
+6. verify **Global** meshes remain visible at every level.

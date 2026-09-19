@@ -381,3 +381,10 @@ A informação percorre Core → host → bridge → React e aparece no inspetor
 O cache React mantém no máximo 64 assets usando ordem LRU. Ao entrar o 65º asset, o mais antigo é removido; se voltar a ser necessário, pode ser solicitado novamente porque não fica marcado permanentemente como `requested`.
 
 O orçamento de prefetch automático (24 chaves únicas) continua separado do limite de cache.
+
+
+## LOD de objetos SCO
+
+Cada `[mesh]` preserva o limiar `[LOD]` vigente no arquivo `.sco`. Meshes declarados antes de qualquer `[LOD]` são globais e permanecem ativos.
+
+O viewport escolhe o maior limiar menor ou igual à fração projetada do objeto na altura da tela, calculada com raio geométrico, distância à câmera e FOV vertical. A atualização ocorre a cada 6 frames para limitar custo.

@@ -266,3 +266,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 3. volte a um objeto cuja textura antiga foi removida e confirme que ela pode ser solicitada novamente;
 4. clique **Limpar cache** e confirme `Cache: 0/64` e `Texturas auto: 0/24` antes do repovoamento progressivo;
 5. confirme que o mapa continua carregado e somente assets de textura são descartados.
+
+
+## Teste de LOD de objetos
+
+1. selecione um objeto com `[LOD] 0.6`, `[LOD] 0.2` e `[LOD] 0`;
+2. confirme os rótulos LOD na aba **Geometria**;
+3. aproxime a câmera e confirme o grupo de maior limiar;
+4. afaste a câmera e confirme as trocas para 0.2 e 0;
+5. confirme que apenas um grupo LOD fica ativo por vez;
+6. confirme que meshes **Global** permanecem visíveis em todos os níveis.

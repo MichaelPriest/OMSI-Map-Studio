@@ -395,3 +395,10 @@ This currently includes `[matl_envmap_mask]`, `[alphascale]`, and `[matl_allcolo
 The bottom bar shows `Cache: X/64`. Real texture assets are capped at 64 entries and the least-recent entry is automatically evicted when needed.
 
 The layers panel now has **Clear cache**, removing loaded textures, clearing in-flight request bookkeeping, and resetting the automatic prefetch budget without unloading the map.
+
+
+## Real object LOD
+
+`.sco` objects with multiple `[LOD]` blocks no longer display every detail level at once. The active level changes according to projected screen size.
+
+In **Geometry**, every mesh is labeled **Global** or with its threshold, for example **LOD 0.6**, making validation easier.

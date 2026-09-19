@@ -158,12 +158,13 @@ public sealed class OmsiSceneryMaterialOverrideTests
             metadata.MeshPaths);
 
         Assert.Equal(
-            [
+            new double?[]
+            {
                 null,
                 0.6,
                 0.2,
                 0.0
-            ],
+            },
             metadata.MeshLodThresholds);
     }
 
@@ -187,7 +188,11 @@ public sealed class OmsiSceneryMaterialOverrideTests
                         source));
 
         Assert.Equal(
-            [0.4, null],
+            new double?[]
+            {
+                0.4,
+                null
+            },
             metadata.MeshLodThresholds);
     }
 

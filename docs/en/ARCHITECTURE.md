@@ -381,3 +381,10 @@ The information travels Core → host → bridge → React and appears in the in
 The React cache keeps at most 64 assets using LRU order. When asset 65 arrives, the oldest entry is removed; if needed again it can be requested because it is no longer permanently marked as `requested`.
 
 The automatic prefetch budget (24 unique keys) remains separate from the cache limit.
+
+
+## SCO object LOD
+
+Each `[mesh]` preserves the active `[LOD]` threshold from the `.sco`. Meshes declared before any `[LOD]` are global and remain active.
+
+The viewport selects the largest threshold less than or equal to the object's projected screen-height fraction, calculated from geometry radius, camera distance, and vertical FOV. Updates run every 6 frames to bound cost.
