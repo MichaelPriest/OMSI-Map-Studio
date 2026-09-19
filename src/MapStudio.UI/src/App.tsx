@@ -46,6 +46,13 @@ type ViewportCameraAction = {
   token: number;
 };
 
+type PreviewTransformHistoryEntry = {
+  key: string;
+  before: OmsiPlacedObject;
+  after: OmsiPlacedObject;
+  hadPreviewBefore: boolean;
+};
+
 type InspectorTab =
   | "general"
   | "transform"
@@ -109,6 +116,17 @@ const getPlacedObjectKey = (
     placedObject.sceneryObjectPath
   ].join("|");
 
+const sameObjectTransform = (
+  left: OmsiPlacedObject,
+  right: OmsiPlacedObject
+) =>
+  left.x === right.x &&
+  left.y === right.y &&
+  left.z === right.z &&
+  left.rotation === right.rotation &&
+  left.pitch === right.pitch &&
+  left.bank === right.bank;
+
 const clamp01 = (value: number) =>
   Math.min(1, Math.max(0, value));
 
@@ -163,6 +181,20 @@ export function App() {
   ] = useState<
     Record<string, OmsiPlacedObject>
   >({});
+
+  const [
+    undoPreviewStack,
+    setUndoPreviewStack
+  ] = useState<
+    PreviewTransformHistoryEntry[]
+  >([]);
+
+  const [
+    redoPreviewStack,
+    setRedoPreviewStack
+  ] = useState<
+    PreviewTransformHistoryEntry[]
+  >([]);
 
   const [
     loadingFullMap,
@@ -283,6 +315,8 @@ export function App() {
           setSceneryMetadataByPath({});
           setGeometryByPath({});
           setPreviewObjectTransforms({});
+          setUndoPreviewStack([]);
+          setRedoPreviewStack([]);
           setEditorTool("select");
           setPreloadingGeometryFor(undefined);
           setSelectingRoot(false);
@@ -316,6 +350,8 @@ export function App() {
           setMapLoadMode("full");
           setEditorTool("select");
           setPreviewObjectTransforms({});
+          setUndoPreviewStack([]);
+          setRedoPreviewStack([]);
           setLoadingRegionKey(undefined);
           setLoadedRegionKey(undefined);
           setLoadingFullMap(false);
@@ -554,6 +590,8 @@ export function App() {
         ) {
           setSaving(false);
           setPreviewObjectTransforms({});
+          setUndoPreviewStack([]);
+          setRedoPreviewStack([]);
           setSelectedObject(undefined);
           setSelectedSpline(undefined);
           setEditorTool("select");
@@ -1064,12 +1102,56 @@ export function App() {
         placedObject:
           OmsiPlacedObject
       ) => {
+        const key =
+          getPlacedObjectKey(
+            placedObject
+          );
+
+        const currentPreview =
+          previewObjectTransforms[
+            key
+          ];
+
+        const source =
+          currentPreview ??
+          objects.find(
+            (candidate) =>
+              getPlacedObjectKey(
+                candidate
+              ) === key
+          );
+
+        if (
+          source &&
+          !sameObjectTransform(
+            source,
+            placedObject
+          )
+        ) {
+          setUndoPreviewStack(
+            (current) => [
+              ...current.slice(-99),
+              {
+                key,
+                before: source,
+                after: placedObject,
+                hadPreviewBefore:
+                  Boolean(
+                    currentPreview
+                  )
+              }
+            ]
+          );
+
+          setRedoPreviewStack(
+            []
+          );
+        }
+
         setPreviewObjectTransforms(
           (current) => ({
             ...current,
-            [getPlacedObjectKey(
-              placedObject
-            )]: placedObject
+            [key]: placedObject
           })
         );
 
@@ -1079,8 +1161,100 @@ export function App() {
 
         setError(undefined);
       },
-      []
+      [
+        objects,
+        previewObjectTransforms
+      ]
     );
+
+  const handleUndoPreview =
+    useCallback(() => {
+      const entry =
+        undoPreviewStack.at(-1);
+
+      if (!entry) {
+        return;
+      }
+
+      setUndoPreviewStack(
+        (current) =>
+          current.slice(0, -1)
+      );
+
+      setRedoPreviewStack(
+        (current) => [
+          ...current.slice(-99),
+          entry
+        ]
+      );
+
+      setPreviewObjectTransforms(
+        (current) => {
+          const next = {
+            ...current
+          };
+
+          if (
+            entry.hadPreviewBefore
+          ) {
+            next[entry.key] =
+              entry.before;
+          } else {
+            delete next[
+              entry.key
+            ];
+          }
+
+          return next;
+        }
+      );
+
+      setSelectedObject(
+        entry.before
+      );
+
+      setError(undefined);
+    }, [
+      undoPreviewStack
+    ]);
+
+  const handleRedoPreview =
+    useCallback(() => {
+      const entry =
+        redoPreviewStack.at(-1);
+
+      if (!entry) {
+        return;
+      }
+
+      setRedoPreviewStack(
+        (current) =>
+          current.slice(0, -1)
+      );
+
+      setUndoPreviewStack(
+        (current) => [
+          ...current.slice(-99),
+          entry
+        ]
+      );
+
+      setPreviewObjectTransforms(
+        (current) => ({
+          ...current,
+          [entry.key]:
+            entry.after
+        })
+      );
+
+      setSelectedObject(
+        entry.after
+      );
+
+      setError(undefined);
+    }, [
+      redoPreviewStack
+    ]);
 
   const handleDiscardPreviewEdits =
     useCallback(() => {
@@ -1107,6 +1281,8 @@ export function App() {
         {}
       );
 
+      setUndoPreviewStack([]);
+      setRedoPreviewStack([]);
       setEditorTool("select");
     }, [
       objects,
@@ -1179,6 +1355,32 @@ export function App() {
 
       const key =
         event.key.toLowerCase();
+
+      if (
+        (event.ctrlKey ||
+          event.metaKey) &&
+        key === "z"
+      ) {
+        event.preventDefault();
+
+        if (event.shiftKey) {
+          handleRedoPreview();
+        } else {
+          handleUndoPreview();
+        }
+
+        return;
+      }
+
+      if (
+        (event.ctrlKey ||
+          event.metaKey) &&
+        key === "y"
+      ) {
+        event.preventDefault();
+        handleRedoPreview();
+        return;
+      }
 
       if (
         (event.ctrlKey ||
@@ -1275,7 +1477,9 @@ export function App() {
         handleKeyDown
       );
   }, [
+    handleRedoPreview,
     handleSavePreviewEdits,
+    handleUndoPreview,
     previewEditCount,
     requestCameraAction,
     saving,
@@ -2403,7 +2607,35 @@ export function App() {
           <button
             type="button"
             className="tool"
-            title="Descartar transformações temporárias"
+            title="Desfazer transformação (Ctrl+Z)"
+            disabled={
+              undoPreviewStack.length === 0
+            }
+            onClick={
+              handleUndoPreview
+            }
+          >
+            ↶
+          </button>
+
+          <button
+            type="button"
+            className="tool"
+            title="Refazer transformação (Ctrl+Y)"
+            disabled={
+              redoPreviewStack.length === 0
+            }
+            onClick={
+              handleRedoPreview
+            }
+          >
+            ↷
+          </button>
+
+          <button
+            type="button"
+            className="tool"
+            title="Descartar todas as transformações temporárias"
             disabled={
               previewEditCount === 0
             }
@@ -2411,7 +2643,7 @@ export function App() {
               handleDiscardPreviewEdits
             }
           >
-            ↶
+            ✕
           </button>
 
           <span className="toolbar-separator" />
