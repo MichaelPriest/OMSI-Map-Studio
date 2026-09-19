@@ -609,3 +609,15 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 - Spline materials use a small preview-only `zOffset` to reduce depth fighting with terrain without changing persisted coordinates.
 - Low, predominantly horizontal object meshes such as junctions may receive a small render-only lift/zOffset; the `.map` file is not changed.
 - Object/spline selection happens on viewport `pointerdown`, resolves metadata up the mesh parent chain, and stores second-click state in `useRef` so it survives the React/Babylon scene rebuild after the first selection.
+
+
+## Material, sky, and selection diagnostics — post-test.33
+
+- SLI surfaces no longer depend on an emissive copy of the texture: the real albedo is applied directly to an unlit material while preserving UVs, declared alpha, and OMSI coordinates;
+- O3D meshes already detected as thin horizontal road/junction surfaces keep the existing `render lift`; when a real diffuse texture is present, only editor preview lighting is bypassed to prevent black surfaces caused by pack-specific normals;
+- no new arbitrary offsets were added;
+- `himmel01.bmp` / `himmel04.bmp` / `himmel05.bmp` now use the BMP → PNG path already validated for WebView2, while terrain BMP remains on the raw-RGBA path;
+- a real mesh hit selects on `pointerdown` and the same click is no longer reprocessed by the `pointerup` proximity fallback, preventing a valid selection from being cleared before the second quick click;
+- the second quick click on the same object/spline still focuses the camera;
+- the viewport shows real selection diagnostics with object/spline, mesh/material, declared and physically resolved texture, UV range, final world position, `render lift`, and SCO/SLI/O3D origin;
+- the physical resolved texture path is sent by the host only for local editor diagnostics; no fake/mock production data is introduced.
