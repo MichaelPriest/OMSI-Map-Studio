@@ -20,3 +20,12 @@ O pacote é self-contained para o runtime .NET. O Windows precisa ter o Microsof
 ## Regra de release
 
 A versão EXE deve ser publicada junto com o ZIP portátil e com seu arquivo SHA-256. Releases de teste continuam como prerelease e só devem ser geradas após Core, React e Desktop passarem.
+
+
+## Desinstalação
+
+O instalador cria um desinstalador próprio do OMSI Map Studio. Ele fica registrado em **Aplicativos instalados** do Windows e também ganha um atalho **Desinstalar OMSI Map Studio** no menu Iniciar.
+
+A desinstalação remove os arquivos instalados em `%LOCALAPPDATA%\Programs\OMSI Map Studio` e os atalhos criados pelo instalador. Arquivos de mapas do OMSI, backups `.mapstudio-backups` e outros arquivos externos ao diretório do aplicativo não são removidos.
+
+Logs e dados locais fora da pasta de instalação não são apagados automaticamente nesta etapa, para evitar perda de diagnóstico ou preferências durante a fase alpha.
