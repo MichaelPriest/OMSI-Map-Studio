@@ -563,3 +563,12 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 3. confirm triangles, materials, and transforms continue through the normal O3D pipeline;
 4. in Grundorf, compare the **Real meshes** total with test.21: objects previously reported as `encrypted` should become renderable when they are inside the supported domain;
 5. if a protected mesh exceeds the validated domain, confirm the explicit `protectedVertexCountUnsupported` error.
+
+
+## Texture validation after O3D loading
+
+1. open Grundorf in **Full map** mode and confirm all 21 tiles and real meshes still load;
+2. compare the status bar with test.23: requested textures should be able to exceed the old 128-object-texture ceiling when the map requires more;
+3. wait until **pending = 0** and confirm buildings/objects that were previously black or gray receive their textures when the files exist;
+4. check the Inspector counters for loaded and failed textures;
+5. if failures remain, record the codes shown under **Texture failures** to distinguish missing files from format/decoding issues.
