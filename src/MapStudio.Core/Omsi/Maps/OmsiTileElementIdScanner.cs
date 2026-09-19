@@ -41,11 +41,14 @@ public static class OmsiTileElementIdScanner
                 continue;
             }
 
+            var dataLines =
+                section.DataLines.ToArray();
+
             if (
-                section.DataLines.Count <=
+                dataLines.Length <=
                     dataIndex ||
                 !int.TryParse(
-                    section.DataLines[
+                    dataLines[
                         dataIndex],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
