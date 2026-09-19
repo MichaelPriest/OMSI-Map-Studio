@@ -586,3 +586,12 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 ## Tree helper validation — test.25
 
 In Grundorf, confirm `[tree]` billboards still render while the large gray panels associated with tree helper meshes no longer appear over the map.
+
+
+## Object placement validation — test.25
+
+1. open Grundorf and compare houses, poles, trees, and other objects against terrain and splines;
+2. confirm regular objects follow local terrain height instead of being buried/floating around Z = 0;
+3. confirm SCO files with `[absheight]` keep the absolute height stored in the map;
+4. move a regular object vertically, save, and reopen the map: the saved value must remain terrain-relative;
+5. confirm selection, focus, and gizmos align with the corrected visual geometry.
