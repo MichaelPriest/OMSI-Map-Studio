@@ -20,6 +20,7 @@ namespace MapStudio.Desktop;
 public partial class MainWindow : Window
 {
     private const int MaxConcurrentTileReads = 4;
+    private const int MaxConcurrentGeometryReads = 8;
     private const int MaxTileStreamRadius = 2;
     private const long MaxTextureAssetBytes =
         16L * 1024L * 1024L;
@@ -60,6 +61,12 @@ public partial class MainWindow : Window
         string,
         Task<OmsiSplineDefinition>>
         _splineDefinitionCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly ConcurrentDictionary<
+        string,
+        Task<SceneryGeometryPayload>>
+        _sceneryGeometryCache =
             new(StringComparer.OrdinalIgnoreCase);
 
     private IReadOnlyList<SceneryLibraryEntry>?
@@ -698,6 +705,7 @@ public partial class MainWindow : Window
         _knownSplinePaths.Clear();
         _tileContentCache.Clear();
         _splineDefinitionCache.Clear();
+        _sceneryGeometryCache.Clear();
         _sceneryLibraryCache = null;
         _splineLibraryCache = null;
 
@@ -4554,96 +4562,15 @@ public partial class MainWindow : Window
 
         try
         {
-            var metadata =
-                await _sceneryObjectReader.ReadMetadataAsync(
+            var payload =
+                await ReadSceneryGeometryCachedAsync(
                     sceneryObjectFullPath);
-
-            var meshes = new List<object>(
-                metadata.MeshPaths.Count);
-
-            for (
-                var meshOrdinal = 0;
-                meshOrdinal <
-                    metadata.MeshPaths.Count;
-                meshOrdinal++)
-            {
-                var declaredPath =
-                    metadata.MeshPaths[
-                        meshOrdinal];
-
-                var lodThreshold =
-                    metadata.MeshLodThresholds
-                        .Count >
-                    meshOrdinal
-                        ? metadata
-                            .MeshLodThresholds[
-                                meshOrdinal]
-                        : null;
-
-                var materialOverrides =
-                    metadata.MaterialOverrides
-                        .Where(
-                            material =>
-                                material
-                                    .MeshOrdinal ==
-                                meshOrdinal)
-                        .ToArray();
-
-                if (!OmsiSceneryMeshPathResolver.TryResolve(
-                        _omsiRootPath,
-                        sceneryObjectFullPath,
-                        declaredPath,
-                        out var meshFullPath))
-                {
-                    meshes.Add(new
-                    {
-                        declaredPath,
-                        lodThreshold,
-                        materialOverrides,
-                        geometry =
-                            OmsiO3dGeometry.Error(
-                                "invalidMeshPath")
-                    });
-                    continue;
-                }
-
-                if (!string.Equals(
-                        Path.GetExtension(meshFullPath),
-                        ".o3d",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    meshes.Add(new
-                    {
-                        declaredPath,
-                        lodThreshold,
-                        materialOverrides,
-                        geometry =
-                            OmsiO3dGeometry.Error(
-                                "unsupportedFormat")
-                    });
-                    continue;
-                }
-
-                meshes.Add(new
-                {
-                    declaredPath,
-                    lodThreshold,
-                    materialOverrides,
-                    geometry =
-                        _o3dGeometryReader.Read(
-                            meshFullPath)
-                });
-            }
 
             PostMessage(new
             {
                 type = "sceneryObjectGeometryLoaded",
                 sceneryObjectPath,
-                geometry = new
-                {
-                    meshes,
-                    tree = metadata.Tree
-                }
+                geometry = payload
             });
         }
         catch (UnauthorizedAccessException)
@@ -4664,6 +4591,115 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private async Task<SceneryGeometryPayload>
+        ReadSceneryGeometryCachedAsync(
+            string sceneryObjectFullPath)
+    {
+        var task =
+            _sceneryGeometryCache.GetOrAdd(
+                sceneryObjectFullPath,
+                path =>
+                    Task.Run(
+                        async () =>
+                            await BuildSceneryGeometryAsync(
+                                path)));
+
+        try
+        {
+            return await task;
+        }
+        catch
+        {
+            _sceneryGeometryCache.TryRemove(
+                sceneryObjectFullPath,
+                out _);
+
+            throw;
+        }
+    }
+
+    private async Task<SceneryGeometryPayload>
+        BuildSceneryGeometryAsync(
+            string sceneryObjectFullPath)
+    {
+        var metadata =
+            await _sceneryObjectReader.ReadMetadataAsync(
+                sceneryObjectFullPath);
+
+        var meshes =
+            new List<SceneryMeshGeometryPayload>(
+                metadata.MeshPaths.Count);
+
+        for (
+            var meshOrdinal = 0;
+            meshOrdinal <
+                metadata.MeshPaths.Count;
+            meshOrdinal++)
+        {
+            var declaredPath =
+                metadata.MeshPaths[
+                    meshOrdinal];
+
+            var lodThreshold =
+                metadata.MeshLodThresholds
+                    .Count >
+                meshOrdinal
+                    ? metadata
+                        .MeshLodThresholds[
+                            meshOrdinal]
+                    : null;
+
+            var materialOverrides =
+                metadata.MaterialOverrides
+                    .Where(
+                        material =>
+                            material
+                                .MeshOrdinal ==
+                            meshOrdinal)
+                    .ToArray();
+
+            OmsiO3dGeometry geometry;
+
+            if (!OmsiSceneryMeshPathResolver.TryResolve(
+                    _omsiRootPath!,
+                    sceneryObjectFullPath,
+                    declaredPath,
+                    out var meshFullPath))
+            {
+                geometry =
+                    OmsiO3dGeometry.Error(
+                        "invalidMeshPath");
+            }
+            else if (!string.Equals(
+                         Path.GetExtension(
+                             meshFullPath),
+                         ".o3d",
+                         StringComparison.OrdinalIgnoreCase))
+            {
+                geometry =
+                    OmsiO3dGeometry.Error(
+                        "unsupportedFormat");
+            }
+            else
+            {
+                geometry =
+                    _o3dGeometryReader.Read(
+                        meshFullPath);
+            }
+
+            meshes.Add(
+                new SceneryMeshGeometryPayload(
+                    declaredPath,
+                    lodThreshold,
+                    materialOverrides,
+                    geometry));
+        }
+
+        return new SceneryGeometryPayload(
+            meshes,
+            metadata.Tree);
     }
 
     private async Task<IReadOnlyList<object>>
@@ -5253,6 +5289,16 @@ public partial class MainWindow : Window
     private sealed record SceneryLibraryEntry(
         string SceneryObjectPath,
         string FileName);
+
+    private sealed record SceneryGeometryPayload(
+        IReadOnlyList<SceneryMeshGeometryPayload> Meshes,
+        OmsiSceneryTreeDefinition? Tree);
+
+    private sealed record SceneryMeshGeometryPayload(
+        string DeclaredPath,
+        double? LodThreshold,
+        IReadOnlyList<OmsiSceneryMaterialOverride> MaterialOverrides,
+        OmsiO3dGeometry Geometry);
 
     private sealed record SplineLibraryEntry(
         string SplinePath,
