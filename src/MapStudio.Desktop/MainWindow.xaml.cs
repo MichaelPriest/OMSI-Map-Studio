@@ -511,82 +511,30 @@ public partial class MainWindow : Window
             return;
         }
 
+        var omsiRoot =
+            _omsiRootPath;
+
         try
         {
             if (_sceneryLibraryCache is null)
             {
-                var root =
-                    Path.Combine(
+                var entries =
+                    await Task.Run(
+                        () =>
+                            ScanSceneryLibrary(
+                                omsiRoot));
+
+                if (!string.Equals(
                         _omsiRootPath,
-                        "Sceneryobjects");
-
-                if (!Directory.Exists(root))
+                        omsiRoot,
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    _sceneryLibraryCache =
-                        Array.Empty<SceneryLibraryEntry>();
+                    return;
                 }
-                else
-                {
-                    var options =
-                        new EnumerationOptions
-                        {
-                            RecurseSubdirectories = true,
-                            IgnoreInaccessible = true,
-                            MatchCasing =
-                                MatchCasing.CaseInsensitive,
-                            AttributesToSkip =
-                                FileAttributes.ReparsePoint
-                        };
 
-                    var entries =
-                        new List<SceneryLibraryEntry>();
-
-                    foreach (var filePath in
-                        Directory.EnumerateFiles(
-                            root,
-                            "*.sco",
-                            options))
-                    {
-                        if (entries.Count >= 50000)
-                        {
-                            break;
-                        }
-
-                        var relative =
-                            Path.GetRelativePath(
-                                root,
-                                filePath)
-                            .Replace(
-                                Path.DirectorySeparatorChar,
-                                '\\');
-
-                        var declaredPath =
-                            "Sceneryobjects\\" +
-                            relative;
-
-                        entries.Add(
-                            new SceneryLibraryEntry(
-                                declaredPath,
-                                Path.GetFileName(
-                                    filePath)));
-
-                        _knownSceneryObjectPaths
-                            .TryAdd(
-                                declaredPath,
-                                0);
-                    }
-
-                    _sceneryLibraryCache =
-                        entries
-                            .OrderBy(
-                                entry =>
-                                    entry.SceneryObjectPath,
-                                StringComparer.OrdinalIgnoreCase)
-                            .ToArray();
-                }
+                _sceneryLibraryCache =
+                    entries;
             }
-
-            await Task.Yield();
 
             PostMessage(new
             {
@@ -614,6 +562,78 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private IReadOnlyList<SceneryLibraryEntry>
+        ScanSceneryLibrary(
+            string omsiRoot)
+    {
+        var root =
+            Path.Combine(
+                omsiRoot,
+                "Sceneryobjects");
+
+        if (!Directory.Exists(root))
+        {
+            return
+                Array.Empty<SceneryLibraryEntry>();
+        }
+
+        var options =
+            new EnumerationOptions
+            {
+                RecurseSubdirectories = true,
+                IgnoreInaccessible = true,
+                MatchCasing =
+                    MatchCasing.CaseInsensitive,
+                AttributesToSkip =
+                    FileAttributes.ReparsePoint
+            };
+
+        var entries =
+            new List<SceneryLibraryEntry>();
+
+        foreach (var filePath in
+            Directory.EnumerateFiles(
+                root,
+                "*.sco",
+                options))
+        {
+            if (entries.Count >= 50000)
+            {
+                break;
+            }
+
+            var relative =
+                Path.GetRelativePath(
+                    root,
+                    filePath)
+                .Replace(
+                    Path.DirectorySeparatorChar,
+                    '\\');
+
+            var declaredPath =
+                "Sceneryobjects\\" +
+                relative;
+
+            entries.Add(
+                new SceneryLibraryEntry(
+                    declaredPath,
+                    Path.GetFileName(
+                        filePath)));
+
+            _knownSceneryObjectPaths
+                .TryAdd(
+                    declaredPath,
+                    0);
+        }
+
+        return entries
+            .OrderBy(
+                entry =>
+                    entry.SceneryObjectPath,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private async Task SaveObjectTransformsAsync(
