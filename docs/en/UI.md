@@ -374,3 +374,10 @@ The inspector shows the file and state; when disabled it shows **preview off**.
 Static materials with `[matl_envmap]` now load the real reflection texture and respect the strength defined by the `.sco`.
 
 The **Materials** tab shows envmap file, state, and strength. Missing/unsafe assets simply leave the material without the extra reflection.
+
+
+## Runtime-dependent materials
+
+The inspector identifies `Transmap` and `Lightmap` declarations from `.sco` and labels them **runtime not simulated**.
+
+This is intentional: `\S:`/script references and OMSI variable-controlled lightmaps are not treated as static files or automatically enabled.

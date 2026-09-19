@@ -374,3 +374,10 @@ O inspetor mostra o arquivo e o estado; com a camada desligada exibe **preview d
 Materiais estáticos com `[matl_envmap]` agora carregam a textura de reflexão real e respeitam a força definida no `.sco`.
 
 A aba **Materiais** mostra arquivo, estado e força do envmap. Se o asset estiver ausente/inseguro, o material permanece sem reflexão adicional.
+
+
+## Materiais dependentes de runtime
+
+O inspetor identifica `Transmap` e `Lightmap` quando declarados no `.sco`, exibindo **runtime não simulado**.
+
+Isso é intencional: referências `\S:`/script e lightmaps controlados por variáveis do OMSI não são tratados como arquivos estáticos nem ligados automaticamente.

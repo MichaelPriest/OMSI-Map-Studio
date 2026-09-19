@@ -11,4 +11,6 @@ public sealed record OmsiSceneryMaterialOverride(
     double? BumpMapStrength,
     string? NightMapTextureName,
     string? EnvironmentMapTextureName,
-    double? EnvironmentMapStrength);
+    double? EnvironmentMapStrength,
+    string? TransMapSource,
+    string? LightMapTextureName);

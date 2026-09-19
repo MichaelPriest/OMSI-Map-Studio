@@ -241,3 +241,11 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 3. confirme carregamento da textura real;
 4. compare a reflexão visual com o mesmo material sem envmap;
 5. valide forças 0, 0.4 e 1 e confirme que valores externos são limitados no preview.
+
+
+## Teste de comandos dinâmicos de material
+
+1. abra um objeto com `[matl_transmap] \S:...`;
+2. confirme a referência no inspetor com **runtime não simulado**;
+3. abra um material com `[matl_lightmap]` e confirme o mesmo aviso;
+4. valide que nenhum desses comandos dispara carregamento/aplicação fake no viewport.

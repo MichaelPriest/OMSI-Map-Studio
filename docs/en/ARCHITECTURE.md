@@ -358,3 +358,10 @@ When **Nightmap** is enabled, the safe resolver loads the file and Babylon appli
 `[matl_envmap]` provides a real file and reflection strength. Core stores both in the static override and the asset uses the same safe `Sceneryobjects` resolver.
 
 Babylon applies the image as a spherical `reflectionTexture`. Preview strength is clamped to 0–1, matching the documented OMSI range.
+
+
+## Runtime-dependent material commands
+
+`[matl_transmap]` and `[matl_lightmap]` are detected within a static `[matl]` context, but preview does not execute them at this stage.
+
+`matl_transmap` may point to dynamic sources such as `\S:` and `matl_lightmap` is controlled by OMSI runtime/script state. Core preserves the reference for inspection without inventing a visual state.

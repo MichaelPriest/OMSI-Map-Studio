@@ -5251,6 +5251,24 @@ export function App() {
                                 : ""}
                             </small>
                           )}
+                          {row.materialOverride
+                            .transMapSource && (
+                            <small>
+                              Transmap:{" "}
+                              {row.materialOverride
+                                .transMapSource}
+                              {" · runtime não simulado"}
+                            </small>
+                          )}
+                          {row.materialOverride
+                            .lightMapTextureName && (
+                            <small>
+                              Lightmap:{" "}
+                              {row.materialOverride
+                                .lightMapTextureName}
+                              {" · runtime não simulado"}
+                            </small>
+                          )}
                         </>
                       )}
                     </div>

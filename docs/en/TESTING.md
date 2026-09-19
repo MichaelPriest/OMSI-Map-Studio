@@ -241,3 +241,11 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 3. verify the real texture loads;
 4. compare reflection against the same material without envmap;
 5. validate strengths 0, 0.4, and 1 and confirm out-of-range values are clamped in preview.
+
+
+## Runtime material-command test
+
+1. open an object using `[matl_transmap] \S:...`;
+2. verify the reference appears in the inspector as **runtime not simulated**;
+3. open a material with `[matl_lightmap]` and verify the same warning;
+4. verify neither command triggers fake loading/application in the viewport.

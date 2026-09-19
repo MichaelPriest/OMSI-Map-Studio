@@ -358,3 +358,10 @@ Quando **Nightmap** é ativado na UI, o resolver seguro carrega o arquivo e o Ba
 `[matl_envmap]` fornece um arquivo real e uma intensidade de reflexão. O Core guarda ambos no override estático; o asset usa o mesmo resolver seguro de `Sceneryobjects`.
 
 No Babylon a imagem é aplicada como `reflectionTexture` em modo esférico. A intensidade é limitada a 0–1 no preview, conforme a faixa documentada do OMSI.
+
+
+## Comandos de material dependentes de runtime
+
+`[matl_transmap]` e `[matl_lightmap]` são detectados no contexto de `[matl]` estático, mas não são executados pelo preview nesta etapa.
+
+`matl_transmap` pode apontar para fontes dinâmicas como `\S:` e `matl_lightmap` é controlado por estado/script do OMSI. O Core preserva a referência para inspeção, sem convertê-la em um estado visual inventado.

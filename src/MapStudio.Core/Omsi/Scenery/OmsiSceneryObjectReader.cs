@@ -159,6 +159,44 @@ public sealed class OmsiSceneryObjectReader
 
             if (string.Equals(
                     section.Keyword,
+                    "matl_transmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var source =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        source))
+                {
+                    current.TransMapSource =
+                        source;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_lightmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var textureName =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        textureName))
+                {
+                    current.LightMapTextureName =
+                        textureName;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
                     "matl_envmap",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -278,7 +316,9 @@ public sealed class OmsiSceneryObjectReader
                         builder.BumpMapStrength,
                         builder.NightMapTextureName,
                         builder.EnvironmentMapTextureName,
-                        builder.EnvironmentMapStrength))
+                        builder.EnvironmentMapStrength,
+                        builder.TransMapSource,
+                        builder.LightMapTextureName))
             .ToArray();
     }
 
@@ -356,6 +396,14 @@ public sealed class OmsiSceneryObjectReader
 
         public double?
             EnvironmentMapStrength
+        { get; set; }
+
+        public string?
+            TransMapSource
+        { get; set; }
+
+        public string?
+            LightMapTextureName
         { get; set; }
     }
 }
