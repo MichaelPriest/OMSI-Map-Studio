@@ -543,3 +543,16 @@ In addition to the diagnostic PNG, real BMP files are decoded by the host into R
 ## Windows icon identity
 
 The executable continues to embed `MapStudio.ico`. The process and installer shortcuts now also use the stable `MichaelPriest.OMSIMapStudio` AppUserModelID and explicitly use the EXE as the icon source, preventing generic Windows taskbar and shortcut icons.
+
+
+## Single continuous loading phase
+
+After structural map loading, the editor keeps **one continuous loading animation** while warming the visual resources for the area: O3D geometry, SLI profiles, textures, `groundtex`, and masks. The screen no longer closes and reopens for each individual item. Unlocking only occurs after a short stable period with no pending resources, avoiding flicker between sequential batches.
+
+## BMP terrain as an unlit material
+
+When the real base texture arrives as RGBA, the terrain material also uses the same asset through the emissive channel. This guarantees the real texture remains visible when material lighting is disabled. The Inspector keeps the RGBA diagnostic, and the host includes sampled average RGB values from the decoded pixels to distinguish a genuinely dark source from a material/GPU issue.
+
+## Windows icon
+
+The application now uses the executable's native shell identity again, avoiding an unregistered custom AppUserModelID when the EXE is launched directly. The window uses an explicit pack resource URI and reapplies `MapStudio.ico` at runtime, while keeping the compiled `ApplicationIcon` as fallback.
