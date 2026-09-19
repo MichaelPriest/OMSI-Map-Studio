@@ -20,6 +20,7 @@ export type OmsiTerrainTextureMask = {
   isValid: boolean;
   width: number;
   height: number;
+  hasPixelStatistics: boolean;
   coverage: number;
   minimumAlpha: number;
   maximumAlpha: number;
@@ -210,6 +211,9 @@ export type OmsiTextureAsset = {
   height: number | null;
   pixelFormat: string | null;
   alphaOnly: boolean | null;
+  alphaCoverage?: number | null;
+  minimumAlpha?: number | null;
+  maximumAlpha?: number | null;
   errorCode: string | null;
 };
 

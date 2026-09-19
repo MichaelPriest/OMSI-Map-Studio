@@ -515,3 +515,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 4. test `[scale]` with three values and confirm independent X/Y/Z scale;
 5. confirm a mesh with no transform blocks keeps identity;
 6. reuse the same physical `.o3d` or `.x` from two `.sco` files with different transforms and confirm geometry remains shared by the cache without mixing transforms.
+
+
+## On-demand DDS mask validation
+
+1. open Grundorf in **Full map** mode and confirm tile loading finishes without scanning every DDS mask pixel;
+2. confirm each valid mask initially reports width/height with `hasPixelStatistics=false`;
+3. enable terrain paint/a layer that uses the mask and confirm the asset is requested normally;
+4. after the asset loads, confirm coverage, minimum alpha, and maximum alpha appear in diagnostics;
+5. validate an empty mask and a fully opaque mask; both must keep their correct classification once the asset is loaded;
+6. confirm invalid, truncated, or non-A8 DDS files remain rejected with no fake fallback.

@@ -12,7 +12,25 @@ public sealed class OmsiTerrainTextureMaskReader
 
     public OmsiTerrainTextureMask Read(
         int layerIndex,
-        string path)
+        string path) =>
+        ReadCore(
+            layerIndex,
+            path,
+            includePixelStatistics: true);
+
+    public OmsiTerrainTextureMask ReadHeader(
+        int layerIndex,
+        string path) =>
+        ReadCore(
+            layerIndex,
+            path,
+            includePixelStatistics: false);
+
+    private static OmsiTerrainTextureMask
+        ReadCore(
+            int layerIndex,
+            string path,
+            bool includePixelStatistics)
     {
         ArgumentOutOfRangeException
             .ThrowIfLessThanOrEqual(
@@ -39,10 +57,7 @@ public sealed class OmsiTerrainTextureMaskReader
 
         try
         {
-            var bytes =
-                File.ReadAllBytes(path);
-
-            if (bytes.Length < DataOffset)
+            if (fileSize < DataOffset)
             {
                 return Error(
                     layerIndex,
@@ -51,11 +66,27 @@ public sealed class OmsiTerrainTextureMaskReader
                     "truncatedHeader");
             }
 
+            using var stream =
+                new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    bufferSize: 4096,
+                    options:
+                        FileOptions
+                            .SequentialScan);
+
+            var header =
+                new byte[DataOffset];
+
+            stream.ReadExactly(header);
+
             if (
-                bytes[0] != (byte)'D' ||
-                bytes[1] != (byte)'D' ||
-                bytes[2] != (byte)'S' ||
-                bytes[3] != (byte)' ')
+                header[0] != (byte)'D' ||
+                header[1] != (byte)'D' ||
+                header[2] != (byte)'S' ||
+                header[3] != (byte)' ')
             {
                 return Error(
                     layerIndex,
@@ -64,60 +95,63 @@ public sealed class OmsiTerrainTextureMaskReader
                     "invalidSignature");
             }
 
+            var span =
+                header.AsSpan();
+
             var headerSize =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(4, 4));
+                        span.Slice(4, 4));
 
             var height =
                 BinaryPrimitives
                     .ReadInt32LittleEndian(
-                        bytes.AsSpan(12, 4));
+                        span.Slice(12, 4));
 
             var width =
                 BinaryPrimitives
                     .ReadInt32LittleEndian(
-                        bytes.AsSpan(16, 4));
+                        span.Slice(16, 4));
 
             var pixelFormatSize =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(76, 4));
+                        span.Slice(76, 4));
 
             var pixelFormatFlags =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(80, 4));
+                        span.Slice(80, 4));
 
             var fourCc =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(84, 4));
+                        span.Slice(84, 4));
 
             var bitCount =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(88, 4));
+                        span.Slice(88, 4));
 
             var redMask =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(92, 4));
+                        span.Slice(92, 4));
 
             var greenMask =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(96, 4));
+                        span.Slice(96, 4));
 
             var blueMask =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(100, 4));
+                        span.Slice(100, 4));
 
             var alphaMask =
                 BinaryPrimitives
                     .ReadUInt32LittleEndian(
-                        bytes.AsSpan(104, 4));
+                        span.Slice(104, 4));
 
             if (
                 headerSize != DdsHeaderSize ||
@@ -166,10 +200,10 @@ public sealed class OmsiTerrainTextureMaskReader
 
             var requiredLength =
                 checked(
-                    DataOffset +
+                    (long)DataOffset +
                     pixelCount);
 
-            if (bytes.Length < requiredLength)
+            if (fileSize < requiredLength)
             {
                 return Error(
                     layerIndex,
@@ -178,14 +212,30 @@ public sealed class OmsiTerrainTextureMaskReader
                     "truncatedPixels");
             }
 
+            if (!includePixelStatistics)
+            {
+                return new OmsiTerrainTextureMask(
+                    LayerIndex: layerIndex,
+                    FileName: fileName,
+                    FileSize: fileSize,
+                    IsValid: true,
+                    Width: width,
+                    Height: height,
+                    HasPixelStatistics: false,
+                    Coverage: 0,
+                    MinimumAlpha: 0,
+                    MaximumAlpha: 0,
+                    ErrorCode: null);
+            }
+
+            var pixels =
+                new byte[pixelCount];
+
+            stream.ReadExactly(pixels);
+
             byte minimum = byte.MaxValue;
             byte maximum = byte.MinValue;
             var nonZero = 0;
-
-            var pixels =
-                bytes.AsSpan(
-                    DataOffset,
-                    pixelCount);
 
             foreach (var alpha in pixels)
             {
@@ -212,6 +262,7 @@ public sealed class OmsiTerrainTextureMaskReader
                 IsValid: true,
                 Width: width,
                 Height: height,
+                HasPixelStatistics: true,
                 Coverage:
                     nonZero /
                     (double)pixelCount,
@@ -226,6 +277,14 @@ public sealed class OmsiTerrainTextureMaskReader
                 fileName,
                 fileSize,
                 "maskTooLarge");
+        }
+        catch (EndOfStreamException)
+        {
+            return Error(
+                layerIndex,
+                fileName,
+                fileSize,
+                "truncatedPixels");
         }
         catch (IOException)
         {
@@ -249,6 +308,7 @@ public sealed class OmsiTerrainTextureMaskReader
             IsValid: false,
             Width: 0,
             Height: 0,
+            HasPixelStatistics: false,
             Coverage: 0,
             MinimumAlpha: 0,
             MaximumAlpha: 0,

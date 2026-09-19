@@ -475,3 +475,12 @@ O metadata real do `.sco` agora preserva uma transformação local por entrada `
 A transformação fica fora da geometria física cacheada. Assim, dois `.sco` podem reutilizar o mesmo `.o3d`/`.x` com posição, rotação ou escala local diferentes sem duplicar o parsing. O host envia a transformação junto ao mesh e o viewport a aplica antes de anexá-lo ao root do objeto.
 
 O mapeamento segue o mesmo sistema OMSI → Babylon já usado no editor: posição X/Z/Y, escala X/Z/Y e rotações convertidas para yaw/pitch/roll com a mudança de handedness existente.
+
+
+## Máscaras DDS fora do caminho crítico
+
+A leitura inicial dos tiles não percorre mais todos os pixels de cada máscara A8 `texture/map/<tile>.map.N.dds`. Na abertura do mapa, o Core valida somente o cabeçalho DDS, dimensões, formato A8 e comprimento mínimo do arquivo.
+
+As estatísticas de pixels (`coverage`, alpha mínimo e máximo) passam a ser calculadas somente quando o asset da máscara é realmente solicitado para renderização. Esses valores são enviados junto do `textureAssetLoaded` e continuam disponíveis no diagnóstico da interface.
+
+Isso preserva a validação real e a pintura de terreno, mas remove leituras integrais de DDS que antes eram feitas para todas as máscaras de todos os tiles antes do mapa ficar utilizável.

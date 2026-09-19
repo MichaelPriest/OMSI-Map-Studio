@@ -7,6 +7,7 @@ public sealed record OmsiTerrainTextureMask(
     bool IsValid,
     int Width,
     int Height,
+    bool HasPixelStatistics,
     double Coverage,
     byte MinimumAlpha,
     byte MaximumAlpha,

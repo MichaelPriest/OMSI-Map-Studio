@@ -475,3 +475,12 @@ Real `.sco` metadata now preserves one local transform per `[mesh]` entry: `[new
 The transform stays outside cached physical geometry. Different `.sco` files can therefore reuse the same `.o3d`/`.x` with different local position, rotation, or scale without duplicating parsing. The host sends the transform alongside the mesh and the viewport applies it before parenting the mesh to the placed-object root.
 
 Mapping follows the same OMSI → Babylon system already used by the editor: X/Z/Y position, X/Z/Y scale, and yaw/pitch/roll rotation with the existing handedness conversion.
+
+
+## DDS masks removed from the critical loading path
+
+Initial tile loading no longer scans every pixel of every A8 mask under `texture/map/<tile>.map.N.dds`. During map opening, Core validates only the DDS header, dimensions, A8 format, and minimum file length.
+
+Pixel statistics (`coverage`, minimum alpha, and maximum alpha) are now computed only when the mask asset is actually requested for rendering. Those values are sent with `textureAssetLoaded` and remain available to UI diagnostics.
+
+This preserves real validation and terrain painting while removing full DDS reads that were previously performed for every mask of every tile before the map became usable.

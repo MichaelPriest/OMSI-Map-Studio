@@ -4172,8 +4172,26 @@ public partial class MainWindow : Window
             ddsMetadata?.Format;
         bool? alphaOnly =
             ddsMetadata?.AlphaOnly;
+        double? alphaCoverage = null;
+        byte? minimumAlpha = null;
+        byte? maximumAlpha = null;
         string? rgbaBase64 = null;
         string? base64Data = null;
+
+        if (
+            TryReadAlphaStatistics(
+                bytes,
+                width,
+                height,
+                alphaOnly,
+                out var coverage,
+                out var minimum,
+                out var maximum))
+        {
+            alphaCoverage = coverage;
+            minimumAlpha = minimum;
+            maximumAlpha = maximum;
+        }
 
         if (
             extension == ".bmp" &&
@@ -4217,6 +4235,9 @@ public partial class MainWindow : Window
             Height: height,
             PixelFormat: pixelFormat,
             AlphaOnly: alphaOnly,
+            AlphaCoverage: alphaCoverage,
+            MinimumAlpha: minimumAlpha,
+            MaximumAlpha: maximumAlpha,
             ErrorCode: null);
     }
 
@@ -4255,9 +4276,101 @@ public partial class MainWindow : Window
                     (string?)null,
                 alphaOnly =
                     (bool?)null,
+                alphaCoverage =
+                    (double?)null,
+                minimumAlpha =
+                    (byte?)null,
+                maximumAlpha =
+                    (byte?)null,
                 errorCode
             }
         });
+    }
+
+    private static bool
+        TryReadAlphaStatistics(
+            byte[] bytes,
+            int? width,
+            int? height,
+            bool? alphaOnly,
+            out double coverage,
+            out byte minimum,
+            out byte maximum)
+    {
+        coverage = 0;
+        minimum = 0;
+        maximum = 0;
+
+        if (
+            alphaOnly != true ||
+            width is null ||
+            height is null ||
+            width <= 0 ||
+            height <= 0)
+        {
+            return false;
+        }
+
+        try
+        {
+            var pixelCount =
+                checked(
+                    width.Value *
+                    height.Value);
+
+            const int dataOffset = 128;
+
+            if (
+                bytes.Length <
+                dataOffset +
+                    pixelCount)
+            {
+                return false;
+            }
+
+            var nonZero = 0;
+            minimum = byte.MaxValue;
+            maximum = byte.MinValue;
+
+            for (
+                var index = 0;
+                index < pixelCount;
+                index++)
+            {
+                var alpha =
+                    bytes[
+                        dataOffset +
+                        index];
+
+                minimum =
+                    Math.Min(
+                        minimum,
+                        alpha);
+
+                maximum =
+                    Math.Max(
+                        maximum,
+                        alpha);
+
+                if (alpha != 0)
+                {
+                    nonZero++;
+                }
+            }
+
+            coverage =
+                nonZero /
+                (double)pixelCount;
+
+            return true;
+        }
+        catch (OverflowException)
+        {
+            coverage = 0;
+            minimum = 0;
+            maximum = 0;
+            return false;
+        }
     }
 
     private static bool
@@ -5449,6 +5562,9 @@ public partial class MainWindow : Window
         int? Height,
         string? PixelFormat,
         bool? AlphaOnly,
+        double? AlphaCoverage,
+        byte? MinimumAlpha,
+        byte? MaximumAlpha,
         string? ErrorCode)
     {
         public static TextureAssetPayload
@@ -5465,6 +5581,9 @@ public partial class MainWindow : Window
                 Height: null,
                 PixelFormat: null,
                 AlphaOnly: null,
+                AlphaCoverage: null,
+                MinimumAlpha: null,
+                MaximumAlpha: null,
                 ErrorCode: errorCode);
     }
 

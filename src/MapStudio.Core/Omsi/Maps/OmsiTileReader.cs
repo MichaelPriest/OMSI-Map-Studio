@@ -187,7 +187,7 @@ public sealed class OmsiTileReader
 
             masks.Add(
                 new OmsiTerrainTextureMaskReader()
-                    .Read(
+                    .ReadHeader(
                         layerIndex,
                         path));
         }

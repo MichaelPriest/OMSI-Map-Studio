@@ -2274,7 +2274,8 @@ export function App() {
             if (
               !groundTexture ||
               !mask.isValid ||
-              mask.maximumAlpha === 0 ||
+              (mask.hasPixelStatistics &&
+                mask.maximumAlpha === 0) ||
               Object.hasOwn(
                 hiddenTerrainLayerIndices,
                 mask.layerIndex
@@ -2323,6 +2324,7 @@ export function App() {
                   groundTexture
                     .mainTextureRepeating,
                 maskIsFull:
+                  mask.hasPixelStatistics &&
                   mask.minimumAlpha === 255 &&
                   mask.maximumAlpha === 255,
                 textureKey,
@@ -6488,10 +6490,12 @@ export function App() {
                         return `${mask.layerIndex}: ${mask.width}×${mask.height} · esperado ${expected}×${expected}`;
                       }
 
-                      return `${mask.layerIndex}: ${mask.width}×${mask.height} · ${Math.round(
-                        mask.coverage *
-                          100
-                      )}%`;
+                      return mask.hasPixelStatistics
+                        ? `${mask.layerIndex}: ${mask.width}×${mask.height} · ${Math.round(
+                            mask.coverage *
+                              100
+                          )}%`
+                        : `${mask.layerIndex}: ${mask.width}×${mask.height} · estatísticas sob demanda`;
                     })
                     .join(" · ")
                 : "Nenhuma"}
@@ -6547,6 +6551,27 @@ export function App() {
                       activeMask.height ===
                         layer.maskResolution);
 
+                  const maskCoverage =
+                    activeMask
+                      ?.hasPixelStatistics
+                      ? activeMask.coverage
+                      : maskAsset
+                          ?.alphaCoverage;
+
+                  const maskMinimumAlpha =
+                    activeMask
+                      ?.hasPixelStatistics
+                      ? activeMask.minimumAlpha
+                      : maskAsset
+                          ?.minimumAlpha;
+
+                  const maskMaximumAlpha =
+                    activeMask
+                      ?.hasPixelStatistics
+                      ? activeMask.maximumAlpha
+                      : maskAsset
+                          ?.maximumAlpha;
+
                   return (
                     <label
                       key={index}
@@ -6559,7 +6584,12 @@ export function App() {
                           (!activeMask ||
                             !activeMask.isValid ||
                             !maskResolutionMatches ||
-                            activeMask.maximumAlpha === 0)
+                            (maskMaximumAlpha !==
+                              undefined &&
+                              maskMaximumAlpha !==
+                                null &&
+                              maskMaximumAlpha ===
+                                0))
                         }
                         checked={
                           !Object.hasOwn(
@@ -6607,15 +6637,28 @@ export function App() {
                                 ? `inválida · ${activeMask.errorCode ?? "erro"}`
                                 : !maskResolutionMatches
                                   ? `${activeMask.width}×${activeMask.height} · esperado ${layer.maskResolution}×${layer.maskResolution} · incompatível`
-                                  : activeMask.maximumAlpha === 0
+                                  : maskMaximumAlpha === 0
                                   ? `${activeMask.width}×${activeMask.height} · vazia · alpha 0`
-                                  : activeMask.minimumAlpha === 255 &&
-                                      activeMask.maximumAlpha === 255
+                                  : maskMinimumAlpha === 255 &&
+                                      maskMaximumAlpha === 255
                                     ? `${activeMask.width}×${activeMask.height} · 100% cobertura · alpha 255 · opaca`
-                                    : `${activeMask.width}×${activeMask.height} · ${formatNumber(
-                                        activeMask.coverage *
-                                          100
-                                      )}% cobertura · alpha ${activeMask.minimumAlpha}-${activeMask.maximumAlpha} · ${maskAsset?.exists ? "carregada" : "presente"}`
+                                    : maskCoverage !==
+                                          undefined &&
+                                        maskCoverage !==
+                                          null &&
+                                        maskMinimumAlpha !==
+                                          undefined &&
+                                        maskMinimumAlpha !==
+                                          null &&
+                                        maskMaximumAlpha !==
+                                          undefined &&
+                                        maskMaximumAlpha !==
+                                          null
+                                      ? `${activeMask.width}×${activeMask.height} · ${formatNumber(
+                                          maskCoverage *
+                                            100
+                                        )}% cobertura · alpha ${maskMinimumAlpha}-${maskMaximumAlpha} · ${maskAsset?.exists ? "carregada" : "presente"}`
+                                      : `${activeMask.width}×${activeMask.height} · validada · estatísticas ao carregar`
                               : "sem máscara no tile"}
                         </small>
                       </span>

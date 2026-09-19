@@ -77,14 +77,16 @@ public sealed class OmsiTerrainTextureMaskTests
             Assert.Equal(
                 2,
                 masks[0].Height);
+            Assert.False(
+                masks[0].HasPixelStatistics);
             Assert.Equal(
-                0.5,
+                0,
                 masks[0].Coverage);
             Assert.Equal(
                 (byte)0,
                 masks[0].MinimumAlpha);
             Assert.Equal(
-                (byte)255,
+                (byte)0,
                 masks[0].MaximumAlpha);
             Assert.Null(
                 masks[0].ErrorCode);
@@ -94,15 +96,14 @@ public sealed class OmsiTerrainTextureMaskTests
                 masks[1].LayerIndex);
             Assert.True(
                 masks[1].IsValid);
+            Assert.False(
+                masks[1].HasPixelStatistics);
             Assert.Equal(
-                1,
-                masks[1].Coverage);
+                2,
+                masks[1].Width);
             Assert.Equal(
-                (byte)255,
-                masks[1].MinimumAlpha);
-            Assert.Equal(
-                (byte)255,
-                masks[1].MaximumAlpha);
+                2,
+                masks[1].Height);
         }
         finally
         {
@@ -152,6 +153,53 @@ public sealed class OmsiTerrainTextureMaskTests
     }
 
     [Fact]
+    public void TerrainTextureMaskReader_HeaderMode_SkipsPixelStatistics()
+    {
+        var root =
+            CreateRoot();
+
+        try
+        {
+            var path =
+                Path.Combine(
+                    root,
+                    "tile_0_0.map.1.dds");
+
+            File.WriteAllBytes(
+                path,
+                CreateA8Dds(
+                    2,
+                    2,
+                    [0, 255, 0, 255]));
+
+            var mask =
+                new OmsiTerrainTextureMaskReader()
+                    .ReadHeader(
+                        1,
+                        path);
+
+            Assert.True(mask.IsValid);
+            Assert.False(
+                mask.HasPixelStatistics);
+            Assert.Equal(2, mask.Width);
+            Assert.Equal(2, mask.Height);
+            Assert.Equal(0, mask.Coverage);
+            Assert.Equal(
+                (byte)0,
+                mask.MinimumAlpha);
+            Assert.Equal(
+                (byte)0,
+                mask.MaximumAlpha);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public void TerrainTextureMaskReader_DetectsEmptyMask()
     {
         var root =
@@ -178,6 +226,8 @@ public sealed class OmsiTerrainTextureMaskTests
                         path);
 
             Assert.True(mask.IsValid);
+            Assert.True(
+                mask.HasPixelStatistics);
             Assert.Equal(
                 0,
                 mask.Coverage);

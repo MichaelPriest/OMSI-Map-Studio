@@ -515,3 +515,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 4. teste `[scale]` com três valores e confirme escala independente X/Y/Z;
 5. confirme que um mesh sem blocos de transformação mantém identidade;
 6. reutilize o mesmo arquivo físico `.o3d` ou `.x` em dois `.sco` com transforms diferentes e confirme que a geometria continua compartilhada pelo cache sem misturar as transformações.
+
+
+## Validação de máscaras DDS sob demanda
+
+1. abra Grundorf em **Mapa completo** e confirme que a leitura dos tiles termina sem varrer todos os pixels das máscaras DDS;
+2. confirme que cada máscara válida já chega com largura/altura e `hasPixelStatistics=false` após a abertura;
+3. habilite pintura/camada que use a máscara e confirme que o asset é solicitado normalmente;
+4. depois do carregamento do asset, confirme que cobertura, alpha mínimo e alpha máximo aparecem no diagnóstico;
+5. valide máscara vazia e máscara totalmente opaca; ambas devem manter a classificação correta depois que o asset for carregado;
+6. confirme que DDS inválido, truncado ou em formato não-A8 continua recusado sem fallback fictício.
