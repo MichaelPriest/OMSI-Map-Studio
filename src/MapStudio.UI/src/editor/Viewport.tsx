@@ -954,6 +954,149 @@ function createPreviewMaterial(
   return material;
 }
 
+type ObjectLodInstance = {
+  root: TransformNode;
+  meshes: Mesh[];
+  radius: number;
+  thresholds: number[];
+};
+
+function getGeometryRadius(
+  geometry: OmsiSceneryObjectGeometry
+) {
+  let radiusSquared = 0;
+
+  for (const meshReference of
+    geometry.meshes) {
+    const positions =
+      meshReference.geometry.positions;
+
+    for (
+      let index = 0;
+      index + 2 < positions.length;
+      index += 3
+    ) {
+      const x = positions[index];
+      const y = positions[index + 1];
+      const z = positions[index + 2];
+
+      radiusSquared = Math.max(
+        radiusSquared,
+        x * x + y * y + z * z
+      );
+    }
+  }
+
+  return Math.max(
+    0.5,
+    Math.sqrt(radiusSquared)
+  );
+}
+
+function getMeshLodThreshold(
+  mesh: Mesh
+) {
+  const value =
+    mesh.metadata
+      ?.mapStudioLodThreshold;
+
+  return typeof value === "number" &&
+    Number.isFinite(value)
+    ? value
+    : null;
+}
+
+function createObjectLodInstance(
+  root: TransformNode,
+  meshes: Mesh[],
+  geometry: OmsiSceneryObjectGeometry
+):
+  | ObjectLodInstance
+  | undefined {
+  const thresholds =
+    Array.from(
+      new Set(
+        geometry.meshes
+          .map(
+            (meshReference) =>
+              meshReference.lodThreshold
+          )
+          .filter(
+            (
+              value
+            ): value is number =>
+              typeof value === "number" &&
+              Number.isFinite(value)
+          )
+      )
+    ).sort(
+      (left, right) =>
+        right - left
+    );
+
+  if (thresholds.length === 0) {
+    return undefined;
+  }
+
+  return {
+    root,
+    meshes,
+    radius:
+      getGeometryRadius(
+        geometry
+      ),
+    thresholds
+  };
+}
+
+function updateObjectLod(
+  instance: ObjectLodInstance,
+  camera: ArcRotateCamera
+) {
+  const distance =
+    Vector3.Distance(
+      camera.position,
+      instance.root
+        .getAbsolutePosition()
+    );
+
+  const angularDiameter =
+    distance <= 0.0001
+      ? Math.PI
+      : 2 *
+        Math.atan2(
+          instance.radius,
+          distance
+        );
+
+  const screenFraction =
+    camera.fov > 0
+      ? angularDiameter /
+        camera.fov
+      : 1;
+
+  const selectedThreshold =
+    instance.thresholds.find(
+      (threshold) =>
+        screenFraction >=
+        threshold
+    );
+
+  for (const mesh of
+    instance.meshes) {
+    const threshold =
+      getMeshLodThreshold(
+        mesh
+      );
+
+    mesh.setEnabled(
+      threshold === null ||
+      threshold ===
+        selectedThreshold
+    );
+  }
+}
+
 function createGeometryMeshes(
   scene: Scene,
   namePrefix: string,
@@ -1187,6 +1330,13 @@ function createGeometryMeshes(
           nightPreviewEnabled
         );
 
+      mesh.metadata = {
+        ...(mesh.metadata ?? {}),
+        mapStudioLodThreshold:
+          meshReference
+            .lodThreshold
+      };
+
       mesh.isPickable = false;
       meshes.push(mesh);
     }
@@ -1331,7 +1481,9 @@ function createSelectedGeometry(
     string,
     OmsiTextureAsset
   >,
-  nightPreviewEnabled: boolean
+  nightPreviewEnabled: boolean,
+  lodInstances:
+    ObjectLodInstance[]
 ) {
   const root = new TransformNode(
     "selected-object-geometry-root",
@@ -1357,6 +1509,19 @@ function createSelectedGeometry(
     mesh.parent = root;
   }
 
+  const lodInstance =
+    createObjectLodInstance(
+      root,
+      meshes,
+      geometry
+    );
+
+  if (lodInstance) {
+    lodInstances.push(
+      lodInstance
+    );
+  }
+
   return root;
 }
 
@@ -1371,7 +1536,9 @@ function createMapObjectGeometry(
     string,
     OmsiTextureAsset
   >,
-  nightPreviewEnabled: boolean
+  nightPreviewEnabled: boolean,
+  lodInstances:
+    ObjectLodInstance[]
 ) {
   const placementsByPath =
     new Map<
@@ -1438,6 +1605,19 @@ function createMapObjectGeometry(
       source.parent = sourceRoot;
     }
 
+    const sourceLodInstance =
+      createObjectLodInstance(
+        sourceRoot,
+        sourceMeshes,
+        geometry
+      );
+
+    if (sourceLodInstance) {
+      lodInstances.push(
+        sourceLodInstance
+      );
+    }
+
     for (
       let placementIndex = 1;
       placementIndex <
@@ -1457,23 +1637,47 @@ function createMapObjectGeometry(
         ]
       );
 
+      const cloneMeshes:
+        Mesh[] = [];
+
       for (
         let meshIndex = 0;
         meshIndex <
           sourceMeshes.length;
         meshIndex += 1
       ) {
-        const clone =
+        const source =
           sourceMeshes[
             meshIndex
-          ].clone(
+          ];
+
+        const clone =
+          source.clone(
             `map-object-instance-${placementIndex}-${meshIndex}`,
             root
           );
 
         if (clone) {
+          clone.metadata = {
+            ...(source.metadata ?? {})
+          };
+
           clone.isPickable = false;
+          cloneMeshes.push(clone);
         }
+      }
+
+      const lodInstance =
+        createObjectLodInstance(
+          root,
+          cloneMeshes,
+          geometry
+        );
+
+      if (lodInstance) {
+        lodInstances.push(
+          lodInstance
+        );
       }
     }
   }
@@ -1618,6 +1822,9 @@ export function Viewport({
 
     const light = new HemisphericLight("editor-light", new Vector3(0, 1, 0), scene);
     light.intensity = 0.9;
+
+    const objectLodInstances:
+      ObjectLodInstance[] = [];
 
     let selectionMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | undefined;
 
@@ -1795,7 +2002,8 @@ export function Viewport({
           objects,
           objectGeometryByPath,
           textureAssetsByKey,
-          nightPreviewEnabled
+          nightPreviewEnabled,
+          objectLodInstances
         );
 
         const markerObjects =
@@ -1889,7 +2097,8 @@ export function Viewport({
           placementPreview,
           placementGeometry,
           textureAssetsByKey,
-          nightPreviewEnabled
+          nightPreviewEnabled,
+          objectLodInstances
         );
       }
 
@@ -2022,7 +2231,8 @@ export function Viewport({
         selectedObject,
         selectedGeometry,
         textureAssetsByKey,
-        nightPreviewEnabled
+        nightPreviewEnabled,
+        objectLodInstances
       );
     }
 
@@ -2056,7 +2266,8 @@ export function Viewport({
             selectedObject,
             selectedGeometry,
             textureAssetsByKey,
-            nightPreviewEnabled
+            nightPreviewEnabled,
+            objectLodInstances
           );
       } else {
         editRoot =
@@ -2516,6 +2727,33 @@ export function Viewport({
     canvas.addEventListener("pointerup", handlePointerUp);
     canvas.addEventListener("pointercancel", handlePointerCancel);
 
+    const refreshObjectLods =
+      () => {
+        for (const instance of
+          objectLodInstances) {
+          updateObjectLod(
+            instance,
+            camera
+          );
+        }
+      };
+
+    refreshObjectLods();
+
+    let lodFrame = 0;
+
+    const lodObserver =
+      scene.onBeforeRenderObservable.add(
+        () => {
+          lodFrame =
+            (lodFrame + 1) % 6;
+
+          if (lodFrame === 0) {
+            refreshObjectLods();
+          }
+        }
+      );
+
     engine.runRenderLoop(() => scene.render());
 
     const resize = () => engine.resize();
@@ -2526,6 +2764,13 @@ export function Viewport({
       canvas.removeEventListener("pointerup", handlePointerUp);
       canvas.removeEventListener("pointercancel", handlePointerCancel);
       window.removeEventListener("resize", resize);
+
+      if (lodObserver) {
+        scene.onBeforeRenderObservable.remove(
+          lodObserver
+        );
+      }
+
       gizmoManager?.dispose();
       scene.dispose();
       engine.dispose();
