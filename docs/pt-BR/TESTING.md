@@ -309,3 +309,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 9. inicie o carregamento progressivo de vários O3D/texturas, mova a câmera durante o processo e confirme que posição/alvo/zoom não retornam ao enquadramento inicial;
 10. confirme que clique esquerdo, seleção e gizmos continuam funcionando;
 11. valide **F**, **Home**, **1** e **2** após navegar manualmente.
+
+## Teste da malha de terreno
+
+1. abra Grundorf e aguarde a leitura dos tiles;
+2. confirme que **Terreno** está habilitado e que o fundo plano é substituído pela malha de altura onde houver `.map.terrain` válido;
+3. no inspetor, confirme **60×60 células**, **3.721 alturas** e um intervalo de altitude coerente para o tile ativo;
+4. altere o tile ativo no modo 3×3 e confirme que as novas malhas acompanham a região carregada;
+5. desligue **Terreno** e confirme que a geometria de altura desaparece sem afetar objetos/splines;
+6. reative a camada e confirme que a câmera enquadra a altitude do terreno, sem voltar para Y=0 em mapas elevados;
+7. valide um sidecar inválido/truncado e confirme que o mapa continua abrindo, o diagnóstico mantém o arquivo visível e nenhuma malha falsa é criada;
+8. confirme que nenhum arquivo `.terrain` é modificado.
