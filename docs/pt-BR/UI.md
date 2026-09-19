@@ -499,3 +499,12 @@ Ao carregar `tile.map.N.dds`, o editor compara largura/altura reais com a resolu
 A camada base do terreno usa a textura real declarada em `[groundtex]` como **albedo**. Formatos decodificados diretamente pelo WebView/Chromium, como BMP, PNG, JPEG, GIF e WebP, não são mais forçados pelo caminho de loaders de textura do Babylon; somente DDS e TGA continuam usando os loaders dedicados.
 
 A camada 0 é tratada como opaca e o material do terreno não multiplica a textura pela iluminação arbitrária do editor. Isso evita que uma textura real carregada seja apresentada quase preta por uma combinação de loader/material/iluminação. A orientação UV e os valores de repetição continuam vindo dos dados reais já conhecidos; nenhum blend de textura de detalhe é inventado nesta etapa.
+
+
+## Carregamento bloqueante
+
+Carregamentos estruturais que alteram o estado editável do mapa agora usam uma sobreposição central animada. Durante seleção/leitura da instalação do OMSI, abertura de mapa, carregamento completo, troca da área 3×3, leitura de SCO/O3D/SLI e carregamento inicial das bibliotecas, a interface bloqueia clique, foco e atalhos de edição até o host concluir a operação.
+
+Quando o host fornece progresso real, como no carregamento dos tiles do mapa completo e na preparação progressiva de O3D, a sobreposição exibe percentual e barra de progresso. Operações sem progresso numérico usam animação indeterminada. O bloqueio é liberado também em caso de erro para não deixar a interface presa.
+
+O prefetch limitado de texturas continua sendo tratado como cache visual em segundo plano depois que a estrutura editável correspondente já está pronta; ele não é usado como motivo para congelar indefinidamente o editor.

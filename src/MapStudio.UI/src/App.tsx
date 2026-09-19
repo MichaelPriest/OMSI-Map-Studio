@@ -768,6 +768,66 @@ export function App() {
   const [saveNotice, setSaveNotice] =
     useState<string>();
 
+  const interactionLocked =
+    selectingRoot ||
+    selectingMap ||
+    loadingFullMap ||
+    Boolean(loadingRegionKey) ||
+    Boolean(loadingSplineFor) ||
+    Boolean(preloadingSplineProfileFor) ||
+    Boolean(loadingMetadataFor) ||
+    Boolean(loadingGeometryFor) ||
+    Boolean(preloadingGeometryFor) ||
+    loadingSceneryLibrary ||
+    loadingSplineLibrary;
+
+  useEffect(() => {
+    if (!interactionLocked) {
+      return;
+    }
+
+    const activeElement =
+      document.activeElement;
+
+    if (
+      activeElement instanceof
+      HTMLElement
+    ) {
+      activeElement.blur();
+    }
+
+    const blockKeyboard = (
+      event: KeyboardEvent
+    ) => {
+      if (
+        event.key === "F11" ||
+        (event.key === "Escape" &&
+          isFullScreen)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+
+    window.addEventListener(
+      "keydown",
+      blockKeyboard,
+      true
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        blockKeyboard,
+        true
+      );
+  }, [
+    interactionLocked,
+    isFullScreen
+  ]);
+
   useEffect(
     () =>
       subscribeToHost((message) => {
@@ -5137,17 +5197,147 @@ export function App() {
   };
 
   const busy =
-    selectingRoot ||
-    selectingMap ||
+    interactionLocked ||
     saving ||
     savingSpline ||
     savingSplineLinks ||
     insertingObject ||
     deletingObject ||
     insertingSpline ||
-    deletingSpline ||
-    loadingFullMap ||
-    Boolean(loadingRegionKey);
+    deletingSpline;
+
+  const loadingOverlay = (() => {
+    if (selectingRoot) {
+      return {
+        title: "Conectando ao OMSI 2",
+        detail:
+          "Validando a instalação e preparando a lista real de mapas."
+      };
+    }
+
+    if (selectingMap) {
+      return {
+        title: "Abrindo mapa",
+        detail:
+          "Lendo global.cfg e validando a estrutura do mapa antes de liberar a edição."
+      };
+    }
+
+    if (loadingFullMap) {
+      const completed =
+        fullMapProgress?.completed ?? 0;
+      const total =
+        fullMapProgress?.total ??
+        selectedMap?.tiles.length ??
+        0;
+
+      return {
+        title: "Carregando mapa completo",
+        detail:
+          selectedMap
+            ? `Preparando ${selectedMap.displayName} para edição.`
+            : "Preparando tiles, objetos, splines e terreno.",
+        completed,
+        total
+      };
+    }
+
+    if (loadingRegionKey) {
+      return {
+        title: "Carregando área ativa",
+        detail:
+          "Atualizando os tiles do modo desempenho 3×3. A edição será liberada quando a área estiver consistente."
+      };
+    }
+
+    if (preloadingGeometryFor) {
+      const fullMode =
+        mapLoadMode === "full";
+      const completed =
+        fullMode
+          ? loadedMapGeometryCount
+          : loadedNearbyGeometryCount;
+      const total =
+        fullMode
+          ? mapObjectPaths.length
+          : nearbyObjectPaths.length;
+
+      return {
+        title: "Preparando modelos 3D",
+        detail:
+          "Carregando a geometria O3D real necessária para o viewport.",
+        completed,
+        total
+      };
+    }
+
+    if (loadingGeometryFor) {
+      return {
+        title: "Carregando geometria O3D",
+        detail:
+          "Aguarde a leitura do modelo real antes de continuar a edição."
+      };
+    }
+
+    if (loadingMetadataFor) {
+      return {
+        title: "Lendo objeto SCO",
+        detail:
+          "Validando metadados e referências reais do objeto selecionado."
+      };
+    }
+
+    if (
+      loadingSplineFor ||
+      preloadingSplineProfileFor
+    ) {
+      return {
+        title: "Preparando perfis de spline",
+        detail:
+          "Lendo os arquivos SLI reais necessários para o mapa."
+      };
+    }
+
+    if (loadingSceneryLibrary) {
+      return {
+        title: "Carregando biblioteca de objetos",
+        detail:
+          "Lendo Sceneryobjects instalados no OMSI 2."
+      };
+    }
+
+    if (loadingSplineLibrary) {
+      return {
+        title: "Carregando biblioteca de splines",
+        detail:
+          "Lendo Splines instaladas no OMSI 2."
+      };
+    }
+
+    return undefined;
+  })();
+
+  const loadingPercentage =
+    loadingOverlay &&
+    "completed" in loadingOverlay &&
+    "total" in loadingOverlay &&
+    typeof loadingOverlay.completed ===
+      "number" &&
+    typeof loadingOverlay.total ===
+      "number" &&
+    loadingOverlay.total > 0
+      ? Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round(
+              (loadingOverlay.completed /
+                loadingOverlay.total) *
+                100
+            )
+          )
+        )
+      : undefined;
 
   const renderNav = () => (
     <aside className="studio-sidebar">
@@ -8518,14 +8708,6 @@ export function App() {
               </button>
             </div>
 
-            {(loadingFullMap ||
-              Boolean(loadingRegionKey)) && (
-              <div className="viewport-loading">
-                {loadingFullMap
-                  ? `Carregando mapa completo${fullMapProgress ? ` · ${fullMapProgress.completed}/${fullMapProgress.total} tiles` : ""}...`
-                  : "Carregando área ativa..."}
-              </div>
-            )}
           </section>
 
           <aside className="object-inspector">
@@ -8649,7 +8831,14 @@ export function App() {
   );
 
   return (
-    <main className="studio-shell">
+    <main
+      className={
+        interactionLocked
+          ? "studio-shell interaction-locked"
+          : "studio-shell"
+      }
+      aria-busy={interactionLocked}
+    >
       {renderNav()}
 
       <section className="studio-main">
@@ -8703,6 +8892,95 @@ export function App() {
             )}
         </div>
       </section>
+
+      {interactionLocked &&
+        loadingOverlay && (
+          <div
+            className="global-loading-lock"
+            role="status"
+            aria-live="polite"
+            aria-label={
+              loadingOverlay.title
+            }
+          >
+            <div className="loading-lock-card">
+              <div
+                className="loading-orbit"
+                aria-hidden="true"
+              >
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <div className="loading-lock-copy">
+                <span className="loading-lock-kicker">
+                  OMSI MAP STUDIO
+                </span>
+                <strong>
+                  {loadingOverlay.title}
+                </strong>
+                <p>
+                  {loadingOverlay.detail}
+                </p>
+              </div>
+
+              <div
+                className={
+                  loadingPercentage ===
+                  undefined
+                    ? "loading-progress indeterminate"
+                    : "loading-progress"
+                }
+                role={
+                  loadingPercentage ===
+                  undefined
+                    ? undefined
+                    : "progressbar"
+                }
+                aria-valuemin={
+                  loadingPercentage ===
+                  undefined
+                    ? undefined
+                    : 0
+                }
+                aria-valuemax={
+                  loadingPercentage ===
+                  undefined
+                    ? undefined
+                    : 100
+                }
+                aria-valuenow={
+                  loadingPercentage
+                }
+              >
+                <span
+                  style={
+                    loadingPercentage ===
+                    undefined
+                      ? undefined
+                      : {
+                          width: `${loadingPercentage}%`
+                        }
+                  }
+                />
+              </div>
+
+              <div className="loading-lock-meta">
+                <span>
+                  {loadingPercentage ===
+                  undefined
+                    ? "Processando..."
+                    : `${loadingPercentage}%`}
+                </span>
+                <span>
+                  Interações bloqueadas até
+                  concluir
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
     </main>
   );
 }

@@ -378,3 +378,15 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 5. confirme que o inspetor mostra a dimensão real e a dimensão esperada;
 6. confirme que a camada incompatível fica desabilitada e não é renderizada;
 7. restaure a máscara correta e confirme que a camada volta a aparecer sem alterar o `global.cfg`.
+
+
+## Teste do bloqueio durante carregamento
+
+1. abra uma instalação do OMSI e confirme que a sobreposição animada aparece durante a leitura;
+2. abra um mapa em modo completo e confirme barra/percentual conforme os tiles avançam;
+3. enquanto a sobreposição estiver visível, tente clicar no Explorer, Inspetor, viewport, menus e atalhos de edição e confirme que nenhuma alteração é aceita;
+4. confirme que a preparação progressiva de O3D também mantém a edição bloqueada até a estrutura visual necessária ficar pronta;
+5. alterne para modo desempenho 3×3, mude o tile ativo e confirme bloqueio temporário enquanto a nova região é carregada;
+6. abra Biblioteca/Splines vazias pela primeira vez e confirme a animação até o host devolver a lista;
+7. provoque um erro de leitura em um mapa de teste e confirme que o bloqueio desaparece junto com a mensagem de erro;
+8. confirme que F11 e a saída de tela cheia continuam utilizáveis sem permitir edição durante o bloqueio.

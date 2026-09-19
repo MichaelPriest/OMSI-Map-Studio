@@ -499,3 +499,12 @@ When loading `tile.map.N.dds`, the editor compares the real width/height against
 The terrain base layer uses the real texture declared by `[groundtex]` as **albedo**. Formats decoded directly by the WebView/Chromium path, such as BMP, PNG, JPEG, GIF, and WebP, are no longer forced through Babylon's texture-loader path; only DDS and TGA continue to use dedicated loaders.
 
 Layer 0 is treated as opaque and the terrain material no longer multiplies the source texture by arbitrary editor lighting. This prevents a real loaded texture from appearing almost black because of loader/material/lighting interaction. UV orientation and repeating values continue to come from the known real data; no detail-texture blend is invented at this stage.
+
+
+## Blocking loading UI
+
+Structural loads that change editable map state now use a centered animated overlay. While selecting/reading the OMSI installation, opening a map, loading the full map, changing the active 3×3 area, reading SCO/O3D/SLI data, or initially loading libraries, the UI blocks pointer input, focus, and editing shortcuts until the host finishes the operation.
+
+When the host exposes real progress, such as full-map tile loading and progressive O3D preparation, the overlay shows a percentage and progress bar. Operations without numeric progress use an indeterminate animation. The lock is also released on host errors so the editor cannot remain stuck.
+
+Bounded texture prefetch remains a background visual cache after the corresponding editable structure is ready; it is not used as a reason to freeze the editor indefinitely.

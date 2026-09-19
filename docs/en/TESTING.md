@@ -378,3 +378,15 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 5. verify the inspector shows both the real and expected dimensions;
 6. verify the incompatible layer is disabled and not rendered;
 7. restore the correct mask and verify the layer becomes visible again without modifying `global.cfg`.
+
+
+## Loading-lock test
+
+1. open an OMSI installation and verify the animated overlay appears while it is being read;
+2. open a map in full mode and verify the bar/percentage advances with tile progress;
+3. while the overlay is visible, try the Explorer, Inspector, viewport, menus, and editing shortcuts and verify no edit is accepted;
+4. verify progressive O3D preparation also keeps editing locked until the required visual structure is ready;
+5. switch to 3×3 performance mode, change the active tile, and verify a temporary lock while the new region loads;
+6. open empty Object/Spline libraries for the first time and verify the animation remains until the host returns the list;
+7. trigger a read error in a test map and verify the lock disappears together with the error message;
+8. verify F11 and leaving fullscreen remain available without enabling editing during the lock.
