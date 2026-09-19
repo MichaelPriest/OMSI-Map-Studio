@@ -203,3 +203,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. change the active tile and verify new nearby resources can use any remaining budget;
 5. select an object whose texture was outside the budget and verify selection still loads it normally;
 6. verify nearby spline profiles load one at a time and the same asset is not requested twice.
+
+
+## `[matl_alpha]` test
+
+1. open an object with `[matl]` + `[matl_alpha] 1` and verify cutout without partial blending;
+2. open an object with `[matl_alpha] 2` and verify partial transparency;
+3. verify the `SCO: alpha ...` line in **Materials**;
+4. test `[matl_noZwrite]` and `[matl_noZcheck]` on a known object;
+5. use a `.sco` with `[matl_change]` and verify dynamic state is not applied as a static override;
+6. verify a material whose index/texture name does not match the O3D receives no override.

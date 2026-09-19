@@ -2614,6 +2614,32 @@ export function App() {
                   )
                 : undefined;
 
+            const normalizedTexture =
+              material.textureName
+                ?.replace(/\\/g, "/")
+                .split("/")
+                .at(-1)
+                ?.toLocaleLowerCase(
+                  "en-US"
+                );
+
+            const materialOverride =
+              normalizedTexture
+                ? mesh.materialOverrides.find(
+                    (override) =>
+                      override.materialIndex ===
+                        index &&
+                      override.textureName
+                        .replace(/\\/g, "/")
+                        .split("/")
+                        .at(-1)
+                        ?.toLocaleLowerCase(
+                          "en-US"
+                        ) ===
+                        normalizedTexture
+                  )
+                : undefined;
+
             return {
               mesh: getObjectName(
                 mesh.declaredPath
@@ -2622,6 +2648,7 @@ export function App() {
                 mesh.declaredPath,
               index,
               material,
+              materialOverride,
               textureAsset:
                 textureKey
                   ? textureAssetsByKey[
@@ -4944,6 +4971,22 @@ export function App() {
                       >
                         {textureState.label}
                       </span>
+                      {row.materialOverride && (
+                        <small>
+                          SCO: alpha{" "}
+                          {row.materialOverride
+                            .alphaMode ??
+                            "padrão"}
+                          {row.materialOverride
+                            .noZWrite
+                            ? " · noZwrite"
+                            : ""}
+                          {row.materialOverride
+                            .noZCheck
+                            ? " · noZcheck"
+                            : ""}
+                        </small>
+                      )}
                     </div>
                   </div>
                 );

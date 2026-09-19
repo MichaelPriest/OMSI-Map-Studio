@@ -340,3 +340,16 @@ O mapa agora pode receber texturas reais progressivamente mesmo sem selecionar c
 O limite automático é de **24 texturas por mapa/sessão**: 16 de objetos e 8 de splines. A barra inferior mostra `Texturas auto: X/24`. Seleções e prévias continuam carregando suas texturas independentemente desse limite.
 
 Perfis `.sli` próximos também são preparados progressivamente, um por vez, para permitir que superfícies de spline recebam textura sem disparar leitura maciça.
+
+
+## Transparência definida pelo SCO
+
+O preview O3D passa a respeitar overrides estáticos do `.sco` para `[matl_alpha]`, `[matl_noZwrite]` e `[matl_noZcheck]`.
+
+- `matl_alpha 0`: textura opaca;
+- `matl_alpha 1`: recorte de alpha (folhas/grades/placas com pixels transparentes);
+- `matl_alpha 2`: transparência parcial (por exemplo vidro);
+- `matl_noZwrite`: não grava profundidade;
+- `matl_noZcheck`: não bloqueia o desenho pelo teste Z.
+
+A aba **Materiais** mostra a linha `SCO:` quando um override estático foi realmente associado ao material. Materiais `[matl_change]` continuam sem estado fake porque dependem de scripts/variáveis do OMSI.

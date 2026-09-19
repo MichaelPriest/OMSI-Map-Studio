@@ -152,9 +152,20 @@ export type OmsiTextureAsset = {
   errorCode: string | null;
 };
 
+export type OmsiSceneryMaterialOverride = {
+  meshOrdinal: number;
+  textureName: string;
+  materialIndex: number;
+  alphaMode: number | null;
+  noZWrite: boolean;
+  noZCheck: boolean;
+};
+
 export type OmsiSceneryObjectGeometry = {
   meshes: Array<{
     declaredPath: string;
+    materialOverrides:
+      OmsiSceneryMaterialOverride[];
     geometry: OmsiO3dGeometry;
   }>;
 };

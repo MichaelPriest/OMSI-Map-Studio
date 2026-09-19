@@ -328,3 +328,12 @@ Além do carregamento prioritário da seleção/prévia, a UI mantém uma janela
 Perfis `.sli` próximos são carregados um por vez. As texturas usam orçamento separado de 16 assets automáticos de objetos + 8 de splines (24 no total), em pequenos lotes de 4 + 2 por ciclo. O cache e `requestedTextureKeys` impedem pedidos duplicados.
 
 A seleção e a prévia não consomem esse orçamento automático: continuam tendo prioridade e podem solicitar seus próprios assets.
+
+
+## Overrides estáticos de material do SCO
+
+`OmsiSceneryObjectReader` agora mantém a ordem dos `[mesh]` e associa `[matl]` ao mesh anterior por ordinal. O override estático guarda nome da textura, índice do material, `[matl_alpha]`, `[matl_noZwrite]` e `[matl_noZcheck]`.
+
+`[matl_change]` encerra o contexto estático e não é aplicado como material fixo, porque depende de variável/script em runtime. No React, o override só é aceito quando índice e nome-base da textura correspondem ao material O3D.
+
+Mapeamento atual: alpha 0 = opaco; alpha 1 = alpha-test/cutout; alpha 2 = alpha-blend; noZwrite desativa escrita de profundidade; noZcheck usa teste de profundidade ALWAYS.

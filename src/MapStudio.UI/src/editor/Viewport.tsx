@@ -3,6 +3,7 @@ import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
+import { Material } from "@babylonjs/core/Materials/material";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
 import { Texture } from "@babylonjs/core/Materials/Textures/texture";
 import "@babylonjs/core/Materials/Textures/Loaders/ddsTextureLoader";
@@ -17,6 +18,7 @@ import type {
   OmsiPlacedObject,
   OmsiPlacedSpline,
   OmsiSplineDefinition,
+  OmsiSceneryMaterialOverride,
   OmsiSceneryObjectGeometry,
   OmsiTextureAsset,
   OmsiTile
@@ -722,6 +724,50 @@ function createTextureFromAsset(
   return texture;
 }
 
+function normalizeTextureFileName(
+  value: string
+) {
+  return value
+    .replace(/\\/g, "/")
+    .split("/")
+    .at(-1)
+    ?.toLocaleLowerCase("en-US") ??
+    value.toLocaleLowerCase(
+      "en-US"
+    );
+}
+
+function findMaterialOverride(
+  overrides:
+    OmsiSceneryMaterialOverride[],
+  materialIndex: number,
+  textureName:
+    | string
+    | null
+    | undefined
+) {
+  if (
+    materialIndex < 0 ||
+    !textureName
+  ) {
+    return undefined;
+  }
+
+  const normalized =
+    normalizeTextureFileName(
+      textureName
+    );
+
+  return overrides.find(
+    (override) =>
+      override.materialIndex ===
+        materialIndex &&
+      normalizeTextureFileName(
+        override.textureName
+      ) === normalized
+  );
+}
+
 function createPreviewMaterial(
   scene: Scene,
   namePrefix: string,
@@ -732,6 +778,9 @@ function createPreviewMaterial(
     | undefined,
   textureAsset:
     | OmsiTextureAsset
+    | undefined,
+  materialOverride:
+    | OmsiSceneryMaterialOverride
     | undefined
 ) {
   const material = new StandardMaterial(
@@ -785,8 +834,48 @@ function createPreviewMaterial(
   if (texture) {
     material.diffuseTexture =
       texture;
-    material.useAlphaFromDiffuseTexture =
+
+    const alphaMode =
+      materialOverride?.alphaMode;
+
+    if (alphaMode === 0) {
+      material.useAlphaFromDiffuseTexture =
+        false;
+
+      material.transparencyMode =
+        Material.MATERIAL_OPAQUE;
+    } else if (alphaMode === 1) {
+      texture.hasAlpha = true;
+
+      material.useAlphaFromDiffuseTexture =
+        true;
+
+      material.transparencyMode =
+        Material.MATERIAL_ALPHATEST;
+
+      material.alphaCutOff = 0.4;
+    } else if (alphaMode === 2) {
+      texture.hasAlpha = true;
+
+      material.useAlphaFromDiffuseTexture =
+        true;
+
+      material.transparencyMode =
+        Material.MATERIAL_ALPHABLEND;
+    } else {
+      material.useAlphaFromDiffuseTexture =
+        false;
+    }
+  }
+
+  if (materialOverride?.noZWrite) {
+    material.disableDepthWrite =
       true;
+  }
+
+  if (materialOverride?.noZCheck) {
+    material.depthFunction =
+      Engine.ALWAYS;
   }
 
   return material;
@@ -920,6 +1009,16 @@ function createGeometryMeshes(
                   )
                 ];
               })()
+            : undefined,
+          materialIndex >= 0
+            ? findMaterialOverride(
+                meshReference
+                  .materialOverrides,
+                materialIndex,
+                meshGeometry.materials[
+                  materialIndex
+                ]?.textureName
+              )
             : undefined
         );
 

@@ -4061,8 +4061,25 @@ public partial class MainWindow : Window
             var meshes = new List<object>(
                 metadata.MeshPaths.Count);
 
-            foreach (var declaredPath in metadata.MeshPaths)
+            for (
+                var meshOrdinal = 0;
+                meshOrdinal <
+                    metadata.MeshPaths.Count;
+                meshOrdinal++)
             {
+                var declaredPath =
+                    metadata.MeshPaths[
+                        meshOrdinal];
+
+                var materialOverrides =
+                    metadata.MaterialOverrides
+                        .Where(
+                            material =>
+                                material
+                                    .MeshOrdinal ==
+                                meshOrdinal)
+                        .ToArray();
+
                 if (!OmsiSceneryMeshPathResolver.TryResolve(
                         _omsiRootPath,
                         sceneryObjectFullPath,
@@ -4072,6 +4089,7 @@ public partial class MainWindow : Window
                     meshes.Add(new
                     {
                         declaredPath,
+                        materialOverrides,
                         geometry =
                             OmsiO3dGeometry.Error(
                                 "invalidMeshPath")
@@ -4087,6 +4105,7 @@ public partial class MainWindow : Window
                     meshes.Add(new
                     {
                         declaredPath,
+                        materialOverrides,
                         geometry =
                             OmsiO3dGeometry.Error(
                                 "unsupportedFormat")
@@ -4097,6 +4116,7 @@ public partial class MainWindow : Window
                 meshes.Add(new
                 {
                     declaredPath,
+                    materialOverrides,
                     geometry =
                         _o3dGeometryReader.Read(
                             meshFullPath)

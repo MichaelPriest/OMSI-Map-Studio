@@ -203,3 +203,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. altere o tile ativo e confirme que novos recursos próximos podem ocupar o orçamento ainda disponível;
 5. selecione um objeto cuja textura não entrou no orçamento e confirme que a seleção ainda carrega a textura normalmente;
 6. confirme que perfis de spline próximos são carregados um por vez e que não há pedidos duplicados do mesmo asset.
+
+
+## Teste de `[matl_alpha]`
+
+1. abra um objeto com `[matl]` + `[matl_alpha] 1` e confirme recorte/cutout sem transparência parcial;
+2. abra um objeto com `[matl_alpha] 2` e confirme transparência parcial;
+3. confira no inspetor **Materiais** a linha `SCO: alpha ...`;
+4. teste `[matl_noZwrite]` e `[matl_noZcheck]` em objeto conhecido;
+5. use um `.sco` com `[matl_change]` e confirme que o estado dinâmico não é aplicado como override estático;
+6. confirme que material cujo índice/nome de textura não correspondem ao O3D não recebe override.

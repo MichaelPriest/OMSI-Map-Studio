@@ -328,3 +328,12 @@ In addition to priority loading for selection/placement previews, the UI keeps a
 Nearby `.sli` profiles load one at a time. Textures use separate budgets of 16 automatic object assets + 8 spline assets (24 total), in small batches of 4 + 2 per cycle. The cache and `requestedTextureKeys` prevent duplicate requests.
 
 Selection and placement preview do not consume this automatic budget: they remain priority paths and may request their own assets.
+
+
+## Static SCO material overrides
+
+`OmsiSceneryObjectReader` now preserves `[mesh]` order and associates `[matl]` with the preceding mesh by ordinal. A static override stores texture name, material index, `[matl_alpha]`, `[matl_noZwrite]`, and `[matl_noZcheck]`.
+
+`[matl_change]` ends the static context and is not applied as a fixed material because it depends on runtime variables/scripts. In React an override is accepted only when both material index and texture basename match the O3D material.
+
+Current mapping: alpha 0 = opaque; alpha 1 = alpha-test/cutout; alpha 2 = alpha-blend; noZwrite disables depth writing; noZcheck uses the ALWAYS depth test.
