@@ -558,3 +558,14 @@ O3D binary mesh coordinates use a local axis convention that differs from map/SC
 O3D section `0x79` is preserved as transform metadata and is no longer baked into preview vertices as an isolated inverse transform. Applying only the inverse displaced/rotated meshes without re-applying the corresponding object transform.
 
 When a diffuse texture exists, its RGB is now used directly as the surface colour. Material `diffuseColor` no longer multiplies the texture, preventing valid OMSI textures from becoming dark or black.
+
+
+## Correct OMSI → viewport rotation-axis conversion
+
+Map-object rotation now follows the OMSI Z-up storage order. After converting OMSI coordinates `(X,Y,Z)` into viewport coordinates `(X,Z,Y)`, the mapping is:
+
+- OMSI main/Z rotation → viewport Y yaw;
+- OMSI X pitch → viewport X pitch;
+- OMSI Y bank → viewport Z roll.
+
+Local SCO mesh transforms `[rot_x]`, `[rot_y]`, and `[rot_z]` use the same sign convention. The edit gizmo converts back to OMSI fields in that same order.
