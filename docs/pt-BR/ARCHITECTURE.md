@@ -518,3 +518,10 @@ A interface separa malhas realmente renderizáveis de assets protegidos. Marcado
 O leitor O3D passa a tratar o cabeçalho estendido protegido dentro do próprio Core. A transformação de vértices é aplicada em memória durante a leitura, antes da conversão de eixos para o viewport. O arquivo original nunca é regravado.
 
 A implementação mantém limites defensivos. Malhas protegidas com domínio de vértices ainda não validado retornam `protectedVertexCountUnsupported` em vez de produzir geometria aproximada.
+
+
+## Carregamento completo de texturas no modo mapa completo
+
+O modo **Mapa completo** deixa de usar o teto de texturas pensado para o modo 3×3. O prefetch de objetos passa a aceitar até 1024 texturas e o de splines até 256, em lotes progressivos, com cache de até 1536 assets. O modo desempenho mantém os limites menores para preservar responsividade.
+
+O Inspetor e a barra de estado passam a separar texturas carregadas, falhas de resolução/leitura e requisições pendentes. Isso evita considerar uma geometria O3D corretamente aberta como visualmente concluída quando sua textura ainda não foi carregada.
