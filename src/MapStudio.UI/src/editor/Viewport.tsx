@@ -85,6 +85,9 @@ type ViewportProps = {
   onPreviewObjectTransform: (
     placedObject: OmsiPlacedObject
   ) => void;
+  onPreviewSplineTransform: (
+    placedSpline: OmsiPlacedSpline
+  ) => void;
 };
 
 function createTileSurface(
@@ -419,7 +422,8 @@ function isSameSpline(
 function createSelectedSplineProfile(
   scene: Scene,
   placedSpline: OmsiPlacedSpline,
-  definition: OmsiSplineDefinition
+  definition: OmsiSplineDefinition,
+  parent?: TransformNode
 ) {
   const length =
     Math.max(0, placedSpline.length);
@@ -590,6 +594,10 @@ function createSelectedSplineProfile(
 
     mesh.material = material;
     mesh.isPickable = false;
+
+    if (parent) {
+      mesh.parent = parent;
+    }
   }
 }
 
@@ -809,6 +817,91 @@ function configureObjectRoot(
     );
 }
 
+function getSplineWorldStart(
+  placedSpline: OmsiPlacedSpline
+) {
+  return new Vector3(
+    placedSpline.tileX * 300 +
+      placedSpline.x,
+    placedSpline.z,
+    placedSpline.tileY * 300 +
+      placedSpline.y
+  );
+}
+
+function createSplineEditRoot(
+  scene: Scene,
+  placedSpline: OmsiPlacedSpline,
+  definition:
+    | OmsiSplineDefinition
+    | undefined
+) {
+  const root =
+    new TransformNode(
+      "selected-spline-edit-root",
+      scene
+    );
+
+  root.position.copyFrom(
+    getSplineWorldStart(
+      placedSpline
+    )
+  );
+
+  root.rotationQuaternion =
+    Quaternion.RotationYawPitchRoll(
+      placedSpline.rotation *
+        degreesToRadians,
+      0,
+      0
+    );
+
+  const localSpline: OmsiPlacedSpline = {
+    ...placedSpline,
+    tileX: 0,
+    tileY: 0,
+    x: 0,
+    y: 0,
+    z: 0,
+    rotation: 0
+  };
+
+  const points =
+    getSplineAxisLine(
+      localSpline
+    );
+
+  if (points.length >= 2) {
+    const axis =
+      MeshBuilder.CreateLines(
+        "selected-spline-edit-axis",
+        { points },
+        scene
+      );
+
+    axis.color =
+      new Color3(
+        0.25,
+        1,
+        0.65
+      );
+
+    axis.isPickable = false;
+    axis.parent = root;
+  }
+
+  if (definition) {
+    createSelectedSplineProfile(
+      scene,
+      localSpline,
+      definition,
+      root
+    );
+  }
+
+  return root;
+}
+
 function hasRenderableGeometry(
   geometry:
     | OmsiSceneryObjectGeometry
@@ -993,7 +1086,8 @@ export function Viewport({
   selectedSplineProfile,
   onSelectObject,
   onSelectSpline,
-  onPreviewObjectTransform
+  onPreviewObjectTransform,
+  onPreviewSplineTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -1206,6 +1300,16 @@ export function Viewport({
             placedSpline,
             splineIndex
           ) => {
+            if (
+              editorTool !== "select" &&
+              isSameSpline(
+                placedSpline,
+                selectedSpline
+              )
+            ) {
+              return;
+            }
+
             const points =
               getSplineAxisLine(
                 placedSpline
@@ -1386,7 +1490,8 @@ export function Viewport({
       showSplines &&
       !usesWorldCoordinates &&
       selectedSpline &&
-      selectedSplineProfile
+      selectedSplineProfile &&
+      editorTool === "select"
     ) {
       createSelectedSplineProfile(
         scene,
@@ -1425,6 +1530,8 @@ export function Viewport({
     let editRoot:
       TransformNode | undefined;
 
+    let editingSpline = false;
+
     if (
       !placementAssetPath &&
       !usesWorldCoordinates &&
@@ -1455,6 +1562,21 @@ export function Viewport({
           selectedObject
         );
       }
+    } else if (
+      !placementAssetPath &&
+      !usesWorldCoordinates &&
+      showSplines &&
+      selectedSpline &&
+      editorTool !== "select"
+    ) {
+      editRoot =
+        createSplineEditRoot(
+          scene,
+          selectedSpline,
+          selectedSplineProfile
+        );
+
+      editingSpline = true;
     }
 
     let gizmoManager:
@@ -1492,13 +1614,25 @@ export function Viewport({
         gizmoManager.gizmos
           .rotationGizmo
       ) {
-        gizmoManager.gizmos
-          .rotationGizmo
+        const rotationGizmo =
+          gizmoManager.gizmos
+            .rotationGizmo;
+
+        rotationGizmo
           .snapDistance =
           snapEnabled
             ? rotationSnap *
               degreesToRadians
             : 0;
+
+        if (editingSpline) {
+          rotationGizmo
+            .xGizmo
+            .isEnabled = false;
+          rotationGizmo
+            .zGizmo
+            .isEnabled = false;
+        }
       }
 
       gizmoManager.attachToNode(
@@ -1506,10 +1640,7 @@ export function Viewport({
       );
 
       const commitPreview = () => {
-        if (
-          !selectedObject ||
-          !editRoot
-        ) {
+        if (!editRoot) {
           return;
         }
 
@@ -1519,27 +1650,49 @@ export function Viewport({
             ?.toEulerAngles() ??
           editRoot.rotation;
 
-        onPreviewObjectTransform({
-          ...selectedObject,
-          x:
-            editRoot.position.x -
-            selectedObject.tileX *
-              300,
-          y:
-            editRoot.position.z -
-            selectedObject.tileY *
-              300,
-          z: editRoot.position.y,
-          rotation:
-            -euler.y /
-            degreesToRadians,
-          bank:
-            -euler.x /
-            degreesToRadians,
-          pitch:
-            -euler.z /
-            degreesToRadians
-        });
+        if (selectedObject) {
+          onPreviewObjectTransform({
+            ...selectedObject,
+            x:
+              editRoot.position.x -
+              selectedObject.tileX *
+                300,
+            y:
+              editRoot.position.z -
+              selectedObject.tileY *
+                300,
+            z: editRoot.position.y,
+            rotation:
+              -euler.y /
+              degreesToRadians,
+            bank:
+              -euler.x /
+              degreesToRadians,
+            pitch:
+              -euler.z /
+              degreesToRadians
+          });
+
+          return;
+        }
+
+        if (selectedSpline) {
+          onPreviewSplineTransform({
+            ...selectedSpline,
+            x:
+              editRoot.position.x -
+              selectedSpline.tileX *
+                300,
+            y:
+              editRoot.position.z -
+              selectedSpline.tileY *
+                300,
+            z: editRoot.position.y,
+            rotation:
+              euler.y /
+              degreesToRadians
+          });
+        }
       };
 
       gizmoManager.gizmos
@@ -1871,7 +2024,8 @@ export function Viewport({
     selectedSplineProfile,
     onSelectObject,
     onSelectSpline,
-    onPreviewObjectTransform
+    onPreviewObjectTransform,
+    onPreviewSplineTransform
   ]);
 
   return <canvas ref={canvasRef} className="viewport-canvas" />;

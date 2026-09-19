@@ -253,3 +253,12 @@ When a spline is selected, the **Path** tab can preview X, Y, Z, rotation, lengt
 
 
 While an unsaved spline preview exists, the editor also blocks **Place**, **Place copy** and **Delete object**, preventing an indirect preview loss when the map reloads.
+
+
+## Visual spline gizmos
+
+With a spline selected, **W** enables the move gizmo and **E** enables the rotation gizmo. Movement adjusts X/Y/Z; visual rotation is restricted to the vertical axis, matching OMSI's spline rotation field.
+
+The selected axis and profile follow the gizmo in real time. The change enters React preview state only when dragging ends, avoiding writes or React updates on every frame. Move/rotation snapping uses the same viewport toolbar values.
+
+The global **Save** button and `Ctrl+S` also save spline previews. The global ✕ button discards a spline preview when it is the pending edit. ↶/↷ remain object-history-only at this stage.

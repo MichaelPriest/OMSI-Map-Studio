@@ -2,7 +2,7 @@
 
 [English](../en/TESTING.md) · **Português (Brasil)**
 
-A **v0.1.0-alpha.3** agora permite salvar apenas **transformações de objetos posicionados**. As demais operações de edição continuam bloqueadas.
+A **v0.1.0-alpha.3** já permite gravação preservativa experimental de transformações de objetos e splines existentes, além de inserção/cópia/exclusão segura de objetos dentro das limitações documentadas.
 
 ## Instalação
 
@@ -36,9 +36,8 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 
 ## Limitações conhecidas
 
-- Salvar atua apenas em posição/rotação/pitch/bank de objetos `[object]` já existentes;
 - criação e cópia só gravam quando existe template seguro do mesmo `.sco`;
-- splines ainda não possuem edição persistente;
+- criação de splines e edição dos vínculos previous/next ainda não existem;
 - terreno binário `.terrain` ainda não é interpretado/editado;
 - texturas de imagem de splines e O3D ainda não são aplicadas;
 - mapas `[worldcoordinates]` continuam limitados;
@@ -98,13 +97,13 @@ Para testar conflito, altere externamente o ID ou caminho `.sco` do objeto antes
 ## Teste de edição de spline
 
 1. selecione uma spline existente;
-2. abra **Traçado**;
-3. altere X/Y/Z, rotação, comprimento, raio ou um gradiente;
-4. confirme que a geometria selecionada usa a prévia;
-5. clique **Descartar prévia** e confirme o retorno aos valores originais;
-6. repita uma alteração e clique **Salvar spline**;
-7. aguarde o recarregamento;
-8. confirme que a alteração persistiu;
+2. pressione **W**, mova o gizmo e confirme que o eixo/perfil acompanham o arraste;
+3. pressione **E** e confirme que apenas a rotação horizontal da spline pode ser alterada;
+4. confirme que o Snap configurado no viewport é respeitado;
+5. abra **Traçado** e altere X/Y/Z, rotação, comprimento, raio ou um gradiente;
+6. clique ✕ ou **Descartar prévia** e confirme o retorno aos valores originais;
+7. repita uma alteração e use **Salvar spline**, o botão global **Salvar** ou `Ctrl+S`;
+8. aguarde o recarregamento e confirme que a alteração persistiu;
 9. confira o backup em `.mapstudio-backups/<timestamp>/`;
 10. confira no tile que ID, previous/next, extras, comentários e seções desconhecidas não foram alterados.
 

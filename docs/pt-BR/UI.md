@@ -253,3 +253,12 @@ Ao selecionar uma spline, a aba **Traçado** permite criar uma prévia para X, Y
 
 
 Enquanto existir uma prévia de spline não salva, o editor também bloqueia **Colocar**, **Colocar cópia** e **Excluir objeto**, evitando descarte indireto da prévia ao recarregar o mapa.
+
+
+## Gizmo visual para splines
+
+Com uma spline selecionada, **W** ativa o gizmo de movimento e **E** ativa o gizmo de rotação. O movimento permite ajustar X/Y/Z; a rotação visual fica restrita ao eixo vertical, correspondente ao campo de rotação do formato OMSI.
+
+O eixo e o perfil selecionados acompanham o gizmo em tempo real. A alteração só entra no estado de prévia quando o arraste termina, evitando gravações ou atualizações React a cada frame. Snap de movimento/rotação usa os mesmos valores configurados na barra do viewport.
+
+O botão global **Salvar** e `Ctrl+S` também salvam prévias de spline. O botão global ✕ descarta a prévia de spline quando ela for a edição pendente. ↶/↷ continuam exclusivos do histórico de objetos nesta etapa.

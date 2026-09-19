@@ -2,7 +2,7 @@
 
 **English** · [Português (Brasil)](../pt-BR/TESTING.md)
 
-**v0.1.0-alpha.3** can now save only **placed-object transforms**. Other editing operations remain blocked.
+**v0.1.0-alpha.3** now supports experimental preservation-safe writes for existing object and spline transforms, plus safe object insertion/copy/deletion within the documented limitations.
 
 ## Installation
 
@@ -36,9 +36,8 @@ With an unsaved preview pending, externally change the identity of that same `[o
 
 ## Known limitations
 
-- Save only persists position/rotation/pitch/bank for existing `[object]` entries;
 - creation and copying only persist when a safe template of the same `.sco` exists;
-- splines do not have persistent editing yet;
+- spline creation and previous/next link editing are not implemented yet;
 - binary `.terrain` is not interpreted/edited yet;
 - spline/O3D image textures are not applied yet;
 - `[worldcoordinates]` maps remain limited;
@@ -98,13 +97,13 @@ For a conflict test, externally change the object's ID or `.sco` path before con
 ## Spline editing test
 
 1. select an existing spline;
-2. open **Path**;
-3. change X/Y/Z, rotation, length, radius or a gradient;
-4. verify the selected geometry uses the preview;
-5. click **Discard preview** and verify original values return;
-6. repeat a change and click **Save spline**;
-7. wait for reload;
-8. verify the change persisted;
+2. press **W**, move the gizmo and verify the axis/profile follow the drag;
+3. press **E** and verify only the spline's horizontal rotation can change;
+4. verify viewport snapping is respected;
+5. open **Path** and change X/Y/Z, rotation, length, radius or a gradient;
+6. click ✕ or **Discard preview** and verify original values return;
+7. repeat a change and use **Save spline**, global **Save**, or `Ctrl+S`;
+8. wait for reload and verify the change persisted;
 9. verify the backup under `.mapstudio-backups/<timestamp>/`;
 10. verify ID, previous/next, extras, comments and unknown sections were not changed in the tile.
 

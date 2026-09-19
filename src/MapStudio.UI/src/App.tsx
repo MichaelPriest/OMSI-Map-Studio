@@ -1799,6 +1799,73 @@ export function App() {
       ]
     );
 
+  const handlePreviewSplineTransform =
+    useCallback(
+      (
+        placedSpline:
+          OmsiPlacedSpline
+      ) => {
+        if (previewEditCount > 0) {
+          setError(
+            "Salve ou descarte as prévias de objetos antes de editar uma spline."
+          );
+          return;
+        }
+
+        const key =
+          getPlacedSplineKey(
+            placedSpline
+          );
+
+        const original =
+          splines.find(
+            (candidate) =>
+              getPlacedSplineKey(
+                candidate
+              ) === key
+          );
+
+        setPreviewSplineTransforms(
+          (current) => {
+            const next = {
+              ...current
+            };
+
+            if (
+              original &&
+              sameSplineTransform(
+                original,
+                placedSpline
+              )
+            ) {
+              delete next[key];
+            } else {
+              next[key] =
+                placedSpline;
+            }
+
+            return next;
+          }
+        );
+
+        setSelectedSpline(
+          original &&
+          sameSplineTransform(
+            original,
+            placedSpline
+          )
+            ? original
+            : placedSpline
+        );
+
+        setError(undefined);
+      },
+      [
+        previewEditCount,
+        splines
+      ]
+    );
+
   const handleSplineNumericTransform =
     useCallback(
       (
@@ -1820,69 +1887,14 @@ export function App() {
           return;
         }
 
-        if (previewEditCount > 0) {
-          setError(
-            "Salve ou descarte as prévias de objetos antes de editar uma spline."
-          );
-          return;
-        }
-
-        const updated = {
+        handlePreviewSplineTransform({
           ...selectedSpline,
           [field]: value
-        };
-
-        const key =
-          getPlacedSplineKey(
-            selectedSpline
-          );
-
-        const original =
-          splines.find(
-            (candidate) =>
-              getPlacedSplineKey(
-                candidate
-              ) === key
-          );
-
-        setPreviewSplineTransforms(
-          (current) => {
-            const next = {
-              ...current
-            };
-
-            if (
-              original &&
-              sameSplineTransform(
-                original,
-                updated
-              )
-            ) {
-              delete next[key];
-            } else {
-              next[key] = updated;
-            }
-
-            return next;
-          }
-        );
-
-        setSelectedSpline(
-          original &&
-          sameSplineTransform(
-            original,
-            updated
-          )
-            ? original
-            : updated
-        );
-
-        setError(undefined);
+        });
       },
       [
-        previewEditCount,
-        selectedSpline,
-        splines
+        handlePreviewSplineTransform,
+        selectedSpline
       ]
     );
 
@@ -2090,6 +2102,11 @@ export function App() {
           !saving
         ) {
           handleSavePreviewEdits();
+        } else if (
+          splinePreviewEditCount > 0 &&
+          !savingSpline
+        ) {
+          handleSaveSplinePreview();
         }
 
         return;
@@ -2125,7 +2142,8 @@ export function App() {
 
       if (
         key === "w" &&
-        selectedObject
+        (selectedObject ||
+          selectedSpline)
       ) {
         setEditorTool("move");
         return;
@@ -2133,7 +2151,8 @@ export function App() {
 
       if (
         key === "e" &&
-        selectedObject
+        (selectedObject ||
+          selectedSpline)
       ) {
         setEditorTool("rotate");
         return;
@@ -2198,12 +2217,15 @@ export function App() {
   }, [
     handleRedoPreview,
     handleSavePreviewEdits,
+    handleSaveSplinePreview,
     handleUndoPreview,
     previewEditCount,
     requestCameraAction,
     saving,
+    savingSpline,
     selectedObject,
-    selectedSpline
+    selectedSpline,
+    splinePreviewEditCount
   ]);
 
   const handleSelectPlacementAsset =
@@ -3654,8 +3676,11 @@ export function App() {
                 ? "tool active"
                 : "tool"
             }
-            disabled={!selectedObject}
-            title="Mover objeto em prévia (W)"
+            disabled={
+              !selectedObject &&
+              !selectedSpline
+            }
+            title="Mover seleção em prévia (W)"
             onClick={() =>
               setEditorTool("move")
             }
@@ -3669,8 +3694,11 @@ export function App() {
                 ? "tool active"
                 : "tool"
             }
-            disabled={!selectedObject}
-            title="Rotacionar objeto em prévia (E)"
+            disabled={
+              !selectedObject &&
+              !selectedSpline
+            }
+            title="Rotacionar seleção em prévia (E)"
             onClick={() =>
               setEditorTool("rotate")
             }
@@ -3749,10 +3777,13 @@ export function App() {
             className="tool"
             title="Descartar todas as transformações temporárias"
             disabled={
-              previewEditCount === 0
+              previewEditCount === 0 &&
+              splinePreviewEditCount === 0
             }
             onClick={
-              handleDiscardPreviewEdits
+              splinePreviewEditCount > 0
+                ? handleDiscardSplinePreview
+                : handleDiscardPreviewEdits
             }
           >
             ✕
@@ -3844,17 +3875,31 @@ export function App() {
             type="button"
             className="primary-button editor-save"
             onClick={
-              handleSavePreviewEdits
+              splinePreviewEditCount > 0
+                ? handleSaveSplinePreview
+                : handleSavePreviewEdits
             }
             disabled={
-              previewEditCount === 0 ||
+              (
+                previewEditCount === 0 &&
+                splinePreviewEditCount === 0
+              ) ||
               busy
             }
             title="Salvar transformações com backup automático (Ctrl+S)"
           >
-            {saving
+            {saving || savingSpline
               ? "Salvando..."
-              : `Salvar${previewEditCount > 0 ? ` (${previewEditCount})` : ""}`}
+              : `Salvar${
+                  previewEditCount +
+                    splinePreviewEditCount >
+                  0
+                    ? ` (${
+                        previewEditCount +
+                        splinePreviewEditCount
+                      })`
+                    : ""
+                }`}
           </button>
 
           <button
@@ -4238,6 +4283,9 @@ export function App() {
               }
               onPreviewObjectTransform={
                 handlePreviewObjectTransform
+              }
+              onPreviewSplineTransform={
+                handlePreviewSplineTransform
               }
             />
 
