@@ -17,6 +17,13 @@ export type OmsiTerrainTextureMask = {
   layerIndex: number;
   fileName: string;
   fileSize: number;
+  isValid: boolean;
+  width: number;
+  height: number;
+  coverage: number;
+  minimumAlpha: number;
+  maximumAlpha: number;
+  errorCode: string | null;
 };
 
 export type OmsiTerrainRenderDataSummary = {
