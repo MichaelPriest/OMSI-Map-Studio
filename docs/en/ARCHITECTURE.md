@@ -525,3 +525,13 @@ The implementation keeps defensive limits. Protected meshes outside the currentl
 **Full map** mode no longer uses the texture ceiling intended for 3×3 performance mode. Object prefetch now allows up to 1024 textures and spline prefetch up to 256, in progressive batches, with a cache of up to 1536 assets. Performance mode keeps the smaller limits to preserve responsiveness.
 
 The Inspector and status bar now separate loaded textures, resolve/read failures, and pending requests. This prevents a successfully decoded O3D mesh from being treated as visually complete while its texture is still missing.
+
+
+## OMSI-compatible texture resolution
+
+The object/spline texture resolver now reproduces two common OMSI content behaviors that previously caused false `textureNotFound` results:
+
+- when a BMP/TGA/PNG-style name is declared, an installed DDS with the same basename is accepted;
+- shared parent-pack `Texture` directories are searched progressively upward.
+
+Lookup remains confined to the allowed `Sceneryobjects` or `Splines` root; paths escaping that root are still rejected.
