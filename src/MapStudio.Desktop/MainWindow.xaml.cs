@@ -3447,7 +3447,19 @@ public partial class MainWindow : Window
                                 .TerrainFileExists,
                         terrainFileSize =
                             loaded.Content.Summary
-                                .TerrainFileSize
+                                .TerrainFileSize,
+                        terrain =
+                            loaded.Content.Terrain is null
+                                ? null
+                                : new
+                                {
+                                    cellCount =
+                                        loaded.Content.Terrain
+                                            .CellCount,
+                                    heights =
+                                        loaded.Content.Terrain
+                                            .Heights
+                                }
                     }),
                 objects,
                 splines
@@ -3646,7 +3658,19 @@ public partial class MainWindow : Window
                                 .TerrainFileExists,
                         terrainFileSize =
                             loaded.Content.Summary
-                                .TerrainFileSize
+                                .TerrainFileSize,
+                        terrain =
+                            loaded.Content.Terrain is null
+                                ? null
+                                : new
+                                {
+                                    cellCount =
+                                        loaded.Content.Terrain
+                                            .CellCount,
+                                    heights =
+                                        loaded.Content.Terrain
+                                            .Heights
+                                }
                     }),
                 objects,
                 splines
