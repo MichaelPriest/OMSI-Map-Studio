@@ -59,9 +59,9 @@ While the binary `.terrain` format is not interpreted yet, existing tiles receiv
 Missing tiles remain unfilled and highlighted separately. Spline axes and object markers are rendered above this surface.
 
 
-## Tile streaming on large maps
+## 3×3 performance mode
 
-The editor works with an **active tile** and a default 3×3 window around it. The full map topology still comes from `global.cfg`, but objects, splines and other heavy data are loaded only for that region.
+When **3×3 performance mode** is enabled, the editor works with an **active tile** and a default 3×3 window around it. The full map topology still comes from `global.cfg`, but objects, splines and other heavy data are loaded only for that region.
 
 Clicking another visible tile changes the active-region center. Tiles already read remain cached for the map session, so returning to a previous area does not require another disk read.
 
@@ -95,3 +95,8 @@ The editor now defaults to **Full map**, matching the expected behavior of the s
 The previous 3×3 streaming behavior remains available as **3×3 performance mode**. It is optional and intended for very large maps or lower-memory computers.
 
 Every newly opened map starts in **Full map** mode.
+
+
+## Visual identity
+
+OMSI Map Studio has its own application icon: a dark-navy map grid with a stylized orange/blue route. The same symbol is used by the executable, the desktop window and the UI header. The project does not reuse the official OMSI brand or application icon.

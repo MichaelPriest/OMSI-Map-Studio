@@ -888,7 +888,12 @@ export function App() {
   const renderNav = () => (
     <aside className="studio-sidebar">
       <div className="sidebar-brand">
-        <div className="brand-mark">O</div>
+        <img
+          className="brand-logo"
+          src="/mapstudio-icon.ico"
+          alt=""
+          aria-hidden="true"
+        />
         <div>
           <strong>OMSI Map Studio</strong>
           <span>Editor moderno para OMSI 2</span>
@@ -1297,21 +1302,31 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Objetos (área ativa)</dt>
+          <dt>
+            {mapLoadMode === "full"
+              ? "Objetos"
+              : "Objetos (área ativa)"}
+          </dt>
           <dd>
             {selectedStats?.objects ??
-              (Boolean(loadingRegionKey)
+              (loadingFullMap ||
+              Boolean(loadingRegionKey)
                 ? "Carregando..."
                 : objects.length)}
           </dd>
         </div>
         <div>
-          <dt>Splines (área ativa)</dt>
+          <dt>
+            {mapLoadMode === "full"
+              ? "Splines"
+              : "Splines (área ativa)"}
+          </dt>
           <dd>
             {selectedStats?.splines ??
-              (Boolean(loadingRegionKey)
+              (loadingFullMap ||
+              Boolean(loadingRegionKey)
                 ? "Carregando..."
-                : "—")}
+                : splines.length)}
           </dd>
         </div>
         <div>
@@ -1323,7 +1338,11 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Tiles ativos</dt>
+          <dt>
+            {mapLoadMode === "full"
+              ? "Tiles carregados"
+              : "Tiles ativos"}
+          </dt>
           <dd>
             {activeTiles.length}
           </dd>
@@ -1916,6 +1935,7 @@ export function App() {
                 ? "secondary-action active-mode"
                 : "secondary-action"
             }
+            disabled={busy}
             onClick={() => {
               if (
                 mapLoadMode === "full"
@@ -1949,6 +1969,7 @@ export function App() {
                 ? "secondary-action active-mode"
                 : "secondary-action"
             }
+            disabled={busy}
             onClick={() => {
               if (
                 mapLoadMode ===
@@ -2021,7 +2042,9 @@ export function App() {
 
               <div className="tree-node active">
                 <span>▣</span>
-                Objetos (área)
+                {mapLoadMode === "full"
+                  ? "Objetos"
+                  : "Objetos (área)"}
                 <strong>
                   {selectedStats?.objects ??
                     objects.length}
@@ -2030,7 +2053,9 @@ export function App() {
 
               <div className="tree-node">
                 <span>⌇</span>
-                Splines (área)
+                {mapLoadMode === "full"
+                  ? "Splines"
+                  : "Splines (área)"}
                 <strong>
                   {selectedStats?.splines ??
                     splines.length}
