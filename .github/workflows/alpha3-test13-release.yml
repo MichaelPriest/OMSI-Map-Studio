@@ -20,13 +20,13 @@ jobs:
       - name: Checkout exact source HEAD
         uses: actions/checkout@v4
         with:
-          ref: 58d3dcca6e0da301e84a0b43da361966772ec235
+          ref: 4c541750217d499cf3b067fc3a762e2b3a1d7069
           fetch-depth: 1
 
       - name: Verify exact source HEAD
         shell: pwsh
         run: |
-          $expected = "58d3dcca6e0da301e84a0b43da361966772ec235"
+          $expected = "4c541750217d499cf3b067fc3a762e2b3a1d7069"
           $actual = (git rev-parse HEAD).Trim()
           Write-Host "Expected: $expected"
           Write-Host "Actual:   $actual"
@@ -82,7 +82,7 @@ jobs:
 
           Build de teste / Test build
 
-          Source HEAD: 58d3dcca6e0da301e84a0b43da361966772ec235
+          Source HEAD: 4c541750217d499cf3b067fc3a762e2b3a1d7069
 
           Esta prerelease corrige o carregamento repetitivo por item, envia BMP real como pixels RGBA diretamente para a GPU, melhora o diagnostico de O3D renderizavel e reforca a identidade/icone do aplicativo no Windows.
 
@@ -108,7 +108,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "v0.1.0-alpha.3-test.13"
-          $sourceHead = "58d3dcca6e0da301e84a0b43da361966772ec235"
+          $sourceHead = "4c541750217d499cf3b067fc3a762e2b3a1d7069"
           $installer = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.13-win-x64.exe"
           $installerSha = "$installer.sha256"
           $zip = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.13-win-x64.zip"
