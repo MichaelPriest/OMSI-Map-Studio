@@ -200,3 +200,30 @@ A varredura:
 - mostra no máximo 300 resultados por vez na interface.
 
 A busca aceita nome e caminho do arquivo. O botão **Inserir** permanece desabilitado até existir escrita segura para criação de novos blocos `[object]` e geração de IDs compatíveis.
+
+
+## Colocação de objetos pela Biblioteca
+
+A Biblioteca agora possui a ação **Colocar**.
+
+Fluxo:
+
+1. abra **Biblioteca**;
+2. escolha um arquivo `.sco` real;
+3. clique **Colocar**;
+4. clique em um tile existente no viewport;
+5. a posição X/Y é calculada em coordenadas locais do tile e respeita o Snap;
+6. ajuste **Z** e **Rotação** na barra de colocação;
+7. confirme com **Confirmar e salvar**.
+
+A prévia usa a geometria O3D real quando disponível. Se o O3D não puder ser interpretado, o ponto de colocação continua visível como marcador.
+
+### Limite conservador desta alpha
+
+A gravação de um novo `[object]` só é permitida quando o mesmo `.sco` já existe em algum ponto do mapa.
+
+Isso é intencional: blocos `[object]` podem possuir valores extras cuja quantidade depende do tipo de objeto. O Map Studio copia o `HeaderValue` e os valores extras de uma instância real do mesmo `.sco`, evitando inventar parâmetros.
+
+Um `.sco` instalado mas nunca usado no mapa pode ser selecionado e pré-visualizado, porém **Confirmar e salvar** fica bloqueado no modo Mapa completo. Em modo desempenho, o host faz a verificação global ao confirmar.
+
+O novo objeto recebe backup automático do tile antes da gravação.

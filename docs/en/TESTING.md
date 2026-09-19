@@ -47,3 +47,21 @@ With an unsaved preview pending, externally change the identity of that same `[o
 ## Safety
 
 Do not use the only copy of an important map during this alpha. Automatic backups and preservation-safe writes are implemented, but Save is still experimental.
+
+
+## Library insertion test
+
+Start with a `.sco` that already appears in the test map:
+
+1. open **Library** and search for the object;
+2. click **Place**;
+3. click a tile;
+4. verify the preview appears at the clicked point;
+5. change Z and rotation;
+6. confirm **Confirm and save**;
+7. wait for the reload;
+8. verify the new object received an ID different from all existing object/spline IDs;
+9. verify the tile backup;
+10. reopen the map in OMSI and validate placement.
+
+Also choose an installed `.sco` that has never been used in the map. In Full map mode the preview should work, while persistent confirmation must stay blocked with the missing-template explanation.

@@ -200,3 +200,30 @@ Scanning:
 - renders at most 300 results at once in the UI.
 
 Search accepts file name and path. **Insert** remains disabled until preservation-safe creation of new `[object]` blocks and compatible ID generation are implemented.
+
+
+## Placing objects from the Library
+
+Library now provides a **Place** action.
+
+Flow:
+
+1. open **Library**;
+2. choose a real `.sco` file;
+3. click **Place**;
+4. click an existing tile in the viewport;
+5. X/Y are calculated in tile-local coordinates and respect snapping;
+6. adjust **Z** and **Rotation** in the placement bar;
+7. confirm with **Confirm and save**.
+
+The preview uses real O3D geometry when available. If O3D geometry cannot be interpreted, the placement point remains visible as a marker.
+
+### Conservative alpha limitation
+
+A new `[object]` can only be persisted when that same `.sco` already exists somewhere in the map.
+
+This is intentional: `[object]` blocks may contain a variable number of extra values depending on the object type. Map Studio copies the `HeaderValue` and extra values from a real instance of the same `.sco` instead of inventing parameters.
+
+An installed `.sco` that has never been used in the map can still be selected and previewed, but **Confirm and save** remains blocked in Full map mode. In performance mode, the host performs the global verification on confirmation.
+
+The target tile is automatically backed up before the new object is written.

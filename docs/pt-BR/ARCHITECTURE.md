@@ -228,3 +228,37 @@ O host nunca grava usando o conteúdo antigo do cache: no Save ele reabre o tile
 O comando `loadSceneryLibrary` é disparado apenas sob demanda. O host percorre `Sceneryobjects` em uma tarefa de background usando `EnumerationOptions`, sem seguir reparse points e ignorando diretórios inacessíveis.
 
 Somente caminhos relativos `Sceneryobjects\\...\\arquivo.sco` e nomes de arquivo são enviados ao React. Os caminhos descobertos também entram na whitelist de objetos conhecidos pelo host. O resultado fica em cache até a instalação OMSI ser alterada.
+
+
+## Inserção preservativa de objetos
+
+`OmsiTileObjectInserter` acrescenta um novo bloco `[object]` ao documento preservado sem reserializar as seções existentes.
+
+O writer acrescenta:
+
+- `[object]`;
+- `HeaderValue` derivado de uma instância real do mesmo `.sco`;
+- caminho `.sco`;
+- ID global novo;
+- X, Y, Z;
+- rotação, pitch e bank;
+- `ExtraValues` copiados do template real.
+
+A linha textual opcional `Object Nr. ...` não é gerada, pois não pertence ao bloco funcional `[object]`.
+
+### Alocação global de ID
+
+Antes de inserir, o host lê os tiles atuais diretamente do disco. `OmsiTileElementIdScanner` procura IDs nos tipos conhecidos que participam da numeração do mapa:
+
+- `[object]`;
+- `[attachObj]`;
+- `[splineAttachement]` / `[splineAttachment]`;
+- `[splineAttachement_repeater]` / variante `Attachment`;
+- `[spline]`;
+- `[spline_h]`.
+
+O novo ID é `maior ID encontrado + 1`. A leitura para conteúdo e análise de IDs usa o mesmo `OmsiConfigDocument` por tile para evitar parse duplicado.
+
+Se não existir uma instância do mesmo `.sco` para servir como template, a gravação é recusada com `objectInsertTemplateUnavailable`.
+
+A escrita final reutiliza `SafeFileTransaction`, portanto o tile recebe backup em `.mapstudio-backups/<timestamp>/` antes da troca atômica.

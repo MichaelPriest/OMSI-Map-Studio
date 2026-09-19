@@ -47,3 +47,21 @@ Com uma prévia pendente, altere externamente a identidade do mesmo bloco `[obje
 ## Segurança
 
 Nunca use o único exemplar de um mapa importante durante esta alpha. Apesar do backup automático e da escrita preservativa, a funcionalidade de Save ainda é experimental.
+
+
+## Teste de inserção pela Biblioteca
+
+Use primeiro um `.sco` que já apareça no mapa de teste:
+
+1. abra **Biblioteca** e busque pelo objeto;
+2. clique **Colocar**;
+3. clique em um tile;
+4. confirme que a prévia aparece no ponto clicado;
+5. altere Z e rotação;
+6. confirme **Confirmar e salvar**;
+7. aguarde o recarregamento;
+8. confira que o novo objeto recebeu um ID diferente de todos os objetos/splines existentes;
+9. confira o backup do tile;
+10. reabra o mapa no OMSI e valide a colocação.
+
+Também escolha um `.sco` instalado que nunca foi usado no mapa. No modo Mapa completo, a prévia deve funcionar, mas a confirmação persistente deve permanecer bloqueada com a explicação de template indisponível.
