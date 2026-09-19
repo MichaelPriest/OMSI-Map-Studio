@@ -178,3 +178,17 @@ Unknown commands remain stored and must survive an unchanged read/write round-tr
 ## Documentation rule
 
 All official documentation must have equivalent `pt-BR` and `en` versions. A documentation change is only complete when both languages are updated.
+
+
+### Full-map O3D catalog
+
+In **Full map** mode, React derives the unique `.sco` path list from placed objects received from the host. Geometries are requested sequentially through the existing `loadSceneryObjectGeometry` command and cached by path.
+
+The viewport groups placements by `sceneryObjectPath`. For each model with valid geometry it:
+
+1. creates base meshes split by material;
+2. uses the first placement as the source;
+3. reuses the same geometry/material buffers through clones for later placements;
+4. keeps markers only for models that are still loading or unsupported.
+
+This displays a complete map without rereading the same O3D for every instance.

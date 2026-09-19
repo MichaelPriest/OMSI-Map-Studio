@@ -100,3 +100,12 @@ Every newly opened map starts in **Full map** mode.
 ## Visual identity
 
 OMSI Map Studio has its own application icon: a dark-navy map grid with a stylized orange/blue route. The same symbol is used by the executable, the desktop window and the UI header. The project does not reuse the official OMSI brand or application icon.
+
+
+## Real objects in Full map mode
+
+After all map tiles are read, the UI identifies unique `.sco` paths used by placed objects and loads each O3D geometry only once.
+
+Progress is shown as **loaded O3D models / unique models**. While a model has not been read yet, its placements remain visible as markers. As soon as geometry arrives, every object using that same model is rendered.
+
+Babylon reuses geometry and materials per model and creates transformed clones/instances for each map placement. This avoids duplicating vertex buffers for hundreds of identical objects.

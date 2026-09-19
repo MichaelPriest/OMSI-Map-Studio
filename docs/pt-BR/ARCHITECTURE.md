@@ -178,3 +178,17 @@ Comandos desconhecidos continuam armazenados e devem sobreviver a um ciclo de le
 ## Regra de documentação
 
 Toda documentação oficial deve possuir versões equivalentes em `pt-BR` e `en`. Uma mudança documental só é considerada completa quando os dois idiomas forem atualizados.
+
+
+### Catálogo O3D do mapa completo
+
+No modo **Mapa completo**, o React deriva a lista de caminhos `.sco` únicos a partir dos objetos posicionados recebidos do host. As geometrias são solicitadas sequencialmente pelo comando já existente `loadSceneryObjectGeometry` e armazenadas em cache por caminho.
+
+O viewport agrupa colocações por `sceneryObjectPath`. Para cada modelo com geometria válida:
+
+1. cria os meshes-base separados por material;
+2. aplica o primeiro posicionamento como fonte;
+3. reutiliza os mesmos buffers/materiais em clones para as demais colocações;
+4. mantém marcadores apenas para modelos ainda não carregados ou formatos não suportados.
+
+Isso permite exibir o mapa completo sem reler o mesmo O3D para cada instância.
