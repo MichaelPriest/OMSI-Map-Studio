@@ -19,6 +19,8 @@ A **v0.1.0-alpha.3** agora permite salvar apenas **transformações de objetos p
 - selecione um objeto;
 - pressione **W**, mova o gizmo e confirme **Prévia não salva**;
 - pressione **E**, rotacione o objeto;
+- use `Ctrl+Z` e `Ctrl+Y` para validar desfazer/refazer;
+- na aba **Transformação**, digite um valor exato de X/Y/Z ou rotação e pressione Enter;
 - pressione **F** para focar a seleção;
 - use **G**, **O** e **L** para alternar grade, objetos e splines;
 - clique em ↶ e confirme que a prévia volta ao valor original;

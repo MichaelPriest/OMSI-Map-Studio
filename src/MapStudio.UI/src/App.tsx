@@ -1123,11 +1123,18 @@ export function App() {
 
         if (
           source &&
-          !sameObjectTransform(
+          sameObjectTransform(
             source,
             placedObject
           )
         ) {
+          setSelectedObject(
+            placedObject
+          );
+          return;
+        }
+
+        if (source) {
           setUndoPreviewStack(
             (current) => [
               ...current.slice(-99),
@@ -2730,7 +2737,7 @@ export function App() {
             Global
           </span>
           <span className="toolbar-chip">
-            Q/W/E · F · Home
+            Q/W/E · F · Home · Ctrl+Z/Y/S
           </span>
 
           <span className="toolbar-separator" />

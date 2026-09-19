@@ -19,6 +19,8 @@
 - select an object;
 - press **W**, drag the gizmo and confirm **Unsaved preview**;
 - press **E** and rotate the object;
+- use `Ctrl+Z` and `Ctrl+Y` to validate undo/redo;
+- in the **Transform** tab, type an exact X/Y/Z or rotation value and press Enter;
 - press **F** to focus selection;
 - use **G**, **O** and **L** to toggle grid, objects and splines;
 - click ↶ and verify the preview returns to the source transform;

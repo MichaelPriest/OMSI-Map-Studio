@@ -146,3 +146,15 @@ For every changed object, the editor keeps the original section identity inside 
 7. tile caches are invalidated and saved state is reloaded.
 
 If the object's source identity changed since the map was opened, the batch is cancelled as a conflict instead of overwriting the file.
+
+
+### History and numeric editing
+
+Temporary transforms keep up to 100 history actions:
+
+- `Ctrl+Z` undoes the latest transform;
+- `Ctrl+Y` or `Ctrl+Shift+Z` redoes it;
+- ✕ discards all pending previews;
+- after a confirmed Save, temporary history is cleared.
+
+In the inspector's **Transform** tab, X, Y, Z, rotation, pitch and bank can also be entered directly. The value becomes a preview when Enter is pressed or the field loses focus, using the same undo/redo history as gizmo edits.

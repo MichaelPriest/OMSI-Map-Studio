@@ -146,3 +146,15 @@ Para cada objeto alterado, o editor preserva a identificação original da seç�
 7. invalida o cache e recarrega o mapa gravado.
 
 Se a identidade do objeto mudou desde a abertura do mapa, o lote é cancelado com conflito em vez de sobrescrever o arquivo.
+
+
+### Histórico e edição numérica
+
+As transformações temporárias possuem histórico de até 100 ações:
+
+- `Ctrl+Z` desfaz a última transformação;
+- `Ctrl+Y` ou `Ctrl+Shift+Z` refaz;
+- ✕ descarta todas as prévias pendentes;
+- após um Save confirmado, o histórico temporário é limpo.
+
+Na aba **Transformação** do inspetor, X, Y, Z, rotação, pitch e bank também podem ser digitados diretamente. O valor entra na prévia ao pressionar Enter ou sair do campo, usando o mesmo histórico de desfazer/refazer do gizmo.
