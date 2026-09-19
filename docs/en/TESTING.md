@@ -547,11 +547,10 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 6. confirm a model with bones no longer becomes a yellow marker merely because section `0x54` was misaligned.
 
 
-## Protected O3D and .x fallback validation
+## Protected O3D validation
 
 1. in Grundorf, confirm the Explorer reports **Real meshes** and does not count a protected payload as rendered;
 2. confirm `encrypted` is presented as **Protected O3D** in the Inspector;
 3. confirm the final status reports protected object-type and mesh counts;
-4. when a real same-name `.x` file exists next to a protected `.o3d`, confirm preview uses it without modifying the original;
-5. when no matching `.x` exists, confirm the asset remains explicitly protected and no fake geometry is created;
-6. confirm protected O3D markers use a different color from missing/invalid asset markers.
+4. confirm a protected O3D does not receive fake geometry or automatic substitution by another format;
+5. confirm protected O3D markers use a different color from missing/invalid asset markers.
