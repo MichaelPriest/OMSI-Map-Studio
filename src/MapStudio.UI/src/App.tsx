@@ -3780,6 +3780,24 @@ export function App() {
       geometryDiagnosticPaths
     ]);
 
+  const encryptedMeshCount =
+    o3dErrorSummary.find(
+      ([code]) =>
+        code === "encrypted"
+    )?.[1] ?? 0;
+
+  const encryptedObjectPathCount =
+    geometryDiagnosticPaths.filter(
+      (path) =>
+        geometryByPath[
+          path
+        ]?.meshes.some(
+          (mesh) =>
+            mesh.geometry.errorCode ===
+            "encrypted"
+        )
+    ).length;
+
   useEffect(() => {
     if (
       !bridgeAvailable ||
@@ -6385,13 +6403,13 @@ export function App() {
           </dd>
         </div>
         <div>
-          <dt>Falhas de malha (O3D/.x)</dt>
+          <dt>Malhas não renderizadas</dt>
           <dd>
             {o3dErrorSummary.length > 0
               ? o3dErrorSummary
                   .map(
                     ([code, count]) =>
-                      `${code}: ${count}`
+                      `${code === "encrypted" ? "O3D protegido" : code}: ${count}`
                   )
                   .join(" · ")
               : loadedDiagnosticGeometryCount > 0
@@ -6399,6 +6417,14 @@ export function App() {
                 : "Aguardando leitura"}
           </dd>
         </div>
+        {encryptedMeshCount > 0 && (
+          <div>
+            <dt>O3D protegidos</dt>
+            <dd>
+              {encryptedObjectPathCount} tipos de objeto · {encryptedMeshCount} malhas
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Perfis SLI reais</dt>
           <dd>
@@ -8272,12 +8298,12 @@ export function App() {
                 <div className="tree-node">
                   <span>◈</span>
                   {mapLoadMode === "full"
-                    ? "Modelos O3D"
-                    : "Modelos O3D (área)"}
+                    ? "Malhas reais"
+                    : "Malhas reais (área)"}
                   <strong>
                     {mapLoadMode === "full"
-                      ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
-                      : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length}`}
+                      ? `${renderableMapGeometryCount}/${mapObjectPaths.length}`
+                      : `${renderableDiagnosticGeometryCount}/${nearbyObjectPaths.length}`}
                   </strong>
                 </div>
   
@@ -9566,7 +9592,12 @@ export function App() {
                           requestedTerrainMaskKeys
                         ).length > 0
                       ? "Preparando texturas de terreno em segundo plano..."
-                      : "Pronto"}
+                      : encryptedMeshCount > 0 &&
+                        failedDiagnosticGeometryCount > 0
+                        ? `Carregamento concluído · ${encryptedObjectPathCount} tipos usam O3D protegido (${encryptedMeshCount} malhas)`
+                        : failedDiagnosticGeometryCount > 0
+                          ? `Carregamento concluído com ${failedDiagnosticGeometryCount} tipo(s) sem prévia real`
+                          : "Pronto"}
           </span>
 
           <span>
