@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Text;
 
 namespace MapStudio.Core.Omsi.Models;
@@ -83,7 +82,6 @@ public sealed class OmsiO3dGeometryReader
                 Array.Empty<OmsiO3dMaterial>();
 
             uint vertexCount = 0;
-            Matrix4x4? fileTransform = null;
 
             while (stream.Position < stream.Length)
             {
@@ -159,14 +157,20 @@ public sealed class OmsiO3dGeometryReader
                                 ref u,
                                 ref v);
 
+                            // O3D binary vertices are already stored in
+                            // OMSI's runtime model axes (Y-up). Babylon
+                            // also renders Y-up, so swapping Y/Z here puts
+                            // buildings on their side. Keep the native
+                            // vertex axes and only convert map/SCO placement
+                            // coordinates at the scene-composition layer.
                             var p = checked((int)index * 3);
                             positions[p] = x;
-                            positions[p + 1] = z;
-                            positions[p + 2] = y;
+                            positions[p + 1] = y;
+                            positions[p + 2] = z;
 
                             normals[p] = nx;
-                            normals[p + 1] = nz;
-                            normals[p + 2] = ny;
+                            normals[p + 1] = ny;
+                            normals[p + 2] = nz;
 
                             var t = checked((int)index * 2);
                             uvs[t] = u;
@@ -229,9 +233,9 @@ public sealed class OmsiO3dGeometryReader
                                 reader.ReadUInt16();
 
                             var t = checked((int)index * 3);
-                            indices[t] = c;
+                            indices[t] = a;
                             indices[t + 1] = b;
-                            indices[t + 2] = a;
+                            indices[t + 2] = c;
 
                             triangleMaterialIndices[
                                 checked((int)index)] =
@@ -269,24 +273,13 @@ public sealed class OmsiO3dGeometryReader
                                 "invalidTransformSection");
                         }
 
-                        fileTransform =
-                            new Matrix4x4(
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle(),
-                                reader.ReadSingle());
+                        // Section 0x79 is export/local-transform metadata.
+                        // Reference O3D renderers keep the original vertex
+                        // positions for display and preserve this matrix
+                        // separately for editing/export. Baking its inverse
+                        // into preview vertices without re-applying the
+                        // forward object transform displaces/rotates models.
+                        stream.Position += 64;
                         break;
 
                     default:
@@ -303,78 +296,6 @@ public sealed class OmsiO3dGeometryReader
             {
                 return OmsiO3dGeometry.Error(
                     "noRenderableGeometry");
-            }
-
-            if (fileTransform is Matrix4x4 transform)
-            {
-                if (!Matrix4x4.Invert(
-                        transform,
-                        out var inverseTransform))
-                {
-                    return OmsiO3dGeometry.Error(
-                        "invalidTransformMatrix");
-                }
-
-                var axisSwap =
-                    new Matrix4x4(
-                        1, 0, 0, 0,
-                        0, 0, 1, 0,
-                        0, 1, 0, 0,
-                        0, 0, 0, 1);
-
-                var convertedTransform =
-                    axisSwap *
-                    inverseTransform *
-                    axisSwap;
-
-                for (
-                    var vertexIndex = 0;
-                    vertexIndex <
-                        checked((int)vertexCount);
-                    vertexIndex++)
-                {
-                    var offset =
-                        vertexIndex * 3;
-
-                    var position =
-                        Vector3.Transform(
-                            new Vector3(
-                                positions[offset],
-                                positions[offset + 1],
-                                positions[offset + 2]),
-                            convertedTransform);
-
-                    positions[offset] =
-                        position.X;
-                    positions[offset + 1] =
-                        position.Y;
-                    positions[offset + 2] =
-                        position.Z;
-
-                    var normal =
-                        Vector3.TransformNormal(
-                            new Vector3(
-                                normals[offset],
-                                normals[offset + 1],
-                                normals[offset + 2]),
-                            convertedTransform);
-
-                    if (
-                        normal.LengthSquared() >
-                        0.0000001f)
-                    {
-                        normal =
-                            Vector3.Normalize(
-                                normal);
-                    }
-
-                    normals[offset] =
-                        normal.X;
-                    normals[offset + 1] =
-                        normal.Y;
-                    normals[offset + 2] =
-                        normal.Z;
-                }
             }
 
             foreach (var index in indices)
