@@ -556,3 +556,12 @@ When the real base texture arrives as RGBA, the terrain material also uses the s
 ## Windows icon
 
 The application now uses the executable's native shell identity again, avoiding an unregistered custom AppUserModelID when the EXE is launched directly. The window uses an explicit pack resource URI and reapplies `MapStudio.ico` at runtime, while keeping the compiled `ApplicationIcon` as fallback.
+
+
+## OMSI special trees ([tree])
+
+The editor now handles OMSI special tree objects separately from the `.x` helper used only by the original editor. The real `[tree]` block in the `.sco` provides the tree definition, while each map `[object]` placement stores the actual selected texture, height, and width/height ratio in its `ExtraValues`.
+
+The viewport renders the tree as an unlit vertical billboard using the texture, height, and ratio stored by that exact map placement. Trees with different dimensions therefore remain different in Map Studio instead of being replaced by averages or mock values.
+
+Repeated tree textures share a material inside the same scene to avoid creating one GPU texture copy per tree. Yellow fallback markers remain only for objects that still have no renderable representation.
