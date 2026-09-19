@@ -271,9 +271,15 @@ function createMeshFromVertexData(
     texture.hasAlpha = false;
 
     material.diffuseColor =
-      Color3.White();
+      Color3.Black();
 
     material.diffuseTexture =
+      texture;
+
+    material.emissiveColor =
+      Color3.White();
+
+    material.emissiveTexture =
       texture;
 
     material.useAlphaFromDiffuseTexture =
@@ -682,9 +688,15 @@ function createTileSurface(
     }
 
     material.diffuseColor =
-      Color3.White();
+      Color3.Black();
 
     material.diffuseTexture =
+      mainTexture;
+
+    material.emissiveColor =
+      Color3.White();
+
+    material.emissiveTexture =
       mainTexture;
 
     // Terrain paint should display the source albedo and validated A8 mask,
@@ -1137,9 +1149,15 @@ function createSelectedSplineProfile(
 
       if (texture) {
         material.diffuseColor =
-          Color3.White();
+          Color3.Black();
 
         material.diffuseTexture =
+          texture;
+
+        material.emissiveColor =
+          Color3.White();
+
+        material.emissiveTexture =
           texture;
 
         material.useAlphaFromDiffuseTexture =
@@ -1328,6 +1346,7 @@ function createTextureFromAsset(
         `raw-${asset.sourceExtension ?? asset.extension}-${asset.width}x${asset.height}`;
 
       rawTexture.hasAlpha = false;
+      rawTexture.gammaSpace = true;
 
       return rawTexture;
     } catch (error) {
