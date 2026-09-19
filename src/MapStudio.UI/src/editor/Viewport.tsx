@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera";
 import { Engine } from "@babylonjs/core/Engines/engine";
 import { GizmoManager } from "@babylonjs/core/Gizmos/gizmoManager";
@@ -29,6 +29,17 @@ import {
   getSplineTextureAssetKey,
   sceneryTreeTextureMeshToken
 } from "../bridge/desktopBridge";
+
+type ViewportDiagnostic = {
+  item: string;
+  mesh: string;
+  material: string;
+  texture: string;
+  uv: string;
+  position: string;
+  renderLift: string;
+  origin: string;
+};
 
 type ViewportProps = {
   tiles: OmsiTile[];
@@ -1281,33 +1292,44 @@ function createSelectedSplineProfile(
     // without changing the actual OMSI spline coordinates.
     material.zOffset = -2;
 
-    if (surface.textureName) {
-      const asset =
-        textureAssetsByKey[
-          getSplineTextureAssetKey(
-            placedSpline.splinePath,
-            surface.textureName
-          )
-        ];
+    const resolvedTextureAsset =
+      surface.textureName
+        ? textureAssetsByKey[
+            getSplineTextureAssetKey(
+              placedSpline.splinePath,
+              surface.textureName
+            )
+          ]
+        : undefined;
 
+    if (surface.textureName) {
       const texture =
         createTextureFromAsset(
           scene,
-          asset
+          resolvedTextureAsset
         );
 
       if (texture) {
+        // Render the real SLI albedo directly. Using a black diffuse
+        // multiplier plus an emissive copy made valid road textures
+        // depend on Babylon's emissive path and could leave the whole
+        // profile black even though the asset had loaded correctly.
         material.diffuseColor =
-          Color3.Black();
+          Color3.White();
 
         material.diffuseTexture =
           texture;
 
         material.emissiveColor =
-          Color3.White();
+          Color3.Black();
 
         material.emissiveTexture =
-          texture;
+          null;
+
+        texture.wrapU =
+          Texture.WRAP_ADDRESSMODE;
+        texture.wrapV =
+          Texture.WRAP_ADDRESSMODE;
 
         if (surface.alphaMode === 1) {
           texture.hasAlpha = true;
@@ -1338,7 +1360,19 @@ function createSelectedSplineProfile(
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
       mapStudioKind: "spline",
-      placedSpline
+      placedSpline,
+      mapStudioSource: "SLI",
+      mapStudioOrigin:
+        placedSpline.splinePath,
+      mapStudioTextureName:
+        surface.textureName ?? null,
+      mapStudioResolvedTexture:
+        resolvedTextureAsset?.resolvedPath ??
+        resolvedTextureAsset?.errorCode ??
+        (resolvedTextureAsset
+          ? "asset carregado sem caminho"
+          : "asset pendente/ausente"),
+      mapStudioRenderLift: 0.12
     };
 
     if (parent) {
@@ -2621,6 +2655,19 @@ function createGeometryMeshes(
             StandardMaterial
         ) {
           mesh.material.zOffset = -2;
+
+          // Thin horizontal O3D surfaces (junction/road meshes) often
+          // carry downward-facing or pack-specific normals. The editor
+          // must still show the real albedo rather than turning the
+          // surface black because of the preview light. This changes
+          // lighting only; OMSI coordinates and the existing render
+          // lift are left untouched.
+          if (mesh.material.diffuseTexture) {
+            mesh.material.disableLighting =
+              true;
+            mesh.material.diffuseColor =
+              Color3.White();
+          }
         }
       }
 
@@ -2640,11 +2687,45 @@ function createGeometryMeshes(
             degreesToRadians
         );
 
+      const diagnosticMaterialData =
+        materialIndex >= 0
+          ? meshGeometry.materials[
+              materialIndex
+            ]
+          : undefined;
+
+      const diagnosticTextureAsset =
+        diagnosticMaterialData
+          ?.textureName
+          ? textureAssetsByKey[
+              getSceneryTextureAssetKey(
+                sceneryObjectPath,
+                meshReference.declaredPath,
+                diagnosticMaterialData
+                  .textureName
+              )
+            ]
+          : undefined;
+
       mesh.metadata = {
         ...(mesh.metadata ?? {}),
         mapStudioLodThreshold:
           meshReference
-            .lodThreshold
+            .lodThreshold,
+        mapStudioSource: "SCO/O3D",
+        mapStudioOrigin:
+          `${sceneryObjectPath} -> ${meshReference.declaredPath}`,
+        mapStudioTextureName:
+          diagnosticMaterialData
+            ?.textureName ?? null,
+        mapStudioResolvedTexture:
+          diagnosticTextureAsset
+            ?.resolvedPath ??
+          diagnosticTextureAsset
+            ?.errorCode ??
+          (diagnosticTextureAsset
+            ? "asset carregado sem caminho"
+            : "asset pendente/ausente")
       };
 
       mesh.isPickable = false;
@@ -3206,14 +3287,20 @@ function createOmsiSky(
       scene
     );
 
+  // Sky BMPs are delivered as browser-decodable PNG payloads by the
+  // host. Render them as an unlit diffuse albedo instead of relying on
+  // an emissive-only material, which could collapse to a white dome in
+  // WebView2 while the texture object itself existed.
   material.diffuseColor =
-    Color3.Black();
+    Color3.White();
+  material.diffuseTexture =
+    texture;
   material.specularColor =
     Color3.Black();
   material.emissiveColor =
-    Color3.White();
+    Color3.Black();
   material.emissiveTexture =
-    texture;
+    null;
   material.disableLighting = true;
   material.backFaceCulling = false;
   material.disableDepthWrite = true;
@@ -3268,6 +3355,13 @@ export function Viewport({
   onPreviewSplineTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [
+    viewportDiagnostic,
+    setViewportDiagnostic
+  ] = useState<
+    ViewportDiagnostic | undefined
+  >(undefined);
 
   const cameraStateRef = useRef<
     | {
@@ -4235,6 +4329,9 @@ export function Viewport({
       | { x: number; y: number }
       | undefined;
 
+    let pointerDownHandledSelection =
+      false;
+
     const getMapItemClickKey = (
       kind: "object" | "spline",
       item:
@@ -4605,6 +4702,129 @@ export function Viewport({
       event.preventDefault();
     };
 
+    const buildPickedDiagnostic = (
+      mesh: Mesh | null,
+      kind: "object" | "spline",
+      item:
+        | OmsiPlacedObject
+        | OmsiPlacedSpline
+    ): ViewportDiagnostic => {
+      const metadata =
+        mesh?.metadata ?? {};
+
+      const uvs =
+        mesh?.getVerticesData("uv") ??
+        [];
+
+      let minU =
+        Number.POSITIVE_INFINITY;
+      let maxU =
+        Number.NEGATIVE_INFINITY;
+      let minV =
+        Number.POSITIVE_INFINITY;
+      let maxV =
+        Number.NEGATIVE_INFINITY;
+
+      for (
+        let index = 0;
+        index + 1 < uvs.length;
+        index += 2
+      ) {
+        minU = Math.min(
+          minU,
+          uvs[index]
+        );
+        maxU = Math.max(
+          maxU,
+          uvs[index]
+        );
+        minV = Math.min(
+          minV,
+          uvs[index + 1]
+        );
+        maxV = Math.max(
+          maxV,
+          uvs[index + 1]
+        );
+      }
+
+      if (mesh) {
+        mesh.computeWorldMatrix(true);
+      }
+
+      const position =
+        mesh?.getAbsolutePosition();
+
+      const material =
+        mesh?.material;
+
+      const textureName =
+        metadata
+          .mapStudioTextureName ??
+        (
+          material instanceof
+            StandardMaterial
+            ? material.diffuseTexture
+                ?.name
+            : null
+        ) ??
+        "sem textura";
+
+      const resolvedTexture =
+        metadata
+          .mapStudioResolvedTexture ??
+        "caminho não exposto";
+
+      const itemId =
+        kind === "object"
+          ? (item as OmsiPlacedObject)
+              .objectId
+          : (item as OmsiPlacedSpline)
+              .splineId;
+
+      const fallbackOrigin =
+        kind === "object"
+          ? (item as OmsiPlacedObject)
+              .sceneryObjectPath
+          : (item as OmsiPlacedSpline)
+              .splinePath;
+
+      return {
+        item:
+          `${kind === "object" ? "Objeto" : "Spline"} #${itemId}`,
+        mesh:
+          mesh?.name ??
+          "fallback geométrico",
+        material:
+          material?.name ??
+          "sem material",
+        texture:
+          `${textureName} -> ${resolvedTexture}`,
+        uv:
+          Number.isFinite(minU) &&
+          Number.isFinite(maxU) &&
+          Number.isFinite(minV) &&
+          Number.isFinite(maxV)
+            ? `U ${minU.toFixed(4)}..${maxU.toFixed(4)} · V ${minV.toFixed(4)}..${maxV.toFixed(4)}`
+            : "sem UV",
+        position:
+          position
+            ? `X ${position.x.toFixed(3)} · Y ${position.y.toFixed(3)} · Z ${position.z.toFixed(3)}`
+            : "posição via item",
+        renderLift:
+          typeof metadata
+            .mapStudioRenderLift ===
+            "number"
+            ? metadata
+                .mapStudioRenderLift
+                .toFixed(3)
+            : "0.000",
+        origin:
+          metadata.mapStudioOrigin ??
+          fallbackOrigin
+      };
+    };
+
     const getPickedMapItem = (
       event: PointerEvent
     ) => {
@@ -4652,11 +4872,19 @@ export function Viewport({
             "object" &&
           metadata.placedObject
         ) {
+          const item =
+            metadata.placedObject as
+              OmsiPlacedObject;
+
           return {
             kind: "object" as const,
-            item:
-              metadata.placedObject as
-                OmsiPlacedObject
+            item,
+            diagnostic:
+              buildPickedDiagnostic(
+                pick?.pickedMesh ?? null,
+                "object",
+                item
+              )
           };
         }
 
@@ -4665,11 +4893,19 @@ export function Viewport({
             "spline" &&
           metadata.placedSpline
         ) {
+          const item =
+            metadata.placedSpline as
+              OmsiPlacedSpline;
+
           return {
             kind: "spline" as const,
-            item:
-              metadata.placedSpline as
-                OmsiPlacedSpline
+            item,
+            diagnostic:
+              buildPickedDiagnostic(
+                pick?.pickedMesh ?? null,
+                "spline",
+                item
+              )
           };
         }
 
@@ -4697,6 +4933,10 @@ export function Viewport({
             picked.item
           );
 
+        setViewportDiagnostic(
+          picked.diagnostic
+        );
+
         onSelectSpline(undefined);
         onSelectObject(
           picked.item
@@ -4716,6 +4956,10 @@ export function Viewport({
           "spline",
           picked.item
         );
+
+      setViewportDiagnostic(
+        picked.diagnostic
+      );
 
       onSelectObject(undefined);
       onSelectSpline(
@@ -4747,13 +4991,11 @@ export function Viewport({
         y: event.clientY
       };
 
-      if (
-        editorTool === "select"
-      ) {
+      pointerDownHandledSelection =
+        editorTool === "select" &&
         selectPickedMapItem(
           event
         );
-      }
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -4769,8 +5011,25 @@ export function Viewport({
       pointerStart = undefined;
 
       if (dragDistance > 5) {
+        pointerDownHandledSelection =
+          false;
         return;
       }
+
+      // A real mesh hit was already selected on pointerdown. Do not run
+      // the pointerup proximity fallback for the same click, otherwise
+      // a valid selection can be immediately cleared and the second
+      // quick click never reaches the focus logic.
+      if (
+        pointerDownHandledSelection
+      ) {
+        pointerDownHandledSelection =
+          false;
+        return;
+      }
+
+      pointerDownHandledSelection =
+        false;
 
       if (usesWorldCoordinates) {
         onSelectObject(undefined);
@@ -4955,6 +5214,33 @@ export function Viewport({
       }
 
       if (selected) {
+        const position =
+          getObjectWorldPosition(
+            selected,
+            objectGeometryByPath[
+              selected.sceneryObjectPath
+            ],
+            tiles
+          );
+
+        setViewportDiagnostic({
+          item:
+            `Objeto #${selected.objectId}`,
+          mesh:
+            "fallback geométrico",
+          material:
+            "não determinado",
+          texture:
+            "não determinada",
+          uv:
+            "não determinado",
+          position:
+            `X ${position.x.toFixed(3)} · Y ${position.y.toFixed(3)} · Z ${position.z.toFixed(3)}`,
+          renderLift: "0.000",
+          origin:
+            selected.sceneryObjectPath
+        });
+
         onSelectSpline(undefined);
         onSelectObject(selected);
         return;
@@ -5000,6 +5286,9 @@ export function Viewport({
         }
       }
 
+      setViewportDiagnostic(
+        undefined
+      );
       onSelectObject(undefined);
       onSelectSpline(undefined);
 
@@ -5230,12 +5519,51 @@ export function Viewport({
   ]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="viewport-canvas"
-      tabIndex={0}
-      aria-label="Viewport 3D do editor"
-      title="Clique seleciona objeto/spline · segundo clique rápido no mesmo item centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        className="viewport-canvas"
+        tabIndex={0}
+        aria-label="Viewport 3D do editor"
+        title="Clique seleciona objeto/spline · segundo clique rápido no mesmo item centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
+      />
+      {viewportDiagnostic ? (
+        <div
+          className="viewport-diagnostic"
+          aria-live="polite"
+        >
+          <strong>
+            Diagnóstico real da seleção
+          </strong>
+          <span>
+            {viewportDiagnostic.item}
+          </span>
+          <span>
+            Mesh/material:{" "}
+            {viewportDiagnostic.mesh} /{" "}
+            {viewportDiagnostic.material}
+          </span>
+          <span>
+            Textura:{" "}
+            {viewportDiagnostic.texture}
+          </span>
+          <span>
+            UV: {viewportDiagnostic.uv}
+          </span>
+          <span>
+            Posição final:{" "}
+            {viewportDiagnostic.position}
+          </span>
+          <span>
+            Render lift:{" "}
+            {viewportDiagnostic.renderLift}
+          </span>
+          <span>
+            Origem:{" "}
+            {viewportDiagnostic.origin}
+          </span>
+        </div>
+      ) : null}
+    </>
   );
 }
