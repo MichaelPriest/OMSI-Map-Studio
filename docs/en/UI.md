@@ -487,3 +487,9 @@ For each mask, Core records width, height, minimum/maximum alpha, and real cover
 Invalid or completely empty masks are not loaded/rendered. Fully opaque masks still apply their layer, but the editor avoids loading an unnecessary `opacityTexture`. This reduces I/O and material cost without changing the visual result.
 
 Base-layer (index 0) visibility is also honored by the editor preview. These visualization options never modify the original map files.
+
+## Expected terrain-mask resolution
+
+Each `[groundtex]` resolution code is now converted to the expected real paint-mask dimension. For paintable layers, the validated relationship is a power of two: **6 → 64 px**, **7 → 128 px**, **8 → 256 px**, **9 → 512 px**, and **10 → 1024 px**. Layer 0 still has no paint mask of its own and uses code 0.
+
+When loading `tile.map.N.dds`, the editor compares the real width/height against layer N's expected resolution. A valid A8 mask with incompatible dimensions is reported as incompatible in the inspector and is not rendered. This prevents accidentally applying a mask from another map/layer.

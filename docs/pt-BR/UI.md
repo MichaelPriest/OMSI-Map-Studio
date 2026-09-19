@@ -487,3 +487,9 @@ Para cada máscara o Core registra largura, altura, alpha mínimo/máximo e cobe
 Máscaras inválidas ou completamente vazias não são carregadas/renderizadas. Máscaras 100% opacas continuam aplicando a camada, mas o editor evita carregar um `opacityTexture` desnecessário. Isso reduz I/O e uso de material sem mudar o resultado visual.
 
 A visibilidade da camada base (índice 0) também é respeitada no preview do editor. O arquivo original do mapa nunca é modificado por essas opções de visualização.
+
+## Resolução esperada das máscaras de terreno
+
+O código de resolução de cada entrada `[groundtex]` agora é convertido para a dimensão real esperada da máscara de pintura. Para camadas pintáveis, a relação validada é potência de dois: **6 → 64 px**, **7 → 128 px**, **8 → 256 px**, **9 → 512 px** e **10 → 1024 px**. A camada 0 continua sem máscara própria e usa código 0.
+
+Ao carregar `tile.map.N.dds`, o editor compara largura/altura reais com a resolução esperada da camada N. Uma máscara A8 válida, mas com dimensão incompatível, é mostrada no inspetor como incompatível e não é renderizada. Isso evita aplicar uma máscara de outro mapa/camada por engano.

@@ -368,3 +368,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 6. hide base layer 0 using the visibility control and verify the base texture disappears while terrain relief remains;
 7. re-enable layer 0 and verify immediate restoration;
 8. switch tiles in 3×3 mode and verify empty masks do not enter the cache and only required masks are loaded.
+
+## [groundtex] declared-resolution test
+
+1. open a map with layers whose resolution is known;
+2. verify code 8 expects a 256×256 mask and code 9 expects 512×512;
+3. select a tile whose mask matches the expected dimension and verify normal rendering;
+4. in a test map, temporarily replace a mask with another valid A8 DDS of a different dimension;
+5. verify the inspector shows both the real and expected dimensions;
+6. verify the incompatible layer is disabled and not rendered;
+7. restore the correct mask and verify the layer becomes visible again without modifying `global.cfg`.

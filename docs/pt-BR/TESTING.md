@@ -368,3 +368,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 6. desligue a camada base 0 no controle de visibilidade e confirme que a textura base some, mantendo o relevo;
 7. reative a camada 0 e confirme restauração imediata;
 8. alterne entre tiles no modo 3×3 e confirme que máscaras vazias não entram no cache e somente as necessárias são carregadas.
+
+## Teste da resolução declarada em [groundtex]
+
+1. abra um mapa com camadas de resolução conhecida;
+2. confirme que código 8 espera máscara 256×256 e código 9 espera 512×512;
+3. selecione um tile cuja máscara corresponde à dimensão esperada e confirme renderização normal;
+4. em um mapa de teste, substitua temporariamente uma máscara por outra A8 válida com dimensão diferente;
+5. confirme que o inspetor mostra a dimensão real e a dimensão esperada;
+6. confirme que a camada incompatível fica desabilitada e não é renderizada;
+7. restaure a máscara correta e confirme que a camada volta a aparecer sem alterar o `global.cfg`.
