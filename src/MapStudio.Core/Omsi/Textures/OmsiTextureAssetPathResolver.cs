@@ -206,6 +206,51 @@ public static class OmsiTextureAssetPathResolver
             out fullPath);
     }
 
+    public static bool TryResolveSceneryObjectTexture(
+        string omsiRoot,
+        string sceneryObjectFullPath,
+        string textureName,
+        out string fullPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            omsiRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            sceneryObjectFullPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            textureName);
+
+        fullPath = string.Empty;
+
+        var sceneryRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    omsiRoot,
+                    "Sceneryobjects"));
+
+        var objectDirectory =
+            Path.GetDirectoryName(
+                Path.GetFullPath(
+                    sceneryObjectFullPath));
+
+        if (
+            string.IsNullOrWhiteSpace(
+                objectDirectory))
+        {
+            return false;
+        }
+
+        return TryResolve(
+            sceneryRoot,
+            textureName,
+            [
+                objectDirectory,
+                Path.Combine(
+                    objectDirectory,
+                    "Texture")
+            ],
+            out fullPath);
+    }
+
     public static bool TryResolveSplineTexture(
         string omsiRoot,
         string splineFullPath,
