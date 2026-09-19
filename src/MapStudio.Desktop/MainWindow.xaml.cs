@@ -3926,25 +3926,57 @@ public partial class MainWindow : Window
                 .TryResolve(
                     _omsiRootPath,
                     sceneryObjectPath,
-                    out var sceneryObjectFullPath) ||
-            !OmsiSceneryMeshPathResolver
-                .TryResolve(
-                    _omsiRootPath,
-                    sceneryObjectFullPath,
-                    declaredMeshPath,
-                    out var meshFullPath) ||
-            !OmsiTextureAssetPathResolver
-                .TryResolveSceneryTexture(
-                    _omsiRootPath,
-                    sceneryObjectFullPath,
-                    meshFullPath,
-                    textureName,
-                    out var textureFullPath))
+                    out var sceneryObjectFullPath))
         {
             PostMissingTextureAsset(
                 requestKey,
                 "textureNotFound");
             return;
+        }
+
+        string textureFullPath;
+
+        if (string.Equals(
+                declaredMeshPath,
+                "__tree__",
+                StringComparison.Ordinal))
+        {
+            if (
+                !OmsiTextureAssetPathResolver
+                    .TryResolveSceneryObjectTexture(
+                        _omsiRootPath,
+                        sceneryObjectFullPath,
+                        textureName,
+                        out textureFullPath))
+            {
+                PostMissingTextureAsset(
+                    requestKey,
+                    "textureNotFound");
+                return;
+            }
+        }
+        else
+        {
+            if (
+                !OmsiSceneryMeshPathResolver
+                    .TryResolve(
+                        _omsiRootPath,
+                        sceneryObjectFullPath,
+                        declaredMeshPath,
+                        out var meshFullPath) ||
+                !OmsiTextureAssetPathResolver
+                    .TryResolveSceneryTexture(
+                        _omsiRootPath,
+                        sceneryObjectFullPath,
+                        meshFullPath,
+                        textureName,
+                        out textureFullPath))
+            {
+                PostMissingTextureAsset(
+                    requestKey,
+                    "textureNotFound");
+                return;
+            }
         }
 
         await LoadTextureAssetAsync(
@@ -4462,7 +4494,8 @@ public partial class MainWindow : Window
                     metadata.FriendlyName,
                     metadata.Groups,
                     meshes,
-                    collisionMeshes
+                    collisionMeshes,
+                    tree = metadata.Tree
                 }
             });
         }
@@ -4604,7 +4637,8 @@ public partial class MainWindow : Window
                 sceneryObjectPath,
                 geometry = new
                 {
-                    meshes
+                    meshes,
+                    tree = metadata.Tree
                 }
             });
         }
