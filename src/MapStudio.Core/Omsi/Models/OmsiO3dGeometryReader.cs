@@ -224,7 +224,6 @@ public sealed class OmsiO3dGeometryReader
                         if (!SkipBones(
                                 reader,
                                 stream,
-                                longHeader,
                                 longTriangleIndices))
                         {
                             return OmsiO3dGeometry.Error(
@@ -375,16 +374,17 @@ public sealed class OmsiO3dGeometryReader
     private static bool SkipBones(
         BinaryReader reader,
         Stream stream,
-        bool longHeader,
         bool longTriangleIndices)
     {
-        if (!TryReadCount(
-                reader,
-                longHeader,
-                out var boneCount))
+        // OMSI keeps the bone-list count at UInt16 even when
+        // vertex/triangle sections use the extended long header.
+        if (!HasRemaining(stream, 2))
         {
             return false;
         }
+
+        var boneCount =
+            (uint)reader.ReadUInt16();
 
         for (var index = 0U;
              index < boneCount;

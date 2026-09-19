@@ -105,15 +105,15 @@ const defaultPlacementTransform:
 
 const nearbyObjectPathLimit = 64;
 const nearbySplinePathLimit = 48;
-const autoObjectTextureLimit = 16;
-const autoSplineTextureLimit = 24;
-const autoObjectTextureBatch = 4;
-const autoSplineTextureBatch = 2;
+const autoObjectTextureLimit = 128;
+const autoSplineTextureLimit = 96;
+const autoObjectTextureBatch = 8;
+const autoSplineTextureBatch = 6;
 const autoTextureLimit =
   autoObjectTextureLimit +
   autoSplineTextureLimit;
 
-const maxTextureCacheEntries = 64;
+const maxTextureCacheEntries = 256;
 const maxGroundTextureCacheEntries = 32;
 const maxTerrainMaskCacheEntries = 96;
 
@@ -2536,6 +2536,26 @@ export function App() {
       ]
     );
 
+  const objectPathsForTexturePreload =
+    useMemo(
+      () =>
+        mapLoadMode === "full"
+          ? Array.from(
+              new Set(
+                objectsForViewport.map(
+                  (placedObject) =>
+                    placedObject.sceneryObjectPath
+                )
+              )
+            )
+          : nearbyObjectPaths,
+      [
+        mapLoadMode,
+        nearbyObjectPaths,
+        objectsForViewport
+      ]
+    );
+
   useEffect(() => {
     if (
       !bridgeAvailable ||
@@ -2671,6 +2691,49 @@ export function App() {
       ]
     );
 
+  const splineProfileDiagnostics =
+    useMemo(() => {
+      let missing = 0;
+      let empty = 0;
+      let surfaces = 0;
+
+      for (const path of
+        splinePathsForPreload) {
+        const definition =
+          splineProfilesByPath[
+            path
+          ];
+
+        if (!definition) {
+          continue;
+        }
+
+        if (!definition.exists) {
+          missing += 1;
+          continue;
+        }
+
+        surfaces +=
+          definition.surfaces.length;
+
+        if (
+          definition.surfaces.length ===
+          0
+        ) {
+          empty += 1;
+        }
+      }
+
+      return {
+        missing,
+        empty,
+        surfaces
+      };
+    }, [
+      splinePathsForPreload,
+      splineProfilesByPath
+    ]);
+
   useEffect(() => {
     if (
       !bridgeAvailable ||
@@ -2762,7 +2825,7 @@ export function App() {
       }> = [];
 
     for (const sceneryObjectPath of
-      nearbyObjectPaths) {
+      objectPathsForTexturePreload) {
       if (
         objectRequests.length >=
           objectBudget
@@ -3012,8 +3075,8 @@ export function App() {
     autoPrefetchedTextureKeys,
     bridgeAvailable,
     geometryByPath,
-    nearbyObjectPaths,
     nightPreviewEnabled,
+    objectPathsForTexturePreload,
     requestedTextureKeys,
     splinePathsForPreload,
     splineProfilesByPath,
@@ -3245,6 +3308,69 @@ export function App() {
       loadedMapGeometryCount -
         renderableMapGeometryCount
     );
+
+  const unresolvedMapGeometryCount =
+    Math.max(
+      0,
+      mapObjectPaths.length -
+        loadedMapGeometryCount
+    );
+
+  const o3dErrorSummary =
+    useMemo(() => {
+      const counts =
+        new Map<string, number>();
+
+      for (const path of
+        mapObjectPaths) {
+        const geometry =
+          geometryByPath[path];
+
+        if (!geometry) {
+          continue;
+        }
+
+        for (const mesh of
+          geometry.meshes) {
+          if (
+            mesh.geometry.isLoaded &&
+            mesh.geometry.positions.length >
+              0 &&
+            mesh.geometry.indices.length >
+              0
+          ) {
+            continue;
+          }
+
+          const code =
+            mesh.geometry.errorCode ??
+            (mesh.geometry.isLoaded
+              ? "emptyGeometry"
+              : "notLoaded");
+
+          counts.set(
+            code,
+            (counts.get(code) ?? 0) +
+              1
+          );
+        }
+      }
+
+      return Array.from(
+        counts.entries()
+      )
+        .sort(
+          (left, right) =>
+            right[1] - left[1] ||
+            left[0].localeCompare(
+              right[0]
+            )
+        )
+        .slice(0, 5);
+    }, [
+      geometryByPath,
+      mapObjectPaths
+    ]);
 
   useEffect(() => {
     if (
@@ -5821,6 +5947,35 @@ export function App() {
           </dd>
         </div>
         <div>
+          <dt>O3D renderizáveis</dt>
+          <dd>
+            {mapLoadMode === "full"
+              ? `${renderableMapGeometryCount}/${mapObjectPaths.length} · falhas ${failedMapGeometryCount} · pendentes ${unresolvedMapGeometryCount}`
+              : `${loadedNearbyGeometryCount}/${nearbyObjectPaths.length} carregados na área`}
+          </dd>
+        </div>
+        <div>
+          <dt>Erros O3D (malhas)</dt>
+          <dd>
+            {o3dErrorSummary.length > 0
+              ? o3dErrorSummary
+                  .map(
+                    ([code, count]) =>
+                      `${code}: ${count}`
+                  )
+                  .join(" · ")
+              : loadedMapGeometryCount > 0
+                ? "Nenhum erro conhecido"
+                : "Aguardando leitura"}
+          </dd>
+        </div>
+        <div>
+          <dt>Perfis SLI reais</dt>
+          <dd>
+            {`${loadedSplineProfileCount}/${splinePathsForPreload.length} · ${splineProfileDiagnostics.surfaces} superfícies · ausentes ${splineProfileDiagnostics.missing} · vazios ${splineProfileDiagnostics.empty}`}
+          </dd>
+        </div>
+        <div>
           <dt>Sistema</dt>
           <dd>
             {selectedMap?.usesWorldCoordinates
@@ -6122,6 +6277,20 @@ export function App() {
                   baseGroundTexture.mainTextureRepeating
                 )}`
               : "Nenhuma camada declarada"}
+          </dd>
+        </div>
+        <div>
+          <dt>Upload textura base</dt>
+          <dd>
+            {!baseGroundMainAsset
+              ? "Aguardando asset"
+              : !baseGroundMainAsset.exists
+                ? `Ausente · ${baseGroundMainAsset.errorCode ?? "sem detalhe"}`
+                : baseGroundMainAsset.rgbaBase64 &&
+                    baseGroundMainAsset.width &&
+                    baseGroundMainAsset.height
+                  ? `RGBA direto · ${baseGroundMainAsset.width}×${baseGroundMainAsset.height} · ${baseGroundMainAsset.pixelFormat ?? "pixels decodificados"}`
+                  : `${baseGroundMainAsset.extension ?? "formato desconhecido"} · ${baseGroundMainAsset.width ?? "?"}×${baseGroundMainAsset.height ?? "?"} · ${baseGroundMainAsset.pixelFormat ?? "decoder padrão"}`}
           </dd>
         </div>
         <div>
@@ -8925,9 +9094,10 @@ export function App() {
               : ""}
             <b>·</b>
             Perfis SLI:{" "}
-            {Object.keys(
-              splineProfilesByPath
-            ).length}
+            {loadedSplineProfileCount}/
+            {splinePathsForPreload.length}
+            {" "}· superfícies:{" "}
+            {splineProfileDiagnostics.surfaces}
             <b>·</b>
             Texturas auto:{" "}
             {Object.keys(

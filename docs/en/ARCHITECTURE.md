@@ -402,3 +402,10 @@ The visual window is 3×3 tiles (radius 1) with a cap of 120 extruded splines pe
 `OmsiTileReader.ReadContent` detects the `[terrain]` marker. `ReadContentAsync(tilePath)` also checks the real `<tile>.map.terrain` sidecar and records existence + byte size.
 
 These values travel through the same `OmsiTileSummary` used by full-map and 3×3 loading, without decoding or modifying the binary file.
+
+
+## O3D compatibility — bone count
+
+In extended-header O3D files, vertex and triangle counts may use 32-bit values. The bone list is an exception: its bone count remains 16-bit. The dedicated reader now handles that distinction explicitly, preventing stream misalignment and false `invalidBoneSection` failures in models containing bones.
+
+Visual loading also distinguishes “response received” from actually renderable geometry. An O3D path is only considered renderable when at least one mesh contains valid positions and indices.

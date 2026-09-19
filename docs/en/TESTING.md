@@ -424,3 +424,10 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 5. check the `real O3D` counter: invalid geometry responses must be shown as failures rather than renderable models;
 6. install through the EXE, launch from Start Menu, and verify the OMSI Map Studio icon in the window, taskbar, and shortcut;
 7. verify no original OMSI file was modified.
+
+
+## O3D long-header + bones regression
+
+The `GeometryReader_LongHeaderBoneSection_UsesShortBoneCount` test creates a minimal extended-header O3D with long triangle indices and a bone section whose list count is UInt16. The reader must finish with renderable geometry and without `invalidBoneSection`.
+
+During manual Grundorf validation, the map Inspector must report renderable O3D paths, failures, pending paths, and the main mesh error codes separately. SLI profiles must also report loaded profile files and the number of actual surfaces available for rendering.

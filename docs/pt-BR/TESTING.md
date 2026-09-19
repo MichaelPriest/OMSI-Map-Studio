@@ -424,3 +424,10 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 5. confira o contador `O3D reais`: respostas com geometria inválida devem aparecer como falhas, não como modelo renderizável;
 6. instale pelo EXE, abra pelo Menu Iniciar e confirme o ícone do OMSI Map Studio na janela, barra de tarefas e atalho;
 7. confirme que nenhum arquivo original do OMSI foi modificado.
+
+
+## Regressão O3D long-header + bones
+
+O teste `GeometryReader_LongHeaderBoneSection_UsesShortBoneCount` cria um O3D mínimo com cabeçalho estendido, índices longos e uma seção de bone cuja contagem é UInt16. A leitura deve terminar com geometria renderizável e sem `invalidBoneSection`.
+
+Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente O3D renderizáveis, falhas, pendentes e os principais códigos de erro por malha. Perfis SLI também devem mostrar quantidade de arquivos lidos e total de superfícies efetivamente disponíveis.

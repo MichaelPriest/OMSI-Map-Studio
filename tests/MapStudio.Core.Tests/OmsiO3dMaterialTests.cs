@@ -96,6 +96,77 @@ public sealed class OmsiO3dMaterialTests
         }
     }
 
+    [Fact]
+    public void GeometryReader_LongHeaderBoneSection_UsesShortBoneCount()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-o3d-bone-{Guid.NewGuid():N}.o3d");
+
+        try
+        {
+            using (var stream = File.Create(path))
+            using (var writer = new BinaryWriter(stream))
+            {
+                writer.Write((byte)0x84);
+                writer.Write((byte)0x19);
+                writer.Write((byte)0x07);
+                writer.Write((byte)0x01);
+                writer.Write(uint.MaxValue);
+
+                writer.Write((byte)0x17);
+                writer.Write((uint)3);
+                WriteVertex(writer, 0, 0, 0);
+                WriteVertex(writer, 1, 0, 0);
+                WriteVertex(writer, 0, 1, 0);
+
+                writer.Write((byte)0x49);
+                writer.Write((uint)1);
+                writer.Write((uint)0);
+                writer.Write((uint)1);
+                writer.Write((uint)2);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x26);
+                writer.Write((ushort)0);
+
+                writer.Write((byte)0x54);
+                writer.Write((ushort)1);
+
+                var boneName =
+                    Encoding.GetEncoding(1252)
+                        .GetBytes("root");
+
+                writer.Write(
+                    checked((byte)boneName.Length));
+                writer.Write(boneName);
+
+                writer.Write((ushort)1);
+                writer.Write((uint)0);
+                writer.Write(1f);
+            }
+
+            var geometry =
+                new OmsiO3dGeometryReader()
+                    .Read(path);
+
+            Assert.True(
+                geometry.IsLoaded,
+                geometry.ErrorCode);
+            Assert.Equal(
+                3,
+                geometry.Positions.Length /
+                3);
+            Assert.Equal(
+                3,
+                geometry.Indices.Length);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
     private static void WriteVertex(
         BinaryWriter writer,
         float x,

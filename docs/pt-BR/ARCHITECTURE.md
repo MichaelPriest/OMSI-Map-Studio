@@ -402,3 +402,10 @@ A janela visual é 3×3 tiles (raio 1) e existe limite de 120 splines extrudadas
 `OmsiTileReader.ReadContent` detecta o marcador `[terrain]`. `ReadContentAsync(tilePath)` também verifica o sidecar real `<tile>.map.terrain` e registra existência + tamanho em bytes.
 
 Esses dados viajam no mesmo `OmsiTileSummary` usado pelo carregamento completo e pelo modo 3×3, sem decodificar nem modificar o binário.
+
+
+## Compatibilidade O3D — contagem de bones
+
+Nos O3D com cabeçalho estendido, as contagens de vértices e triângulos podem usar 32 bits. A lista de bones é uma exceção: a quantidade de bones continua sendo armazenada em 16 bits. O reader dedicado agora trata explicitamente essa diferença, evitando desalinhamento do stream e falsos `invalidBoneSection` em modelos que possuem bones.
+
+O carregamento visual também distingue “resposta recebida” de geometria realmente renderizável. Um caminho O3D só é considerado renderizável quando pelo menos uma malha possui posições e índices válidos.
