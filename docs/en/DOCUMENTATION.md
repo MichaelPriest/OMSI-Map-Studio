@@ -27,3 +27,5 @@ Technical terms, file format names, classes, commands and code paths should not 
 ## Application UI
 
 This policy will also provide the foundation for UI internationalization. User-facing strings should not remain scattered directly throughout the code once the UI localization system is introduced.
+
+- [Windows installation (.exe)](INSTALLATION.md)

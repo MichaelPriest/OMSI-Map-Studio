@@ -7,6 +7,7 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - "installer/**"
       - ".github/workflows/ci.yml"
       - "Directory.Build.props"
       - "*.sln"
@@ -16,6 +17,7 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - "installer/**"
       - ".github/workflows/ci.yml"
       - "Directory.Build.props"
       - "*.sln"
