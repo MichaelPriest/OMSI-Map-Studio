@@ -37,6 +37,7 @@ type ViewportProps = {
   showGrid: boolean;
   showObjects: boolean;
   showSplines: boolean;
+  showSplineProfiles: boolean;
   nightPreviewEnabled: boolean;
   cameraAction?: {
     type:
@@ -114,6 +115,10 @@ type ViewportProps = {
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
+  >;
+  splineProfilesByPath: Record<
+    string,
+    OmsiSplineDefinition
   >;
   selectedSpline?: OmsiPlacedSpline;
   selectedSplineProfile?: OmsiSplineDefinition;
@@ -464,7 +469,9 @@ function createSelectedSplineProfile(
     string,
     OmsiTextureAsset
   >,
-  parent?: TransformNode
+  parent?: TransformNode,
+  namePrefix =
+    "selected-spline-profile"
 ) {
   const length =
     Math.max(0, placedSpline.length);
@@ -568,7 +575,7 @@ function createSelectedSplineProfile(
     }
 
     const mesh = new Mesh(
-      `selected-spline-profile-${surfaceIndex}`,
+      `${namePrefix}-${surfaceIndex}`,
       scene
     );
 
@@ -602,7 +609,7 @@ function createSelectedSplineProfile(
 
     const material =
       new StandardMaterial(
-        `selected-spline-profile-material-${surfaceIndex}`,
+        `${namePrefix}-material-${surfaceIndex}`,
         scene
       );
 
@@ -663,6 +670,91 @@ function createSelectedSplineProfile(
       mesh.parent = parent;
     }
   }
+}
+
+const maxMapSplineProfiles = 120;
+const mapSplineProfileTileRadius = 1;
+
+function createMapSplineProfiles(
+  scene: Scene,
+  splines: OmsiPlacedSpline[],
+  activeTile:
+    | { x: number; y: number }
+    | undefined,
+  selectedSpline:
+    | OmsiPlacedSpline
+    | undefined,
+  splineProfilesByPath: Record<
+    string,
+    OmsiSplineDefinition
+  >,
+  textureAssetsByKey: Record<
+    string,
+    OmsiTextureAsset
+  >
+) {
+  let rendered = 0;
+
+  for (
+    let splineIndex = 0;
+    splineIndex < splines.length &&
+    rendered < maxMapSplineProfiles;
+    splineIndex += 1
+  ) {
+    const placedSpline =
+      splines[splineIndex];
+
+    if (
+      activeTile &&
+      Math.max(
+        Math.abs(
+          placedSpline.tileX -
+            activeTile.x
+        ),
+        Math.abs(
+          placedSpline.tileY -
+            activeTile.y
+        )
+      ) >
+        mapSplineProfileTileRadius
+    ) {
+      continue;
+    }
+
+    if (
+      isSameSpline(
+        placedSpline,
+        selectedSpline
+      )
+    ) {
+      continue;
+    }
+
+    const definition =
+      splineProfilesByPath[
+        placedSpline.splinePath
+      ];
+
+    if (
+      !definition?.exists ||
+      definition.surfaces.length === 0
+    ) {
+      continue;
+    }
+
+    createSelectedSplineProfile(
+      scene,
+      placedSpline,
+      definition,
+      textureAssetsByKey,
+      undefined,
+      `map-spline-profile-${splineIndex}`
+    );
+
+    rendered += 1;
+  }
+
+  return rendered;
 }
 
 function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
@@ -1693,6 +1785,7 @@ export function Viewport({
   showGrid,
   showObjects,
   showSplines,
+  showSplineProfiles,
   nightPreviewEnabled,
   cameraAction,
   placementAssetPath,
@@ -1712,6 +1805,7 @@ export function Viewport({
   selectedGeometry,
   objectGeometryByPath,
   textureAssetsByKey,
+  splineProfilesByPath,
   selectedSpline,
   selectedSplineProfile,
   onSelectObject,
@@ -1928,6 +2022,17 @@ export function Viewport({
         !usesWorldCoordinates &&
         splines.length
       ) {
+        if (showSplineProfiles) {
+          createMapSplineProfiles(
+            scene,
+            splines,
+            activeTile,
+            selectedSpline,
+            splineProfilesByPath,
+            textureAssetsByKey
+          );
+        }
+
         splines.forEach(
           (
             placedSpline,
@@ -2784,6 +2889,7 @@ export function Viewport({
     showGrid,
     showObjects,
     showSplines,
+    showSplineProfiles,
     nightPreviewEnabled,
     cameraAction,
     placementAssetPath,
@@ -2803,6 +2909,7 @@ export function Viewport({
     selectedGeometry,
     objectGeometryByPath,
     textureAssetsByKey,
+    splineProfilesByPath,
     selectedSpline,
     selectedSplineProfile,
     onSelectObject,

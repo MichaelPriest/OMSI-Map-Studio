@@ -276,3 +276,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 4. move away and verify switching to 0.2 and 0;
 5. verify only one LOD group is active at a time;
 6. verify **Global** meshes remain visible at every level.
+
+
+## Spline surface test
+
+1. open a tile with roads/splines and wait for `.sli` profile prefetch;
+2. with **Spline profiles** enabled, verify nearby axes gain extruded surfaces;
+3. compare curvature, width, elevation, and gradient against the axis;
+4. verify real textures when available;
+5. change the active tile and verify the 3×3 window follows the new area;
+6. disable **Spline profiles** and verify immediate return to axis-only mode.

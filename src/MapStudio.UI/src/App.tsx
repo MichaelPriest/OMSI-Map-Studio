@@ -349,6 +349,11 @@ export function App() {
     useState(true);
 
   const [
+    showSplineProfiles,
+    setShowSplineProfiles
+  ] = useState(true);
+
+  const [
     nightPreviewEnabled,
     setNightPreviewEnabled
   ] = useState(false);
@@ -6674,6 +6679,9 @@ export function App() {
               showGrid={showGrid}
               showObjects={showObjects}
               showSplines={showSplines}
+              showSplineProfiles={
+                showSplineProfiles
+              }
               nightPreviewEnabled={
                 nightPreviewEnabled
               }
@@ -6756,6 +6764,9 @@ export function App() {
               }
               textureAssetsByKey={
                 textureAssetsByKey
+              }
+              splineProfilesByPath={
+                splineProfilesByPath
               }
               selectedSpline={selectedSpline}
               selectedSplineProfile={
@@ -7277,6 +7288,21 @@ export function App() {
                 <input
                   type="checkbox"
                   checked={
+                    showSplineProfiles
+                  }
+                  disabled={!showSplines}
+                  onChange={(event) =>
+                    setShowSplineProfiles(
+                      event.target.checked
+                    )
+                  }
+                />
+                Perfis spline
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={
                     nightPreviewEnabled
                   }
                   onChange={(event) =>
@@ -7394,6 +7420,11 @@ export function App() {
             {mapLoadMode === "full"
               ? `${loadedMapGeometryCount}/${mapObjectPaths.length}`
               : "sob demanda"}
+            <b>·</b>
+            Perfis SLI:{" "}
+            {Object.keys(
+              splineProfilesByPath
+            ).length}
             <b>·</b>
             Texturas auto:{" "}
             {Object.keys(

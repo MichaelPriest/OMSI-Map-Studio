@@ -388,3 +388,10 @@ The automatic prefetch budget (24 unique keys) remains separate from the cache l
 Each `[mesh]` preserves the active `[LOD]` threshold from the `.sco`. Meshes declared before any `[LOD]` are global and remain active.
 
 The viewport selects the largest threshold less than or equal to the object's projected screen-height fraction, calculated from geometry radius, camera distance, and vertical FOV. Updates run every 6 frames to bound cost.
+
+
+## Nearby spline surfaces
+
+The viewport reuses real `.sli` profiles already present in `splineProfilesByPath` to extrude surfaces for splines near the active tile.
+
+The visual window is 3×3 tiles (radius 1) with a cap of 120 extruded splines per scene. The selected spline is excluded because it already has its own preview. Splines without a loaded profile remain visible through their axis.

@@ -388,3 +388,10 @@ O orçamento de prefetch automático (24 chaves únicas) continua separado do li
 Cada `[mesh]` preserva o limiar `[LOD]` vigente no arquivo `.sco`. Meshes declarados antes de qualquer `[LOD]` são globais e permanecem ativos.
 
 O viewport escolhe o maior limiar menor ou igual à fração projetada do objeto na altura da tela, calculada com raio geométrico, distância à câmera e FOV vertical. A atualização ocorre a cada 6 frames para limitar custo.
+
+
+## Superfícies de splines próximas
+
+O viewport reutiliza os perfis `.sli` reais já presentes em `splineProfilesByPath` para extrudar superfícies das splines próximas ao tile ativo.
+
+A janela visual é 3×3 tiles (raio 1) e existe limite de 120 splines extrudadas por cena. A spline selecionada é excluída desse lote porque já possui preview próprio. Splines sem perfil carregado continuam exibidas pelo eixo.

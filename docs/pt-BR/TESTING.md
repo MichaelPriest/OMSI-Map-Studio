@@ -276,3 +276,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 4. afaste a câmera e confirme as trocas para 0.2 e 0;
 5. confirme que apenas um grupo LOD fica ativo por vez;
 6. confirme que meshes **Global** permanecem visíveis em todos os níveis.
+
+
+## Teste de superfícies de spline
+
+1. abra um tile com ruas/splines e aguarde o prefetch dos perfis `.sli`;
+2. com **Perfis spline** ativo, confirme que eixos próximos passam a receber superfície extrudada;
+3. confira curva, largura, elevação e gradiente contra o eixo;
+4. confirme texturas reais quando disponíveis;
+5. mude o tile ativo e confirme que a janela 3×3 acompanha a nova área;
+6. desligue **Perfis spline** e confirme retorno imediato ao modo de eixos.

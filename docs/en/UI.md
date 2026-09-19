@@ -402,3 +402,10 @@ The layers panel now has **Clear cache**, removing loaded textures, clearing in-
 `.sco` objects with multiple `[LOD]` blocks no longer display every detail level at once. The active level changes according to projected screen size.
 
 In **Geometry**, every mesh is labeled **Global** or with its threshold, for example **LOD 0.6**, making validation easier.
+
+
+## Spline profiles on the map
+
+The **Spline profiles** layer displays real nearby spline surfaces using `.sli` profile geometry, UVs, gradient, curvature, and already-loaded textures.
+
+Rendering is limited to the active tile's 3×3 area and 120 splines per scene. Disable **Spline profiles** to return to the lightweight axis-only view.

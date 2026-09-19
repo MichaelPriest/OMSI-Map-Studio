@@ -402,3 +402,10 @@ A área de camadas ganhou **Limpar cache**, que remove texturas carregadas, canc
 Objetos `.sco` com vários blocos `[LOD]` não exibem mais todos os níveis de detalhe ao mesmo tempo. O nível ativo muda conforme o tamanho projetado na tela.
 
 Na aba **Geometria**, cada mesh mostra **Global** ou o limiar correspondente, por exemplo **LOD 0,6**, facilitando a validação.
+
+
+## Perfis de spline no mapa
+
+A camada **Perfis spline** mostra as superfícies reais das splines próximas usando o perfil `.sli`, UVs, gradiente, curva e texturas já carregadas.
+
+A renderização é limitada ao entorno 3×3 do tile ativo e a 120 splines por cena. Desmarque **Perfis spline** para voltar ao modo leve somente com eixos.
