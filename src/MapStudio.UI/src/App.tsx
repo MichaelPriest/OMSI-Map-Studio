@@ -346,6 +346,11 @@ export function App() {
     useState(true);
 
   const [
+    nightPreviewEnabled,
+    setNightPreviewEnabled
+  ] = useState(false);
+
+  const [
     cameraMode,
     setCameraMode
   ] = useState<
@@ -1541,6 +1546,14 @@ export function App() {
           materialOverride
             ?.bumpMapTextureName
         );
+
+        if (nightPreviewEnabled) {
+          queueTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.nightMapTextureName
+          );
+        }
       }
     }
 
@@ -1575,6 +1588,7 @@ export function App() {
   }, [
     bridgeAvailable,
     geometryByPath,
+    nightPreviewEnabled,
     placementAsset,
     requestedTextureKeys,
     selectedObject,
@@ -2006,6 +2020,14 @@ export function App() {
             materialOverride
               ?.bumpMapTextureName
           );
+
+          if (nightPreviewEnabled) {
+            queueObjectTexture(
+              mesh.declaredPath,
+              materialOverride
+                ?.nightMapTextureName
+            );
+          }
         }
       }
     }
@@ -2142,6 +2164,7 @@ export function App() {
     geometryByPath,
     nearbyObjectPaths,
     nearbySplinePaths,
+    nightPreviewEnabled,
     requestedTextureKeys,
     splineProfilesByPath,
     textureAssetsByKey
@@ -2740,6 +2763,18 @@ export function App() {
                   )
                 : undefined;
 
+            const nightTextureKey =
+              materialOverride
+                ?.nightMapTextureName
+                ? getSceneryTextureAssetKey(
+                    selectedObject
+                      .sceneryObjectPath,
+                    mesh.declaredPath,
+                    materialOverride
+                      .nightMapTextureName
+                  )
+                : undefined;
+
             return {
               mesh: getObjectName(
                 mesh.declaredPath
@@ -2774,6 +2809,20 @@ export function App() {
                   ? Boolean(
                       requestedTextureKeys[
                         bumpTextureKey
+                      ]
+                    )
+                  : false,
+              nightTextureAsset:
+                nightTextureKey
+                  ? textureAssetsByKey[
+                      nightTextureKey
+                    ]
+                  : undefined,
+              nightTextureRequested:
+                nightTextureKey
+                  ? Boolean(
+                      requestedTextureKeys[
+                        nightTextureKey
                       ]
                     )
                   : false
@@ -5124,6 +5173,23 @@ export function App() {
                                 : ""}
                             </small>
                           )}
+                          {row.materialOverride
+                            .nightMapTextureName && (
+                            <small>
+                              Nightmap:{" "}
+                              {row.materialOverride
+                                .nightMapTextureName}
+                              {" · "}
+                              {nightPreviewEnabled
+                                ? getTextureState(
+                                    row.materialOverride
+                                      .nightMapTextureName,
+                                    row.nightTextureAsset,
+                                    row.nightTextureRequested
+                                  ).label
+                                : "preview desligado"}
+                            </small>
+                          )}
                         </>
                       )}
                     </div>
@@ -6440,6 +6506,9 @@ export function App() {
               showGrid={showGrid}
               showObjects={showObjects}
               showSplines={showSplines}
+              nightPreviewEnabled={
+                nightPreviewEnabled
+              }
               cameraAction={cameraAction}
               placementAssetPath={
                 placementAsset
@@ -7035,6 +7104,20 @@ export function App() {
                   }
                 />
                 Splines
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={
+                    nightPreviewEnabled
+                  }
+                  onChange={(event) =>
+                    setNightPreviewEnabled(
+                      event.target.checked
+                    )
+                  }
+                />
+                Nightmap
               </label>
               <label className="muted">
                 <input

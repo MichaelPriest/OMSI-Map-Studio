@@ -360,3 +360,10 @@ A aba **Materiais** mostra a linha `SCO:` quando um override estático foi realm
 Materiais estáticos com `[matl_bumpmap]` agora carregam a imagem real de bump e aplicam o fator definido no `.sco`. A aba **Materiais** mostra o nome, estado de carregamento e fator do bump.
 
 Assim como a textura difusa, bump ausente ou inseguro não recebe placeholder: o material continua renderizado sem bump.
+
+
+## Camada Nightmap
+
+O viewport possui a camada **Nightmap**. Desligada, mantém o preview diurno. Ligada, materiais estáticos com `[matl_nightmap]` carregam a textura real como emissão.
+
+O inspetor mostra o arquivo e o estado; com a camada desligada exibe **preview desligado**.

@@ -159,6 +159,25 @@ public sealed class OmsiSceneryObjectReader
 
             if (string.Equals(
                     section.Keyword,
+                    "matl_nightmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var textureName =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        textureName))
+                {
+                    current.NightMapTextureName =
+                        textureName;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
                     "matl_bumpmap",
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -220,7 +239,8 @@ public sealed class OmsiSceneryObjectReader
                         builder.NoZWrite,
                         builder.NoZCheck,
                         builder.BumpMapTextureName,
-                        builder.BumpMapStrength))
+                        builder.BumpMapStrength,
+                        builder.NightMapTextureName))
             .ToArray();
     }
 
@@ -286,6 +306,10 @@ public sealed class OmsiSceneryObjectReader
 
         public double?
             BumpMapStrength
+        { get; set; }
+
+        public string?
+            NightMapTextureName
         { get; set; }
     }
 }

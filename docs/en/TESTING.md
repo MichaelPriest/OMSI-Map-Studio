@@ -222,3 +222,13 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 3. verify the asset transitions from waiting/loading to loaded;
 4. compare surface detail against an equivalent material without bump mapping;
 5. temporarily remove the bump image and verify fallback without a placeholder/fake.
+
+
+## Night-map test
+
+1. select an object with static `[matl_nightmap]`;
+2. verify **preview off** while Nightmap is unchecked;
+3. enable **Nightmap** and verify the real asset loads;
+4. verify emission without replacing the diffuse texture;
+5. disable it and verify daytime preview returns;
+6. verify `[matl_change]` is still not executed.

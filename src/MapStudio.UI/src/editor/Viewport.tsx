@@ -37,6 +37,7 @@ type ViewportProps = {
   showGrid: boolean;
   showObjects: boolean;
   showSplines: boolean;
+  nightPreviewEnabled: boolean;
   cameraAction?: {
     type:
       | "fit"
@@ -784,7 +785,11 @@ function createPreviewMaterial(
     | undefined,
   bumpTextureAsset:
     | OmsiTextureAsset
-    | undefined
+    | undefined,
+  nightTextureAsset:
+    | OmsiTextureAsset
+    | undefined,
+  nightPreviewEnabled: boolean
 ) {
   const material = new StandardMaterial(
     `${namePrefix}-material-${meshIndex}-${materialIndex}`,
@@ -887,6 +892,25 @@ function createPreviewMaterial(
       1;
   }
 
+  if (
+    nightPreviewEnabled &&
+    materialOverride
+      ?.nightMapTextureName
+  ) {
+    const nightTexture =
+      createTextureFromAsset(
+        scene,
+        nightTextureAsset
+      );
+
+    if (nightTexture) {
+      material.emissiveTexture =
+        nightTexture;
+      material.emissiveColor =
+        Color3.White();
+    }
+  }
+
   if (materialOverride?.noZWrite) {
     material.disableDepthWrite =
       true;
@@ -908,7 +932,8 @@ function createGeometryMeshes(
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
-  >
+  >,
+  nightPreviewEnabled: boolean
 ) {
   const meshes: Mesh[] = [];
 
@@ -1068,7 +1093,38 @@ function createGeometryMeshes(
                   )
                 ];
               })()
-            : undefined
+            : undefined,
+          materialIndex >= 0
+            ? (() => {
+                const materialOverride =
+                  findMaterialOverride(
+                    meshReference
+                      .materialOverrides,
+                    materialIndex,
+                    meshGeometry.materials[
+                      materialIndex
+                    ]?.textureName
+                  );
+
+                const textureName =
+                  materialOverride
+                    ?.nightMapTextureName;
+
+                if (!textureName) {
+                  return undefined;
+                }
+
+                return textureAssetsByKey[
+                  getSceneryTextureAssetKey(
+                    sceneryObjectPath,
+                    meshReference
+                      .declaredPath,
+                    textureName
+                  )
+                ];
+              })()
+            : undefined,
+          nightPreviewEnabled
         );
 
       mesh.isPickable = false;
@@ -1214,7 +1270,8 @@ function createSelectedGeometry(
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
-  >
+  >,
+  nightPreviewEnabled: boolean
 ) {
   const root = new TransformNode(
     "selected-object-geometry-root",
@@ -1232,7 +1289,8 @@ function createSelectedGeometry(
       "selected-object",
       placedObject.sceneryObjectPath,
       geometry,
-      textureAssetsByKey
+      textureAssetsByKey,
+      nightPreviewEnabled
     );
 
   for (const mesh of meshes) {
@@ -1252,7 +1310,8 @@ function createMapObjectGeometry(
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
-  >
+  >,
+  nightPreviewEnabled: boolean
 ) {
   const placementsByPath =
     new Map<
@@ -1311,7 +1370,8 @@ function createMapObjectGeometry(
         `map-object-${sceneryObjectPath}`,
         sceneryObjectPath,
         geometry,
-        textureAssetsByKey
+        textureAssetsByKey,
+        nightPreviewEnabled
       );
 
     for (const source of sourceMeshes) {
@@ -1369,6 +1429,7 @@ export function Viewport({
   showGrid,
   showObjects,
   showSplines,
+  nightPreviewEnabled,
   cameraAction,
   placementAssetPath,
   placementGeometry,
@@ -1673,7 +1734,8 @@ export function Viewport({
           scene,
           objects,
           objectGeometryByPath,
-          textureAssetsByKey
+          textureAssetsByKey,
+          nightPreviewEnabled
         );
 
         const markerObjects =
@@ -1766,7 +1828,8 @@ export function Viewport({
           scene,
           placementPreview,
           placementGeometry,
-          textureAssetsByKey
+          textureAssetsByKey,
+          nightPreviewEnabled
         );
       }
 
@@ -1898,7 +1961,8 @@ export function Viewport({
         scene,
         selectedObject,
         selectedGeometry,
-        textureAssetsByKey
+        textureAssetsByKey,
+        nightPreviewEnabled
       );
     }
 
@@ -1931,7 +1995,8 @@ export function Viewport({
             scene,
             selectedObject,
             selectedGeometry,
-            textureAssetsByKey
+            textureAssetsByKey,
+            nightPreviewEnabled
           );
       } else {
         editRoot =
@@ -2414,6 +2479,7 @@ export function Viewport({
     showGrid,
     showObjects,
     showSplines,
+    nightPreviewEnabled,
     cameraAction,
     placementAssetPath,
     placementGeometry,

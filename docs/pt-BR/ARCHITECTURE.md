@@ -344,3 +344,10 @@ Mapeamento atual: alpha 0 = opaco; alpha 1 = alpha-test/cutout; alpha 2 = alpha-
 `[matl_bumpmap]` é lido somente no contexto de um `[matl]` estático. Nome de textura e fator numérico são transportados com o mesmo override associado por mesh ordinal + material ID + textura.
 
 O arquivo de bump usa o mesmo `OmsiTextureAssetPathResolver`, portanto continua restrito a `Sceneryobjects`, formatos suportados e limite de 16 MiB. No Babylon ele é aplicado em `StandardMaterial.bumpTexture`, com `level` igual ao fator explícito quando disponível.
+
+
+## Preview manual de nightmap
+
+`[matl_nightmap]` é armazenado somente para `[matl]` estático. O asset não é carregado automaticamente no modo diurno.
+
+Quando **Nightmap** é ativado na UI, o resolver seguro carrega o arquivo e o Babylon o aplica como `emissiveTexture`. É uma inspeção manual, não uma simulação de horário, `NightMapMode` ou scripts do OMSI.

@@ -222,3 +222,13 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 3. valide que o asset passa de Aguardando/Carregando para Carregada;
 4. compare o relevo visual com um material equivalente sem bump;
 5. remova temporariamente a imagem do bump e confirme fallback sem placeholder/fake.
+
+
+## Teste de nightmap
+
+1. selecione um objeto com `[matl_nightmap]` estático;
+2. confirme **preview desligado** com Nightmap desmarcado;
+3. marque **Nightmap** e confirme carregamento do asset real;
+4. confirme emissão sem substituir a textura difusa;
+5. desmarque e confirme retorno ao preview diurno;
+6. confirme que `[matl_change]` continua sem ser executado.
