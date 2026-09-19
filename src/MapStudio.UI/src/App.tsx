@@ -378,6 +378,11 @@ export function App() {
     Record<number, true>
   >({});
 
+  const [
+    showTerrainPaint,
+    setShowTerrainPaint
+  ] = useState(true);
+
   const [showObjects, setShowObjects] =
     useState(true);
 
@@ -856,6 +861,7 @@ export function App() {
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
           setHiddenTerrainLayerIndices({});
+          setShowTerrainPaint(true);
           setGroundTextureAssetsByKey({});
           setRequestedGroundTextureKeys({});
           setTerrainMaskAssetsByKey({});
@@ -2126,7 +2132,10 @@ export function App() {
 
   const terrainOverlayEntries =
     useMemo(() => {
-      if (!selectedMap) {
+      if (
+        !selectedMap ||
+        !showTerrainPaint
+      ) {
         return [];
       }
 
@@ -2188,7 +2197,8 @@ export function App() {
     }, [
       activeTiles,
       hiddenTerrainLayerIndices,
-      selectedMap
+      selectedMap,
+      showTerrainPaint
     ]);
 
   useEffect(() => {
@@ -8368,6 +8378,25 @@ export function App() {
                   }
                 />
                 Terreno
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={
+                    showTerrainPaint
+                  }
+                  disabled={
+                    !showTerrain ||
+                    selectedMap
+                      .usesWorldCoordinates
+                  }
+                  onChange={(event) =>
+                    setShowTerrainPaint(
+                      event.target.checked
+                    )
+                  }
+                />
+                Pintura terreno
               </label>
 
               <button
