@@ -2152,6 +2152,8 @@ export function App() {
 
             if (
               !groundTexture ||
+              !mask.isValid ||
+              mask.maximumAlpha === 0 ||
               Object.hasOwn(
                 hiddenTerrainLayerIndices,
                 mask.layerIndex
@@ -5695,20 +5697,17 @@ export function App() {
                       .terrainTextureMasks
                       ?.length ?? 0
                   ) > 0
-                ? `Camadas ${activeTileDetails.terrainTextureMasks!
+                ? activeTileDetails.terrainTextureMasks!
                     .map(
                       (mask) =>
-                        mask.layerIndex
+                        mask.isValid
+                          ? `${mask.layerIndex}: ${mask.width}×${mask.height} · ${Math.round(
+                              mask.coverage *
+                                100
+                            )}%`
+                          : `${mask.layerIndex}: inválida (${mask.errorCode ?? "erro"})`
                     )
-                    .join(", ")} · ${formatFileSize(
-                    activeTileDetails.terrainTextureMasks!
-                      .reduce(
-                        (total, mask) =>
-                          total +
-                          mask.fileSize,
-                        0
-                      )
-                  )}`
+                    .join(" · ")
                 : "Nenhuma"}
           </dd>
         </div>
@@ -5760,6 +5759,12 @@ export function App() {
                     >
                       <input
                         type="checkbox"
+                        disabled={
+                          index > 0 &&
+                          (!activeMask ||
+                            !activeMask.isValid ||
+                            activeMask.maximumAlpha === 0)
+                        }
                         checked={
                           !Object.hasOwn(
                             hiddenTerrainLayerIndices,
@@ -5802,11 +5807,19 @@ export function App() {
                           {index === 0
                             ? "base"
                             : activeMask
-                              ? maskAsset?.exists
-                                ? maskAsset.alphaOnly === true
-                                  ? `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"} · validada`
-                                  : `${maskAsset.width ?? "?"}×${maskAsset.height ?? "?"} · ${maskAsset.pixelFormat ?? "DDS"} · não renderizada`
-                                : "máscara presente"
+                              ? !activeMask.isValid
+                                ? `inválida · ${activeMask.errorCode ?? "erro"}`
+                                : activeMask.maximumAlpha === 0
+                                  ? `${activeMask.width}×${activeMask.height} · vazia`
+                                  : maskAsset?.exists
+                                    ? `${activeMask.width}×${activeMask.height} · ${Math.round(
+                                        activeMask.coverage *
+                                          100
+                                      )}% cobertura · carregada`
+                                    : `${activeMask.width}×${activeMask.height} · ${Math.round(
+                                        activeMask.coverage *
+                                          100
+                                      )}% cobertura · presente`
                               : "sem máscara no tile"}
                         </small>
                       </span>
