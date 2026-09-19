@@ -431,3 +431,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 The `GeometryReader_LongHeaderBoneSection_UsesShortBoneCount` test creates a minimal extended-header O3D with long triangle indices and a bone section whose list count is UInt16. The reader must finish with renderable geometry and without `invalidBoneSection`.
 
 During manual Grundorf validation, the map Inspector must report renderable O3D paths, failures, pending paths, and the main mesh error codes separately. SLI profiles must also report loaded profile files and the number of actual surfaces available for rendering.
+
+
+## Single-loader, terrain, and icon validation
+
+1. open Grundorf and verify that after tile loading a single “Preparing map resources” animation remains until O3D/SLI/textures stabilize;
+2. verify the animation does not close and reopen for each item;
+3. editing interactions must remain locked while that animation is active;
+4. in the Inspector, verify `base texture upload: direct RGBA` and inspect the `average RGB` diagnostic;
+5. visually verify `gras.bmp` is visible on terrain through the unlit emissive path;
+6. verify textured spline surfaces are no longer dark merely because lighting is disabled;
+7. install the new build through the EXE and launch both from Start Menu and directly from the executable; the OMSI Map Studio icon should appear in the window and taskbar.
