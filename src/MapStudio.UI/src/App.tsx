@@ -104,17 +104,18 @@ const defaultPlacementTransform:
     bank: 0
   };
 
-const autoObjectTextureLimit = 128;
-const autoSplineTextureLimit = 96;
-const autoObjectTextureBatch = 12;
-const autoSplineTextureBatch = 8;
+const performanceObjectTextureLimit = 128;
+const performanceSplineTextureLimit = 96;
+const fullMapObjectTextureLimit = 1024;
+const fullMapSplineTextureLimit = 256;
+const performanceObjectTextureBatch = 12;
+const performanceSplineTextureBatch = 8;
+const fullMapObjectTextureBatch = 24;
+const fullMapSplineTextureBatch = 12;
 const geometryPreloadBatchSize = 12;
 const splineProfilePreloadBatchSize = 12;
-const autoTextureLimit =
-  autoObjectTextureLimit +
-  autoSplineTextureLimit;
 
-const maxTextureCacheEntries = 256;
+const maxTextureCacheEntries = 1536;
 const maxGroundTextureCacheEntries = 32;
 const maxTerrainMaskCacheEntries = 96;
 
@@ -362,6 +363,30 @@ export function App() {
 
   const [mapLoadMode, setMapLoadMode] =
     useState<MapLoadMode>("full");
+
+  const autoObjectTextureLimit =
+    mapLoadMode === "full"
+      ? fullMapObjectTextureLimit
+      : performanceObjectTextureLimit;
+
+  const autoSplineTextureLimit =
+    mapLoadMode === "full"
+      ? fullMapSplineTextureLimit
+      : performanceSplineTextureLimit;
+
+  const autoObjectTextureBatch =
+    mapLoadMode === "full"
+      ? fullMapObjectTextureBatch
+      : performanceObjectTextureBatch;
+
+  const autoSplineTextureBatch =
+    mapLoadMode === "full"
+      ? fullMapSplineTextureBatch
+      : performanceSplineTextureBatch;
+
+  const autoTextureLimit =
+    autoObjectTextureLimit +
+    autoSplineTextureLimit;
 
   const [editorTool, setEditorTool] =
     useState<EditorTool>("select");
@@ -3193,6 +3218,10 @@ export function App() {
     }
   }, [
     autoPrefetchedTextureKeys,
+    autoObjectTextureBatch,
+    autoObjectTextureLimit,
+    autoSplineTextureBatch,
+    autoSplineTextureLimit,
     bridgeAvailable,
     geometryByPath,
     nightPreviewEnabled,
@@ -3498,6 +3527,57 @@ export function App() {
         terrainMaskAssetsByKey
       ]
     );
+
+  const loadedTextureAssetCount =
+    Object.values(
+      textureAssetsByKey
+    ).filter(
+      (asset) =>
+        asset.exists &&
+        Boolean(
+          asset.base64Data ||
+          asset.rgbaBase64
+        )
+    ).length;
+
+  const failedTextureAssets =
+    Object.values(
+      textureAssetsByKey
+    ).filter(
+      (asset) =>
+        !asset.exists ||
+        Boolean(asset.errorCode)
+    );
+
+  const failedTextureAssetCount =
+    failedTextureAssets.length;
+
+  const textureErrorSummary =
+    Array.from(
+      failedTextureAssets.reduce(
+        (counts, asset) => {
+          const code =
+            asset.errorCode ??
+            "semDados";
+
+          counts.set(
+            code,
+            (counts.get(code) ?? 0) + 1
+          );
+
+          return counts;
+        },
+        new Map<string, number>()
+      )
+    )
+      .sort(
+        (left, right) =>
+          right[1] - left[1] ||
+          left[0].localeCompare(
+            right[0]
+          )
+      )
+      .slice(0, 4);
 
   const requestedVisualAssetCount =
     Object.keys(
@@ -6437,6 +6517,25 @@ export function App() {
             <dt>O3D protegidos</dt>
             <dd>
               {protectedObjectPathCount} tipos de objeto · {protectedMeshCount} malhas
+            </dd>
+          </div>
+        )}
+        <div>
+          <dt>Texturas de objetos/splines</dt>
+          <dd>
+            {`${loadedTextureAssetCount} carregadas · ${failedTextureAssetCount} falhas · ${pendingTextureAssetCount} pendentes`}
+          </dd>
+        </div>
+        {textureErrorSummary.length > 0 && (
+          <div>
+            <dt>Falhas de textura</dt>
+            <dd>
+              {textureErrorSummary
+                .map(
+                  ([code, count]) =>
+                    `${code}: ${count}`
+                )
+                .join(" · ")}
             </dd>
           </div>
         )}
@@ -9643,7 +9742,14 @@ export function App() {
             {" "}· superfícies:{" "}
             {splineProfileDiagnostics.surfaces}
             <b>·</b>
-            Texturas auto:{" "}
+            Texturas:{" "}
+            {loadedTextureAssetCount} OK
+            {" · "}
+            {failedTextureAssetCount} falhas
+            {" · "}
+            {pendingTextureAssetCount} pendentes
+            <b>·</b>
+            Auto solicitadas:{" "}
             {Object.keys(
               autoPrefetchedTextureKeys
             ).length}/
