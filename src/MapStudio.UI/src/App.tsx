@@ -29,6 +29,7 @@ import {
   loadSceneryObjectMetadata,
   saveObjectTransforms,
   saveSplineTransforms,
+  sceneryTreeTextureMeshToken,
   selectMap,
   selectOmsiRoot,
   setFullScreen,
@@ -1917,6 +1918,11 @@ export function App() {
       });
     };
 
+    queueTexture(
+      sceneryTreeTextureMeshToken,
+      geometry.tree?.textureName
+    );
+
     for (const mesh of
       geometry.meshes) {
       for (const [
@@ -2909,6 +2915,11 @@ export function App() {
         });
       };
 
+      queueObjectTexture(
+        sceneryTreeTextureMeshToken,
+        geometry.tree?.textureName
+      );
+
       for (const mesh of
         geometry.meshes) {
         for (const [
@@ -3297,15 +3308,20 @@ export function App() {
       () =>
         mapObjectPaths.filter(
           (path) =>
-            geometryByPath[
-              path
-            ]?.meshes.some(
-              (mesh) =>
-                mesh.geometry.isLoaded &&
-                mesh.geometry.positions.length >
-                  0 &&
-                mesh.geometry.indices.length >
-                  0
+            Boolean(
+              geometryByPath[path]?.tree
+            ) ||
+            Boolean(
+              geometryByPath[
+                path
+              ]?.meshes.some(
+                (mesh) =>
+                  mesh.geometry.isLoaded &&
+                  mesh.geometry.positions.length >
+                    0 &&
+                  mesh.geometry.indices.length >
+                    0
+              )
             )
         ).length,
       [
@@ -3479,6 +3495,15 @@ export function App() {
 
         for (const mesh of
           geometry.meshes) {
+          if (
+            geometry.tree &&
+            mesh.declaredPath
+              .toLowerCase()
+              .endsWith(".x")
+          ) {
+            continue;
+          }
+
           if (
             mesh.geometry.isLoaded &&
             mesh.geometry.positions.length >
@@ -6597,6 +6622,32 @@ export function App() {
                       : "Não informado"}
                 </dd>
               </div>
+              {selectedMetadata?.tree && (
+                <>
+                  <div>
+                    <dt>Árvore [tree]</dt>
+                    <dd>
+                      {selectedMetadata.tree.textureName}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Faixa [tree]</dt>
+                    <dd>
+                      altura{" "}
+                      {formatNumber(
+                        selectedMetadata.tree.minimumHeight
+                      )}–{formatNumber(
+                        selectedMetadata.tree.maximumHeight
+                      )} m · aspecto{" "}
+                      {formatNumber(
+                        selectedMetadata.tree.minimumAspect
+                      )}–{formatNumber(
+                        selectedMetadata.tree.maximumAspect
+                      )}
+                    </dd>
+                  </div>
+                </>
+              )}
             </dl>
 
             <button
