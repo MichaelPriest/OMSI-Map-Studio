@@ -1775,6 +1775,10 @@ function createPlacedTree(
   textureAssetsByKey: Record<
     string,
     OmsiTextureAsset
+  >,
+  materialCache?: Map<
+    string,
+    StandardMaterial
   >
 ) {
   const tree =
@@ -1798,45 +1802,64 @@ function createPlacedTree(
     return undefined;
   }
 
-  const texture =
-    createTextureFromAsset(
-      scene,
-      asset
+  const materialKey =
+    getSceneryTextureAssetKey(
+      placedObject.sceneryObjectPath,
+      sceneryTreeTextureMeshToken,
+      tree.textureName
     );
 
-  if (!texture) {
-    return undefined;
+  let material =
+    materialCache?.get(
+      materialKey
+    );
+
+  if (!material) {
+    const texture =
+      createTextureFromAsset(
+        scene,
+        asset
+      );
+
+    if (!texture) {
+      return undefined;
+    }
+
+    texture.hasAlpha = true;
+
+    material =
+      new StandardMaterial(
+        `${name}-material`,
+        scene
+      );
+
+    material.diffuseColor =
+      Color3.Black();
+
+    material.diffuseTexture =
+      texture;
+
+    material.emissiveColor =
+      Color3.White();
+
+    material.emissiveTexture =
+      texture;
+
+    material.useAlphaFromDiffuseTexture =
+      true;
+
+    material.transparencyMode =
+      Material.MATERIAL_ALPHATESTANDBLEND;
+
+    material.alphaCutOff = 0.25;
+    material.backFaceCulling = false;
+    material.disableLighting = true;
+
+    materialCache?.set(
+      materialKey,
+      material
+    );
   }
-
-  texture.hasAlpha = true;
-
-  const material =
-    new StandardMaterial(
-      `${name}-material`,
-      scene
-    );
-
-  material.diffuseColor =
-    Color3.Black();
-
-  material.diffuseTexture =
-    texture;
-
-  material.emissiveColor =
-    Color3.White();
-
-  material.emissiveTexture =
-    texture;
-
-  material.useAlphaFromDiffuseTexture =
-    true;
-
-  material.transparencyMode =
-    Material.MATERIAL_ALPHATESTANDBLEND;
-
-  material.alphaCutOff = 0.25;
-  material.backFaceCulling = false;
-  material.disableLighting = true;
 
   const mesh =
     MeshBuilder.CreatePlane(
@@ -2490,6 +2513,12 @@ function createMapObjectGeometry(
       OmsiPlacedObject[]
     >();
 
+  const treeMaterialCache =
+    new Map<
+      string,
+      StandardMaterial
+    >();
+
   for (const placedObject of objects) {
     const current =
       placementsByPath.get(
@@ -2561,7 +2590,8 @@ function createMapObjectGeometry(
         `map-tree-${sceneryObjectPath}-0`,
         placements[0],
         geometry,
-        textureAssetsByKey
+        textureAssetsByKey,
+        treeMaterialCache
       );
 
     if (sourceTree) {
@@ -2639,7 +2669,8 @@ function createMapObjectGeometry(
             placementIndex
           ],
           geometry,
-          textureAssetsByKey
+          textureAssetsByKey,
+          treeMaterialCache
         );
 
       if (tree) {
