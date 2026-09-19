@@ -9,6 +9,7 @@ import {
   deleteObject,
   deleteSpline,
   getGroundTextureAssetKey,
+  getTerrainTextureMaskAssetKey,
   getSceneryTextureAssetKey,
   getSplineTextureAssetKey,
   insertObject,
@@ -18,6 +19,7 @@ import {
   loadMapFull,
   loadMapRegion,
   loadGroundTextureAsset,
+  loadTerrainTextureMaskAsset,
   loadSceneryLibrary,
   loadSceneryTextureAsset,
   loadSplineLibrary,
@@ -628,6 +630,20 @@ export function App() {
   >({});
 
   const [
+    terrainMaskAssetsByKey,
+    setTerrainMaskAssetsByKey
+  ] = useState<
+    Record<string, OmsiTextureAsset>
+  >({});
+
+  const [
+    requestedTerrainMaskKeys,
+    setRequestedTerrainMaskKeys
+  ] = useState<
+    Record<string, true>
+  >({});
+
+  const [
     requestedTextureKeys,
     setRequestedTextureKeys
   ] = useState<
@@ -761,6 +777,8 @@ export function App() {
           setTextureAssetsByKey({});
           setGroundTextureAssetsByKey({});
           setRequestedGroundTextureKeys({});
+          setTerrainMaskAssetsByKey({});
+          setRequestedTerrainMaskKeys({});
           setRequestedTextureKeys({});
           setAutoPrefetchedTextureKeys({});
           textureCacheOrderRef.current =
@@ -1047,6 +1065,38 @@ export function App() {
 
             return current;
           });
+
+          return;
+        }
+
+        if (
+          message.type ===
+          "textureAssetLoaded" &&
+          message.requestKey.startsWith(
+            "terrain-mask|"
+          )
+        ) {
+          setRequestedTerrainMaskKeys(
+            (current) => {
+              const next = {
+                ...current
+              };
+
+              delete next[
+                message.requestKey
+              ];
+
+              return next;
+            }
+          );
+
+          setTerrainMaskAssetsByKey(
+            (current) => ({
+              ...current,
+              [message.requestKey]:
+                message.asset
+            })
+          );
 
           return;
         }
@@ -1954,6 +2004,205 @@ export function App() {
     requestedGroundTextureKeys,
     selectedMap
   ]);
+
+  const terrainOverlayEntries =
+    useMemo(() => {
+      if (!selectedMap) {
+        return [];
+      }
+
+      return activeTiles.flatMap(
+        (tile) =>
+          (
+            tile.terrainTextureMasks ??
+            []
+          ).flatMap((mask) => {
+            const groundTexture =
+              selectedMap.groundTextures[
+                mask.layerIndex
+              ];
+
+            if (!groundTexture) {
+              return [];
+            }
+
+            const textureKey =
+              getGroundTextureAssetKey(
+                selectedMap.directoryName,
+                groundTexture
+                  .mainTexturePath
+              );
+
+            const maskKey =
+              getTerrainTextureMaskAssetKey(
+                selectedMap.directoryName,
+                tile.relativeMapPath,
+                mask.layerIndex
+              );
+
+            return [
+              {
+                tileX: tile.x,
+                tileY: tile.y,
+                relativeMapPath:
+                  tile.relativeMapPath,
+                layerIndex:
+                  mask.layerIndex,
+                texturePath:
+                  groundTexture
+                    .mainTexturePath,
+                textureRepeating:
+                  groundTexture
+                    .mainTextureRepeating,
+                textureKey,
+                maskKey
+              }
+            ];
+          })
+      );
+    }, [
+      activeTiles,
+      selectedMap
+    ]);
+
+  useEffect(() => {
+    if (
+      !bridgeAvailable ||
+      !selectedMap ||
+      terrainOverlayEntries.length === 0
+    ) {
+      return;
+    }
+
+    const texturePaths =
+      Array.from(
+        new Set(
+          terrainOverlayEntries
+            .filter(
+              (entry) =>
+                !Object.hasOwn(
+                  groundTextureAssetsByKey,
+                  entry.textureKey
+                ) &&
+                !Object.hasOwn(
+                  requestedGroundTextureKeys,
+                  entry.textureKey
+                )
+            )
+            .map(
+              (entry) =>
+                entry.texturePath
+            )
+        )
+      );
+
+    const maskRequests =
+      terrainOverlayEntries.filter(
+        (entry) =>
+          !Object.hasOwn(
+            terrainMaskAssetsByKey,
+            entry.maskKey
+          ) &&
+          !Object.hasOwn(
+            requestedTerrainMaskKeys,
+            entry.maskKey
+          )
+      );
+
+    if (texturePaths.length > 0) {
+      setRequestedGroundTextureKeys(
+        (current) => {
+          const next = {
+            ...current
+          };
+
+          for (const texturePath of
+            texturePaths) {
+            next[
+              getGroundTextureAssetKey(
+                selectedMap.directoryName,
+                texturePath
+              )
+            ] = true;
+          }
+
+          return next;
+        }
+      );
+
+      for (const texturePath of
+        texturePaths) {
+        loadGroundTextureAsset(
+          selectedMap.directoryName,
+          texturePath
+        );
+      }
+    }
+
+    if (maskRequests.length > 0) {
+      setRequestedTerrainMaskKeys(
+        (current) => {
+          const next = {
+            ...current
+          };
+
+          for (const request of
+            maskRequests) {
+            next[
+              request.maskKey
+            ] = true;
+          }
+
+          return next;
+        }
+      );
+
+      for (const request of
+        maskRequests) {
+        loadTerrainTextureMaskAsset(
+          selectedMap.directoryName,
+          request.relativeMapPath,
+          request.layerIndex
+        );
+      }
+    }
+  }, [
+    bridgeAvailable,
+    groundTextureAssetsByKey,
+    requestedGroundTextureKeys,
+    requestedTerrainMaskKeys,
+    selectedMap,
+    terrainMaskAssetsByKey,
+    terrainOverlayEntries
+  ]);
+
+  const terrainOverlayPreviews =
+    useMemo(
+      () =>
+        terrainOverlayEntries.map(
+          (entry) => ({
+            tileX: entry.tileX,
+            tileY: entry.tileY,
+            layerIndex:
+              entry.layerIndex,
+            textureRepeating:
+              entry.textureRepeating,
+            textureAsset:
+              groundTextureAssetsByKey[
+                entry.textureKey
+              ],
+            maskAsset:
+              terrainMaskAssetsByKey[
+                entry.maskKey
+              ]
+          })
+        ),
+      [
+        groundTextureAssetsByKey,
+        terrainMaskAssetsByKey,
+        terrainOverlayEntries
+      ]
+    );
 
   const objectsForViewport = useMemo(
     () =>
@@ -7238,6 +7487,9 @@ export function App() {
               terrainMainTextureRepeating={
                 baseGroundTexture
                   ?.mainTextureRepeating
+              }
+              terrainOverlays={
+                terrainOverlayPreviews
               }
               showObjects={showObjects}
               showSplines={showSplines}
