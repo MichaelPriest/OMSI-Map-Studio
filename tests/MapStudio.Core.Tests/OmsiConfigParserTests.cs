@@ -577,16 +577,16 @@ public sealed class OmsiConfigParserTests
                 {
                     0, 0, 0,
                     1, 0, 0,
-                    0, 0, 1
+                    0, 1, 0
                 },
                 geometry.Positions);
 
             Assert.Equal(
                 new float[]
                 {
-                    0, 1, 0,
-                    0, 1, 0,
-                    0, 1, 0
+                    0, 0, 1,
+                    0, 0, 1,
+                    0, 0, 1
                 },
                 geometry.Normals);
 
@@ -600,7 +600,7 @@ public sealed class OmsiConfigParserTests
                 geometry.Uvs);
 
             Assert.Equal(
-                new uint[] { 2, 1, 0 },
+                new uint[] { 0, 1, 2 },
                 geometry.Indices);
         }
         finally
