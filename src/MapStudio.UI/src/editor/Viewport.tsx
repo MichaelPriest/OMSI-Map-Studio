@@ -2014,30 +2014,53 @@ export function Viewport({
     const minY = tileYs.length ? Math.min(...tileYs) : 0;
     const maxY = tileYs.length ? Math.max(...tileYs) : 0;
 
-    const terrainHeights =
+    let terrainMinimum =
+      Number.POSITIVE_INFINITY;
+
+    let terrainMaximum =
+      Number.NEGATIVE_INFINITY;
+
+    if (
       showTerrain &&
       !usesWorldCoordinates
-        ? tiles.flatMap(
-            (tile) =>
-              hasRenderableTerrain(
-                tile,
-                tileSize
-              )
-                ? tile.terrain!
-                    .heights
-                : []
+    ) {
+      for (const tile of tiles) {
+        if (
+          !hasRenderableTerrain(
+            tile,
+            tileSize
           )
-        : [];
+        ) {
+          continue;
+        }
+
+        for (const height of
+          tile.terrain!.heights) {
+          terrainMinimum =
+            Math.min(
+              terrainMinimum,
+              height
+            );
+
+          terrainMaximum =
+            Math.max(
+              terrainMaximum,
+              height
+            );
+        }
+      }
+    }
 
     const terrainCenterHeight =
-      terrainHeights.length > 0
+      Number.isFinite(
+        terrainMinimum
+      ) &&
+      Number.isFinite(
+        terrainMaximum
+      )
         ? (
-            Math.min(
-              ...terrainHeights
-            ) +
-            Math.max(
-              ...terrainHeights
-            )
+            terrainMinimum +
+            terrainMaximum
           ) / 2
         : 0;
 
