@@ -39,6 +39,14 @@ type ViewportProps = {
   showTerrain: boolean;
   terrainMainTextureAsset?: OmsiTextureAsset;
   terrainMainTextureRepeating?: number;
+  terrainOverlays: Array<{
+    tileX: number;
+    tileY: number;
+    layerIndex: number;
+    textureRepeating: number;
+    textureAsset?: OmsiTextureAsset;
+    maskAsset?: OmsiTextureAsset;
+  }>;
   showObjects: boolean;
   showSplines: boolean;
   showSplineProfiles: boolean;
@@ -274,7 +282,15 @@ function createTileSurface(
     | undefined,
   terrainMainTextureRepeating:
     | number
-    | undefined
+    | undefined,
+  terrainOverlays: Array<{
+    tileX: number;
+    tileY: number;
+    layerIndex: number;
+    textureRepeating: number;
+    textureAsset?: OmsiTextureAsset;
+    maskAsset?: OmsiTextureAsset;
+  }>
 ) {
   if (tiles.length === 0) {
     return;
@@ -437,6 +453,216 @@ function createTileSurface(
     terrainMainTextureAsset,
     terrainMainTextureRepeating
   );
+
+  for (const overlay of
+    terrainOverlays) {
+    if (
+      !overlay.textureAsset
+        ?.exists ||
+      !overlay.maskAsset?.exists
+    ) {
+      continue;
+    }
+
+    const tile =
+      tiles.find(
+        (candidate) =>
+          candidate.x ===
+            overlay.tileX &&
+          candidate.y ===
+            overlay.tileY
+      );
+
+    if (
+      !tile ||
+      !hasRenderableTerrain(
+        tile,
+        tileSize
+      )
+    ) {
+      continue;
+    }
+
+    const terrain =
+      tile.terrain!;
+
+    const sampleCount =
+      terrain.cellCount + 1;
+
+    const spacing =
+      tileSize /
+      terrain.cellCount;
+
+    const positions:
+      number[] = [];
+
+    const indices:
+      number[] = [];
+
+    const uvs:
+      number[] = [];
+
+    const heightOffset =
+      0.01 +
+      Math.min(
+        20,
+        overlay.layerIndex
+      ) *
+        0.0005;
+
+    for (
+      let row = 0;
+      row < sampleCount;
+      row += 1
+    ) {
+      for (
+        let column = 0;
+        column < sampleCount;
+        column += 1
+      ) {
+        positions.push(
+          tile.x * tileSize +
+            column * spacing,
+          terrain.heights[
+            row * sampleCount +
+              column
+          ] +
+            heightOffset,
+          tile.y * tileSize +
+            row * spacing
+        );
+
+        uvs.push(
+          column /
+            terrain.cellCount,
+          row /
+            terrain.cellCount
+        );
+      }
+    }
+
+    for (
+      let row = 0;
+      row < terrain.cellCount;
+      row += 1
+    ) {
+      for (
+        let column = 0;
+        column < terrain.cellCount;
+        column += 1
+      ) {
+        const topLeft =
+          row * sampleCount +
+          column;
+
+        const topRight =
+          topLeft + 1;
+
+        const bottomLeft =
+          topLeft + sampleCount;
+
+        const bottomRight =
+          bottomLeft + 1;
+
+        indices.push(
+          topLeft,
+          bottomRight,
+          topRight,
+          topLeft,
+          bottomLeft,
+          bottomRight
+        );
+      }
+    }
+
+    const mesh =
+      new Mesh(
+        `omsi-terrain-layer-${overlay.layerIndex}-${tile.x}-${tile.y}`,
+        scene
+      );
+
+    const vertexData =
+      new VertexData();
+
+    vertexData.positions =
+      positions;
+    vertexData.indices =
+      indices;
+    vertexData.uvs = uvs;
+
+    VertexData.ComputeNormals(
+      positions,
+      indices,
+      (vertexData.normals = [])
+    );
+
+    vertexData.applyToMesh(
+      mesh,
+      false
+    );
+
+    const material =
+      new StandardMaterial(
+        `omsi-terrain-layer-material-${overlay.layerIndex}-${tile.x}-${tile.y}`,
+        scene
+      );
+
+    material.diffuseColor =
+      Color3.White();
+
+    material.specularColor =
+      Color3.Black();
+
+    const mainTexture =
+      createTextureFromAsset(
+        scene,
+        overlay.textureAsset
+      );
+
+    const maskTexture =
+      createTextureFromAsset(
+        scene,
+        overlay.maskAsset
+      );
+
+    if (
+      !mainTexture ||
+      !maskTexture
+    ) {
+      mesh.dispose();
+      continue;
+    }
+
+    mainTexture.hasAlpha = false;
+    mainTexture.uScale =
+      overlay.textureRepeating;
+    mainTexture.vScale =
+      overlay.textureRepeating;
+    mainTexture.wrapU =
+      Texture.WRAP_ADDRESSMODE;
+    mainTexture.wrapV =
+      Texture.WRAP_ADDRESSMODE;
+
+    maskTexture.hasAlpha = true;
+    maskTexture.uScale = 1;
+    maskTexture.vScale = 1;
+    maskTexture.wrapU =
+      Texture.CLAMP_ADDRESSMODE;
+    maskTexture.wrapV =
+      Texture.CLAMP_ADDRESSMODE;
+
+    material.diffuseTexture =
+      mainTexture;
+    material.opacityTexture =
+      maskTexture;
+    material.transparencyMode =
+      Material.MATERIAL_ALPHABLEND;
+    material.disableDepthWrite =
+      true;
+
+    mesh.material = material;
+    mesh.isPickable = false;
+  }
 
   createMeshFromVertexData(
     scene,
@@ -1998,6 +2224,7 @@ export function Viewport({
   showTerrain,
   terrainMainTextureAsset,
   terrainMainTextureRepeating,
+  terrainOverlays,
   showObjects,
   showSplines,
   showSplineProfiles,
@@ -2290,7 +2517,8 @@ export function Viewport({
           showTerrain &&
             !usesWorldCoordinates,
           terrainMainTextureAsset,
-          terrainMainTextureRepeating
+          terrainMainTextureRepeating,
+          terrainOverlays
         );
       }
 
@@ -3584,6 +3812,7 @@ export function Viewport({
     showTerrain,
     terrainMainTextureAsset,
     terrainMainTextureRepeating,
+    terrainOverlays,
     showObjects,
     showSplines,
     showSplineProfiles,
