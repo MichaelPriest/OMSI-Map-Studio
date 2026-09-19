@@ -82,6 +82,66 @@ public sealed class OmsiTextureAssetPathResolverTests
     }
 
     [Fact]
+    public void ResolvesSceneryObjectTextureInsidePack()
+    {
+        var root =
+            CreateTempRoot();
+
+        try
+        {
+            var objectDirectory =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    "Trees");
+
+            var textureDirectory =
+                Path.Combine(
+                    objectDirectory,
+                    "Texture");
+
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            var objectPath =
+                Path.Combine(
+                    objectDirectory,
+                    "tree.sco");
+
+            var texturePath =
+                Path.Combine(
+                    textureDirectory,
+                    "tree.tga");
+
+            File.WriteAllText(
+                objectPath,
+                string.Empty);
+            File.WriteAllBytes(
+                texturePath,
+                [1, 2, 3]);
+
+            Assert.True(
+                OmsiTextureAssetPathResolver
+                    .TryResolveSceneryObjectTexture(
+                        root,
+                        objectPath,
+                        "tree.tga",
+                        out var resolved));
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    texturePath),
+                resolved);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public void ResolvesSplineTextureInsidePack()
     {
         var root =
