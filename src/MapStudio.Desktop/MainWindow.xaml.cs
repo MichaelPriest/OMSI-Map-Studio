@@ -4936,11 +4936,49 @@ public partial class MainWindow : Window
                 path =>
                     new Lazy<OmsiO3dGeometry>(
                         () =>
-                            isO3d
-                                ? _o3dGeometryReader
-                                    .Read(path)
-                                : _directXGeometryReader
-                                    .Read(path),
+                        {
+                            if (!isO3d)
+                            {
+                                return
+                                    _directXGeometryReader
+                                        .Read(path);
+                            }
+
+                            var geometry =
+                                _o3dGeometryReader
+                                    .Read(path);
+
+                            if (
+                                !string.Equals(
+                                    geometry.ErrorCode,
+                                    "encrypted",
+                                    StringComparison.OrdinalIgnoreCase))
+                            {
+                                return geometry;
+                            }
+
+                            var directXFallbackPath =
+                                Path.ChangeExtension(
+                                    path,
+                                    ".x");
+
+                            if (!File.Exists(
+                                    directXFallbackPath))
+                            {
+                                return geometry;
+                            }
+
+                            var directXFallback =
+                                _directXGeometryReader
+                                    .Read(
+                                        directXFallbackPath);
+
+                            return
+                                directXFallback
+                                    .IsLoaded
+                                    ? directXFallback
+                                    : geometry;
+                        },
                         LazyThreadSafetyMode
                             .ExecutionAndPublication));
 
