@@ -390,3 +390,15 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 6. open empty Object/Spline libraries for the first time and verify the animation remains until the host returns the list;
 7. trigger a read error in a test map and verify the lock disappears together with the error message;
 8. verify F11 and leaving fullscreen remain available without enabling editing during the lock.
+
+
+## Fullscreen, terrain, and spline test
+
+1. enter F11 and verify the sidebar plus fixed Explorer/Inspector disappear;
+2. verify the floating dock can select/move/rotate, create objects, create splines, open Explorer/Inspector, save, and control layers;
+3. verify Explorer/Inspector open as drawers over the viewport and close without leaving fullscreen;
+4. in Grundorf, wait for the blocking load to finish and verify the base terrain no longer appears black when its source file is BMP;
+5. in the Inspector, verify a transcoded BMP texture is reported as PNG with BMP as its source;
+6. in full-map mode, wait for the SLI-profile queue and verify spline surfaces appear across the whole map rather than only around the 3×3 area;
+7. switch to performance mode and verify nearby profile limits remain active;
+8. verify no OMSI BMP/SLI file is modified by preview rendering.

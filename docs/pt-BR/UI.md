@@ -508,3 +508,16 @@ Carregamentos estruturais que alteram o estado editável do mapa agora usam uma 
 Quando o host fornece progresso real, como no carregamento dos tiles do mapa completo e na preparação progressiva de O3D, a sobreposição exibe percentual e barra de progresso. Operações sem progresso numérico usam animação indeterminada. O bloqueio é liberado também em caso de erro para não deixar a interface presa.
 
 O prefetch limitado de texturas continua sendo tratado como cache visual em segundo plano depois que a estrutura editável correspondente já está pronta; ele não é usado como motivo para congelar indefinidamente o editor.
+
+
+## Tela cheia imersiva e ferramentas flutuantes
+
+No modo tela cheia, as laterais e o chrome fixo do aplicativo são ocultados para o viewport ocupar toda a área útil. As funções principais ficam em um dock flutuante: selecionar, mover, rotacionar, enquadrar, focar, abrir Explorador/Inspetor, criar objeto pela Biblioteca, criar spline pela Biblioteca, snap, desfazer/refazer, salvar e controles de visibilidade.
+
+Explorador e Inspetor continuam disponíveis como painéis flutuantes temporários, sem reduzir permanentemente a área 3D. Uma faixa de atalhos permanece visível no rodapé do viewport com Q/W/E, 1/2, N, F, Home, G, O, L, Ctrl+S, Ctrl+Z/Y e controles de mouse.
+
+### Terreno e splines
+
+Texturas BMP reais entregues pelo host são convertidas em memória para PNG antes de chegar ao WebView. A conversão preserva o conteúdo visual da textura e evita depender do suporte variável a BMP no caminho de textura do navegador/Babylon. O arquivo original no OMSI não é alterado.
+
+Em mapa completo, todos os caminhos de spline realmente usados no mapa entram na fila de leitura de perfis SLI, em vez de limitar a preparação aos poucos tipos próximos ao tile ativo. O viewport pode renderizar até 500 superfícies de spline no mapa completo; o modo desempenho continua limitando perfis à área próxima. Materiais de spline são exibidos como albedo para não ficarem artificialmente escuros pela iluminação do editor.

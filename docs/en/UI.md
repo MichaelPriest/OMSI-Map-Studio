@@ -508,3 +508,16 @@ Structural loads that change editable map state now use a centered animated over
 When the host exposes real progress, such as full-map tile loading and progressive O3D preparation, the overlay shows a percentage and progress bar. Operations without numeric progress use an indeterminate animation. The lock is also released on host errors so the editor cannot remain stuck.
 
 Bounded texture prefetch remains a background visual cache after the corresponding editable structure is ready; it is not used as a reason to freeze the editor indefinitely.
+
+
+## Immersive fullscreen and floating tools
+
+In fullscreen mode, side panels and fixed application chrome are hidden so the viewport uses the entire available area. Core actions move to a floating dock: select, move, rotate, fit, focus, Explorer/Inspector, create an object from the Library, create a spline from the Library, snap, undo/redo, save, and visibility controls.
+
+Explorer and Inspector remain available as temporary floating drawers without permanently reducing the 3D area. A shortcut strip stays visible at the bottom with Q/W/E, 1/2, N, F, Home, G, O, L, Ctrl+S, Ctrl+Z/Y, and mouse navigation.
+
+### Terrain and splines
+
+Real BMP textures delivered by the host are transcoded in memory to PNG before reaching the WebView. This preserves the visual texture content while avoiding variable BMP support in the browser/Babylon texture path. The original OMSI file is never modified.
+
+In full-map mode, every spline path actually used by the map enters the real SLI-profile loading queue instead of limiting preparation to a few types near the active tile. The viewport can render up to 500 spline surfaces in full-map mode; performance mode keeps profile rendering near the active area. Spline materials are shown as albedo so editor lighting cannot make them artificially dark.

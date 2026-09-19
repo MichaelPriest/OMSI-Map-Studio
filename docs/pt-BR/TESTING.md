@@ -390,3 +390,15 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 6. abra Biblioteca/Splines vazias pela primeira vez e confirme a animação até o host devolver a lista;
 7. provoque um erro de leitura em um mapa de teste e confirme que o bloqueio desaparece junto com a mensagem de erro;
 8. confirme que F11 e a saída de tela cheia continuam utilizáveis sem permitir edição durante o bloqueio.
+
+
+## Teste de tela cheia, terreno e splines
+
+1. entre em F11 e confirme que sidebar, Explorador e Inspetor fixos desaparecem;
+2. confirme que o dock flutuante permite selecionar/mover/rotacionar, criar objeto, criar spline, abrir Explorer/Inspetor, salvar e controlar camadas;
+3. confirme que Explorer/Inspetor abrem como drawers sobre o viewport e fecham sem sair da tela cheia;
+4. em Grundorf, aguarde o carregamento bloqueante terminar e confirme que a textura base de terreno deixa de aparecer preta quando o arquivo de origem é BMP;
+5. no Inspetor, confirme que uma textura BMP convertida aparece como PNG com indicação de origem BMP;
+6. em modo mapa completo, aguarde a fila de perfis SLI e confirme que as superfícies de spline aparecem pelo mapa inteiro, não apenas no entorno 3×3;
+7. alterne para modo desempenho e confirme que a limitação espacial de perfis continua ativa;
+8. confirme que nenhum arquivo BMP/SLI do OMSI é modificado pela visualização.
