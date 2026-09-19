@@ -3925,7 +3925,8 @@ public partial class MainWindow : Window
 
         await LoadTextureAssetAsync(
             requestKey,
-            fullPath);
+            fullPath,
+            preferRawBmp: true);
     }
 
     private async Task LoadSceneryTextureAssetAsync(
@@ -4065,13 +4066,15 @@ public partial class MainWindow : Window
 
     private async Task LoadTextureAssetAsync(
         string requestKey,
-        string fullPath)
+        string fullPath,
+        bool preferRawBmp = false)
     {
         try
         {
             var payload =
                 await ReadTextureAssetCachedAsync(
-                    fullPath);
+                    fullPath,
+                    preferRawBmp);
 
             PostMessage(new
             {
@@ -4096,16 +4099,21 @@ public partial class MainWindow : Window
 
     private async Task<TextureAssetPayload>
         ReadTextureAssetCachedAsync(
-            string fullPath)
+            string fullPath,
+            bool preferRawBmp)
     {
+        var cacheKey =
+            $"{(preferRawBmp ? "raw-bmp" : "png-bmp")}|{fullPath}";
+
         var task =
             _textureAssetCache.GetOrAdd(
-                fullPath,
-                path =>
+                cacheKey,
+                _ =>
                     Task.Run(
                         async () =>
                             await BuildTextureAssetAsync(
-                                path)));
+                                fullPath,
+                                preferRawBmp)));
 
         try
         {
@@ -4123,7 +4131,8 @@ public partial class MainWindow : Window
 
     private static async Task<TextureAssetPayload>
         BuildTextureAssetAsync(
-            string fullPath)
+            string fullPath,
+            bool preferRawBmp)
     {
         var info =
             new FileInfo(fullPath);
@@ -4199,15 +4208,29 @@ public partial class MainWindow : Window
                     rgbaBytes);
             alphaOnly = false;
 
-            // Use a browser-native PNG for the Babylon texture upload.
-            // Raw RGBA avoided one encoding pass, but real OMSI road
-            // surfaces made entirely from legacy BMPs could render black
-            // in WebView2. The texture cache keeps this transcode one-time.
-            base64Data =
-                Convert.ToBase64String(
-                    pngBytes);
-            rgbaBase64 = null;
-            extension = ".png";
+            if (preferRawBmp)
+            {
+                // Ground textures already rendered correctly through the
+                // raw-RGBA path. Keep that proven path for terrain only;
+                // converting every OMSI BMP to PNG regressed the terrain
+                // into a black surface in the editor.
+                rgbaBase64 =
+                    Convert.ToBase64String(
+                        rgbaBytes);
+                base64Data = null;
+                extension = ".bmp";
+            }
+            else
+            {
+                // Scenery/spline BMPs use a browser-native PNG. This avoids
+                // the raw-RGBA WebView2 regression seen on legacy road and
+                // junction O3D surfaces.
+                base64Data =
+                    Convert.ToBase64String(
+                        pngBytes);
+                rgbaBase64 = null;
+                extension = ".png";
+            }
         }
         else
         {
