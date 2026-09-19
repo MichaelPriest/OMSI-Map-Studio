@@ -766,20 +766,163 @@ function createTileOutline(
   ];
 }
 
-function getObjectWorldPosition(placedObject: OmsiPlacedObject) {
+function getTerrainHeightAtObject(
+  placedObject: OmsiPlacedObject,
+  tiles: OmsiTile[]
+) {
+  const tile =
+    tiles.find(
+      (candidate) =>
+        candidate.x === placedObject.tileX &&
+        candidate.y === placedObject.tileY
+    );
+
+  if (
+    !tile ||
+    !hasRenderableTerrain(
+      tile,
+      300
+    )
+  ) {
+    return 0;
+  }
+
+  const terrain = tile.terrain!;
+  const cellCount = terrain.cellCount;
+  const sampleCount = cellCount + 1;
+
+  const gridX =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (placedObject.x / 300) *
+          cellCount
+      )
+    );
+
+  const gridY =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (placedObject.y / 300) *
+          cellCount
+      )
+    );
+
+  const column0 = Math.floor(gridX);
+  const row0 = Math.floor(gridY);
+  const column1 =
+    Math.min(
+      cellCount,
+      column0 + 1
+    );
+  const row1 =
+    Math.min(
+      cellCount,
+      row0 + 1
+    );
+
+  const fractionX =
+    gridX - column0;
+  const fractionY =
+    gridY - row0;
+
+  const height00 =
+    terrain.heights[
+      row0 * sampleCount +
+        column0
+    ];
+  const height10 =
+    terrain.heights[
+      row0 * sampleCount +
+        column1
+    ];
+  const height01 =
+    terrain.heights[
+      row1 * sampleCount +
+        column0
+    ];
+  const height11 =
+    terrain.heights[
+      row1 * sampleCount +
+        column1
+    ];
+
+  const top =
+    height00 +
+    (height10 - height00) *
+      fractionX;
+
+  const bottom =
+    height01 +
+    (height11 - height01) *
+      fractionX;
+
+  return (
+    top +
+    (bottom - top) *
+      fractionY
+  );
+}
+
+function getObjectTerrainOffset(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  tiles: OmsiTile[]
+) {
+  if (geometry?.usesAbsoluteHeight) {
+    return 0;
+  }
+
+  return getTerrainHeightAtObject(
+    placedObject,
+    tiles
+  );
+}
+
+function getObjectWorldPosition(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  tiles: OmsiTile[]
+) {
   return new Vector3(
     placedObject.tileX * 300 + placedObject.x,
-    placedObject.z,
+    placedObject.z +
+      getObjectTerrainOffset(
+        placedObject,
+        geometry,
+        tiles
+      ),
     placedObject.tileY * 300 + placedObject.y
   );
 }
 
-function createObjectMarkerLines(objects: OmsiPlacedObject[]) {
+function createObjectMarkerLines(
+  objects: OmsiPlacedObject[],
+  geometryByPath: Record<
+    string,
+    OmsiSceneryObjectGeometry
+  >,
+  tiles: OmsiTile[]
+) {
   const markerRadius = 1.5;
   const markerHeight = 3;
 
   return objects.flatMap((placedObject) => {
-    const position = getObjectWorldPosition(placedObject);
+    const position =
+      getObjectWorldPosition(
+        placedObject,
+        geometryByPath[
+          placedObject.sceneryObjectPath
+        ],
+        tiles
+      );
 
     return [
       [
@@ -1262,8 +1405,19 @@ function createMapSplineProfiles(
   return rendered;
 }
 
-function createSelectedMarkerLines(placedObject: OmsiPlacedObject) {
-  const position = getObjectWorldPosition(placedObject);
+function createSelectedMarkerLines(
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  tiles: OmsiTile[]
+) {
+  const position =
+    getObjectWorldPosition(
+      placedObject,
+      geometry,
+      tiles
+    );
   const radius = 4;
   const height = 8;
 
@@ -2315,11 +2469,17 @@ function createGeometryMeshes(
 
 function configureObjectRoot(
   root: TransformNode,
-  placedObject: OmsiPlacedObject
+  placedObject: OmsiPlacedObject,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined,
+  tiles: OmsiTile[]
 ) {
   root.position.copyFrom(
     getObjectWorldPosition(
-      placedObject
+      placedObject,
+      geometry,
+      tiles
     )
   );
 
@@ -2496,7 +2656,8 @@ function createSelectedGeometry(
   >,
   nightPreviewEnabled: boolean,
   lodInstances:
-    ObjectLodInstance[]
+    ObjectLodInstance[],
+  tiles: OmsiTile[]
 ) {
   const root = new TransformNode(
     "selected-object-geometry-root",
@@ -2505,18 +2666,22 @@ function createSelectedGeometry(
 
   configureObjectRoot(
     root,
-    placedObject
+    placedObject,
+    geometry,
+    tiles
   );
 
   const meshes =
-    createGeometryMeshes(
-      scene,
-      "selected-object",
-      placedObject.sceneryObjectPath,
-      geometry,
-      textureAssetsByKey,
-      nightPreviewEnabled
-    );
+    geometry.tree
+      ? []
+      : createGeometryMeshes(
+          scene,
+          "selected-object",
+          placedObject.sceneryObjectPath,
+          geometry,
+          textureAssetsByKey,
+          nightPreviewEnabled
+        );
 
   const tree =
     createPlacedTree(
@@ -2564,7 +2729,8 @@ function createMapObjectGeometry(
   >,
   nightPreviewEnabled: boolean,
   lodInstances:
-    ObjectLodInstance[]
+    ObjectLodInstance[],
+  tiles: OmsiTile[]
 ) {
   const placementsByPath =
     new Map<
@@ -2626,7 +2792,9 @@ function createMapObjectGeometry(
 
     configureObjectRoot(
       sourceRoot,
-      placements[0]
+      placements[0],
+      geometry,
+      tiles
     );
 
     // OMSI [tree] scenery uses its generated billboard as the
@@ -2693,7 +2861,9 @@ function createMapObjectGeometry(
         root,
         placements[
           placementIndex
-        ]
+        ],
+        geometry,
+        tiles
       );
 
       const cloneMeshes:
@@ -2988,7 +3158,12 @@ export function Viewport({
       if (selectedObject) {
         camera.setTarget(
           getObjectWorldPosition(
-            selectedObject
+            selectedObject,
+            objectGeometryByPath[
+              selectedObject
+                .sceneryObjectPath
+            ],
+            tiles
           )
         );
         camera.radius =
@@ -3044,7 +3219,17 @@ export function Viewport({
 
       selectionMarker = MeshBuilder.CreateLineSystem(
         "omsi-selected-object",
-        { lines: createSelectedMarkerLines(placedObject) },
+        {
+          lines:
+            createSelectedMarkerLines(
+              placedObject,
+              objectGeometryByPath[
+                placedObject
+                  .sceneryObjectPath
+              ],
+              tiles
+            )
+        },
         scene
       );
       selectionMarker.color = new Color3(1, 0.96, 0.68);
@@ -3230,7 +3415,8 @@ export function Viewport({
           objectGeometryByPath,
           textureAssetsByKey,
           nightPreviewEnabled,
-          objectLodInstances
+          objectLodInstances,
+          tiles
         );
 
         const markerObjects =
@@ -3276,7 +3462,9 @@ export function Viewport({
                 {
                   lines:
                     createObjectMarkerLines(
-                      protectedMarkers
+                      protectedMarkers,
+                      objectGeometryByPath,
+                      tiles
                     )
                 },
                 scene
@@ -3300,7 +3488,9 @@ export function Viewport({
                 {
                   lines:
                     createObjectMarkerLines(
-                      missingMarkers
+                      missingMarkers,
+                      objectGeometryByPath,
+                      tiles
                     )
                 },
                 scene
@@ -3375,7 +3565,8 @@ export function Viewport({
           placementGeometry,
           textureAssetsByKey,
           nightPreviewEnabled,
-          objectLodInstances
+          objectLodInstances,
+          tiles
         );
       }
 
@@ -3385,7 +3576,9 @@ export function Viewport({
           {
             lines:
               createSelectedMarkerLines(
-                placementPreview
+                placementPreview,
+                placementGeometry,
+                tiles
               )
           },
           scene
@@ -3511,7 +3704,8 @@ export function Viewport({
         selectedGeometry,
         textureAssetsByKey,
         nightPreviewEnabled,
-        objectLodInstances
+        objectLodInstances,
+        tiles
       );
     }
 
@@ -3548,7 +3742,8 @@ export function Viewport({
             selectedGeometry,
             textureAssetsByKey,
             nightPreviewEnabled,
-            objectLodInstances
+            objectLodInstances,
+            tiles
           );
       } else {
         editRoot =
@@ -3559,7 +3754,13 @@ export function Viewport({
 
         configureObjectRoot(
           editRoot,
-          selectedObject
+          selectedObject,
+          selectedGeometry ??
+            objectGeometryByPath[
+              selectedObject
+                .sceneryObjectPath
+            ],
+          tiles
         );
       }
     } else if (
@@ -3662,7 +3863,17 @@ export function Viewport({
               editRoot.position.z -
               selectedObject.tileY *
                 300,
-            z: editRoot.position.y,
+            z:
+              editRoot.position.y -
+              getObjectTerrainOffset(
+                selectedObject,
+                selectedGeometry ??
+                  objectGeometryByPath[
+                    selectedObject
+                      .sceneryObjectPath
+                  ],
+                tiles
+              ),
             rotation:
               -euler.y /
               degreesToRadians,
@@ -4162,7 +4373,15 @@ export function Viewport({
             ? objects
             : []
       ) {
-        const position = getObjectWorldPosition(placedObject);
+        const position =
+          getObjectWorldPosition(
+            placedObject,
+            objectGeometryByPath[
+              placedObject
+                .sceneryObjectPath
+            ],
+            tiles
+          );
         const offset = position.subtract(ray.origin);
         const depth = Vector3.Dot(offset, direction);
 
