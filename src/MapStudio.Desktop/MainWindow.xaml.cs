@@ -4744,6 +4744,16 @@ public partial class MainWindow : Window
                             meshOrdinal]
                     : null;
 
+            var transform =
+                metadata.MeshTransforms
+                    .Count >
+                meshOrdinal
+                    ? metadata
+                        .MeshTransforms[
+                            meshOrdinal]
+                    : OmsiSceneryMeshTransform
+                        .Identity;
+
             var materialOverrides =
                 metadata.MaterialOverrides
                     .Where(
@@ -4776,6 +4786,7 @@ public partial class MainWindow : Window
                 new SceneryMeshGeometryPayload(
                     declaredPath,
                     lodThreshold,
+                    transform,
                     materialOverrides,
                     geometry));
         }
@@ -5464,6 +5475,7 @@ public partial class MainWindow : Window
     private sealed record SceneryMeshGeometryPayload(
         string DeclaredPath,
         double? LodThreshold,
+        OmsiSceneryMeshTransform Transform,
         IReadOnlyList<OmsiSceneryMaterialOverride> MaterialOverrides,
         OmsiO3dGeometry Geometry);
 

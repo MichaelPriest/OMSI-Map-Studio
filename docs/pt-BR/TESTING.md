@@ -505,3 +505,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 6. valide múltiplos `Mesh` no mesmo arquivo;
 7. use variantes `bin`, `tzip` e `bzip` e confirme `legacyDirectXUnsupportedEncoding`, sem travamento e sem fallback fictício;
 8. confirme que o cache por arquivo físico também é reutilizado para `.x`.
+
+
+## Validação de transformações locais SCO
+
+1. abra um `.sco` com dois `[mesh]` apontando para geometria real e use `[new_pos]` diferente em cada um; confirme a posição relativa;
+2. valide os aliases `[rot_x]/[rotx]`, `[rot_y]/[roty]` e `[rot_z]/[rotz]`;
+3. teste `[scale]` com um valor e confirme escala uniforme;
+4. teste `[scale]` com três valores e confirme escala independente X/Y/Z;
+5. confirme que um mesh sem blocos de transformação mantém identidade;
+6. reutilize o mesmo arquivo físico `.o3d` ou `.x` em dois `.sco` com transforms diferentes e confirme que a geometria continua compartilhada pelo cache sem misturar as transformações.

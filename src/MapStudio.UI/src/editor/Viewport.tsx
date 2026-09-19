@@ -2273,6 +2273,31 @@ function createGeometryMeshes(
           nightPreviewEnabled
         );
 
+      const meshTransform =
+        meshReference.transform;
+
+      mesh.position.set(
+        meshTransform.positionX,
+        meshTransform.positionZ,
+        meshTransform.positionY
+      );
+
+      mesh.scaling.set(
+        meshTransform.scaleX,
+        meshTransform.scaleZ,
+        meshTransform.scaleY
+      );
+
+      mesh.rotationQuaternion =
+        Quaternion.RotationYawPitchRoll(
+          -meshTransform.rotationZ *
+            degreesToRadians,
+          -meshTransform.rotationX *
+            degreesToRadians,
+          -meshTransform.rotationY *
+            degreesToRadians
+        );
+
       mesh.metadata = {
         ...(mesh.metadata ?? {}),
         mapStudioLodThreshold:

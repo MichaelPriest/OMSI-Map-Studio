@@ -466,3 +466,12 @@ The initial implementation covers:
 - file, vertex, face, triangle, and material guardrails.
 
 Binary or compressed `.x` files (`bin`, `tzip`, `bzip`) are never interpreted as text and return `legacyDirectXUnsupportedEncoding`. The editor creates no fake geometry for unsupported variants.
+
+
+## Per-mesh SCO local transforms
+
+Real `.sco` metadata now preserves one local transform per `[mesh]` entry: `[new_pos]`, `[rot_x]/[rotx]`, `[rot_y]/[roty]`, `[rot_z]/[rotz]`, and `[scale]` (uniform or per-axis).
+
+The transform stays outside cached physical geometry. Different `.sco` files can therefore reuse the same `.o3d`/`.x` with different local position, rotation, or scale without duplicating parsing. The host sends the transform alongside the mesh and the viewport applies it before parenting the mesh to the placed-object root.
+
+Mapping follows the same OMSI → Babylon system already used by the editor: X/Z/Y position, X/Z/Y scale, and yaw/pitch/roll rotation with the existing handedness conversion.

@@ -53,6 +53,8 @@ public sealed class OmsiSceneryObjectReader
             MeshPaths: meshes.Paths,
             MeshLodThresholds:
                 meshes.LodThresholds,
+            MeshTransforms:
+                meshes.Transforms,
             CollisionMeshPaths: collisionMeshes,
             MaterialOverrides:
                 materialOverrides,
@@ -69,8 +71,14 @@ public sealed class OmsiSceneryObjectReader
         var lodThresholds =
             new List<double?>();
 
+        var transforms =
+            new List<
+                OmsiSceneryMeshTransform>();
+
         double? currentLodThreshold =
             null;
+
+        var currentMeshOrdinal = -1;
 
         foreach (var section in
             document.Sections)
@@ -83,17 +91,11 @@ public sealed class OmsiSceneryObjectReader
                 currentLodThreshold =
                     null;
 
-                var value =
-                    section.DataLines
-                        .FirstOrDefault();
-
                 if (
-                    double.TryParse(
-                        value,
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
+                    TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
                         out var threshold) &&
-                    double.IsFinite(threshold) &&
                     threshold >= 0)
                 {
                     currentLodThreshold =
@@ -103,32 +105,227 @@ public sealed class OmsiSceneryObjectReader
                 continue;
             }
 
-            if (!string.Equals(
+            if (string.Equals(
                     section.Keyword,
                     "mesh",
                     StringComparison.OrdinalIgnoreCase))
             {
+                var path =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(
+                        path))
+                {
+                    currentMeshOrdinal = -1;
+                    continue;
+                }
+
+                paths.Add(path);
+                lodThresholds.Add(
+                    currentLodThreshold);
+                transforms.Add(
+                    OmsiSceneryMeshTransform
+                        .Identity);
+
+                currentMeshOrdinal =
+                    transforms.Count - 1;
+
                 continue;
             }
 
-            var path =
-                section.DataLines
-                    .FirstOrDefault();
-
-            if (string.IsNullOrWhiteSpace(
-                    path))
+            if (
+                currentMeshOrdinal < 0 ||
+                currentMeshOrdinal >=
+                    transforms.Count)
             {
                 continue;
             }
 
-            paths.Add(path);
-            lodThresholds.Add(
-                currentLodThreshold);
+            var current =
+                transforms[
+                    currentMeshOrdinal];
+
+            if (string.Equals(
+                    section.Keyword,
+                    "new_pos",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length >= 3 &&
+                    TryReadFiniteDouble(
+                        values[0],
+                        out var x) &&
+                    TryReadFiniteDouble(
+                        values[1],
+                        out var y) &&
+                    TryReadFiniteDouble(
+                        values[2],
+                        out var z))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            PositionX = x,
+                            PositionY = y,
+                            PositionZ = z
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_x",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "rotx",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationX =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_y",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "roty",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationY =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_z",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "rotz",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationZ =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "scale",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    TryReadFiniteDouble(
+                        values[0],
+                        out var scaleX))
+                {
+                    var scaleY = scaleX;
+                    var scaleZ = scaleX;
+
+                    if (
+                        values.Length >= 3 &&
+                        TryReadFiniteDouble(
+                            values[1],
+                            out var parsedScaleY) &&
+                        TryReadFiniteDouble(
+                            values[2],
+                            out var parsedScaleZ))
+                    {
+                        scaleY =
+                            parsedScaleY;
+                        scaleZ =
+                            parsedScaleZ;
+                    }
+
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            ScaleX = scaleX,
+                            ScaleY = scaleY,
+                            ScaleZ = scaleZ
+                        };
+                }
+            }
         }
 
         return new MeshReadResult(
             paths,
-            lodThresholds);
+            lodThresholds,
+            transforms);
+    }
+
+    private static bool
+        TryReadFiniteDouble(
+            string? value,
+            out double result)
+    {
+        result = 0;
+
+        return
+            double.TryParse(
+                value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out result) &&
+            double.IsFinite(result);
     }
 
     private static IReadOnlyList<
@@ -520,7 +717,8 @@ public sealed class OmsiSceneryObjectReader
 
     private sealed record MeshReadResult(
         IReadOnlyList<string> Paths,
-        IReadOnlyList<double?> LodThresholds);
+        IReadOnlyList<double?> LodThresholds,
+        IReadOnlyList<OmsiSceneryMeshTransform> Transforms);
 
     private sealed class MaterialOverrideBuilder(
         int meshOrdinal,

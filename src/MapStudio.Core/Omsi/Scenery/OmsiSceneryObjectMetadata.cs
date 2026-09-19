@@ -6,6 +6,7 @@ public sealed record OmsiSceneryObjectMetadata(
     IReadOnlyList<string> Groups,
     IReadOnlyList<string> MeshPaths,
     IReadOnlyList<double?> MeshLodThresholds,
+    IReadOnlyList<OmsiSceneryMeshTransform> MeshTransforms,
     IReadOnlyList<string> CollisionMeshPaths,
     IReadOnlyList<OmsiSceneryMaterialOverride> MaterialOverrides,
     OmsiSceneryTreeDefinition? Tree)
@@ -17,6 +18,8 @@ public sealed record OmsiSceneryObjectMetadata(
         MeshPaths: Array.Empty<string>(),
         MeshLodThresholds:
             Array.Empty<double?>(),
+        MeshTransforms:
+            Array.Empty<OmsiSceneryMeshTransform>(),
         CollisionMeshPaths: Array.Empty<string>(),
         MaterialOverrides:
             Array.Empty<OmsiSceneryMaterialOverride>(),

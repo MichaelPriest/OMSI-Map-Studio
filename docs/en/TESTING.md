@@ -505,3 +505,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 6. validate multiple `Mesh` blocks in one file;
 7. use `bin`, `tzip`, and `bzip` variants and confirm `legacyDirectXUnsupportedEncoding` without crashes or fake fallback;
 8. confirm the physical-file cache is reused for `.x` as well.
+
+
+## SCO local transform validation
+
+1. open a `.sco` with two `[mesh]` entries pointing to real geometry and give each a different `[new_pos]`; confirm their relative placement;
+2. validate `[rot_x]/[rotx]`, `[rot_y]/[roty]`, and `[rot_z]/[rotz]` aliases;
+3. test `[scale]` with one value and confirm uniform scale;
+4. test `[scale]` with three values and confirm independent X/Y/Z scale;
+5. confirm a mesh with no transform blocks keeps identity;
+6. reuse the same physical `.o3d` or `.x` from two `.sco` files with different transforms and confirm geometry remains shared by the cache without mixing transforms.

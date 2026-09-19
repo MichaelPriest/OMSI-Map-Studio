@@ -466,3 +466,12 @@ A primeira implementação cobre:
 - limites de arquivo, vértices, faces, triângulos e materiais.
 
 Arquivos `.x` binários ou comprimidos (`bin`, `tzip`, `bzip`) não são interpretados como texto e retornam `legacyDirectXUnsupportedEncoding`. O editor não cria geometria falsa quando a variante não é suportada.
+
+
+## Transformações locais por mesh SCO
+
+O metadata real do `.sco` agora preserva uma transformação local por entrada `[mesh]`: `[new_pos]`, `[rot_x]/[rotx]`, `[rot_y]/[roty]`, `[rot_z]/[rotz]` e `[scale]` (uniforme ou por eixo).
+
+A transformação fica fora da geometria física cacheada. Assim, dois `.sco` podem reutilizar o mesmo `.o3d`/`.x` com posição, rotação ou escala local diferentes sem duplicar o parsing. O host envia a transformação junto ao mesh e o viewport a aplica antes de anexá-lo ao root do objeto.
+
+O mapeamento segue o mesmo sistema OMSI → Babylon já usado no editor: posição X/Z/Y, escala X/Z/Y e rotações convertidas para yaw/pitch/roll com a mudança de handedness existente.

@@ -235,6 +235,17 @@ export type OmsiSceneryObjectGeometry = {
   meshes: Array<{
     declaredPath: string;
     lodThreshold: number | null;
+    transform: {
+      positionX: number;
+      positionY: number;
+      positionZ: number;
+      rotationX: number;
+      rotationY: number;
+      rotationZ: number;
+      scaleX: number;
+      scaleY: number;
+      scaleZ: number;
+    };
     materialOverrides:
       OmsiSceneryMaterialOverride[];
     geometry: OmsiO3dGeometry;
