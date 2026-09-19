@@ -69,6 +69,16 @@ public partial class App : Application
     {
         WriteCrashLog(e.Exception);
 
+        if (
+            string.Equals(
+                Environment.GetEnvironmentVariable(
+                    "MAPSTUDIO_SMOKE_TEST"),
+                "1",
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
         MessageBox.Show(
             "O OMSI Map Studio encontrou um erro ao iniciar. " +
             "Um diagnóstico foi salvo em %LOCALAPPDATA%\\OMSI Map Studio\\logs\\startup-crash.log.",
