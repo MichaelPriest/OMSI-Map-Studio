@@ -1233,6 +1233,40 @@ export function App() {
       sceneryLibrary
     ]);
 
+  const placementHasKnownTemplate =
+    useMemo(
+      () =>
+        placementAsset
+          ? objects.some(
+              (placedObject) =>
+                placedObject
+                  .sceneryObjectPath
+                  .toLocaleLowerCase(
+                    "pt-BR"
+                  ) ===
+                placementAsset
+                  .sceneryObjectPath
+                  .toLocaleLowerCase(
+                    "pt-BR"
+                  )
+            )
+          : false,
+      [
+        objects,
+        placementAsset
+      ]
+    );
+
+  const placementCanPersist =
+    Boolean(
+      placementAsset &&
+      pendingPlacement
+    ) &&
+    (
+      mapLoadMode !== "full" ||
+      placementHasKnownTemplate
+    );
+
   const selectedStats = useMemo(() => {
     if (
       activeTiles.length === 0 ||
@@ -1881,6 +1915,8 @@ export function App() {
 
         setPlacementAsset(entry);
         setPendingPlacement(undefined);
+        setSelectedObject(undefined);
+        setSelectedSpline(undefined);
         setEditorTool("select");
         setShowObjects(true);
         setError(undefined);
@@ -1915,6 +1951,7 @@ export function App() {
         !selectedMap ||
         !placementAsset ||
         !pendingPlacement ||
+        !placementCanPersist ||
         insertingObject
       ) {
         return;
@@ -1934,6 +1971,7 @@ export function App() {
       insertingObject,
       pendingPlacement,
       placementAsset,
+      placementCanPersist,
       selectedMap
     ]);
 
@@ -3667,20 +3705,102 @@ export function App() {
                   </strong>
                   <span>
                     {pendingPlacement
-                      ? `Tile ${pendingPlacement.tileX},${pendingPlacement.tileY} · X ${formatNumber(pendingPlacement.x)} · Y ${formatNumber(pendingPlacement.y)} · Z 0`
-                      : "Clique em um tile para posicionar a prévia em Z=0."}
+                      ? `Tile ${pendingPlacement.tileX},${pendingPlacement.tileY} · X ${formatNumber(pendingPlacement.x)} · Y ${formatNumber(pendingPlacement.y)}`
+                      : "Clique em um tile para posicionar a prévia."}
                   </span>
+
+                  {mapLoadMode ===
+                    "full" &&
+                    !placementHasKnownTemplate && (
+                    <span className="placement-warning">
+                      Prévia apenas: este .sco ainda não existe no mapa, então seus parâmetros extras não podem ser derivados com segurança.
+                    </span>
+                  )}
                 </div>
+
+                {pendingPlacement && (
+                  <>
+                    <label className="placement-field">
+                      <span>Z</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={
+                          pendingPlacement.z
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPendingPlacement(
+                              (current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      z: value
+                                    }
+                                  : current
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+
+                    <label className="placement-field">
+                      <span>Rot °</span>
+                      <input
+                        type="number"
+                        step="1"
+                        value={
+                          pendingPlacement.rotation
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPendingPlacement(
+                              (current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      rotation:
+                                        value
+                                    }
+                                  : current
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                  </>
+                )}
 
                 <button
                   type="button"
                   className="primary-button"
                   disabled={
-                    !pendingPlacement ||
+                    !placementCanPersist ||
                     insertingObject
                   }
                   onClick={
                     handleConfirmPlacement
+                  }
+                  title={
+                    placementCanPersist
+                      ? "Criar backup e inserir o objeto"
+                      : "É necessário um template real do mesmo .sco no mapa"
                   }
                 >
                   {insertingObject

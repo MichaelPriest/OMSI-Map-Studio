@@ -1245,3 +1245,29 @@ code {
   padding: 0 9px;
   font-size: 8px;
 }
+
+
+.placement-warning {
+  color: #f5b46c !important;
+  white-space: normal !important;
+}
+
+.placement-field {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  color: #b8946d;
+  font-size: 8px;
+}
+
+.placement-field input {
+  width: 58px;
+  height: 27px;
+  padding: 0 5px;
+  border: 1px solid #70451e;
+  border-radius: 4px;
+  background: #160f09;
+  color: #ffe2bb;
+  font-size: 8px;
+}
