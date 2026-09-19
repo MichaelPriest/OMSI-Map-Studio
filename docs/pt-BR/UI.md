@@ -543,3 +543,16 @@ Além do PNG de diagnóstico, BMPs reais são decodificados pelo host para pixel
 ## Ícone no Windows
 
 O executável continua incorporando `MapStudio.ico`. O processo e os atalhos agora usam também o AppUserModelID estável `MichaelPriest.OMSIMapStudio` e o próprio EXE como fonte explícita do ícone, evitando o ícone genérico na barra de tarefas e nos atalhos.
+
+
+## Carregamento único e contínuo
+
+Depois da leitura estrutural do mapa, o editor mantém **uma única animação de carregamento** durante o aquecimento dos recursos visuais da área: geometrias O3D, perfis SLI, texturas, `groundtex` e máscaras. A tela não fecha e reabre para cada item. O desbloqueio ocorre somente após uma pequena janela de estabilidade sem recursos pendentes, evitando piscar entre lotes sequenciais.
+
+## Terreno BMP como material não iluminado
+
+Quando a textura base real chega como RGBA, o material do terreno usa o mesmo asset também no canal emissivo. Isso garante que a textura real continue visível quando a iluminação do material está desativada. O Inspetor mantém o diagnóstico RGBA e o host inclui uma amostra de RGB médio dos pixels decodificados para separar “arquivo realmente escuro” de “problema de material/GPU”.
+
+## Ícone Windows
+
+O aplicativo voltou a usar a identidade padrão do próprio executável no shell do Windows, evitando um AppUserModelID personalizado não registrado quando o EXE é aberto diretamente. A janela usa URI de recurso explícita e também aplica o `MapStudio.ico` em runtime, mantendo o `ApplicationIcon` compilado como fallback.
