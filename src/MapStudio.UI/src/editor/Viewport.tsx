@@ -230,7 +230,7 @@ function getSplineFrame(
     );
 
   const yaw =
-    -placedSpline.rotation *
+    placedSpline.rotation *
     degreesToRadians;
 
   const hasCurve =
