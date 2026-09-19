@@ -248,19 +248,16 @@ function createActiveTileOutline(
   return createTileOutline(
     {
       x: activeTile.x,
-      y: activeTile.y,
-      relativeMapPath: "",
-      detailsLoaded: true,
-      fileExists: true,
-      objectCount: 0,
-      splineCount: 0,
-      splineAttachmentCount: 0
+      y: activeTile.y
     },
     tileSize
   );
 }
 
-function createTileOutline(tile: OmsiTile, tileSize: number) {
+function createTileOutline(
+  tile: Pick<OmsiTile, "x" | "y">,
+  tileSize: number
+) {
   const x0 = tile.x * tileSize;
   const z0 = tile.y * tileSize;
   const x1 = x0 + tileSize;
