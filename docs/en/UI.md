@@ -530,3 +530,16 @@ Grundorf visual diagnostics showed that the host was already transcoding `gras.b
 Browser-decodable image formats now explicitly use `Texture.CreateFromBase64String`, Babylon's path intended for Base64 payloads, instead of relying on a generic `data:` URL. DDS/TGA remain on their dedicated loader path. Upload failures are logged with source extension, MIME type, and the Babylon error.
 
 For terrain and real spline surfaces, the preview also uses the real texture as an unlit emissive/albedo source. This removes editor lighting/material multiplication as a cause of an almost-black surface without inventing a replacement texture. The real OMSI file remains the only visual source.
+
+
+## Continuous loading without one modal per item
+
+The full-screen blocking overlay is now reserved for structural operations: selecting the OMSI installation, opening a map, loading the full map/region, and loading libraries. Individual SCO, O3D, SLI, and texture reads continue in the background and are reported in the status bar instead of opening and closing a modal for every resource.
+
+## Real RGBA path for BMP textures
+
+In addition to the diagnostic PNG, real BMP files are decoded by the host into RGBA pixels and uploaded to Babylon as `RawTexture`. This removes the browser image decoder from the critical path for BMP-based terrain and spline textures. The original OMSI file is not modified.
+
+## Windows icon identity
+
+The executable continues to embed `MapStudio.ico`. The process and installer shortcuts now also use the stable `MichaelPriest.OMSIMapStudio` AppUserModelID and explicitly use the EXE as the icon source, preventing generic Windows taskbar and shortcut icons.

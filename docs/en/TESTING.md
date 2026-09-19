@@ -413,3 +413,14 @@ Conflict test: try linking to an occupied endpoint or externally change a link b
 5. enable Spline profiles and verify real spline surfaces use their loaded textures;
 6. if a texture is still missing, open the WebView2 console and look for `OMSI Map Studio: texture upload failed`, recording extension/MIME and error;
 7. verify no OMSI file was modified during the test.
+
+
+## Continuous loading, RGBA, and icon validation
+
+1. open Grundorf in full-map mode and verify there is only one blocking structural loading screen, not a new modal for every O3D/SLI item;
+2. verify O3D, SLI, and texture progress continues in the status bar in the background;
+3. verify `gras.bmp` is still reported as a BMP source and terrain appears through the RGBA upload path;
+4. verify BMP-based road/spline surfaces appear without depending on WebView PNG decoding;
+5. check the `real O3D` counter: invalid geometry responses must be shown as failures rather than renderable models;
+6. install through the EXE, launch from Start Menu, and verify the OMSI Map Studio icon in the window, taskbar, and shortcut;
+7. verify no original OMSI file was modified.

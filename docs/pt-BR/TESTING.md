@@ -413,3 +413,14 @@ Teste de conflito: tente ligar a uma ponta já ocupada ou altere externamente um
 5. ligue Perfis spline e confirme que as superfícies reais das splines usam suas texturas carregadas;
 6. se uma textura continuar ausente, abra o console WebView2 e procure por `OMSI Map Studio: texture upload failed`, registrando extensão/MIME e erro;
 7. confirme que nenhum arquivo do OMSI foi modificado durante o teste.
+
+
+## Validação de carregamento contínuo, RGBA e ícone
+
+1. abra Grundorf em mapa completo e confirme que existe apenas uma tela bloqueante para o carregamento estrutural, sem um novo modal para cada O3D/SLI;
+2. confirme que O3D, SLI e texturas continuam avançando na barra de status em segundo plano;
+3. confirme que `gras.bmp` continua indicado como origem BMP e que o terreno aparece usando o upload RGBA;
+4. confirme que superfícies de ruas/splines BMP aparecem sem depender do decoder PNG do WebView;
+5. confira o contador `O3D reais`: respostas com geometria inválida devem aparecer como falhas, não como modelo renderizável;
+6. instale pelo EXE, abra pelo Menu Iniciar e confirme o ícone do OMSI Map Studio na janela, barra de tarefas e atalho;
+7. confirme que nenhum arquivo original do OMSI foi modificado.

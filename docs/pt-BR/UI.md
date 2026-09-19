@@ -530,3 +530,16 @@ O diagnóstico visual do Grundorf mostrou que o host já convertia `gras.bmp` pa
 Formatos de imagem decodificáveis pelo navegador agora usam explicitamente `Texture.CreateFromBase64String`, o caminho do Babylon destinado a payload Base64, em vez de depender de um URL `data:` genérico. DDS/TGA continuam no loader dedicado. Falhas de upload são registradas no console com extensão de origem, MIME e erro retornado pelo Babylon.
 
 Para terreno e superfície real de spline, o preview usa a textura também como emissiva/albedo não iluminado. Isso elimina iluminação/material como causa de uma superfície quase preta sem inventar uma textura substituta. O arquivo real do OMSI continua sendo a única fonte visual.
+
+
+## Carregamento contínuo sem modal por item
+
+O bloqueio de tela inteira fica reservado às operações estruturais: selecionar a instalação do OMSI, abrir mapa, carregar mapa completo/região e carregar bibliotecas. Leitura individual de SCO, O3D, SLI e texturas continua em segundo plano e é mostrada na barra de status, sem abrir e fechar um modal para cada recurso.
+
+## Texturas BMP por RGBA real
+
+Além do PNG de diagnóstico, BMPs reais são decodificados pelo host para pixels RGBA e enviados ao Babylon como `RawTexture`. Isso remove o decoder de imagem do navegador do caminho crítico para terreno e splines baseadas em BMP. O arquivo original do OMSI não é alterado.
+
+## Ícone no Windows
+
+O executável continua incorporando `MapStudio.ico`. O processo e os atalhos agora usam também o AppUserModelID estável `MichaelPriest.OMSIMapStudio` e o próprio EXE como fonte explícita do ícone, evitando o ícone genérico na barra de tarefas e nos atalhos.
