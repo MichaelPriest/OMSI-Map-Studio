@@ -409,3 +409,14 @@ These values travel through the same `OmsiTileSummary` used by full-map and 3×3
 In extended-header O3D files, vertex and triangle counts may use 32-bit values. The bone list is an exception: its bone count remains 16-bit. The dedicated reader now handles that distinction explicitly, preventing stream misalignment and false `invalidBoneSection` failures in models containing bones.
 
 Visual loading also distinguishes “response received” from actually renderable geometry. An O3D path is only considered renderable when at least one mesh contains valid positions and indices.
+
+
+## Optimized map-loading pipeline
+
+Visual warmup no longer loads one O3D geometry and one SLI profile at a time. React now dispatches batches of up to 8 O3D geometries and 8 SLI profiles in parallel, while the host bounds heavy O3D parsing to a safe amount of available CPU parallelism.
+
+Scenery geometry is cached by absolute path while the OMSI root remains unchanged. Texture payloads are also cached by physical file, so repeated references across materials/objects do not trigger another read, conversion, or Base64 encoding of the same file.
+
+OMSI BMP textures are sent directly to the GPU as RGBA. The host no longer creates a redundant PNG for the same BMP, reducing CPU, memory, and WebView2 message traffic.
+
+Performance 3×3 mode no longer has an artificial 64-object-path or 48-spline-path cap. Every asset actually used by the loaded tiles enters the preload queue.
