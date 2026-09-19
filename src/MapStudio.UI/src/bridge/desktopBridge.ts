@@ -28,6 +28,14 @@ export type OmsiTile = {
   terrain?: OmsiTerrainGrid | null;
 };
 
+export type OmsiGroundTexture = {
+  mainTexturePath: string;
+  detailTexturePath: string;
+  resolutionCode: number;
+  mainTextureRepeating: number;
+  detailTextureRepeating: number;
+};
+
 export type OmsiMap = {
   directoryName: string;
   displayName: string;
@@ -35,6 +43,7 @@ export type OmsiMap = {
   globalConfigPath: string;
   usesWorldCoordinates: boolean;
   tiles: OmsiTile[];
+  groundTextures: OmsiGroundTexture[];
 };
 
 export type OmsiPlacedObject = {
@@ -634,6 +643,17 @@ export function loadMapRegion(
   });
 }
 
+export function getGroundTextureAssetKey(
+  directoryName: string,
+  texturePath: string
+) {
+  return [
+    "ground",
+    directoryName,
+    texturePath
+  ].join("|");
+}
+
 export function getSceneryTextureAssetKey(
   sceneryObjectPath: string,
   declaredMeshPath: string,
@@ -656,6 +676,26 @@ export function getSplineTextureAssetKey(
     splinePath,
     textureName
   ].join("|");
+}
+
+export function loadGroundTextureAsset(
+  directoryName: string,
+  texturePath: string
+) {
+  const requestKey =
+    getGroundTextureAssetKey(
+      directoryName,
+      texturePath
+    );
+
+  getWebView()?.postMessage({
+    type: "loadGroundTextureAsset",
+    requestKey,
+    directoryName,
+    texturePath
+  });
+
+  return requestKey;
 }
 
 export function loadSceneryTextureAsset(
