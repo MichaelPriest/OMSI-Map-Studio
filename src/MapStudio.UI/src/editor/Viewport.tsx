@@ -1310,7 +1310,12 @@ function createSelectedSplineProfile(
     }
 
     mesh.material = material;
-    mesh.isPickable = false;
+    mesh.isPickable = true;
+    mesh.metadata = {
+      ...(mesh.metadata ?? {}),
+      mapStudioKind: "spline",
+      placedSpline
+    };
 
     if (parent) {
       mesh.parent = parent;
@@ -2911,6 +2916,12 @@ function createMapObjectGeometry(
 
     for (const source of sourceMeshes) {
       source.parent = sourceRoot;
+      source.isPickable = true;
+      source.metadata = {
+        ...(source.metadata ?? {}),
+        mapStudioKind: "object",
+        placedObject: placements[0]
+      };
     }
 
     const sourceTree =
@@ -2926,6 +2937,12 @@ function createMapObjectGeometry(
     if (sourceTree) {
       sourceTree.parent =
         sourceRoot;
+      sourceTree.isPickable = true;
+      sourceTree.metadata = {
+        ...(sourceTree.metadata ?? {}),
+        mapStudioKind: "object",
+        placedObject: placements[0]
+      };
     }
 
     const sourceLodInstance =
@@ -2984,10 +3001,13 @@ function createMapObjectGeometry(
 
         if (clone) {
           clone.metadata = {
-            ...(source.metadata ?? {})
+            ...(source.metadata ?? {}),
+            mapStudioKind: "object",
+            placedObject:
+              placements[placementIndex]
           };
 
-          clone.isPickable = false;
+          clone.isPickable = true;
           cloneMeshes.push(clone);
         }
       }
@@ -3006,6 +3026,13 @@ function createMapObjectGeometry(
 
       if (tree) {
         tree.parent = root;
+        tree.isPickable = true;
+        tree.metadata = {
+          ...(tree.metadata ?? {}),
+          mapStudioKind: "object",
+          placedObject:
+            placements[placementIndex]
+        };
       }
 
       const lodInstance =
@@ -4455,6 +4482,58 @@ export function Viewport({
         }
 
         return;
+      }
+
+      const directPick =
+        scene.pick(
+          pointerX,
+          pointerY,
+          (mesh) =>
+            mesh.isPickable &&
+            (
+              mesh.metadata?.mapStudioKind ===
+                "object" ||
+              mesh.metadata?.mapStudioKind ===
+                "spline"
+            ),
+          false,
+          camera
+        );
+
+      if (
+        directPick?.hit &&
+        directPick.pickedMesh?.metadata
+          ?.mapStudioKind === "object"
+      ) {
+        const placedObject =
+          directPick.pickedMesh.metadata
+            .placedObject as
+              | OmsiPlacedObject
+              | undefined;
+
+        if (placedObject) {
+          onSelectSpline(undefined);
+          onSelectObject(placedObject);
+          return;
+        }
+      }
+
+      if (
+        directPick?.hit &&
+        directPick.pickedMesh?.metadata
+          ?.mapStudioKind === "spline"
+      ) {
+        const placedSpline =
+          directPick.pickedMesh.metadata
+            .placedSpline as
+              | OmsiPlacedSpline
+              | undefined;
+
+        if (placedSpline) {
+          onSelectObject(undefined);
+          onSelectSpline(placedSpline);
+          return;
+        }
       }
 
       const threshold = Math.max(2.5, Math.min(20, camera.radius * 0.004));

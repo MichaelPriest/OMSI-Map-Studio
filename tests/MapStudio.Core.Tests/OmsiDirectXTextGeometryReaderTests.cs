@@ -62,9 +62,9 @@ public sealed class
             Assert.Equal(
                 new uint[]
                 {
-                    2,
+                    0,
                     1,
-                    0
+                    2
                 },
                 geometry.Indices);
 
@@ -74,6 +74,11 @@ public sealed class
 
             Assert.Equal(
                 1f,
+                geometry.Positions[7],
+                4);
+
+            Assert.Equal(
+                0f,
                 geometry.Positions[8],
                 4);
 
@@ -89,6 +94,49 @@ public sealed class
                 new ushort[] { 0 },
                 geometry
                     .TriangleMaterialIndices);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Read_TextMesh_PreservesDirectXYUpAxes()
+    {
+        var path =
+            CreateTempFile(
+                """
+                xof 0303txt 0032
+                Mesh {
+                  3;
+                  0;0;0;,
+                  1;0;0;,
+                  0;0;2;;
+                  1;
+                  3;0,1,2;;
+                }
+                """);
+
+        try
+        {
+            var geometry =
+                new OmsiDirectXTextGeometryReader()
+                    .Read(path);
+
+            Assert.True(
+                geometry.IsLoaded,
+                geometry.ErrorCode);
+
+            Assert.Equal(
+                2f,
+                geometry.Positions[8],
+                4);
+
+            Assert.Equal(
+                0f,
+                geometry.Positions[7],
+                4);
         }
         finally
         {

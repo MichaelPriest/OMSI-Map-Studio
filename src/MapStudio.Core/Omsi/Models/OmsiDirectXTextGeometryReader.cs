@@ -547,11 +547,12 @@ public sealed class OmsiDirectXTextGeometryReader
                         sourceVertices[index],
                         transform);
 
+                // Legacy OMSI DirectX .x geometry is already expressed
+                // in the DirectX/Y-up model coordinate system used by
+                // Babylon. Do not apply the map Z-up conversion here;
+                // that conversion belongs only to placed map objects.
                 convertedVertices[index] =
-                    new Vector3(
-                        transformed.X,
-                        transformed.Z,
-                        transformed.Y);
+                    transformed;
             }
 
             var localIndices =
@@ -603,19 +604,19 @@ public sealed class OmsiDirectXTextGeometryReader
                         face.Length - 1;
                     triangle++)
                 {
-                    // Axis swapping changes handedness. Reverse
-                    // winding to keep front faces consistent with O3D.
+                    // No axis swap is performed for legacy .x data,
+                    // so preserve the source winding.
                     localIndices.Add(
                         checked(
-                            (uint)face[
-                                triangle + 1]));
+                            (uint)face[0]));
                     localIndices.Add(
                         checked(
                             (uint)face[
                                 triangle]));
                     localIndices.Add(
                         checked(
-                            (uint)face[0]));
+                            (uint)face[
+                                triangle + 1]));
 
                     localTriangleMaterials.Add(
                         checked(
