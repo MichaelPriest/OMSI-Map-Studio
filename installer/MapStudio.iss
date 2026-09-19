@@ -24,7 +24,6 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppUrl}
 AppSupportURL={#AppUrl}
 AppUpdatesURL={#AppUrl}
-AppUserModelID=MichaelPriest.OMSIMapStudio
 DefaultDirName={localappdata}\\Programs\\OMSI Map Studio
 DefaultGroupName=OMSI Map Studio
 DisableProgramGroupPage=yes
