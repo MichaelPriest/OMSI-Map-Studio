@@ -202,6 +202,163 @@ public sealed class OmsiTextureAssetPathResolverTests
     }
 
     [Fact]
+    public void ResolvesDeclaredBmpToInstalledDdsReplacement()
+    {
+        var root =
+            CreateTempRoot();
+
+        try
+        {
+            var objectDirectory =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    "Pack");
+
+            var modelDirectory =
+                Path.Combine(
+                    objectDirectory,
+                    "model");
+
+            var textureDirectory =
+                Path.Combine(
+                    objectDirectory,
+                    "Texture");
+
+            Directory.CreateDirectory(
+                modelDirectory);
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            var objectPath =
+                Path.Combine(
+                    objectDirectory,
+                    "house.sco");
+
+            var meshPath =
+                Path.Combine(
+                    modelDirectory,
+                    "house.o3d");
+
+            var texturePath =
+                Path.Combine(
+                    textureDirectory,
+                    "wall.dds");
+
+            File.WriteAllText(
+                objectPath,
+                string.Empty);
+            File.WriteAllText(
+                meshPath,
+                string.Empty);
+            File.WriteAllBytes(
+                texturePath,
+                [1, 2, 3]);
+
+            Assert.True(
+                OmsiTextureAssetPathResolver
+                    .TryResolveSceneryTexture(
+                        root,
+                        objectPath,
+                        meshPath,
+                        "wall.bmp",
+                        out var resolved));
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    texturePath),
+                resolved);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ResolvesSharedTextureFromParentPackDirectory()
+    {
+        var root =
+            CreateTempRoot();
+
+        try
+        {
+            var packDirectory =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    "Pack");
+
+            var objectDirectory =
+                Path.Combine(
+                    packDirectory,
+                    "Subfolder");
+
+            var modelDirectory =
+                Path.Combine(
+                    objectDirectory,
+                    "model");
+
+            var textureDirectory =
+                Path.Combine(
+                    packDirectory,
+                    "Texture");
+
+            Directory.CreateDirectory(
+                modelDirectory);
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            var objectPath =
+                Path.Combine(
+                    objectDirectory,
+                    "house.sco");
+
+            var meshPath =
+                Path.Combine(
+                    modelDirectory,
+                    "house.o3d");
+
+            var texturePath =
+                Path.Combine(
+                    textureDirectory,
+                    "shared.tga");
+
+            File.WriteAllText(
+                objectPath,
+                string.Empty);
+            File.WriteAllText(
+                meshPath,
+                string.Empty);
+            File.WriteAllBytes(
+                texturePath,
+                [1, 2, 3]);
+
+            Assert.True(
+                OmsiTextureAssetPathResolver
+                    .TryResolveSceneryTexture(
+                        root,
+                        objectPath,
+                        meshPath,
+                        "shared.tga",
+                        out var resolved));
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    texturePath),
+                resolved);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public void RejectsTraversalOutsideAllowedRoot()
     {
         var root =
