@@ -484,3 +484,14 @@ Initial tile loading no longer scans every pixel of every A8 mask under `texture
 Pixel statistics (`coverage`, minimum alpha, and maximum alpha) are now computed only when the mask asset is actually requested for rendering. Those values are sent with `textureAssetLoaded` and remain available to UI diagnostics.
 
 This preserves real validation and terrain painting while removing full DDS reads that were previously performed for every mask of every tile before the map became usable.
+
+
+## Off-UI parsing and tile parallelism
+
+The map-opening path now runs on dedicated workers. The tile-content cache starts `OmsiTileReader.ReadContentAsync` inside `Task.Run`, preventing `.map`, terrain, and sidecar parsing from resuming on the WPF dispatcher after asynchronous I/O.
+
+The same approach is used for `.sco` metadata and `.sli` profile parsing. The UI only receives completed results to publish to the WebView.
+
+Full-map and region loading now allow up to 8 tiles concurrently regardless of a low runtime CPU count. O3D parsing remains bounded but guarantees at least 4 workers up to the existing ceiling of 12.
+
+Within each tile, asynchronous `.terrain` reading starts before `.rdy` diagnostics and mask discovery, overlapping I/O with metadata work.

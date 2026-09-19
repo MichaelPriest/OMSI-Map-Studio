@@ -484,3 +484,14 @@ A leitura inicial dos tiles não percorre mais todos os pixels de cada máscara 
 As estatísticas de pixels (`coverage`, alpha mínimo e máximo) passam a ser calculadas somente quando o asset da máscara é realmente solicitado para renderização. Esses valores são enviados junto do `textureAssetLoaded` e continuam disponíveis no diagnóstico da interface.
 
 Isso preserva a validação real e a pintura de terreno, mas remove leituras integrais de DDS que antes eram feitas para todas as máscaras de todos os tiles antes do mapa ficar utilizável.
+
+
+## Parse fora da UI thread e paralelismo de tiles
+
+O caminho de abertura do mapa foi movido para workers dedicados. O cache de conteúdo de tile agora inicia `OmsiTileReader.ReadContentAsync` dentro de `Task.Run`, evitando que parsing de `.map`, terrain e sidecars volte ao dispatcher WPF depois do I/O.
+
+O mesmo princípio foi aplicado ao parse de metadata `.sco` e perfis `.sli`. A UI só recebe o resultado pronto para publicar no WebView.
+
+A leitura de mapa completo e região permite até 8 tiles simultâneos, independentemente de o runtime expor poucas CPUs. O parse O3D continua limitado, mas garante pelo menos 4 workers e respeita o teto de 12.
+
+Dentro de cada tile, a leitura assíncrona do `.terrain` é iniciada antes do diagnóstico `.rdy` e da descoberta de máscaras, permitindo sobrepor I/O e trabalho de metadata.

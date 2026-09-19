@@ -525,3 +525,13 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 4. after the asset loads, confirm coverage, minimum alpha, and maximum alpha appear in diagnostics;
 5. validate an empty mask and a fully opaque mask; both must keep their correct classification once the asset is loaded;
 6. confirm invalid, truncated, or non-A8 DDS files remain rejected with no fake fallback.
+
+
+## Parallelism and responsiveness validation
+
+1. open Grundorf in **Full map** mode and confirm WPF/WebView remains responsive while loading;
+2. confirm progress advances across multiple tiles rather than waiting for strict serial completion;
+3. repeat under a runtime exposing few logical processors and confirm map opening can still use up to 8 tile reads;
+4. reopen the same installation/map and confirm tile cache reuse;
+5. confirm SLI profiles and SCO metadata return the same real data after moving parsing to workers;
+6. validate terrain, RDY, and masks on a tile containing all sidecars and confirm results remain identical.

@@ -19,7 +19,7 @@ namespace MapStudio.Desktop;
 
 public partial class MainWindow : Window
 {
-    private const int MaxConcurrentTileReads = 4;
+    private const int MaxConcurrentTileReads = 8;
     private const int MaxConcurrentGeometryReads = 12;
     private const int MaxTileStreamRadius = 2;
     private const long MaxTextureAssetBytes =
@@ -42,7 +42,7 @@ public partial class MainWindow : Window
                 Math.Min(
                     MaxConcurrentGeometryReads,
                     Math.Max(
-                        1,
+                        4,
                         Environment.ProcessorCount)));
 
     private IReadOnlyDictionary<string, OmsiMapDescriptor> _knownMaps =
@@ -1909,12 +1909,7 @@ public partial class MainWindow : Window
     {
         using var semaphore =
             new SemaphoreSlim(
-                Math.Min(
-                    MaxConcurrentTileReads,
-                    Math.Max(
-                        1,
-                        Environment
-                            .ProcessorCount)));
+                    MaxConcurrentTileReads);
 
         var tasks =
             map.Tiles.Select(
@@ -3401,11 +3396,7 @@ public partial class MainWindow : Window
 
             using var semaphore =
                 new SemaphoreSlim(
-                    Math.Min(
-                        MaxConcurrentTileReads,
-                        Math.Max(
-                            1,
-                            Environment.ProcessorCount)));
+                    MaxConcurrentTileReads);
 
             var completedTiles = 0;
 
@@ -3638,11 +3629,7 @@ public partial class MainWindow : Window
 
             using var semaphore =
                 new SemaphoreSlim(
-                    Math.Min(
-                        MaxConcurrentTileReads,
-                        Math.Max(
-                            1,
-                            Environment.ProcessorCount)));
+                    MaxConcurrentTileReads);
 
             var tasks = requestedTiles
                 .Select(async (tile, index) =>
@@ -3823,8 +3810,11 @@ public partial class MainWindow : Window
             _tileContentCache.GetOrAdd(
                 tilePath,
                 path =>
-                    _tileReader.ReadContentAsync(
-                        path));
+                    Task.Run(
+                        async () =>
+                            await _tileReader
+                                .ReadContentAsync(
+                                    path)));
 
         try
         {
@@ -4571,8 +4561,10 @@ public partial class MainWindow : Window
                 _splineDefinitionCache.GetOrAdd(
                     fullPath,
                     path =>
-                        _splineDefinitionReader.ReadAsync(
-                            path));
+                        Task.Run(
+                            async () =>
+                                await _splineDefinitionReader
+                                    .ReadAsync(path)));
 
             OmsiSplineDefinition definition;
 
@@ -4768,8 +4760,11 @@ public partial class MainWindow : Window
             _sceneryMetadataCache.GetOrAdd(
                 sceneryObjectFullPath,
                 path =>
-                    _sceneryObjectReader
-                        .ReadMetadataAsync(path));
+                    Task.Run(
+                        async () =>
+                            await _sceneryObjectReader
+                                .ReadMetadataAsync(
+                                    path)));
 
         try
         {

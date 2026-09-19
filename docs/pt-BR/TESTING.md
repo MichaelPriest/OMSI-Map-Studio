@@ -525,3 +525,13 @@ Na validação manual do Grundorf, o Inspetor do mapa deve mostrar separadamente
 4. depois do carregamento do asset, confirme que cobertura, alpha mínimo e alpha máximo aparecem no diagnóstico;
 5. valide máscara vazia e máscara totalmente opaca; ambas devem manter a classificação correta depois que o asset for carregado;
 6. confirme que DDS inválido, truncado ou em formato não-A8 continua recusado sem fallback fictício.
+
+
+## Validação de paralelismo e responsividade
+
+1. abra Grundorf em **Mapa completo** e confirme que o WPF/WebView continua responsivo durante a leitura;
+2. confirme no progresso que vários tiles avançam sem esperar serialmente um pelo outro;
+3. repita em uma máquina/runtime com poucos processadores lógicos e confirme que a abertura continua usando até 8 leituras de tile;
+4. abra a mesma instalação/mapa novamente e confirme reaproveitamento do cache de tiles;
+5. confirme que perfis SLI e metadata SCO continuam retornando os mesmos dados reais após a mudança para workers;
+6. valide terrain, RDY e máscaras em um tile com todos os sidecars presentes e confirme resultado idêntico ao anterior.

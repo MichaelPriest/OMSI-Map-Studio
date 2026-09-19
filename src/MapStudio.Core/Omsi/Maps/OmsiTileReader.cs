@@ -46,24 +46,13 @@ public sealed class OmsiTileReader
                     .Length
                 : 0;
 
-        OmsiTerrainGrid? terrain =
-            null;
-
-        if (terrainFileExists)
-        {
-            try
-            {
-                terrain =
-                    await _terrainReader
-                        .ReadAsync(
-                            terrainPath,
-                            cancellationToken);
-            }
-            catch (InvalidDataException)
-            {
-                terrain = null;
-            }
-        }
+        var terrainTask =
+            terrainFileExists
+                ? ReadTerrainSafeAsync(
+                    terrainPath,
+                    cancellationToken)
+                : Task.FromResult<
+                    OmsiTerrainGrid?>(null);
 
         var terrainRenderDataPath =
             terrainPath + "_0.rdy";
@@ -79,6 +68,10 @@ public sealed class OmsiTileReader
         var terrainTextureMasks =
             ReadTerrainTextureMasks(
                 tilePath);
+
+        var terrain =
+            await terrainTask
+                .ConfigureAwait(false);
 
         return content with
         {
@@ -96,6 +89,25 @@ public sealed class OmsiTileReader
                         terrainFileSize
                 }
         };
+    }
+
+    private async Task<OmsiTerrainGrid?>
+        ReadTerrainSafeAsync(
+            string terrainPath,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _terrainReader
+                .ReadAsync(
+                    terrainPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
     }
 
     public static IReadOnlyList<OmsiTerrainTextureMask>
@@ -143,6 +155,9 @@ public sealed class OmsiTileReader
             new List<
                 OmsiTerrainTextureMask>();
 
+        var maskReader =
+            new OmsiTerrainTextureMaskReader();
+
         foreach (
             var path in Directory
                 .EnumerateFiles(
@@ -186,10 +201,9 @@ public sealed class OmsiTileReader
             }
 
             masks.Add(
-                new OmsiTerrainTextureMaskReader()
-                    .ReadHeader(
-                        layerIndex,
-                        path));
+                maskReader.ReadHeader(
+                    layerIndex,
+                    path));
         }
 
         return masks
