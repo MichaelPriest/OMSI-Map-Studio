@@ -2448,9 +2448,18 @@ function hasProtectedGeometry(
 ) {
   return Boolean(
     geometry?.meshes.some(
-      (meshReference) =>
-        meshReference.geometry
-          .errorCode === "encrypted"
+      (meshReference) => {
+        const code =
+          meshReference.geometry
+            .errorCode;
+
+        return Boolean(
+          code === "encrypted" ||
+          code?.startsWith(
+            "protected"
+          )
+        );
+      }
     )
   );
 }
