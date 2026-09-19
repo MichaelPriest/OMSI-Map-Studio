@@ -462,3 +462,14 @@ During manual Grundorf validation, the map Inspector must report renderable O3D 
 4. focus the viewport and test `A/D` for left/right and `W/S` for forward/backward movement;
 5. repeat with `Shift` for faster movement;
 6. verify middle mouse and `Shift + right mouse` still pan without selecting objects.
+
+
+## Loading-performance validation
+
+1. open Grundorf in full-map mode and time from map selection until “Preparing map resources” finishes;
+2. reopen during the same OMSI-root session and verify host caches are reused;
+3. in performance 3×3 mode, verify the O3D counter can exceed 64 when the loaded region actually references more than 64 unique paths;
+4. verify every SLI profile used by the region enters the queue, with no 48-path truncation;
+5. verify BMP textures use direct RGBA upload without a second PNG payload for the same file;
+6. inspect O3D objects containing transform section 0x79 and verify correct internal placement after applying the inverse transform;
+7. verify heavy O3D parsing no longer freezes the UI thread.
