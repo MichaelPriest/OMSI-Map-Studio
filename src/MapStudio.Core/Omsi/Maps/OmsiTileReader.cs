@@ -66,8 +66,18 @@ public sealed class OmsiTileReader
 
         var objects = new List<OmsiPlacedObject>();
 
-        foreach (var section in document.FindSections("object"))
+        var objectSections =
+            document.FindSections("object")
+                .ToArray();
+
+        for (
+            var sectionOrdinal = 0;
+            sectionOrdinal < objectSections.Length;
+            sectionOrdinal++)
         {
+            var section =
+                objectSections[sectionOrdinal];
+
             var values =
                 section.DataLines.ToArray();
 
@@ -104,7 +114,11 @@ public sealed class OmsiTileReader
                 Pitch: pitch,
                 Bank: bank,
                 ExtraValues:
-                    values.Skip(9).ToArray()));
+                    values.Skip(9).ToArray())
+                {
+                    SourceSectionOrdinal =
+                        sectionOrdinal
+                });
         }
 
         return objects;

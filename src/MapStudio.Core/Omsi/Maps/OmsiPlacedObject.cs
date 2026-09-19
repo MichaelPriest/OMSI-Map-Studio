@@ -10,4 +10,19 @@ public sealed record OmsiPlacedObject(
     double Rotation,
     double Pitch,
     double Bank,
-    IReadOnlyList<string> ExtraValues);
+    IReadOnlyList<string> ExtraValues)
+{
+    public int SourceSectionOrdinal { get; init; } = -1;
+}
+
+public static class OmsiPlacedObjectSource
+{
+    public static OmsiPlacedObject WithSectionOrdinal(
+        this OmsiPlacedObject placedObject,
+        int sourceSectionOrdinal) =>
+        placedObject with
+        {
+            SourceSectionOrdinal =
+                sourceSectionOrdinal
+        };
+}
