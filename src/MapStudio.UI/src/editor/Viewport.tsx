@@ -459,7 +459,11 @@ function createTileSurface(
     if (
       !overlay.textureAsset
         ?.exists ||
-      !overlay.maskAsset?.exists
+      !overlay.maskAsset?.exists ||
+      overlay.maskAsset
+        .alphaOnly !== true ||
+      !overlay.maskAsset.width ||
+      !overlay.maskAsset.height
     ) {
       continue;
     }
