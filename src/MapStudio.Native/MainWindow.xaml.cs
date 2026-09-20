@@ -136,8 +136,11 @@ public sealed partial class MainWindow : Window
                 $"Objetos: {snapshot.ObjectCount} · Splines: {snapshot.SplineCount}\n" +
                 $"Terrenos: {snapshot.TerrainCount} · Tile ativo: {activeTile}";
 
-            Viewport.SetMapSnapshot(
-                snapshot);
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session
+                        .OmsiRootPath!);
 
             StatusText.Text =
                 $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core.";

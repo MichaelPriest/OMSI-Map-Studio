@@ -45,49 +45,9 @@ public sealed class NativeMapGeometryBuilder
                     NativeMapVertex>());
         }
 
-        var minX =
-            scene.Tiles.Min(
-                tile =>
-                    tile.Reference.X *
-                    300.0);
-
-        var maxX =
-            scene.Tiles.Max(
-                tile =>
-                    tile.Reference.X *
-                    300.0 +
-                    300.0);
-
-        var minZ =
-            scene.Tiles.Min(
-                tile =>
-                    tile.Reference.Y *
-                    300.0);
-
-        var maxZ =
-            scene.Tiles.Max(
-                tile =>
-                    tile.Reference.Y *
-                    300.0 +
-                    300.0);
-
-        var centerX =
-            (minX + maxX) * 0.5;
-
-        var centerZ =
-            (minZ + maxZ) * 0.5;
-
-        var halfWidth =
-            Math.Max(
-                1.0,
-                (maxX - minX) *
-                0.55);
-
-        var halfHeight =
-            Math.Max(
-                1.0,
-                (maxZ - minZ) *
-                0.55);
+        var projection =
+            NativeSceneProjection
+                .FromScene(scene);
 
         var vertices =
             new List<NativeMapVertex>(
@@ -97,14 +57,11 @@ public sealed class NativeMapGeometryBuilder
             double worldX,
             double worldZ)
         {
-            return new Vector3(
-                (float)(
-                    (worldX - centerX) /
-                    halfWidth),
-                (float)(
-                    (worldZ - centerZ) /
-                    halfHeight),
-                0.0f);
+            return projection
+                .ProjectTopDown(
+                    worldX,
+                    worldZ,
+                    depth: 0.98f);
         }
 
         void AddLine(

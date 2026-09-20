@@ -24,6 +24,13 @@ public sealed class D3D11NativeMapRenderer :
 
     private ID3D11Buffer? _vertexBuffer;
     private int _vertexCount;
+
+    private ID3D11Buffer?
+        _objectTriangleBuffer;
+
+    private int
+        _objectTriangleVertexCount;
+
     private bool _disposed;
 
     public D3D11NativeMapRenderer(
@@ -96,14 +103,24 @@ public sealed class D3D11NativeMapRenderer :
     public int VertexCount =>
         _vertexCount;
 
+    public int ObjectTriangleVertexCount =>
+        _objectTriangleVertexCount;
+
     public void Upload(
-        NativeSceneSnapshot scene)
+        NativeSceneSnapshot scene,
+        NativeObjectTriangleGeometry?
+            objectGeometry = null)
     {
         ThrowIfDisposed();
 
         _vertexBuffer?.Dispose();
         _vertexBuffer = null;
         _vertexCount = 0;
+
+        _objectTriangleBuffer
+            ?.Dispose();
+        _objectTriangleBuffer = null;
+        _objectTriangleVertexCount = 0;
 
         var geometry =
             new NativeMapGeometryBuilder()
@@ -124,6 +141,25 @@ public sealed class D3D11NativeMapRenderer :
 
         _vertexCount =
             geometry.Vertices.Length;
+
+        if (
+            objectGeometry is not null &&
+            objectGeometry
+                .Vertices.Length > 0)
+        {
+            _objectTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        objectGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _objectTriangleVertexCount =
+                objectGeometry
+                    .Vertices.Length;
+        }
     }
 
     public void Render(
@@ -135,6 +171,42 @@ public sealed class D3D11NativeMapRenderer :
             ClearColor,
             context =>
             {
+                context
+                    .IASetInputLayout(
+                        _inputLayout);
+
+                context
+                    .VSSetShader(
+                        _vertexShader);
+
+                context
+                    .PSSetShader(
+                        _pixelShader);
+
+                if (
+                    _objectTriangleBuffer
+                        is not null &&
+                    _objectTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _objectTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)
+                            _objectTriangleVertexCount,
+                        0);
+                }
+
                 if (
                     _vertexBuffer is
                         null ||
@@ -149,23 +221,11 @@ public sealed class D3D11NativeMapRenderer :
                             .LineList);
 
                 context
-                    .IASetInputLayout(
-                        _inputLayout);
-
-                context
                     .IASetVertexBuffer(
                         0,
                         _vertexBuffer,
                         NativeMapVertex
                             .SizeInBytes);
-
-                context
-                    .VSSetShader(
-                        _vertexShader);
-
-                context
-                    .PSSetShader(
-                        _pixelShader);
 
                 context.Draw(
                     (uint)_vertexCount,
@@ -190,6 +250,8 @@ public sealed class D3D11NativeMapRenderer :
 
         _disposed = true;
 
+        _objectTriangleBuffer
+            ?.Dispose();
         _vertexBuffer?.Dispose();
         _inputLayout.Dispose();
         _pixelShader.Dispose();

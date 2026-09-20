@@ -64,8 +64,14 @@ public sealed class NativeViewportRuntime : IDisposable
             height);
     }
 
-    public NativeSceneSnapshot LoadScene(
-        IReadOnlyList<NativeSceneTile> tiles)
+    public async Task<
+        NativeSceneSnapshot>
+        LoadSceneAsync(
+            IReadOnlyList<NativeSceneTile>
+                tiles,
+            string omsiRoot,
+            CancellationToken cancellationToken =
+                default)
     {
         ThrowIfDisposed();
 
@@ -75,10 +81,46 @@ public sealed class NativeViewportRuntime : IDisposable
                     tiles,
                     Picking);
 
+        var assets =
+            await new NativeSceneryAssetLoader()
+                .LoadAsync(
+                    omsiRoot,
+                    Scene,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var objectGeometry =
+            new NativeObjectTriangleGeometryBuilder()
+                .Build(
+                    Scene,
+                    assets);
+
         MapRenderer.Upload(
-            Scene);
+            Scene,
+            objectGeometry);
+
+        LoadedSceneryAssetCount =
+            assets.Values.Count(
+                asset =>
+                    asset.IsLoaded);
+
+        LoadedObjectMeshCount =
+            objectGeometry
+                .LoadedMeshCount;
 
         return Scene;
+    }
+
+    public int LoadedSceneryAssetCount
+    {
+        get;
+        private set;
+    }
+
+    public int LoadedObjectMeshCount
+    {
+        get;
+        private set;
     }
 
     public void RenderInitialFrame()

@@ -32,8 +32,11 @@ public sealed partial class NativeViewport : UserControl
 
     public event EventHandler<string>? SelectionStatusChanged;
 
-    public void SetMapSnapshot(
-        NativeMapSnapshot snapshot)
+    public async Task SetMapSnapshotAsync(
+        NativeMapSnapshot snapshot,
+        string omsiRoot,
+        CancellationToken cancellationToken =
+            default)
     {
         ArgumentNullException.ThrowIfNull(
             snapshot);
@@ -46,26 +49,35 @@ public sealed partial class NativeViewport : UserControl
             return;
         }
 
+        SelectionStatusChanged?.Invoke(
+            this,
+            "Carregando SCO/O3D reais no renderer nativo...");
+
         var scene =
-            _runtime.LoadScene(
-                snapshot.Tiles
-                    .Select(
-                        tile =>
-                            new NativeSceneTile(
-                                tile.Reference,
-                                tile.Content))
-                    .ToArray());
+            await _runtime
+                .LoadSceneAsync(
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                new NativeSceneTile(
+                                    tile.Reference,
+                                    tile.Content))
+                        .ToArray(),
+                    omsiRoot,
+                    cancellationToken);
 
         _runtime.RenderInitialFrame();
 
         RuntimeText.Text =
             $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
             $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
-            $"{_runtime.MapRenderer.VertexCount} vértices GPU";
+            $"{_runtime.MapRenderer.ObjectTriangleVertexCount / 3} triângulos O3D";
 
         SelectionStatusChanged?.Invoke(
             this,
-            $"Registry nativo pronto: {scene.SelectableCount} entidades selecionáveis.");
+            $"Assets nativos: {_runtime.LoadedSceneryAssetCount} SCO · " +
+            $"{_runtime.LoadedObjectMeshCount} meshes · " +
+            $"{scene.SelectableCount} IDs de seleção.");
     }
 
     private void OnLoaded(
