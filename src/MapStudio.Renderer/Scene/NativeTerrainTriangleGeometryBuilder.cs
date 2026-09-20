@@ -489,6 +489,7 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                         heightOffset,
                     uv00,
                     maskUv00,
+                    detailUv00,
                     x0,
                     z1,
                     h01 +
