@@ -21312,7 +21312,6 @@ export function App() {
                     </div>
                   </div>
                 )}
-                )}
               </>
             {showTileNavigator &&
               activeTile && (
