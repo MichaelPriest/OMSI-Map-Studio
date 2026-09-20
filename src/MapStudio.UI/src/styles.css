@@ -3576,3 +3576,393 @@ code {
   color: #789bb1;
   font-size: 6.5px;
 }
+
+
+/* City-builder editor shell v2 */
+.map-editor {
+  grid-template-rows:
+    34px 28px 38px minmax(0, 1fr) 24px;
+  background: #07111a;
+}
+
+.editor-titlebar {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(14 29 42 / 98%),
+      rgb(8 19 29 / 98%)
+    );
+}
+
+.editor-menubar,
+.editor-toolbar {
+  background:
+    rgb(8 21 32 / 96%);
+}
+
+.editor-toolbar {
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.editor-toolbar > .construction-dock,
+.editor-toolbar > .construction-sets-button,
+.editor-toolbar > .dependency-audit-button,
+.editor-toolbar > .map-health-button,
+.editor-toolbar > .construction-history-controls,
+.editor-toolbar > .selection-tool-group,
+.editor-toolbar > .toolbar-chip {
+  display: none;
+}
+
+.editor-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.editor-viewport {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.city-drawer {
+  position: absolute;
+  z-index: 35;
+  top: 12px;
+  bottom: 112px;
+  width: min(340px, calc(100% - 32px));
+  min-height: 0;
+  border: 1px solid rgb(74 111 139 / 72%);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(12 31 45 / 96%),
+      rgb(6 20 31 / 95%)
+    );
+  box-shadow:
+    0 18px 50px rgb(0 0 0 / 42%);
+  backdrop-filter: blur(16px);
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.city-drawer-left {
+  left: 12px;
+  transform:
+    translateX(
+      calc(-100% - 28px)
+    );
+}
+
+.city-drawer-right {
+  right: 12px;
+  transform:
+    translateX(
+      calc(100% + 28px)
+    );
+}
+
+.city-drawer.closed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.city-drawer.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.map-explorer.city-drawer {
+  display: grid;
+  grid-template-rows:
+    34px minmax(0, 1fr) 42px;
+  overflow: hidden;
+  border-right: 1px solid rgb(74 111 139 / 72%);
+}
+
+.object-inspector.city-drawer {
+  display: block;
+  overflow: auto;
+  border-left: 1px solid rgb(74 111 139 / 72%);
+}
+
+.city-drawer-close {
+  position: sticky;
+  z-index: 8;
+  top: 6px;
+  float: right;
+  margin: 6px 6px -30px auto;
+}
+
+.citybuilder-hud {
+  position: absolute;
+  z-index: 32;
+  left: 50%;
+  bottom: 14px;
+  display: grid;
+  max-width: calc(100% - 28px);
+  grid-template-columns:
+    auto minmax(0, auto) auto;
+  grid-template-rows:
+    58px auto;
+  gap: 5px 8px;
+  align-items: stretch;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.citybuilder-context,
+.citybuilder-main-tools,
+.citybuilder-subbar {
+  pointer-events: auto;
+  border: 1px solid rgb(64 105 135 / 72%);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(15 35 50 / 94%),
+      rgb(7 24 36 / 94%)
+    );
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 36%);
+  backdrop-filter: blur(14px);
+}
+
+.citybuilder-context {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 5px;
+  border-radius: 13px;
+}
+
+.citybuilder-context-right {
+  justify-self: end;
+}
+
+.citybuilder-main-tools {
+  display: flex;
+  min-width: 0;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+  overflow-x: auto;
+  border-radius: 14px;
+  scrollbar-width: none;
+}
+
+.citybuilder-main-tools::-webkit-scrollbar {
+  display: none;
+}
+
+.city-hud-action,
+.city-construction-tool {
+  display: grid;
+  height: 46px;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  padding: 3px 7px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #a9bfd0;
+}
+
+.city-hud-action {
+  min-width: 52px;
+}
+
+.city-construction-tool {
+  min-width: 58px;
+}
+
+.city-hud-action > span,
+.city-construction-tool > span {
+  color: #b9cedd;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.city-hud-action > small,
+.city-construction-tool > small {
+  color: #718da3;
+  font-size: 6.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.city-hud-action:hover,
+.city-construction-tool:hover {
+  border-color: #356e98;
+  background: #0f3148;
+}
+
+.city-hud-action.active,
+.city-construction-tool.active {
+  border-color: #4ab4ff;
+  background:
+    linear-gradient(
+      180deg,
+      #168bd5,
+      #0b619c
+    );
+  box-shadow:
+    0 0 0 1px
+      rgb(93 194 255 / 18%);
+  color: #fff;
+}
+
+.city-hud-action.active > span,
+.city-hud-action.active > small,
+.city-construction-tool.active > span,
+.city-construction-tool.active > small {
+  color: #fff;
+}
+
+.city-hud-action.warning {
+  border-color: #ad782a;
+  background: #312109;
+}
+
+.citybuilder-subbar {
+  grid-column: 1 / -1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border-radius: 10px;
+}
+
+.citybuilder-current-mode {
+  display: grid;
+  min-width: 150px;
+  max-width: 330px;
+  gap: 1px;
+  margin-right: auto;
+}
+
+.citybuilder-current-mode strong {
+  overflow: hidden;
+  color: #d9eaf4;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citybuilder-current-mode span {
+  overflow: hidden;
+  color: #718fa5;
+  font-size: 6.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citybuilder-selection-filters {
+  display: flex;
+  gap: 3px;
+}
+
+.citybuilder-selection-filters button,
+.city-sub-action {
+  height: 25px;
+  padding: 0 7px;
+  border: 1px solid #294d65;
+  border-radius: 6px;
+  background: #091d2b;
+  color: #85a2b7;
+  font-size: 7px;
+}
+
+.citybuilder-selection-filters button.active,
+.city-sub-action.active {
+  border-color: #3d9bda;
+  background: #0c5f95;
+  color: #eef9ff;
+}
+
+.fullscreen-editor .citybuilder-hud {
+  bottom: 16px;
+}
+
+.fullscreen-editor .fullscreen-tool-dock {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  max-width: calc(100% - 24px);
+  transform: none;
+}
+
+.fullscreen-editor .fullscreen-panels {
+  display: none;
+}
+
+.fullscreen-editor .fullscreen-shortcuts {
+  display: none;
+}
+
+.fullscreen-editor .city-drawer {
+  top: 62px;
+  bottom: 112px;
+  display: grid;
+  width: min(360px, calc(100% - 32px));
+}
+
+.fullscreen-editor .object-inspector.city-drawer {
+  display: block;
+}
+
+.fullscreen-editor .city-drawer.closed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fullscreen-editor .city-drawer.open {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+@media (max-width: 1280px) {
+  .citybuilder-hud {
+    width: calc(100% - 24px);
+    max-width: none;
+  }
+
+  .citybuilder-main-tools {
+    justify-content: flex-start;
+  }
+
+  .city-construction-tool {
+    min-width: 52px;
+  }
+
+  .citybuilder-current-mode {
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 920px) {
+  .citybuilder-context {
+    display: none;
+  }
+
+  .citybuilder-hud {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .citybuilder-main-tools {
+    grid-column: 1;
+  }
+
+  .citybuilder-subbar {
+    grid-column: 1;
+  }
+}
