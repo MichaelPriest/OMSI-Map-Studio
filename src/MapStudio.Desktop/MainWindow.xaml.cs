@@ -5941,14 +5941,6 @@ public partial class MainWindow : Window
                         loaded.Tile.Y,
                         loaded.Tile.RelativeMapPath,
                         detailsLoaded = true,
-                        streamDetail =
-                            loaded.Detail ==
-                                OmsiTileStreamDetail
-                                    .Full
-                                ? "full"
-                                : "summary",
-                        streamRing =
-                            loaded.Ring,
                         fileExists =
                             loaded.Content.Summary.Exists,
                         objectCount =
@@ -6207,6 +6199,14 @@ public partial class MainWindow : Window
                         loaded.Tile.Y,
                         loaded.Tile.RelativeMapPath,
                         detailsLoaded = true,
+                        streamDetail =
+                            loaded.Detail ==
+                                OmsiTileStreamDetail
+                                    .Full
+                                ? "full"
+                                : "summary",
+                        streamRing =
+                            loaded.Ring,
                         fileExists =
                             loaded.Content.Summary.Exists,
                         objectCount =
