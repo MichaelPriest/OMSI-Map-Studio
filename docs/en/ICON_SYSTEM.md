@@ -337,3 +337,10 @@ This brings F11 mode closer to the approved visual reference without creating a 
 - `collection` for asset collections;
 - `preview` for opening the real asset preview;
 - placement actions continue to reuse `sco-object`, `sli-spline`, and `profile`.
+
+
+### Seventh migrated batch
+
+- `recent` for recent items;
+- `usage` for most-used items;
+- Library navigation combines these icons with `construction-set`, `favorite`, and `collection`.

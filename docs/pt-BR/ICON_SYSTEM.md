@@ -337,3 +337,10 @@ Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda im
 - `collection` para coleções de assets;
 - `preview` para abrir a prévia real do asset;
 - ações de colocação continuam reutilizando `sco-object`, `sli-spline` e `profile`.
+
+
+### Sétimo lote migrado
+
+- `recent` para itens recentes;
+- `usage` para itens mais usados;
+- navegação da Biblioteca combina estes ícones com `construction-set`, `favorite` e `collection`.

@@ -928,3 +928,11 @@ All behavior remains connected to real editor state; no fake commands are introd
 - Favorite, Collection, Preview, Place, Normal, and Height actions now use the shared SVG pack;
 - the selected card gets a stronger visual state without changing selection or persistence behavior;
 - drag-and-drop to the map keeps the same internal MIME payloads and real data.
+
+
+### Library navigation and featured preview
+
+- Groups/Favorites/Recent/Most used/Collection tabs now use semantic icons;
+- the selected real 3D preview gets a larger visual area and clearer information hierarchy;
+- asset details are organized into small blocks without hiding technical data;
+- thumbnail and preview still come from real OMSI content.

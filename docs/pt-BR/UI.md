@@ -928,3 +928,11 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - ações Favoritar, Coleção, Prévia, Colocar, Normal e Altura passam a usar o pacote SVG compartilhado;
 - o cartão selecionado recebe destaque visual sem alterar a seleção ou o fluxo de persistência;
 - drag-and-drop para o mapa continua usando os mesmos MIME internos e dados reais.
+
+
+### Navegação e prévia destacada da Biblioteca
+
+- abas Grupos/Favoritos/Recentes/Mais usados/Coleção usam ícones semânticos;
+- a prévia 3D real selecionada ganhou maior área visual e hierarquia de informação;
+- detalhes do asset passam a ser organizados em pequenos blocos, sem esconder os dados técnicos;
+- a miniatura e a prévia continuam vindo do conteúdo real carregado do OMSI.
