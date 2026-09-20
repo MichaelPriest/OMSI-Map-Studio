@@ -163,3 +163,10 @@ After a successful write, affected tiles are read again through `MapStudio.Core`
 The runtime keeps transform history as before/after pairs using the same `OmsiObjectTransformEdit` and `OmsiSplineTransformEdit` types used for persistence. **Undo** and **Redo** reapply these states to the snapshot, rebuild the required renderer state, and stage the resulting version again for safe persistence.
 
 Snapping can be toggled from the native UI. The initial configuration quantizes movement to **0.25 m** and rotation to **5°**. The snapped value drives the red preview, the gizmo, and the final OMSI edit so the saved result matches what was displayed during dragging.
+
+
+### Checkpoint N2.4 — native Inspector bound to real selection state
+
+The WinUI Inspector now consumes the selected entity state directly from the renderer. For objects it shows ID, tile, SCO path, OMSI coordinates, rotation, pitch, and bank. For splines it shows the SLI path, OMSI coordinates, rotation, length, radius, and start/end gradients.
+
+The Inspector refreshes after ID-buffer selection, gizmo move/rotation, and undo/redo operations. There is no duplicate XAML-side model: displayed values come from the same native snapshot that produces geometry and persisted edits.

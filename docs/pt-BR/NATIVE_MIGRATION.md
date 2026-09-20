@@ -163,3 +163,10 @@ Depois de uma gravação bem-sucedida, os tiles afetados são relidos pelo `MapS
 O runtime mantém histórico de transformações em pares antes/depois usando os mesmos `OmsiObjectTransformEdit` e `OmsiSplineTransformEdit` usados para persistência. **Desfazer** e **Refazer** reaplicam esses estados ao snapshot, reconstroem somente o estado necessário do renderer e voltam a registrar a versão resultante como edição pendente para o salvamento seguro.
 
 O snap pode ser ligado ou desligado pela interface. Nesta primeira configuração, movimento é quantizado em **0,25 m** e rotação em **5°**. O valor quantizado é aplicado ao preview vermelho, ao gizmo e ao edit OMSI final, evitando diferença entre o que o usuário vê durante o drag e o que será gravado.
+
+
+### Checkpoint N2.4 — Inspector nativo ligado à seleção real
+
+O painel Inspector do host WinUI passou a consumir diretamente o estado da entidade selecionada no renderer. Para objetos, exibe ID, tile, caminho SCO, coordenadas OMSI, rotação, pitch e bank. Para splines, exibe caminho SLI, coordenadas OMSI, rotação, comprimento, raio e gradientes inicial/final.
+
+O Inspector é atualizado após seleção por ID Buffer, movimento/rotação por gizmo e operações de desfazer/refazer. Não existe cópia de estado separada no XAML: os valores exibidos vêm do mesmo snapshot nativo que gera a geometria e os edits persistidos.

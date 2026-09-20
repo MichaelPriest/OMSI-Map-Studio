@@ -47,6 +47,10 @@ public sealed partial class NativeViewport : UserControl
         NativePendingTransformEdit>?
         TransformEditPending;
 
+    public event Action<
+        NativeSelectionInfo?>?
+        SelectionChanged;
+
     public bool CanUndo =>
         _runtime?.CanUndo ??
         false;
@@ -86,6 +90,8 @@ public sealed partial class NativeViewport : UserControl
             ?.Invoke(
                 edit);
 
+        PublishSelectionInfo();
+
         SelectionStatusChanged?.Invoke(
             this,
             "Última transformação desfeita.");
@@ -106,6 +112,8 @@ public sealed partial class NativeViewport : UserControl
         TransformEditPending
             ?.Invoke(
                 edit);
+
+        PublishSelectionInfo();
 
         SelectionStatusChanged?.Invoke(
             this,
@@ -495,6 +503,8 @@ public sealed partial class NativeViewport : UserControl
                 "Sem seleção.");
         }
 
+        PublishSelectionInfo();
+
         e.Handled = true;
     }
 
@@ -717,6 +727,8 @@ public sealed partial class NativeViewport : UserControl
                     ?.Invoke(
                         edit);
 
+                PublishSelectionInfo();
+
                 SelectionStatusChanged?.Invoke(
                     this,
                     edit.IsObject
@@ -752,6 +764,14 @@ public sealed partial class NativeViewport : UserControl
             uint.MaxValue;
 
         _runtime?.ClearHover();
+    }
+
+    private void PublishSelectionInfo()
+    {
+        SelectionChanged
+            ?.Invoke(
+                _runtime
+                    ?.GetSelectionInfo());
     }
 
     private void OnPointerWheelChanged(

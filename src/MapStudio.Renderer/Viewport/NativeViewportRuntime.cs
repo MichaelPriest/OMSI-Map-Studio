@@ -117,6 +117,79 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool IsDisposed => _disposed;
 
+    public NativeSelectionInfo?
+        GetSelectionInfo()
+    {
+        if (
+            Scene is null ||
+            _selectedPickingId.IsNone)
+        {
+            return null;
+        }
+
+        var objectEntity =
+            Scene.Objects
+                .FirstOrDefault(
+                    entity =>
+                        entity.PickingId ==
+                        _selectedPickingId);
+
+        if (objectEntity is not null)
+        {
+            var item =
+                objectEntity.Object;
+
+            return new NativeSelectionInfo(
+                PickingKind.Object,
+                item.ObjectId,
+                objectEntity.Tile.X,
+                objectEntity.Tile.Y,
+                item.SceneryObjectPath,
+                item.X,
+                item.Y,
+                item.Z,
+                item.Rotation,
+                item.Pitch,
+                item.Bank,
+                null,
+                null,
+                null,
+                null);
+        }
+
+        var splineEntity =
+            Scene.Splines
+                .FirstOrDefault(
+                    entity =>
+                        entity.PickingId ==
+                        _selectedPickingId);
+
+        if (splineEntity is null)
+        {
+            return null;
+        }
+
+        var spline =
+            splineEntity.Spline;
+
+        return new NativeSelectionInfo(
+            PickingKind.Spline,
+            spline.SplineId,
+            splineEntity.Tile.X,
+            splineEntity.Tile.Y,
+            spline.SplinePath,
+            spline.X,
+            spline.Y,
+            spline.Z,
+            spline.Rotation,
+            null,
+            null,
+            spline.Length,
+            spline.Radius,
+            spline.GradientStart,
+            spline.GradientEnd);
+    }
+
     public IntPtr SwapChainPointer =>
         Surface?.NativePointer ??
         IntPtr.Zero;
@@ -891,12 +964,12 @@ public sealed class NativeViewportRuntime : IDisposable
                         )
                 };
 
-            var before =
+            var objectBefore =
                 CreateObjectEdit(
                     objectEntity.Tile,
                     source);
 
-            var after =
+            var objectAfter =
                 CreateObjectEdit(
                     objectEntity.Tile,
                     updated);
@@ -907,8 +980,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
             return
                 new NativeTransformHistoryEntry(
-                    before,
-                    after);
+                    objectBefore,
+                    objectAfter);
         }
 
         var splineEntity =
@@ -948,12 +1021,12 @@ public sealed class NativeViewportRuntime : IDisposable
                     )
             };
 
-        var before =
+        var splineBefore =
             CreateSplineEdit(
                 splineEntity.Tile,
                 spline);
 
-        var after =
+        var splineAfter =
             CreateSplineEdit(
                 splineEntity.Tile,
                 updatedSpline);
@@ -964,8 +1037,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
         return
             new NativeTransformHistoryEntry(
-                before,
-                after);
+                splineBefore,
+                splineAfter);
     }
 
     private NativePendingTransformEdit

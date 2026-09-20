@@ -124,10 +124,36 @@
                                FontWeight="SemiBold" />
                     <TextBlock x:Name="SelectionText"
                                Text="Sem seleção"
+                               FontSize="14"
                                Foreground="#9FB5C5" />
-                    <TextBlock Text="O novo seletor usará ID buffer nativo: 1 pixel = 1 ID OMSI."
+                    <TextBlock x:Name="InspectorTypeText"
+                               Text="Tipo: —"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="InspectorAssetText"
+                               Text="Arquivo: —"
+                               FontSize="13"
                                TextWrapping="Wrap"
-                               Foreground="#9FB5C5" />
+                               Foreground="#B9CAD6" />
+                    <TextBlock x:Name="InspectorTileText"
+                               Text="Tile: —"
+                               FontSize="13"
+                               Foreground="#B9CAD6" />
+                    <TextBlock x:Name="InspectorPositionText"
+                               Text="Posição: —"
+                               FontSize="13"
+                               Foreground="#B9CAD6" />
+                    <TextBlock x:Name="InspectorRotationText"
+                               Text="Rotação: —"
+                               FontSize="13"
+                               Foreground="#B9CAD6" />
+                    <TextBlock x:Name="InspectorExtraText"
+                               Text="Detalhes: —"
+                               FontSize="13"
+                               TextWrapping="Wrap"
+                               Foreground="#B9CAD6" />
+                    <TextBlock Text="Seleção: ID Buffer GPU nativo com profundidade real."
+                               TextWrapping="Wrap"
+                               Foreground="#7FA6BF" />
                 </StackPanel>
             </Border>
         </Grid>

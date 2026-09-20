@@ -1,4 +1,5 @@
 using MapStudio.Native.Services;
+using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -67,6 +68,60 @@ public sealed partial class MainWindow : Window
 
                 StatusText.Text =
                     $"{_session.PendingTransformCount} alteração(ões) pendente(s).";
+            };
+
+        Viewport.SelectionChanged +=
+            info =>
+            {
+                if (info is null)
+                {
+                    InspectorTypeText.Text =
+                        "Tipo: —";
+
+                    InspectorAssetText.Text =
+                        "Arquivo: —";
+
+                    InspectorTileText.Text =
+                        "Tile: —";
+
+                    InspectorPositionText.Text =
+                        "Posição: —";
+
+                    InspectorRotationText.Text =
+                        "Rotação: —";
+
+                    InspectorExtraText.Text =
+                        "Detalhes: —";
+
+                    return;
+                }
+
+                var type =
+                    info.Kind ==
+                        PickingKind.Object
+                        ? "Objeto"
+                        : "Spline";
+
+                InspectorTypeText.Text =
+                    $"Tipo: {type} #{info.EntityId}";
+
+                InspectorAssetText.Text =
+                    $"Arquivo: {info.AssetPath}";
+
+                InspectorTileText.Text =
+                    $"Tile: {info.TileX}, {info.TileY}";
+
+                InspectorPositionText.Text =
+                    $"OMSI X/Y/Z: {info.X:F3} / {info.Y:F3} / {info.Z:F3}";
+
+                InspectorRotationText.Text =
+                    $"Rotação: {info.Rotation:F3}°";
+
+                InspectorExtraText.Text =
+                    info.Kind ==
+                        PickingKind.Object
+                        ? $"Pitch: {info.Pitch.GetValueOrDefault():F3}° · Bank: {info.Bank.GetValueOrDefault():F3}°"
+                        : $"Comprimento: {info.Length.GetValueOrDefault():F3} m · Raio: {info.Radius.GetValueOrDefault():F3} m · Gradiente: {info.GradientStart.GetValueOrDefault():F3}% → {info.GradientEnd.GetValueOrDefault():F3}%";
             };
     }
 
