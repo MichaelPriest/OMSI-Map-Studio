@@ -2945,7 +2945,11 @@ export function App() {
     activeTopMenu,
     setActiveTopMenu
   ] = useState<
-    "map" | "view" | undefined
+    | "file"
+    | "edit"
+    | "view"
+    | "map"
+    | undefined
   >();
 
   const [
@@ -16521,18 +16525,227 @@ export function App() {
         </div>
 
         <div className="editor-menubar">
-          {[
-            "Arquivo",
-            "Editar"
-          ].map((item) => (
+          <div className="editor-menu-root">
             <button
-              key={item}
               type="button"
-              disabled
+              className={
+                activeTopMenu === "file"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "file"
+                      ? undefined
+                      : "file"
+                )
+              }
             >
-              {item}
+              Arquivo
             </button>
-          ))}
+
+            {activeTopMenu === "file" && (
+              <div className="editor-menu-popup">
+                <button
+                  type="button"
+                  disabled={
+                    previewEditCount === 0 ||
+                    busy
+                  }
+                  onClick={() => {
+                    handleSavePreviewEdits();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Salvar objeto
+                  {previewEditCount > 0
+                    ? ` (${previewEditCount})`
+                    : ""}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    splinePreviewEditCount ===
+                      0 || busy
+                  }
+                  onClick={() => {
+                    handleSaveSplinePreview();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Salvar spline
+                  {splinePreviewEditCount > 0
+                    ? ` (${splinePreviewEditCount})`
+                    : ""}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    previewEditCount === 0 &&
+                    splinePreviewEditCount === 0
+                  }
+                  onClick={() => {
+                    handleDiscardPreviewEdits();
+                    handleDiscardSplinePreview();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Descartar prévias
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    handleOpenMap();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Abrir outro mapa…
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="editor-menu-root">
+            <button
+              type="button"
+              className={
+                activeTopMenu === "edit"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "edit"
+                      ? undefined
+                      : "edit"
+                )
+              }
+            >
+              Editar
+            </button>
+
+            {activeTopMenu === "edit" && (
+              <div className="editor-menu-popup">
+                <button
+                  type="button"
+                  disabled={
+                    undoPreviewStack.length ===
+                    0
+                  }
+                  onClick={() => {
+                    handleUndoPreview();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Desfazer transformação · Ctrl+Z
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    redoPreviewStack.length ===
+                    0
+                  }
+                  onClick={() => {
+                    handleRedoPreview();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Refazer transformação · Ctrl+Y
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    restoringConstruction ||
+                    constructionUndoStack.length ===
+                      0
+                  }
+                  onClick={() => {
+                    handleUndoConstruction();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Desfazer construção
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    restoringConstruction ||
+                    constructionRedoStack.length ===
+                      0
+                  }
+                  onClick={() => {
+                    handleRedoConstruction();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Refazer construção
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditorTool("select");
+                    setActiveConstructionTool(
+                      undefined
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Selecionar · Q
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    !selectedObject &&
+                    !selectedSpline
+                  }
+                  onClick={() => {
+                    setEditorTool("move");
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Mover seleção · W
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    !selectedObject &&
+                    !selectedSpline
+                  }
+                  onClick={() => {
+                    setEditorTool("rotate");
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Rotacionar seleção · E
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="editor-menu-root">
             <button
@@ -16559,6 +16772,64 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => {
+                    if (isFullScreen) {
+                      setFullScreenPanel(
+                        fullScreenPanel ===
+                          "explorer"
+                          ? undefined
+                          : "explorer"
+                      );
+                    } else {
+                      setDesktopExplorerOpen(
+                        (current) =>
+                          !current
+                      );
+                    }
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {(isFullScreen
+                    ? fullScreenPanel ===
+                      "explorer"
+                    : desktopExplorerOpen)
+                    ? "✓ "
+                    : ""}
+                  Explorador
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isFullScreen) {
+                      setFullScreenPanel(
+                        fullScreenPanel ===
+                          "inspector"
+                          ? undefined
+                          : "inspector"
+                      );
+                    } else {
+                      setDesktopInspectorOpen(
+                        (current) =>
+                          !current
+                      );
+                    }
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {(isFullScreen
+                    ? fullScreenPanel ===
+                      "inspector"
+                    : desktopInspectorOpen)
+                    ? "✓ "
+                    : ""}
+                  Inspetor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
                     setShowTileNavigator(
                       (current) => !current
                     );
@@ -16575,36 +16846,51 @@ export function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowRealMapPanel(
-                      (current) => !current
+                    requestCameraAction(
+                      "fit"
                     );
                     setActiveTopMenu(
                       undefined
                     );
                   }}
                 >
-                  {showRealMapPanel
-                    ? "✓ "
-                    : ""}
-                  Mapa real por coordenadas
+                  Enquadrar mapa · Home
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    !selectedObject &&
+                    !selectedSpline
+                  }
+                  onClick={() => {
+                    requestCameraAction(
+                      "focus"
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Focar seleção · F
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    requestFullScreen(
+                      !isFullScreen
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {isFullScreen
+                    ? "Sair da tela cheia · F11"
+                    : "Tela cheia · F11"}
                 </button>
               </div>
             )}
           </div>
-
-          {[
-            "Objetos",
-            "Terreno",
-            "Splines"
-          ].map((item) => (
-            <button
-              key={item}
-              type="button"
-              disabled
-            >
-              {item}
-            </button>
-          ))}
 
           <div className="editor-menu-root">
             <button
@@ -16641,22 +16927,84 @@ export function App() {
                 >
                   Mapa real por coordenadas…
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMapHealthPanel(
+                      (current) =>
+                        !current
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {showMapHealthPanel
+                    ? "✓ "
+                    : ""}
+                  Saúde do mapa
+                  {mapHealthIssueCount > 0
+                    ? ` (${mapHealthIssueCount})`
+                    : ""}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    loadingSceneryLibrary ||
+                    loadingSplineLibrary
+                  }
+                  onClick={() => {
+                    handleAuditDependencies();
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Verificar dependências
+                  {missingDependencyCount > 0
+                    ? ` (${missingDependencyCount})`
+                    : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowConstructionSetPanel(
+                      (current) =>
+                        !current
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {showConstructionSetPanel
+                    ? "✓ "
+                    : ""}
+                  Conjuntos de construção
+                </button>
               </div>
             )}
           </div>
 
-          {[
-            "Ferramentas",
-            "Ajuda"
-          ].map((item) => (
-            <button
-              key={item}
-              type="button"
-              disabled
-            >
-              {item}
-            </button>
-          ))}
+          <div className="editor-menu-spacer" />
+
+          <div
+            className="editor-menu-status"
+            title="Estado atual da edição"
+          >
+            <strong>
+              {previewEditCount +
+                splinePreviewEditCount >
+              0
+                ? `${previewEditCount + splinePreviewEditCount} alteração(ões)`
+                : "Mapa pronto"}
+            </strong>
+            <span>
+              {mapLoadMode === "full"
+                ? "Mapa completo"
+                : "Desempenho 3×3"}
+            </span>
+          </div>
         </div>
 
         <div className="editor-toolbar">
