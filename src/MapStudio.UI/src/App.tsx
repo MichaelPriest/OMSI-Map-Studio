@@ -59,6 +59,7 @@ import {
   type OmsiTextureAsset,
   type OmsiTile
 } from "./bridge/desktopBridge";
+import { AssetPreview3D } from "./editor/AssetPreview3D";
 import { Viewport } from "./editor/Viewport";
 
 type AppView =
@@ -390,6 +391,127 @@ const sampleTerrainHeight = (
   );
 };
 
+type RoadPoint = {
+  targetTileX: number;
+  targetTileY: number;
+  x: number;
+  y: number;
+};
+
+const deriveRoadArc = (
+  start: RoadPoint,
+  end: RoadPoint,
+  curveOffset: number
+) => {
+  const startWorldX =
+    start.targetTileX * 300 +
+    start.x;
+  const startWorldY =
+    start.targetTileY * 300 +
+    start.y;
+  const endWorldX =
+    end.targetTileX * 300 +
+    end.x;
+  const endWorldY =
+    end.targetTileY * 300 +
+    end.y;
+
+  const deltaX =
+    endWorldX - startWorldX;
+  const deltaY =
+    endWorldY - startWorldY;
+  const chordLength =
+    Math.hypot(deltaX, deltaY);
+
+  if (chordLength < 0.001) {
+    return undefined;
+  }
+
+  const chordBearing =
+    Math.atan2(
+      deltaX,
+      deltaY
+    );
+
+  if (
+    Math.abs(curveOffset) <
+      0.05
+  ) {
+    return {
+      rotation:
+        chordBearing *
+        180 /
+        Math.PI,
+      length: chordLength,
+      radius: 0,
+      chordLength
+    };
+  }
+
+  const maximumOffset =
+    Math.max(
+      0.05,
+      chordLength * 0.49
+    );
+  const sagitta =
+    Math.max(
+      -maximumOffset,
+      Math.min(
+        maximumOffset,
+        curveOffset
+      )
+    );
+
+  const radiusMagnitude =
+    (
+      chordLength *
+      chordLength
+    ) /
+      (
+        8 *
+        Math.abs(sagitta)
+      ) +
+    Math.abs(sagitta) /
+      2;
+
+  const signedRadius =
+    Math.sign(sagitta) *
+    radiusMagnitude;
+
+  const halfAngle =
+    Math.asin(
+      Math.min(
+        1,
+        chordLength /
+          (
+            2 *
+            radiusMagnitude
+          )
+      )
+    );
+
+  const signedAngle =
+    Math.sign(sagitta) *
+    halfAngle *
+    2;
+
+  return {
+    rotation:
+      (
+        chordBearing -
+        signedAngle / 2
+      ) *
+      180 /
+      Math.PI,
+    length:
+      radiusMagnitude *
+      Math.abs(signedAngle),
+    radius:
+      signedRadius,
+    chordLength
+  };
+};
+
 const formatFileSize = (
   bytes: number
 ) => {
@@ -700,6 +822,23 @@ export function App() {
   ] = useState(false);
 
   const [
+    activeTopMenu,
+    setActiveTopMenu
+  ] = useState<
+    "map" | "view" | undefined
+  >();
+
+  const [
+    showRealMapPanel,
+    setShowRealMapPanel
+  ] = useState(false);
+
+  const [
+    showTileNavigator,
+    setShowTileNavigator
+  ] = useState(true);
+
+  const [
     fullScreenPanel,
     setFullScreenPanel
   ] = useState<
@@ -934,12 +1073,17 @@ export function App() {
   const [
     easyRoadStart,
     setEasyRoadStart
-  ] = useState<{
-    targetTileX: number;
-    targetTileY: number;
-    x: number;
-    y: number;
-  }>();
+  ] = useState<RoadPoint>();
+
+  const [
+    easyRoadEnd,
+    setEasyRoadEnd
+  ] = useState<RoadPoint>();
+
+  const [
+    easyRoadCurveOffset,
+    setEasyRoadCurveOffset
+  ] = useState(0);
 
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
