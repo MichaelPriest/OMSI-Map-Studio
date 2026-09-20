@@ -1052,3 +1052,10 @@ A **double-click on the resize handle** removes the saved manual size and immedi
 Selection fallback no longer depends only on an object's placement origin. For each SCO path, the viewport computes and reuses an approximate selection volume from loaded geometry, mesh transforms and tree dimensions. Clicking a facade, roof or other visible part of a large object can therefore select the same item even when triangle raycasting does not return a usable mesh.
 
 Priority is based on the first approximate surface reached by the ray, reducing the chance that a large distant object steals the click from a nearer item. Protected or incomplete assets still use fallback selection and now also receive a blue hover guide when no renderable mesh is available for outlining.
+
+
+### Projected screen-box selection
+
+A second selection path now works independently from triangle raycasting. The editor projects real OMSI mesh bounding boxes into CSS viewport coordinates and directly checks whether the pointer is over the object's visible screen area. This removes scaling differences between WebView2, Windows DPI and Babylon's framebuffer.
+
+For splines, the real axis is projected to screen space and pointer-to-segment distance is measured in pixels. Selection is also committed on left-button press with pointer capture, since the selection layer no longer rebuilds the structural scene. This makes clicking immediate and closer to the original OMSI editor behavior.

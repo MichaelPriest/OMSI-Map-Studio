@@ -1052,3 +1052,10 @@ Um **duplo clique na alça de redimensionamento** remove o tamanho manual salvo 
 O fallback de seleção não depende mais apenas do ponto de origem do objeto. Para cada caminho SCO, o viewport calcula e reutiliza um volume de seleção aproximado a partir da geometria real carregada, transformações do mesh e dimensões de árvores. Assim, clicar na fachada, cobertura ou parte visível de um objeto grande pode selecionar o mesmo item mesmo quando o raycast de triângulos não retorna uma malha utilizável.
 
 A prioridade usa a primeira superfície aproximada atingida pelo raio, reduzindo a chance de um objeto grande e distante roubar o clique de um item mais próximo. Assets protegidos ou incompletos continuam usando fallback, e agora recebem também um guia azul de hover mesmo quando não existe uma malha renderizável para contornar.
+
+
+### Seleção por caixa projetada na tela
+
+Foi adicionada uma segunda rota de seleção totalmente independente do raycast de triângulos. O editor projeta as caixas reais das malhas OMSI para coordenadas CSS do viewport e verifica diretamente se o cursor está sobre a área visual do objeto. Isso elimina diferenças de escala entre WebView2, DPI do Windows e framebuffer do Babylon.
+
+Para splines, o eixo real é projetado para a tela e a distância do cursor aos segmentos é calculada em pixels. A seleção também passa a ser confirmada já no pressionamento do botão esquerdo, com captura do ponteiro, pois a camada de seleção já não reconstrói a cena estrutural. O clique fica assim mais próximo do comportamento imediato do editor original do OMSI.

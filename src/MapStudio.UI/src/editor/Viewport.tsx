@@ -5238,6 +5238,9 @@ export function Viewport({
       | { x: number; y: number }
       | undefined;
 
+    let pointerDownSelectionHandled =
+      false;
+
     const getMapItemClickKey = (
       kind: "object" | "spline",
       item:
@@ -6273,6 +6276,425 @@ export function Viewport({
         }
       }
 
+      // WebView2/DPI-safe second path: test the actual rendered OMSI mesh
+      // bounds in CSS screen space. This does not depend on Babylon's
+      // triangle raycast coordinates, so clicking the visible facade,
+      // roof, pole or billboard still resolves the owning map item.
+      const renderWidth =
+        Math.max(
+          1,
+          engine.getRenderWidth()
+        );
+
+      const renderHeight =
+        Math.max(
+          1,
+          engine.getRenderHeight()
+        );
+
+      const viewport =
+        camera.viewport.toGlobal(
+          renderWidth,
+          renderHeight
+        );
+
+      const cursorX =
+        event.clientX - rect.left;
+
+      const cursorY =
+        event.clientY - rect.top;
+
+      let screenCandidate:
+        | {
+            item: OmsiPlacedObject;
+            mesh: Mesh;
+            depth: number;
+            area: number;
+          }
+        | undefined;
+
+      if (objectSelectionEnabled) {
+        for (const mesh of scene.meshes) {
+          if (
+            !(mesh instanceof Mesh) ||
+            !mesh.isEnabled() ||
+            mesh.visibility <= 0
+          ) {
+            continue;
+          }
+
+          let node: Node | null =
+            mesh;
+          let placedObject:
+            | OmsiPlacedObject
+            | undefined;
+
+          while (node) {
+            const metadata =
+              node.metadata;
+
+            if (
+              metadata?.mapStudioKind ===
+                "object" &&
+              metadata.placedObject
+            ) {
+              placedObject =
+                metadata.placedObject as
+                  OmsiPlacedObject;
+              break;
+            }
+
+            node = node.parent;
+          }
+
+          if (!placedObject) {
+            continue;
+          }
+
+          mesh.computeWorldMatrix(true);
+
+          const vectors =
+            mesh.getBoundingInfo()
+              .boundingBox.vectorsWorld;
+
+          let minScreenX =
+            Number.POSITIVE_INFINITY;
+          let maxScreenX =
+            Number.NEGATIVE_INFINITY;
+          let minScreenY =
+            Number.POSITIVE_INFINITY;
+          let maxScreenY =
+            Number.NEGATIVE_INFINITY;
+          let minDepth =
+            Number.POSITIVE_INFINITY;
+
+          for (const vector of vectors) {
+            const projected =
+              Vector3.Project(
+                vector,
+                Matrix.Identity(),
+                scene.getTransformMatrix(),
+                viewport
+              );
+
+            if (
+              !Number.isFinite(
+                projected.x
+              ) ||
+              !Number.isFinite(
+                projected.y
+              ) ||
+              !Number.isFinite(
+                projected.z
+              )
+            ) {
+              continue;
+            }
+
+            const screenX =
+              projected.x *
+              rect.width /
+              renderWidth;
+
+            const screenY =
+              projected.y *
+              rect.height /
+              renderHeight;
+
+            minScreenX =
+              Math.min(
+                minScreenX,
+                screenX
+              );
+            maxScreenX =
+              Math.max(
+                maxScreenX,
+                screenX
+              );
+            minScreenY =
+              Math.min(
+                minScreenY,
+                screenY
+              );
+            maxScreenY =
+              Math.max(
+                maxScreenY,
+                screenY
+              );
+            minDepth =
+              Math.min(
+                minDepth,
+                projected.z
+              );
+          }
+
+          if (
+            !Number.isFinite(
+              minScreenX
+            ) ||
+            !Number.isFinite(
+              minScreenY
+            ) ||
+            !Number.isFinite(
+              minDepth
+            ) ||
+            minDepth < -0.05 ||
+            minDepth > 1.05
+          ) {
+            continue;
+          }
+
+          const padding = 9;
+
+          if (
+            cursorX <
+              minScreenX - padding ||
+            cursorX >
+              maxScreenX + padding ||
+            cursorY <
+              minScreenY - padding ||
+            cursorY >
+              maxScreenY + padding
+          ) {
+            continue;
+          }
+
+          const width =
+            Math.max(
+              1,
+              maxScreenX -
+                minScreenX
+            );
+
+          const height =
+            Math.max(
+              1,
+              maxScreenY -
+                minScreenY
+            );
+
+          const area =
+            width * height;
+
+          if (
+            !screenCandidate ||
+            minDepth <
+              screenCandidate.depth -
+                0.0005 ||
+            (
+              Math.abs(
+                minDepth -
+                  screenCandidate.depth
+              ) <= 0.0005 &&
+              area <
+                screenCandidate.area
+            )
+          ) {
+            screenCandidate = {
+              item: placedObject,
+              mesh,
+              depth: minDepth,
+              area
+            };
+          }
+        }
+      }
+
+      if (screenCandidate) {
+        return {
+          kind: "object" as const,
+          item:
+            screenCandidate.item,
+          pickedMesh:
+            screenCandidate.mesh,
+          diagnostic:
+            buildPickedDiagnostic(
+              screenCandidate.mesh,
+              "object",
+              screenCandidate.item
+            )
+        };
+      }
+
+      if (splineSelectionEnabled) {
+        const splineScreenRadius = 11;
+        let splineCandidate:
+          | {
+              item: OmsiPlacedSpline;
+              distance: number;
+              depth: number;
+            }
+          | undefined;
+
+        const pointToSegmentDistance = (
+          px: number,
+          py: number,
+          ax: number,
+          ay: number,
+          bx: number,
+          by: number
+        ) => {
+          const dx = bx - ax;
+          const dy = by - ay;
+          const lengthSquared =
+            dx * dx + dy * dy;
+
+          if (
+            lengthSquared <=
+            0.000001
+          ) {
+            return Math.hypot(
+              px - ax,
+              py - ay
+            );
+          }
+
+          const t =
+            Math.max(
+              0,
+              Math.min(
+                1,
+                (
+                  (px - ax) * dx +
+                  (py - ay) * dy
+                ) /
+                  lengthSquared
+              )
+            );
+
+          return Math.hypot(
+            px -
+              (
+                ax + dx * t
+              ),
+            py -
+              (
+                ay + dy * t
+              )
+          );
+        };
+
+        for (const item of splines) {
+          const points =
+            getSplineAxisLine(item);
+
+          if (points.length < 2) {
+            continue;
+          }
+
+          let bestDistance =
+            Number.POSITIVE_INFINITY;
+          let bestDepth =
+            Number.POSITIVE_INFINITY;
+
+          let previous:
+            | {
+                x: number;
+                y: number;
+                z: number;
+              }
+            | undefined;
+
+          for (const point of points) {
+            const projected =
+              Vector3.Project(
+                point,
+                Matrix.Identity(),
+                scene.getTransformMatrix(),
+                viewport
+              );
+
+            const current = {
+              x:
+                projected.x *
+                rect.width /
+                renderWidth,
+              y:
+                projected.y *
+                rect.height /
+                renderHeight,
+              z: projected.z
+            };
+
+            if (
+              previous &&
+              current.z >= -0.05 &&
+              current.z <= 1.05
+            ) {
+              const distance =
+                pointToSegmentDistance(
+                  cursorX,
+                  cursorY,
+                  previous.x,
+                  previous.y,
+                  current.x,
+                  current.y
+                );
+
+              if (
+                distance <
+                bestDistance
+              ) {
+                bestDistance =
+                  distance;
+                bestDepth =
+                  Math.min(
+                    previous.z,
+                    current.z
+                  );
+              }
+            }
+
+            previous = current;
+          }
+
+          if (
+            bestDistance >
+            splineScreenRadius
+          ) {
+            continue;
+          }
+
+          if (
+            !splineCandidate ||
+            bestDepth <
+              splineCandidate.depth -
+                0.0005 ||
+            (
+              Math.abs(
+                bestDepth -
+                  splineCandidate.depth
+              ) <= 0.0005 &&
+              bestDistance <
+                splineCandidate.distance
+            )
+          ) {
+            splineCandidate = {
+              item,
+              distance:
+                bestDistance,
+              depth:
+                bestDepth
+            };
+          }
+        }
+
+        if (splineCandidate) {
+          return {
+            kind: "spline" as const,
+            item:
+              splineCandidate.item,
+            pickedMesh: undefined,
+            diagnostic:
+              buildPickedDiagnostic(
+                null,
+                "spline",
+                splineCandidate.item
+              )
+          };
+        }
+      }
+
       // Some OMSI assets do not expose a usable rendered mesh:
       // encrypted/protected O3D, helper-only SCOs, missing geometry,
       // or very thin spline profiles. Keep them selectable by using
@@ -7130,6 +7552,9 @@ export function Viewport({
         y: event.clientY
       };
 
+      pointerDownSelectionHandled =
+        false;
+
       const endpointControl =
         pickRoadEndpointControl(
           event
@@ -7185,9 +7610,28 @@ export function Viewport({
         return;
       }
 
-      // Selection is committed on pointerup, like the classic OMSI
-      // editor. This prevents a React state update from rebuilding the
-      // scene halfway through the same mouse click.
+      const selectingMapItem =
+        !placementAssetPath &&
+        !splinePlacementTemplate &&
+        selectionMode !== "terrain";
+
+      // Selection itself no longer rebuilds the structural scene, so we
+      // can commit it on left-button press like the classic OMSI editor.
+      // Pointer capture keeps the click deterministic in WebView2 even if
+      // focus, hover outline or the Inspector changes before button-up.
+      if (
+        selectingMapItem &&
+        selectPickedMapItem(event)
+      ) {
+        pointerDownSelectionHandled =
+          true;
+
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+
+        event.preventDefault();
+      }
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -7306,6 +7750,25 @@ export function Viewport({
         event.clientY - pointerStart.y
       );
       pointerStart = undefined;
+
+      if (
+        pointerDownSelectionHandled
+      ) {
+        pointerDownSelectionHandled =
+          false;
+
+        if (
+          canvas.hasPointerCapture(
+            event.pointerId
+          )
+        ) {
+          canvas.releasePointerCapture(
+            event.pointerId
+          );
+        }
+
+        return;
+      }
 
       if (dragDistance > 5) {
         return;
@@ -7728,6 +8191,19 @@ export function Viewport({
       }
 
       pointerStart = undefined;
+      pointerDownSelectionHandled =
+        false;
+
+      if (
+        canvas.hasPointerCapture(
+          event.pointerId
+        )
+      ) {
+        canvas.releasePointerCapture(
+          event.pointerId
+        );
+      }
+
       finishNavigationPointer(event);
     };
 
