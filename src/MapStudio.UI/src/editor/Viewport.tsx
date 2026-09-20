@@ -45,6 +45,11 @@ type ViewportProps = {
   tiles: OmsiTile[];
   cameraStateKey: string;
   editorTool: "select" | "move" | "rotate";
+  selectionMode:
+    | "all"
+    | "object"
+    | "spline"
+    | "terrain";
   snapEnabled: boolean;
   moveSnap: number;
   rotationSnap: number;
@@ -1320,11 +1325,14 @@ function createSelectedSplineProfile(
         material.diffuseTexture =
           texture;
 
+        // Keep the real OMSI road texture visible even with editor
+        // lighting disabled. The same source asset and UVs are used;
+        // no synthetic material or colour is introduced.
         material.emissiveColor =
-          Color3.Black();
+          Color3.White();
 
         material.emissiveTexture =
-          null;
+          texture;
 
         texture.wrapU =
           Texture.WRAP_ADDRESSMODE;
@@ -2667,6 +2675,10 @@ function createGeometryMeshes(
               true;
             mesh.material.diffuseColor =
               Color3.White();
+            mesh.material.emissiveColor =
+              Color3.White();
+            mesh.material.emissiveTexture =
+              mesh.material.diffuseTexture;
           }
         }
       }
@@ -3314,6 +3326,7 @@ export function Viewport({
   tiles,
   cameraStateKey,
   editorTool,
+  selectionMode,
   snapEnabled,
   moveSnap,
   rotationSnap,
@@ -4853,7 +4866,35 @@ export function Viewport({
         scene.pick(
           pointerX,
           pointerY,
-          (mesh) => mesh.isPickable,
+          (mesh) => {
+            if (
+              !mesh.isPickable ||
+              selectionMode ===
+                "terrain"
+            ) {
+              return false;
+            }
+
+            const kind =
+              mesh.metadata
+                ?.mapStudioKind;
+
+            if (
+              selectionMode ===
+                "object"
+            ) {
+              return kind === "object";
+            }
+
+            if (
+              selectionMode ===
+                "spline"
+            ) {
+              return kind === "spline";
+            }
+
+            return true;
+          },
           false,
           camera
         );
@@ -5186,7 +5227,13 @@ export function Viewport({
 
       for (
         const placedObject of
-          showObjects
+          showObjects &&
+          (
+            selectionMode ===
+              "all" ||
+            selectionMode ===
+              "object"
+          )
             ? objects
             : []
       ) {
@@ -5253,7 +5300,13 @@ export function Viewport({
       }
 
       const splinePick =
-        showSplines
+        showSplines &&
+        (
+          selectionMode ===
+            "all" ||
+          selectionMode ===
+            "spline"
+        )
           ? scene.pick(
           pointerX,
           pointerY,
@@ -5333,6 +5386,34 @@ export function Viewport({
                 tile.y === tileY
             )
           ) {
+            if (
+              selectionMode ===
+                "terrain"
+            ) {
+              setViewportDiagnostic({
+                item:
+                  `Terreno tile ${tileX},${tileY}`,
+                mesh:
+                  "omsi-editor-terrain",
+                material:
+                  "groundtex real",
+                texture:
+                  terrainMainTextureAsset
+                    ?.resolvedPath ??
+                  terrainMainTextureAsset
+                    ?.errorCode ??
+                  "textura base não resolvida",
+                uv:
+                  "UV do tile 0..1",
+                position:
+                  `X ${groundPoint.x.toFixed(3)} · Y 0.000 · Z ${groundPoint.z.toFixed(3)}`,
+                renderLift:
+                  "0.000",
+                origin:
+                  "global.cfg / .map.terrain"
+              });
+            }
+
             onActiveTileChange({
               x: tileX,
               y: tileY
@@ -5483,6 +5564,7 @@ export function Viewport({
     tiles,
     cameraStateKey,
     editorTool,
+    selectionMode,
     snapEnabled,
     moveSnap,
     rotationSnap,
