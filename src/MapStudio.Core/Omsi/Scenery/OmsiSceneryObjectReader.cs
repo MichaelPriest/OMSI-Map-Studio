@@ -46,6 +46,20 @@ public sealed class OmsiSceneryObjectReader
         var tree =
             ReadTree(document);
 
+        var renderType =
+            document
+                .FindFirstSection(
+                    "rendertype")
+                ?.DataLines
+                .FirstOrDefault()
+                ?.Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                renderType))
+        {
+            renderType = null;
+        }
+
         return new OmsiSceneryObjectMetadata(
             Exists: true,
             FriendlyName: friendlyName,
@@ -61,7 +75,8 @@ public sealed class OmsiSceneryObjectReader
             UsesAbsoluteHeight:
                 document.FindFirstSection(
                     "absheight") is not null,
-            Tree: tree);
+            Tree: tree,
+            RenderType: renderType);
     }
 
     private static MeshReadResult
