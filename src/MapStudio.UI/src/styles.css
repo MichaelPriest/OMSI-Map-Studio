@@ -3966,3 +3966,22 @@ code {
     grid-column: 1;
   }
 }
+
+
+/* Keep floating edit tools clear of the bottom construction HUD. */
+.city-drawer-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  float: none;
+  margin: 0;
+}
+
+.terrain-edit-panel {
+  bottom: 112px;
+}
+
+.viewport-diagnostic,
+.reference-attribution {
+  bottom: 112px;
+}
