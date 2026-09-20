@@ -5102,10 +5102,39 @@ export function App() {
             return {
               ...current,
               tiles: current.tiles.map(
-                (tile) =>
-                  loadedByCoordinate.get(
-                    `${tile.x}:${tile.y}`
-                  ) ?? tile
+                (tile) => {
+                  const loaded =
+                    loadedByCoordinate.get(
+                      `${tile.x}:${tile.y}`
+                    );
+
+                  if (loaded) {
+                    return loaded;
+                  }
+
+                  if (
+                    !tile.terrain &&
+                    !tile.terrainRenderData &&
+                    !tile.terrainTextureMasks
+                      ?.length
+                  ) {
+                    return tile;
+                  }
+
+                  return {
+                    ...tile,
+                    detailsLoaded: false,
+                    streamDetail:
+                      undefined,
+                    streamRing:
+                      undefined,
+                    terrain: undefined,
+                    terrainRenderData:
+                      undefined,
+                    terrainTextureMasks:
+                      undefined
+                  };
+                }
               )
             };
           });
@@ -14530,7 +14559,7 @@ export function App() {
       return {
         title: "Carregando área ativa",
         detail:
-          "Atualizando os tiles do modo desempenho 3×3. A edição será liberada quando a área estiver consistente."
+          "Atualizando os tiles do modo streaming 3×3. A edição será liberada quando a área estiver consistente."
       };
     }
 
@@ -14540,7 +14569,7 @@ export function App() {
         detail:
           mapLoadMode === "full"
             ? "Carregando malhas O3D/.x, perfis SLI e texturas reais do mapa completo."
-            : "Carregando malhas O3D/.x, perfis SLI e texturas reais da área 3×3.",
+            : "Carregando malhas O3D/.x, perfis SLI e texturas reais da área ativa 3×3.",
         completed:
           assetWarmupProgress.completed,
         total:
@@ -17574,7 +17603,7 @@ export function App() {
                   "performance"
                     ? "✓ "
                     : ""}
-                  Desempenho 3×3
+                  Streaming 3×3
                 </button>
                 <button
                   type="button"
@@ -17705,7 +17734,7 @@ export function App() {
             <span>
               {mapLoadMode === "full"
                 ? "Mapa completo"
-                : "Desempenho 3×3"}
+                : "Streaming 3×3"}
             </span>
           </div>
         </div>
@@ -24155,7 +24184,7 @@ export function App() {
             Modo:{" "}
             {mapLoadMode === "full"
               ? "Mapa completo"
-              : "Desempenho 3×3"}
+              : "Streaming 3×3"}
             <b>·</b>
             Objetos:{" "}
             {selectedStats?.objects ??
