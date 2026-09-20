@@ -23,7 +23,11 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11PixelShader _texturedPixelShader;
+    private readonly ID3D11PixelShader _alphaCutoutPixelShader;
+    private readonly ID3D11PixelShader _alphaBlendPixelShader;
     private readonly ID3D11PixelShader _nightMaterialPixelShader;
+    private readonly ID3D11PixelShader _nightMaterialCutoutPixelShader;
+    private readonly ID3D11PixelShader _nightMaterialBlendPixelShader;
     private readonly ID3D11PixelShader _terrainLayerPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
@@ -31,6 +35,8 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11SamplerState _maskSampler;
     private readonly ID3D11SamplerState _skySampler;
     private readonly ID3D11DepthStencilState _skyDepthState;
+    private readonly ID3D11DepthStencilState _depthReadState;
+    private readonly ID3D11DepthStencilState _depthDisabledState;
     private readonly ID3D11BlendState _alphaBlendState;
     private readonly NativeGpuTextureLoader _textureLoader;
     private readonly ID3D11Buffer _skyTriangleBuffer;
@@ -237,10 +243,38 @@ public sealed class D3D11NativeMapRenderer :
                     "ps_4_0");
 
         ReadOnlyMemory<byte>
+            alphaCutoutPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSAlphaCutout",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            alphaBlendPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSAlphaBlend",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
             nightMaterialPixelShaderBytecode =
                 Compiler.CompileFromFile(
                     shaderPath,
                     "PSNightMaterial",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            nightMaterialCutoutPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSNightMaterialCutout",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            nightMaterialBlendPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSNightMaterialBlend",
                     "ps_4_0");
 
         ReadOnlyMemory<byte>
@@ -268,10 +302,34 @@ public sealed class D3D11NativeMapRenderer :
                     texturedPixelShaderBytecode
                         .Span);
 
+        _alphaCutoutPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    alphaCutoutPixelShaderBytecode
+                        .Span);
+
+        _alphaBlendPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    alphaBlendPixelShaderBytecode
+                        .Span);
+
         _nightMaterialPixelShader =
             _deviceHost.Device
                 .CreatePixelShader(
                     nightMaterialPixelShaderBytecode
+                        .Span);
+
+        _nightMaterialCutoutPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    nightMaterialCutoutPixelShaderBytecode
+                        .Span);
+
+        _nightMaterialBlendPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    nightMaterialBlendPixelShaderBytecode
                         .Span);
 
         _terrainLayerPixelShader =
@@ -347,6 +405,18 @@ public sealed class D3D11NativeMapRenderer :
                         TextureAddressMode.Clamp));
 
         _skyDepthState =
+            _deviceHost.Device
+                .CreateDepthStencilState(
+                    DepthStencilDescription
+                        .None);
+
+        _depthReadState =
+            _deviceHost.Device
+                .CreateDepthStencilState(
+                    DepthStencilDescription
+                        .DepthRead);
+
+        _depthDisabledState =
             _deviceHost.Device
                 .CreateDepthStencilState(
                     DepthStencilDescription
@@ -1026,6 +1096,10 @@ public sealed class D3D11NativeMapRenderer :
                     null);
 
             context
+                .OMSetDepthStencilState(
+                    null);
+
+            context
                 .PSSetShader(
                     _pixelShader);
 
@@ -1055,37 +1129,47 @@ public sealed class D3D11NativeMapRenderer :
                 continue;
             }
 
+            if (batch.NoZCheck)
+            {
+                context
+                    .OMSetDepthStencilState(
+                        _depthDisabledState);
+            }
+            else if (batch.NoZWrite)
+            {
+                context
+                    .OMSetDepthStencilState(
+                        _depthReadState);
+            }
+            else
+            {
+                context
+                    .OMSetDepthStencilState(
+                        null);
+            }
+
             NativeGpuTexture? texture =
                 null;
 
             var hasTexture =
-                false;
-
-            if (
                 batch.TexturePath is
                     { Length: > 0 }
-                    texturePath)
-            {
-                hasTexture =
-                    _textureCache
-                        .TryGetValue(
-                            texturePath,
-                            out texture);
-            }
+                    texturePath &&
+                _textureCache
+                    .TryGetValue(
+                        texturePath,
+                        out texture);
 
             if (
                 batch.MaskTexturePath is
                     { Length: > 0 }
                     maskPath)
             {
-                NativeGpuTexture? maskTexture =
-                    null;
-
                 var hasMask =
                     _textureCache
                         .TryGetValue(
                             maskPath,
-                            out maskTexture);
+                            out var maskTexture);
 
                 if (
                     !hasTexture ||
@@ -1111,20 +1195,26 @@ public sealed class D3D11NativeMapRenderer :
                     .PSSetShaderResource(
                         1,
                         maskTexture!.View);
+
+                context
+                    .PSUnsetShaderResource(
+                        2);
             }
             else if (hasTexture)
             {
+                var alphaMode =
+                    batch.AlphaMode ??
+                    0;
+
                 context
                     .OMSetBlendState(
-                        null);
+                        alphaMode == 2
+                            ? _alphaBlendState
+                            : null);
 
                 context
                     .PSUnsetShaderResource(
                         1);
-
-                NativeGpuTexture?
-                    secondaryTexture =
-                        null;
 
                 var secondaryPath =
                     _nightPreviewEnabled
@@ -1138,13 +1228,22 @@ public sealed class D3D11NativeMapRenderer :
                     _textureCache
                         .TryGetValue(
                             secondaryPath,
-                            out secondaryTexture);
+                            out var secondaryTexture);
+
+                ID3D11PixelShader shader;
 
                 if (hasSecondary)
                 {
-                    context
-                        .PSSetShader(
-                            _nightMaterialPixelShader);
+                    shader =
+                        alphaMode switch
+                        {
+                            1 =>
+                                _nightMaterialCutoutPixelShader,
+                            2 =>
+                                _nightMaterialBlendPixelShader,
+                            _ =>
+                                _nightMaterialPixelShader
+                        };
 
                     context
                         .PSSetShaderResource(
@@ -1153,14 +1252,25 @@ public sealed class D3D11NativeMapRenderer :
                 }
                 else
                 {
+                    shader =
+                        alphaMode switch
+                        {
+                            1 =>
+                                _alphaCutoutPixelShader,
+                            2 =>
+                                _alphaBlendPixelShader,
+                            _ =>
+                                _texturedPixelShader
+                        };
+
                     context
                         .PSUnsetShaderResource(
                             2);
-
-                    context
-                        .PSSetShader(
-                            _texturedPixelShader);
                 }
+
+                context
+                    .PSSetShader(
+                        shader);
 
                 context
                     .PSSetShaderResource(
@@ -1182,6 +1292,10 @@ public sealed class D3D11NativeMapRenderer :
                         1);
 
                 context
+                    .PSUnsetShaderResource(
+                        2);
+
+                context
                     .PSSetShader(
                         _pixelShader);
             }
@@ -1195,6 +1309,10 @@ public sealed class D3D11NativeMapRenderer :
 
         context
             .OMSetBlendState(
+                null);
+
+        context
+            .OMSetDepthStencilState(
                 null);
 
         context
@@ -1863,13 +1981,19 @@ public sealed class D3D11NativeMapRenderer :
         _skyTexture = null;
         _skyTriangleBuffer.Dispose();
         _alphaBlendState.Dispose();
+        _depthDisabledState.Dispose();
+        _depthReadState.Dispose();
         _skyDepthState.Dispose();
         _skySampler.Dispose();
         _maskSampler.Dispose();
         _textureSampler.Dispose();
         _inputLayout.Dispose();
         _terrainLayerPixelShader.Dispose();
+        _nightMaterialBlendPixelShader.Dispose();
+        _nightMaterialCutoutPixelShader.Dispose();
         _nightMaterialPixelShader.Dispose();
+        _alphaBlendPixelShader.Dispose();
+        _alphaCutoutPixelShader.Dispose();
         _texturedPixelShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();

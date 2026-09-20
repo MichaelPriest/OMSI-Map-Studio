@@ -222,6 +222,14 @@ public sealed class NativeSceneryAssetLoader
                 new int?[
                     geometry.Materials.Count];
 
+            var materialNoZWriteFlags =
+                new bool[
+                    geometry.Materials.Count];
+
+            var materialNoZCheckFlags =
+                new bool[
+                    geometry.Materials.Count];
+
             foreach (
                 var materialOverride in
                     metadata.MaterialOverrides
@@ -246,6 +254,16 @@ public sealed class NativeSceneryAssetLoader
                     materialIndex] =
                     materialOverride
                         .AlphaMode;
+
+                materialNoZWriteFlags[
+                    materialIndex] =
+                    materialOverride
+                        .NoZWrite;
+
+                materialNoZCheckFlags[
+                    materialIndex] =
+                    materialOverride
+                        .NoZCheck;
 
                 if (
                     !string.IsNullOrWhiteSpace(
@@ -294,7 +312,9 @@ public sealed class NativeSceneryAssetLoader
                     materialTexturePaths,
                     materialNightTexturePaths,
                     materialLightTexturePaths,
-                    materialAlphaModes));
+                    materialAlphaModes,
+                    materialNoZWriteFlags,
+                    materialNoZCheckFlags));
         }
 
         return new NativeSceneryAsset(

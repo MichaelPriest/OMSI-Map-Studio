@@ -19,6 +19,12 @@ public sealed record NativeSceneryMeshAsset(
             null,
     IReadOnlyList<int?>?
         MaterialAlphaModes =
+            null,
+    IReadOnlyList<bool>?
+        MaterialNoZWriteFlags =
+            null,
+    IReadOnlyList<bool>?
+        MaterialNoZCheckFlags =
             null);
 
 public sealed record NativeSceneryAsset(

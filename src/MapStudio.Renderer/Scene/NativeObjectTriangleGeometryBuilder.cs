@@ -15,7 +15,9 @@ public readonly record struct NativeMaterialBatch(
     string? MaskTexturePath = null,
     string? NightTexturePath = null,
     string? LightTexturePath = null,
-    int? AlphaMode = null);
+    int? AlphaMode = null,
+    bool NoZWrite = false,
+    bool NoZCheck = false);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
@@ -327,6 +329,16 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     mesh,
                     materialIndex);
 
+            var noZWrite =
+                GetMaterialFlag(
+                    mesh.MaterialNoZWriteFlags,
+                    materialIndex);
+
+            var noZCheck =
+                GetMaterialFlag(
+                    mesh.MaterialNoZCheckFlags,
+                    materialIndex);
+
             var triangleStart =
                 output.Count;
 
@@ -393,7 +405,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 texturePath,
                 nightTexturePath,
                 lightTexturePath,
-                alphaMode);
+                alphaMode,
+                noZWrite,
+                noZCheck);
         }
     }
 
@@ -404,7 +418,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
         string? texturePath,
         string? nightTexturePath,
         string? lightTexturePath,
-        int? alphaMode)
+        int? alphaMode,
+        bool noZWrite,
+        bool noZCheck)
     {
         if (
             batches.Count > 0)
@@ -429,7 +445,11 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     lightTexturePath,
                     StringComparison.OrdinalIgnoreCase) &&
                 previous.AlphaMode ==
-                    alphaMode)
+                    alphaMode &&
+                previous.NoZWrite ==
+                    noZWrite &&
+                previous.NoZCheck ==
+                    noZCheck)
             {
                 batches[^1] =
                     previous with
@@ -451,7 +471,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 null,
                 nightTexturePath,
                 lightTexturePath,
-                alphaMode));
+                alphaMode,
+                noZWrite,
+                noZCheck));
     }
 
     private static int?
@@ -530,6 +552,23 @@ public sealed class NativeObjectTriangleGeometryBuilder
         return mesh
             .MaterialAlphaModes[
                 index];
+    }
+
+    private static bool
+        GetMaterialFlag(
+            IReadOnlyList<bool>? flags,
+            int? materialIndex)
+    {
+        if (
+            flags is null ||
+            materialIndex is not int index ||
+            index < 0 ||
+            index >= flags.Count)
+        {
+            return false;
+        }
+
+        return flags[index];
     }
 
     private static Vector4

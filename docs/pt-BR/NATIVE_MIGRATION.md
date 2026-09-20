@@ -419,3 +419,17 @@ O shader noturno combina a textura base com a textura secundária sem alterar os
 
 Este checkpoint ainda não altera depth state nem blending de `matl_alpha`, `matl_noZwrite` e `matl_noZcheck`; bump map e environment map também permanecem para um checkpoint separado.
 
+### Checkpoint N3.22 — matl_alpha e estados noZ nativos
+
+O renderer nativo passa a respeitar os três modos de alpha definidos pelo SCO:
+
+- `matl_alpha 0`: material opaco; o alpha da textura não recorta a geometria.
+- `matl_alpha 1`: recorte binário; pixels abaixo do limiar de alpha são descartados e os demais permanecem opacos.
+- `matl_alpha 2`: transparência parcial com alpha blending.
+
+Os mesmos modos também são aplicados quando o material possui night map/light map, usando shaders noturnos equivalentes.
+
+`matl_noZwrite` passa a usar depth test somente leitura, preservando a comparação com a cena sem gravar profundidade. `matl_noZcheck` desativa o depth test para o lote do material. Depois de cada lote, o renderer restaura os estados padrão para não contaminar terreno, splines ou outros objetos.
+
+Os flags são carregados diretamente dos `MaterialOverrides` do Core e permanecem associados ao material correto de cada mesh.
+
