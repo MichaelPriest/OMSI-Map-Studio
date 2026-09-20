@@ -337,6 +337,102 @@ public sealed class OmsiTerrainTextureMaskTests
         }
     }
 
+    [Fact]
+    public void TerrainTextureMaskWriter_RoundTripsEditablePixels()
+    {
+        var root =
+            CreateRoot();
+
+        try
+        {
+            var path =
+                Path.Combine(
+                    root,
+                    "paint.dds");
+
+            var source =
+                new OmsiTerrainTextureMaskData(
+                    4,
+                    4,
+                    [
+                        0, 1, 2, 3,
+                        4, 5, 6, 7,
+                        8, 9, 10, 11,
+                        12, 13, 14, 15
+                    ]);
+
+            File.WriteAllBytes(
+                path,
+                OmsiTerrainTextureMaskWriter
+                    .Write(source));
+
+            var read =
+                OmsiTerrainTextureMaskDataReader
+                    .Read(path);
+
+            Assert.Equal(
+                source.Width,
+                read.Width);
+
+            Assert.Equal(
+                source.Height,
+                read.Height);
+
+            Assert.Equal(
+                source.AlphaPixels,
+                read.AlphaPixels);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public void TerrainTextureMaskPainter_PaintsCircularFeatheredBrush()
+    {
+        var source =
+            new OmsiTerrainTextureMaskData(
+                9,
+                9,
+                new byte[81]);
+
+        var result =
+            OmsiTerrainTextureMaskPainter
+                .PaintCircularBrush(
+                    source,
+                    localX: 150,
+                    localY: 150,
+                    radiusMeters: 90,
+                    targetAlpha: 255,
+                    feather: 0.5);
+
+        Assert.True(
+            result.ChangedPixels >
+            0);
+
+        Assert.Equal(
+            255,
+            result.Mask
+                .AlphaPixels[
+                    4 * 9 +
+                    4]);
+
+        Assert.Equal(
+            0,
+            result.Mask
+                .AlphaPixels[0]);
+
+        Assert.Contains(
+            result.Mask
+                .AlphaPixels,
+            value =>
+                value is
+                    > 0 and < 255);
+    }
+
     private static byte[] CreateA8Dds(
         int width,
         int height,

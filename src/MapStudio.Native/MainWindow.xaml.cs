@@ -144,8 +144,15 @@ public sealed partial class MainWindow : Window
                 ApplyTerrainLevelButton.IsEnabled =
                     true;
 
+                ApplyTerrainPaintButton.IsEnabled =
+                    _session.CurrentMap?
+                        .Map
+                        .GroundTextures
+                        .Count >
+                    1;
+
                 StatusText.Text =
-                    "Ponto de terreno selecionado. Ajuste altura, raio e feather.";
+                    "Ponto de terreno selecionado. Ajuste nivelamento ou pintura, raio e feather.";
             };
 
         Viewport.SelectionChanged +=
@@ -1169,6 +1176,9 @@ public sealed partial class MainWindow : Window
         ApplyTerrainLevelButton.IsEnabled =
             false;
 
+        ApplyTerrainPaintButton.IsEnabled =
+            false;
+
         TerrainPointText.Text =
             "Clique no terreno no viewport...";
 
@@ -1256,6 +1266,9 @@ public sealed partial class MainWindow : Window
             _terrainEditPoint =
                 null;
 
+            ApplyTerrainPaintButton.IsEnabled =
+                false;
+
             TerrainPointText.Text =
                 "Nivelamento aplicado. Escolha outro ponto para continuar.";
 
@@ -1269,6 +1282,152 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao nivelar terreno: {exception.Message}";
+        }
+    }
+
+    private async void OnApplyTerrainPaintClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var point =
+            _terrainEditPoint;
+
+        var snapshot =
+            _session.CurrentMap;
+
+        if (
+            point is null ||
+            snapshot is null)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de pintar o terreno.";
+
+            return;
+        }
+
+        var layerValue =
+            TerrainPaintLayerBox.Value;
+
+        var alphaValue =
+            TerrainPaintAlphaBox.Value;
+
+        var radius =
+            TerrainBrushRadiusBox.Value;
+
+        var feather =
+            TerrainBrushFeatherBox.Value;
+
+        if (
+            !double.IsFinite(layerValue) ||
+            Math.Truncate(layerValue) !=
+                layerValue ||
+            layerValue < 1 ||
+            layerValue >=
+                snapshot.Map
+                    .GroundTextures
+                    .Count)
+        {
+            StatusText.Text =
+                snapshot.Map
+                    .GroundTextures
+                    .Count <= 1
+                    ? "Este mapa não possui camadas groundtex pintáveis além da base."
+                    : $"Camada inválida. Use um índice entre 1 e {snapshot.Map.GroundTextures.Count - 1}.";
+
+            return;
+        }
+
+        if (
+            !double.IsFinite(alphaValue) ||
+            Math.Truncate(alphaValue) !=
+                alphaValue ||
+            alphaValue < 0 ||
+            alphaValue > 255 ||
+            !double.IsFinite(radius) ||
+            !double.IsFinite(feather) ||
+            radius <= 0 ||
+            feather < 0 ||
+            feather > 1)
+        {
+            StatusText.Text =
+                "Valores de pintura inválidos: alpha 0–255, raio maior que zero e feather entre 0 e 1.";
+
+            return;
+        }
+
+        var layer =
+            checked(
+                (int)layerValue);
+
+        var alpha =
+            checked(
+                (byte)alphaValue);
+
+        try
+        {
+            ApplyTerrainPaintButton.IsEnabled =
+                false;
+
+            ApplyTerrainLevelButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Pintando groundtex {layer} no tile {point.Tile.X},{point.Tile.Y}...";
+
+            var updated =
+                await _session
+                    .PaintTerrainTextureAsync(
+                        point,
+                        layer,
+                        alpha,
+                        radius,
+                        feather);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    updated,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            _terrainEditPoint =
+                null;
+
+            TerrainPointText.Text =
+                $"Pintura aplicada na camada {layer}. Escolha outro ponto para continuar.";
+
+            StatusText.Text =
+                $"Groundtex {layer} pintado · alpha {alpha} · raio {radius:F1} m · feather {feather:F2}.";
+        }
+        catch (Exception exception)
+        {
+            ApplyTerrainLevelButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            ApplyTerrainPaintButton.IsEnabled =
+                _terrainEditPoint is not null &&
+                _session.CurrentMap?
+                    .Map
+                    .GroundTextures
+                    .Count >
+                1;
+
+            StatusText.Text =
+                $"Falha ao pintar textura do terreno: {exception.Message}";
         }
     }
 
@@ -2756,6 +2915,9 @@ public sealed partial class MainWindow : Window
             null;
 
         ApplyTerrainLevelButton.IsEnabled =
+            false;
+
+        ApplyTerrainPaintButton.IsEnabled =
             false;
 
         TerrainPointText.Text =

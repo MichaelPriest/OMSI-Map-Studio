@@ -433,3 +433,15 @@ Os mesmos modos também são aplicados quando o material possui night map/light 
 
 Os flags são carregados diretamente dos `MaterialOverrides` do Core e permanecem associados ao material correto de cada mesh.
 
+### Checkpoint N3.23 — pintura nativa das máscaras de terreno
+
+O host WinUI passa a editar as mesmas máscaras A8 DDS que o OMSI usa para pintar as camadas adicionais de `[groundtex]`.
+
+O `MapStudio.Core` ganhou leitura dos pixels alpha, escrita DDS A8 válida e um pincel circular com raio, alpha alvo e feather. O pincel trabalha nas coordenadas locais reais de 0–300 m do tile e interpola o alpha existente em direção ao valor solicitado, permitindo tanto pintar quanto apagar uma camada.
+
+No Inspector, o mesmo ponto escolhido pela ferramenta de terreno pode ser usado para **Pintar textura no ponto**. O usuário escolhe o índice da camada `groundtex`, alpha de 0–255, raio e feather. A camada 0 continua reservada como textura base; a pintura atua somente nas camadas 1 em diante.
+
+Quando a máscara `tile_*.map.N.dds` já existe, ela é substituída por `SafeFileTransaction` com backup automático. Quando a camada ainda não possui máscara, o editor cria uma nova DDS usando a resolução declarada pelo `ResolutionCode` do `[groundtex]` e publica o arquivo de forma atômica por arquivo temporário + rename.
+
+Depois da gravação, o tile é relido pelo Core e o viewport Direct3D reconstrói imediatamente as camadas pintadas. Nenhum caminho fornecido pela UI é aceito diretamente: nome e destino da máscara são derivados do tile real e da camada validada.
+

@@ -861,6 +861,217 @@ public sealed class OmsiNativeSession
     }
 
     public async Task<NativeMapSnapshot>
+        PaintTerrainTextureAsync(
+            NativeTerrainEditPoint point,
+            int layerIndex,
+            byte targetAlpha,
+            double radius,
+            double feather,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            point);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainPaint");
+        }
+
+        if (
+            layerIndex <= 0 ||
+            layerIndex >=
+                snapshot.Map
+                    .GroundTextures
+                    .Count)
+        {
+            throw new InvalidDataException(
+                "terrainPaintLayerInvalid");
+        }
+
+        var groundTexture =
+            snapshot.Map
+                .GroundTextures[
+                    layerIndex];
+
+        var resolution =
+            groundTexture
+                .MaskResolution;
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            point.Tile.X &&
+                        item.Reference.Y ==
+                            point.Tile.Y &&
+                        string.Equals(
+                            item.Reference.RelativeMapPath,
+                            point.Tile.RelativeMapPath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                "terrainTileNotLoaded");
+
+        if (
+            !OmsiMapPathResolver.TryResolveTilePath(
+                snapshot.Map.DirectoryPath,
+                loaded.Reference.RelativeMapPath,
+                out var tilePath))
+        {
+            throw new InvalidDataException(
+                "terrainTilePathInvalid");
+        }
+
+        var maskDirectory =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "texture",
+                "map");
+
+        var maskPath =
+            Path.GetFullPath(
+                Path.Combine(
+                    maskDirectory,
+                    Path.GetFileName(
+                        tilePath) +
+                    "." +
+                    layerIndex.ToString(
+                        CultureInfo.InvariantCulture) +
+                    ".dds"));
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map.DirectoryPath)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        var requiredPrefix =
+            mapRoot +
+            Path.DirectorySeparatorChar;
+
+        if (
+            !maskPath.StartsWith(
+                requiredPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "terrainMaskPathInvalid");
+        }
+
+        var existed =
+            File.Exists(
+                maskPath);
+
+        OmsiTerrainTextureMaskData source;
+
+        if (existed)
+        {
+            source =
+                OmsiTerrainTextureMaskDataReader
+                    .Read(
+                        maskPath);
+        }
+        else
+        {
+            if (
+                resolution is not int size ||
+                size <= 0)
+            {
+                throw new InvalidDataException(
+                    "terrainMaskResolutionUnavailable");
+            }
+
+            source =
+                new OmsiTerrainTextureMaskData(
+                    size,
+                    size,
+                    new byte[
+                        checked(
+                            size *
+                            size)]);
+        }
+
+        var result =
+            OmsiTerrainTextureMaskPainter
+                .PaintCircularBrush(
+                    source,
+                    point.LocalX,
+                    point.LocalY,
+                    radius,
+                    targetAlpha,
+                    feather);
+
+        if (result.ChangedPixels == 0)
+        {
+            return snapshot;
+        }
+
+        var bytes =
+            OmsiTerrainTextureMaskWriter
+                .Write(
+                    result.Mask);
+
+        if (existed)
+        {
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            maskPath,
+                            CreateNativeBackupPath(
+                                snapshot.Map.DirectoryPath,
+                                maskPath),
+                            bytes)
+                    ],
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            await CreateNewFileAtomicallyAsync(
+                    maskPath,
+                    bytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var refreshedContent =
+            await _tileReader
+                .ReadContentAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            item =>
+                                string.Equals(
+                                    item.Reference.RelativeMapPath,
+                                    loaded.Reference.RelativeMapPath,
+                                    StringComparison.OrdinalIgnoreCase)
+                                    ? new NativeLoadedTile(
+                                        item.Reference,
+                                        refreshedContent)
+                                    : item)
+                        .ToArray()
+            };
+
+        return CurrentMap;
+    }
+
+    public async Task<NativeMapSnapshot>
         UpdateSplineLinksAsync(
             NativeSelectionInfo selection,
             int desiredPreviousSplineId,
@@ -2087,6 +2298,67 @@ public sealed class OmsiNativeSession
                 .Select(
                     tile => tile!)
                 .ToArray());
+    }
+
+    private static async Task
+        CreateNewFileAtomicallyAsync(
+            string targetPath,
+            byte[] bytes,
+            CancellationToken cancellationToken)
+    {
+        var fullTarget =
+            Path.GetFullPath(
+                targetPath);
+
+        var directory =
+            Path.GetDirectoryName(
+                fullTarget) ??
+            throw new InvalidOperationException(
+                "targetDirectoryMissing");
+
+        Directory.CreateDirectory(
+            directory);
+
+        if (File.Exists(fullTarget))
+        {
+            throw new IOException(
+                "Target file already exists.");
+        }
+
+        var tempPath =
+            Path.Combine(
+                directory,
+                $".{Path.GetFileName(fullTarget)}.mapstudio-{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            await File.WriteAllBytesAsync(
+                    tempPath,
+                    bytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            File.Move(
+                tempPath,
+                fullTarget,
+                overwrite: false);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(
+                        tempPath))
+                {
+                    File.Delete(
+                        tempPath);
+                }
+            }
+            catch
+            {
+                // Best effort cleanup.
+            }
+        }
     }
 
     private static string CreateNativeBackupPath(

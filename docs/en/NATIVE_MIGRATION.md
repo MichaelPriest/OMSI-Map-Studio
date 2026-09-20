@@ -433,3 +433,15 @@ The same modes are also applied when a material has a night map/light map, throu
 
 Flags are loaded directly from Core `MaterialOverrides` and remain associated with the correct material in each mesh.
 
+### Checkpoint N3.23 — native terrain mask painting
+
+The WinUI host now edits the same A8 DDS masks OMSI uses to paint additional `[groundtex]` layers.
+
+`MapStudio.Core` now provides alpha-pixel reading, valid A8 DDS writing, and a circular brush with radius, target alpha, and feather. The brush works in the tile's real 0–300 m local coordinates and interpolates existing alpha toward the requested value, allowing a layer to be painted or erased.
+
+In the Inspector, the same point selected by the terrain tool can be used with **Paint texture at point**. The user chooses the `groundtex` layer index, alpha from 0–255, radius, and feather. Layer 0 remains the base texture; painting only targets layers 1 and above.
+
+When `tile_*.map.N.dds` already exists, it is replaced through `SafeFileTransaction` with an automatic backup. When the layer has no mask yet, the editor creates a new DDS using the mask resolution declared by the `[groundtex]` `ResolutionCode` and publishes it atomically through a temporary file + rename.
+
+After writing, the tile is read back through Core and the Direct3D viewport immediately rebuilds the painted layers. The UI never supplies an arbitrary output path: mask name and destination are derived from the real tile and validated layer.
+
