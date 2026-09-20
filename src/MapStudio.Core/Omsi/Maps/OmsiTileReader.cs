@@ -5,6 +5,13 @@ namespace MapStudio.Core.Omsi.Maps;
 
 public sealed class OmsiTileReader
 {
+    private readonly OmsiTerrainReader _terrainReader =
+        new();
+
+    private readonly OmsiTerrainRenderDataReader
+        _terrainRenderDataReader =
+            new();
+
     public async Task<OmsiTileContent> ReadContentAsync(
         string tilePath,
         CancellationToken cancellationToken = default)
@@ -21,22 +28,222 @@ public sealed class OmsiTileReader
                 tilePath,
                 cancellationToken);
 
+        var content =
+            ReadContent(
+                document);
+
+        var terrainPath =
+            tilePath + ".terrain";
+
+        var terrainFileExists =
+            File.Exists(
+                terrainPath);
+
+        var terrainFileSize =
+            terrainFileExists
+                ? new FileInfo(
+                    terrainPath)
+                    .Length
+                : 0;
+
+        var terrainTask =
+            terrainFileExists
+                ? ReadTerrainSafeAsync(
+                    terrainPath,
+                    cancellationToken)
+                : Task.FromResult<
+                    OmsiTerrainGrid?>(null);
+
+        var terrainRenderDataPath =
+            terrainPath + "_0.rdy";
+
+        var terrainRenderData =
+            File.Exists(
+                terrainRenderDataPath)
+                ? _terrainRenderDataReader
+                    .Read(
+                        terrainRenderDataPath)
+                : null;
+
+        var terrainTextureMasks =
+            ReadTerrainTextureMasks(
+                tilePath);
+
+        var terrain =
+            await terrainTask
+                .ConfigureAwait(false);
+
+        return content with
+        {
+            Terrain = terrain,
+            TerrainRenderData =
+                terrainRenderData,
+            TerrainTextureMasks =
+                terrainTextureMasks,
+            Summary =
+                content.Summary with
+                {
+                    TerrainFileExists =
+                        terrainFileExists,
+                    TerrainFileSize =
+                        terrainFileSize
+                }
+        };
+    }
+
+    private async Task<OmsiTerrainGrid?>
+        ReadTerrainSafeAsync(
+            string terrainPath,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _terrainReader
+                .ReadAsync(
+                    terrainPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+    }
+
+    public static IReadOnlyList<OmsiTerrainTextureMask>
+        ReadTerrainTextureMasks(
+            string tilePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            tilePath);
+
+        var mapDirectory =
+            Path.GetDirectoryName(
+                Path.GetFullPath(
+                    tilePath));
+
+        if (
+            string.IsNullOrWhiteSpace(
+                mapDirectory))
+        {
+            return Array.Empty<
+                OmsiTerrainTextureMask>();
+        }
+
+        var textureMapDirectory =
+            Path.Combine(
+                mapDirectory,
+                "texture",
+                "map");
+
+        if (
+            !Directory.Exists(
+                textureMapDirectory))
+        {
+            return Array.Empty<
+                OmsiTerrainTextureMask>();
+        }
+
+        var tileFileName =
+            Path.GetFileName(
+                tilePath);
+
+        var prefix =
+            tileFileName + ".";
+
+        var masks =
+            new List<
+                OmsiTerrainTextureMask>();
+
+        var maskReader =
+            new OmsiTerrainTextureMaskReader();
+
+        foreach (
+            var path in Directory
+                .EnumerateFiles(
+                    textureMapDirectory,
+                    tileFileName +
+                        ".*.dds",
+                    SearchOption
+                        .TopDirectoryOnly))
+        {
+            var fileName =
+                Path.GetFileName(
+                    path);
+
+            if (
+                !fileName.StartsWith(
+                    prefix,
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                !fileName.EndsWith(
+                    ".dds",
+                    StringComparison
+                        .OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var layerText =
+                fileName[
+                    prefix.Length..
+                    ^4];
+
+            if (
+                !int.TryParse(
+                    layerText,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var layerIndex) ||
+                layerIndex <= 0)
+            {
+                continue;
+            }
+
+            masks.Add(
+                maskReader.ReadHeader(
+                    layerIndex,
+                    path));
+        }
+
+        return masks
+            .OrderBy(
+                mask =>
+                    mask.LayerIndex)
+            .ToArray();
+    }
+
+    public static OmsiTileContent ReadContent(
+        OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
         var attachmentCount =
             document.FindSections("splineAttachement").Count() +
             document.FindSections("splineAttachment").Count();
+
+        var splineCount =
+            document.Sections.Count(
+                OmsiSplineFieldLayout
+                    .IsSplineSection);
 
         var summary = new OmsiTileSummary(
             Exists: true,
             ObjectCount:
                 document.FindSections("object").Count(),
             SplineCount:
-                document.FindSections("spline").Count(),
+                splineCount,
             SplineAttachmentCount:
-                attachmentCount);
+                attachmentCount,
+            TerrainMarkerPresent:
+                document.FindFirstSection(
+                    "terrain") is not null);
 
         return new OmsiTileContent(
             summary,
-            ReadObjects(document));
+            ReadObjects(document),
+            ReadSplines(document));
     }
 
     public async Task<OmsiTileSummary> ReadSummaryAsync(
@@ -45,6 +252,55 @@ public sealed class OmsiTileReader
         (await ReadContentAsync(
             tilePath,
             cancellationToken)).Summary;
+
+    public async Task<OmsiTileSummary>
+        ReadSummaryLightAsync(
+            string tilePath,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            tilePath);
+
+        if (!File.Exists(tilePath))
+        {
+            return OmsiTileSummary.Missing;
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var summary =
+            ReadContent(
+                document)
+            .Summary;
+
+        var terrainPath =
+            tilePath +
+            ".terrain";
+
+        var terrainFileExists =
+            File.Exists(
+                terrainPath);
+
+        var terrainFileSize =
+            terrainFileExists
+                ? new FileInfo(
+                    terrainPath)
+                    .Length
+                : 0;
+
+        return summary with
+        {
+            TerrainFileExists =
+                terrainFileExists,
+            TerrainFileSize =
+                terrainFileSize
+        };
+    }
 
     public async Task<IReadOnlyList<OmsiPlacedObject>>
         ReadObjectsAsync(
@@ -61,8 +317,18 @@ public sealed class OmsiTileReader
 
         var objects = new List<OmsiPlacedObject>();
 
-        foreach (var section in document.FindSections("object"))
+        var objectSections =
+            document.FindSections("object")
+                .ToArray();
+
+        for (
+            var sectionOrdinal = 0;
+            sectionOrdinal < objectSections.Length;
+            sectionOrdinal++)
         {
+            var section =
+                objectSections[sectionOrdinal];
+
             var values =
                 section.DataLines.ToArray();
 
@@ -99,10 +365,143 @@ public sealed class OmsiTileReader
                 Pitch: pitch,
                 Bank: bank,
                 ExtraValues:
-                    values.Skip(9).ToArray()));
+                    values.Skip(9).ToArray())
+                {
+                    SourceSectionOrdinal =
+                        sectionOrdinal
+                });
         }
 
         return objects;
+    }
+
+    public static IReadOnlyList<OmsiPlacedSpline> ReadSplines(
+        OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var splines =
+            new List<OmsiPlacedSpline>();
+
+        var sourceSectionOrdinal = 0;
+        var version =
+            OmsiSplineFieldLayout
+                .ReadVersion(document);
+
+        foreach (var section in document.Sections)
+        {
+            if (!OmsiSplineFieldLayout
+                .IsSplineSection(section))
+            {
+                continue;
+            }
+
+            var currentSectionOrdinal =
+                sourceSectionOrdinal++;
+
+            var values =
+                section.DataLines.ToArray();
+
+            if (
+                !OmsiSplineFieldLayout.TryCreate(
+                    version,
+                    values.Length,
+                    out var layout) ||
+                !int.TryParse(
+                    values[layout.IdIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var splineId) ||
+                !int.TryParse(
+                    values[layout.PreviousIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var previousSplineId))
+            {
+                continue;
+            }
+
+            var nextSplineId = -1;
+
+            if (
+                layout.NextIndex is int nextIndex &&
+                !int.TryParse(
+                    values[nextIndex],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out nextSplineId))
+            {
+                continue;
+            }
+
+            if (
+                !TryParseDouble(
+                    values[layout.XIndex],
+                    out var x) ||
+                !TryParseDouble(
+                    values[layout.ZIndex],
+                    out var z) ||
+                !TryParseDouble(
+                    values[layout.YIndex],
+                    out var y) ||
+                !TryParseDouble(
+                    values[layout.RotationIndex],
+                    out var rotation) ||
+                !TryParseDouble(
+                    values[layout.LengthIndex],
+                    out var length) ||
+                !TryParseDouble(
+                    values[layout.RadiusIndex],
+                    out var radius) ||
+                !TryParseDouble(
+                    values[layout.GradientStartIndex],
+                    out var gradientStart) ||
+                !TryParseDouble(
+                    values[layout.GradientEndIndex],
+                    out var gradientEnd))
+            {
+                continue;
+            }
+
+            var isHeightSpline =
+                string.Equals(
+                    section.Keyword,
+                    "spline_h",
+                    StringComparison.OrdinalIgnoreCase);
+
+            splines.Add(new OmsiPlacedSpline(
+                HeaderValue:
+                    layout.HeaderIndex >= 0
+                        ? values[layout.HeaderIndex]
+                        : string.Empty,
+                SplinePath:
+                    values[layout.PathIndex],
+                SplineId: splineId,
+                PreviousSplineId:
+                    previousSplineId,
+                NextSplineId:
+                    nextSplineId,
+                X: x,
+                Z: z,
+                Y: y,
+                Rotation: rotation,
+                Length: length,
+                Radius: radius,
+                GradientStart: gradientStart,
+                GradientEnd: gradientEnd,
+                IsHeightSpline: isHeightSpline,
+                ExtraValues:
+                    values
+                        .Skip(
+                            layout.ExtraStartIndex)
+                        .ToArray())
+                {
+                    SourceSectionOrdinal =
+                        currentSectionOrdinal
+                });
+        }
+
+        return splines;
     }
 
     private static bool TryParseDouble(

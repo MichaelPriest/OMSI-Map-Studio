@@ -60,6 +60,135 @@ public sealed class OmsiLazyLoadingTests
     }
 
     [Fact]
+    public async Task CatalogDiscovery_SkipsUnreadableMapAndContinues()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-catalog-errors-{Guid.NewGuid():N}");
+
+        var goodMap = Path.Combine(
+            root,
+            "maps",
+            "Good");
+
+        var badMap = Path.Combine(
+            root,
+            "maps",
+            "Bad");
+
+        Directory.CreateDirectory(goodMap);
+        Directory.CreateDirectory(badMap);
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    goodMap,
+                    "global.cfg"),
+                "[name]\r\nGood Map\r\n",
+                new UTF8Encoding(false));
+
+            var badGlobal = Path.Combine(
+                badMap,
+                "global.cfg");
+
+            await File.WriteAllTextAsync(
+                badGlobal,
+                "[name]\r\nLocked Map\r\n",
+                new UTF8Encoding(false));
+
+            using var lockStream =
+                new FileStream(
+                    badGlobal,
+                    FileMode.Open,
+                    FileAccess.ReadWrite,
+                    FileShare.None);
+
+            var result =
+                await new OmsiMapCatalog()
+                    .DiscoverWithProgressAsync(
+                        root);
+
+            var map =
+                Assert.Single(result.Maps);
+
+            Assert.Equal(
+                "Good Map",
+                map.DisplayName);
+
+            Assert.Equal(
+                1,
+                result.SkippedMaps);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task OpenMapAsync_ReadsOnlySelectedMap()
+    {
+        var root = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-open-map-{Guid.NewGuid():N}");
+
+        var selectedMap = Path.Combine(
+            root,
+            "maps",
+            "Selected");
+
+        var otherMap = Path.Combine(
+            root,
+            "maps",
+            "Other");
+
+        Directory.CreateDirectory(selectedMap);
+        Directory.CreateDirectory(otherMap);
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    selectedMap,
+                    "global.cfg"),
+                "[name]\r\nSelected Map\r\n" +
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n",
+                new UTF8Encoding(false));
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    otherMap,
+                    "global.cfg"),
+                "[name]\r\nOther Map\r\n",
+                new UTF8Encoding(false));
+
+            var descriptor =
+                await OmsiMapCatalog.OpenMapAsync(
+                    selectedMap);
+
+            Assert.Equal(
+                "Selected Map",
+                descriptor.DisplayName);
+
+            Assert.Equal(
+                "Selected",
+                descriptor.DirectoryName);
+
+            Assert.Single(
+                descriptor.Tiles);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task TileContent_ReadsSummaryAndObjectsTogether()
     {
         var path = Path.Combine(
@@ -103,4 +232,56 @@ public sealed class OmsiLazyLoadingTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public async Task TileSummaryLight_ReadsCountsWithoutLoadingTerrainPayload()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-summary-{Guid.NewGuid():N}.map");
+
+        var terrainPath =
+            path + ".terrain";
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                path,
+                "[terrain]\r\n" +
+                "[object]\r\n0\r\nSceneryobjects\\Building.sco\r\n" +
+                "42\r\n10\r\n20\r\n1\r\n90\r\n0\r\n0\r\n" +
+                "[spline]\r\n0\r\nSplines\\Street.sli\r\n",
+                new UTF8Encoding(false));
+
+            await File.WriteAllBytesAsync(
+                terrainPath,
+                new byte[37]);
+
+            var summary =
+                await new OmsiTileReader()
+                    .ReadSummaryLightAsync(
+                        path);
+
+            Assert.True(summary.Exists);
+            Assert.Equal(
+                1,
+                summary.ObjectCount);
+            Assert.Equal(
+                1,
+                summary.SplineCount);
+            Assert.True(
+                summary.TerrainMarkerPresent);
+            Assert.True(
+                summary.TerrainFileExists);
+            Assert.Equal(
+                37,
+                summary.TerrainFileSize);
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(terrainPath);
+        }
+    }
+
 }

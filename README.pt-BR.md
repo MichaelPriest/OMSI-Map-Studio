@@ -18,9 +18,9 @@ O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2
 
 ## Primeira versão de teste
 
-A prerelease atual é **v0.1.0-alpha.2** e permanece somente leitura.
+A prerelease atual é **v0.1.0-alpha.8**. A gravação ainda é experimental, mas já inclui transformações de objetos existentes e inserção preservativa de novos objetos quando existe um template seguro do mesmo `.sco`, sempre com backup automático.
 
-Ela permite selecionar uma instalação real do OMSI 2, abrir mapas, visualizar tiles, selecionar objetos e carregar previews de meshes O3D não criptografados. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
+Ela permite selecionar uma instalação real do OMSI 2, abrir manualmente um mapa, trabalhar em Mapa completo ou modo 3×3, visualizar objetos O3D e splines reais, editar X/Y/Z/rotação/pitch/bank, desfazer/refazer prévias, inserir objetos pela Biblioteca e usar **Colocar cópia** no objeto selecionado. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
 
 ## Requisitos de desenvolvimento
 
@@ -60,3 +60,18 @@ Documentação de arquitetura:
 
 - [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
 - [Architecture — English](docs/en/ARCHITECTURE.md)
+
+
+### Biblioteca de Splines
+
+A Alpha.4 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
+
+
+## Roadmap do projeto
+
+A direção técnica e funcional oficial está documentada em:
+
+- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
+- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
+
+O roadmap define a stack mantida, Asset Index/cache, streaming por tiles, paridade com o editor OMSI, Traffic Rules, paths, tracks/trips, timetables, sinais, ferrovia, geodados e critérios para considerar o Map Studio um substituto funcional do editor original.

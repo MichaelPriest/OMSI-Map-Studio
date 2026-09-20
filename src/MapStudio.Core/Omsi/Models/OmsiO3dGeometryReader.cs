@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace MapStudio.Core.Omsi.Models;
 
 public sealed class OmsiO3dGeometryReader
@@ -10,6 +12,11 @@ public sealed class OmsiO3dGeometryReader
 
     private const uint MaxVertices = 150_000;
     private const uint MaxTriangles = 300_000;
+    private const uint MaxBones = 1_000_000;
+    private const ushort MaxMaterials = 4_096;
+
+    private static readonly Encoding Windows1252 =
+        CreateWindows1252();
 
     public OmsiO3dGeometry Read(string path)
     {
@@ -44,6 +51,8 @@ public sealed class OmsiO3dGeometryReader
             var version = reader.ReadByte();
             var longHeader = version > 3;
             var longTriangleIndices = false;
+            var usesAlternativeProtectionSeed = false;
+            var protectionKey = uint.MaxValue;
 
             if (longHeader)
             {
@@ -54,21 +63,24 @@ public sealed class OmsiO3dGeometryReader
                 }
 
                 var options = reader.ReadByte();
-                var encryptionKey = reader.ReadUInt32();
+                protectionKey =
+                    reader.ReadUInt32();
 
                 longTriangleIndices =
                     (options & 0x01) != 0;
 
-                if (encryptionKey != uint.MaxValue)
-                {
-                    return OmsiO3dGeometry.Error("encrypted");
-                }
+                usesAlternativeProtectionSeed =
+                    (options & 0x02) != 0;
             }
 
             float[]? positions = null;
             float[]? normals = null;
             float[]? uvs = null;
             uint[]? indices = null;
+            ushort[]? triangleMaterialIndices = null;
+            IReadOnlyList<OmsiO3dMaterial> materials =
+                Array.Empty<OmsiO3dMaterial>();
+
             uint vertexCount = 0;
 
             while (stream.Position < stream.Length)
@@ -100,6 +112,22 @@ public sealed class OmsiO3dGeometryReader
                         uvs =
                             new float[checked((int)vertexCount * 2)];
 
+                        OmsiO3dProtectedVertexDecoder?
+                            protectedVertexDecoder = null;
+
+                        if (
+                            protectionKey != uint.MaxValue &&
+                            !OmsiO3dProtectedVertexDecoder.TryCreate(
+                                version,
+                                protectionKey,
+                                usesAlternativeProtectionSeed,
+                                vertexCount,
+                                out protectedVertexDecoder))
+                        {
+                            return OmsiO3dGeometry.Error(
+                                "protectedVertexCountUnsupported");
+                        }
+
                         for (var index = 0U;
                              index < vertexCount;
                              index++)
@@ -119,14 +147,30 @@ public sealed class OmsiO3dGeometryReader
                             var u = reader.ReadSingle();
                             var v = reader.ReadSingle();
 
+                            protectedVertexDecoder?.Decode(
+                                ref x,
+                                ref y,
+                                ref z,
+                                ref nx,
+                                ref ny,
+                                ref nz,
+                                ref u,
+                                ref v);
+
+                            // O3D binary vertices are already stored in
+                            // OMSI's runtime model axes (Y-up). Babylon
+                            // also renders Y-up, so swapping Y/Z here puts
+                            // buildings on their side. Keep the native
+                            // vertex axes and only convert map/SCO placement
+                            // coordinates at the scene-composition layer.
                             var p = checked((int)index * 3);
                             positions[p] = x;
-                            positions[p + 1] = z;
-                            positions[p + 2] = y;
+                            positions[p + 1] = y;
+                            positions[p + 2] = z;
 
                             normals[p] = nx;
-                            normals[p + 1] = nz;
-                            normals[p + 2] = ny;
+                            normals[p + 1] = ny;
+                            normals[p + 2] = nz;
 
                             var t = checked((int)index * 2);
                             uvs[t] = u;
@@ -152,6 +196,9 @@ public sealed class OmsiO3dGeometryReader
 
                         indices =
                             new uint[checked((int)triangleCount * 3)];
+
+                        triangleMaterialIndices =
+                            new ushort[checked((int)triangleCount)];
 
                         for (var index = 0U;
                              index < triangleCount;
@@ -182,17 +229,25 @@ public sealed class OmsiO3dGeometryReader
                                 c = reader.ReadUInt16();
                             }
 
-                            _ = reader.ReadUInt16();
+                            var materialIndex =
+                                reader.ReadUInt16();
 
                             var t = checked((int)index * 3);
-                            indices[t] = c;
+                            indices[t] = a;
                             indices[t + 1] = b;
-                            indices[t + 2] = a;
+                            indices[t + 2] = c;
+
+                            triangleMaterialIndices[
+                                checked((int)index)] =
+                                materialIndex;
                         }
                         break;
 
                     case MaterialSection:
-                        if (!SkipMaterials(reader, stream))
+                        if (!TryReadMaterials(
+                                reader,
+                                stream,
+                                out materials))
                         {
                             return OmsiO3dGeometry.Error(
                                 "invalidMaterialSection");
@@ -212,11 +267,19 @@ public sealed class OmsiO3dGeometryReader
                         break;
 
                     case TransformSection:
-                        if (!TrySkip(stream, 64))
+                        if (!HasRemaining(stream, 64))
                         {
                             return OmsiO3dGeometry.Error(
                                 "invalidTransformSection");
                         }
+
+                        // Section 0x79 is export/local-transform metadata.
+                        // Reference O3D renderers keep the original vertex
+                        // positions for display and preserve this matrix
+                        // separately for editing/export. Baking its inverse
+                        // into preview vertices without re-applying the
+                        // forward object transform displaces/rotates models.
+                        stream.Position += 64;
                         break;
 
                     default:
@@ -228,7 +291,8 @@ public sealed class OmsiO3dGeometryReader
             if (positions is null ||
                 normals is null ||
                 uvs is null ||
-                indices is null)
+                indices is null ||
+                triangleMaterialIndices is null)
             {
                 return OmsiO3dGeometry.Error(
                     "noRenderableGeometry");
@@ -249,7 +313,10 @@ public sealed class OmsiO3dGeometryReader
                 Positions: positions,
                 Normals: normals,
                 Uvs: uvs,
-                Indices: indices);
+                Indices: indices,
+                TriangleMaterialIndices:
+                    triangleMaterialIndices,
+                Materials: materials);
         }
         catch (EndOfStreamException)
         {
@@ -263,10 +330,13 @@ public sealed class OmsiO3dGeometryReader
         }
     }
 
-    private static bool SkipMaterials(
+    private static bool TryReadMaterials(
         BinaryReader reader,
-        Stream stream)
+        Stream stream,
+        out IReadOnlyList<OmsiO3dMaterial> materials)
     {
+        materials = Array.Empty<OmsiO3dMaterial>();
+
         if (!HasRemaining(stream, 2))
         {
             return false;
@@ -274,24 +344,73 @@ public sealed class OmsiO3dGeometryReader
 
         var materialCount = reader.ReadUInt16();
 
+        if (materialCount > MaxMaterials)
+        {
+            return false;
+        }
+
+        var result =
+            new List<OmsiO3dMaterial>(materialCount);
+
         for (var index = 0;
              index < materialCount;
              index++)
         {
-            if (!TrySkip(stream, 44) ||
-                !HasRemaining(stream, 1))
+            if (!HasRemaining(stream, 45))
             {
                 return false;
             }
+
+            var diffuseR = reader.ReadSingle();
+            var diffuseG = reader.ReadSingle();
+            var diffuseB = reader.ReadSingle();
+            var diffuseA = reader.ReadSingle();
+
+            var specularR = reader.ReadSingle();
+            var specularG = reader.ReadSingle();
+            var specularB = reader.ReadSingle();
+
+            var emissionR = reader.ReadSingle();
+            var emissionG = reader.ReadSingle();
+            var emissionB = reader.ReadSingle();
+
+            var specularPower = reader.ReadSingle();
 
             var textureLength = reader.ReadByte();
 
-            if (!TrySkip(stream, textureLength))
+            if (!HasRemaining(
+                    stream,
+                    textureLength))
             {
                 return false;
             }
+
+            var textureName =
+                textureLength == 0
+                    ? null
+                    : Windows1252.GetString(
+                        reader.ReadBytes(
+                            textureLength));
+
+            result.Add(new OmsiO3dMaterial(
+                diffuseR,
+                diffuseG,
+                diffuseB,
+                diffuseA,
+                specularR,
+                specularG,
+                specularB,
+                emissionR,
+                emissionG,
+                emissionB,
+                specularPower,
+                string.IsNullOrWhiteSpace(
+                    textureName)
+                    ? null
+                    : textureName));
         }
 
+        materials = result;
         return true;
     }
 
@@ -304,7 +423,8 @@ public sealed class OmsiO3dGeometryReader
         if (!TryReadCount(
                 reader,
                 longHeader,
-                out var boneCount))
+                out var boneCount) ||
+            boneCount > MaxBones)
         {
             return false;
         }
@@ -379,4 +499,12 @@ public sealed class OmsiO3dGeometryReader
         long bytes) =>
         bytes >= 0 &&
         stream.Position <= stream.Length - bytes;
+
+    private static Encoding CreateWindows1252()
+    {
+        Encoding.RegisterProvider(
+            CodePagesEncodingProvider.Instance);
+
+        return Encoding.GetEncoding(1252);
+    }
 }

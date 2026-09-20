@@ -577,16 +577,16 @@ public sealed class OmsiConfigParserTests
                 {
                     0, 0, 0,
                     1, 0, 0,
-                    0, 0, 1
+                    0, 1, 0
                 },
                 geometry.Positions);
 
             Assert.Equal(
                 new float[]
                 {
-                    0, 1, 0,
-                    0, 1, 0,
-                    0, 1, 0
+                    0, 0, 1,
+                    0, 0, 1,
+                    0, 0, 1
                 },
                 geometry.Normals);
 
@@ -600,7 +600,7 @@ public sealed class OmsiConfigParserTests
                 geometry.Uvs);
 
             Assert.Equal(
-                new uint[] { 2, 1, 0 },
+                new uint[] { 0, 1, 2 },
                 geometry.Indices);
         }
         finally
@@ -610,7 +610,7 @@ public sealed class OmsiConfigParserTests
     }
 
     [Fact]
-    public void O3dGeometryReader_RejectsEncryptedGeometry()
+    public void O3dGeometryReader_ProtectedHeaderWithoutSections_IsNotRenderable()
     {
         var path = Path.Combine(
             Path.GetTempPath(),
@@ -637,7 +637,7 @@ public sealed class OmsiConfigParserTests
 
             Assert.False(geometry.IsLoaded);
             Assert.Equal(
-                "encrypted",
+                "noRenderableGeometry",
                 geometry.ErrorCode);
         }
         finally
@@ -725,6 +725,101 @@ public sealed class OmsiConfigParserTests
         Assert.Equal(
             source,
             document.ToText());
+    }
+
+    [Fact]
+    public void SceneryObjectReader_ReadsPerMeshTransforms()
+    {
+        const string source =
+            "[mesh]\r\n" +
+            "base.o3d\r\n" +
+            "[new_pos]\r\n" +
+            "1.5\r\n" +
+            "-2\r\n" +
+            "3.25\r\n" +
+            "[rot_x]\r\n" +
+            "10\r\n" +
+            "[roty]\r\n" +
+            "20\r\n" +
+            "[rot_z]\r\n" +
+            "30\r\n" +
+            "[scale]\r\n" +
+            "2\r\n" +
+            "[mesh]\r\n" +
+            "detail.x\r\n" +
+            "[new_pos]\r\n" +
+            "-1\r\n" +
+            "4\r\n" +
+            "0.5\r\n" +
+            "[rotx]\r\n" +
+            "-5\r\n" +
+            "[rot_y]\r\n" +
+            "15\r\n" +
+            "[rotz]\r\n" +
+            "45\r\n" +
+            "[scale]\r\n" +
+            "1\r\n" +
+            "2\r\n" +
+            "3\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    document);
+
+        Assert.Equal(
+            2,
+            metadata.MeshTransforms.Count);
+
+        Assert.Equal(
+            new OmsiSceneryMeshTransform(
+                1.5,
+                -2,
+                3.25,
+                10,
+                20,
+                30,
+                2,
+                2,
+                2),
+            metadata.MeshTransforms[0]);
+
+        Assert.Equal(
+            new OmsiSceneryMeshTransform(
+                -1,
+                4,
+                0.5,
+                -5,
+                15,
+                45,
+                1,
+                2,
+                3),
+            metadata.MeshTransforms[1]);
+
+        Assert.Equal(
+            source,
+            document.ToText());
+    }
+
+    [Fact]
+    public void SceneryObjectReader_UsesIdentityForUntransformedMesh()
+    {
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        "[mesh]\r\nplain.o3d\r\n"));
+
+        Assert.Equal(
+            OmsiSceneryMeshTransform
+                .Identity,
+            Assert.Single(
+                metadata.MeshTransforms));
     }
 
     [Fact]

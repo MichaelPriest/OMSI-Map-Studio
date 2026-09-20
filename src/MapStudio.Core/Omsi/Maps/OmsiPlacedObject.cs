@@ -10,4 +10,7 @@ public sealed record OmsiPlacedObject(
     double Rotation,
     double Pitch,
     double Bank,
-    IReadOnlyList<string> ExtraValues);
+    IReadOnlyList<string> ExtraValues)
+{
+    public int SourceSectionOrdinal { get; init; } = -1;
+}

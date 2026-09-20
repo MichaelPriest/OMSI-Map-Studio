@@ -5,7 +5,12 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>MapStudio.Desktop</RootNamespace>
     <AssemblyName>OMSI Map Studio</AssemblyName>
+    <ApplicationIcon>Assets\MapStudio.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\MapStudio.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../MapStudio.Core/MapStudio.Core.csproj" />

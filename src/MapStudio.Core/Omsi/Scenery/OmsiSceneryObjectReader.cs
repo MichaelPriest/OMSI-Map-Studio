@@ -34,17 +34,667 @@ public sealed class OmsiSceneryObjectReader
             .FirstOrDefault();
 
         var groups = ReadGroups(document);
-        var meshes = ReadSingleValueSections(document, "mesh");
+        var meshes = ReadMeshes(document);
         var collisionMeshes = ReadSingleValueSections(
             document,
             "collision_mesh");
+
+        var materialOverrides =
+            ReadMaterialOverrides(
+                document);
+
+        var tree =
+            ReadTree(document);
+
+        var renderType =
+            document
+                .FindFirstSection(
+                    "rendertype")
+                ?.DataLines
+                .FirstOrDefault()
+                ?.Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                renderType))
+        {
+            renderType = null;
+        }
 
         return new OmsiSceneryObjectMetadata(
             Exists: true,
             FriendlyName: friendlyName,
             Groups: groups,
-            MeshPaths: meshes,
-            CollisionMeshPaths: collisionMeshes);
+            MeshPaths: meshes.Paths,
+            MeshLodThresholds:
+                meshes.LodThresholds,
+            MeshTransforms:
+                meshes.Transforms,
+            CollisionMeshPaths: collisionMeshes,
+            MaterialOverrides:
+                materialOverrides,
+            UsesAbsoluteHeight:
+                document.FindFirstSection(
+                    "absheight") is not null,
+            Tree: tree,
+            RenderType: renderType);
+    }
+
+    private static MeshReadResult
+        ReadMeshes(
+            OmsiConfigDocument document)
+    {
+        var paths =
+            new List<string>();
+
+        var lodThresholds =
+            new List<double?>();
+
+        var transforms =
+            new List<
+                OmsiSceneryMeshTransform>();
+
+        double? currentLodThreshold =
+            null;
+
+        var currentMeshOrdinal = -1;
+
+        foreach (var section in
+            document.Sections)
+        {
+            if (string.Equals(
+                    section.Keyword,
+                    "LOD",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                currentLodThreshold =
+                    null;
+
+                if (
+                    TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var threshold) &&
+                    threshold >= 0)
+                {
+                    currentLodThreshold =
+                        threshold;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "mesh",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var path =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (string.IsNullOrWhiteSpace(
+                        path))
+                {
+                    currentMeshOrdinal = -1;
+                    continue;
+                }
+
+                paths.Add(path);
+                lodThresholds.Add(
+                    currentLodThreshold);
+                transforms.Add(
+                    OmsiSceneryMeshTransform
+                        .Identity);
+
+                currentMeshOrdinal =
+                    transforms.Count - 1;
+
+                continue;
+            }
+
+            if (
+                currentMeshOrdinal < 0 ||
+                currentMeshOrdinal >=
+                    transforms.Count)
+            {
+                continue;
+            }
+
+            var current =
+                transforms[
+                    currentMeshOrdinal];
+
+            if (string.Equals(
+                    section.Keyword,
+                    "new_pos",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length >= 3 &&
+                    TryReadFiniteDouble(
+                        values[0],
+                        out var x) &&
+                    TryReadFiniteDouble(
+                        values[1],
+                        out var y) &&
+                    TryReadFiniteDouble(
+                        values[2],
+                        out var z))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            PositionX = x,
+                            PositionY = y,
+                            PositionZ = z
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_x",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "rotx",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationX =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_y",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "roty",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationY =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "rot_z",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "rotz",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var rotation))
+                {
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            RotationZ =
+                                rotation
+                        };
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "scale",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    TryReadFiniteDouble(
+                        values[0],
+                        out var scaleX))
+                {
+                    var scaleY = scaleX;
+                    var scaleZ = scaleX;
+
+                    if (
+                        values.Length >= 3 &&
+                        TryReadFiniteDouble(
+                            values[1],
+                            out var parsedScaleY) &&
+                        TryReadFiniteDouble(
+                            values[2],
+                            out var parsedScaleZ))
+                    {
+                        scaleY =
+                            parsedScaleY;
+                        scaleZ =
+                            parsedScaleZ;
+                    }
+
+                    transforms[
+                        currentMeshOrdinal] =
+                        current with
+                        {
+                            ScaleX = scaleX,
+                            ScaleY = scaleY,
+                            ScaleZ = scaleZ
+                        };
+                }
+            }
+        }
+
+        return new MeshReadResult(
+            paths,
+            lodThresholds,
+            transforms);
+    }
+
+    private static bool
+        TryReadFiniteDouble(
+            string? value,
+            out double result)
+    {
+        result = 0;
+
+        return
+            double.TryParse(
+                value,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out result) &&
+            double.IsFinite(result);
+    }
+
+    private static IReadOnlyList<
+        OmsiSceneryMaterialOverride>
+        ReadMaterialOverrides(
+            OmsiConfigDocument document)
+    {
+        var result =
+            new List<MaterialOverrideBuilder>();
+
+        var meshOrdinal = -1;
+
+        MaterialOverrideBuilder?
+            current = null;
+
+        foreach (var section in
+            document.Sections)
+        {
+            if (string.Equals(
+                    section.Keyword,
+                    "mesh",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                meshOrdinal++;
+                current = null;
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_change",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current = null;
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current = null;
+
+                if (meshOrdinal < 0)
+                {
+                    continue;
+                }
+
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length < 2 ||
+                    string.IsNullOrWhiteSpace(
+                        values[0]) ||
+                    !int.TryParse(
+                        values[1],
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out var materialIndex) ||
+                    materialIndex < 0)
+                {
+                    continue;
+                }
+
+                current =
+                    new MaterialOverrideBuilder(
+                        meshOrdinal,
+                        values[0],
+                        materialIndex);
+
+                result.Add(current);
+                continue;
+            }
+
+            if (current is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_alpha",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var value =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (
+                    int.TryParse(
+                        value,
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out var alphaMode) &&
+                    alphaMode is >= 0 and <= 2)
+                {
+                    current.AlphaMode =
+                        alphaMode;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_transmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var source =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        source))
+                {
+                    current.TransMapSource =
+                        source;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_lightmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var textureName =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        textureName))
+                {
+                    current.LightMapTextureName =
+                        textureName;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_envmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    !string.IsNullOrWhiteSpace(
+                        values[0]))
+                {
+                    current
+                        .EnvironmentMapTextureName =
+                        values[0];
+                }
+
+                if (
+                    values.Length > 1 &&
+                    double.TryParse(
+                        values[1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var strength) &&
+                    double.IsFinite(strength))
+                {
+                    current
+                        .EnvironmentMapStrength =
+                        strength;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_nightmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var textureName =
+                    section.DataLines
+                        .FirstOrDefault();
+
+                if (!string.IsNullOrWhiteSpace(
+                        textureName))
+                {
+                    current.NightMapTextureName =
+                        textureName;
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_bumpmap",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var values =
+                    section.DataLines
+                        .ToArray();
+
+                if (
+                    values.Length > 0 &&
+                    !string.IsNullOrWhiteSpace(
+                        values[0]))
+                {
+                    current.BumpMapTextureName =
+                        values[0];
+                }
+
+                if (
+                    values.Length > 1 &&
+                    double.TryParse(
+                        values[1],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out var strength) &&
+                    double.IsFinite(strength))
+                {
+                    current.BumpMapStrength =
+                        strength;
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "matl_envmap_mask",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "alphascale",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "matl_allcolor",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current.UnsupportedCommands
+                    .Add(
+                        "[" +
+                        section.Keyword +
+                        "]");
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_noZwrite",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current.NoZWrite = true;
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "matl_noZcheck",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                current.NoZCheck = true;
+            }
+        }
+
+        return result
+            .Select(
+                builder =>
+                    new OmsiSceneryMaterialOverride(
+                        builder.MeshOrdinal,
+                        builder.TextureName,
+                        builder.MaterialIndex,
+                        builder.AlphaMode,
+                        builder.NoZWrite,
+                        builder.NoZCheck,
+                        builder.BumpMapTextureName,
+                        builder.BumpMapStrength,
+                        builder.NightMapTextureName,
+                        builder.EnvironmentMapTextureName,
+                        builder.EnvironmentMapStrength,
+                        builder.TransMapSource,
+                        builder.LightMapTextureName,
+                        builder.UnsupportedCommands
+                            .Distinct(
+                                StringComparer.OrdinalIgnoreCase)
+                            .ToArray()))
+            .ToArray();
+    }
+
+    private static OmsiSceneryTreeDefinition?
+        ReadTree(
+            OmsiConfigDocument document)
+    {
+        var values =
+            document
+                .FindFirstSection("tree")
+                ?.DataLines
+                .ToArray();
+
+        if (
+            values is null ||
+            values.Length < 5 ||
+            string.IsNullOrWhiteSpace(
+                values[0]) ||
+            !double.TryParse(
+                values[1],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var minimumHeight) ||
+            !double.TryParse(
+                values[2],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var maximumHeight) ||
+            !double.TryParse(
+                values[3],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var minimumAspect) ||
+            !double.TryParse(
+                values[4],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var maximumAspect) ||
+            !double.IsFinite(minimumHeight) ||
+            !double.IsFinite(maximumHeight) ||
+            !double.IsFinite(minimumAspect) ||
+            !double.IsFinite(maximumAspect) ||
+            minimumHeight <= 0 ||
+            maximumHeight < minimumHeight ||
+            minimumAspect <= 0 ||
+            maximumAspect < minimumAspect)
+        {
+            return null;
+        }
+
+        return new OmsiSceneryTreeDefinition(
+            values[0].Trim(),
+            minimumHeight,
+            maximumHeight,
+            minimumAspect,
+            maximumAspect);
     }
 
     private static IReadOnlyList<string> ReadGroups(
@@ -82,4 +732,62 @@ public sealed class OmsiSceneryObjectReader
             .Where(static value => !string.IsNullOrWhiteSpace(value))
             .Select(static value => value!)
             .ToArray();
+
+    private sealed record MeshReadResult(
+        IReadOnlyList<string> Paths,
+        IReadOnlyList<double?> LodThresholds,
+        IReadOnlyList<OmsiSceneryMeshTransform> Transforms);
+
+    private sealed class MaterialOverrideBuilder(
+        int meshOrdinal,
+        string textureName,
+        int materialIndex)
+    {
+        public int MeshOrdinal { get; } =
+            meshOrdinal;
+
+        public string TextureName { get; } =
+            textureName;
+
+        public int MaterialIndex { get; } =
+            materialIndex;
+
+        public int? AlphaMode { get; set; }
+
+        public bool NoZWrite { get; set; }
+
+        public bool NoZCheck { get; set; }
+
+        public string?
+            BumpMapTextureName
+        { get; set; }
+
+        public double?
+            BumpMapStrength
+        { get; set; }
+
+        public string?
+            NightMapTextureName
+        { get; set; }
+
+        public string?
+            EnvironmentMapTextureName
+        { get; set; }
+
+        public double?
+            EnvironmentMapStrength
+        { get; set; }
+
+        public string?
+            TransMapSource
+        { get; set; }
+
+        public string?
+            LightMapTextureName
+        { get; set; }
+
+        public List<string>
+            UnsupportedCommands
+        { get; } = [];
+    }
 }

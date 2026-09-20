@@ -1,12 +1,77 @@
+export type OmsiMapCatalogEntry = {
+  directoryName: string;
+  displayName: string;
+  directoryPath: string;
+  tileCount: number;
+  usesWorldCoordinates: boolean;
+};
+
+export type SceneryLibraryEntry = {
+  sceneryObjectPath: string;
+  fileName: string;
+};
+
+export type SplineLibraryEntry = {
+  splinePath: string;
+  fileName: string;
+};
+
+export type OmsiTerrainGrid = {
+  cellCount: number;
+  heights: number[];
+};
+
+export type OmsiTerrainTextureMask = {
+  layerIndex: number;
+  fileName: string;
+  fileSize: number;
+  isValid: boolean;
+  width: number;
+  height: number;
+  hasPixelStatistics: boolean;
+  coverage: number;
+  minimumAlpha: number;
+  maximumAlpha: number;
+  errorCode: string | null;
+};
+
+export type OmsiTerrainRenderDataSummary = {
+  exists: boolean;
+  isValid: boolean;
+  fileSize: number;
+  vertexCount: number;
+  triangleCount: number;
+  materialCount: number;
+  hasTransform: boolean;
+  errorCode: string | null;
+};
+
 export type OmsiTile = {
   x: number;
   y: number;
   relativeMapPath: string;
   detailsLoaded: boolean;
+  streamDetail?: "full" | "summary";
+  streamRing?: number;
   fileExists: boolean;
   objectCount: number;
   splineCount: number;
   splineAttachmentCount: number;
+  terrainMarkerPresent: boolean;
+  terrainFileExists: boolean;
+  terrainFileSize: number;
+  terrain?: OmsiTerrainGrid | null;
+  terrainRenderData?: OmsiTerrainRenderDataSummary | null;
+  terrainTextureMasks?: OmsiTerrainTextureMask[];
+};
+
+export type OmsiGroundTexture = {
+  mainTexturePath: string;
+  detailTexturePath: string;
+  resolutionCode: number;
+  maskResolution: number | null;
+  mainTextureRepeating: number;
+  detailTextureRepeating: number;
 };
 
 export type OmsiMap = {
@@ -16,6 +81,7 @@ export type OmsiMap = {
   globalConfigPath: string;
   usesWorldCoordinates: boolean;
   tiles: OmsiTile[];
+  groundTextures: OmsiGroundTexture[];
 };
 
 export type OmsiPlacedObject = {
@@ -24,12 +90,55 @@ export type OmsiPlacedObject = {
   headerValue: string;
   sceneryObjectPath: string;
   objectId: number;
+  sourceSectionOrdinal: number;
   x: number;
   y: number;
   z: number;
   rotation: number;
   pitch: number;
   bank: number;
+  extraValues?: string[];
+};
+
+export type OmsiPlacedSpline = {
+  tileX: number;
+  tileY: number;
+  headerValue: string;
+  splinePath: string;
+  splineId: number;
+  sourceSectionOrdinal: number;
+  previousSplineId: number;
+  nextSplineId: number;
+  x: number;
+  z: number;
+  y: number;
+  rotation: number;
+  length: number;
+  radius: number;
+  gradientStart: number;
+  gradientEnd: number;
+  isHeightSpline: boolean;
+};
+
+export type OmsiSplineProfilePoint = {
+  x: number;
+  z: number;
+  textureX: number;
+  textureScale: number;
+};
+
+export type OmsiSplineSurface = {
+  textureIndex: number;
+  textureName: string | null;
+  alphaMode: number;
+  from: OmsiSplineProfilePoint;
+  to: OmsiSplineProfilePoint;
+};
+
+export type OmsiSplineDefinition = {
+  exists: boolean;
+  textures: string[];
+  surfaces: OmsiSplineSurface[];
 };
 
 export type OmsiO3dHeader = {
@@ -59,12 +168,38 @@ export type OmsiSceneryMeshReference = {
   structure: OmsiO3dStructureSummary | null;
 };
 
+export type OmsiSceneryTreeDefinition = {
+  textureName: string;
+  minimumHeight: number;
+  maximumHeight: number;
+  minimumAspect: number;
+  maximumAspect: number;
+};
+
 export type OmsiSceneryObjectMetadata = {
   exists: boolean;
   friendlyName: string | null;
   groups: string[];
   meshes: OmsiSceneryMeshReference[];
   collisionMeshes: OmsiSceneryMeshReference[];
+  usesAbsoluteHeight: boolean;
+  tree: OmsiSceneryTreeDefinition | null;
+  renderType: string | null;
+};
+
+export type OmsiO3dMaterial = {
+  diffuseR: number;
+  diffuseG: number;
+  diffuseB: number;
+  diffuseA: number;
+  specularR: number;
+  specularG: number;
+  specularB: number;
+  emissionR: number;
+  emissionG: number;
+  emissionB: number;
+  specularPower: number;
+  textureName: string | null;
 };
 
 export type OmsiO3dGeometry = {
@@ -74,30 +209,294 @@ export type OmsiO3dGeometry = {
   normals: number[];
   uvs: number[];
   indices: number[];
+  triangleMaterialIndices: number[];
+  materials: OmsiO3dMaterial[];
+};
+
+export type OmsiTextureAsset = {
+  exists: boolean;
+  resolvedPath?: string | null;
+  base64Data: string | null;
+  extension: string | null;
+  sourceExtension?: string | null;
+  rgbaBase64?: string | null;
+  mimeType: string | null;
+  width: number | null;
+  height: number | null;
+  pixelFormat: string | null;
+  alphaOnly: boolean | null;
+  alphaCoverage?: number | null;
+  minimumAlpha?: number | null;
+  maximumAlpha?: number | null;
+  errorCode: string | null;
+};
+
+export type OmsiSceneryMaterialOverride = {
+  meshOrdinal: number;
+  textureName: string;
+  materialIndex: number;
+  alphaMode: number | null;
+  noZWrite: boolean;
+  noZCheck: boolean;
+  bumpMapTextureName: string | null;
+  bumpMapStrength: number | null;
+  nightMapTextureName: string | null;
+  environmentMapTextureName: string | null;
+  environmentMapStrength: number | null;
+  transMapSource: string | null;
+  lightMapTextureName: string | null;
+  unsupportedCommands: string[];
 };
 
 export type OmsiSceneryObjectGeometry = {
+  tree: OmsiSceneryTreeDefinition | null;
   meshes: Array<{
     declaredPath: string;
+    lodThreshold: number | null;
+    transform: {
+      positionX: number;
+      positionY: number;
+      positionZ: number;
+      rotationX: number;
+      rotationY: number;
+      rotationZ: number;
+      scaleX: number;
+      scaleY: number;
+      scaleZ: number;
+    };
+    materialOverrides:
+      OmsiSceneryMaterialOverride[];
     geometry: OmsiO3dGeometry;
   }>;
+  usesAbsoluteHeight: boolean;
+  renderType: string | null;
+};
+
+export type GoogleElevationGrid = {
+  tileX: number;
+  tileY: number;
+  rows: number;
+  columns: number;
+  elevations: number[];
+  minimumElevation: number;
+  maximumElevation: number;
+  anchorLatitude: number;
+  anchorLongitude: number;
+};
+
+export type GoogleMapReference = {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  mapType:
+    | "roadmap"
+    | "satellite"
+    | "hybrid"
+    | "terrain";
+  width: number;
+  height: number;
+  metersPerPixel: number;
+  centerElevation: number | null;
+  mimeType: string;
+  base64Data: string;
+  attribution: string;
 };
 
 export type HostMessage =
   | {
-      type: "omsiInstallationLoaded";
+      type: "omsiRootSelected";
       rootPath: string;
-      maps: OmsiMap[];
+    }
+  | {
+      type: "assetIndexRefreshStarted";
+    }
+  | {
+      type: "assetIndexRefreshProgress";
+      examinedFiles: number;
+      candidateFiles: number;
+      relativePath: string | null;
+    }
+  | {
+      type: "assetIndexRefreshCompleted";
+      examinedFiles: number;
+      totalEntries: number;
+      addedFiles: number;
+      updatedFiles: number;
+      unchangedFiles: number;
+      removedFiles: number;
+      durationMilliseconds: number;
+      sceneryObjects: number;
+      splines: number;
+      models: number;
+      textures: number;
+    }
+  | {
+      type: "assetIndexRefreshFailed";
+      detail: string;
+    }
+  | {
+      type: "mapCatalogLoadingStarted";
+    }
+  | {
+      type: "mapCatalogLoadingProgress";
+      completed: number;
+      total: number;
+      skipped: number;
+      directoryName: string | null;
+    }
+  | {
+      type: "mapCatalogLoaded";
+      skippedMaps: number;
+      entries: OmsiMapCatalogEntry[];
+    }
+  | {
+      type: "coordinateMapCreated";
+      directoryName: string;
+      displayName: string;
+      latitude: number;
+      longitude: number;
+    }
+  | {
+      type: "mapOpened";
+      initialTile: {
+        x: number;
+        y: number;
+      } | null;
+      map: OmsiMap;
     }
   | {
       type: "selectionCancelled";
+      target: "omsi" | "map";
     }
   | {
-      type: "mapContentLoaded";
+      type: "sceneryLibraryLoaded";
+      entries: SceneryLibraryEntry[];
+    }
+  | {
+      type: "splineLibraryLoaded";
+      entries: SplineLibraryEntry[];
+    }
+  | {
+      type: "backupRestored";
       directoryName: string;
-      usesWorldCoordinates: boolean;
+      sourceBackupDirectory: string;
+      rollbackBackupDirectory: string;
+      filesRestored: number;
+    }
+  | {
+      type: "objectInserted";
+      directoryName: string;
+      backupDirectory: string;
+      placedObject: OmsiPlacedObject;
+    }
+  | {
+      type: "objectBatchInserted";
+      directoryName: string;
+      backupDirectory: string;
+      count: number;
+      placedObjects: OmsiPlacedObject[];
+    }
+  | {
+      type: "objectMultiBatchInserted";
+      directoryName: string;
+      backupDirectory: string;
+      groupCount: number;
+      count: number;
+      placedObjects: OmsiPlacedObject[];
+    }
+  | {
+      type: "objectTransformsSaved";
+      directoryName: string;
+      editsSaved: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "objectDeleted";
+      directoryName: string;
+      objectId: number;
+      deletedObjects: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "splineDeleted";
+      directoryName: string;
+      splineId: number;
+      deletedSplines: number;
+      unlinkedSplines: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "splineInserted";
+      directoryName: string;
+      backupDirectory: string;
+      placedSpline: OmsiPlacedSpline;
+    }
+  | {
+      type: "splineLinksUpdated";
+      directoryName: string;
+      splineId: number;
+      previousSplineId: number;
+      nextSplineId: number;
+      linksUpdated: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "splineTransformsSaved";
+      directoryName: string;
+      editsSaved: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "assetPathReplaced";
+      directoryName: string;
+      kind: "object" | "spline";
+      oldPath: string;
+      newPath: string;
+      replacements: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "mapFullLoadingStarted";
+      directoryName: string;
+      totalTiles: number;
+    }
+  | {
+      type: "mapFullLoadingProgress";
+      directoryName: string;
+      completedTiles: number;
+      totalTiles: number;
+    }
+  | {
+      type: "mapFullLoaded";
+      directoryName: string;
       tiles: OmsiTile[];
       objects: OmsiPlacedObject[];
+      splines: OmsiPlacedSpline[];
+    }
+  | {
+      type: "mapRegionLoaded";
+      directoryName: string;
+      centerX: number;
+      centerY: number;
+      radius: number;
+      tiles: OmsiTile[];
+      objects: OmsiPlacedObject[];
+      splines: OmsiPlacedSpline[];
+    }
+  | {
+      type: "textureAssetLoaded";
+      requestKey: string;
+      asset: OmsiTextureAsset;
+    }
+  | {
+      type: "splineProfileLoaded";
+      splinePath: string;
+      definition: OmsiSplineDefinition;
     }
   | {
       type: "sceneryObjectMetadataLoaded";
@@ -110,16 +509,63 @@ export type HostMessage =
       geometry: OmsiSceneryObjectGeometry;
     }
   | {
+      type: "fullScreenChanged";
+      enabled: boolean;
+    }
+  | {
+      type: "terrainLeveled";
+      directoryName: string;
+      tileX: number;
+      tileY: number;
+      changedSamples: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "googleMapReferenceLoaded";
+      latitude: number;
+      longitude: number;
+      zoom: number;
+      mapType:
+        | "roadmap"
+        | "satellite"
+        | "hybrid"
+        | "terrain";
+      width: number;
+      height: number;
+      metersPerPixel: number;
+      centerElevation: number | null;
+      mimeType: string;
+      base64Data: string;
+      attribution: string;
+    }
+  | {
+      type: "googleElevationGridLoaded";
+      grid: GoogleElevationGrid;
+    }
+  | {
+      type: "terrainElevationGridApplied";
+      directoryName: string;
+      tileX: number;
+      tileY: number;
+      changedSamples: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "mapGeoreferenceSaved";
+      directoryName: string;
+      path: string;
+      latitude: number;
+      longitude: number;
+      anchorTileX: number;
+      anchorTileY: number;
+      anchorX: number;
+      anchorY: number;
+      zoom: number;
+      mapType: string;
+    }
+  | {
       type: "hostError";
-      code:
-        | "invalidMessage"
-        | "invalidOmsiRoot"
-        | "accessDenied"
-        | "ioError"
-        | "unknownMap"
-        | "unknownSceneryObject"
-        | "invalidSceneryObjectPath"
-        | string;
+      code: string;
       detail?: string;
     };
 
@@ -155,12 +601,643 @@ export function selectOmsiRoot() {
   });
 }
 
-export function loadMapContent(
+export function selectMap() {
+  getWebView()?.postMessage({
+    type: "selectMap"
+  });
+}
+
+export function loadMapCatalog() {
+  getWebView()?.postMessage({
+    type: "loadMapCatalog"
+  });
+}
+
+export function createCoordinateMap(
+  request: {
+    directoryName: string;
+    displayName: string;
+    latitude: number;
+    longitude: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "createCoordinateMap",
+    ...request
+  });
+}
+
+export function openMapFromCatalog(
   directoryName: string
 ) {
   getWebView()?.postMessage({
-    type: "loadMapContent",
+    type: "openMapFromCatalog",
     directoryName
+  });
+}
+
+export function setFullScreen(
+  enabled: boolean
+) {
+  getWebView()?.postMessage({
+    type: "setFullScreen",
+    enabled
+  });
+}
+
+export function loadSceneryLibrary() {
+  getWebView()?.postMessage({
+    type: "loadSceneryLibrary"
+  });
+}
+
+export function loadSplineLibrary() {
+  getWebView()?.postMessage({
+    type: "loadSplineLibrary"
+  });
+}
+
+export function restoreMapStudioBackup(
+  directoryName: string,
+  backupDirectory: string
+) {
+  getWebView()?.postMessage({
+    type: "restoreMapStudioBackup",
+    directoryName,
+    backupDirectory
+  });
+}
+
+export function insertSplineFromLibrary(
+  directoryName: string,
+  splinePath: string,
+  isHeightSpline: boolean,
+  placement: {
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    length: number;
+    radius: number;
+    gradientStart: number;
+    gradientEnd: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertSplineFromLibrary",
+    directoryName,
+    splinePath,
+    isHeightSpline,
+    ...placement
+  });
+}
+
+export function insertObject(
+  directoryName: string,
+  sceneryObjectPath: string,
+  placement: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    pitch: number;
+    bank: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertObject",
+    directoryName,
+    sceneryObjectPath,
+    ...placement
+  });
+}
+
+export function insertObjectBatch(
+  directoryName: string,
+  sceneryObjectPath: string,
+  placements: Array<{
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    pitch: number;
+    bank: number;
+  }>
+) {
+  getWebView()?.postMessage({
+    type: "insertObjectBatch",
+    directoryName,
+    sceneryObjectPath,
+    placements
+  });
+}
+
+export function insertObjectMultiBatch(
+  directoryName: string,
+  groups: Array<{
+    sceneryObjectPath: string;
+    placements: Array<{
+      tileX: number;
+      tileY: number;
+      x: number;
+      y: number;
+      z: number;
+      rotation: number;
+      pitch: number;
+      bank: number;
+    }>;
+  }>
+) {
+  getWebView()?.postMessage({
+    type: "insertObjectMultiBatch",
+    directoryName,
+    groups
+  });
+}
+
+export function deleteObject(
+  directoryName: string,
+  placedObject: OmsiPlacedObject
+) {
+  getWebView()?.postMessage({
+    type: "deleteObject",
+    directoryName,
+    tileX: placedObject.tileX,
+    tileY: placedObject.tileY,
+    sourceSectionOrdinal:
+      placedObject.sourceSectionOrdinal,
+    sceneryObjectPath:
+      placedObject.sceneryObjectPath,
+    objectId: placedObject.objectId
+  });
+}
+
+export function saveObjectTransforms(
+  directoryName: string,
+  edits: OmsiPlacedObject[]
+) {
+  getWebView()?.postMessage({
+    type: "saveObjectTransforms",
+    directoryName,
+    edits: edits.map(
+      (placedObject) => ({
+        tileX: placedObject.tileX,
+        tileY: placedObject.tileY,
+        sourceSectionOrdinal:
+          placedObject.sourceSectionOrdinal,
+        sceneryObjectPath:
+          placedObject.sceneryObjectPath,
+        objectId:
+          placedObject.objectId,
+        x: placedObject.x,
+        y: placedObject.y,
+        z: placedObject.z,
+        rotation:
+          placedObject.rotation,
+        pitch:
+          placedObject.pitch,
+        bank:
+          placedObject.bank
+      })
+    )
+  });
+}
+
+export function deleteSpline(
+  directoryName: string,
+  placedSpline: OmsiPlacedSpline
+) {
+  getWebView()?.postMessage({
+    type: "deleteSpline",
+    directoryName,
+    tileX: placedSpline.tileX,
+    tileY: placedSpline.tileY,
+    sourceSectionOrdinal:
+      placedSpline.sourceSectionOrdinal,
+    splinePath:
+      placedSpline.splinePath,
+    splineId:
+      placedSpline.splineId,
+    previousSplineId:
+      placedSpline.previousSplineId,
+    nextSplineId:
+      placedSpline.nextSplineId,
+    isHeightSpline:
+      placedSpline.isHeightSpline
+  });
+}
+
+export function insertSpline(
+  directoryName: string,
+  sourceSpline: OmsiPlacedSpline,
+  placement: {
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    length: number;
+    radius: number;
+    gradientStart: number;
+    gradientEnd: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "insertSpline",
+    directoryName,
+    sourceTileX:
+      sourceSpline.tileX,
+    sourceTileY:
+      sourceSpline.tileY,
+    sourceSectionOrdinal:
+      sourceSpline.sourceSectionOrdinal,
+    splinePath:
+      sourceSpline.splinePath,
+    splineId:
+      sourceSpline.splineId,
+    previousSplineId:
+      sourceSpline.previousSplineId,
+    nextSplineId:
+      sourceSpline.nextSplineId,
+    isHeightSpline:
+      sourceSpline.isHeightSpline,
+    ...placement
+  });
+}
+
+export function updateSplineLinks(
+  directoryName: string,
+  placedSpline: OmsiPlacedSpline,
+  desiredPreviousSplineId: number,
+  desiredNextSplineId: number
+) {
+  getWebView()?.postMessage({
+    type: "updateSplineLinks",
+    directoryName,
+    tileX: placedSpline.tileX,
+    tileY: placedSpline.tileY,
+    sourceSectionOrdinal:
+      placedSpline.sourceSectionOrdinal,
+    splinePath:
+      placedSpline.splinePath,
+    splineId:
+      placedSpline.splineId,
+    previousSplineId:
+      placedSpline.previousSplineId,
+    nextSplineId:
+      placedSpline.nextSplineId,
+    isHeightSpline:
+      placedSpline.isHeightSpline,
+    desiredPreviousSplineId,
+    desiredNextSplineId
+  });
+}
+
+export function saveSplineTransforms(
+  directoryName: string,
+  edits: OmsiPlacedSpline[]
+) {
+  getWebView()?.postMessage({
+    type: "saveSplineTransforms",
+    directoryName,
+    edits: edits.map(
+      (placedSpline) => ({
+        tileX: placedSpline.tileX,
+        tileY: placedSpline.tileY,
+        sourceSectionOrdinal:
+          placedSpline.sourceSectionOrdinal,
+        splinePath:
+          placedSpline.splinePath,
+        splineId:
+          placedSpline.splineId,
+        previousSplineId:
+          placedSpline.previousSplineId,
+        nextSplineId:
+          placedSpline.nextSplineId,
+        isHeightSpline:
+          placedSpline.isHeightSpline,
+        x: placedSpline.x,
+        z: placedSpline.z,
+        y: placedSpline.y,
+        rotation:
+          placedSpline.rotation,
+        length:
+          placedSpline.length,
+        radius:
+          placedSpline.radius,
+        gradientStart:
+          placedSpline.gradientStart,
+        gradientEnd:
+          placedSpline.gradientEnd
+      })
+    )
+  });
+}
+
+export function replaceMapAssetPath(
+  directoryName: string,
+  kind: "object" | "spline",
+  oldPath: string,
+  newPath: string
+) {
+  getWebView()?.postMessage({
+    type: "replaceMapAssetPath",
+    directoryName,
+    kind,
+    oldPath,
+    newPath
+  });
+}
+
+export function loadMapFull(
+  directoryName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadMapFull",
+    directoryName
+  });
+}
+
+export function loadMapRegion(
+  directoryName: string,
+  centerX: number,
+  centerY: number,
+  radius: number
+) {
+  getWebView()?.postMessage({
+    type: "loadMapRegion",
+    directoryName,
+    centerX,
+    centerY,
+    radius
+  });
+}
+
+export function getTerrainTextureMaskAssetKey(
+  directoryName: string,
+  relativeMapPath: string,
+  layerIndex: number
+) {
+  return [
+    "terrain-mask",
+    directoryName,
+    relativeMapPath,
+    layerIndex
+  ].join("|");
+}
+
+export function getGroundTextureAssetKey(
+  directoryName: string,
+  texturePath: string
+) {
+  return [
+    "ground",
+    directoryName,
+    texturePath
+  ].join("|");
+}
+
+export function getSkyTextureAssetKey(
+  textureName: string
+) {
+  return [
+    "sky",
+    textureName
+  ].join("|");
+}
+
+export const sceneryTreeTextureMeshToken =
+  "__tree__";
+
+export function getSceneryTextureAssetKey(
+  sceneryObjectPath: string,
+  declaredMeshPath: string,
+  textureName: string
+) {
+  return [
+    "scenery",
+    sceneryObjectPath,
+    declaredMeshPath,
+    textureName
+  ].join("|");
+}
+
+export function getSplineTextureAssetKey(
+  splinePath: string,
+  textureName: string
+) {
+  return [
+    "spline",
+    splinePath,
+    textureName
+  ].join("|");
+}
+
+export function levelTerrain(
+  directoryName: string,
+  request: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    targetHeight: number;
+    radius: number;
+    feather: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "levelTerrain",
+    directoryName,
+    ...request
+  });
+}
+
+export function loadGoogleMapReference(
+  apiKey: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+    mapType:
+      | "roadmap"
+      | "satellite"
+      | "hybrid"
+      | "terrain";
+    width: number;
+    height: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "loadGoogleMapReference",
+    apiKey,
+    ...request
+  });
+}
+
+export function saveMapGeoreference(
+  directoryName: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    anchorTileX: number;
+    anchorTileY: number;
+    anchorX: number;
+    anchorY: number;
+    zoom: number;
+    mapType:
+      | "roadmap"
+      | "satellite"
+      | "hybrid"
+      | "terrain";
+  }
+) {
+  getWebView()?.postMessage({
+    type: "saveMapGeoreference",
+    directoryName,
+    ...request
+  });
+}
+
+export function loadGoogleElevationGrid(
+  apiKey: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    anchorTileX: number;
+    anchorTileY: number;
+    anchorX: number;
+    anchorY: number;
+    tileX: number;
+    tileY: number;
+    sampleCount: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "loadGoogleElevationGrid",
+    apiKey,
+    ...request
+  });
+}
+
+export function applyTerrainElevationGrid(
+  directoryName: string,
+  request: {
+    tileX: number;
+    tileY: number;
+    rows: number;
+    columns: number;
+    elevations: number[];
+    verticalOffset: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "applyTerrainElevationGrid",
+    directoryName,
+    ...request
+  });
+}
+
+export function loadTerrainTextureMaskAsset(
+  directoryName: string,
+  relativeMapPath: string,
+  layerIndex: number
+) {
+  const requestKey =
+    getTerrainTextureMaskAssetKey(
+      directoryName,
+      relativeMapPath,
+      layerIndex
+    );
+
+  getWebView()?.postMessage({
+    type: "loadTerrainTextureMaskAsset",
+    requestKey,
+    directoryName,
+    relativeMapPath,
+    layerIndex
+  });
+
+  return requestKey;
+}
+
+export function loadSkyTextureAsset(
+  textureName: string
+) {
+  const requestKey =
+    getSkyTextureAssetKey(
+      textureName
+    );
+
+  getWebView()?.postMessage({
+    type: "loadSkyTextureAsset",
+    requestKey,
+    textureName
+  });
+
+  return requestKey;
+}
+
+export function loadGroundTextureAsset(
+  directoryName: string,
+  texturePath: string
+) {
+  const requestKey =
+    getGroundTextureAssetKey(
+      directoryName,
+      texturePath
+    );
+
+  getWebView()?.postMessage({
+    type: "loadGroundTextureAsset",
+    requestKey,
+    directoryName,
+    texturePath
+  });
+
+  return requestKey;
+}
+
+export function loadSceneryTextureAsset(
+  requestKey: string,
+  sceneryObjectPath: string,
+  declaredMeshPath: string,
+  textureName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSceneryTextureAsset",
+    requestKey,
+    sceneryObjectPath,
+    declaredMeshPath,
+    textureName
+  });
+}
+
+export function loadSplineTextureAsset(
+  requestKey: string,
+  splinePath: string,
+  textureName: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSplineTextureAsset",
+    requestKey,
+    splinePath,
+    textureName
+  });
+}
+
+export function loadSplineProfile(
+  splinePath: string
+) {
+  getWebView()?.postMessage({
+    type: "loadSplineProfile",
+    splinePath
   });
 }
 

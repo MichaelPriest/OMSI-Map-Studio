@@ -4,4 +4,7 @@
     <RootNamespace>MapStudio.Core</RootNamespace>
     <AssemblyName>MapStudio.Core</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+  </ItemGroup>
 </Project>

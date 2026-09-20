@@ -18,9 +18,9 @@
 
 ## First test version
 
-The current prerelease is **v0.1.0-alpha.2** and remains read-only.
+The current prerelease is **v0.1.0-alpha.8**. Writing is still experimental, but it now covers existing-object transforms and preservation-safe object insertion when a safe template of the same `.sco` is available, always with automatic backups.
 
-It can select a real OMSI 2 installation, open maps, display tiles, select objects and load previews for unencrypted O3D meshes. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
+It can select a real OMSI 2 installation, manually open a map, work in Full map or 3×3 mode, display real O3D objects and splines, edit X/Y/Z/rotation/pitch/bank, undo/redo previews, insert objects from the Library, and use **Place copy** on the selected object. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
 
 ## Development requirements
 
@@ -60,3 +60,18 @@ Architecture documentation:
 
 - [Architecture — English](docs/en/ARCHITECTURE.md)
 - [Arquitetura — Português](docs/pt-BR/ARCHITECTURE.md)
+
+
+### Spline Library
+
+Alpha.4 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. The library offers **Normal** and **Height** creation. Persistence is enabled only when the map contains a real neutral template of the same type: five explicit zero extras for `[spline]` and six for `[spline_h]`. Header and extras are copied from that template.
+
+
+## Project roadmap
+
+The official technical and functional direction is documented in:
+
+- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
+- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
+
+The roadmap defines the retained stack, Asset Index/cache, tile streaming, original-editor parity, Traffic Rules, paths, tracks/trips, timetables, signals, rail, geodata, and the criteria for considering Map Studio a functional replacement for the original editor.

@@ -32,3 +32,9 @@ All official project documentation must exist, at minimum, in:
 - English (`en`)
 
 See the English version for full details.
+
+
+## Roadmap / Roadmap
+
+- 🇧🇷 [Roadmap técnico e funcional](docs/pt-BR/ROADMAP.md)
+- 🇬🇧 [Technical and functional roadmap](docs/en/ROADMAP.md)

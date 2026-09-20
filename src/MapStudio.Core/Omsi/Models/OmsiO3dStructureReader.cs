@@ -7,6 +7,7 @@ public sealed class OmsiO3dStructureReader
     private const byte MaterialSection = 0x26;
     private const byte BoneSection = 0x54;
     private const byte TransformSection = 0x79;
+    private const uint MaxBones = 1_000_000;
 
     public OmsiO3dStructureSummary Read(
         string path)
@@ -149,7 +150,8 @@ public sealed class OmsiO3dStructureReader
                     if (!TryReadCount(
                             reader,
                             longHeader,
-                            out boneCount))
+                            out boneCount) ||
+                        boneCount > MaxBones)
                     {
                         return OmsiO3dStructureSummary.Invalid(
                             "invalidBoneSection");
