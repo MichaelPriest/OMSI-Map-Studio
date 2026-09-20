@@ -8219,6 +8219,94 @@ export function App() {
                 Abrir pasta manualmente
               </button>
             </div>
+
+            <div className="coordinate-map-creator">
+              <div>
+                <strong>Criar mapa real</strong>
+                <span>
+                  Usa o template NewMap da sua própria instalação do OMSI e grava uma âncora de coordenadas do Map Studio.
+                </span>
+              </div>
+
+              <label>
+                <span>Nome do mapa</span>
+                <input
+                  type="text"
+                  value={newMapDisplayName}
+                  placeholder="Minha cidade"
+                  onChange={(event) =>
+                    setNewMapDisplayName(
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                <span>Pasta em maps</span>
+                <input
+                  type="text"
+                  value={newMapDirectoryName}
+                  placeholder="Minha_Cidade"
+                  onChange={(event) =>
+                    setNewMapDirectoryName(
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <div className="coordinate-map-row">
+                <label>
+                  <span>Latitude</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={newMapLatitude}
+                    placeholder="-23.5505"
+                    onChange={(event) =>
+                      setNewMapLatitude(
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+
+                <label>
+                  <span>Longitude</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={newMapLongitude}
+                    placeholder="-46.6333"
+                    onChange={(event) =>
+                      setNewMapLongitude(
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+              </div>
+
+              <button
+                type="button"
+                className="primary-button"
+                disabled={
+                  creatingCoordinateMap
+                }
+                onClick={
+                  handleCreateCoordinateMap
+                }
+              >
+                {creatingCoordinateMap
+                  ? "Criando..."
+                  : "Criar e abrir mapa"}
+              </button>
+
+              <small>
+                O projeto é criado a partir do template oficial instalado. A referência visual e o relevo real podem ser carregados no editor depois.
+              </small>
+            </div>
           </aside>
         </div>
       )}
