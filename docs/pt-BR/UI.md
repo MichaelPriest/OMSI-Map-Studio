@@ -669,3 +669,10 @@ Operações com mais de um item usam o comando nativo `insertObjectBatch`. O hos
 A colocação em lote ganhou **Matriz**, **Círculo** e **Lotes**. Matriz cria linhas/colunas com espaçamento X/Y; Círculo distribui itens no perímetro e pode orientar cada asset pela tangente; Lotes usa dois pontos como frente de rua e distribui casas/prédios com espaçamento e recuo configuráveis.
 
 Presets incluídos: **Arborização de avenida**, **Postes de iluminação**, **Casas alinhadas**, **Praça arborizada** e **Grade/estacionamento**. Os presets só configuram as ferramentas; a gravação continua usando o `.sco` real selecionado e o fluxo transacional de lote.
+
+
+### Barra Construção e ponte/elevado
+
+A barra principal ganhou um grupo **Construção** dedicado para abrir diretamente **Ruas**, **Cruzamentos**, **Pontes**, **Prédios**, **Vegetação**, **Transporte**, **Mobiliário**, **Infraestrutura** e **Terreno**. Cada botão apenas direciona a biblioteca real correspondente; nenhum catálogo paralelo de assets é criado.
+
+O modo **Ponte/Elevado** abre o grupo real de splines de pontes/túneis e reutiliza o criador de rua por pontos e alça de curva. Uma elevação configurável é somada às alturas reais do terreno no início e no fim da spline, preservando a conversão para rotação, comprimento, raio e gradiente OMSI.

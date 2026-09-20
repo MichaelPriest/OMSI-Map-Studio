@@ -88,7 +88,12 @@ type SelectionMode =
 
 type QuickCreateTool =
   | "road"
+  | "bridge"
   | "junction"
+  | "building"
+  | "transit"
+  | "street"
+  | "utilities"
   | "object"
   | "terrain"
   | "water"
@@ -2716,6 +2721,18 @@ export function App() {
   const [
     easyRoadCurveOffset,
     setEasyRoadCurveOffset
+  ] = useState(0);
+
+  const [
+    roadPlacementKind,
+    setRoadPlacementKind
+  ] = useState<"road" | "bridge">(
+    "road"
+  );
+
+  const [
+    roadElevationOffset,
+    setRoadElevationOffset
   ] = useState(0);
 
   const [objects, setObjects] =
@@ -9051,7 +9068,7 @@ export function App() {
           return false;
         }
 
-        const startHeight =
+        const baseStartHeight =
           sampleTerrainHeight(
             activeTiles,
             start.targetTileX,
@@ -9061,7 +9078,7 @@ export function App() {
           ) ??
           splinePlacementTemplate.z;
 
-        const endHeight =
+        const baseEndHeight =
           sampleTerrainHeight(
             activeTiles,
             end.targetTileX,
@@ -9069,7 +9086,21 @@ export function App() {
             end.x,
             end.y
           ) ??
-          startHeight;
+          baseStartHeight;
+
+        const elevation =
+          roadPlacementKind ===
+            "bridge"
+            ? roadElevationOffset
+            : 0;
+
+        const startHeight =
+          baseStartHeight +
+          elevation;
+
+        const endHeight =
+          baseEndHeight +
+          elevation;
 
         const gradient =
           (
@@ -9099,6 +9130,8 @@ export function App() {
       },
       [
         activeTiles,
+        roadElevationOffset,
+        roadPlacementKind,
         splinePlacementTemplate
       ]
     );
@@ -9149,14 +9182,22 @@ export function App() {
         ) {
           if (!easyRoadStart) {
             const startHeight =
-              sampleTerrainHeight(
-                activeTiles,
-                point.targetTileX,
-                point.targetTileY,
-                point.x,
-                point.y
-              ) ??
-              splinePlacementTemplate.z;
+              (
+                sampleTerrainHeight(
+                  activeTiles,
+                  point.targetTileX,
+                  point.targetTileY,
+                  point.x,
+                  point.y
+                ) ??
+                splinePlacementTemplate.z
+              ) +
+              (
+                roadPlacementKind ===
+                  "bridge"
+                  ? roadElevationOffset
+                  : 0
+              );
 
             setEasyRoadStart(point);
             setEasyRoadEnd(undefined);
@@ -9222,6 +9263,8 @@ export function App() {
         easyRoadCurveOffset,
         easyRoadMode,
         easyRoadStart,
+        roadElevationOffset,
+        roadPlacementKind,
         splineLibraryPlacementIsHeight,
         splinePlacementTemplate,
         updateEasyRoadPreview
@@ -9246,6 +9289,8 @@ export function App() {
       setEasyRoadStart(undefined);
       setEasyRoadEnd(undefined);
       setEasyRoadCurveOffset(0);
+      setRoadPlacementKind("road");
+      setRoadElevationOffset(0);
       setInsertingSpline(false);
     }, []);
 
@@ -10647,7 +10692,21 @@ export function App() {
           );
         }
 
-        if (tool === "road") {
+        if (
+          tool === "road" ||
+          tool === "bridge"
+        ) {
+          const isBridge =
+            tool === "bridge";
+
+          setRoadPlacementKind(
+            isBridge
+              ? "bridge"
+              : "road"
+          );
+          setRoadElevationOffset(
+            isBridge ? 5 : 0
+          );
           setEasyRoadMode(true);
           setEasyRoadStart(undefined);
           setEasyRoadEnd(undefined);
@@ -10655,12 +10714,18 @@ export function App() {
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
-          setSplineLibraryGroup("roads");
+          setSplineLibraryGroup(
+            isBridge
+              ? "bridges"
+              : "roads"
+          );
           handleExplorerPanelTab(
             "splineLibrary"
           );
           setSaveNotice(
-            "Criador de rua: escolha uma spline .sli real, clique no início e arraste até o fim. Depois use o controle de curva para ajustar o traçado."
+            isBridge
+              ? "Ponte/elevado: escolha uma spline real de ponte/túnel, arraste início/fim e ajuste a elevação."
+              : "Criador de rua: escolha uma spline .sli real, clique no início e arraste até o fim. Depois use o controle de curva para ajustar o traçado."
           );
           return;
         }
@@ -10669,6 +10734,8 @@ export function App() {
         setEasyRoadStart(undefined);
         setEasyRoadEnd(undefined);
         setEasyRoadCurveOffset(0);
+        setRoadPlacementKind("road");
+        setRoadElevationOffset(0);
 
         if (tool === "terrain") {
           setSelectionMode("terrain");
@@ -10686,23 +10753,39 @@ export function App() {
         setSceneryLibraryGroup(
           tool === "junction"
             ? "junctions"
-            : tool === "tree" ||
-                tool === "grass"
-              ? "vegetation"
-              : "all"
+            : tool === "building"
+              ? "buildings"
+              : tool === "transit"
+                ? "transit"
+                : tool === "street"
+                  ? "street"
+                  : tool === "utilities"
+                    ? "utilities"
+                    : tool === "tree" ||
+                        tool === "grass"
+                      ? "vegetation"
+                      : "all"
         );
         handleExplorerPanelTab("library");
 
         const label =
           tool === "junction"
             ? "cruzamento"
-            : tool === "water"
-              ? "água"
-              : tool === "grass"
-                ? "grama"
-                : tool === "tree"
-                  ? "árvore"
-                  : "objeto";
+            : tool === "building"
+              ? "prédio/casa"
+              : tool === "transit"
+                ? "item de transporte"
+                : tool === "street"
+                  ? "mobiliário urbano"
+                  : tool === "utilities"
+                    ? "infraestrutura"
+                    : tool === "water"
+                      ? "água"
+                      : tool === "grass"
+                        ? "grama"
+                        : tool === "tree"
+                          ? "árvore"
+                          : "objeto";
 
         setSaveNotice(
           `Criar ${label}: escolha um .sco real da Biblioteca e use Colocar.`
@@ -13488,83 +13571,42 @@ export function App() {
           <span className="toolbar-separator" />
 
           <div
-            className="create-tool-group"
-            aria-label="Criar no mapa"
+            className="create-tool-group construction-dock"
+            aria-label="Construção"
           >
-            <button
-              type="button"
-              className="create-tool"
-              title="Criar rua com spline real (Alt+R)"
-              onClick={() =>
-                openQuickCreate("road")
-              }
-            >
-              + Rua
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Inserir cruzamento .sco real (Alt+C)"
-              onClick={() =>
-                openQuickCreate(
-                  "junction"
-                )
-              }
-            >
-              + Cruz.
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Inserir objeto .sco real (Alt+O)"
-              onClick={() =>
-                openQuickCreate("object")
-              }
-            >
-              + Objeto
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Selecionar terreno para edição segura (Alt+T)"
-              onClick={() =>
-                openQuickCreate(
-                  "terrain"
-                )
-              }
-            >
-              Terreno
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Inserir água usando assets reais da biblioteca (Alt+A)"
-              onClick={() =>
-                openQuickCreate("water")
-              }
-            >
-              + Água
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Inserir grama usando assets reais da biblioteca (Alt+G)"
-              onClick={() =>
-                openQuickCreate("grass")
-              }
-            >
-              + Grama
-            </button>
-            <button
-              type="button"
-              className="create-tool"
-              title="Inserir árvore usando .sco/[tree] real (Alt+Y)"
-              onClick={() =>
-                openQuickCreate("tree")
-              }
-            >
-              + Árvore
-            </button>
+            <span className="construction-dock-label">
+              Construção
+            </span>
+            {([
+              ["road", "═", "Ruas"],
+              ["junction", "✣", "Cruzamentos"],
+              ["bridge", "⌁", "Pontes"],
+              ["building", "⌂", "Prédios"],
+              ["tree", "♣", "Vegetação"],
+              ["transit", "▤", "Transporte"],
+              ["street", "⚑", "Mobiliário"],
+              ["utilities", "⚙", "Infraestrutura"],
+              ["terrain", "▱", "Terreno"]
+            ] as const).map(
+              ([tool, icon, label]) => (
+                <button
+                  type="button"
+                  className="create-tool construction-tool"
+                  key={tool}
+                  title={label}
+                  onClick={() =>
+                    openQuickCreate(tool)
+                  }
+                >
+                  <span aria-hidden="true">
+                    {icon}
+                  </span>
+                  <small>
+                    {label}
+                  </small>
+                </button>
+              )
+            )}
           </div>
 
           <span className="toolbar-separator" />
@@ -16273,6 +16315,125 @@ export function App() {
                       )
                     )}
                   </>
+                )}
+
+                {easyRoadMode &&
+                  roadPlacementKind ===
+                    "bridge" && (
+                  <div className="bridge-elevation-control">
+                    <strong>
+                      Ponte / elevado
+                    </strong>
+                    <label className="placement-field">
+                      <span>
+                        Elevação m
+                      </span>
+                      <input
+                        type="number"
+                        min="-20"
+                        max="100"
+                        step="0.5"
+                        value={
+                          roadElevationOffset
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            !Number.isFinite(
+                              value
+                            )
+                          ) {
+                            return;
+                          }
+
+                          setRoadElevationOffset(
+                            value
+                          );
+
+                          if (
+                            easyRoadStart &&
+                            easyRoadEnd
+                          ) {
+                            const arc =
+                              deriveRoadArc(
+                                easyRoadStart,
+                                easyRoadEnd,
+                                easyRoadCurveOffset
+                              );
+
+                            if (!arc) {
+                              return;
+                            }
+
+                            const baseStart =
+                              sampleTerrainHeight(
+                                activeTiles,
+                                easyRoadStart
+                                  .targetTileX,
+                                easyRoadStart
+                                  .targetTileY,
+                                easyRoadStart.x,
+                                easyRoadStart.y
+                              ) ?? 0;
+
+                            const baseEnd =
+                              sampleTerrainHeight(
+                                activeTiles,
+                                easyRoadEnd
+                                  .targetTileX,
+                                easyRoadEnd
+                                  .targetTileY,
+                                easyRoadEnd.x,
+                                easyRoadEnd.y
+                              ) ??
+                              baseStart;
+
+                            const startZ =
+                              baseStart +
+                              value;
+                            const endZ =
+                              baseEnd +
+                              value;
+                            const gradient =
+                              (
+                                (
+                                  endZ -
+                                  startZ
+                                ) /
+                                Math.max(
+                                  0.001,
+                                  arc.length
+                                )
+                              ) *
+                              100;
+
+                            setPendingSplinePlacement(
+                              {
+                                ...easyRoadStart,
+                                z: startZ,
+                                rotation:
+                                  arc.rotation,
+                                length:
+                                  arc.length,
+                                radius:
+                                  arc.radius,
+                                gradientStart:
+                                  gradient,
+                                gradientEnd:
+                                  gradient
+                              }
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                    <span>
+                      A elevação é somada à altura real do terreno.
+                    </span>
+                  </div>
                 )}
 
                 {easyRoadMode &&

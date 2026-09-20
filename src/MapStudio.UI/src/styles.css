@@ -2838,3 +2838,70 @@ code {
   color: #bdd1df;
   font-size: 7px;
 }
+
+
+.construction-dock {
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  max-width: min(68vw, 900px);
+  overflow-x: auto;
+  padding: 3px 4px;
+  border: 1px solid #1a415d;
+  border-radius: 6px;
+  background: #061723;
+}
+
+.construction-dock-label {
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
+  color: #6f93aa;
+  font-size: 7px;
+  font-weight: 800;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.construction-tool {
+  display: grid;
+  min-width: 57px;
+  height: 39px;
+  place-items: center;
+  gap: 1px;
+  padding: 3px 5px !important;
+}
+
+.construction-tool > span {
+  color: #7ec5f5;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.construction-tool > small {
+  color: #9eb9ca;
+  font-size: 6.5px;
+  white-space: nowrap;
+}
+
+.bridge-elevation-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid #2e5e7a;
+  border-radius: 6px;
+  background: #082237;
+}
+
+.bridge-elevation-control strong {
+  color: #d4edff;
+  font-size: 8px;
+}
+
+.bridge-elevation-control > span {
+  color: #7da0b7;
+  font-size: 7px;
+}

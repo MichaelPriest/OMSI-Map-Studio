@@ -669,3 +669,10 @@ Operations with more than one item use the native `insertObjectBatch` command. T
 Batch placement now includes **Matrix**, **Circle**, and **Lots**. Matrix creates rows/columns with X/Y spacing; Circle distributes items around a perimeter and can orient each asset tangentially; Lots uses two points as a street frontage and distributes houses/buildings with configurable spacing and setback.
 
 Built-in presets include **Avenue trees**, **Street lights**, **Aligned houses**, **Green square**, and **Grid/parking**. Presets only configure placement tools; saving still uses the selected real `.sco` asset and the transactional batch pipeline.
+
+
+### Construction bar and bridge/elevated mode
+
+The main toolbar now has a dedicated **Construction** group that opens **Roads**, **Junctions**, **Bridges**, **Buildings**, **Vegetation**, **Transit**, **Street furniture**, **Infrastructure**, and **Terrain** directly. Each button only routes into the corresponding real asset library; no parallel fake asset catalog is created.
+
+**Bridge/Elevated** mode opens the real bridge/tunnel spline group and reuses the point/drag road builder and curve handle. A configurable elevation is added to the real terrain height at both spline endpoints while preserving conversion into OMSI rotation, length, radius, and gradient fields.
