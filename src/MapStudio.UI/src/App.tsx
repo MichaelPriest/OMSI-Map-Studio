@@ -17863,15 +17863,15 @@ export function App() {
               Construção
             </span>
             {([
-              ["road", "═", "Ruas"],
-              ["junction", "✣", "Cruzamentos"],
-              ["bridge", "⌁", "Pontes"],
-              ["building", "⌂", "Prédios"],
-              ["tree", "♣", "Vegetação"],
-              ["transit", "▤", "Transporte"],
-              ["street", "⚑", "Mobiliário"],
-              ["utilities", "⚙", "Infraestrutura"],
-              ["terrain", "▱", "Terreno"]
+              ["road", "road", "Ruas"],
+              ["junction", "intersection", "Cruzamentos"],
+              ["bridge", "bridge", "Pontes"],
+              ["building", "building", "Prédios"],
+              ["tree", "tree", "Vegetação"],
+              ["transit", "transit", "Transporte"],
+              ["street", "street-furniture", "Mobiliário"],
+              ["utilities", "utility", "Infraestrutura"],
+              ["terrain", "terrain", "Terreno"]
             ] as const).map(
               ([tool, icon, label]) => (
                 <button
@@ -17883,9 +17883,10 @@ export function App() {
                     openQuickCreate(tool)
                   }
                 >
-                  <span aria-hidden="true">
-                    {icon}
-                  </span>
+                  <MapStudioIcon
+                    name={icon}
+                    size={22}
+                  />
                   <small>
                     {label}
                   </small>
