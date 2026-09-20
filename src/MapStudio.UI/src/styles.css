@@ -6042,3 +6042,57 @@ span.active {
     display: none;
   }
 }
+
+
+/* Diagnostic overlay is available on demand instead of permanently covering
+   the map after every selection. */
+.viewport-diagnostic {
+  display: block;
+  width: min(360px, calc(100% - 24px));
+  max-width: min(360px, calc(100% - 24px));
+  padding: 0;
+  overflow: hidden;
+  border-color: rgb(48 96 126 / 78%);
+  border-radius: 8px;
+  background: rgb(5 20 30 / 94%);
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+}
+
+.viewport-diagnostic > summary {
+  padding: 6px 9px;
+  color: #8eb0c5;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 7px;
+  font-weight: 750;
+  cursor: pointer;
+  user-select: none;
+}
+
+.viewport-diagnostic > summary:hover {
+  color: #d4e8f3;
+  background: rgb(19 55 76 / 42%);
+}
+
+.viewport-diagnostic-body {
+  display: grid;
+  gap: 2px;
+  padding: 0 9px 8px;
+  border-top: 1px solid #17384d;
+  color: #91afc1;
+  font: 7px/1.35 Consolas, "Cascadia Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.viewport-diagnostic-body strong {
+  margin-top: 7px;
+  color: #d6e9f5;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 8px;
+}
+
+.map-editor.fullscreen-editor
+.viewport-diagnostic {
+  right: 12px;
+  bottom: 92px;
+}

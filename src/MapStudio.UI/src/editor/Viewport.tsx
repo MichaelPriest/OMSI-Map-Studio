@@ -5585,6 +5585,13 @@ export function Viewport({
       gizmoManager =
         new GizmoManager(scene);
 
+      // Keep transform handles easier to acquire over dense OMSI scenery.
+      // GizmoManager scaleRatio is visual only and does not alter transform math.
+      gizmoManager.scaleRatio =
+        editorTool === "move"
+          ? 1.14
+          : 1.08;
+
       gizmoManager
         .usePointerToAttachGizmos =
         false;
@@ -8409,41 +8416,45 @@ export function Viewport({
         </div>
       )}
       {viewportDiagnostic ? (
-        <div
+        <details
           className="viewport-diagnostic"
-          aria-live="polite"
         >
-          <strong>
-            Diagnóstico real da seleção
-          </strong>
-          <span>
-            {viewportDiagnostic.item}
-          </span>
-          <span>
-            Mesh/material:{" "}
-            {viewportDiagnostic.mesh} /{" "}
-            {viewportDiagnostic.material}
-          </span>
-          <span>
-            Textura:{" "}
-            {viewportDiagnostic.texture}
-          </span>
-          <span>
-            UV: {viewportDiagnostic.uv}
-          </span>
-          <span>
-            Posição final:{" "}
-            {viewportDiagnostic.position}
-          </span>
-          <span>
-            Render lift:{" "}
-            {viewportDiagnostic.renderLift}
-          </span>
-          <span>
-            Origem:{" "}
-            {viewportDiagnostic.origin}
-          </span>
-        </div>
+          <summary>
+            Diagnóstico da seleção
+          </summary>
+          <div
+            className="viewport-diagnostic-body"
+            aria-live="polite"
+          >
+            <strong>
+              {viewportDiagnostic.item}
+            </strong>
+            <span>
+              Mesh/material:{" "}
+              {viewportDiagnostic.mesh} /{" "}
+              {viewportDiagnostic.material}
+            </span>
+            <span>
+              Textura:{" "}
+              {viewportDiagnostic.texture}
+            </span>
+            <span>
+              UV: {viewportDiagnostic.uv}
+            </span>
+            <span>
+              Posição final:{" "}
+              {viewportDiagnostic.position}
+            </span>
+            <span>
+              Render lift:{" "}
+              {viewportDiagnostic.renderLift}
+            </span>
+            <span>
+              Origem:{" "}
+              {viewportDiagnostic.origin}
+            </span>
+          </div>
+        </details>
       ) : null}
     </>
   );
