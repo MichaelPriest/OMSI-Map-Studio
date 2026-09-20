@@ -613,3 +613,27 @@ No Grundorf, confirme que as árvores `[tree]` continuam renderizadas, mas os gr
 3. confirme que objetos com bank/pitch deixam de aparecer inclinados no eixo errado;
 4. confirme que meshes com `[rot_x]`, `[rot_y]` ou `[rot_z]` mantêm a orientação local correta;
 5. rotacione um objeto com o gizmo, salve e reabra para confirmar que a orientação persiste.
+
+
+## Fase A — Asset Index e streaming por anéis
+
+Validações automatizadas adicionadas:
+
+- primeira indexação identifica assets suportados;
+- segunda indexação reutiliza arquivos sem alteração;
+- arquivo alterado é contado como atualização;
+- arquivo removido é retirado do índice;
+- estatísticas separam SCO, SLI, modelos e texturas;
+- seletor de streaming 5×5 classifica 3×3 como completo e anel externo como summary;
+- `ReadSummaryLightAsync` conta objetos/splines e detecta terreno sem carregar o payload pesado.
+
+Validação manual esperada no Windows:
+
+1. selecionar a raiz do OMSI e confirmar que a UI permanece utilizável enquanto o índice trabalha;
+2. confirmar a mensagem **Índice local pronto** e suas contagens;
+3. fechar/reabrir e confirmar alto número de arquivos reutilizados quando nada mudou;
+4. abrir as bibliotecas de objetos e splines e confirmar os mesmos assets reais;
+5. usar **Streaming 3×3**, mover entre tiles e confirmar que objetos/splines/terreno acompanham a área;
+6. voltar a um tile visitado e confirmar recarga correta;
+7. testar seleção/picking após várias trocas de tile;
+8. confirmar que **Mapa completo** continua funcionando como fallback/diagnóstico.
