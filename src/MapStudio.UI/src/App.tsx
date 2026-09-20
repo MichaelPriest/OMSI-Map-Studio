@@ -407,6 +407,34 @@ export function App() {
   const [selectedMap, setSelectedMap] =
     useState<OmsiMap>();
 
+  const [
+    availableMaps,
+    setAvailableMaps
+  ] = useState<OmsiMapCatalogEntry[]>([]);
+
+  const [
+    loadingMapCatalog,
+    setLoadingMapCatalog
+  ] = useState(false);
+
+  const [
+    mapCatalogProgress,
+    setMapCatalogProgress
+  ] = useState<{
+    completed: number;
+    total: number;
+    skipped: number;
+    directoryName: string | null;
+  }>();
+
+  const [mapSearch, setMapSearch] =
+    useState("");
+
+  const [
+    sidebarCollapsed,
+    setSidebarCollapsed
+  ] = useState(false);
+
   const [mapLoadMode, setMapLoadMode] =
     useState<MapLoadMode>("full");
 
@@ -436,6 +464,11 @@ export function App() {
 
   const [editorTool, setEditorTool] =
     useState<EditorTool>("select");
+
+  const [
+    selectionMode,
+    setSelectionMode
+  ] = useState<SelectionMode>("all");
 
   const [showGrid, setShowGrid] =
     useState(true);
