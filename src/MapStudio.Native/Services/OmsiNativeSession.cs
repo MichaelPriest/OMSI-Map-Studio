@@ -65,7 +65,7 @@ public sealed class OmsiNativeSession
                 mapsDirectory))
         {
             throw new InvalidDataException(
-                "A pasta selecionada não contém OMSI 2\maps.");
+                @"A pasta selecionada não contém OMSI 2\maps.");
         }
 
         var maps =
@@ -123,7 +123,7 @@ public sealed class OmsiNativeSession
                     .OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
-                "O mapa precisa estar dentro de OMSI 2\maps.");
+                @"O mapa precisa estar dentro de OMSI 2\maps.");
         }
 
         var map =
