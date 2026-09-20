@@ -122,8 +122,10 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
             geometry.Vertices[0].TexCoord);
 
         Assert.InRange(
-            geometry.Vertices[^1]
-                .TexCoord.Y,
+            geometry.Vertices
+                .Max(
+                    vertex =>
+                        vertex.TexCoord.Y),
             2.399f,
             2.401f);
 
