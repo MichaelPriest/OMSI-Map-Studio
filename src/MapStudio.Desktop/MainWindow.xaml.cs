@@ -634,6 +634,113 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "loadGoogleElevationGrid":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "apiKey",
+                            out var gridApiKey) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "latitude",
+                            out var gridLatitude) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "longitude",
+                            out var gridLongitude) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "anchorTileX",
+                            out var gridAnchorTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "anchorTileY",
+                            out var gridAnchorTileY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "anchorX",
+                            out var gridAnchorX) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "anchorY",
+                            out var gridAnchorY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var gridTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var gridTileY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "sampleCount",
+                            out var gridSampleCount))
+                    {
+                        await LoadGoogleElevationGridAsync(
+                            gridApiKey,
+                            gridLatitude,
+                            gridLongitude,
+                            gridAnchorTileX,
+                            gridAnchorTileY,
+                            gridAnchorX,
+                            gridAnchorY,
+                            gridTileX,
+                            gridTileY,
+                            gridSampleCount);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "applyTerrainElevationGrid":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var elevationDirectoryName) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var elevationTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var elevationTileY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "rows",
+                            out var elevationRows) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "columns",
+                            out var elevationColumns) &&
+                        TryReadDoubleArray(
+                            message.RootElement,
+                            "elevations",
+                            out var elevations) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "verticalOffset",
+                            out var verticalOffset))
+                    {
+                        await ApplyTerrainElevationGridAsync(
+                            elevationDirectoryName,
+                            elevationTileX,
+                            elevationTileY,
+                            elevationRows,
+                            elevationColumns,
+                            elevations,
+                            verticalOffset);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "saveMapGeoreference":
                     if (
                         TryReadString(
