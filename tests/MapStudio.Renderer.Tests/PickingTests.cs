@@ -1,3 +1,4 @@
+using Xunit;
 using MapStudio.Renderer.Picking;
 
 namespace MapStudio.Renderer.Tests;
