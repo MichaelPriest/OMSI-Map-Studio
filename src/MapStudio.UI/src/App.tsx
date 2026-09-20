@@ -14,6 +14,7 @@ import {
   getSceneryTextureAssetKey,
   getSplineTextureAssetKey,
   insertObject,
+  insertObjectBatch,
   insertSpline,
   insertSplineFromLibrary,
   applyTerrainElevationGrid,
@@ -870,10 +871,351 @@ type PendingObjectPlacement = {
   bank: number;
 };
 
+type ObjectPlacementMode =
+  | "single"
+  | "repeat"
+  | "line"
+  | "area";
+
 type PlacementTransformDefaults = Pick<
   PendingObjectPlacement,
   "z" | "rotation" | "pitch" | "bank"
 >;
+
+const placementWorldPoint = (
+  placement: Pick<
+    PendingObjectPlacement,
+    "tileX" | "tileY" | "x" | "y"
+  >
+) => ({
+  x:
+    placement.tileX * 300 +
+    placement.x,
+  y:
+    placement.tileY * 300 +
+    placement.y
+});
+
+const placementFromWorldPoint = (
+  worldX: number,
+  worldY: number,
+  transform:
+    PlacementTransformDefaults
+): PendingObjectPlacement => {
+  const tileX =
+    Math.floor(worldX / 300);
+  const tileY =
+    Math.floor(worldY / 300);
+
+  return {
+    tileX,
+    tileY,
+    x: worldX - tileX * 300,
+    y: worldY - tileY * 300,
+    ...transform
+  };
+};
+
+const getSplineAxisEnd = (
+  spline: OmsiPlacedSpline
+) => {
+  const startX =
+    spline.tileX * 300 +
+    spline.x;
+  const startY =
+    spline.tileY * 300 +
+    spline.y;
+  const heading =
+    spline.rotation *
+    Math.PI /
+    180;
+
+  if (
+    Math.abs(spline.radius) <
+      0.001 ||
+    Math.abs(spline.length) <
+      0.001
+  ) {
+    return {
+      x:
+        startX +
+        Math.sin(heading) *
+          spline.length,
+      y:
+        startY +
+        Math.cos(heading) *
+          spline.length
+    };
+  }
+
+  const turn =
+    spline.length /
+    spline.radius;
+  const endHeading =
+    heading + turn;
+
+  return {
+    x:
+      startX +
+      spline.radius *
+        (
+          Math.cos(heading) -
+          Math.cos(endHeading)
+        ),
+    y:
+      startY +
+      spline.radius *
+        (
+          Math.sin(endHeading) -
+          Math.sin(heading)
+        )
+  };
+};
+
+const snapPlacementToNearestRoad = (
+  placement: PendingObjectPlacement,
+  splines: OmsiPlacedSpline[],
+  maximumDistance: number
+) => {
+  const point =
+    placementWorldPoint(placement);
+  let best:
+    | {
+        distance: number;
+        x: number;
+        y: number;
+        rotation: number;
+      }
+    | undefined;
+
+  for (const spline of splines) {
+    if (
+      spline.isHeightSpline ||
+      spline.length <= 0
+    ) {
+      continue;
+    }
+
+    const startX =
+      spline.tileX * 300 +
+      spline.x;
+    const startY =
+      spline.tileY * 300 +
+      spline.y;
+    const end =
+      getSplineAxisEnd(spline);
+    const dx = end.x - startX;
+    const dy = end.y - startY;
+    const lengthSquared =
+      dx * dx + dy * dy;
+
+    if (lengthSquared <= 0.001) {
+      continue;
+    }
+
+    const t =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            (
+              point.x - startX
+            ) *
+              dx +
+            (
+              point.y - startY
+            ) *
+              dy
+          ) /
+            lengthSquared
+        )
+      );
+    const x = startX + dx * t;
+    const y = startY + dy * t;
+    const distance =
+      Math.hypot(
+        point.x - x,
+        point.y - y
+      );
+
+    if (
+      distance >
+        maximumDistance ||
+      (
+        best &&
+        distance >= best.distance
+      )
+    ) {
+      continue;
+    }
+
+    const turn =
+      Math.abs(spline.radius) >
+        0.001
+        ? (
+            spline.length /
+            spline.radius
+          ) *
+          t
+        : 0;
+    best = {
+      distance,
+      x,
+      y,
+      rotation:
+        spline.rotation +
+        turn *
+          180 /
+          Math.PI
+    };
+  }
+
+  return best
+    ? placementFromWorldPoint(
+        best.x,
+        best.y,
+        {
+          z: placement.z,
+          rotation: best.rotation,
+          pitch: placement.pitch,
+          bank: placement.bank
+        }
+      )
+    : placement;
+};
+
+const buildLinePlacements = (
+  start: PendingObjectPlacement,
+  end: PendingObjectPlacement,
+  spacing: number,
+  randomRotation: boolean
+) => {
+  const from =
+    placementWorldPoint(start);
+  const to =
+    placementWorldPoint(end);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance =
+    Math.hypot(dx, dy);
+  const safeSpacing =
+    Math.max(0.5, spacing);
+  const segments =
+    Math.max(
+      1,
+      Math.ceil(
+        distance /
+        safeSpacing
+      )
+    );
+  const heading =
+    Math.atan2(dx, dy) *
+    180 /
+    Math.PI;
+
+  return Array.from(
+    {
+      length:
+        Math.min(
+          256,
+          segments + 1
+        )
+    },
+    (_, index) => {
+      const t =
+        segments <= 0
+          ? 0
+          : index / segments;
+      const rotation =
+        randomRotation
+          ? (
+              heading +
+              index * 137.507764
+            ) %
+            360
+          : heading;
+
+      return placementFromWorldPoint(
+        from.x + dx * t,
+        from.y + dy * t,
+        {
+          z: start.z,
+          rotation,
+          pitch: start.pitch,
+          bank: start.bank
+        }
+      );
+    }
+  );
+};
+
+const buildAreaPlacements = (
+  center: PendingObjectPlacement,
+  radius: number,
+  count: number,
+  randomRotation: boolean
+) => {
+  const origin =
+    placementWorldPoint(center);
+  const safeRadius =
+    Math.max(1, radius);
+  const safeCount =
+    Math.max(
+      1,
+      Math.min(
+        256,
+        Math.floor(count)
+      )
+    );
+
+  return Array.from(
+    { length: safeCount },
+    (_, index) => {
+      const progress =
+        (index + 0.5) /
+        safeCount;
+      const radial =
+        safeRadius *
+        Math.sqrt(progress);
+      const angle =
+        index *
+          2.399963229728653 +
+        (
+          (
+            origin.x +
+            origin.y
+          ) %
+          17
+        ) *
+          0.07;
+      const rotation =
+        randomRotation
+          ? (
+              angle *
+              180 /
+              Math.PI
+            ) %
+            360
+          : center.rotation;
+
+      return placementFromWorldPoint(
+        origin.x +
+          Math.cos(angle) *
+            radial,
+        origin.y +
+          Math.sin(angle) *
+            radial,
+        {
+          z: center.z,
+          rotation,
+          pitch: center.pitch,
+          bank: center.bank
+        }
+      );
+    }
+  );
+};
 
 const defaultPlacementTransform:
   PlacementTransformDefaults = {
@@ -2467,6 +2809,62 @@ export function App() {
   >();
 
   const [
+    pendingPlacementBatch,
+    setPendingPlacementBatch
+  ] = useState<
+    PendingObjectPlacement[]
+  >([]);
+
+  const [
+    placementMode,
+    setPlacementMode
+  ] = useState<ObjectPlacementMode>(
+    "single"
+  );
+
+  const [
+    placementLineStart,
+    setPlacementLineStart
+  ] = useState<
+    PendingObjectPlacement
+  >();
+
+  const [
+    placementSpacing,
+    setPlacementSpacing
+  ] = useState(12);
+
+  const [
+    placementBrushRadius,
+    setPlacementBrushRadius
+  ] = useState(20);
+
+  const [
+    placementBrushCount,
+    setPlacementBrushCount
+  ] = useState(18);
+
+  const [
+    placementRandomRotation,
+    setPlacementRandomRotation
+  ] = useState(false);
+
+  const [
+    placementAlignRoad,
+    setPlacementAlignRoad
+  ] = useState(false);
+
+  const [
+    placementRoadSnapDistance,
+    setPlacementRoadSnapDistance
+  ] = useState(8);
+
+  const batchKeepPlacementRef =
+    useRef(false);
+  const batchPlacementAssetRef =
+    useRef<SceneryLibraryEntry>();
+
+  const [
     placementTransformDefaults,
     setPlacementTransformDefaults
   ] = useState<
@@ -2566,6 +2964,15 @@ export function App() {
       assetThumbnailCache
     );
   }, [assetThumbnailCache]);
+
+  useEffect(() => {
+    setPendingPlacementBatch([]);
+    setPlacementLineStart(undefined);
+    batchKeepPlacementRef.current =
+      false;
+    batchPlacementAssetRef.current =
+      undefined;
+  }, [selectedMap?.directoryName]);
 
   const interactionLocked =
     selectingRoot ||
@@ -3341,6 +3748,46 @@ export function App() {
                 : current
           );
 
+          return;
+        }
+
+        if (
+          message.type ===
+          "objectBatchInserted"
+        ) {
+          setInsertingObject(false);
+          setPendingPlacementBatch([]);
+          setPlacementLineStart(undefined);
+          setEditorTool("select");
+
+          if (
+            batchKeepPlacementRef.current &&
+            batchPlacementAssetRef.current
+          ) {
+            setPlacementAsset(
+              batchPlacementAssetRef.current
+            );
+            setPendingPlacement(undefined);
+          } else {
+            setPlacementAsset(undefined);
+            setPendingPlacement(undefined);
+          }
+
+          setSaveNotice(
+            `${message.count} objeto(s) inserido(s) em lote. Backup: ${message.backupDirectory}`
+          );
+
+          batchKeepPlacementRef.current =
+            false;
+          batchPlacementAssetRef.current =
+            undefined;
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
           return;
         }
 
@@ -9175,6 +9622,8 @@ export function App() {
           entry
         );
         setPlacementAsset(entry);
+        setPendingPlacementBatch([]);
+        setPlacementLineStart(undefined);
         setPendingPlacement(
           activeTile
             ? {
@@ -9336,13 +9785,117 @@ export function App() {
         placement:
           PendingObjectPlacement
       ) => {
-        setPendingPlacement({
+        let next: PendingObjectPlacement = {
           ...placement,
           ...placementTransformDefaults
-        });
+        };
+
+        if (placementAlignRoad) {
+          next =
+            snapPlacementToNearestRoad(
+              next,
+              splines,
+              placementRoadSnapDistance
+            );
+        }
+
+        const validTiles =
+          new Set(
+            selectedMap?.tiles.map(
+              (tile) =>
+                `${tile.x}:${tile.y}`
+            ) ?? []
+          );
+        const keepOnMap = (
+          item: PendingObjectPlacement
+        ) =>
+          validTiles.size === 0 ||
+          validTiles.has(
+            `${item.tileX}:${item.tileY}`
+          );
+
+        if (placementMode === "single") {
+          setPlacementLineStart(
+            undefined
+          );
+          setPendingPlacementBatch([]);
+          setPendingPlacement(next);
+          return;
+        }
+
+        if (placementMode === "repeat") {
+          setPendingPlacement(next);
+          setPendingPlacementBatch(
+            (current) => [
+              ...current,
+              next
+            ].slice(-256)
+          );
+          return;
+        }
+
+        if (placementMode === "line") {
+          if (!placementLineStart) {
+            setPlacementLineStart(next);
+            setPendingPlacement(next);
+            setPendingPlacementBatch([
+              next
+            ]);
+            setSaveNotice(
+              "Linha: ponto inicial marcado. Clique no ponto final."
+            );
+            return;
+          }
+
+          const batch =
+            buildLinePlacements(
+              placementLineStart,
+              next,
+              placementSpacing,
+              placementRandomRotation
+            ).filter(keepOnMap);
+
+          setPendingPlacement(next);
+          setPendingPlacementBatch(
+            batch
+          );
+          setSaveNotice(
+            `Linha pronta: ${batch.length} objeto(s). Confirme para salvar em uma única transação.`
+          );
+          return;
+        }
+
+        const batch =
+          buildAreaPlacements(
+            next,
+            placementBrushRadius,
+            placementBrushCount,
+            placementRandomRotation
+          ).filter(keepOnMap);
+
+        setPlacementLineStart(
+          undefined
+        );
+        setPendingPlacement(next);
+        setPendingPlacementBatch(
+          batch
+        );
+        setSaveNotice(
+          `Pincel pronto: ${batch.length} objeto(s) em raio de ${formatNumber(placementBrushRadius)} m.`
+        );
       },
       [
-        placementTransformDefaults
+        placementAlignRoad,
+        placementBrushCount,
+        placementBrushRadius,
+        placementLineStart,
+        placementMode,
+        placementRandomRotation,
+        placementRoadSnapDistance,
+        placementSpacing,
+        placementTransformDefaults,
+        selectedMap,
+        splines
       ]
     );
 
@@ -9350,6 +9903,12 @@ export function App() {
     useCallback(() => {
       setPlacementAsset(undefined);
       setPendingPlacement(undefined);
+      setPendingPlacementBatch([]);
+      setPlacementLineStart(undefined);
+      batchKeepPlacementRef.current =
+        false;
+      batchPlacementAssetRef.current =
+        undefined;
       setPlacementTransformDefaults(
         defaultPlacementTransform
       );
@@ -9368,21 +9927,46 @@ export function App() {
         return;
       }
 
+      const placements =
+        placementMode === "single"
+          ? [pendingPlacement]
+          : pendingPlacementBatch
+              .length > 0
+            ? pendingPlacementBatch
+            : [pendingPlacement];
+
       setInsertingObject(true);
       setSaveNotice(undefined);
       setError(undefined);
+
+      if (placements.length > 1) {
+        batchKeepPlacementRef.current =
+          placementMode !== "single";
+        batchPlacementAssetRef.current =
+          placementAsset;
+
+        insertObjectBatch(
+          selectedMap.directoryName,
+          placementAsset
+            .sceneryObjectPath,
+          placements
+        );
+        return;
+      }
 
       insertObject(
         selectedMap.directoryName,
         placementAsset
           .sceneryObjectPath,
-        pendingPlacement
+        placements[0]
       );
     }, [
       insertingObject,
       pendingPlacement,
+      pendingPlacementBatch,
       placementAsset,
       placementCanPersist,
+      placementMode,
       selectedMap
     ]);
 
@@ -14518,6 +15102,9 @@ export function App() {
               pendingPlacement={
                 pendingPlacement
               }
+              pendingPlacementBatch={
+                pendingPlacementBatch
+              }
               onPlacementPoint={
                 handlePlacementPoint
               }
@@ -15314,6 +15901,248 @@ export function App() {
                   )}
                 </div>
 
+                <div className="placement-mode-panel">
+                  <div className="placement-mode-tabs">
+                    {([
+                      ["single", "Único"],
+                      ["repeat", "Repetir"],
+                      ["line", "Linha"],
+                      ["area", "Pincel"]
+                    ] as const).map(
+                      ([mode, label]) => (
+                        <button
+                          type="button"
+                          key={mode}
+                          className={
+                            placementMode ===
+                            mode
+                              ? "active"
+                              : ""
+                          }
+                          disabled={
+                            insertingObject
+                          }
+                          onClick={() => {
+                            setPlacementMode(
+                              mode
+                            );
+                            setPendingPlacementBatch(
+                              []
+                            );
+                            setPlacementLineStart(
+                              undefined
+                            );
+                          }}
+                        >
+                          {label}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  {(placementMode ===
+                      "line" ||
+                    placementMode ===
+                      "repeat") && (
+                    <label className="placement-field">
+                      <span>Espaço m</span>
+                      <input
+                        type="number"
+                        min="0.5"
+                        max="100"
+                        step="0.5"
+                        value={
+                          placementSpacing
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPlacementSpacing(
+                              Math.max(
+                                0.5,
+                                value
+                              )
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+
+                  {placementMode ===
+                    "area" && (
+                    <>
+                      <label className="placement-field">
+                        <span>Raio m</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="150"
+                          step="1"
+                          value={
+                            placementBrushRadius
+                          }
+                          onChange={(event) => {
+                            const value =
+                              event.currentTarget
+                                .valueAsNumber;
+                            if (
+                              Number.isFinite(
+                                value
+                              )
+                            ) {
+                              setPlacementBrushRadius(
+                                Math.max(
+                                  1,
+                                  value
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </label>
+                      <label className="placement-field">
+                        <span>Qtd.</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="256"
+                          step="1"
+                          value={
+                            placementBrushCount
+                          }
+                          onChange={(event) => {
+                            const value =
+                              event.currentTarget
+                                .valueAsNumber;
+                            if (
+                              Number.isFinite(
+                                value
+                              )
+                            ) {
+                              setPlacementBrushCount(
+                                Math.max(
+                                  1,
+                                  Math.min(
+                                    256,
+                                    Math.floor(
+                                      value
+                                    )
+                                  )
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  <label className="placement-toggle">
+                    <input
+                      type="checkbox"
+                      checked={
+                        placementRandomRotation
+                      }
+                      onChange={(event) =>
+                        setPlacementRandomRotation(
+                          event.currentTarget
+                            .checked
+                        )
+                      }
+                    />
+                    <span>
+                      Rotação variada
+                    </span>
+                  </label>
+
+                  <label className="placement-toggle">
+                    <input
+                      type="checkbox"
+                      checked={
+                        placementAlignRoad
+                      }
+                      onChange={(event) =>
+                        setPlacementAlignRoad(
+                          event.currentTarget
+                            .checked
+                        )
+                      }
+                    />
+                    <span>
+                      Encaixar/alinha à rua
+                    </span>
+                  </label>
+
+                  {placementAlignRoad && (
+                    <label className="placement-field">
+                      <span>Alcance m</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        step="1"
+                        value={
+                          placementRoadSnapDistance
+                        }
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPlacementRoadSnapDistance(
+                              Math.max(
+                                1,
+                                value
+                              )
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+
+                  {placementMode ===
+                    "line" &&
+                    placementLineStart && (
+                    <button
+                      type="button"
+                      className="secondary-action"
+                      onClick={() => {
+                        setPlacementLineStart(
+                          undefined
+                        );
+                        setPendingPlacementBatch(
+                          []
+                        );
+                        setSaveNotice(
+                          "Linha reiniciada. Clique no novo ponto inicial."
+                        );
+                      }}
+                    >
+                      Reiniciar linha
+                    </button>
+                  )}
+
+                  {pendingPlacementBatch.length >
+                    0 && (
+                    <span className="placement-batch-count">
+                      {pendingPlacementBatch.length}
+                      {" "}objeto(s) na operação
+                    </span>
+                  )}
+                </div>
+
                 {pendingPlacement && (
                   <>
                     <label className="placement-field">
@@ -15465,7 +16294,10 @@ export function App() {
                 >
                   {insertingObject
                     ? "Inserindo..."
-                    : "Confirmar e salvar"}
+                    : pendingPlacementBatch.length >
+                        1
+                      ? `Salvar lote (${pendingPlacementBatch.length})`
+                      : "Confirmar e salvar"}
                 </button>
 
                 <button

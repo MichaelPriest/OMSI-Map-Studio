@@ -653,3 +653,12 @@ Technical filters can highlight assets used by the map, actually detected `[tree
 Once a real 3D preview finishes rendering, the UI captures a lightweight JPEG thumbnail and keeps it in a local cache (up to 48 entries). The thumbnail replaces the generic card icon, producing a visual library without reloading and rendering every asset at once.
 
 `.sco` and `.sli` cards can be dragged directly into the viewport. Drop uses the editor's existing raycast to convert screen position into a real tile/map coordinate. Objects enter the normal placement flow; splines start as a normal 20 m segment. Saving still goes through the existing bridges and backup rules.
+
+
+### Batch, line, and brush placement
+
+`.sco` objects have four construction modes: **Single**, **Repeat**, **Line**, and **Brush**. Line distributes the asset between two points using the configured spacing; Brush distributes up to 256 items in a circular area; Repeat accumulates clicked points before saving. **Varied rotation** adds deterministic rotation variation to the batch.
+
+Operations with more than one item use the native `insertObjectBatch` command. The host validates the asset and target tiles, reserves globally unique IDs, groups writes per tile, and uses one `SafeFileTransaction` plus one backup directory for the complete operation.
+
+**Snap/align to road** finds the nearest normal spline within the configured distance, projects the placement onto the spline axis, and adopts the local road heading. The viewport displays up to 96 simultaneous ghosts to keep preview rendering light; saved batches remain capped at 256 items.

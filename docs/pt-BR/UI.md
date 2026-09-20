@@ -653,3 +653,12 @@ Filtros técnicos permitem destacar assets usados no mapa, árvores `[tree]` rea
 Quando uma prévia 3D real termina de renderizar, a interface captura uma miniatura JPEG leve e a mantém em cache local (até 48 entradas). A miniatura passa a substituir o ícone genérico no cartão, deixando a biblioteca visual sem reler ou renderizar todos os assets ao mesmo tempo.
 
 Cartões de `.sco` e `.sli` podem ser arrastados diretamente para o viewport. O drop usa o mesmo raycast do editor para converter a posição da tela em tile/coordenada real. Objetos entram no fluxo normal de colocação; splines entram como trecho normal inicial de 20 m. O salvamento continua passando pelos bridges existentes e suas regras de backup.
+
+
+### Colocação em lote, linha e pincel
+
+Objetos `.sco` possuem quatro modos de construção: **Único**, **Repetir**, **Linha** e **Pincel**. Linha distribui o asset entre dois pontos respeitando o espaçamento configurado; Pincel distribui até 256 itens em uma área circular; Repetir acumula pontos clicados antes de salvar. A opção **Rotação variada** cria variação determinística no lote.
+
+Operações com mais de um item usam o comando nativo `insertObjectBatch`. O host valida o asset e os tiles, reserva IDs globais únicos, agrupa gravações por tile e usa uma única `SafeFileTransaction` e um único diretório de backup para toda a operação.
+
+**Encaixar/alinha à rua** procura a spline normal mais próxima dentro do alcance configurado, projeta o ponto no eixo da spline e adota a direção local da rua. O viewport mostra até 96 ghosts simultâneos para manter a prévia leve; o lote salvo continua limitado a 256 itens.

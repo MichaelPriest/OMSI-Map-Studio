@@ -96,6 +96,16 @@ type ViewportProps = {
     pitch: number;
     bank: number;
   };
+  pendingPlacementBatch?: Array<{
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    z: number;
+    rotation: number;
+    pitch: number;
+    bank: number;
+  }>;
   onPlacementPoint?: (
     placement: {
       tileX: number;
@@ -3882,6 +3892,7 @@ export function Viewport({
   placementAssetPath,
   placementGeometry,
   pendingPlacement,
+  pendingPlacementBatch,
   onPlacementPoint,
   onLibraryAssetDrop,
   onThumbnailReady,
@@ -4740,6 +4751,93 @@ export function Viewport({
 
       placementMarker.isPickable =
         false;
+    }
+
+    if (
+      placementAssetPath &&
+      placementGeometry &&
+      pendingPlacementBatch &&
+      pendingPlacementBatch.length > 0 &&
+      !usesWorldCoordinates
+    ) {
+      for (
+        const [
+          batchIndex,
+          batchPlacement
+        ] of pendingPlacementBatch
+          .slice(0, 96)
+          .entries()
+      ) {
+        const previewObject:
+          OmsiPlacedObject = {
+            tileX:
+              batchPlacement.tileX,
+            tileY:
+              batchPlacement.tileY,
+            headerValue: "",
+            sceneryObjectPath:
+              placementAssetPath,
+            objectId:
+              -1000 - batchIndex,
+            sourceSectionOrdinal: -1,
+            x: batchPlacement.x,
+            y: batchPlacement.y,
+            z: batchPlacement.z,
+            rotation:
+              batchPlacement.rotation,
+            pitch:
+              batchPlacement.pitch,
+            bank:
+              batchPlacement.bank
+          };
+
+        if (
+          showObjects &&
+          hasRenderableGeometry(
+            placementGeometry
+          )
+        ) {
+          const batchRoot =
+            createSelectedGeometry(
+              scene,
+              previewObject,
+              placementGeometry,
+              textureAssetsByKey,
+              nightPreviewEnabled,
+              objectLodInstances,
+              tiles
+            );
+
+          for (const mesh of
+            batchRoot.getChildMeshes()) {
+            mesh.visibility = 0.38;
+            mesh.isPickable = false;
+          }
+        }
+
+        const batchMarker =
+          MeshBuilder.CreateLineSystem(
+            `omsi-batch-object-preview-${batchIndex}`,
+            {
+              lines:
+                createSelectedMarkerLines(
+                  previewObject,
+                  placementGeometry,
+                  tiles
+                )
+            },
+            scene
+          );
+
+        batchMarker.color =
+          new Color3(
+            0.2,
+            0.8,
+            0.45
+          );
+        batchMarker.isPickable =
+          false;
+      }
     }
 
     let splinePlacementPreview:
@@ -7284,6 +7382,7 @@ export function Viewport({
     placementAssetPath,
     placementGeometry,
     pendingPlacement,
+    pendingPlacementBatch,
     onPlacementPoint,
     onLibraryAssetDrop,
     captureThumbnail,

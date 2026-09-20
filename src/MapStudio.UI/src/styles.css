@@ -2771,3 +2771,55 @@ code {
 .library-entry-preview-button[draggable="true"]:active {
   cursor: grabbing;
 }
+
+
+.placement-mode-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.placement-mode-tabs {
+  display: flex;
+  gap: 3px;
+}
+
+.placement-mode-tabs button {
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid #214661;
+  border-radius: 4px;
+  background: #071824;
+  color: #8eacbf;
+  font-size: 7px;
+}
+
+.placement-mode-tabs button.active {
+  border-color: #2d8bcf;
+  background: #0e3049;
+  color: #e0f2ff;
+}
+
+.placement-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8aa8bb;
+  font-size: 7px;
+}
+
+.placement-toggle input {
+  width: 13px;
+  height: 13px;
+}
+
+.placement-batch-count {
+  padding: 3px 6px;
+  border: 1px solid #286745;
+  border-radius: 8px;
+  background: #0a2a1d;
+  color: #8ed5ad;
+  font-size: 7px;
+}
