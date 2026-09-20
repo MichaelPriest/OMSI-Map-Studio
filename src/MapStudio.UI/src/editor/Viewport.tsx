@@ -1511,6 +1511,23 @@ function getSplineAxisLine(
   return points;
 }
 
+function isSameObject(
+  left: OmsiPlacedObject | undefined,
+  right: OmsiPlacedObject | undefined
+) {
+  return Boolean(
+    left &&
+    right &&
+    left.tileX === right.tileX &&
+    left.tileY === right.tileY &&
+    left.objectId === right.objectId &&
+    left.sourceSectionOrdinal ===
+      right.sourceSectionOrdinal &&
+    left.sceneryObjectPath ===
+      right.sceneryObjectPath
+  );
+}
+
 function isSameSpline(
   left: OmsiPlacedSpline | undefined,
   right: OmsiPlacedSpline | undefined
@@ -3444,6 +3461,10 @@ function createSplineEditRoot(
         "spline"
       ) {
         mesh.isPickable = true;
+        mesh.renderOutline = true;
+        mesh.outlineColor =
+          new Color3(0.3, 0.82, 1);
+        mesh.outlineWidth = 0.035;
         mesh.metadata = {
           ...(mesh.metadata ?? {}),
           placedSpline
@@ -3575,6 +3596,10 @@ function createSelectedGeometry(
   if (tree) {
     tree.parent = root;
     tree.isPickable = true;
+    tree.renderOutline = true;
+    tree.outlineColor =
+      new Color3(0.3, 0.82, 1);
+    tree.outlineWidth = 0.035;
     tree.metadata = {
       ...(tree.metadata ?? {}),
       mapStudioKind: "object",
@@ -3585,6 +3610,10 @@ function createSelectedGeometry(
   for (const mesh of meshes) {
     mesh.parent = root;
     mesh.isPickable = true;
+    mesh.renderOutline = true;
+    mesh.outlineColor =
+      new Color3(0.3, 0.82, 1);
+    mesh.outlineWidth = 0.035;
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
       mapStudioKind: "object",
@@ -5787,6 +5816,41 @@ export function Viewport({
 
     let lastSelectionHoverAt = 0;
     let selectionHoverActive = false;
+    let hoveredSelectionMesh:
+      | Mesh
+      | undefined;
+
+    const clearSelectionHover = () => {
+      if (
+        hoveredSelectionMesh &&
+        !hoveredSelectionMesh.isDisposed()
+      ) {
+        hoveredSelectionMesh.renderOutline =
+          false;
+      }
+
+      hoveredSelectionMesh = undefined;
+    };
+
+    const setSelectionHoverMesh = (
+      mesh: Mesh | undefined
+    ) => {
+      if (hoveredSelectionMesh === mesh) {
+        return;
+      }
+
+      clearSelectionHover();
+
+      if (!mesh || mesh.isDisposed()) {
+        return;
+      }
+
+      hoveredSelectionMesh = mesh;
+      mesh.renderOutline = true;
+      mesh.outlineColor =
+        new Color3(0.2, 0.62, 1);
+      mesh.outlineWidth = 0.03;
+    };
 
     const clampCameraRadius = (
       nextRadius: number
@@ -6452,6 +6516,11 @@ export function Viewport({
             return {
               kind: "object" as const,
               item,
+              pickedMesh:
+                pick.pickedMesh instanceof
+                  Mesh
+                  ? pick.pickedMesh
+                  : undefined,
               diagnostic:
                 buildPickedDiagnostic(
                   pick.pickedMesh instanceof
@@ -6476,6 +6545,11 @@ export function Viewport({
             return {
               kind: "spline" as const,
               item,
+              pickedMesh:
+                pick.pickedMesh instanceof
+                  Mesh
+                  ? pick.pickedMesh
+                  : undefined,
               diagnostic:
                 buildPickedDiagnostic(
                   pick.pickedMesh instanceof
@@ -6666,6 +6740,7 @@ export function Viewport({
         return {
           kind: "object" as const,
           item: fallback.item,
+          pickedMesh: undefined,
           diagnostic:
             buildPickedDiagnostic(
               null,
@@ -6678,6 +6753,7 @@ export function Viewport({
       return {
         kind: "spline" as const,
         item: fallback.item,
+        pickedMesh: undefined,
         diagnostic:
           buildPickedDiagnostic(
             null,
@@ -6689,10 +6765,36 @@ export function Viewport({
 
     resolveSelectionHover = (
       event: PointerEvent
-    ) =>
-      Boolean(
-        getPickedMapItem(event)
-      );
+    ) => {
+      const picked =
+        getPickedMapItem(event);
+
+      if (!picked) {
+        clearSelectionHover();
+        return false;
+      }
+
+      const alreadySelected =
+        picked.kind === "object"
+          ? isSameObject(
+              picked.item,
+              selectedObject
+            )
+          : isSameSpline(
+              picked.item,
+              selectedSpline
+            );
+
+      if (alreadySelected) {
+        clearSelectionHover();
+      } else {
+        setSelectionHoverMesh(
+          picked.pickedMesh
+        );
+      }
+
+      return true;
+    };
 
     const selectPickedMapItem = (
       event: PointerEvent
@@ -7865,6 +7967,12 @@ export function Viewport({
       });
     };
 
+    const handlePointerLeave = () => {
+      clearSelectionHover();
+      selectionHoverActive = false;
+      canvas.style.cursor = "";
+    };
+
     const handlePointerCancel = (
       event: PointerEvent
     ) => {
@@ -7924,6 +8032,10 @@ export function Viewport({
     canvas.addEventListener(
       "pointercancel",
       handlePointerCancel
+    );
+    canvas.addEventListener(
+      "pointerleave",
+      handlePointerLeave
     );
     canvas.addEventListener(
       "wheel",
@@ -8086,6 +8198,11 @@ export function Viewport({
         "pointercancel",
         handlePointerCancel
       );
+      canvas.removeEventListener(
+        "pointerleave",
+        handlePointerLeave
+      );
+      clearSelectionHover();
       canvas.removeEventListener(
         "wheel",
         handleWheel
