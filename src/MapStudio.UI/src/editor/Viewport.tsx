@@ -2730,6 +2730,95 @@ function getGeometryRadius(
   );
 }
 
+function getObjectSelectionProxy(
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined
+) {
+  if (!geometry) {
+    return {
+      radius: 2.2,
+      centerYOffset: 1.2
+    };
+  }
+
+  let radius = 0.5;
+
+  for (const meshReference of
+    geometry.meshes) {
+    const localRadius =
+      getGeometryRadius({
+        ...geometry,
+        tree: null,
+        meshes: [meshReference]
+      });
+
+    const transform =
+      meshReference.transform;
+
+    const scale =
+      Math.max(
+        Math.abs(transform.scaleX),
+        Math.abs(transform.scaleY),
+        Math.abs(transform.scaleZ),
+        0.001
+      );
+
+    const offset =
+      Math.hypot(
+        transform.positionX,
+        transform.positionY,
+        transform.positionZ
+      );
+
+    radius =
+      Math.max(
+        radius,
+        localRadius * scale +
+          offset
+      );
+  }
+
+  const treeHeight =
+    geometry.tree?.maximumHeight ??
+    0;
+
+  const treeWidth =
+    treeHeight *
+    (
+      geometry.tree?.maximumAspect ??
+      1
+    );
+
+  radius =
+    Math.max(
+      radius,
+      treeHeight * 0.62,
+      treeWidth * 0.55
+    );
+
+  return {
+    radius:
+      Math.min(
+        80,
+        Math.max(
+          1.8,
+          radius
+        )
+      ),
+    centerYOffset:
+      treeHeight > 0
+        ? treeHeight * 0.5
+        : Math.min(
+            8,
+            Math.max(
+              0.9,
+              radius * 0.22
+            )
+          )
+  };
+}
+
 function getMeshLodThreshold(
   mesh: Mesh
 ) {
@@ -5277,6 +5366,10 @@ export function Viewport({
         }
       | undefined;
 
+    let fallbackHoverMarker:
+      | Mesh
+      | undefined;
+
     const clearSelectionHover = () => {
       if (
         hoveredSelectionMesh &&
@@ -5291,6 +5384,75 @@ export function Viewport({
       }
 
       hoveredSelectionMesh = undefined;
+
+      if (
+        fallbackHoverMarker &&
+        !fallbackHoverMarker.isDisposed()
+      ) {
+        fallbackHoverMarker.dispose();
+      }
+
+      fallbackHoverMarker =
+        undefined;
+    };
+
+    const setFallbackSelectionHover = (
+      picked:
+        | {
+            kind: "object";
+            item: OmsiPlacedObject;
+          }
+        | {
+            kind: "spline";
+            item: OmsiPlacedSpline;
+          }
+    ) => {
+      clearSelectionHover();
+
+      const lines =
+        picked.kind === "object"
+          ? createSelectedMarkerLines(
+              picked.item,
+              objectGeometryByPath[
+                picked.item
+                  .sceneryObjectPath
+              ],
+              tiles
+            )
+          : (() => {
+              const points =
+                getSplineAxisLine(
+                  picked.item
+                );
+
+              return points.length >= 2
+                ? [points]
+                : [];
+            })();
+
+      if (lines.length === 0) {
+        return;
+      }
+
+      fallbackHoverMarker =
+        MeshBuilder.CreateLineSystem(
+          "omsi-selection-hover-fallback",
+          { lines },
+          scene
+        );
+
+      fallbackHoverMarker.color =
+        new Color3(
+          0.12,
+          0.48,
+          1
+        );
+      fallbackHoverMarker.visibility =
+        0.98;
+      fallbackHoverMarker.isPickable =
+        false;
+      fallbackHoverMarker
+        .renderingGroupId = 3;
     };
 
     const setSelectionHoverMesh = (
@@ -5905,6 +6067,47 @@ export function Viewport({
         selectionMode === "spline"
       );
 
+    // Cache one editor-selection proxy per SCO path. The classic OMSI
+    // editor lets the user click the visual extent of an object rather
+    // than requiring a hit on its placement origin. Computing this once
+    // per scene keeps hover picking fast even on dense maps.
+    const objectSelectionProxyByPath =
+      new Map<
+        string,
+        {
+          radius: number;
+          centerYOffset: number;
+        }
+      >();
+
+    const getSelectionProxy = (
+      item: OmsiPlacedObject
+    ) => {
+      const path =
+        item.sceneryObjectPath;
+
+      const existing =
+        objectSelectionProxyByPath.get(
+          path
+        );
+
+      if (existing) {
+        return existing;
+      }
+
+      const proxy =
+        getObjectSelectionProxy(
+          objectGeometryByPath[path]
+        );
+
+      objectSelectionProxyByPath.set(
+        path,
+        proxy
+      );
+
+      return proxy;
+    };
+
     const getPickedMapItem = (
       event: PointerEvent
     ) => {
@@ -6098,12 +6301,14 @@ export function Viewport({
             item: OmsiPlacedObject;
             distance: number;
             depth: number;
+            score: number;
           }
         | {
             kind: "spline";
             item: OmsiPlacedSpline;
             distance: number;
             depth: number;
+            score: number;
           }
         | undefined;
 
@@ -6178,43 +6383,163 @@ export function Viewport({
           return;
         }
 
+        const score =
+          distance +
+          depth * 0.00001;
+
         if (
           !fallback ||
-          distance <
-            fallback.distance -
-              0.001 ||
-          (
-            Math.abs(
-              distance -
-                fallback.distance
-            ) <= 0.001 &&
-            depth <
-              fallback.depth
-          )
+          score <
+            fallback.score
         ) {
           fallback = {
             ...candidate,
             distance,
-            depth
+            depth,
+            score
           } as typeof fallback;
+        }
+      };
+
+      const considerObject = (
+        item: OmsiPlacedObject
+      ) => {
+        const proxy =
+          getSelectionProxy(item);
+
+        const base =
+          getObjectWorldPosition(
+            item,
+            objectGeometryByPath[
+              item.sceneryObjectPath
+            ],
+            tiles
+          );
+
+        const center =
+          base.add(
+            new Vector3(
+              0,
+              proxy.centerYOffset,
+              0
+            )
+          );
+
+        const offset =
+          center.subtract(
+            ray.origin
+          );
+
+        const depth =
+          Vector3.Dot(
+            offset,
+            direction
+          );
+
+        if (depth < 0) {
+          return;
+        }
+
+        const closest =
+          ray.origin.add(
+            direction.scale(
+              depth
+            )
+          );
+
+        const centerDistance =
+          Vector3.Distance(
+            center,
+            closest
+          );
+
+        const viewportHeight =
+          Math.max(
+            1,
+            rect.height
+          );
+
+        const pixelWorldRadius =
+          Math.max(
+            0.8,
+            2 *
+              depth *
+              Math.tan(
+                camera.fov / 2
+              ) *
+              (
+                selectionPixelRadius /
+                viewportHeight
+              )
+          );
+
+        const allowedRadius =
+          proxy.radius +
+          pixelWorldRadius;
+
+        if (
+          centerDistance >
+          allowedRadius
+        ) {
+          return;
+        }
+
+        // Prefer the first surface reached along the ray. This behaves
+        // like clicking an OMSI editor helper volume and prevents a huge
+        // distant object's center from winning over a nearby object.
+        const insideRadius =
+          Math.min(
+            proxy.radius,
+            centerDistance
+          );
+
+        const intersectionOffset =
+          Math.sqrt(
+            Math.max(
+              0,
+              proxy.radius *
+                proxy.radius -
+                insideRadius *
+                  insideRadius
+            )
+          );
+
+        const hitDepth =
+          Math.max(
+            0,
+            depth -
+              intersectionOffset
+          );
+
+        const miss =
+          Math.max(
+            0,
+            centerDistance -
+              proxy.radius
+          );
+
+        const score =
+          hitDepth +
+          miss * 4;
+
+        if (
+          !fallback ||
+          score <
+            fallback.score
+        ) {
+          fallback = {
+            kind: "object",
+            item,
+            distance: miss,
+            depth: hitDepth,
+            score
+          };
         }
       };
 
       if (objectSelectionEnabled) {
         for (const item of objects) {
-          considerPoint(
-            getObjectWorldPosition(
-              item,
-              objectGeometryByPath[
-                item.sceneryObjectPath
-              ],
-              tiles
-            ),
-            {
-              kind: "object",
-              item
-            }
-          );
+          considerObject(item);
         }
       }
 
@@ -6311,9 +6636,15 @@ export function Viewport({
 
       if (alreadySelected) {
         clearSelectionHover();
-      } else {
+      } else if (
+        picked.pickedMesh
+      ) {
         setSelectionHoverMesh(
           picked.pickedMesh
+        );
+      } else {
+        setFallbackSelectionHover(
+          picked
         );
       }
 

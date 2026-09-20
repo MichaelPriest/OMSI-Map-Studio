@@ -1045,3 +1045,10 @@ In addition to automatic sizing, Explorer/Library now has a lower-right resize h
 
 
 A **double-click on the resize handle** removes the saved manual size and immediately returns the drawer to automatic content/window sizing.
+
+
+### OMSI-style visual-volume selector
+
+Selection fallback no longer depends only on an object's placement origin. For each SCO path, the viewport computes and reuses an approximate selection volume from loaded geometry, mesh transforms and tree dimensions. Clicking a facade, roof or other visible part of a large object can therefore select the same item even when triangle raycasting does not return a usable mesh.
+
+Priority is based on the first approximate surface reached by the ray, reducing the chance that a large distant object steals the click from a nearer item. Protected or incomplete assets still use fallback selection and now also receive a blue hover guide when no renderable mesh is available for outlining.

@@ -1045,3 +1045,10 @@ Além do dimensionamento automático, o Explorer/Biblioteca possui uma alça no 
 
 
 Um **duplo clique na alça de redimensionamento** remove o tamanho manual salvo e devolve imediatamente o painel ao modo de dimensionamento automático por conteúdo e resolução.
+
+
+### Seletor OMSI por volume visual
+
+O fallback de seleção não depende mais apenas do ponto de origem do objeto. Para cada caminho SCO, o viewport calcula e reutiliza um volume de seleção aproximado a partir da geometria real carregada, transformações do mesh e dimensões de árvores. Assim, clicar na fachada, cobertura ou parte visível de um objeto grande pode selecionar o mesmo item mesmo quando o raycast de triângulos não retorna uma malha utilizável.
+
+A prioridade usa a primeira superfície aproximada atingida pelo raio, reduzindo a chance de um objeto grande e distante roubar o clique de um item mais próximo. Assets protegidos ou incompletos continuam usando fallback, e agora recebem também um guia azul de hover mesmo quando não existe uma malha renderizável para contornar.
