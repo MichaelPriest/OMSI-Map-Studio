@@ -3858,6 +3858,11 @@ export function Viewport({
       undefined
     );
 
+  const roadDragPointerRef =
+    useRef<number | undefined>(
+      undefined
+    );
+
   const lastMapItemClickRef =
     useRef<
       | {
@@ -4950,10 +4955,6 @@ export function Viewport({
     let pointerDownHandledSelection =
       false;
 
-    let splineRoadDragPointer:
-      | number
-      | undefined;
-
     const getMapItemClickKey = (
       kind: "object" | "spline",
       item:
@@ -5190,7 +5191,7 @@ export function Viewport({
       event: PointerEvent
     ) => {
       if (
-        splineRoadDragPointer ===
+        roadDragPointerRef.current ===
           event.pointerId
       ) {
         emitSplineRoadPoint(event);
@@ -5822,11 +5823,6 @@ export function Viewport({
         y
       });
 
-      onActiveTileChange?.({
-        x: tileX,
-        y: tileY
-      });
-
       return true;
     };
 
@@ -5852,7 +5848,7 @@ export function Viewport({
         onSplinePlacementPoint &&
         emitSplineRoadPoint(event)
       ) {
-        splineRoadDragPointer =
+        roadDragPointerRef.current =
           event.pointerId;
         pointerDownHandledSelection =
           false;
@@ -5871,7 +5867,7 @@ export function Viewport({
 
     const handlePointerUp = (event: PointerEvent) => {
       if (
-        splineRoadDragPointer ===
+        roadDragPointerRef.current ===
         event.pointerId
       ) {
         emitSplineRoadPoint(event);
@@ -5886,7 +5882,7 @@ export function Viewport({
           );
         }
 
-        splineRoadDragPointer =
+        roadDragPointerRef.current =
           undefined;
         pointerStart = undefined;
         pointerDownHandledSelection =
@@ -6351,10 +6347,10 @@ export function Viewport({
       event: PointerEvent
     ) => {
       if (
-        splineRoadDragPointer ===
+        roadDragPointerRef.current ===
         event.pointerId
       ) {
-        splineRoadDragPointer =
+        roadDragPointerRef.current =
           undefined;
       }
 
