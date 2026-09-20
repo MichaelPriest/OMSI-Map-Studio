@@ -323,3 +323,14 @@ The spline Inspector now also exposes **Previous ID** and **Next ID**. **Save li
 
 When a change touches splines in different tiles, every affected file participates in the same `SafeFileTransaction` and receives a backup. After writing, affected loaded tiles are read back and the edited spline is reselected in the viewport/Explorer with its new links.
 
+### Checkpoint N3.14 — terrain leveling in the native host
+
+The first real terrain editing tool from the React editor has been migrated into the WinUI Inspector.
+
+The **Terrain** section can activate **Pick point on map**. The next viewport click casts the Direct3D camera ray against the real terrain height and resolves the tile, local coordinates, and current elevation. The Inspector automatically initializes the target height with the sampled value.
+
+The user can then edit **target height**, **brush radius**, and **feather**. **Apply leveling** runs `OmsiTerrainLeveler.LevelCircularBrush` against the real `.terrain` file and writes the result through `SafeFileTransaction`, creating a backup before replacement.
+
+After writing, the tile is read back through `MapStudio.Core` and the viewport is rebuilt using the new topography. The operation is blocked while object/spline transforms are pending so two different edit transactions are not mixed.
+
+This checkpoint covers circular leveling. Raise/lower dragging, terrain texture painting, tile creation/removal, and DEM import are still pending.

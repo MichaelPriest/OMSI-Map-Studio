@@ -25,6 +25,9 @@ public sealed partial class MainWindow : Window
     private NativeSelectionInfo?
         _selectionInfo;
 
+    private NativeTerrainEditPoint?
+        _terrainEditPoint;
+
     private IReadOnlyList<
         NativeExplorerItem>
         _explorerItems =
@@ -119,6 +122,27 @@ public sealed partial class MainWindow : Window
             {
                 await HandleSplinePlacementAsync(
                     request);
+            };
+
+        Viewport.TerrainPointSelected +=
+            point =>
+            {
+                _terrainEditPoint =
+                    point;
+
+                TerrainTargetHeightBox.Value =
+                    point.Height;
+
+                TerrainPointText.Text =
+                    $"Tile {point.Tile.X},{point.Tile.Y} · " +
+                    $"X {point.LocalX:F2} · Y {point.LocalY:F2} · " +
+                    $"altura {point.Height:F2} m";
+
+                ApplyTerrainLevelButton.IsEnabled =
+                    true;
+
+                StatusText.Text =
+                    "Ponto de terreno selecionado. Ajuste altura, raio e feather.";
             };
 
         Viewport.SelectionChanged +=
@@ -618,6 +642,7 @@ public sealed partial class MainWindow : Window
                     snapshot,
                     _session.OmsiRootPath);
 
+            ClearInspectorSelectionState();
             RefreshExplorer();
 
             UndoButton.IsEnabled =
@@ -866,6 +891,78 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ClearInspectorSelectionState()
+    {
+        _selectionInfo =
+            null;
+
+        ApplyInspectorButton.IsEnabled =
+            false;
+
+        DeleteSelectionButton.IsEnabled =
+            false;
+
+        DuplicateSelectionButton.IsEnabled =
+            false;
+
+        SaveSplineLinksButton.IsEnabled =
+            false;
+
+        SelectionText.Text =
+            "Sem seleção";
+
+        InspectorTypeText.Text =
+            "Tipo: —";
+
+        InspectorAssetText.Text =
+            "Arquivo: —";
+
+        InspectorTileText.Text =
+            "Tile: —";
+
+        InspectorXBox.Value =
+            double.NaN;
+
+        InspectorYBox.Value =
+            double.NaN;
+
+        InspectorZBox.Value =
+            double.NaN;
+
+        InspectorRotationBox.Value =
+            double.NaN;
+
+        InspectorPitchBox.Value =
+            double.NaN;
+
+        InspectorBankBox.Value =
+            double.NaN;
+
+        InspectorLengthBox.Value =
+            double.NaN;
+
+        InspectorRadiusBox.Value =
+            double.NaN;
+
+        InspectorGradientStartBox.Value =
+            double.NaN;
+
+        InspectorGradientEndBox.Value =
+            double.NaN;
+
+        InspectorPreviousSplineIdBox.Value =
+            double.NaN;
+
+        InspectorNextSplineIdBox.Value =
+            double.NaN;
+
+        InspectorObjectFields.Visibility =
+            Visibility.Collapsed;
+
+        InspectorSplineFields.Visibility =
+            Visibility.Collapsed;
+    }
+
     private void RefreshExplorer()
     {
         _explorerItems =
@@ -1048,6 +1145,127 @@ public sealed partial class MainWindow : Window
         {
             _synchronizingExplorer =
                 false;
+        }
+    }
+
+    private void OnPickTerrainPointClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Abra um mapa OMSI antes de editar o terreno.";
+
+            return;
+        }
+
+        _terrainEditPoint =
+            null;
+
+        ApplyTerrainLevelButton.IsEnabled =
+            false;
+
+        TerrainPointText.Text =
+            "Clique no terreno no viewport...";
+
+        Viewport.BeginTerrainPointPick();
+
+        StatusText.Text =
+            "Ferramenta de terreno ativa: clique no ponto que deseja nivelar.";
+    }
+
+    private async void OnApplyTerrainLevelClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var point =
+            _terrainEditPoint;
+
+        if (point is null)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de editar o terreno.";
+
+            return;
+        }
+
+        var targetHeight =
+            TerrainTargetHeightBox.Value;
+
+        var radius =
+            TerrainBrushRadiusBox.Value;
+
+        var feather =
+            TerrainBrushFeatherBox.Value;
+
+        if (
+            !double.IsFinite(targetHeight) ||
+            !double.IsFinite(radius) ||
+            !double.IsFinite(feather) ||
+            radius <= 0 ||
+            feather < 0 ||
+            feather > 1)
+        {
+            StatusText.Text =
+                "Valores de nivelamento do terreno são inválidos.";
+
+            return;
+        }
+
+        try
+        {
+            ApplyTerrainLevelButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Nivelando terreno do tile {point.Tile.X},{point.Tile.Y} com backup...";
+
+            var snapshot =
+                await _session
+                    .LevelTerrainAsync(
+                        point,
+                        targetHeight,
+                        radius,
+                        feather);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            _terrainEditPoint =
+                null;
+
+            TerrainPointText.Text =
+                "Nivelamento aplicado. Escolha outro ponto para continuar.";
+
+            StatusText.Text =
+                $"Terreno nivelado para {targetHeight:F2} m · raio {radius:F1} m · feather {feather:F2}.";
+        }
+        catch (Exception exception)
+        {
+            ApplyTerrainLevelButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            StatusText.Text =
+                $"Falha ao nivelar terreno: {exception.Message}";
         }
     }
 
@@ -1475,27 +1693,7 @@ public sealed partial class MainWindow : Window
                     snapshot,
                     _session.OmsiRootPath);
 
-            _selectionInfo =
-                null;
-
-            SelectionText.Text =
-                "Sem seleção";
-
-            InspectorTypeText.Text =
-                "Tipo: —";
-
-            InspectorAssetText.Text =
-                "Arquivo: —";
-
-            InspectorTileText.Text =
-                "Tile: —";
-
-            InspectorObjectFields.Visibility =
-                Visibility.Collapsed;
-
-            InspectorSplineFields.Visibility =
-                Visibility.Collapsed;
-
+            ClearInspectorSelectionState();
             RefreshExplorer();
 
             UndoButton.IsEnabled =

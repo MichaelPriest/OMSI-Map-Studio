@@ -404,6 +404,51 @@
                                 IsEnabled="False"
                                 Click="OnDeleteSelectionClick" />
 
+                        <Border Height="1"
+                                Margin="0,8,0,4"
+                                Background="#173347" />
+
+                        <TextBlock Text="Terreno"
+                                   FontSize="16"
+                                   FontWeight="SemiBold" />
+
+                        <Button x:Name="PickTerrainPointButton"
+                                Content="Escolher ponto no mapa"
+                                HorizontalAlignment="Stretch"
+                                Click="OnPickTerrainPointClick" />
+
+                        <TextBlock x:Name="TerrainPointText"
+                                   Text="Nenhum ponto selecionado."
+                                   TextWrapping="Wrap"
+                                   FontSize="12"
+                                   Foreground="#9FB5C5" />
+
+                        <NumberBox x:Name="TerrainTargetHeightBox"
+                                   Header="Altura alvo (m)"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="0.25" />
+
+                        <NumberBox x:Name="TerrainBrushRadiusBox"
+                                   Header="Raio do pincel (m)"
+                                   Value="20"
+                                   Minimum="0.25"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="1" />
+
+                        <NumberBox x:Name="TerrainBrushFeatherBox"
+                                   Header="Feather (0–1)"
+                                   Value="0.25"
+                                   Minimum="0"
+                                   Maximum="1"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="0.05" />
+
+                        <Button x:Name="ApplyTerrainLevelButton"
+                                Content="Aplicar nivelamento"
+                                HorizontalAlignment="Stretch"
+                                IsEnabled="False"
+                                Click="OnApplyTerrainLevelClick" />
+
                         <TextBlock Text="Seleção e edição usam o mesmo estado nativo do viewport e do ID Buffer."
                                    TextWrapping="Wrap"
                                    Foreground="#7FA6BF" />

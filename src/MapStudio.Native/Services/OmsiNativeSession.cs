@@ -735,6 +735,132 @@ public sealed class OmsiNativeSession
     }
 
     public async Task<NativeMapSnapshot>
+        LevelTerrainAsync(
+            NativeTerrainEditPoint point,
+            double targetHeight,
+            double radius,
+            double feather,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            point);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainEdit");
+        }
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            point.Tile.X &&
+                        item.Reference.Y ==
+                            point.Tile.Y &&
+                        string.Equals(
+                            item.Reference.RelativeMapPath,
+                            point.Tile.RelativeMapPath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                "terrainTileNotLoaded");
+
+        if (
+            !OmsiMapPathResolver.TryResolveTilePath(
+                snapshot.Map.DirectoryPath,
+                loaded.Reference.RelativeMapPath,
+                out var tilePath))
+        {
+            throw new InvalidDataException(
+                "terrainTilePathInvalid");
+        }
+
+        var terrainPath =
+            tilePath +
+            ".terrain";
+
+        if (!File.Exists(terrainPath))
+        {
+            throw new InvalidDataException(
+                "terrainFileMissing");
+        }
+
+        var terrain =
+            await new OmsiTerrainReader()
+                .ReadAsync(
+                    terrainPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var result =
+            OmsiTerrainLeveler
+                .LevelCircularBrush(
+                    terrain,
+                    point.LocalX,
+                    point.LocalY,
+                    targetHeight,
+                    radius,
+                    feather);
+
+        if (result.ChangedSamples == 0)
+        {
+            return snapshot;
+        }
+
+        var bytes =
+            OmsiTerrainWriter
+                .Write(
+                    result.Terrain);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        terrainPath,
+                        CreateNativeBackupPath(
+                            snapshot.Map.DirectoryPath,
+                            terrainPath),
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshedContent =
+            await _tileReader
+                .ReadContentAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            item =>
+                                string.Equals(
+                                    item.Reference.RelativeMapPath,
+                                    loaded.Reference.RelativeMapPath,
+                                    StringComparison.OrdinalIgnoreCase)
+                                    ? new NativeLoadedTile(
+                                        item.Reference,
+                                        refreshedContent)
+                                    : item)
+                        .ToArray()
+            };
+
+        return CurrentMap;
+    }
+
+    public async Task<NativeMapSnapshot>
         UpdateSplineLinksAsync(
             NativeSelectionInfo selection,
             int desiredPreviousSplineId,

@@ -3005,6 +3005,66 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool TryGetTerrainEditPoint(
+        uint pixelX,
+        uint pixelY,
+        out NativeTerrainEditPoint?
+            editPoint)
+    {
+        ThrowIfDisposed();
+
+        editPoint =
+            null;
+
+        if (
+            Scene is null ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var point))
+        {
+            return false;
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                point.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                point.Z /
+                300.0f);
+
+        var tile =
+            Scene.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            tileX &&
+                        item.Reference.Y ==
+                            tileY);
+
+        if (tile is null)
+        {
+            return false;
+        }
+
+        editPoint =
+            new NativeTerrainEditPoint(
+                tile.Reference,
+                point.X -
+                    tileX *
+                    300.0,
+                point.Z -
+                    tileY *
+                    300.0,
+                point.Y,
+                point);
+
+        return true;
+    }
+
     private NativeSplinePlacementRequest?
         CreateSplinePlacementRequest(
             NativeSplinePlacementShape shape)

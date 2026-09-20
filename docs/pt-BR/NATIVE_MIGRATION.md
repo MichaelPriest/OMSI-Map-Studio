@@ -323,3 +323,14 @@ O Inspector de spline também exibe **Anterior ID** e **Próxima ID**. **Salvar 
 
 Quando a mudança afeta splines em tiles diferentes, todos os arquivos entram na mesma `SafeFileTransaction` e recebem backup. Depois da gravação, os tiles carregados afetados são relidos e a spline editada volta a ser selecionada no viewport/Explorer com os novos vínculos.
 
+### Checkpoint N3.14 — nivelamento de terreno no host nativo
+
+A primeira ferramenta real de edição de terreno da versão React foi migrada para o Inspector WinUI.
+
+O painel **Terreno** permite ativar **Escolher ponto no mapa**. O próximo clique no viewport usa o raio da câmera Direct3D contra a altura real do terreno e identifica tile, coordenadas locais e altura atual. O Inspector preenche automaticamente a altura alvo com o valor encontrado.
+
+O usuário pode então ajustar **altura alvo**, **raio do pincel** e **feather**. **Aplicar nivelamento** usa `OmsiTerrainLeveler.LevelCircularBrush` sobre o arquivo `.terrain` real e grava o resultado por `SafeFileTransaction`, com backup automático antes da substituição.
+
+Depois da gravação, o tile é relido pelo `MapStudio.Core` e o viewport é reconstruído com a nova topografia. A operação é bloqueada enquanto existem transformações de objeto/spline pendentes, evitando misturar duas transações de edição diferentes.
+
+Este checkpoint cobre nivelamento circular. Ele ainda não inclui elevar/abaixar por arraste, pintura de textura do terreno, criação/remoção de tile ou importação DEM.

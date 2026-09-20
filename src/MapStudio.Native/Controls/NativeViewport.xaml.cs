@@ -26,6 +26,7 @@ public sealed partial class NativeViewport : UserControl
     private uint _lastHoverPixelY =
         uint.MaxValue;
     private bool _swapChainBound;
+    private bool _terrainPointPickActive;
 
     public NativeViewport()
     {
@@ -59,6 +60,10 @@ public sealed partial class NativeViewport : UserControl
     public event Action<
         NativeSplinePlacementRequest>?
         SplinePlacementRequested;
+
+    public event Action<
+        NativeTerrainEditPoint>?
+        TerrainPointSelected;
 
     public IReadOnlyList<
         NativeExplorerItem>
@@ -372,6 +377,25 @@ public sealed partial class NativeViewport : UserControl
         }
 
         return started;
+    }
+
+    public void BeginTerrainPointPick()
+    {
+        _runtime?.CancelSceneryPlacement();
+        _runtime?.CancelSplinePlacement();
+
+        _terrainPointPickActive =
+            true;
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Terreno: clique no ponto que deseja nivelar.");
+    }
+
+    public void CancelTerrainPointPick()
+    {
+        _terrainPointPickActive =
+            false;
     }
 
     public void CancelSceneryPlacement()
@@ -741,6 +765,40 @@ public sealed partial class NativeViewport : UserControl
                 Math.Round(
                     point.Position.Y *
                     scaleY));
+
+        if (
+            _terrainPointPickActive &&
+            _runtime is not null)
+        {
+            _terrainPointPickActive =
+                false;
+
+            if (
+                _runtime.TryGetTerrainEditPoint(
+                    pixelX,
+                    pixelY,
+                    out var terrainPoint) &&
+                terrainPoint is not null)
+            {
+                TerrainPointSelected
+                    ?.Invoke(
+                        terrainPoint);
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    $"Terreno selecionado em tile {terrainPoint.Tile.X},{terrainPoint.Tile.Y} · " +
+                    $"altura {terrainPoint.Height:F2} m.");
+            }
+            else
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Não foi possível selecionar terreno neste ponto.");
+            }
+
+            e.Handled = true;
+            return;
+        }
 
         if (
             _runtime is not null &&
