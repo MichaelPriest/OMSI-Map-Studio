@@ -178,6 +178,8 @@ public partial class MainWindow : Window
 
     private string? _omsiRootPath;
 
+    private long _mapRegionLoadGeneration;
+
     private bool _isFullScreen;
     private WindowStyle _windowStyleBeforeFullScreen =
         WindowStyle.SingleBorderWindow;
@@ -1986,6 +1988,9 @@ public partial class MainWindow : Window
     private void OpenKnownMap(
         OmsiMapDescriptor map)
     {
+        Interlocked.Increment(
+            ref _mapRegionLoadGeneration);
+
         _knownSceneryObjectPaths.Clear();
         _knownSplinePaths.Clear();
         _tileContentCache.Clear();
@@ -5891,6 +5896,9 @@ public partial class MainWindow : Window
     private async Task LoadMapFullAsync(
         string? directoryName)
     {
+        Interlocked.Increment(
+            ref _mapRegionLoadGeneration);
+
         if (string.IsNullOrWhiteSpace(directoryName) ||
             !_knownMaps.TryGetValue(
                 directoryName,
@@ -6118,6 +6126,10 @@ public partial class MainWindow : Window
         int centerY,
         int radius)
     {
+        var requestGeneration =
+            Interlocked.Increment(
+                ref _mapRegionLoadGeneration);
+
         if (string.IsNullOrWhiteSpace(directoryName) ||
             !_knownMaps.TryGetValue(
                 directoryName,
@@ -6290,6 +6302,14 @@ public partial class MainWindow : Window
                         placedSpline.IsHeightSpline
                     });
                 }
+            }
+
+            if (
+                requestGeneration !=
+                Volatile.Read(
+                    ref _mapRegionLoadGeneration))
+            {
+                return;
             }
 
             PostMessage(new
