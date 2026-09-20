@@ -802,6 +802,135 @@ function createTileOutline(
   ];
 }
 
+function getTerrainHeightAtLocalPoint(
+  tile: OmsiTile,
+  localX: number,
+  localY: number
+) {
+  if (
+    !hasRenderableTerrain(
+      tile,
+      300
+    )
+  ) {
+    return 0;
+  }
+
+  const terrain = tile.terrain!;
+  const cellCount = terrain.cellCount;
+  const sampleCount =
+    cellCount + 1;
+
+  const gridX =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (localX / 300) *
+          cellCount
+      )
+    );
+
+  const gridY =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (localY / 300) *
+          cellCount
+      )
+    );
+
+  const column0 =
+    Math.floor(gridX);
+  const row0 =
+    Math.floor(gridY);
+  const column1 =
+    Math.min(
+      cellCount,
+      column0 + 1
+    );
+  const row1 =
+    Math.min(
+      cellCount,
+      row0 + 1
+    );
+
+  const fractionX =
+    gridX - column0;
+  const fractionY =
+    gridY - row0;
+
+  const height00 =
+    terrain.heights[
+      row0 * sampleCount +
+        column0
+    ];
+  const height10 =
+    terrain.heights[
+      row0 * sampleCount +
+        column1
+    ];
+  const height01 =
+    terrain.heights[
+      row1 * sampleCount +
+        column0
+    ];
+  const height11 =
+    terrain.heights[
+      row1 * sampleCount +
+        column1
+    ];
+
+  const top =
+    height00 +
+    (height10 - height00) *
+      fractionX;
+
+  const bottom =
+    height01 +
+    (height11 - height01) *
+      fractionX;
+
+  return (
+    top +
+    (bottom - top) *
+      fractionY
+  );
+}
+
+function getTerrainHeightAtWorldPoint(
+  tiles: OmsiTile[],
+  worldX: number,
+  worldZ: number
+) {
+  const tileX =
+    Math.floor(
+      worldX / 300
+    );
+  const tileY =
+    Math.floor(
+      worldZ / 300
+    );
+
+  const tile =
+    tiles.find(
+      (candidate) =>
+        candidate.x === tileX &&
+        candidate.y === tileY
+    );
+
+  if (!tile) {
+    return 0;
+  }
+
+  return getTerrainHeightAtLocalPoint(
+    tile,
+    worldX - tileX * 300,
+    worldZ - tileY * 300
+  );
+}
+
 function getTerrainHeightAtObject(
   placedObject: OmsiPlacedObject,
   tiles: OmsiTile[]
