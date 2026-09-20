@@ -630,3 +630,10 @@ When implementing a feature family described here:
 - when an architectural decision changes, record the new decision and why.
 
 New ideas that matter for replacing the original editor or extending the modern editor must be added to this roadmap before they can be considered “remembered by the project”.
+
+
+### Visual identity and icon pack
+
+Map Studio will use its own SVG icon pack, inspired by OMSI's technical atmosphere without copying proprietary assets. The full specification is in [ICON_SYSTEM.md](ICON_SYSTEM.md).
+
+Migration will happen by groups: quick toolbar, construction HUD, Explorer/Inspector, menus, library, diagnostics, and future OMSI tools.
