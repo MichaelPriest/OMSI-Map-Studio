@@ -4977,7 +4977,9 @@ public partial class MainWindow : Window
                     metadata.Groups,
                     meshes,
                     collisionMeshes,
-                    tree = metadata.Tree
+                    metadata.UsesAbsoluteHeight,
+                    tree = metadata.Tree,
+                    metadata.RenderType
                 }
             });
         }
@@ -5213,7 +5215,8 @@ public partial class MainWindow : Window
         return new SceneryGeometryPayload(
             meshes,
             metadata.Tree,
-            metadata.UsesAbsoluteHeight);
+            metadata.UsesAbsoluteHeight,
+            metadata.RenderType);
     }
 
     private OmsiO3dGeometry
@@ -5899,7 +5902,8 @@ public partial class MainWindow : Window
     private sealed record SceneryGeometryPayload(
         IReadOnlyList<SceneryMeshGeometryPayload> Meshes,
         OmsiSceneryTreeDefinition? Tree,
-        bool UsesAbsoluteHeight);
+        bool UsesAbsoluteHeight,
+        string? RenderType);
 
     private sealed record SceneryMeshGeometryPayload(
         string DeclaredPath,
