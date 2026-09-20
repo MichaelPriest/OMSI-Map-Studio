@@ -5556,3 +5556,94 @@ span.active {
     height: 72px;
   }
 }
+
+
+/* Semantic navigation tabs inside object/spline libraries. */
+.library-view-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.library-view-tabs button > .mapstudio-icon {
+  color: #76a8c9;
+}
+
+.library-view-tabs button > span {
+  white-space: nowrap;
+}
+
+.library-view-tabs button.active > .mapstudio-icon {
+  color: #8ed1fb;
+}
+
+/* Featured real-3D preview styling. */
+.asset-preview-card {
+  margin: 8px;
+  padding: 8px;
+  border-color: #315d79;
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      #0b2334,
+      #06151f
+    );
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 24%);
+}
+
+.asset-preview-heading {
+  min-height: 30px;
+}
+
+.asset-preview-heading > div::before {
+  content: "PREVIEW REAL";
+  color: #56aee5;
+  font-size: 5.8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.asset-preview-heading strong {
+  font-size: 9.5px;
+}
+
+.asset-preview-3d {
+  height: 190px;
+  border-color: #315d78;
+  border-radius: 8px;
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      #0e2b3f,
+      #02080d 70%
+    );
+}
+
+.asset-preview-details {
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(120px, 1fr)
+    );
+  gap: 4px;
+}
+
+.asset-preview-details > span {
+  padding: 4px 6px;
+  border: 1px solid #17394f;
+  border-radius: 5px;
+  background: #06141e;
+}
+
+@media (max-width: 780px) {
+  .asset-preview-3d {
+    height: 150px;
+  }
+
+  .library-view-tabs button {
+    min-width: 30px;
+  }
+}

@@ -43,4 +43,6 @@ export type MapStudioIconName =
   | "drag"
   | "favorite"
   | "collection"
-  | "preview";
+  | "preview"
+  | "recent"
+  | "usage";

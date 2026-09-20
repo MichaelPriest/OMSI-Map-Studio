@@ -18858,13 +18858,13 @@ export function App() {
                 <div className="library-smart-toolbar">
                   <div className="library-view-tabs">
                     {([
-                      ["groups", "Grupos"],
-                      ["favorites", "★ Favoritos"],
-                      ["recent", "Recentes"],
-                      ["frequent", "Mais usados"],
-                      ["collection", "Coleção"]
+                      ["groups", "Grupos", "construction-set"],
+                      ["favorites", "Favoritos", "favorite"],
+                      ["recent", "Recentes", "recent"],
+                      ["frequent", "Mais usados", "usage"],
+                      ["collection", "Coleção", "collection"]
                     ] as const).map(
-                      ([value, label]) => (
+                      ([value, label, iconName]) => (
                         <button
                           type="button"
                           key={value}
@@ -18880,7 +18880,11 @@ export function App() {
                             )
                           }
                         >
-                          {label}
+                          <MapStudioIcon
+                            name={iconName}
+                            size={13}
+                          />
+                          <span>{label}</span>
                         </button>
                       )
                     )}
@@ -19580,13 +19584,13 @@ export function App() {
                 <div className="library-smart-toolbar">
                   <div className="library-view-tabs">
                     {([
-                      ["groups", "Grupos"],
-                      ["favorites", "★ Favoritos"],
-                      ["recent", "Recentes"],
-                      ["frequent", "Mais usados"],
-                      ["collection", "Coleção"]
+                      ["groups", "Grupos", "construction-set"],
+                      ["favorites", "Favoritos", "favorite"],
+                      ["recent", "Recentes", "recent"],
+                      ["frequent", "Mais usados", "usage"],
+                      ["collection", "Coleção", "collection"]
                     ] as const).map(
-                      ([value, label]) => (
+                      ([value, label, iconName]) => (
                         <button
                           type="button"
                           key={value}
@@ -19602,7 +19606,11 @@ export function App() {
                             )
                           }
                         >
-                          {label}
+                          <MapStudioIcon
+                            name={iconName}
+                            size={13}
+                          />
+                          <span>{label}</span>
                         </button>
                       )
                     )}
