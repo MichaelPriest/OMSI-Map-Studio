@@ -845,3 +845,17 @@ Os antigos placeholders desabilitados foram removidos da superfície ativa. O to
 ### Painéis móveis
 
 Explorador e Inspetor agora usam o mesmo sistema persistente das ferramentas flutuantes. Cada drawer possui uma alça própria para arrastar; a posição é limitada à área útil do editor e reaproveitada na sessão seguinte pelo armazenamento local da interface. O tamanho do painel permanece estável durante o arraste tanto no desktop quanto na tela cheia.
+
+## Prateleira contextual de construção
+
+As categorias principais da barra inferior agora exibem uma prateleira horizontal de assets reais diretamente sobre o viewport:
+
+- **Ruas/Pontes** usam entradas `.sli` reais da categoria ativa;
+- **Cruzamentos, prédios, vegetação, transporte, mobiliário, infraestrutura e objetos** usam `.sco` reais;
+- a lista prioriza favoritos, itens recentes e assets mais usados;
+- thumbnails gerados pela prévia 3D real são reutilizados quando já existem; caso contrário, o grupo mostra um ícone sem criar imagem falsa;
+- um clique seleciona o asset para colocação/construção;
+- duplo clique abre a biblioteca completa e a prévia 3D;
+- o botão **Biblioteca** continua disponível para busca, filtros, coleções, favoritos e diagnóstico técnico.
+
+Ao selecionar um item pela prateleira, a interface troca para o **Inspetor contextual**. Durante a colocação de `.sco`, ele mostra caminho, grupo/subcategoria, disponibilidade da geometria 3D, template seguro, tile/posição e rotação. Durante a criação de `.sli`, mostra perfil real, tipo `[spline]`/`[spline_h]`, comprimento/raio/rotação e estado de snap/`previous`/`next`. Esse estado não simula dados: ele acompanha somente informações reais já carregadas ou parâmetros da construção ativa.
