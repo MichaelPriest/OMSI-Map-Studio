@@ -280,3 +280,16 @@ First UI batch implemented:
 The package also includes `map-health`, `asset-index`, and `streaming` diagnostic icons, ready for the next visual migration.
 
 All SVG drawings are original Map Studio assets and do not reuse OMSI 2 graphical files.
+
+
+### Second migrated batch
+
+- technical select/move/rotate/reserved-scale toolbar;
+- fit, focus, fullscreen, undo/redo, and discard;
+- construction history;
+- construction-set button;
+- dependency audit;
+- map health in the toolbar and city-builder HUD;
+- active construction-category icon in the asset shelf.
+
+New SVGs in this batch: `scale`, `construction-set`, `dependency`, `discard`, `warning`, and `success`.

@@ -17763,7 +17763,7 @@ export function App() {
               setEditorTool("select")
             }
           >
-            ↖
+            <MapStudioIcon name="select" size={20} />
           </button>
           <button
             type="button"
@@ -17781,7 +17781,7 @@ export function App() {
               setEditorTool("move")
             }
           >
-            ✥
+            <MapStudioIcon name="move" size={20} />
           </button>
           <button
             type="button"
@@ -17799,7 +17799,7 @@ export function App() {
               setEditorTool("rotate")
             }
           >
-            ⟳
+            <MapStudioIcon name="rotate" size={20} />
           </button>
           <button
             type="button"
@@ -17807,7 +17807,7 @@ export function App() {
             disabled
             title="Escala — ainda não suportada pelo formato de objeto OMSI nesta etapa"
           >
-            ◫
+            <MapStudioIcon name="scale" size={20} />
           </button>
 
           <span className="toolbar-separator" />
@@ -17910,7 +17910,8 @@ export function App() {
             }
             title="Criar e aplicar conjuntos de construção"
           >
-            ▦ Conjuntos
+            <MapStudioIcon name="construction-set" size={18} />
+            <span>Conjuntos</span>
             {constructionSets.length >
               0 && (
               <small>
@@ -17935,16 +17936,19 @@ export function App() {
             }
             title="Comparar assets usados no mapa com a instalação atual"
           >
-            {loadingSceneryLibrary ||
-            loadingSplineLibrary
-              ? "Verificando..."
-              : sceneryLibraryReady &&
-                  splineLibraryReady
-                ? missingDependencyCount > 0
-                  ? "⚠ Faltam " +
-                    missingDependencyCount
-                  : "✓ Dependências"
-                : "Verificar dependências"}
+            <MapStudioIcon name="dependency" size={18} />
+            <span>
+              {loadingSceneryLibrary ||
+              loadingSplineLibrary
+                ? "Verificando..."
+                : sceneryLibraryReady &&
+                    splineLibraryReady
+                  ? missingDependencyCount > 0
+                    ? "Faltam " +
+                      missingDependencyCount
+                    : "Dependências"
+                  : "Verificar dependências"}
+            </span>
           </button>
 
           <button
@@ -17964,10 +17968,13 @@ export function App() {
             }
             title="Resumo técnico do mapa e assets carregados"
           >
-            {mapHealthIssueCount > 0
-              ? "⚠ Saúde " +
-                mapHealthIssueCount
-              : "✓ Saúde"}
+            <MapStudioIcon name="map-health" size={18} />
+            <span>
+              {mapHealthIssueCount > 0
+                ? "Saúde " +
+                  mapHealthIssueCount
+                : "Saúde"}
+            </span>
           </button>
 
           <div className="construction-history-controls">
@@ -17992,7 +17999,8 @@ export function App() {
                   : "Nenhuma construção para desfazer"
               }
             >
-              ↶ Construção
+              <MapStudioIcon name="undo" size={17} />
+              <span>Construção</span>
             </button>
             <button
               type="button"
@@ -18015,7 +18023,7 @@ export function App() {
                   : "Nenhuma construção para refazer"
               }
             >
-              ↷
+              <MapStudioIcon name="redo" size={17} />
             </button>
             <span>
               {constructionUndoStack.length}
@@ -18033,7 +18041,7 @@ export function App() {
               requestCameraAction("fit")
             }
           >
-            ⛶
+            <MapStudioIcon name="fit-view" size={20} />
           </button>
 
           <button
@@ -18050,7 +18058,7 @@ export function App() {
               )
             }
           >
-            ◎
+            <MapStudioIcon name="focus" size={20} />
           </button>
 
           <button
@@ -18071,7 +18079,14 @@ export function App() {
               )
             }
           >
-            ⤢
+            <MapStudioIcon
+              name={
+                isFullScreen
+                  ? "exit-fullscreen"
+                  : "fullscreen"
+              }
+              size={20}
+            />
           </button>
 
           <button
@@ -18085,7 +18100,7 @@ export function App() {
               handleUndoPreview
             }
           >
-            ↶
+            <MapStudioIcon name="undo" size={20} />
           </button>
 
           <button
@@ -18099,7 +18114,7 @@ export function App() {
               handleRedoPreview
             }
           >
-            ↷
+            <MapStudioIcon name="redo" size={20} />
           </button>
 
           <button
@@ -18116,7 +18131,7 @@ export function App() {
                 : handleDiscardPreviewEdits
             }
           >
-            ✕
+            <MapStudioIcon name="discard" size={20} />
           </button>
 
           <span className="toolbar-separator" />
@@ -20223,13 +20238,16 @@ export function App() {
                   }
                   title="Saúde do mapa"
                 >
-                  <span>
-                    {mapHealthIssueCount >
-                    0
-                      ? "⚠"
-                      : "✓"}
-                  </span>
-                  <small>Saúde</small>
+                  <MapStudioIcon
+                    name="map-health"
+                    size={24}
+                  />
+                  <small>
+                    Saúde
+                    {mapHealthIssueCount > 0
+                      ? ` ${mapHealthIssueCount}`
+                      : ""}
+                  </small>
                 </button>
               </div>
 
@@ -20241,35 +20259,38 @@ export function App() {
                   aria-label="Assets da categoria de construção ativa"
                 >
                   <div className="citybuilder-asset-shelf-heading">
-                    <span>
-                      {activeConstructionTool ===
+                    <MapStudioIcon
+                      name={
+                        activeConstructionTool ===
                         "road"
-                        ? "═"
-                        : activeConstructionTool ===
-                            "bridge"
-                          ? "⌁"
+                          ? "road"
                           : activeConstructionTool ===
-                              "junction"
-                            ? "✣"
+                              "bridge"
+                            ? "bridge"
                             : activeConstructionTool ===
-                                "building"
-                              ? "⌂"
+                                "junction"
+                              ? "intersection"
                               : activeConstructionTool ===
-                                  "tree" ||
-                                  activeConstructionTool ===
-                                    "grass"
-                                ? "♣"
+                                  "building"
+                                ? "building"
                                 : activeConstructionTool ===
-                                    "transit"
-                                  ? "▤"
+                                      "tree" ||
+                                    activeConstructionTool ===
+                                      "grass"
+                                  ? "tree"
                                   : activeConstructionTool ===
-                                      "street"
-                                    ? "⚑"
+                                      "transit"
+                                    ? "transit"
                                     : activeConstructionTool ===
-                                        "utilities"
-                                      ? "⚙"
-                                      : "◇"}
-                    </span>
+                                        "street"
+                                      ? "street-furniture"
+                                      : activeConstructionTool ===
+                                          "utilities"
+                                        ? "utility"
+                                        : "sco-object"
+                      }
+                      size={24}
+                    />
                     <div>
                       <strong>
                         {activeConstructionTool ===

@@ -280,3 +280,16 @@ Primeiro lote implementado na interface:
 O pacote também já inclui os ícones de diagnóstico `map-health`, `asset-index` e `streaming`, preparados para a próxima migração visual.
 
 Os SVGs são originais do Map Studio e não reutilizam arquivos gráficos do OMSI 2.
+
+
+### Segundo lote migrado
+
+- toolbar técnico de seleção/mover/rotacionar/escala reservada;
+- enquadrar, focar, tela cheia, desfazer/refazer e descartar;
+- histórico de construção;
+- botão de conjuntos de construção;
+- auditoria de dependências;
+- saúde do mapa no toolbar e no HUD;
+- ícone da categoria ativa na prateleira de assets.
+
+Novos SVGs deste lote: `scale`, `construction-set`, `dependency`, `discard`, `warning` e `success`.

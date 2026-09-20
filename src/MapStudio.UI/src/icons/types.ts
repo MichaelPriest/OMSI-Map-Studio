@@ -24,4 +24,10 @@ export type MapStudioIconName =
   | "sli-spline"
   | "map-health"
   | "asset-index"
-  | "streaming";
+  | "streaming"
+  | "scale"
+  | "construction-set"
+  | "dependency"
+  | "discard"
+  | "warning"
+  | "success";

@@ -1,3 +1,9 @@
+import icon31 from "./icons/success.svg?raw";
+import icon30 from "./icons/warning.svg?raw";
+import icon29 from "./icons/discard.svg?raw";
+import icon28 from "./icons/dependency.svg?raw";
+import icon27 from "./icons/construction-set.svg?raw";
+import icon26 from "./icons/scale.svg?raw";
 import icon0 from "./icons/select.svg?raw";
 import icon1 from "./icons/move.svg?raw";
 import icon2 from "./icons/rotate.svg?raw";
@@ -28,6 +34,12 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "success": icon31,
+  "warning": icon30,
+  "discard": icon29,
+  "dependency": icon28,
+  "construction-set": icon27,
+  "scale": icon26,
   "select": icon0,
   "move": icon1,
   "rotate": icon2,
