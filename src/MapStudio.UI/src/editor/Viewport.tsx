@@ -3463,8 +3463,8 @@ function createSplineEditRoot(
         mesh.isPickable = true;
         mesh.renderOutline = true;
         mesh.outlineColor =
-          new Color3(0.3, 0.82, 1);
-        mesh.outlineWidth = 0.035;
+          new Color3(0.1, 0.9, 1);
+        mesh.outlineWidth = 0.05;
         mesh.metadata = {
           ...(mesh.metadata ?? {}),
           placedSpline
@@ -3598,8 +3598,8 @@ function createSelectedGeometry(
     tree.isPickable = true;
     tree.renderOutline = true;
     tree.outlineColor =
-      new Color3(0.3, 0.82, 1);
-    tree.outlineWidth = 0.035;
+      new Color3(0.1, 0.9, 1);
+    tree.outlineWidth = 0.05;
     tree.metadata = {
       ...(tree.metadata ?? {}),
       mapStudioKind: "object",
@@ -3612,8 +3612,8 @@ function createSelectedGeometry(
     mesh.isPickable = true;
     mesh.renderOutline = true;
     mesh.outlineColor =
-      new Color3(0.3, 0.82, 1);
-    mesh.outlineWidth = 0.035;
+      new Color3(0.1, 0.9, 1);
+    mesh.outlineWidth = 0.05;
     mesh.metadata = {
       ...(mesh.metadata ?? {}),
       mapStudioKind: "object",
@@ -4473,10 +4473,11 @@ export function Viewport({
       );
       selectionMarker.color =
         new Color3(
-          0.16,
-          0.78,
+          0.1,
+          0.92,
           1
         );
+      selectionMarker.visibility = 0.96;
       selectionMarker.isPickable = false;
       selectionMarker.renderingGroupId = 3;
     };
@@ -4591,10 +4592,12 @@ export function Viewport({
 
       splineSelectionMarker.color =
         new Color3(
-          0.16,
-          0.78,
+          0.1,
+          0.92,
           1
         );
+      splineSelectionMarker.visibility =
+        0.98;
       splineSelectionMarker.isPickable =
         false;
       splineSelectionMarker
@@ -4646,7 +4649,13 @@ export function Viewport({
           { lines: existingLines },
           scene
         );
-        existingGrid.color = new Color3(0.55, 0.68, 0.82);
+        existingGrid.color =
+          new Color3(
+            0.32,
+            0.43,
+            0.54
+          );
+        existingGrid.visibility = 0.68;
         existingGrid.isPickable = false;
       }
 
@@ -4666,7 +4675,13 @@ export function Viewport({
           { lines: missingLines },
           scene
         );
-        missingGrid.color = new Color3(0.9, 0.35, 0.35);
+        missingGrid.color =
+          new Color3(
+            0.78,
+            0.3,
+            0.34
+          );
+        missingGrid.visibility = 0.82;
         missingGrid.isPickable = false;
       }
 
@@ -4690,10 +4705,12 @@ export function Viewport({
 
         activeGrid.color =
           new Color3(
-            0.2,
-            0.95,
-            0.65
+            0.16,
+            0.9,
+            0.56
           );
+        activeGrid.visibility = 0.96;
+        activeGrid.renderingGroupId = 3;
 
         activeGrid.isPickable =
           false;
@@ -4755,15 +4772,23 @@ export function Viewport({
                 selectedSpline
               )
                 ? new Color3(
-                    0.25,
-                    1,
-                    0.65
+                    0.1,
+                    0.92,
+                    1
                   )
                 : new Color3(
-                    0.25,
-                    0.62,
-                    1
+                    0.2,
+                    0.48,
+                    0.78
                   );
+
+            splineAxis.visibility =
+              isSameSpline(
+                placedSpline,
+                selectedSpline
+              )
+                ? 0.98
+                : 0.72;
 
             splineAxis.isPickable =
               true;
@@ -5848,8 +5873,8 @@ export function Viewport({
       hoveredSelectionMesh = mesh;
       mesh.renderOutline = true;
       mesh.outlineColor =
-        new Color3(0.2, 0.62, 1);
-      mesh.outlineWidth = 0.03;
+        new Color3(0.32, 0.68, 0.9);
+      mesh.outlineWidth = 0.022;
     };
 
     const clampCameraRadius = (
@@ -8324,6 +8349,23 @@ export function Viewport({
     onPreviewSplineTransform
   ]);
 
+  const selectedViewportPath =
+    selectedObject?.sceneryObjectPath ??
+    selectedSpline?.splinePath;
+
+  const selectedViewportName =
+    selectedViewportPath
+      ?.split(/[\\/]/)
+      .filter(Boolean)
+      .pop();
+
+  const selectedViewportTool =
+    editorTool === "move"
+      ? "Mover"
+      : editorTool === "rotate"
+        ? "Rotacionar"
+        : "Selecionar";
+
   return (
     <>
       <canvas
@@ -8333,6 +8375,34 @@ export function Viewport({
         aria-label="Viewport 3D do editor"
         title="Clique seleciona qualquer objeto/spline visível ou por posição OMSI · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
       />
+      {(selectedObject || selectedSpline) && (
+        <div className="viewport-selection-state">
+          <span
+            className={
+              selectedObject
+                ? "viewport-selection-type object"
+                : "viewport-selection-type spline"
+            }
+          >
+            {selectedObject ? "OBJ" : "SLI"}
+          </span>
+          <div>
+            <strong>
+              {selectedObject
+                ? `Objeto #${selectedObject.objectId}`
+                : `Spline #${selectedSpline?.splineId}`}
+            </strong>
+            <span title={selectedViewportPath}>
+              {selectedViewportName ?? "Item selecionado"}
+            </span>
+            <small>
+              {selectedViewportTool}
+              {" · "}
+              Snap {snapEnabled ? "ativo" : "off"}
+            </small>
+          </div>
+        </div>
+      )}
       {referenceOverlay && (
         <div className="reference-attribution">
           Referência: {referenceOverlay.attribution}

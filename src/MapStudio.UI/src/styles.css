@@ -5929,3 +5929,116 @@ span.active {
   background: #3a151e;
   color: #ffd2d7;
 }
+
+
+/* Viewport visual language v2: selection stays real/pickable while the
+   presentation separates active selection, hover, map grid and overlays. */
+.editor-viewport {
+  background:
+    radial-gradient(
+      circle at 50% 42%,
+      #0a1721,
+      #03080d 72%
+    );
+}
+
+.viewport-canvas {
+  background: transparent;
+}
+
+.viewport-canvas:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px rgb(76 169 225 / 28%);
+}
+
+.viewport-selection-state {
+  position: absolute;
+  z-index: 18;
+  left: 12px;
+  bottom: 116px;
+  display: flex;
+  min-width: 180px;
+  max-width: min(320px, calc(100% - 24px));
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgb(55 113 150 / 76%);
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(8 31 46 / 94%),
+      rgb(5 19 29 / 92%)
+    );
+  box-shadow:
+    0 10px 30px rgb(0 0 0 / 34%);
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.viewport-selection-type {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #3b779b;
+  border-radius: 7px;
+  background: #0b2d42;
+  color: #90d6ff;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.viewport-selection-type.spline {
+  border-color: #347b84;
+  background: #0a3037;
+  color: #7fe4e8;
+}
+
+.viewport-selection-state > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.viewport-selection-state strong,
+.viewport-selection-state span,
+.viewport-selection-state small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewport-selection-state strong {
+  color: #e3f2fa;
+  font-size: 8.5px;
+}
+
+.viewport-selection-state span {
+  color: #7ea4ba;
+  font-size: 7px;
+}
+
+.viewport-selection-state small {
+  color: #5f879f;
+  font-size: 6.5px;
+}
+
+.map-editor.fullscreen-editor
+.viewport-selection-state {
+  bottom: 92px;
+  left: 76px;
+}
+
+@media (max-width: 920px) {
+  .viewport-selection-state {
+    min-width: 0;
+    max-width: 230px;
+  }
+
+  .viewport-selection-state span {
+    display: none;
+  }
+}
