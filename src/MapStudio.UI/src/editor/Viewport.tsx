@@ -15,6 +15,7 @@ import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
 import { Scene } from "@babylonjs/core/scene";
+import type { Node } from "@babylonjs/core/node";
 import type {
   OmsiPlacedObject,
   OmsiPlacedSpline,
@@ -5410,7 +5411,7 @@ export function Viewport({
         ) ?? [];
 
       for (const pick of picks) {
-        let node =
+        let node: Node | null =
           pick.pickedMesh;
 
         while (node) {
