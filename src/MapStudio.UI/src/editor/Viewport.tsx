@@ -4023,6 +4023,10 @@ export function Viewport({
     useRef<ArcRotateCamera | undefined>(
       undefined
     );
+  const renderFrameRef =
+    useRef<
+      (() => void) | undefined
+    >(undefined);
   const defaultCameraTargetRef =
     useRef<Vector3 | undefined>(
       undefined
@@ -4217,8 +4221,12 @@ export function Viewport({
       engineCaptureThumbnailRef.current =
         captureThumbnail;
     }
+    const previousScene =
+      sceneRef.current;
+    const previousRenderFrame =
+      renderFrameRef.current;
+
     const scene = new Scene(engine);
-    sceneRef.current = scene;
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
     const tileSize = usesWorldCoordinates ? 1 : 300;
@@ -4312,7 +4320,6 @@ export function Viewport({
         radius * 4
       );
 
-    cameraRef.current = camera;
     defaultCameraTargetRef.current =
       target.clone();
     defaultCameraRadiusRef.current =
@@ -7831,9 +7838,30 @@ export function Viewport({
       }
     };
 
+    if (
+      previousRenderFrame
+    ) {
+      engine.stopRenderLoop(
+        previousRenderFrame
+      );
+    }
+
     engine.runRenderLoop(
       renderFrame
     );
+
+    renderFrameRef.current =
+      renderFrame;
+    sceneRef.current = scene;
+    cameraRef.current = camera;
+
+    if (
+      previousScene &&
+      previousScene !== scene &&
+      !previousScene.isDisposed
+    ) {
+      previousScene.dispose();
+    }
 
     let resizeFrame:
       | number
@@ -7877,10 +7905,6 @@ export function Viewport({
     );
 
     return () => {
-      engine.stopRenderLoop(
-        renderFrame
-      );
-
       cameraStateRef.current = {
         alpha: camera.alpha,
         beta: camera.beta,
@@ -7962,21 +7986,10 @@ export function Viewport({
       canvas.style.cursor = "";
       gizmoManager?.dispose();
 
-      if (
-        sceneRef.current === scene
-      ) {
-        sceneRef.current =
-          undefined;
-      }
-
-      if (
-        cameraRef.current === camera
-      ) {
-        cameraRef.current =
-          undefined;
-      }
-
-      scene.dispose();
+      // Do not tear down the rendered scene here. React runs this
+      // cleanup before the replacement effect. The next effect builds
+      // the new scene first and swaps it atomically, so the user never
+      // sees an intentionally blank Babylon frame.
     };
   }, [
     tiles,
@@ -8517,12 +8530,44 @@ export function Viewport({
   ]);
 
   // The scene effect above intentionally survives ordinary App renders
-  // with the same Engine. Dispose the GPU engine only when the Viewport
-  // component itself is removed (or capture mode requires a new engine).
+  // with the same Engine. Dispose the active scene/loop only when the
+  // Viewport component itself is removed. Ordinary scene refreshes use
+  // the atomic swap performed by the structural effect.
   useEffect(
     () => () => {
       const engine =
         engineRef.current;
+      const scene =
+        sceneRef.current;
+      const renderFrame =
+        renderFrameRef.current;
+
+      if (
+        engine &&
+        renderFrame
+      ) {
+        engine.stopRenderLoop(
+          renderFrame
+        );
+      }
+
+      renderFrameRef.current =
+        undefined;
+      sceneRef.current =
+        undefined;
+      cameraRef.current =
+        undefined;
+      defaultCameraTargetRef.current =
+        undefined;
+      defaultCameraRadiusRef.current =
+        undefined;
+
+      if (
+        scene &&
+        !scene.isDisposed
+      ) {
+        scene.dispose();
+      }
 
       engineRef.current =
         undefined;

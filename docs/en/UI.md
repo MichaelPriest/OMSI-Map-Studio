@@ -993,3 +993,8 @@ The visual selection layer is now separate from structural scene rebuilding. In 
 ### Camera actions without scene rebuilding
 
 Perspective, top, fit, focus and tile-centering commands now operate directly on the existing Babylon camera. These commands no longer participate in the dependency list that rebuilds the 3D scene, avoiding terrain/object teardown just because the user changed the view.
+
+
+### Atomic scene swap
+
+When a structural change still requires rebuilding the Babylon `Scene`, the viewport keeps the previous scene active while the replacement is assembled. The render loop is switched only after the new scene is ready, and the old scene is disposed afterwards. This removes the intentionally blank interval between React cleanup and scene recreation that could appear as a black flash while assets stream in.

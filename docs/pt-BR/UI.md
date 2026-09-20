@@ -993,3 +993,8 @@ A seleção visual foi separada da reconstrução estrutural da cena. Em modo **
 ### Ações de câmera sem reconstrução da cena
 
 Perspectiva, topo, enquadrar, focar e centralizar em tile agora operam diretamente sobre a câmera Babylon já existente. Esses comandos não entram mais na lista de dependências que reconstrói a cena 3D, evitando apagar e recriar terreno/objetos apenas porque o usuário mudou a visão.
+
+
+### Troca atômica de cena
+
+Quando uma alteração estrutural ainda exige reconstruir a `Scene`, o viewport mantém a cena anterior renderizando enquanto a nova é montada. Só depois de a nova cena estar pronta o loop de renderização é trocado e a cena antiga é descartada. Isso elimina o intervalo propositalmente vazio entre `cleanup` e recriação que podia aparecer como um piscar preto durante streaming de assets.
