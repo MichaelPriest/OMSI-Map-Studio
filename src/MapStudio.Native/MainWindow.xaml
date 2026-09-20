@@ -106,6 +106,12 @@
                     x:Name="SnapButton"
                     Content="Snap: off"
                     Click="OnSnapClick" />
+                <CheckBox
+                    x:Name="NightPreviewCheckBox"
+                    Content="Noite"
+                    VerticalAlignment="Center"
+                    Checked="OnNightPreviewChecked"
+                    Unchecked="OnNightPreviewUnchecked" />
                 <Button
                     Content="Mover"
                     ToolTipService.ToolTip="Gizmo mover (W)"

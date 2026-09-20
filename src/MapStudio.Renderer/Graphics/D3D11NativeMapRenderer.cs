@@ -28,8 +28,15 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11Buffer _viewProjectionBuffer;
     private readonly ID3D11SamplerState _textureSampler;
     private readonly ID3D11SamplerState _maskSampler;
+    private readonly ID3D11SamplerState _skySampler;
+    private readonly ID3D11DepthStencilState _skyDepthState;
     private readonly ID3D11BlendState _alphaBlendState;
     private readonly NativeGpuTextureLoader _textureLoader;
+    private readonly ID3D11Buffer _skyTriangleBuffer;
+    private readonly int _skyTriangleVertexCount;
+
+    private NativeGpuTexture? _skyTexture;
+    private string? _skyTexturePath;
 
     private readonly Dictionary<
         string,
@@ -315,6 +322,21 @@ public sealed class D3D11NativeMapRenderer :
                     SamplerDescription
                         .LinearClamp);
 
+        _skySampler =
+            _deviceHost.Device
+                .CreateSamplerState(
+                    new SamplerDescription(
+                        Filter.MinMagMipLinear,
+                        TextureAddressMode.Wrap,
+                        TextureAddressMode.Clamp,
+                        TextureAddressMode.Clamp));
+
+        _skyDepthState =
+            _deviceHost.Device
+                .CreateDepthStencilState(
+                    DepthStencilDescription
+                        .None);
+
         _alphaBlendState =
             _deviceHost.Device
                 .CreateBlendState(
@@ -324,6 +346,23 @@ public sealed class D3D11NativeMapRenderer :
         _textureLoader =
             new NativeGpuTextureLoader(
                 _deviceHost);
+
+        var skyGeometry =
+            new NativeSkySphereGeometryBuilder()
+                .Build();
+
+        _skyTriangleBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    skyGeometry
+                        .Vertices
+                        .AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _skyTriangleVertexCount =
+            skyGeometry
+                .Vertices.Length;
     }
 
     public int VertexCount =>
@@ -340,6 +379,64 @@ public sealed class D3D11NativeMapRenderer :
 
     public int LoadedTextureCount =>
         _textureCache.Count;
+
+    public bool HasSkyTexture =>
+        _skyTexture is not null;
+
+    public string? SkyTexturePath =>
+        _skyTexturePath;
+
+    public bool SetSkyTexture(
+        string? path)
+    {
+        ThrowIfDisposed();
+
+        var normalized =
+            string.IsNullOrWhiteSpace(
+                path)
+                ? null
+                : Path.GetFullPath(
+                    path);
+
+        if (
+            string.Equals(
+                normalized,
+                _skyTexturePath,
+                StringComparison.OrdinalIgnoreCase) &&
+            _skyTexture is not null)
+        {
+            return true;
+        }
+
+        _skyTexture?.Dispose();
+        _skyTexture = null;
+        _skyTexturePath = null;
+
+        if (
+            normalized is null ||
+            !File.Exists(normalized))
+        {
+            return false;
+        }
+
+        var texture =
+            _textureLoader
+                .TryLoad(
+                    normalized);
+
+        if (texture is null)
+        {
+            return false;
+        }
+
+        _skyTexture =
+            texture;
+
+        _skyTexturePath =
+            normalized;
+
+        return true;
+    }
 
     public void SetViewProjection(
         Matrix4x4 viewProjection,
@@ -617,6 +714,9 @@ public sealed class D3D11NativeMapRenderer :
                     .VSSetShader(
                         _vertexShader);
 
+                DrawSkyGeometry(
+                    context);
+
                 ApplyViewProjection(
                     context);
 
@@ -760,6 +860,80 @@ public sealed class D3D11NativeMapRenderer :
         RenderPicking(
             surface.Width,
             surface.Height);
+    }
+
+    private void DrawSkyGeometry(
+        ID3D11DeviceContext context)
+    {
+        if (
+            _skyTexture is null ||
+            _skyTriangleVertexCount <=
+                0)
+        {
+            return;
+        }
+
+        context
+            .OMSetBlendState(
+                null);
+
+        context
+            .OMSetDepthStencilState(
+                _skyDepthState);
+
+        context
+            .IASetPrimitiveTopology(
+                PrimitiveTopology
+                    .TriangleList);
+
+        context
+            .IASetVertexBuffer(
+                0,
+                _skyTriangleBuffer,
+                NativeMapVertex
+                    .SizeInBytes);
+
+        var skyTransform =
+            Matrix4x4.CreateScale(
+                10_000.0f) *
+            Matrix4x4.CreateTranslation(
+                _cameraPosition);
+
+        ApplyViewProjection(
+            context,
+            skyTransform *
+            _viewProjection);
+
+        context
+            .PSSetSampler(
+                0,
+                _skySampler);
+
+        context
+            .PSSetShader(
+                _texturedPixelShader);
+
+        context
+            .PSSetShaderResource(
+                0,
+                _skyTexture.View);
+
+        context.Draw(
+            (uint)
+                _skyTriangleVertexCount,
+            0);
+
+        context
+            .PSUnsetShaderResource(
+                0);
+
+        context
+            .OMSetDepthStencilState(
+                null);
+
+        context
+            .PSSetShader(
+                _pixelShader);
     }
 
     private void DrawTerrainGeometry(
@@ -1597,7 +1771,12 @@ public sealed class D3D11NativeMapRenderer :
         _textureCache.Clear();
         _failedTexturePaths.Clear();
 
+        _skyTexture?.Dispose();
+        _skyTexture = null;
+        _skyTriangleBuffer.Dispose();
         _alphaBlendState.Dispose();
+        _skyDepthState.Dispose();
+        _skySampler.Dispose();
         _maskSampler.Dispose();
         _textureSampler.Dispose();
         _inputLayout.Dispose();

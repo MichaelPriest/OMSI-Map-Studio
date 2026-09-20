@@ -395,3 +395,15 @@ Para impedir z-fighting entre a base e as sobreposições sem alterar os dados d
 
 Ainda falta aplicar a textura de detalhe secundária de `[groundtex]` e migrar a pintura/edição das máscaras.
 
+### Checkpoint N3.20 — céu OMSI nativo e preview dia/noite
+
+O host WinUI passa a renderizar o céu real do OMSI no Direct3D 11 em vez de depender somente da cor de limpeza do viewport.
+
+O runtime procura `Texture\himmel01.bmp` para o preview diurno e `Texture\himmel05.bmp` para o preview noturno. Quando esses arquivos não existem, mantém a mesma compatibilidade usada pela versão React e tenta `Texture\skybox\day01.bmp` ou `night01.bmp`.
+
+O céu é desenhado em uma esfera texturizada centrada na câmera. A geometria fica fora do ID Buffer e usa um depth state sem escrita de profundidade, portanto não interfere na seleção nem pode ocultar objetos, splines ou terreno distantes.
+
+O mapeamento horizontal replica a inversão usada no viewport React e o eixo vertical fica limitado na borda da textura para evitar costuras no polo.
+
+A barra superior do host nativo recebe a opção **Noite**, que alterna imediatamente entre o céu diurno e noturno sem recarregar o mapa.
+

@@ -395,3 +395,15 @@ To avoid z-fighting between base and overlays without changing map data, each ov
 
 Secondary `[groundtex]` detail textures and mask painting/editing are still pending.
 
+### Checkpoint N3.20 — native OMSI sky and day/night preview
+
+The WinUI host now renders the real OMSI sky in Direct3D 11 instead of relying only on the viewport clear color.
+
+The runtime looks for `Texture\himmel01.bmp` for daytime preview and `Texture\himmel05.bmp` for nighttime preview. When those files are absent, it keeps compatibility with the React implementation and falls back to `Texture\skybox\day01.bmp` or `night01.bmp`.
+
+The sky is rendered on a textured sphere centered on the camera. Its geometry stays outside the ID Buffer and uses a no-depth-write state, so it does not affect selection and cannot occlude distant objects, splines, or terrain.
+
+Horizontal mapping mirrors the React viewport orientation while vertical sampling is clamped at the texture edge to avoid pole seams.
+
+The native host top bar now exposes a **Night** option that switches between daytime and nighttime sky immediately without reloading the map.
+

@@ -476,6 +476,20 @@ public sealed partial class NativeViewport : UserControl
                 : "Gizmo: rotacionar");
     }
 
+    public bool SetNightPreview(
+        bool enabled)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        _runtime.SetNightPreview(
+            enabled);
+
+        return _runtime.HasSkyTexture;
+    }
+
     public async Task SetMapSnapshotAsync(
         NativeMapSnapshot snapshot,
         string omsiRoot,

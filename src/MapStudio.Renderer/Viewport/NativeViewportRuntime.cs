@@ -85,6 +85,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private OmsiMapDescriptor? _mapDescriptor;
     private string? _omsiRoot;
+    private bool _nightPreviewEnabled;
 
     private bool _disposed;
 
@@ -1560,6 +1561,8 @@ public sealed class NativeViewportRuntime : IDisposable
         _omsiRoot =
             omsiRoot;
 
+        ApplySkyTexture();
+
         Scene =
             new NativeSceneBuilder()
                 .Build(
@@ -1633,6 +1636,24 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         get;
         private set;
+    }
+
+    public bool NightPreviewEnabled =>
+        _nightPreviewEnabled;
+
+    public bool HasSkyTexture =>
+        MapRenderer.HasSkyTexture;
+
+    public void SetNightPreview(
+        bool enabled)
+    {
+        ThrowIfDisposed();
+
+        _nightPreviewEnabled =
+            enabled;
+
+        ApplySkyTexture();
+        RenderInitialFrame();
     }
 
     public void SetSnapEnabled(
@@ -3190,6 +3211,59 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.IsCurved,
             shape.Start,
             shape.End);
+    }
+
+    private void ApplySkyTexture()
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                _omsiRoot))
+        {
+            MapRenderer.SetSkyTexture(
+                null);
+
+            return;
+        }
+
+        var fileName =
+            _nightPreviewEnabled
+                ? "himmel05.bmp"
+                : "himmel01.bmp";
+
+        var enhancedFileName =
+            _nightPreviewEnabled
+                ? "night01.bmp"
+                : "day01.bmp";
+
+        var primary =
+            Path.Combine(
+                _omsiRoot,
+                "Texture",
+                fileName);
+
+        string? resolved =
+            File.Exists(primary)
+                ? primary
+                : null;
+
+        if (resolved is null)
+        {
+            var enhanced =
+                Path.Combine(
+                    _omsiRoot,
+                    "Texture",
+                    "skybox",
+                    enhancedFileName);
+
+            if (File.Exists(enhanced))
+            {
+                resolved =
+                    enhanced;
+            }
+        }
+
+        MapRenderer.SetSkyTexture(
+            resolved);
     }
 
     private void UpdateCameraTransform()

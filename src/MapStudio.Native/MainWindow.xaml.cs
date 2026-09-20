@@ -1907,6 +1907,35 @@ public sealed partial class MainWindow : Window
                 : "Snap de transformação desativado.";
     }
 
+    private void OnNightPreviewChecked(
+        object sender,
+        RoutedEventArgs e) =>
+        ApplyNightPreview(
+            true);
+
+    private void OnNightPreviewUnchecked(
+        object sender,
+        RoutedEventArgs e) =>
+        ApplyNightPreview(
+            false);
+
+    private void ApplyNightPreview(
+        bool enabled)
+    {
+        var loaded =
+            Viewport.SetNightPreview(
+                enabled);
+
+        StatusText.Text =
+            loaded
+                ? enabled
+                    ? "Preview noturno ativo com céu OMSI."
+                    : "Preview diurno ativo com céu OMSI."
+                : _session.OmsiRootPath is null
+                    ? "Selecione a instalação OMSI para carregar o céu."
+                    : "Textura de céu OMSI não encontrada; mantendo o fundo padrão.";
+    }
+
     private async void OnSaveChangesClick(
         object sender,
         RoutedEventArgs e) =>
