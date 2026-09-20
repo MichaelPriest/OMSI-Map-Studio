@@ -683,3 +683,10 @@ O modo **Ponte/Elevado** abre o grupo real de splines de pontes/túneis e reutil
 **Verificar dependências** carrega os catálogos reais de `Sceneryobjects` e `Splines` e compara seus caminhos com tudo que o mapa aberto referencia. Arquivos `.sco` e `.sli` ausentes aparecem em um painel flutuante no viewport, separados de falhas de textura ou O3D.
 
 `Ctrl+D` inicia a colocação de uma cópia do objeto selecionado usando exatamente o mesmo `.sco`, Z, rotação, pitch e bank como base; o próximo clique define a nova posição e continua usando o fluxo seguro de inserção.
+
+
+### Assistente geométrico de cruzamentos
+
+Ao abrir **Construção > Cruzamentos**, o editor analisa até 400 splines normais carregadas. Splines curvas são amostradas ao longo do arco real; o sistema procura encontros com ângulo útil, ignora simples conexões ponta-a-ponta e agrupa pontos muito próximos.
+
+O painel **Assistente de cruzamentos** lista até 64 sugestões e permite escolher o ponto. A sugestão só define posição/rotação inicial; o usuário ainda escolhe um `.sco` real de cruzamento na biblioteca. Portanto o assistente não inventa geometria nem substitui dependências OMSI.

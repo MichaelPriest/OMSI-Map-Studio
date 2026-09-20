@@ -683,3 +683,10 @@ The main toolbar now has a dedicated **Construction** group that opens **Roads**
 **Check dependencies** loads the real `Sceneryobjects` and `Splines` catalogs and compares their paths against every reference in the open map. Missing `.sco` and `.sli` files appear in a floating viewport panel, separately from texture or O3D failures.
 
 `Ctrl+D` starts placing a copy of the selected object using the exact same `.sco`, Z, rotation, pitch, and bank as the initial transform; the next click defines the new position and still uses the safe insertion pipeline.
+
+
+### Geometric junction assistant
+
+When **Construction > Junctions** is opened, the editor analyzes up to 400 loaded normal splines. Curved splines are sampled along their real arc; the system looks for useful-angle intersections, ignores simple endpoint-to-endpoint chain connections, and deduplicates nearby points.
+
+The **Junction assistant** lists up to 64 suggestions and lets the user pick a point. A suggestion only supplies an initial position/rotation; the user still selects a real junction `.sco` from the library. The assistant never invents junction geometry or replaces OMSI dependencies.

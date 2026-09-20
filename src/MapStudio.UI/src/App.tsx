@@ -988,6 +988,367 @@ const getSplineAxisEnd = (
   };
 };
 
+type JunctionSuggestion = {
+  key: string;
+  tileX: number;
+  tileY: number;
+  x: number;
+  y: number;
+  rotation: number;
+  splineA: number;
+  splineB: number;
+};
+
+const getSplineAxisPoint = (
+  spline: OmsiPlacedSpline,
+  progress: number
+) => {
+  const t =
+    Math.max(
+      0,
+      Math.min(1, progress)
+    );
+  const startX =
+    spline.tileX * 300 +
+    spline.x;
+  const startY =
+    spline.tileY * 300 +
+    spline.y;
+  const heading =
+    spline.rotation *
+    Math.PI /
+    180;
+
+  if (
+    Math.abs(spline.radius) <
+      0.001
+  ) {
+    return {
+      x:
+        startX +
+        Math.sin(heading) *
+          spline.length *
+          t,
+      y:
+        startY +
+        Math.cos(heading) *
+          spline.length *
+          t,
+      heading
+    };
+  }
+
+  const turn =
+    (
+      spline.length /
+      spline.radius
+    ) *
+    t;
+  const localHeading =
+    heading + turn;
+
+  return {
+    x:
+      startX +
+      spline.radius *
+        (
+          Math.cos(heading) -
+          Math.cos(localHeading)
+        ),
+    y:
+      startY +
+      spline.radius *
+        (
+          Math.sin(localHeading) -
+          Math.sin(heading)
+        ),
+    heading: localHeading
+  };
+};
+
+const sampleSplineAxis = (
+  spline: OmsiPlacedSpline
+) => {
+  const curveRadians =
+    Math.abs(spline.radius) >
+      0.001
+      ? Math.abs(
+          spline.length /
+            spline.radius
+        )
+      : 0;
+  const segmentCount =
+    Math.max(
+      1,
+      Math.min(
+        24,
+        Math.ceil(
+          curveRadians * 6
+        )
+      )
+    );
+
+  return Array.from(
+    { length: segmentCount + 1 },
+    (_, index) => ({
+      ...getSplineAxisPoint(
+        spline,
+        index / segmentCount
+      ),
+      progress:
+        index / segmentCount
+    })
+  );
+};
+
+const segmentIntersection = (
+  a0: { x: number; y: number },
+  a1: { x: number; y: number },
+  b0: { x: number; y: number },
+  b1: { x: number; y: number }
+) => {
+  const ax = a1.x - a0.x;
+  const ay = a1.y - a0.y;
+  const bx = b1.x - b0.x;
+  const by = b1.y - b0.y;
+  const denominator =
+    ax * by - ay * bx;
+
+  if (
+    Math.abs(denominator) <
+      0.0001
+  ) {
+    return undefined;
+  }
+
+  const dx = b0.x - a0.x;
+  const dy = b0.y - a0.y;
+  const ta =
+    (
+      dx * by -
+      dy * bx
+    ) /
+    denominator;
+  const tb =
+    (
+      dx * ay -
+      dy * ax
+    ) /
+    denominator;
+
+  if (
+    ta < -0.001 ||
+    ta > 1.001 ||
+    tb < -0.001 ||
+    tb > 1.001
+  ) {
+    return undefined;
+  }
+
+  return {
+    x: a0.x + ax * ta,
+    y: a0.y + ay * ta,
+    ta,
+    tb,
+    angleA:
+      Math.atan2(ax, ay),
+    angleB:
+      Math.atan2(bx, by)
+  };
+};
+
+const findJunctionSuggestions = (
+  splines: OmsiPlacedSpline[]
+) => {
+  const candidates =
+    splines
+      .filter(
+        (spline) =>
+          !spline.isHeightSpline &&
+          spline.length > 1
+      )
+      .slice(0, 400)
+      .map((spline) => ({
+        spline,
+        points:
+          sampleSplineAxis(spline)
+      }));
+  const result:
+    JunctionSuggestion[] = [];
+
+  for (
+    let aIndex = 0;
+    aIndex < candidates.length;
+    aIndex++
+  ) {
+    const a = candidates[aIndex];
+
+    for (
+      let bIndex = aIndex + 1;
+      bIndex < candidates.length;
+      bIndex++
+    ) {
+      const b = candidates[bIndex];
+
+      if (
+        a.spline.splineId ===
+        b.spline.splineId
+      ) {
+        continue;
+      }
+
+      for (
+        let ai = 0;
+        ai < a.points.length - 1;
+        ai++
+      ) {
+        for (
+          let bi = 0;
+          bi < b.points.length - 1;
+          bi++
+        ) {
+          const hit =
+            segmentIntersection(
+              a.points[ai],
+              a.points[ai + 1],
+              b.points[bi],
+              b.points[bi + 1]
+            );
+
+          if (!hit) {
+            continue;
+          }
+
+          const angleDifference =
+            Math.abs(
+              Math.atan2(
+                Math.sin(
+                  hit.angleA -
+                    hit.angleB
+                ),
+                Math.cos(
+                  hit.angleA -
+                    hit.angleB
+                )
+              )
+            );
+
+          const acuteAngle =
+            Math.min(
+              angleDifference,
+              Math.PI -
+                angleDifference
+            );
+
+          if (
+            acuteAngle <
+              15 *
+                Math.PI /
+                180
+          ) {
+            continue;
+          }
+
+          const progressA =
+            a.points[ai].progress +
+            (
+              a.points[ai + 1]
+                .progress -
+              a.points[ai]
+                .progress
+            ) *
+              hit.ta;
+          const progressB =
+            b.points[bi].progress +
+            (
+              b.points[bi + 1]
+                .progress -
+              b.points[bi]
+                .progress
+            ) *
+              hit.tb;
+
+          const interiorA =
+            progressA > 0.03 &&
+            progressA < 0.97;
+          const interiorB =
+            progressB > 0.03 &&
+            progressB < 0.97;
+
+          if (
+            !interiorA &&
+            !interiorB
+          ) {
+            continue;
+          }
+
+          if (
+            result.some(
+              (current) =>
+                Math.hypot(
+                  current.tileX *
+                    300 +
+                    current.x -
+                    hit.x,
+                  current.tileY *
+                    300 +
+                    current.y -
+                    hit.y
+                ) < 3
+            )
+          ) {
+            continue;
+          }
+
+          const tileX =
+            Math.floor(
+              hit.x / 300
+            );
+          const tileY =
+            Math.floor(
+              hit.y / 300
+            );
+
+          result.push({
+            key:
+              a.spline.splineId +
+              ":" +
+              b.spline.splineId +
+              ":" +
+              Math.round(hit.x) +
+              ":" +
+              Math.round(hit.y),
+            tileX,
+            tileY,
+            x:
+              hit.x -
+              tileX * 300,
+            y:
+              hit.y -
+              tileY * 300,
+            rotation:
+              hit.angleA *
+              180 /
+              Math.PI,
+            splineA:
+              a.spline.splineId,
+            splineB:
+              b.spline.splineId
+          });
+
+          if (
+            result.length >= 64
+          ) {
+            return result;
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+};
+
 const snapPlacementToNearestRoad = (
   placement: PendingObjectPlacement,
   splines: OmsiPlacedSpline[],
@@ -2210,6 +2571,20 @@ export function App() {
 
   const [editorTool, setEditorTool] =
     useState<EditorTool>("select");
+
+  const [
+    activeConstructionTool,
+    setActiveConstructionTool
+  ] = useState<
+    QuickCreateTool | undefined
+  >();
+
+  const [
+    junctionPlacementTarget,
+    setJunctionPlacementTarget
+  ] = useState<
+    PendingObjectPlacement | undefined
+  >();
 
   const [
     selectionMode,
@@ -5392,6 +5767,15 @@ export function App() {
       splines
     ]
   );
+
+  const junctionSuggestions =
+    useMemo(
+      () =>
+        findJunctionSuggestions(
+          splinesForViewport
+        ),
+      [splinesForViewport]
+    );
 
   const nearbyObjectPaths =
     useMemo(() => {
@@ -10126,15 +10510,25 @@ export function App() {
         setPendingPlacementBatch([]);
         setPlacementLineStart(undefined);
         setPendingPlacement(
-          activeTile
+          activeConstructionTool ===
+              "junction" &&
+            junctionPlacementTarget
             ? {
-                tileX: activeTile.x,
-                tileY: activeTile.y,
-                x: 150,
-                y: 150,
-                ...transformDefaults
+                ...junctionPlacementTarget,
+                ...transformDefaults,
+                rotation:
+                  junctionPlacementTarget
+                    .rotation
               }
-            : undefined
+            : activeTile
+              ? {
+                  tileX: activeTile.x,
+                  tileY: activeTile.y,
+                  x: 150,
+                  y: 150,
+                  ...transformDefaults
+                }
+              : undefined
         );
         setSelectedObject(undefined);
         setSelectedSpline(undefined);
@@ -10165,8 +10559,10 @@ export function App() {
         }
       },
       [
+        activeConstructionTool,
         activeTile,
         geometryByPath,
+        junctionPlacementTarget,
         registerSceneryLibraryUse,
         sceneryMetadataByPath,
         selectedMap,
@@ -10203,6 +10599,57 @@ export function App() {
       handleSelectPlacementAsset,
       selectedObject
     ]);
+
+  const handleUseJunctionSuggestion =
+    useCallback(
+      (suggestion: JunctionSuggestion) => {
+        const target:
+          PendingObjectPlacement = {
+            tileX:
+              suggestion.tileX,
+            tileY:
+              suggestion.tileY,
+            x: suggestion.x,
+            y: suggestion.y,
+            z:
+              placementTransformDefaults.z,
+            rotation:
+              suggestion.rotation,
+            pitch:
+              placementTransformDefaults
+                .pitch,
+            bank:
+              placementTransformDefaults
+                .bank
+          };
+
+        setJunctionPlacementTarget(
+          target
+        );
+        setActiveTile({
+          x: suggestion.tileX,
+          y: suggestion.tileY
+        });
+
+        if (placementAsset) {
+          setPendingPlacement(
+            target
+          );
+        }
+
+        setSaveNotice(
+          "Cruzamento sugerido entre splines #" +
+            suggestion.splineA +
+            " e #" +
+            suggestion.splineB +
+            ". Escolha/posicione um .sco real compatível."
+        );
+      },
+      [
+        placementAsset,
+        placementTransformDefaults
+      ]
+    );
 
   useEffect(() => {
     const handleDuplicateShortcut = (
@@ -10862,6 +11309,14 @@ export function App() {
 
         setView("editor");
         setEditorTool("select");
+        setActiveConstructionTool(
+          tool
+        );
+        if (tool !== "junction") {
+          setJunctionPlacementTarget(
+            undefined
+          );
+        }
         setError(undefined);
 
         if (isFullScreen) {
@@ -17445,6 +17900,97 @@ export function App() {
                 >
                   Cancelar
                 </button>
+              </div>
+            )}
+
+            {activeConstructionTool ===
+              "junction" && (
+              <div
+                className="junction-assistant-panel floating-tool"
+                data-floating-tool
+              >
+                <button
+                  type="button"
+                  className="tool-drag-grip drag-handle"
+                  data-drag-handle
+                  title="Mover assistente"
+                >
+                  ⋮⋮
+                </button>
+                <div className="junction-assistant-heading">
+                  <strong>
+                    Assistente de cruzamentos
+                  </strong>
+                  <span>
+                    {junctionSuggestions.length}
+                    {" "}encontro(s) detectado(s)
+                  </span>
+                </div>
+                <div className="junction-assistant-list">
+                  {junctionSuggestions
+                    .slice(0, 12)
+                    .map(
+                      (
+                        suggestion,
+                        index
+                      ) => (
+                        <button
+                          type="button"
+                          key={
+                            suggestion.key
+                          }
+                          className={
+                            junctionPlacementTarget &&
+                            junctionPlacementTarget
+                              .tileX ===
+                              suggestion.tileX &&
+                            junctionPlacementTarget
+                              .tileY ===
+                              suggestion.tileY &&
+                            Math.abs(
+                              junctionPlacementTarget
+                                .x -
+                                suggestion.x
+                            ) < 0.1 &&
+                            Math.abs(
+                              junctionPlacementTarget
+                                .y -
+                                suggestion.y
+                            ) < 0.1
+                              ? "active"
+                              : ""
+                          }
+                          onClick={() =>
+                            handleUseJunctionSuggestion(
+                              suggestion
+                            )
+                          }
+                        >
+                          <strong>
+                            #{index + 1}
+                            {" · "}
+                            Splines {suggestion.splineA}/{suggestion.splineB}
+                          </strong>
+                          <span>
+                            Tile {suggestion.tileX},{suggestion.tileY}
+                            {" · "}
+                            {formatNumber(
+                              suggestion.x
+                            )},{" "}
+                            {formatNumber(
+                              suggestion.y
+                            )}
+                          </span>
+                        </button>
+                      )
+                    )}
+                  {junctionSuggestions.length ===
+                    0 && (
+                    <span className="junction-assistant-empty">
+                      Nenhum cruzamento geométrico detectado nas splines carregadas.
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
