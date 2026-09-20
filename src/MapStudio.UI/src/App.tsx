@@ -17324,6 +17324,84 @@ export function App() {
                 </button>
                 <button
                   type="button"
+                  disabled={
+                    mapLoadMode === "full" ||
+                    busy
+                  }
+                  onClick={() => {
+                    if (
+                      mapLoadMode !== "full"
+                    ) {
+                      setAssetWarmupActive(
+                        true
+                      );
+                      setMapLoadMode("full");
+                      setLoadedFullMapFor(
+                        undefined
+                      );
+                      setLoadedRegionKey(
+                        undefined
+                      );
+                      setSelectedObject(
+                        undefined
+                      );
+                      setSelectedSpline(
+                        undefined
+                      );
+                    }
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {mapLoadMode === "full"
+                    ? "✓ "
+                    : ""}
+                  Mapa completo
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    mapLoadMode ===
+                      "performance" ||
+                    busy
+                  }
+                  onClick={() => {
+                    if (
+                      mapLoadMode !==
+                      "performance"
+                    ) {
+                      setAssetWarmupActive(
+                        true
+                      );
+                      setMapLoadMode(
+                        "performance"
+                      );
+                      setLoadedRegionKey(
+                        undefined
+                      );
+                      setObjects([]);
+                      setSplines([]);
+                      setSelectedObject(
+                        undefined
+                      );
+                      setSelectedSpline(
+                        undefined
+                      );
+                    }
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {mapLoadMode ===
+                  "performance"
+                    ? "✓ "
+                    : ""}
+                  Desempenho 3×3
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     requestFullScreen(
                       !isFullScreen
@@ -20630,11 +20708,18 @@ export function App() {
               </div>
             </div>
 
-            {isFullScreen && (
-              <>
+            <>
                 <div
-                  className="fullscreen-tool-dock floating-tool"
+                  className={[
+                    "fullscreen-tool-dock",
+                    "editor-quick-dock",
+                    isFullScreen
+                      ? "fullscreen-mode"
+                      : "desktop-mode",
+                    "floating-tool"
+                  ].join(" ")}
                   data-floating-tool
+                  data-floating-tool-id="editor-quick-dock"
                 >
                   <button
                     type="button"
@@ -20654,10 +20739,88 @@ export function App() {
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group fullscreen-panels">
-                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("map"); }} title="Abrir Explorador">☰ <span>Explorar</span></button>
-                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("library"); }} title="Criar/colocar objeto real">＋ <span>Objeto</span></button>
-                    <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("splineLibrary"); }} title="Criar/colocar spline real">⌇＋ <span>Spline</span></button>
-                    <button type="button" onClick={() => setFullScreenPanel((current) => current === "inspector" ? undefined : "inspector")} title="Abrir Inspetor">ⓘ <span>Inspetor</span></button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExplorerPanelTab(
+                          "map"
+                        );
+                        if (isFullScreen) {
+                          setFullScreenPanel(
+                            "explorer"
+                          );
+                        } else {
+                          setDesktopExplorerOpen(
+                            true
+                          );
+                        }
+                      }}
+                      title="Abrir Explorador"
+                    >
+                      ☰ <span>Explorar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExplorerPanelTab(
+                          "library"
+                        );
+                        if (isFullScreen) {
+                          setFullScreenPanel(
+                            "explorer"
+                          );
+                        } else {
+                          setDesktopExplorerOpen(
+                            true
+                          );
+                        }
+                      }}
+                      title="Criar/colocar objeto real"
+                    >
+                      ＋ <span>Objeto</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleExplorerPanelTab(
+                          "splineLibrary"
+                        );
+                        if (isFullScreen) {
+                          setFullScreenPanel(
+                            "explorer"
+                          );
+                        } else {
+                          setDesktopExplorerOpen(
+                            true
+                          );
+                        }
+                      }}
+                      title="Criar/colocar spline real"
+                    >
+                      ⌇＋ <span>Spline</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isFullScreen) {
+                          setFullScreenPanel(
+                            (current) =>
+                              current ===
+                              "inspector"
+                                ? undefined
+                                : "inspector"
+                          );
+                        } else {
+                          setDesktopInspectorOpen(
+                            (current) =>
+                              !current
+                          );
+                        }
+                      }}
+                      title="Abrir Inspetor"
+                    >
+                      ⓘ <span>Inspetor</span>
+                    </button>
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group fullscreen-history">
@@ -20673,22 +20836,44 @@ export function App() {
                     <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)">O</button>
                     <button type="button" className={showSplines ? "active" : ""} onClick={() => setShowSplines((current) => !current)} title="Splines (L)">L</button>
                     <button type="button" className={showSplineProfiles ? "active" : ""} onClick={() => setShowSplineProfiles((current) => !current)} title="Perfis reais das splines">P</button>
-                    <button type="button" className="exit" onClick={() => requestFullScreen(false)} title="Sair da tela cheia (F11/Esc)">⤡</button>
+                    <button
+                      type="button"
+                      className={
+                        isFullScreen
+                          ? "exit active"
+                          : ""
+                      }
+                      onClick={() =>
+                        requestFullScreen(
+                          !isFullScreen
+                        )
+                      }
+                      title={
+                        isFullScreen
+                          ? "Sair da tela cheia (F11/Esc)"
+                          : "Entrar em tela cheia (F11)"
+                      }
+                    >
+                      {isFullScreen
+                        ? "⤡"
+                        : "⤢"}
+                    </button>
                   </div>
                 </div>
-                <div className="fullscreen-shortcuts">
-                  <strong>Atalhos</strong>
-                  <span>Q selecionar</span><span>W mover</span><span>E rotacionar</span>
-                  <span>1 perspectiva</span><span>2 topo</span><span>N snap</span>
-                  <span>F foco</span><span>Home enquadrar</span><span>G grade</span>
-                  <span>Alt+1..4 filtro seleção</span><span>Alt+R/C/O criar rua/cruz./objeto</span>
-                  <span>Alt+T/A/G/Y terreno/água/grama/árvore</span>
-                  <span>O objetos</span><span>L splines</span><span>Ctrl+S salvar</span>
-                  <span>Ctrl+Z/Y desfazer/refazer</span><span>RMB orbitar</span>
-                  <span>MMB deslocar</span><span>roda zoom</span>
-                </div>
+                {isFullScreen && (
+                  <div className="fullscreen-shortcuts">
+                    <strong>Atalhos</strong>
+                    <span>Q selecionar</span><span>W mover</span><span>E rotacionar</span>
+                    <span>1 perspectiva</span><span>2 topo</span><span>N snap</span>
+                    <span>F foco</span><span>Home enquadrar</span><span>G grade</span>
+                    <span>Alt+1..4 filtro seleção</span><span>Alt+R/C/O criar rua/cruz./objeto</span>
+                    <span>Alt+T/A/G/Y terreno/água/grama/árvore</span>
+                    <span>O objetos</span><span>L splines</span><span>Ctrl+S salvar</span>
+                    <span>Ctrl+Z/Y desfazer/refazer</span><span>RMB orbitar</span>
+                    <span>MMB deslocar</span><span>roda zoom</span>
+                  </div>
+                )}
               </>
-            )}
             {showTileNavigator &&
               activeTile && (
               <div
