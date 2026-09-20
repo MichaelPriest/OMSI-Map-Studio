@@ -128,4 +128,29 @@ public sealed class NativeViewportNavigationTests
                     1280,
                     720));
     }
+
+    [Fact]
+    public void FocusOnCentersCameraOnRequestedWorldPoint()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var target =
+            new Vector3(
+                120,
+                14,
+                -80);
+
+        navigation.FocusOn(
+            target,
+            75);
+
+        Assert.Equal(
+            target,
+            navigation.Target);
+
+        Assert.Equal(
+            75,
+            navigation.Distance);
+    }
 }

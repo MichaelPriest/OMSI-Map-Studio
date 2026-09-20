@@ -4,6 +4,8 @@ using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
@@ -19,6 +21,14 @@ public sealed partial class MainWindow : Window
 
     private NativeSelectionInfo?
         _selectionInfo;
+
+    private IReadOnlyList<
+        NativeExplorerItem>
+        _explorerItems =
+            Array.Empty<
+                NativeExplorerItem>();
+
+    private bool _synchronizingExplorer;
 
     public MainWindow()
     {
@@ -178,7 +188,143 @@ public sealed partial class MainWindow : Window
                         info.GradientEnd ??
                         0;
                 }
+
+                SynchronizeExplorerSelection(
+                    info);
             };
+    }
+
+    private void OnExplorerSearchTextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        RefreshExplorerFilter();
+    }
+
+    private void OnExplorerSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            _synchronizingExplorer ||
+            ExplorerListView.SelectedItem is not
+                NativeExplorerItem item)
+        {
+            return;
+        }
+
+        Viewport.SelectExplorerItem(
+            item,
+            focus: false);
+    }
+
+    private void OnExplorerDoubleTapped(
+        object sender,
+        DoubleTappedRoutedEventArgs e)
+    {
+        if (
+            ExplorerListView.SelectedItem is
+                NativeExplorerItem item)
+        {
+            Viewport.SelectExplorerItem(
+                item,
+                focus: true);
+
+            StatusText.Text =
+                $"Câmera focada em {item.DisplayText}.";
+        }
+    }
+
+    private void RefreshExplorer()
+    {
+        _explorerItems =
+            Viewport.GetExplorerItems();
+
+        RefreshExplorerFilter();
+    }
+
+    private void RefreshExplorerFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            NativeExplorerItem> items =
+            _explorerItems;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.DisplayText
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        item.AssetPath
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        item.TileX
+                            .ToString()
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        item.TileY
+                            .ToString()
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+        }
+
+        ExplorerListView.ItemsSource =
+            items.ToArray();
+    }
+
+    private void SynchronizeExplorerSelection(
+        NativeSelectionInfo info)
+    {
+        var item =
+            _explorerItems
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Kind ==
+                            info.Kind &&
+                        candidate.EntityId ==
+                            info.EntityId &&
+                        candidate.TileX ==
+                            info.TileX &&
+                        candidate.TileY ==
+                            info.TileY);
+
+        if (item is null)
+        {
+            return;
+        }
+
+        _synchronizingExplorer =
+            true;
+
+        try
+        {
+            ExplorerListView.SelectedItem =
+                item;
+
+            ExplorerListView.ScrollIntoView(
+                item);
+        }
+        finally
+        {
+            _synchronizingExplorer =
+                false;
+        }
     }
 
     private void OnApplyInspectorClick(
@@ -520,6 +666,8 @@ public sealed partial class MainWindow : Window
                     snapshot,
                     _session
                         .OmsiRootPath!);
+
+            RefreshExplorer();
 
             SaveChangesButton.IsEnabled =
                 false;

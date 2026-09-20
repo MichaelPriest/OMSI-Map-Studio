@@ -179,3 +179,12 @@ O Inspector nativo deixou de ser apenas informativo e passou a editar a transfor
 Ao clicar em **Aplicar valores**, o runtime atualiza o mesmo snapshot usado pelo viewport, cria um par antes/depois no histórico, atualiza a geometria nativa, registra a transformação OMSI como pendente e mantém compatibilidade com Desfazer/Refazer e Salvar alterações.
 
 Assim, gizmo e Inspector são duas interfaces sobre o mesmo modelo de edição nativo, sem duplicação de estado.
+
+
+### Checkpoint N3.1 — Explorer nativo com seleção e foco
+
+A fase N3 começou com um Explorer WinUI alimentado diretamente pelo snapshot do renderer. Objetos e splines reais são listados com tipo, ID, arquivo e tile, sem inventário paralelo.
+
+A busca filtra nome exibido, caminho do asset e coordenadas do tile. Selecionar um item no Explorer usa o mesmo `PickingId` da cena e atualiza o highlight vermelho, o gizmo e o Inspector. Um duplo clique também reposiciona a câmera 3D sobre o ponto de inserção da entidade.
+
+Seleções feitas diretamente no viewport são sincronizadas de volta para a lista e roladas para ficar visíveis, mantendo Explorer e viewport como duas visualizações do mesmo estado nativo.

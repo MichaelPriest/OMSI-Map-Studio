@@ -359,6 +359,126 @@ public sealed class NativeViewportRuntime : IDisposable
             PendingTransformEdit;
     }
 
+    public IReadOnlyList<
+        NativeExplorerItem>
+        GetExplorerItems()
+    {
+        if (Scene is null)
+        {
+            return Array.Empty<
+                NativeExplorerItem>();
+        }
+
+        return
+            Scene.Objects
+                .Select(
+                    entity =>
+                        new NativeExplorerItem(
+                            entity.PickingId,
+                            PickingKind.Object,
+                            entity.Object.ObjectId,
+                            entity.Tile.X,
+                            entity.Tile.Y,
+                            entity.Object
+                                .SceneryObjectPath))
+                .Concat(
+                    Scene.Splines
+                        .Select(
+                            entity =>
+                                new NativeExplorerItem(
+                                    entity.PickingId,
+                                    PickingKind.Spline,
+                                    entity.Spline.SplineId,
+                                    entity.Tile.X,
+                                    entity.Tile.Y,
+                                    entity.Spline
+                                        .SplinePath)))
+                .OrderBy(
+                    item =>
+                        item.Kind)
+                .ThenBy(
+                    item =>
+                        item.AssetPath,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .ThenBy(
+                    item =>
+                        item.EntityId)
+                .ToArray();
+    }
+
+    public NativeSelectionInfo?
+        SelectExplorerItem(
+            PickingId pickingId,
+            bool focus)
+    {
+        ThrowIfDisposed();
+
+        if (
+            Scene is null ||
+            pickingId.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ))
+        {
+            return null;
+        }
+
+        var exists =
+            pickingId.Kind ==
+                PickingKind.Object
+                ? Scene.Objects.Any(
+                    item =>
+                        item.PickingId ==
+                        pickingId)
+                : Scene.Splines.Any(
+                    item =>
+                        item.PickingId ==
+                        pickingId);
+
+        if (!exists)
+        {
+            return null;
+        }
+
+        _selectedPickingId =
+            pickingId;
+
+        MapRenderer.SetHover(
+            PickingId.None);
+
+        MapRenderer.SetSelection(
+            pickingId);
+
+        MapRenderer
+            .SetSelectionPreviewTransform(
+                Matrix4x4.Identity);
+
+        if (
+            focus &&
+            TryGetSelectionAnchor(
+                out var anchor))
+        {
+            Navigation.FocusOn(
+                anchor,
+                preferredDistance:
+                    Math.Clamp(
+                        Navigation.Distance *
+                        0.35f,
+                        35.0f,
+                        180.0f));
+
+            UpdateCameraTransform();
+        }
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+
+        return
+            GetSelectionInfo();
+    }
+
     public IntPtr SwapChainPointer =>
         Surface?.NativePointer ??
         IntPtr.Zero;

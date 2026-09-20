@@ -219,6 +219,21 @@ public sealed class NativeViewportNavigation
             projection;
     }
 
+    public void FocusOn(
+        Vector3 target,
+        float preferredDistance =
+            100.0f)
+    {
+        Target =
+            target;
+
+        Distance =
+            Math.Clamp(
+                preferredDistance,
+                _minimumDistance,
+                _maximumDistance);
+    }
+
     public void ZoomByWheel(
         int wheelDelta)
     {

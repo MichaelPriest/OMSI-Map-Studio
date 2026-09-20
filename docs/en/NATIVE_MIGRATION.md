@@ -179,3 +179,12 @@ The native Inspector is no longer read-only and can edit the selected entity tra
 Pressing **Apply values** updates the same snapshot used by the viewport, creates a before/after history pair, refreshes native geometry, stages the OMSI transform for persistence, and remains compatible with Undo/Redo and Save changes.
 
 Gizmo and Inspector are therefore two interfaces over the same native editing model, with no duplicated state.
+
+
+### Checkpoint N3.1 — native Explorer with selection and focus
+
+N3 starts with a WinUI Explorer fed directly by the renderer snapshot. Real objects and splines are listed with type, ID, asset path, and tile, without a parallel inventory model.
+
+Search filters the display name, asset path, and tile coordinates. Selecting an Explorer item uses the same scene `PickingId` and updates the red highlight, gizmo, and Inspector. Double-clicking also repositions the 3D camera over the entity insertion point.
+
+Selections made directly in the viewport are synchronized back into the list and scrolled into view, keeping Explorer and viewport as two views over the same native state.

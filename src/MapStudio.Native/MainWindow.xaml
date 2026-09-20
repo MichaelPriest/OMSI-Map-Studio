@@ -91,22 +91,45 @@
                     Margin="8"
                     Background="#0C2130"
                     CornerRadius="8">
-                <StackPanel Padding="14" Spacing="10">
-                    <TextBlock Text="Explorer"
+                <Grid Padding="14" RowSpacing="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0"
+                               Text="Explorer"
                                FontSize="18"
                                FontWeight="SemiBold" />
-                    <TextBox PlaceholderText="Buscar objetos e splines..." />
-                    <TextBlock
-                        x:Name="RootText"
-                        Text="Nenhuma instalação OMSI selecionada."
-                        TextWrapping="Wrap"
-                        Foreground="#9FB5C5" />
-                    <TextBlock
-                        x:Name="MapText"
-                        Text="Nenhum mapa aberto."
-                        TextWrapping="Wrap"
-                        Foreground="#9FB5C5" />
-                </StackPanel>
+
+                    <TextBox x:Name="ExplorerSearchBox"
+                             Grid.Row="1"
+                             PlaceholderText="Buscar objetos e splines..."
+                             TextChanged="OnExplorerSearchTextChanged" />
+
+                    <TextBlock x:Name="RootText"
+                               Grid.Row="2"
+                               Text="Nenhuma instalação OMSI selecionada."
+                               TextWrapping="Wrap"
+                               Foreground="#9FB5C5" />
+
+                    <TextBlock x:Name="MapText"
+                               Grid.Row="3"
+                               Text="Nenhum mapa aberto."
+                               TextWrapping="Wrap"
+                               Foreground="#9FB5C5" />
+
+                    <ListView x:Name="ExplorerListView"
+                              Grid.Row="4"
+                              Margin="0,4,0,0"
+                              SelectionMode="Single"
+                              DisplayMemberPath="DisplayText"
+                              SelectionChanged="OnExplorerSelectionChanged"
+                              DoubleTapped="OnExplorerDoubleTapped" />
+                </Grid>
             </Border>
 
             <controls:NativeViewport

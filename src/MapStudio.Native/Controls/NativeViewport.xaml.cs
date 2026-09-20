@@ -51,6 +51,45 @@ public sealed partial class NativeViewport : UserControl
         NativeSelectionInfo?>?
         SelectionChanged;
 
+    public IReadOnlyList<
+        NativeExplorerItem>
+        GetExplorerItems() =>
+        _runtime
+            ?.GetExplorerItems() ??
+        Array.Empty<
+            NativeExplorerItem>();
+
+    public bool SelectExplorerItem(
+        NativeExplorerItem item,
+        bool focus)
+    {
+        ArgumentNullException.ThrowIfNull(
+            item);
+
+        var info =
+            _runtime
+                ?.SelectExplorerItem(
+                    item.PickingId,
+                    focus);
+
+        if (info is null)
+        {
+            return false;
+        }
+
+        PublishSelectionInfo();
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            info.Kind ==
+                MapStudio.Renderer.Picking
+                    .PickingKind.Object
+                ? $"Objeto #{info.EntityId} selecionado pelo Explorer."
+                : $"Spline #{info.EntityId} selecionada pelo Explorer.");
+
+        return true;
+    }
+
     public bool CanUndo =>
         _runtime?.CanUndo ??
         false;
