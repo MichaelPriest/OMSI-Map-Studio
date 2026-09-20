@@ -873,7 +873,7 @@ public partial class MainWindow : Window
     }
 
     private Task OpenMapFromCatalogAsync(
-        string directoryName)
+        string? directoryName)
     {
         if (
             string.IsNullOrWhiteSpace(
