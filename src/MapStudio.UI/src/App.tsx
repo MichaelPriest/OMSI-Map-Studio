@@ -16,8 +16,10 @@ import {
   insertObject,
   insertSpline,
   insertSplineFromLibrary,
+  applyTerrainElevationGrid,
   isDesktopBridgeAvailable,
   levelTerrain,
+  loadGoogleElevationGrid,
   loadGoogleMapReference,
   loadMapCatalog,
   loadMapFull,
@@ -42,6 +44,7 @@ import {
   setFullScreen,
   subscribeToHost,
   updateSplineLinks,
+  type GoogleElevationGrid,
   type GoogleMapReference,
   type OmsiMapCatalogEntry,
   type SceneryLibraryEntry,
@@ -246,6 +249,12 @@ const errorMessages: Record<string, string> = {
     "Revise a chave, coordenadas, zoom e tipo de mapa da referência do Google.",
   googleMapsReferenceError:
     "Não foi possível carregar a referência do Google Maps/Elevation. Verifique a chave, APIs habilitadas, billing e conexão.",
+  invalidGoogleElevationRequest:
+    "Os dados usados para buscar a grade de elevação são inválidos.",
+  googleElevationGridError:
+    "Não foi possível carregar a grade de elevação do Google Elevation.",
+  invalidElevationGrid:
+    "A grade de elevação recebida não é válida para o terreno.",
   invalidMapGeoreference:
     "Os dados de coordenadas da referência do mapa são inválidos.",
   mapGeoreferenceSaveError:
@@ -837,6 +846,26 @@ export function App() {
     referenceOpacity,
     setReferenceOpacity
   ] = useState(0.55);
+
+  const [
+    googleElevationGrid,
+    setGoogleElevationGrid
+  ] = useState<GoogleElevationGrid>();
+
+  const [
+    loadingElevationGrid,
+    setLoadingElevationGrid
+  ] = useState(false);
+
+  const [
+    elevationVerticalOffset,
+    setElevationVerticalOffset
+  ] = useState(0);
+
+  const [
+    applyingElevationGrid,
+    setApplyingElevationGrid
+  ] = useState(false);
 
   const [
     georefAnchor,
