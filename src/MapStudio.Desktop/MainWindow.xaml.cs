@@ -1172,6 +1172,475 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task CreateCoordinateMapAsync(
+        string? directoryName,
+        string? displayName,
+        double latitude,
+        double longitude)
+    {
+        if (_omsiRootPath is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "omsiRootRequired"
+            });
+            return;
+        }
+
+        directoryName =
+            directoryName?.Trim();
+        displayName =
+            displayName?.Trim();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                displayName) ||
+            directoryName.Length > 80 ||
+            displayName.Length > 120 ||
+            latitude is < -90 or > 90 ||
+            longitude is < -180 or > 180 ||
+            directoryName is "." or ".." ||
+            !string.Equals(
+                Path.GetFileName(
+                    directoryName),
+                directoryName,
+                StringComparison.Ordinal) ||
+            directoryName.IndexOfAny(
+                Path.GetInvalidFileNameChars()) >= 0)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "invalidCoordinateMapRequest"
+            });
+            return;
+        }
+
+        var templateRoot =
+            Path.Combine(
+                _omsiRootPath,
+                "template");
+
+        var templateDirectory =
+            Path.Combine(
+                templateRoot,
+                "NewMap");
+
+        if (
+            !Directory.Exists(
+                templateDirectory) &&
+            Directory.Exists(
+                templateRoot))
+        {
+            templateDirectory =
+                Directory
+                    .EnumerateDirectories(
+                        templateRoot)
+                    .FirstOrDefault(
+                        candidate =>
+                        {
+                            var name =
+                                Path.GetFileName(
+                                    candidate);
+
+                            return
+                                string.Equals(
+                                    name,
+                                    "NewMap",
+                                    StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(
+                                    name,
+                                    "New Map",
+                                    StringComparison.OrdinalIgnoreCase);
+                        })
+                ?? templateDirectory;
+        }
+
+        if (
+            !Directory.Exists(
+                templateDirectory))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "newMapTemplateMissing",
+                detail =
+                    templateDirectory
+            });
+            return;
+        }
+
+        var mapsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    _omsiRootPath,
+                    "maps"));
+
+        var targetDirectory =
+            Path.GetFullPath(
+                Path.Combine(
+                    mapsRoot,
+                    directoryName));
+
+        var requiredPrefix =
+            mapsRoot
+                .TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+
+        if (
+            !targetDirectory.StartsWith(
+                requiredPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "invalidCoordinateMapRequest"
+            });
+            return;
+        }
+
+        if (
+            Directory.Exists(
+                targetDirectory) ||
+            File.Exists(
+                targetDirectory))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "coordinateMapAlreadyExists",
+                detail =
+                    targetDirectory
+            });
+            return;
+        }
+
+        try
+        {
+            Directory.CreateDirectory(
+                targetDirectory);
+
+            foreach (
+                var sourceDirectory in
+                    Directory
+                        .EnumerateDirectories(
+                            templateDirectory,
+                            "*",
+                            SearchOption.AllDirectories))
+            {
+                var relative =
+                    Path.GetRelativePath(
+                        templateDirectory,
+                        sourceDirectory);
+
+                if (
+                    relative.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relative))
+                {
+                    throw new InvalidDataException(
+                        "invalidTemplatePath");
+                }
+
+                Directory.CreateDirectory(
+                    Path.Combine(
+                        targetDirectory,
+                        relative));
+            }
+
+            foreach (
+                var sourceFile in
+                    Directory
+                        .EnumerateFiles(
+                            templateDirectory,
+                            "*",
+                            SearchOption.AllDirectories))
+            {
+                var relative =
+                    Path.GetRelativePath(
+                        templateDirectory,
+                        sourceFile);
+
+                if (
+                    relative.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relative))
+                {
+                    throw new InvalidDataException(
+                        "invalidTemplatePath");
+                }
+
+                var destination =
+                    Path.Combine(
+                        targetDirectory,
+                        relative);
+
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(
+                        destination)!);
+
+                File.Copy(
+                    sourceFile,
+                    destination,
+                    overwrite: false);
+            }
+
+            var globalConfigPath =
+                Path.Combine(
+                    targetDirectory,
+                    "global.cfg");
+
+            if (
+                !File.Exists(
+                    globalConfigPath))
+            {
+                throw new InvalidDataException(
+                    "newMapTemplateInvalid");
+            }
+
+            var globalDocument =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        globalConfigPath);
+
+            var lines =
+                globalDocument
+                    .Lines
+                    .ToList();
+
+            SetSimpleConfigSectionValue(
+                lines,
+                "name",
+                displayName);
+
+            SetSimpleConfigSectionValue(
+                lines,
+                "friendlyname",
+                displayName);
+
+            var patchedGlobal =
+                new OmsiConfigDocument(
+                    lines,
+                    Array.Empty<
+                        OmsiConfigSection>(),
+                    globalDocument.NewLine,
+                    globalDocument
+                        .HasTrailingNewLine,
+                    globalDocument
+                        .TextEncoding,
+                    globalDocument
+                        .HasByteOrderMark);
+
+            await File.WriteAllBytesAsync(
+                globalConfigPath,
+                patchedGlobal.ToBytes());
+
+            var map =
+                await OmsiMapCatalog
+                    .OpenMapAsync(
+                        targetDirectory);
+
+            var initialTile =
+                OmsiTileRegionSelector
+                    .FindInitialTile(
+                        map.Tiles);
+
+            var anchorTileX =
+                initialTile?.X ?? 0;
+
+            var anchorTileY =
+                initialTile?.Y ?? 0;
+
+            var metadataDirectory =
+                Path.Combine(
+                    targetDirectory,
+                    ".mapstudio");
+
+            Directory.CreateDirectory(
+                metadataDirectory);
+
+            var georeferencePath =
+                Path.Combine(
+                    metadataDirectory,
+                    "georeference.json");
+
+            var georeferencePayload =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        version = 1,
+                        provider =
+                            "Google Maps",
+                        latitude,
+                        longitude,
+                        anchorTileX,
+                        anchorTileY,
+                        anchorX = 150.0,
+                        anchorY = 150.0,
+                        zoom = 18,
+                        mapType = "hybrid",
+                        sourceTemplate =
+                            Path.GetFileName(
+                                templateDirectory),
+                        savedAtUtc =
+                            DateTimeOffset.UtcNow
+                    },
+                    new JsonSerializerOptions(
+                        JsonSerializerDefaults.Web)
+                    {
+                        WriteIndented = true
+                    });
+
+            await File.WriteAllTextAsync(
+                georeferencePath,
+                georeferencePayload);
+
+            var knownMaps =
+                _knownMaps.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value,
+                    StringComparer.OrdinalIgnoreCase);
+
+            knownMaps[map.DirectoryName] =
+                map;
+
+            _knownMaps = knownMaps;
+
+            PostMessage(new
+            {
+                type =
+                    "coordinateMapCreated",
+                map.DirectoryName,
+                map.DisplayName,
+                latitude,
+                longitude
+            });
+
+            OpenKnownMap(map);
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    IOException or
+                    UnauthorizedAccessException or
+                    InvalidDataException)
+        {
+            try
+            {
+                if (
+                    Directory.Exists(
+                        targetDirectory))
+                {
+                    Directory.Delete(
+                        targetDirectory,
+                        recursive: true);
+                }
+            }
+            catch
+            {
+                // Preserve the original creation error.
+            }
+
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "newMapTemplateInvalid"
+                        ? "newMapTemplateInvalid"
+                        : "coordinateMapCreateError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private static void SetSimpleConfigSectionValue(
+        List<string> lines,
+        string keyword,
+        string value)
+    {
+        var header =
+            $"[{keyword}]";
+
+        var headerIndex =
+            lines.FindIndex(
+                line =>
+                    string.Equals(
+                        line.Trim(),
+                        header,
+                        StringComparison.OrdinalIgnoreCase));
+
+        if (headerIndex < 0)
+        {
+            if (
+                lines.Count > 0 &&
+                !string.IsNullOrWhiteSpace(
+                    lines[^1]))
+            {
+                lines.Add(
+                    string.Empty);
+            }
+
+            lines.Add(header);
+            lines.Add(value);
+            return;
+        }
+
+        for (
+            var index =
+                headerIndex + 1;
+            index < lines.Count;
+            index++)
+        {
+            var trimmed =
+                lines[index].Trim();
+
+            if (
+                trimmed.StartsWith(
+                    "[",
+                    StringComparison.Ordinal) &&
+                trimmed.EndsWith(
+                    "]",
+                    StringComparison.Ordinal))
+            {
+                lines.Insert(
+                    index,
+                    value);
+                return;
+            }
+
+            if (
+                trimmed.Length == 0 ||
+                trimmed.StartsWith(
+                    "#",
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            lines[index] =
+                value;
+            return;
+        }
+
+        lines.Add(value);
+    }
+
     private Task OpenMapFromCatalogAsync(
         string? directoryName)
     {
