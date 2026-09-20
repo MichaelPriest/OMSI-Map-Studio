@@ -138,6 +138,26 @@ type ViewportProps = {
       y: number;
     }
   ) => void;
+  onTerrainPoint?: (
+    point: {
+      tileX: number;
+      tileY: number;
+      x: number;
+      y: number;
+      height: number;
+    }
+  ) => void;
+  referenceOverlay?: {
+    base64Data: string;
+    mimeType: string;
+    width: number;
+    height: number;
+    metersPerPixel: number;
+    anchorWorldX: number;
+    anchorWorldZ: number;
+    opacity: number;
+    attribution: string;
+  };
   usesWorldCoordinates: boolean;
   selectedObject?: OmsiPlacedObject;
   selectedGeometry?: OmsiSceneryObjectGeometry;
@@ -3595,6 +3615,8 @@ export function Viewport({
   splines,
   activeTile,
   onActiveTileChange,
+  onTerrainPoint,
+  referenceOverlay,
   usesWorldCoordinates,
   selectedObject,
   selectedGeometry,
