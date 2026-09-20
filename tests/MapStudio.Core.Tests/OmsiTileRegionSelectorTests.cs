@@ -92,4 +92,71 @@ public sealed class OmsiTileRegionSelectorTests
                 tile.X == 1 &&
                 tile.Y == 1);
     }
+
+    [Fact]
+    public void SelectForStreaming_LoadsNearTilesFullyAndOuterRingAsSummary()
+    {
+        var tiles = new List<OmsiTileReference>();
+
+        for (var y = -2; y <= 2; y++)
+        {
+            for (var x = -2; x <= 2; x++)
+            {
+                tiles.Add(
+                    new OmsiTileReference(
+                        x,
+                        y,
+                        $"tile_{x}_{y}.map"));
+            }
+        }
+
+        var selection =
+            OmsiTileRegionSelector
+                .SelectForStreaming(
+                    tiles,
+                    centerX: 0,
+                    centerY: 0,
+                    fullRadius: 1,
+                    metadataRadius: 2);
+
+        Assert.Equal(
+            25,
+            selection.Count);
+
+        Assert.Equal(
+            9,
+            selection.Count(
+                item =>
+                    item.Detail ==
+                    OmsiTileStreamDetail
+                        .Full));
+
+        Assert.Equal(
+            16,
+            selection.Count(
+                item =>
+                    item.Detail ==
+                    OmsiTileStreamDetail
+                        .Summary));
+
+        Assert.All(
+            selection.Where(
+                item =>
+                    item.Ring <= 1),
+            item =>
+                Assert.Equal(
+                    OmsiTileStreamDetail
+                        .Full,
+                    item.Detail));
+
+        Assert.All(
+            selection.Where(
+                item =>
+                    item.Ring == 2),
+            item =>
+                Assert.Equal(
+                    OmsiTileStreamDetail
+                        .Summary,
+                    item.Detail));
+    }
 }
