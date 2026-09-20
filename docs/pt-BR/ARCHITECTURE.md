@@ -656,3 +656,30 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 ## Roadmap arquitetural
 
 A arquitetura alvo, incluindo Asset Index persistente, cache incremental, streaming por tiles, etapas de paridade com o editor OMSI e critérios de conclusão, está consolidada em [ROADMAP.md](ROADMAP.md). Quando este documento e o roadmap tratarem do mesmo tema, a implementação atual pertence a este documento e a direção futura pertence ao roadmap.
+
+
+## Asset Index e streaming incremental — Fase A
+
+A primeira implementação da fundação de desempenho adiciona um **Asset Index SQLite v1** em `MapStudio.Core`.
+
+- existe um banco separado por instalação OMSI, identificado por hash do caminho raiz;
+- o banco é armazenado fora da pasta do OMSI, em `LocalApplicationData\OMSI Map Studio\Cache\<id>\assets-v1.sqlite`;
+- são indexados `.sco`, `.sli`, `.o3d`, `.x` e formatos de textura reconhecidos;
+- a varredura cobre `Sceneryobjects`, `Splines` e `Texture`, ignorando reparse points;
+- cada entrada preserva path relativo, tipo, tamanho e `LastWriteTimeUtc`;
+- gerações de varredura permitem retirar entradas de arquivos removidos;
+- arquivos sem alteração são marcados como vistos sem serem recriados;
+- bibliotecas de objetos e splines preferem o índice quando existem entradas e mantêm a varredura direta anterior como fallback;
+- a atualização ocorre em segundo plano depois da seleção da instalação OMSI;
+- falha do cache é não fatal e não bloqueia mapas, bibliotecas ou leitura direta.
+
+O banco é **derivado** e nunca é fonte autoritativa de dados OMSI. A existência de uma entrada no índice não substitui as validações de path/arquivo antes de qualquer operação persistente.
+
+O carregamento regional ganhou o primeiro modelo em anéis:
+
+- anéis 0 e 1: conteúdo completo da área 3×3;
+- anel 2: apenas summary/metadata leve do tile, sem decodificar terrain grid, RDY ou masks;
+- ao mover a região ativa, a UI remove payloads pesados de terreno que ficaram fora da janela de streaming;
+- objetos e splines visíveis continuam vindo apenas da região completa para manter picking e identidade reais.
+
+Esta etapa é intermediária. Cache derivado de geometria/material, fila de prioridade completa, LOD/instancing e descarte explícito de recursos Babylon/GPU ainda pertencem à Fase A.
