@@ -13,13 +13,16 @@ public static class NativeSplineEndpointSnapper
     {
         ArgumentNullException.ThrowIfNull(scene);
 
-        snapped =
+        var bestPoint =
             candidate;
 
         if (
             maximumHorizontalDistance <=
             0)
         {
+            snapped =
+                candidate;
+
             return false;
         }
 
@@ -57,6 +60,9 @@ public static class NativeSplineEndpointSnapper
                 end);
         }
 
+        snapped =
+            bestPoint;
+
         return found;
 
         void Consider(
@@ -84,7 +90,7 @@ public static class NativeSplineEndpointSnapper
             bestDistanceSquared =
                 distanceSquared;
 
-            snapped =
+            bestPoint =
                 endpoint;
 
             found =
