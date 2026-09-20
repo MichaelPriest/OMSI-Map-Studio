@@ -17508,6 +17508,8 @@ export function App() {
 
         <div className="editor-grid">
           <aside
+            data-floating-tool
+            data-floating-tool-id="explorer-drawer"
             className={[
               "map-explorer city-drawer city-drawer-left",
               isFullScreen
@@ -17525,6 +17527,15 @@ export function App() {
               .filter(Boolean)
               .join(" ")}
           >
+            <button
+              type="button"
+              className="city-drawer-drag-grip"
+              data-drag-handle
+              title="Arraste para mover o painel"
+              aria-label="Mover painel"
+            >
+              ⋮⋮
+            </button>
             {(
               isFullScreen
                 ? fullScreenPanel ===
@@ -22751,6 +22762,8 @@ export function App() {
           </section>
 
           <aside
+            data-floating-tool
+            data-floating-tool-id="inspector-drawer"
             className={[
               "object-inspector city-drawer city-drawer-right",
               isFullScreen
@@ -22768,6 +22781,15 @@ export function App() {
               .filter(Boolean)
               .join(" ")}
           >
+            <button
+              type="button"
+              className="city-drawer-drag-grip"
+              data-drag-handle
+              title="Arraste para mover o painel"
+              aria-label="Mover painel"
+            >
+              ⋮⋮
+            </button>
             {(
               isFullScreen
                 ? fullScreenPanel ===
