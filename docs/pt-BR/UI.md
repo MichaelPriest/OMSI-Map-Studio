@@ -720,3 +720,10 @@ A prévia de biblioteca agora participa do mesmo carregamento real de texturas u
 O inspetor de `.sco` mostra meshes carregados/falhos, arquivos O3D ausentes, vértices, triângulos, materiais, texturas carregadas/ausentes/pendentes, comandos de material ainda não suportados e meshes de colisão declarados. O status visual indica **íntegro**, **atenção/carregando** ou **problemas detectados**.
 
 Para `.sli`, o inspetor mostra quantidade de superfícies, largura real do perfil, texturas carregadas/ausentes/pendentes e superfícies com alpha. Esses diagnósticos são apenas leitura; não alteram o asset nem substituem dependências.
+
+
+### Multi-lote transacional de objetos
+
+O bridge desktop aceita `insertObjectMultiBatch` para inserir vários grupos de `.sco` diferentes na mesma operação. O host valida cada asset real, encontra o template preservativo correspondente no mapa, reserva uma sequência global de IDs e agrupa todos os objetos por tile antes de gravar.
+
+O multi-lote aceita até 16 tipos de asset e até 512 objetos totais, com no máximo 256 por tipo. Toda a operação usa uma única `SafeFileTransaction` e um único diretório de backup, evitando corridas de ID quando um conjunto de construção mistura, por exemplo, árvores e postes.

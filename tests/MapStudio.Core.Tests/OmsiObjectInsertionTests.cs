@@ -198,6 +198,65 @@ public sealed class OmsiObjectInsertionTests
     }
 
     [Fact]
+    public void Inserter_AppendsMixedAssetBatch()
+    {
+        const string source =
+            "[version]\r\n14\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(source);
+
+        var result =
+            OmsiTileObjectInserter.AppendMany(
+                document,
+                [
+                    new OmsiNewPlacedObject(
+                        "0",
+                        @"Sceneryobjects\Pack\Tree.sco",
+                        1,
+                        1,
+                        2,
+                        0,
+                        0,
+                        0,
+                        0,
+                        ["4", "Tree.tga"]),
+                    new OmsiNewPlacedObject(
+                        "1",
+                        @"Sceneryobjects\Pack\Lamp.sco",
+                        2,
+                        3,
+                        4,
+                        0,
+                        90,
+                        0,
+                        0,
+                        ["lamp-extra"])
+                ]);
+
+        var text =
+            Encoding.UTF8.GetString(
+                result.Bytes);
+
+        Assert.Equal(
+            new[] { 0, 1 },
+            result.SourceSectionOrdinals);
+
+        Assert.Contains(
+            "Sceneryobjects\\Pack\\Tree.sco\r\n1\r\n",
+            text);
+        Assert.Contains(
+            "4\r\nTree.tga\r\n",
+            text);
+        Assert.Contains(
+            "Sceneryobjects\\Pack\\Lamp.sco\r\n2\r\n",
+            text);
+        Assert.Contains(
+            "lamp-extra\r\n",
+            text);
+    }
+
+    [Fact]
     public void Analyzer_DoesNotInventTemplateForNewAsset()
     {
         var tile = new OmsiTileContent(

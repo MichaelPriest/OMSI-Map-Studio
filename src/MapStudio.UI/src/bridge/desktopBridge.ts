@@ -368,6 +368,14 @@ export type HostMessage =
       placedObjects: OmsiPlacedObject[];
     }
   | {
+      type: "objectMultiBatchInserted";
+      directoryName: string;
+      backupDirectory: string;
+      groupCount: number;
+      count: number;
+      placedObjects: OmsiPlacedObject[];
+    }
+  | {
       type: "objectTransformsSaved";
       directoryName: string;
       editsSaved: number;
@@ -688,6 +696,29 @@ export function insertObjectBatch(
     directoryName,
     sceneryObjectPath,
     placements
+  });
+}
+
+export function insertObjectMultiBatch(
+  directoryName: string,
+  groups: Array<{
+    sceneryObjectPath: string;
+    placements: Array<{
+      tileX: number;
+      tileY: number;
+      x: number;
+      y: number;
+      z: number;
+      rotation: number;
+      pitch: number;
+      bank: number;
+    }>;
+  }>
+) {
+  getWebView()?.postMessage({
+    type: "insertObjectMultiBatch",
+    directoryName,
+    groups
   });
 }
 

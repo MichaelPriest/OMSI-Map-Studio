@@ -720,3 +720,10 @@ Library previews now participate in the same real texture-loading path used by s
 The `.sco` inspector reports loaded/failed meshes, missing O3D files, vertices, triangles, materials, loaded/missing/pending textures, material commands that are still unsupported, and declared collision meshes. The visual status reports **healthy**, **attention/loading**, or **problems detected**.
 
 For `.sli`, the inspector reports surface count, real profile width, loaded/missing/pending textures, and alpha-enabled surfaces. Diagnostics are read-only; they never change the asset or replace dependencies.
+
+
+### Transactional multi-object batch
+
+The desktop bridge accepts `insertObjectMultiBatch` to insert several different real `.sco` groups in one operation. The host validates each asset, finds its preservation template in the map, reserves one global ID sequence, and groups all objects per tile before writing.
+
+A multi-batch accepts up to 16 asset types and 512 total objects, with at most 256 per type. The entire operation uses one `SafeFileTransaction` and one backup directory, preventing ID races when a construction set mixes assets such as trees and street lights.
