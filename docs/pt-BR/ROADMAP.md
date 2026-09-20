@@ -630,3 +630,10 @@ Ao implementar uma família de recursos descrita aqui:
 - quando uma decisão arquitetural mudar, registrar a nova decisão e o motivo.
 
 Novas ideias relevantes para substituir o editor original ou ampliar o editor moderno devem entrar neste roadmap antes de serem consideradas “lembradas pelo projeto”.
+
+
+### Identidade visual e pacote de ícones
+
+O Map Studio usará um pacote SVG próprio, inspirado na atmosfera técnica do OMSI sem copiar assets proprietários. A especificação completa está em [ICON_SYSTEM.md](ICON_SYSTEM.md).
+
+A migração acontecerá por grupos: barra rápida, HUD de construção, Explorer/Inspector, menus, biblioteca, diagnósticos e futuras ferramentas OMSI.
