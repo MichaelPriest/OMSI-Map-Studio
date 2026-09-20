@@ -2631,6 +2631,40 @@ function createGeometryMeshes(
           nightPreviewEnabled
         );
 
+      const normalizedRenderType =
+        geometry.renderType
+          ?.trim()
+          .toLocaleLowerCase("en-US");
+
+      const isOmsiSurfaceRenderType =
+        normalizedRenderType ===
+          "surface" ||
+        normalizedRenderType ===
+          "on_surface" ||
+        normalizedRenderType ===
+          "presurface";
+
+      // Intersections and road scenery commonly declare their real
+      // OMSI [rendertype]. Respect that source metadata in the preview:
+      // surface materials use their actual diffuse texture unlit so
+      // pack-specific normals cannot make a valid crossing disappear
+      // into black. Coordinates and geometry remain untouched.
+      if (
+        isOmsiSurfaceRenderType &&
+        mesh.material instanceof
+          StandardMaterial &&
+        mesh.material.diffuseTexture
+      ) {
+        mesh.material.disableLighting =
+          true;
+        mesh.material.diffuseColor =
+          Color3.White();
+        mesh.material.emissiveColor =
+          Color3.White();
+        mesh.material.emissiveTexture =
+          mesh.material.diffuseTexture;
+      }
+
       const meshTransform =
         meshReference.transform;
 
@@ -2725,6 +2759,8 @@ function createGeometryMeshes(
           meshReference
             .lodThreshold,
         mapStudioSource: "SCO/O3D",
+        mapStudioRenderType:
+          geometry.renderType ?? null,
         mapStudioOrigin:
           `${sceneryObjectPath} -> ${meshReference.declaredPath}`,
         mapStudioTextureName:
