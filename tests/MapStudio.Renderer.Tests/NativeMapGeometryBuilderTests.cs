@@ -8,7 +8,7 @@ namespace MapStudio.Renderer.Tests;
 public sealed class NativeMapGeometryBuilderTests
 {
     [Fact]
-    public void BuildCreatesTerrainObjectAndSplineLines()
+    public void BuildCreatesWorldSpaceTerrainObjectAndSplineLines()
     {
         var tile =
             new OmsiTileReference(
@@ -86,13 +86,18 @@ public sealed class NativeMapGeometryBuilderTests
             {
                 Assert.InRange(
                     vertex.Position.X,
-                    -1.1f,
-                    1.1f);
+                    0.0f,
+                    300.0f);
 
                 Assert.InRange(
                     vertex.Position.Y,
-                    -1.1f,
-                    1.1f);
+                    0.0f,
+                    3.0f);
+
+                Assert.InRange(
+                    vertex.Position.Z,
+                    0.0f,
+                    300.0f);
             });
     }
 }

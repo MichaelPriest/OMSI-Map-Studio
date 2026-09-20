@@ -10,14 +10,7 @@ on:
       - "src/MapStudio.Renderer/**"
       - "tests/MapStudio.Renderer.Tests/**"
       - ".github/workflows/native-ci.yml"
-  push:
-    branches:
-      - feature/native-winui-d3d11
-    paths:
-      - "src/MapStudio.Native/**"
-      - "src/MapStudio.Renderer/**"
-      - "tests/MapStudio.Renderer.Tests/**"
-      - ".github/workflows/native-ci.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
