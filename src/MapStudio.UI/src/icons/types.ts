@@ -48,4 +48,7 @@ export type MapStudioIconName =
   | "usage"
   | "properties"
   | "geometry"
-  | "materials";
+  | "materials"
+  | "duplicate"
+  | "delete"
+  | "link";

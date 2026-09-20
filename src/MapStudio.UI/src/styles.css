@@ -5863,3 +5863,69 @@ span.active {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* Inspector action buttons share the semantic icon language used by the
+   fullscreen quick dock and Library cards. */
+.object-inspector .wide,
+.object-inspector .spline-edit-actions > button,
+.object-inspector .placement-inspector-actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.object-inspector > .wide,
+.object-inspector .transform-inspector > .wide {
+  margin-inline: 8px;
+  width: calc(100% - 16px);
+}
+
+.object-inspector .placement-inspector-actions {
+  padding: 0 8px 8px;
+}
+
+.object-inspector .placement-inspector-actions > button {
+  min-height: 30px;
+}
+
+.object-inspector .spline-link-editor {
+  margin: 0 8px;
+  padding: 8px;
+  border-color: #1c435a;
+  border-radius: 7px;
+  background: #071925;
+}
+
+.object-inspector .spline-link-editor > strong {
+  color: #d5e8f3;
+  font-size: 8.5px;
+}
+
+.object-inspector .spline-edit-actions {
+  gap: 5px;
+  margin: 0 8px;
+}
+
+.object-inspector .spline-link-editor .spline-edit-actions {
+  margin: 8px 0 0;
+}
+
+.object-inspector .spline-edit-actions > button {
+  min-height: 30px;
+  padding-inline: 6px;
+  font-size: 7px;
+}
+
+.object-inspector .danger-action.wide {
+  border-color: #75424a;
+  background: #2b1117;
+  color: #e9a5ad;
+}
+
+.object-inspector .danger-action.wide:hover:not(:disabled) {
+  border-color: #a65360;
+  background: #3a151e;
+  color: #ffd2d7;
+}

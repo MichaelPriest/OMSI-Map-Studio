@@ -1,3 +1,6 @@
+import linkIcon from "./icons/link.svg?raw";
+import deleteIcon from "./icons/delete.svg?raw";
+import duplicateIcon from "./icons/duplicate.svg?raw";
 import materialsIcon from "./icons/materials.svg?raw";
 import geometryIcon from "./icons/geometry.svg?raw";
 import propertiesIcon from "./icons/properties.svg?raw";
@@ -52,6 +55,9 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "link": linkIcon,
+  "delete": deleteIcon,
+  "duplicate": duplicateIcon,
   "properties": propertiesIcon,
   "geometry": geometryIcon,
   "materials": materialsIcon,

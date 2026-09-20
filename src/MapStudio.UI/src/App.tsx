@@ -15943,7 +15943,8 @@ export function App() {
                 );
               }}
             >
-              Abrir prévia 3D e biblioteca
+              <MapStudioIcon name="preview" size={14} />
+              <span>Abrir prévia 3D</span>
             </button>
             <button
               type="button"
@@ -15952,7 +15953,8 @@ export function App() {
                 handleCancelPlacement
               }
             >
-              Cancelar colocação
+              <MapStudioIcon name="discard" size={14} />
+              <span>Cancelar colocação</span>
             </button>
           </div>
 
@@ -16112,7 +16114,8 @@ export function App() {
               }
               title="Criar uma nova colocação usando o mesmo .sco e a transformação atual como base"
             >
-              Colocar cópia
+              <MapStudioIcon name="duplicate" size={14} />
+              <span>Colocar cópia</span>
             </button>
 
             <div className="transform-help">
@@ -16143,9 +16146,12 @@ export function App() {
                     : "Excluir o objeto do tile com backup automático"
               }
             >
-              {deletingObject
-                ? "Excluindo..."
-                : "Excluir objeto"}
+              <MapStudioIcon name="delete" size={14} />
+              <span>
+                {deletingObject
+                  ? "Excluindo..."
+                  : "Excluir objeto"}
+              </span>
             </button>
           </>
         )}
@@ -16647,7 +16653,8 @@ export function App() {
                 );
               }}
             >
-              Abrir prévia 3D e biblioteca
+              <MapStudioIcon name="preview" size={14} />
+              <span>Abrir prévia 3D</span>
             </button>
             <button
               type="button"
@@ -16656,7 +16663,8 @@ export function App() {
                 handleCancelSplinePlacement
               }
             >
-              Cancelar construção
+              <MapStudioIcon name="discard" size={14} />
+              <span>Cancelar construção</span>
             </button>
           </div>
 
@@ -16787,7 +16795,8 @@ export function App() {
               }
               title="Criar uma nova spline desconectada usando esta spline real como template"
             >
-              Colocar cópia desconectada
+              <MapStudioIcon name="duplicate" size={14} />
+              <span>Colocar cópia desconectada</span>
             </button>
 
             <div className="transform-help">
@@ -16910,9 +16919,12 @@ export function App() {
                     )
                   }
                 >
-                  {savingSplineLinks
-                    ? "Atualizando..."
-                    : "Salvar vínculos"}
+                  <MapStudioIcon name="link" size={14} />
+                  <span>
+                    {savingSplineLinks
+                      ? "Atualizando..."
+                      : "Salvar vínculos"}
+                  </span>
                 </button>
 
                 <button
@@ -16928,7 +16940,8 @@ export function App() {
                     );
                   }}
                 >
-                  Desconectar rascunho
+                  <MapStudioIcon name="discard" size={14} />
+                  <span>Desconectar rascunho</span>
                 </button>
               </div>
             </div>
@@ -16948,9 +16961,12 @@ export function App() {
               }
               title="Excluir spline e liberar os vínculos recíprocos dos vizinhos na mesma transação"
             >
-              {deletingSpline
-                ? "Excluindo..."
-                : "Excluir spline"}
+              <MapStudioIcon name="delete" size={14} />
+              <span>
+                {deletingSpline
+                  ? "Excluindo..."
+                  : "Excluir spline"}
+              </span>
             </button>
           </>
         )}
@@ -17051,7 +17067,8 @@ export function App() {
                 disabled={savingSpline}
                 title="Ajustar Z e gradientes pela altura real do terreno carregado"
               >
-                Nivelar rua ao terreno
+                <MapStudioIcon name="terrain" size={14} />
+                <span>Nivelar ao terreno</span>
               </button>
 
               <button
@@ -17065,9 +17082,12 @@ export function App() {
                   savingSpline
                 }
               >
-                {savingSpline
-                  ? "Salvando..."
-                  : "Salvar spline"}
+                <MapStudioIcon name="save" size={14} />
+                <span>
+                  {savingSpline
+                    ? "Salvando..."
+                    : "Salvar spline"}
+                </span>
               </button>
 
               <button
@@ -17081,7 +17101,8 @@ export function App() {
                   savingSpline
                 }
               >
-                Descartar prévia
+                <MapStudioIcon name="discard" size={14} />
+                <span>Descartar prévia</span>
               </button>
             </div>
           </div>
