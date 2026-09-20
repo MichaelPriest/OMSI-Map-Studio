@@ -5676,29 +5676,51 @@ export function App() {
           isHeightSpline
         );
 
-        setSplinePlacementTemplate({
-          tileX: 0,
-          tileY: 0,
-          headerValue: "",
-          splinePath:
-            entry.splinePath,
-          splineId: -1,
-          sourceSectionOrdinal: -1,
-          previousSplineId: -1,
-          nextSplineId: -1,
-          x: 0,
-          y: 0,
-          z: 0,
-          rotation: 0,
-          length: 20,
-          radius: 0,
-          gradientStart: 0,
-          gradientEnd: 0,
-          isHeightSpline
-        });
+        const template:
+          OmsiPlacedSpline = {
+            tileX: 0,
+            tileY: 0,
+            headerValue: "",
+            splinePath:
+              entry.splinePath,
+            splineId: -1,
+            sourceSectionOrdinal: -1,
+            previousSplineId: -1,
+            nextSplineId: -1,
+            x: 0,
+            y: 0,
+            z: 0,
+            rotation: 0,
+            length: 20,
+            radius: 0,
+            gradientStart: 0,
+            gradientEnd: 0,
+            isHeightSpline
+          };
+
+        setSplinePlacementTemplate(
+          template
+        );
+
+        setEasyRoadStart(undefined);
 
         setPendingSplinePlacement(
-          undefined
+          activeTile
+            ? {
+                targetTileX:
+                  activeTile.x,
+                targetTileY:
+                  activeTile.y,
+                x: 150,
+                y: 150,
+                z: 0,
+                rotation: 0,
+                length: 20,
+                radius: 0,
+                gradientStart: 0,
+                gradientEnd: 0
+              }
+            : undefined
         );
         setSelectedSpline(undefined);
         setSelectedObject(undefined);
@@ -5723,6 +5745,7 @@ export function App() {
         }
       },
       [
+        activeTile,
         placementAsset,
         previewEditCount,
         selectedMap,
@@ -6216,7 +6239,17 @@ export function App() {
           transformDefaults
         );
         setPlacementAsset(entry);
-        setPendingPlacement(undefined);
+        setPendingPlacement(
+          activeTile
+            ? {
+                tileX: activeTile.x,
+                tileY: activeTile.y,
+                x: 150,
+                y: 150,
+                ...transformDefaults
+              }
+            : undefined
+        );
         setSelectedObject(undefined);
         setSelectedSpline(undefined);
         setEditorTool("select");
@@ -6235,6 +6268,7 @@ export function App() {
         }
       },
       [
+        activeTile,
         geometryByPath,
         selectedMap,
         splinePlacementTemplate,
@@ -6461,6 +6495,8 @@ export function App() {
         }
 
         if (tool === "road") {
+          setEasyRoadMode(true);
+          setEasyRoadStart(undefined);
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
@@ -6468,17 +6504,20 @@ export function App() {
             "splineLibrary"
           );
           setSaveNotice(
-            "Criar rua: escolha uma spline .sli real da instalação e use Colocar."
+            "Criador fácil de rua: escolha uma spline .sli real, depois clique no início e no fim da rua."
           );
           return;
         }
+
+        setEasyRoadMode(false);
+        setEasyRoadStart(undefined);
 
         if (tool === "terrain") {
           setSelectionMode("terrain");
           setShowTerrain(true);
           setExplorerPanelTab("map");
           setSaveNotice(
-            "Modo terreno: clique em um tile para selecioná-lo. A edição de alturas será habilitada somente com gravação preservativa validada."
+            "Modo terreno: clique diretamente no terreno para marcar o ponto e usar o nivelamento manual com backup."
           );
           return;
         }
