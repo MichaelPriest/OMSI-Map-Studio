@@ -14,6 +14,9 @@ public sealed partial class NativeViewport : UserControl
 {
     private NativeViewportRuntime? _runtime;
     private bool _leftPressed;
+    private bool _isPanning;
+    private double _lastPanX;
+    private double _lastPanY;
     private bool _swapChainBound;
 
     public NativeViewport()
@@ -265,6 +268,31 @@ public sealed partial class NativeViewport : UserControl
             e.GetCurrentPoint(
                 InputSurface);
 
+        var panPressed =
+            point.Properties
+                .IsMiddleButtonPressed ||
+            point.Properties
+                .IsRightButtonPressed;
+
+        if (panPressed)
+        {
+            _isPanning = true;
+            _lastPanX =
+                point.Position.X;
+            _lastPanY =
+                point.Position.Y;
+
+            InputSurface.CapturePointer(
+                e.Pointer);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                "Pan nativo ativo");
+
+            e.Handled = true;
+            return;
+        }
+
         _leftPressed =
             point.Properties
                 .IsLeftButtonPressed;
@@ -352,6 +380,54 @@ public sealed partial class NativeViewport : UserControl
         PointerText.Text =
             $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
 
+        if (
+            _isPanning &&
+            _runtime is not null)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var deltaX =
+                (
+                    point.Position.X -
+                    _lastPanX
+                ) *
+                scaleX;
+
+            var deltaY =
+                (
+                    point.Position.Y -
+                    _lastPanY
+                ) *
+                scaleY;
+
+            _lastPanX =
+                point.Position.X;
+
+            _lastPanY =
+                point.Position.Y;
+
+            _runtime.Pan(
+                deltaX,
+                deltaY);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
+
+            e.Handled = true;
+            return;
+        }
+
         if (_leftPressed)
         {
             PointerStatusChanged?.Invoke(
@@ -364,13 +440,16 @@ public sealed partial class NativeViewport : UserControl
         object sender,
         PointerRoutedEventArgs e)
     {
-        if (_leftPressed)
+        if (
+            _leftPressed ||
+            _isPanning)
         {
             InputSurface.ReleasePointerCapture(
                 e.Pointer);
         }
 
         _leftPressed = false;
+        _isPanning = false;
     }
 
     private void OnPointerWheelChanged(
@@ -381,9 +460,16 @@ public sealed partial class NativeViewport : UserControl
             e.GetCurrentPoint(
                 InputSurface);
 
-        PointerStatusChanged?.Invoke(
-            this,
-            $"Zoom nativo: delta={point.Properties.MouseWheelDelta}");
+        if (_runtime is not null)
+        {
+            _runtime.Zoom(
+                point.Properties
+                    .MouseWheelDelta);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Zoom nativo: {_runtime.Navigation.Zoom:F2}×");
+        }
 
         e.Handled = true;
     }

@@ -1,3 +1,8 @@
+cbuffer ViewportTransform : register(b0)
+{
+    float4 ViewTransform;
+};
+
 struct VSInput
 {
     float3 Position : POSITION;
@@ -13,7 +18,16 @@ struct PSInput
 PSInput VSMain(VSInput input)
 {
     PSInput output;
-    output.Position = float4(input.Position, 1.0f);
+    float2 transformed =
+        input.Position.xy *
+        ViewTransform.z +
+        ViewTransform.xy;
+
+    output.Position =
+        float4(
+            transformed,
+            input.Position.z,
+            1.0f);
     output.Color = input.Color;
     return output;
 }

@@ -84,3 +84,10 @@ O tamanho do backbuffer usa `CompositionScaleX/Y` do WinUI, portanto o renderer 
 O host WinUI agora abre a pasta real do OMSI e uma pasta de mapa usando o seletor nativo do Windows. O `MapStudio.Core` é chamado diretamente, sem bridge WebView2, para descobrir mapas, abrir `global.cfg`, escolher o tile inicial e carregar a região 3×3 real.
 
 O painel nativo já exibe contagens reais de tiles, objetos, splines e terrenos carregados. O próximo checkpoint transforma esse snapshot do Core em buffers GPU.
+
+
+### Checkpoint N1.1 — navegação GPU nativa
+
+O overview nativo agora possui transformação de viewport executada no vertex shader. Zoom por roda do mouse e pan por botão direito/meio alteram somente um constant buffer Direct3D; a geometria O3D não é reconstruída a cada movimento.
+
+A mesma transformação é usada no passe visível e no ID buffer, mantendo o pixel de seleção alinhado ao objeto mesmo depois de navegar pelo mapa.

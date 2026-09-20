@@ -31,6 +31,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public D3D11NativeMapRenderer MapRenderer { get; }
 
+    public NativeViewportNavigation Navigation { get; } =
+        new();
+
     public PickingRegistry<object> Picking { get; } =
         new();
 
@@ -81,6 +84,12 @@ public sealed class NativeViewportRuntime : IDisposable
                     tiles,
                     Picking);
 
+        Navigation.Reset();
+
+        MapRenderer.SetViewTransform(
+            Navigation
+                .ShaderTransform);
+
         var assets =
             await new NativeSceneryAssetLoader()
                 .LoadAsync(
@@ -127,6 +136,58 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         get;
         private set;
+    }
+
+    public void Zoom(
+        int wheelDelta)
+    {
+        ThrowIfDisposed();
+
+        Navigation.ZoomByWheel(
+            wheelDelta);
+
+        MapRenderer.SetViewTransform(
+            Navigation
+                .ShaderTransform);
+
+        RenderInitialFrame();
+    }
+
+    public void Pan(
+        double deltaPixelX,
+        double deltaPixelY)
+    {
+        ThrowIfDisposed();
+
+        if (Surface is null)
+        {
+            return;
+        }
+
+        Navigation.PanPixels(
+            deltaPixelX,
+            deltaPixelY,
+            Surface.Width,
+            Surface.Height);
+
+        MapRenderer.SetViewTransform(
+            Navigation
+                .ShaderTransform);
+
+        RenderInitialFrame();
+    }
+
+    public void ResetView()
+    {
+        ThrowIfDisposed();
+
+        Navigation.Reset();
+
+        MapRenderer.SetViewTransform(
+            Navigation
+                .ShaderTransform);
+
+        RenderInitialFrame();
     }
 
     public bool TryPick(

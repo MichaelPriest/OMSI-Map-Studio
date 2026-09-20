@@ -1,3 +1,4 @@
+using System.Numerics;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using Vortice.D3DCompiler;
@@ -22,6 +23,14 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11InputLayout _inputLayout;
+    private readonly ID3D11Buffer _viewTransformBuffer;
+
+    private Vector4 _viewTransform =
+        new(
+            0,
+            0,
+            1,
+            0);
 
     private ID3D11Buffer? _vertexBuffer;
     private int _vertexCount;
@@ -144,6 +153,11 @@ public sealed class D3D11NativeMapRenderer :
                     elements,
                     vertexShaderBytecode
                         .Span);
+
+        _viewTransformBuffer =
+            _deviceHost.Device
+                .CreateConstantBuffer<
+                    Vector4>();
     }
 
     public int VertexCount =>
@@ -151,6 +165,12 @@ public sealed class D3D11NativeMapRenderer :
 
     public int ObjectTriangleVertexCount =>
         _objectTriangleVertexCount;
+
+    public void SetViewTransform(
+        Vector4 transform)
+    {
+        _viewTransform = transform;
+    }
 
     public void Upload(
         NativeSceneSnapshot scene,
@@ -321,6 +341,9 @@ public sealed class D3D11NativeMapRenderer :
                     .VSSetShader(
                         _vertexShader);
 
+                ApplyViewTransform(
+                    context);
+
                 context
                     .PSSetShader(
                         _pixelShader);
@@ -441,6 +464,9 @@ public sealed class D3D11NativeMapRenderer :
                     .VSSetShader(
                         _vertexShader);
 
+                ApplyViewTransform(
+                    context);
+
                 context
                     .PSSetShader(
                         _pixelShader);
@@ -544,6 +570,27 @@ public sealed class D3D11NativeMapRenderer :
             selected.Length;
     }
 
+    private void ApplyViewTransform(
+        ID3D11DeviceContext context)
+    {
+        Span<Vector4> data =
+            stackalloc Vector4[1];
+
+        data[0] =
+            _viewTransform;
+
+        _viewTransformBuffer
+            .SetData(
+                context,
+                data,
+                MapMode.WriteDiscard);
+
+        context
+            .VSSetConstantBuffer(
+                0,
+                _viewTransformBuffer);
+    }
+
     private void ThrowIfDisposed()
     {
         ObjectDisposedException
@@ -573,6 +620,7 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _vertexBuffer?.Dispose();
+        _viewTransformBuffer.Dispose();
         _inputLayout.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();

@@ -84,3 +84,10 @@ Backbuffer sizing uses WinUI `CompositionScaleX/Y`, so the renderer works in phy
 The WinUI host now opens the real OMSI folder and a map folder using the native Windows picker. `MapStudio.Core` is called directly, without a WebView2 bridge, to discover maps, open `global.cfg`, choose the initial tile and load the real 3×3 region.
 
 The native UI already displays real counts for loaded tiles, objects, splines and terrain grids. The next checkpoint converts this Core snapshot into GPU buffers.
+
+
+### Checkpoint N1.1 — native GPU navigation
+
+The native overview now has a viewport transform executed by the vertex shader. Mouse-wheel zoom and right/middle-button pan update only a Direct3D constant buffer; O3D geometry is not rebuilt on every movement.
+
+The same transform is used by both the visible pass and the ID-buffer pass, keeping selection pixels aligned with objects after navigating the map.
