@@ -2504,6 +2504,12 @@ function createPlacedTree(
 
     texture.hasAlpha = true;
 
+    // OMSI [tree] billboard images use the opposite vertical texture
+    // origin from Babylon's plane UV convention. Keep the generic
+    // scenery/O3D texture path unchanged and flip only tree billboards.
+    texture.vScale = -1;
+    texture.vOffset = 1;
+
     material =
       new StandardMaterial(
         `${name}-material`,
@@ -5518,28 +5524,45 @@ export function Viewport({
               return false;
             }
 
-            const kind =
-              mesh.metadata
-                ?.mapStudioKind;
+            let node: Node | null =
+              mesh;
 
-            if (
-              selectionMode ===
-                "object"
-            ) {
-              return kind === "object";
+            while (node) {
+              const kind =
+                node.metadata
+                  ?.mapStudioKind;
+
+              if (
+                selectionMode ===
+                  "object" &&
+                kind === "object"
+              ) {
+                return true;
+              }
+
+              if (
+                selectionMode ===
+                  "spline" &&
+                kind === "spline"
+              ) {
+                return true;
+              }
+
+              if (
+                selectionMode ===
+                  "all" &&
+                (
+                  kind === "object" ||
+                  kind === "spline"
+                )
+              ) {
+                return true;
+              }
+
+              node = node.parent;
             }
 
-            if (
-              selectionMode ===
-                "spline"
-            ) {
-              return kind === "spline";
-            }
-
-            return (
-              kind === "object" ||
-              kind === "spline"
-            );
+            return false;
           },
           camera
         ) ?? [];
@@ -5683,7 +5706,6 @@ export function Viewport({
       };
 
       pointerDownHandledSelection =
-        editorTool === "select" &&
         selectPickedMapItem(
           event
         );
