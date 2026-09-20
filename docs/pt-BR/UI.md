@@ -875,3 +875,8 @@ Ao escolher um objeto ou spline na prateleira de construção ou na biblioteca, 
 O editor desktop e o modo tela cheia agora usam a mesma **barra rápida flutuante e movível** para seleção, mover/rotacionar, enquadrar/focar, snap, desfazer/refazer, salvar e controlar camadas. A posição é persistida junto das demais ferramentas flutuantes.
 
 A toolbar horizontal antiga foi retirada do layout ativo para reduzir duplicação visual. Suas funções continuam disponíveis na barra rápida, na barra de construção inferior e nos menus superiores. Os modos **Mapa completo** e **Desempenho 3×3** ficam em **Visualizar** e o modo atual continua visível no status do menu.
+
+
+### Filtros de seleção no picking real
+
+Os filtros **Tudo / Objetos / Splines / Terreno** agora são aplicados diretamente no picking do viewport, incluindo mesh real, hierarquia de filhos e fallback geométrico. No modo **Objetos**, splines não roubam o clique; no modo **Splines**, objetos não roubam o clique; e no modo **Terreno** o pointerdown não seleciona cenário antes do clique de terreno ser processado.
