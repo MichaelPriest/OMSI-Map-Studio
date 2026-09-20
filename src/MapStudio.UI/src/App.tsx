@@ -9083,7 +9083,19 @@ export function App() {
                   </strong>
                 </div>
   
-                <div className="tree-node active">
+                <button
+                  type="button"
+                  className={
+                    selectionMode === "object"
+                      ? "tree-node tree-node-button active"
+                      : "tree-node tree-node-button"
+                  }
+                  onClick={() => {
+                    setSelectionMode("object");
+                    setEditorTool("select");
+                  }}
+                  title="Selecionar apenas objetos"
+                >
                   <span>▣</span>
                   {mapLoadMode === "full"
                     ? "Objetos"
@@ -9092,7 +9104,7 @@ export function App() {
                     {selectedStats?.objects ??
                       objects.length}
                   </strong>
-                </div>
+                </button>
   
                 <div className="tree-node">
                   <span>◈</span>
@@ -9106,7 +9118,19 @@ export function App() {
                   </strong>
                 </div>
   
-                <div className="tree-node">
+                <button
+                  type="button"
+                  className={
+                    selectionMode === "spline"
+                      ? "tree-node tree-node-button active"
+                      : "tree-node tree-node-button"
+                  }
+                  onClick={() => {
+                    setSelectionMode("spline");
+                    setEditorTool("select");
+                  }}
+                  title="Selecionar apenas splines"
+                >
                   <span>⌇</span>
                   {mapLoadMode === "full"
                     ? "Splines"
@@ -9115,9 +9139,22 @@ export function App() {
                     {selectedStats?.splines ??
                       splines.length}
                   </strong>
-                </div>
+                </button>
   
-                <div className="tree-node">
+                <button
+                  type="button"
+                  className={
+                    selectionMode === "terrain"
+                      ? "tree-node tree-node-button active"
+                      : "tree-node tree-node-button"
+                  }
+                  onClick={() => {
+                    setSelectionMode("terrain");
+                    setEditorTool("select");
+                    setShowTerrain(true);
+                  }}
+                  title="Selecionar terreno/tile"
+                >
                   <span>▧</span>
                   Terreno
                   <strong>
@@ -9128,7 +9165,7 @@ export function App() {
                         )
                     ).length}
                   </strong>
-                </div>
+                </button>
   
                 <div className="tree-node disabled">
                   <span>◩</span>
