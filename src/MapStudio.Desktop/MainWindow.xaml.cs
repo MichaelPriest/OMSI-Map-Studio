@@ -1520,6 +1520,8 @@ public partial class MainWindow : Window
 
             _knownMaps = knownMaps;
 
+            OpenKnownMap(map);
+
             PostMessage(new
             {
                 type =
@@ -1529,8 +1531,6 @@ public partial class MainWindow : Window
                 latitude,
                 longitude
             });
-
-            OpenKnownMap(map);
         }
         catch (
             Exception exception)
