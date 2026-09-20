@@ -107,6 +107,12 @@ O índice deve cobrir progressivamente:
 
 O índice não substitui os arquivos OMSI. Ele é derivado deles e pode ser reconstruído.
 
+### Implementação Fase A — primeira etapa
+
+A primeira etapa já implementada usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
+
+O streaming regional também começou a migrar do antigo conceito fixo de 3×3 para anéis: tiles da área 3×3 são carregados integralmente e o anel externo 5×5 recebe somente summary/metadata. Essa etapa ainda não é o streaming final descrito abaixo.
+
 ### 3.2 Cache derivado
 
 O cache pode armazenar:
@@ -273,17 +279,20 @@ Legenda:
 
 Prioridade máxima antes de aumentar muito a quantidade de sistemas.
 
-Implementar:
+Estado atual da Fase A:
 
-- Asset Index;
-- cache persistente;
-- invalidação incremental;
-- streaming por tiles;
-- fila de carregamento por prioridade;
-- gerenciamento de memória/GPU;
-- instancing e LOD onde seguro;
-- métricas internas de tempo de abertura;
-- diagnóstico de cache.
+- 🟡 **Asset Index:** SQLite v1 já indexa `.sco`, `.sli`, `.o3d`, `.x` e texturas em `Sceneryobjects`, `Splines` e `Texture`;
+- 🟡 **cache persistente:** o índice fica em `LocalApplicationData/OMSI Map Studio/Cache/<instalação>/assets-v1.sqlite` e pode ser reconstruído;
+- 🟡 **invalidação incremental:** path, tipo, tamanho e data de modificação distinguem arquivos novos, alterados, iguais e removidos;
+- 🟡 **bibliotecas indexadas:** os catálogos de objetos e splines podem usar o índice persistente e mantêm a varredura direta como fallback seguro;
+- 🟡 **streaming por tiles:** o modo Streaming 3×3 mantém anéis 0–1 completos e lê o anel 2 como metadata leve; terreno pesado fora da região ativa é descartado da UI;
+- ⬜ fila de carregamento por prioridade completa;
+- ⬜ gerenciamento de memória/GPU completo;
+- ⬜ instancing e LOD onde seguro;
+- ⬜ métricas internas completas de tempo de abertura;
+- 🟡 diagnóstico de cache: progresso e contagens do Asset Index já aparecem na tela da instalação OMSI.
+
+Ainda falta transformar o cache de fingerprints em cache derivado de geometria/material/thumbnail e concluir descarte/LOD de recursos GPU para marcar a Fase A como ✅.
 
 Critério de conclusão:
 
