@@ -4124,3 +4124,51 @@ code {
 .city-drawer {
   bottom: 116px;
 }
+
+
+/* Contextual city-builder road guide: keeps OMSI spline semantics visible
+   near the active bottom tool without opening another permanent panel. */
+.citybuilder-road-guide {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.citybuilder-road-guide::-webkit-scrollbar {
+  display: none;
+}
+
+.citybuilder-road-guide > span {
+  flex: 0 0 auto;
+  padding: 3px 6px;
+  border: 1px solid #284d66;
+  border-radius: 999px;
+  background: #071b29;
+  color: #7798af;
+  font-size: 6.5px;
+  white-space: nowrap;
+}
+
+.citybuilder-road-guide >
+.road-guide-primary {
+  border-color: #3477a5;
+  background: #0a2a40;
+  color: #b9ddf2;
+  font-weight: 700;
+}
+
+.citybuilder-road-guide >
+span.active {
+  border-color: #2e8059;
+  background: #09281d;
+  color: #a6dfbd;
+}
+
+@media (max-width: 1120px) {
+  .citybuilder-road-guide {
+    max-width: 42vw;
+  }
+}
