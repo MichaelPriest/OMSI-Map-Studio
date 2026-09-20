@@ -578,3 +578,10 @@ Perfis `.sli` com três ou mais `[profilepnt]` agora geram todas as faixas entre
 ## Navegação lateral
 
 Com o viewport focado, `A/D` e as setas esquerda/direita deslocam a câmera lateralmente; `W/S` e as setas cima/baixo deslocam para frente/trás. `Shift` acelera. O botão do meio continua fazendo pan e `Shift + botão direito` também desloca em vez de orbitar.
+
+
+## Fluxo de mapas e atalhos de edição
+
+Depois de conectar a pasta do OMSI 2, **Abrir mapa** mostra a lista real de mapas encontrados em `maps`. O usuário pesquisa e escolhe o mapa pelo nome; a seleção manual de pasta continua disponível como fallback.
+
+A barra lateral pode ser recolhida. No editor, **Tudo / Objetos / Splines / Terreno** controlam o tipo clicável. Atalhos: `Alt+1..4` alternam esses filtros; `Alt+R` abre criação de rua por spline; `Alt+C` cruzamento; `Alt+O` objeto; `Alt+T` terreno; `Alt+A` água; `Alt+G` grama; `Alt+Y` árvore. Os atalhos reutilizam somente bibliotecas e assets reais da instalação.
