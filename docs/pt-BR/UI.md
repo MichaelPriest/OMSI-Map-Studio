@@ -711,3 +711,12 @@ Para `.sli`, a prévia mostra a largura total e a variação vertical do perfil 
 No criador de rua/ponte, **Encaixar nas pontas de vias existentes** procura a extremidade de spline normal mais próxima dentro do alcance configurado. Início e fim da nova rua passam a usar exatamente a coordenada da ponta encontrada, inclusive quando a spline existente é curva.
 
 O painel informa o ID da spline, qual extremidade foi usada e a distância original do clique. O snap não altera, recorta nem reconecta automaticamente a spline existente; apenas posiciona o novo trecho sobre a ponta real para reduzir ajustes manuais.
+
+
+### Diagnóstico técnico de assets na biblioteca
+
+A prévia de biblioteca agora participa do mesmo carregamento real de texturas usado por seleção/colocação. Ao apenas clicar em **Prévia**, o Map Studio solicita as texturas do `.sco`/O3D ou do perfil `.sli`, melhorando também as miniaturas 3D persistidas.
+
+O inspetor de `.sco` mostra meshes carregados/falhos, arquivos O3D ausentes, vértices, triângulos, materiais, texturas carregadas/ausentes/pendentes, comandos de material ainda não suportados e meshes de colisão declarados. O status visual indica **íntegro**, **atenção/carregando** ou **problemas detectados**.
+
+Para `.sli`, o inspetor mostra quantidade de superfícies, largura real do perfil, texturas carregadas/ausentes/pendentes e superfícies com alpha. Esses diagnósticos são apenas leitura; não alteram o asset nem substituem dependências.

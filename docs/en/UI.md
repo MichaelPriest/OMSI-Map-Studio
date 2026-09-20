@@ -711,3 +711,12 @@ For `.sli`, the preview displays the real profile's total width and vertical ran
 In the road/bridge builder, **Snap to existing road endpoints** finds the nearest endpoint of a normal spline within the configured range. The new road start/end then uses the exact endpoint coordinate, including endpoints of curved splines.
 
 The panel shows the spline ID, which endpoint was used, and the original cursor distance. Snapping never edits, cuts, or reconnects the existing spline automatically; it only positions the new segment on the real endpoint to reduce manual adjustment.
+
+
+### Technical asset diagnostics in the library
+
+Library previews now participate in the same real texture-loading path used by selection/placement. Clicking **Preview** alone requests the textures referenced by the `.sco`/O3D or `.sli` profile, which also improves persisted 3D thumbnails.
+
+The `.sco` inspector reports loaded/failed meshes, missing O3D files, vertices, triangles, materials, loaded/missing/pending textures, material commands that are still unsupported, and declared collision meshes. The visual status reports **healthy**, **attention/loading**, or **problems detected**.
+
+For `.sli`, the inspector reports surface count, real profile width, loaded/missing/pending textures, and alpha-enabled surfaces. Diagnostics are read-only; they never change the asset or replace dependencies.

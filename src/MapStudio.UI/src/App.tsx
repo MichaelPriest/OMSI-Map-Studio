@@ -5442,6 +5442,8 @@ export function App() {
       selectedObject
         ?.sceneryObjectPath ??
       placementAsset
+        ?.sceneryObjectPath ??
+      sceneryLibraryPreviewAsset
         ?.sceneryObjectPath;
 
     if (!sceneryObjectPath) {
@@ -5597,6 +5599,7 @@ export function App() {
     nightPreviewEnabled,
     placementAsset,
     requestedTextureKeys,
+    sceneryLibraryPreviewAsset,
     selectedObject,
     textureAssetsByKey
   ]);
@@ -5606,17 +5609,21 @@ export function App() {
       return;
     }
 
-    const placedSpline =
-      selectedSpline ??
-      splinePlacementTemplate;
+    const splinePath =
+      selectedSpline
+        ?.splinePath ??
+      splinePlacementTemplate
+        ?.splinePath ??
+      splineLibraryPreviewAsset
+        ?.splinePath;
 
-    if (!placedSpline) {
+    if (!splinePath) {
       return;
     }
 
     const definition =
       splineProfilesByPath[
-        placedSpline.splinePath
+        splinePath
       ];
 
     if (!definition) {
@@ -5633,7 +5640,7 @@ export function App() {
           textureName,
           key:
             getSplineTextureAssetKey(
-              placedSpline.splinePath,
+              splinePath,
               textureName
             )
         }))
@@ -5672,7 +5679,7 @@ export function App() {
       requests) {
       loadSplineTextureAsset(
         request.key,
-        placedSpline.splinePath,
+        splinePath,
         request.textureName
       );
     }
@@ -5680,6 +5687,7 @@ export function App() {
     bridgeAvailable,
     requestedTextureKeys,
     selectedSpline,
+    splineLibraryPreviewAsset,
     splinePlacementTemplate,
     splineProfilesByPath,
     textureAssetsByKey
@@ -8134,6 +8142,350 @@ export function App() {
 
   const splineLibraryResultCount =
     filteredSplineLibrary.length;
+
+  const sceneryPreviewTechnicalSummary =
+    useMemo(() => {
+      if (
+        !sceneryLibraryPreviewAsset
+      ) {
+        return undefined;
+      }
+
+      const path =
+        sceneryLibraryPreviewAsset
+          .sceneryObjectPath;
+      const geometry =
+        geometryByPath[path];
+      const metadata =
+        sceneryMetadataByPath[path];
+
+      if (!geometry) {
+        return {
+          meshCount: 0,
+          loadedMeshCount: 0,
+          failedMeshCount: 0,
+          missingMeshFileCount:
+            metadata?.meshes.filter(
+              (mesh) =>
+                !mesh.fileExists
+            ).length ?? 0,
+          collisionMeshCount:
+            metadata?.collisionMeshes
+              .length ?? 0,
+          vertexCount: 0,
+          triangleCount: 0,
+          materialCount: 0,
+          textureCount: 0,
+          loadedTextureCount: 0,
+          missingTextureCount: 0,
+          pendingTextureCount: 0,
+          unsupportedCommandCount: 0,
+          health:
+            "loading" as const
+        };
+      }
+
+      const textureKeys =
+        new Map<
+          string,
+          {
+            key: string;
+            textureName: string;
+          }
+        >();
+      let loadedMeshCount = 0;
+      let failedMeshCount = 0;
+      let vertexCount = 0;
+      let triangleCount = 0;
+      let materialCount = 0;
+      let unsupportedCommandCount =
+        0;
+
+      const queueTexture = (
+        meshPath: string,
+        textureName:
+          | string
+          | null
+          | undefined
+      ) => {
+        if (!textureName) {
+          return;
+        }
+
+        const key =
+          getSceneryTextureAssetKey(
+            path,
+            meshPath,
+            textureName
+          );
+
+        textureKeys.set(key, {
+          key,
+          textureName
+        });
+      };
+
+      queueTexture(
+        sceneryTreeTextureMeshToken,
+        geometry.tree?.textureName
+      );
+
+      for (const mesh of
+        geometry.meshes) {
+        if (
+          mesh.geometry.isLoaded
+        ) {
+          loadedMeshCount += 1;
+        } else {
+          failedMeshCount += 1;
+        }
+
+        vertexCount +=
+          Math.floor(
+            mesh.geometry
+              .positions.length / 3
+          );
+        triangleCount +=
+          Math.floor(
+            mesh.geometry
+              .indices.length / 3
+          );
+        materialCount +=
+          mesh.geometry
+            .materials.length;
+
+        for (const [
+          materialIndex,
+          material
+        ] of mesh.geometry.materials
+          .entries()) {
+          queueTexture(
+            mesh.declaredPath,
+            material.textureName
+          );
+
+          const materialOverride =
+            findSceneryMaterialOverride(
+              mesh,
+              materialIndex
+            );
+
+          queueTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.bumpMapTextureName
+          );
+          queueTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.nightMapTextureName
+          );
+          queueTexture(
+            mesh.declaredPath,
+            materialOverride
+              ?.environmentMapTextureName
+          );
+          queueTexture(
+            mesh.declaredPath,
+            getStaticTransparencyMapName(
+              materialOverride
+                ?.transMapSource
+            )
+          );
+
+          unsupportedCommandCount +=
+            materialOverride
+              ?.unsupportedCommands
+              .length ?? 0;
+        }
+      }
+
+      let loadedTextureCount = 0;
+      let missingTextureCount = 0;
+      let pendingTextureCount = 0;
+
+      for (const { key } of
+        textureKeys.values()) {
+        const asset =
+          textureAssetsByKey[key];
+
+        if (asset?.exists) {
+          loadedTextureCount += 1;
+        } else if (
+          asset &&
+          !asset.exists
+        ) {
+          missingTextureCount += 1;
+        } else if (
+          requestedTextureKeys[key]
+        ) {
+          pendingTextureCount += 1;
+        }
+      }
+
+      const missingMeshFileCount =
+        metadata?.meshes.filter(
+          (mesh) =>
+            !mesh.fileExists
+        ).length ?? 0;
+
+      const health =
+        failedMeshCount > 0 ||
+        missingMeshFileCount > 0 ||
+        missingTextureCount > 0
+          ? "error"
+          : pendingTextureCount > 0 ||
+              unsupportedCommandCount > 0
+            ? "warning"
+            : "ok";
+
+      return {
+        meshCount:
+          geometry.meshes.length,
+        loadedMeshCount,
+        failedMeshCount,
+        missingMeshFileCount,
+        collisionMeshCount:
+          metadata?.collisionMeshes
+            .length ?? 0,
+        vertexCount,
+        triangleCount,
+        materialCount,
+        textureCount:
+          textureKeys.size,
+        loadedTextureCount,
+        missingTextureCount,
+        pendingTextureCount,
+        unsupportedCommandCount,
+        health
+      };
+    }, [
+      geometryByPath,
+      requestedTextureKeys,
+      sceneryLibraryPreviewAsset,
+      sceneryMetadataByPath,
+      textureAssetsByKey
+    ]);
+
+  const splinePreviewTechnicalSummary =
+    useMemo(() => {
+      if (
+        !splineLibraryPreviewAsset
+      ) {
+        return undefined;
+      }
+
+      const path =
+        splineLibraryPreviewAsset
+          .splinePath;
+      const profile =
+        splineProfilesByPath[path];
+
+      if (!profile) {
+        return {
+          surfaceCount: 0,
+          textureCount: 0,
+          loadedTextureCount: 0,
+          missingTextureCount: 0,
+          pendingTextureCount: 0,
+          alphaSurfaceCount: 0,
+          width: 0,
+          health:
+            "loading" as const
+        };
+      }
+
+      let minimumX =
+        Number.POSITIVE_INFINITY;
+      let maximumX =
+        Number.NEGATIVE_INFINITY;
+      let alphaSurfaceCount = 0;
+
+      for (const surface of
+        profile.surfaces) {
+        minimumX = Math.min(
+          minimumX,
+          surface.from.x,
+          surface.to.x
+        );
+        maximumX = Math.max(
+          maximumX,
+          surface.from.x,
+          surface.to.x
+        );
+
+        if (surface.alphaMode !== 0) {
+          alphaSurfaceCount += 1;
+        }
+      }
+
+      const uniqueTextures =
+        Array.from(
+          new Set(
+            profile.textures.filter(
+              Boolean
+            )
+          )
+        );
+
+      let loadedTextureCount = 0;
+      let missingTextureCount = 0;
+      let pendingTextureCount = 0;
+
+      for (const textureName of
+        uniqueTextures) {
+        const key =
+          getSplineTextureAssetKey(
+            path,
+            textureName
+          );
+        const asset =
+          textureAssetsByKey[key];
+
+        if (asset?.exists) {
+          loadedTextureCount += 1;
+        } else if (
+          asset &&
+          !asset.exists
+        ) {
+          missingTextureCount += 1;
+        } else if (
+          requestedTextureKeys[key]
+        ) {
+          pendingTextureCount += 1;
+        }
+      }
+
+      return {
+        surfaceCount:
+          profile.surfaces.length,
+        textureCount:
+          uniqueTextures.length,
+        loadedTextureCount,
+        missingTextureCount,
+        pendingTextureCount,
+        alphaSurfaceCount,
+        width:
+          Number.isFinite(minimumX) &&
+          Number.isFinite(maximumX)
+            ? Math.max(
+                0,
+                maximumX - minimumX
+              )
+            : 0,
+        health:
+          missingTextureCount > 0
+            ? "error"
+            : pendingTextureCount > 0
+              ? "warning"
+              : "ok"
+      };
+    }, [
+      requestedTextureKeys,
+      splineLibraryPreviewAsset,
+      splineProfilesByPath,
+      textureAssetsByKey
+    ]);
 
   const explorerSplineResultCount =
     useMemo(() => {
@@ -15719,16 +16071,100 @@ export function App() {
                           )
                         )}
                       </span>
-                      <span>
+                      <span
+                        className={
+                          sceneryPreviewTechnicalSummary
+                            ?.health
+                            ? "asset-health-card " +
+                              sceneryPreviewTechnicalSummary
+                                .health
+                            : "asset-health-card"
+                        }
+                      >
                         <strong>Status</strong>
-                        {geometryByPath[
-                          sceneryLibraryPreviewAsset
-                            .sceneryObjectPath
-                        ]
-                          ? "3D carregado"
-                          : "Aguardando 3D"}
+                        {sceneryPreviewTechnicalSummary
+                          ?.health === "ok"
+                          ? "✓ Asset íntegro"
+                          : sceneryPreviewTechnicalSummary
+                                ?.health ===
+                              "error"
+                            ? "⚠ Problemas detectados"
+                            : sceneryPreviewTechnicalSummary
+                                  ?.health ===
+                                "warning"
+                              ? "◌ Atenção / carregando"
+                              : "Carregando 3D"}
                       </span>
                     </div>
+
+                    {sceneryPreviewTechnicalSummary && (
+                      <div className="asset-technical-summary">
+                        <div>
+                          <strong>
+                            Geometria
+                          </strong>
+                          <span>
+                            {sceneryPreviewTechnicalSummary.meshCount}
+                            {" "}mesh(es) ·{" "}
+                            {sceneryPreviewTechnicalSummary.vertexCount.toLocaleString(
+                              "pt-BR"
+                            )}
+                            {" "}vértices ·{" "}
+                            {sceneryPreviewTechnicalSummary.triangleCount.toLocaleString(
+                              "pt-BR"
+                            )}
+                            {" "}triângulos
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Materiais / texturas
+                          </strong>
+                          <span>
+                            {sceneryPreviewTechnicalSummary.materialCount}
+                            {" "}material(is) ·{" "}
+                            {sceneryPreviewTechnicalSummary.loadedTextureCount}
+                            /{sceneryPreviewTechnicalSummary.textureCount}
+                            {" "}textura(s) carregada(s)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Dependências O3D
+                          </strong>
+                          <span>
+                            {sceneryPreviewTechnicalSummary.loadedMeshCount}
+                            {" "}OK ·{" "}
+                            {sceneryPreviewTechnicalSummary.failedMeshCount}
+                            {" "}falha(s) ·{" "}
+                            {sceneryPreviewTechnicalSummary.missingMeshFileCount}
+                            {" "}arquivo(s) ausente(s)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Diagnóstico
+                          </strong>
+                          <span>
+                            {sceneryPreviewTechnicalSummary.missingTextureCount}
+                            {" "}textura(s) ausente(s) ·{" "}
+                            {sceneryPreviewTechnicalSummary.pendingTextureCount}
+                            {" "}pendente(s) ·{" "}
+                            {sceneryPreviewTechnicalSummary.unsupportedCommandCount}
+                            {" "}comando(s) não suportado(s)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Colisão
+                          </strong>
+                          <span>
+                            {sceneryPreviewTechnicalSummary.collisionMeshCount}
+                            {" "}mesh(es) de colisão declarada(s)
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -16338,16 +16774,72 @@ export function App() {
                           )
                         )}
                       </span>
-                      <span>
+                      <span
+                        className={
+                          splinePreviewTechnicalSummary
+                            ?.health
+                            ? "asset-health-card " +
+                              splinePreviewTechnicalSummary
+                                .health
+                            : "asset-health-card"
+                        }
+                      >
                         <strong>Status</strong>
-                        {splineProfilesByPath[
-                          splineLibraryPreviewAsset
-                            .splinePath
-                        ]
-                          ? "Perfil carregado"
-                          : "Aguardando perfil"}
+                        {splinePreviewTechnicalSummary
+                          ?.health === "ok"
+                          ? "✓ Perfil íntegro"
+                          : splinePreviewTechnicalSummary
+                                ?.health ===
+                              "error"
+                            ? "⚠ Textura ausente"
+                            : splinePreviewTechnicalSummary
+                                  ?.health ===
+                                "warning"
+                              ? "◌ Texturas carregando"
+                              : "Aguardando perfil"}
                       </span>
                     </div>
+
+                    {splinePreviewTechnicalSummary && (
+                      <div className="asset-technical-summary">
+                        <div>
+                          <strong>
+                            Perfil
+                          </strong>
+                          <span>
+                            {splinePreviewTechnicalSummary.surfaceCount}
+                            {" "}superfície(s) · largura{" "}
+                            {formatNumber(
+                              splinePreviewTechnicalSummary.width
+                            )}
+                            {" "}m
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Texturas
+                          </strong>
+                          <span>
+                            {splinePreviewTechnicalSummary.loadedTextureCount}
+                            /{splinePreviewTechnicalSummary.textureCount}
+                            {" "}carregada(s) ·{" "}
+                            {splinePreviewTechnicalSummary.missingTextureCount}
+                            {" "}ausente(s) ·{" "}
+                            {splinePreviewTechnicalSummary.pendingTextureCount}
+                            {" "}pendente(s)
+                          </span>
+                        </div>
+                        <div>
+                          <strong>
+                            Transparência
+                          </strong>
+                          <span>
+                            {splinePreviewTechnicalSummary.alphaSurfaceCount}
+                            {" "}superfície(s) com alpha
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
