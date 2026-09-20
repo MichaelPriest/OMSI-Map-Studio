@@ -2438,6 +2438,8 @@ export function App() {
           );
           setEasyRoadMode(false);
           setEasyRoadStart(undefined);
+          setEasyRoadEnd(undefined);
+          setEasyRoadCurveOffset(0);
           setSelectedSpline(undefined);
           setEditorTool("select");
 
@@ -6745,24 +6747,29 @@ export function App() {
         );
 
         setEasyRoadStart(undefined);
+        setEasyRoadEnd(undefined);
+        setEasyRoadCurveOffset(0);
 
         setPendingSplinePlacement(
-          activeTile
-            ? {
-                targetTileX:
-                  activeTile.x,
-                targetTileY:
-                  activeTile.y,
-                x: 150,
-                y: 150,
-                z: 0,
-                rotation: 0,
-                length: 20,
-                radius: 0,
-                gradientStart: 0,
-                gradientEnd: 0
-              }
-            : undefined
+          easyRoadMode &&
+          !isHeightSpline
+            ? undefined
+            : activeTile
+              ? {
+                  targetTileX:
+                    activeTile.x,
+                  targetTileY:
+                    activeTile.y,
+                  x: 150,
+                  y: 150,
+                  z: 0,
+                  rotation: 0,
+                  length: 20,
+                  radius: 0,
+                  gradientStart: 0,
+                  gradientEnd: 0
+                }
+              : undefined
         );
         setSelectedSpline(undefined);
         setSelectedObject(undefined);
@@ -6788,6 +6795,7 @@ export function App() {
       },
       [
         activeTile,
+        easyRoadMode,
         placementAsset,
         previewEditCount,
         selectedMap,
@@ -7779,6 +7787,8 @@ export function App() {
         if (tool === "road") {
           setEasyRoadMode(true);
           setEasyRoadStart(undefined);
+          setEasyRoadEnd(undefined);
+          setEasyRoadCurveOffset(0);
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
@@ -7786,13 +7796,15 @@ export function App() {
             "splineLibrary"
           );
           setSaveNotice(
-            "Criador fácil de rua: escolha uma spline .sli real, depois clique no início e no fim da rua."
+            "Criador de rua: escolha uma spline .sli real, clique no início e arraste até o fim. Depois use o controle de curva para ajustar o traçado."
           );
           return;
         }
 
         setEasyRoadMode(false);
         setEasyRoadStart(undefined);
+        setEasyRoadEnd(undefined);
+        setEasyRoadCurveOffset(0);
 
         if (tool === "terrain") {
           setSelectionMode("terrain");
@@ -11884,6 +11896,10 @@ export function App() {
               onSplinePlacementPoint={
                 handleSplinePlacementPoint
               }
+              roadDragMode={
+                easyRoadMode &&
+                !splineLibraryPlacementIsHeight
+              }
               activeTile={activeTile}
               onTerrainPoint={
                 handleTerrainPoint
@@ -12350,8 +12366,15 @@ export function App() {
             )}
 
             {splinePlacementTemplate && (
-              <div className="placement-bar">
-                <div>
+              <div
+                className="placement-bar floating-tool"
+                data-floating-tool
+              >
+                <div
+                  className="placement-bar-heading drag-handle"
+                  data-drag-handle
+                  title="Arraste para mover esta ferramenta"
+                >
                   <strong>
                     {splineLibraryPlacementAsset
                       ? splineLibraryPlacementIsHeight
@@ -12459,6 +12482,82 @@ export function App() {
                   </>
                 )}
 
+                {easyRoadMode &&
+                  easyRoadStart &&
+                  easyRoadEnd &&
+                  pendingSplinePlacement &&
+                  pendingSplinePlacement.length > 0 && (
+                  <div className="road-curve-control">
+                    <div>
+                      <strong>Curva</strong>
+                      <span>
+                        Arraste o controle para curvar a rua mantendo início e fim.
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={
+                        -Math.max(
+                          2,
+                          (
+                            deriveRoadArc(
+                              easyRoadStart,
+                              easyRoadEnd,
+                              0
+                            )?.chordLength ??
+                            10
+                          ) * 0.45
+                        )
+                      }
+                      max={
+                        Math.max(
+                          2,
+                          (
+                            deriveRoadArc(
+                              easyRoadStart,
+                              easyRoadEnd,
+                              0
+                            )?.chordLength ??
+                            10
+                          ) * 0.45
+                        )
+                      }
+                      step="0.25"
+                      value={
+                        easyRoadCurveOffset
+                      }
+                      onChange={(event) =>
+                        handleEasyRoadCurveChange(
+                          Number(
+                            event.target.value
+                          )
+                        )
+                      }
+                      aria-label="Curvatura lateral da rua"
+                    />
+                    <span className="road-curve-value">
+                      Controle lateral: {formatNumber(
+                        easyRoadCurveOffset
+                      )} m · raio OMSI: {pendingSplinePlacement.radius === 0
+                        ? "reta"
+                        : `${formatNumber(
+                            pendingSplinePlacement.radius
+                          )} m`}
+                    </span>
+                    <button
+                      type="button"
+                      className="secondary-action"
+                      onClick={() =>
+                        handleEasyRoadCurveChange(
+                          0
+                        )
+                      }
+                    >
+                      Endireitar
+                    </button>
+                  </div>
+                )}
+
                 {pendingSplinePlacement &&
                   pendingSplinePlacement.length > 0 && (
                   <button
@@ -12481,13 +12580,15 @@ export function App() {
                     disabled={insertingSpline}
                     onClick={() => {
                       setEasyRoadStart(undefined);
+                      setEasyRoadEnd(undefined);
+                      setEasyRoadCurveOffset(0);
                       setPendingSplinePlacement(undefined);
                       setSaveNotice(
-                        "Clique no início da rua e depois no ponto final."
+                        "Clique no início da rua, segure e arraste até o ponto final."
                       );
                     }}
                   >
-                    Reiniciar 2 cliques
+                    Reiniciar traçado
                   </button>
                 )}
 
@@ -12523,8 +12624,15 @@ export function App() {
             )}
 
             {placementAsset && (
-              <div className="placement-bar">
-                <div>
+              <div
+                className="placement-bar floating-tool"
+                data-floating-tool
+              >
+                <div
+                  className="placement-bar-heading drag-handle"
+                  data-drag-handle
+                  title="Arraste para mover esta ferramenta"
+                >
                   <strong>
                     Colocando:{" "}
                     {placementAsset.fileName}
