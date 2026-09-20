@@ -863,3 +863,8 @@ When an item is selected from the shelf, the interface switches to the **context
 ### Quick road controls
 
 The contextual road/bridge guide in the bottom bar is now interactive as well. **Endpoint snap** toggles snapping to existing spline endpoints, **previous/next** toggles automatic chain linking, and bridge/elevated mode exposes `−`/`+` elevation controls in 0.5 m steps. The detailed elevation field remains available in the full panel, and both surfaces use the same real preview update path.
+
+
+### Automatic contextual Inspector
+
+When an object or spline is selected from the construction shelf or library, the **Inspector** now opens automatically and follows the real asset being placed. In fullscreen it replaces the previous drawer to keep the viewport clear; on desktop it opens as a floating panel. It shows the file, group, subcategory, preview/profile state, pending destination or geometry, and actions to open the full preview or cancel placement.
