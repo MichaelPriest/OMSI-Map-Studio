@@ -578,3 +578,10 @@ The editor LOD selector also keeps one real LOD visible when no raw SCO threshol
 ## Lateral navigation
 
 With the viewport focused, `A/D` and left/right arrows pan sideways; `W/S` and up/down arrows move forward/backward. `Shift` accelerates movement. Middle mouse still pans, and `Shift + right mouse` pans instead of orbiting.
+
+
+## Map flow and editing shortcuts
+
+After connecting the OMSI 2 folder, **Open map** displays the real maps found under `maps`. The user can search and choose a map by name; manual folder selection remains available as a fallback.
+
+The main sidebar can be collapsed. In the editor, **All / Objects / Splines / Terrain** control which item type is clickable. Shortcuts: `Alt+1..4` switch those filters; `Alt+R` opens road creation from the spline library; `Alt+C` junction; `Alt+O` object; `Alt+T` terrain; `Alt+A` water; `Alt+G` grass; `Alt+Y` tree. These shortcuts reuse only real installed libraries and assets.
