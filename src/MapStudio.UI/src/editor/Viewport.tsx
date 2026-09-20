@@ -5775,6 +5775,15 @@ export function Viewport({
         }
       | undefined;
 
+    let resolveSelectionHover:
+      | ((
+          event: PointerEvent
+        ) => boolean)
+      | undefined;
+
+    let lastSelectionHoverAt = 0;
+    let selectionHoverActive = false;
+
     const clampCameraRadius = (
       nextRadius: number
     ) =>
@@ -5999,23 +6008,39 @@ export function Viewport({
         return;
       }
 
-      if (
-        !navigationPointer &&
-        (
+      if (!navigationPointer) {
+        const now =
+          performance.now();
+
+        if (
+          resolveSelectionHover &&
+          now -
+            lastSelectionHoverAt >=
+            70
+        ) {
+          lastSelectionHoverAt = now;
+          selectionHoverActive =
+            resolveSelectionHover(
+              event
+            );
+        }
+
+        if (selectionHoverActive) {
+          canvas.style.cursor =
+            "pointer";
+        } else if (
           updateObjectHoverPreview(
             event
           ) ||
           updateSplineHoverPreview(
             event
           )
-        )
-      ) {
-        canvas.style.cursor =
-          "copy";
-      } else if (
-        !navigationPointer
-      ) {
-        canvas.style.cursor = "";
+        ) {
+          canvas.style.cursor =
+            "copy";
+        } else {
+          canvas.style.cursor = "";
+        }
       }
 
       if (
@@ -6683,6 +6708,15 @@ export function Viewport({
           )
       };
     };
+
+    resolveSelectionHover = (
+      event: PointerEvent
+    ) =>
+      selectionMode !==
+        "terrain" &&
+      Boolean(
+        getPickedMapItem(event)
+      );
 
     const selectPickedMapItem = (
       event: PointerEvent
