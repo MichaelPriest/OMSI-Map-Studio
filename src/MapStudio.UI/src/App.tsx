@@ -863,6 +863,11 @@ export function App() {
   ] = useState(0);
 
   const [
+    elevationSampleCount,
+    setElevationSampleCount
+  ] = useState(17);
+
+  const [
     applyingElevationGrid,
     setApplyingElevationGrid
   ] = useState(false);
@@ -2166,6 +2171,74 @@ export function App() {
 
         if (
           message.type ===
+          "googleElevationGridLoaded"
+        ) {
+          setLoadingElevationGrid(false);
+          setGoogleElevationGrid(
+            message.grid
+          );
+
+          const centerIndex =
+            Math.floor(
+              message.grid.rows / 2
+            ) *
+              message.grid.columns +
+            Math.floor(
+              message.grid.columns / 2
+            );
+
+          const realCenter =
+            message.grid.elevations[
+              centerIndex
+            ];
+
+          const currentCenter =
+            sampleTerrainHeight(
+              activeTiles,
+              message.grid.tileX,
+              message.grid.tileY,
+              150,
+              150
+            );
+
+          const suggestedOffset =
+            currentCenter !== undefined &&
+            Number.isFinite(realCenter)
+              ? currentCenter -
+                realCenter
+              : 0;
+
+          setElevationVerticalOffset(
+            suggestedOffset
+          );
+
+          setSaveNotice(
+            `Grade real carregada: ${message.grid.rows}×${message.grid.columns} · ${formatNumber(message.grid.minimumElevation)} a ${formatNumber(message.grid.maximumElevation)} m.`
+          );
+          return;
+        }
+
+        if (
+          message.type ===
+          "terrainElevationGridApplied"
+        ) {
+          setApplyingElevationGrid(false);
+
+          setSaveNotice(
+            message.changedSamples > 0
+              ? `Relevo real aplicado no tile ${message.tileX},${message.tileY}: ${message.changedSamples} amostra(s). Backup: ${message.backupDirectory}`
+              : "O terreno já correspondia à grade aplicada."
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          return;
+        }
+
+        if (
+          message.type ===
           "mapGeoreferenceSaved"
         ) {
           setSaveNotice(
@@ -2195,6 +2268,8 @@ export function App() {
           setLoadingSplineLibrary(false);
           setLoadingMapCatalog(false);
           setLoadingGoogleReference(false);
+          setLoadingElevationGrid(false);
+          setApplyingElevationGrid(false);
           setSavingTerrain(false);
           setSaving(false);
           setInsertingObject(false);
