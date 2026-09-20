@@ -5647,3 +5647,219 @@ span.active {
     min-width: 30px;
   }
 }
+
+
+/* Inspector v2: visual hierarchy aligned with the approved full-screen concept. */
+.object-inspector.city-drawer {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(10 28 41 / 97%),
+      rgb(5 17 26 / 96%)
+    );
+}
+
+.inspector-hero {
+  margin: 8px;
+  padding: 9px;
+  border: 1px solid #224a63;
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      135deg,
+      rgb(13 43 62 / 92%),
+      rgb(7 24 36 / 92%)
+    );
+}
+
+.inspector-hero .object-symbol {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-color: #356f94;
+  background:
+    radial-gradient(
+      circle at 50% 35%,
+      #164b6d,
+      #0a2233 72%
+    );
+  color: #8bd0fa;
+}
+
+.inspector-hero strong {
+  color: #e4f2fa;
+  font-size: 10.5px;
+}
+
+.inspector-hero span {
+  color: #789db5;
+  font-size: 7.5px;
+}
+
+.object-inspector .inspector-tabs {
+  gap: 3px;
+  padding: 0 8px 7px;
+  border-bottom: 1px solid #17394e;
+}
+
+.object-inspector .inspector-tabs button {
+  display: inline-flex;
+  min-width: 0;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid #1c4159;
+  border-radius: 6px;
+  background: #071925;
+  color: #7898ad;
+  font-size: 7px;
+}
+
+.object-inspector .inspector-tabs button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.object-inspector .inspector-tabs button > .mapstudio-icon {
+  color: #6f9fbd;
+}
+
+.object-inspector .inspector-tabs button.active {
+  border-color: #3a91c9;
+  background:
+    linear-gradient(
+      180deg,
+      #114465,
+      #0c3048
+    );
+  color: #edf8ff;
+}
+
+.object-inspector .inspector-tabs button.active > .mapstudio-icon {
+  color: #8bd4ff;
+}
+
+.object-inspector .property-list.dense {
+  margin: 0 8px 8px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid #17384d;
+  border-radius: 7px;
+  background: #06151f;
+}
+
+.object-inspector .property-list.dense > div {
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 8px;
+  border-bottom: 1px solid #122f41;
+}
+
+.object-inspector .property-list.dense > div:last-child {
+  border-bottom: 0;
+}
+
+.object-inspector .property-list dt {
+  color: #6d8da4;
+  font-size: 7.5px;
+}
+
+.object-inspector .property-list dd {
+  color: #c9dce8;
+  font-size: 8px;
+}
+
+.object-inspector .transform-inspector {
+  gap: 8px;
+  padding: 0 0 8px;
+}
+
+.object-inspector .transform-fields {
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.object-inspector .object-transform-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.object-inspector .spline-transform-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.object-inspector .transform-field {
+  gap: 3px;
+}
+
+.object-inspector .transform-field span {
+  color: #7697ac;
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.object-inspector .transform-field input {
+  height: 31px;
+  border-color: #234b64;
+  border-radius: 6px;
+  background: #061824;
+  color: #e0edf5;
+  font-size: 8.5px;
+}
+
+.object-inspector .transform-field input:hover {
+  border-color: #326b8e;
+}
+
+.object-inspector .transform-field input:focus {
+  border-color: #55aee5;
+  background: #082235;
+  box-shadow:
+    0 0 0 2px rgb(73 164 222 / 12%);
+}
+
+.object-inspector .transform-help {
+  margin: 0 8px;
+  padding: 7px 8px;
+  border-color: #1b4157;
+  border-radius: 6px;
+  background: #071a26;
+  color: #718fa3;
+  font-size: 7.3px;
+}
+
+.object-inspector .mesh-list,
+.object-inspector .material-list {
+  gap: 5px;
+  padding: 0 8px 8px;
+}
+
+.object-inspector .mesh-row,
+.object-inspector .material-row {
+  border-color: #1b4056;
+  border-radius: 7px;
+  background: #071925;
+}
+
+.object-inspector .mesh-row {
+  padding: 7px;
+}
+
+.object-inspector .material-row {
+  grid-template-columns: 30px minmax(0, 1fr);
+  padding: 7px;
+}
+
+.object-inspector .material-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+}
+
+@media (max-width: 980px) {
+  .object-inspector .object-transform-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

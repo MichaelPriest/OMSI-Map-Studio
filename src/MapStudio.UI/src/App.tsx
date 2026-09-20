@@ -15299,7 +15299,7 @@ export function App() {
   const renderMapInspector = () => (
     <>
       <div className="inspector-hero">
-        <div className="object-symbol">M</div>
+        <div className="object-symbol"><MapStudioIcon name="map-health" size={22} /></div>
         <div>
           <strong>
             {selectedMap?.displayName}
@@ -15839,8 +15839,10 @@ export function App() {
               />
             ) : (
               <div className="object-symbol">
-                {placementGroupInfo?.icon ??
-                  "O"}
+                <MapStudioIcon
+                  name={placementGroupInfo?.icon ?? "sco-object"}
+                  size={22}
+                />
               </div>
             )}
             <div>
@@ -15968,7 +15970,7 @@ export function App() {
     return (
       <>
         <div className="inspector-hero">
-          <div className="object-symbol">O</div>
+          <div className="object-symbol"><MapStudioIcon name="sco-object" size={22} /></div>
           <div>
             <strong>
               {selectedDisplayName}
@@ -15991,7 +15993,8 @@ export function App() {
               setInspectorTab("general")
             }
           >
-            Geral
+            <MapStudioIcon name="properties" size={14} />
+            <span>Geral</span>
           </button>
           <button
             type="button"
@@ -16004,7 +16007,8 @@ export function App() {
               setInspectorTab("transform")
             }
           >
-            Transformação
+            <MapStudioIcon name="move" size={14} />
+            <span>Transformar</span>
           </button>
           <button
             type="button"
@@ -16017,7 +16021,8 @@ export function App() {
               setInspectorTab("geometry")
             }
           >
-            Geometria
+            <MapStudioIcon name="geometry" size={14} />
+            <span>Geometria</span>
           </button>
           <button
             type="button"
@@ -16030,7 +16035,8 @@ export function App() {
               setInspectorTab("materials")
             }
           >
-            Materiais
+            <MapStudioIcon name="materials" size={14} />
+            <span>Materiais</span>
           </button>
         </div>
 
@@ -16174,7 +16180,7 @@ export function App() {
               )}
             </dl>
 
-            <div className="transform-fields">
+            <div className="transform-fields object-transform-fields">
               {(
                 [
                   ["x", "X", selectedObject.x],
@@ -16531,8 +16537,10 @@ export function App() {
               />
             ) : (
               <div className="object-symbol">
-                {placementGroupInfo?.icon ??
-                  "S"}
+                <MapStudioIcon
+                  name={placementGroupInfo?.icon ?? "sli-spline"}
+                  size={22}
+                />
               </div>
             )}
             <div>
@@ -16668,7 +16676,7 @@ export function App() {
     return (
       <>
         <div className="inspector-hero">
-          <div className="object-symbol">S</div>
+          <div className="object-symbol"><MapStudioIcon name="sli-spline" size={22} /></div>
           <div>
             <strong>
               {getObjectName(
@@ -16693,7 +16701,8 @@ export function App() {
               setInspectorTab("general")
             }
           >
-            Geral
+            <MapStudioIcon name="properties" size={14} />
+            <span>Geral</span>
           </button>
           <button
             type="button"
@@ -16706,7 +16715,8 @@ export function App() {
               setInspectorTab("transform")
             }
           >
-            Traçado
+            <MapStudioIcon name="sli-spline" size={14} />
+            <span>Traçado</span>
           </button>
           <button
             type="button"
@@ -16719,7 +16729,8 @@ export function App() {
               setInspectorTab("geometry")
             }
           >
-            Perfil
+            <MapStudioIcon name="profile" size={14} />
+            <span>Perfil</span>
           </button>
         </div>
 
@@ -16946,7 +16957,7 @@ export function App() {
 
         {inspectorTab === "transform" && (
           <div className="transform-inspector">
-            <div className="transform-fields">
+            <div className="transform-fields spline-transform-fields">
               {(
                 [
                   ["x", "X", selectedSpline.x],
