@@ -894,6 +894,18 @@ code {
   color: #e1ebf4;
 }
 
+.tree-node-button {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+}
+
+.tree-node-button:not(:disabled):hover {
+  border-color: #1d4a6d;
+  background: #0c2234;
+}
+
 .tree-node.active {
   background: #0870e8;
   color: #fff;
