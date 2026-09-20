@@ -19145,6 +19145,68 @@ export function App() {
                   </span>
                 </div>
 
+                {easyRoadMode &&
+                  (
+                    roadPlacementKind ===
+                      "road" ||
+                    roadPlacementKind ===
+                      "bridge"
+                  ) && (
+                  <div
+                    className="citybuilder-road-guide"
+                    title="Guia contextual da via ativa"
+                  >
+                    <span className="road-guide-primary">
+                      1 Início → 2 Fim → 3 Curva
+                    </span>
+                    <span
+                      className={
+                        roadEndpointSnapEnabled
+                          ? "active"
+                          : ""
+                      }
+                    >
+                      Snap pontas{" "}
+                      {roadEndpointSnapEnabled
+                        ? "ON"
+                        : "OFF"}
+                    </span>
+                    <span
+                      className={
+                        roadAutoConnectEnabled
+                          ? "active"
+                          : ""
+                      }
+                    >
+                      previous/next{" "}
+                      {roadAutoConnectEnabled
+                        ? "AUTO"
+                        : "manual"}
+                    </span>
+                    {(roadStartSnap ||
+                      roadEndSnap) && (
+                      <span className="active">
+                        {roadStartSnap
+                          ? "I✓"
+                          : "I–"}{" "}
+                        {roadEndSnap
+                          ? "F✓"
+                          : "F–"}
+                      </span>
+                    )}
+                    {roadPlacementKind ===
+                      "bridge" && (
+                      <span className="active">
+                        Elevação{" "}
+                        {formatNumber(
+                          roadElevationOffset
+                        )}{" "}
+                        m
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="citybuilder-selection-filters">
                   {([
                     ["all", "Tudo"],
