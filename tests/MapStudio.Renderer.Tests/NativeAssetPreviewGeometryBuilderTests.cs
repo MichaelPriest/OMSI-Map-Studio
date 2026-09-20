@@ -35,10 +35,12 @@ public sealed class
                 [
                     new NativeSceneryMeshAsset(
                         "model.o3d",
+                        @"C:\OMSI\Sceneryobjects\Test\model\model.o3d",
                         OmsiSceneryMeshTransform
                             .Identity,
                         null,
-                        geometry)
+                        geometry,
+                        Array.Empty<string?>())
                 ],
                 null,
                 false,

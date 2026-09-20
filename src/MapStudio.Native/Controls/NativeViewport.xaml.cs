@@ -523,6 +523,7 @@ public sealed partial class NativeViewport : UserControl
             this,
             $"Assets nativos: {_runtime.LoadedSceneryAssetCount} SCO · " +
             $"{_runtime.LoadedObjectMeshCount} meshes · " +
+            $"{_runtime.MapRenderer.LoadedTextureCount} texturas O3D · " +
             $"{_runtime.LoadedSplineAssetCount} SLI · " +
             $"{_runtime.LoadedSplineSurfaceCount} superfícies spline · " +
             $"{scene.SelectableCount} IDs de seleção.");

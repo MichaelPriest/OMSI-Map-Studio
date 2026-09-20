@@ -1,5 +1,6 @@
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Renderer.Scene;
 
@@ -185,12 +186,38 @@ public sealed class NativeSceneryAssetLoader
                             index]
                     : null;
 
+            var materialTexturePaths =
+                geometry.Materials
+                    .Select(
+                        material =>
+                        {
+                            if (
+                                string.IsNullOrWhiteSpace(
+                                    material.TextureName))
+                            {
+                                return null;
+                            }
+
+                            return OmsiTextureAssetPathResolver
+                                .TryResolveSceneryTexture(
+                                    omsiRoot,
+                                    fullScoPath,
+                                    meshPath,
+                                    material.TextureName,
+                                    out var texturePath)
+                                ? texturePath
+                                : null;
+                        })
+                    .ToArray();
+
             meshes.Add(
                 new NativeSceneryMeshAsset(
                     declaredPath,
+                    meshPath,
                     transform,
                     lodThreshold,
-                    geometry));
+                    geometry,
+                    materialTexturePaths));
         }
 
         return new NativeSceneryAsset(

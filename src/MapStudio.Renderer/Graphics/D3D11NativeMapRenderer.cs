@@ -22,8 +22,25 @@ public sealed class D3D11NativeMapRenderer :
     private readonly D3D11DeviceHost _deviceHost;
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
+    private readonly ID3D11PixelShader _texturedPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
+    private readonly ID3D11SamplerState _textureSampler;
+    private readonly NativeGpuTextureLoader _textureLoader;
+
+    private readonly Dictionary<
+        string,
+        NativeGpuTexture>
+        _textureCache =
+            new(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+    private readonly HashSet<string>
+        _failedTexturePaths =
+            new(
+                StringComparer
+                    .OrdinalIgnoreCase);
 
     private Matrix4x4 _viewProjection =
         Matrix4x4.Identity;
@@ -105,6 +122,16 @@ public sealed class D3D11NativeMapRenderer :
                 PickingId,
                 NativeTriangleRange>();
 
+        _objectMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
+    private IReadOnlyList<
+        NativeMaterialBatch>
+        _objectMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
     private NativeMapVertex[]
         _splineVertices =
             Array.Empty<
@@ -182,6 +209,13 @@ public sealed class D3D11NativeMapRenderer :
                     "PSMain",
                     "ps_4_0");
 
+        ReadOnlyMemory<byte>
+            texturedPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSTextured",
+                    "ps_4_0");
+
         _vertexShader =
             _deviceHost.Device
                 .CreateVertexShader(
@@ -192,6 +226,12 @@ public sealed class D3D11NativeMapRenderer :
             _deviceHost.Device
                 .CreatePixelShader(
                     pixelShaderBytecode
+                        .Span);
+
+        _texturedPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    texturedPixelShaderBytecode
                         .Span);
 
         InputElementDescription[]
@@ -210,6 +250,13 @@ public sealed class D3D11NativeMapRenderer :
                     Format
                         .R32G32B32A32_Float,
                     12,
+                    0),
+                new(
+                    "TEXCOORD",
+                    0,
+                    Format
+                        .R32G32_Float,
+                    28,
                     0)
             ];
 
@@ -224,6 +271,16 @@ public sealed class D3D11NativeMapRenderer :
             _deviceHost.Device
                 .CreateConstantBuffer<
                     Matrix4x4>();
+
+        _textureSampler =
+            _deviceHost.Device
+                .CreateSamplerState(
+                    SamplerDescription
+                        .LinearWrap);
+
+        _textureLoader =
+            new NativeGpuTextureLoader(
+                _deviceHost);
     }
 
     public int VertexCount =>
@@ -237,6 +294,9 @@ public sealed class D3D11NativeMapRenderer :
 
     public int SplineTriangleVertexCount =>
         _splineTriangleVertexCount;
+
+    public int LoadedTextureCount =>
+        _textureCache.Count;
 
     public void SetViewProjection(
         Matrix4x4 viewProjection,
@@ -423,7 +483,14 @@ public sealed class D3D11NativeMapRenderer :
             _objectRanges =
                 objectGeometry
                     .Ranges;
+
+            _objectMaterialBatches =
+                objectGeometry
+                    .MaterialBatches;
         }
+
+        UpdateTextureCache(
+            _objectMaterialBatches);
 
         if (
             splineGeometry is not null &&
@@ -541,29 +608,8 @@ public sealed class D3D11NativeMapRenderer :
                         0);
                 }
 
-                if (
-                    _objectTriangleBuffer
-                        is not null &&
-                    _objectTriangleVertexCount >
-                        0)
-                {
-                    context
-                        .IASetPrimitiveTopology(
-                            PrimitiveTopology
-                                .TriangleList);
-
-                    context
-                        .IASetVertexBuffer(
-                            0,
-                            _objectTriangleBuffer,
-                            NativeMapVertex
-                                .SizeInBytes);
-
-                    context.Draw(
-                        (uint)
-                            _objectTriangleVertexCount,
-                        0);
-                }
+                DrawObjectGeometry(
+                    context);
 
                 if (
                     _vertexBuffer is
@@ -692,6 +738,181 @@ public sealed class D3D11NativeMapRenderer :
         RenderPicking(
             surface.Width,
             surface.Height);
+    }
+
+    private void DrawObjectGeometry(
+        ID3D11DeviceContext context)
+    {
+        if (
+            _objectTriangleBuffer is
+                null ||
+            _objectTriangleVertexCount <=
+                0)
+        {
+            return;
+        }
+
+        context
+            .IASetPrimitiveTopology(
+                PrimitiveTopology
+                    .TriangleList);
+
+        context
+            .IASetVertexBuffer(
+                0,
+                _objectTriangleBuffer,
+                NativeMapVertex
+                    .SizeInBytes);
+
+        if (
+            _objectMaterialBatches
+                .Count ==
+            0)
+        {
+            context
+                .PSSetShader(
+                    _pixelShader);
+
+            context.Draw(
+                (uint)
+                    _objectTriangleVertexCount,
+                0);
+
+            return;
+        }
+
+        context
+            .PSSetSampler(
+                0,
+                _textureSampler);
+
+        foreach (
+            var batch in
+                _objectMaterialBatches)
+        {
+            if (
+                batch.VertexCount <=
+                    0)
+            {
+                continue;
+            }
+
+            if (
+                batch.TexturePath is
+                    { Length: > 0 }
+                    texturePath &&
+                _textureCache
+                    .TryGetValue(
+                        texturePath,
+                        out var texture))
+            {
+                context
+                    .PSSetShader(
+                        _texturedPixelShader);
+
+                context
+                    .PSSetShaderResource(
+                        0,
+                        texture.View);
+            }
+            else
+            {
+                context
+                    .PSUnsetShaderResource(
+                        0);
+
+                context
+                    .PSSetShader(
+                        _pixelShader);
+            }
+
+            context.Draw(
+                (uint)
+                    batch.VertexCount,
+                (uint)
+                    batch.StartVertex);
+        }
+
+        context
+            .PSUnsetShaderResource(
+                0);
+
+        context
+            .PSSetShader(
+                _pixelShader);
+    }
+
+    private void UpdateTextureCache(
+        IReadOnlyList<
+            NativeMaterialBatch> batches)
+    {
+        var requested =
+            batches
+                .Where(
+                    batch =>
+                        !string.IsNullOrWhiteSpace(
+                            batch.TexturePath))
+                .Select(
+                    batch =>
+                        batch.TexturePath!)
+                .Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .Take(256)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var stale =
+            _textureCache.Keys
+                .Where(
+                    path =>
+                        !requested
+                            .Contains(path))
+                .ToArray();
+
+        foreach (var path in stale)
+        {
+            _textureCache[path]
+                .Dispose();
+
+            _textureCache.Remove(
+                path);
+        }
+
+        _failedTexturePaths
+            .RemoveWhere(
+                path =>
+                    !requested
+                        .Contains(path));
+
+        foreach (
+            var path in requested)
+        {
+            if (
+                _textureCache
+                    .ContainsKey(path) ||
+                _failedTexturePaths
+                    .Contains(path))
+            {
+                continue;
+            }
+
+            var texture =
+                _textureLoader
+                    .TryLoad(path);
+
+            if (texture is null)
+            {
+                _failedTexturePaths
+                    .Add(path);
+
+                continue;
+            }
+
+            _textureCache[path] =
+                texture;
+        }
     }
 
     private void RenderPicking(
@@ -1200,7 +1421,19 @@ public sealed class D3D11NativeMapRenderer :
 
         _vertexBuffer?.Dispose();
         _viewProjectionBuffer.Dispose();
+        foreach (
+            var texture in
+                _textureCache.Values)
+        {
+            texture.Dispose();
+        }
+
+        _textureCache.Clear();
+        _failedTexturePaths.Clear();
+
+        _textureSampler.Dispose();
         _inputLayout.Dispose();
+        _texturedPixelShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();
     }

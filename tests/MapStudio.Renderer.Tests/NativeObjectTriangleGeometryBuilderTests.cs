@@ -99,10 +99,12 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                 [
                     new NativeSceneryMeshAsset(
                         "house.o3d",
+                        @"C:\OMSI\Sceneryobjects\Test\model\house.o3d",
                         OmsiSceneryMeshTransform
                             .Identity,
                         null,
-                        geometry)
+                        geometry,
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house.dds"])
                 ],
                 null,
                 false,
@@ -131,6 +133,28 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
         Assert.Equal(
             1,
             result.LoadedObjectCount);
+
+        Assert.Single(
+            result.MaterialBatches);
+
+        var materialBatch =
+            result.MaterialBatches[0];
+
+        Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house.dds",
+            materialBatch.TexturePath);
+
+        Assert.Equal(
+            new System.Numerics.Vector2(
+                0,
+                0),
+            result.Vertices[0].TexCoord);
+
+        Assert.Equal(
+            new System.Numerics.Vector2(
+                1,
+                0),
+            result.Vertices[1].TexCoord);
 
         Assert.Single(
             result.Ranges);

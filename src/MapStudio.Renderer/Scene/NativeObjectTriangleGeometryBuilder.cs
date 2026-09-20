@@ -8,17 +8,30 @@ public readonly record struct NativeTriangleRange(
     int StartVertex,
     int VertexCount);
 
+public readonly record struct NativeMaterialBatch(
+    int StartVertex,
+    int VertexCount,
+    string? TexturePath);
+
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
     NativeMapVertex[] PickingVertices,
     IReadOnlyDictionary<
         MapStudio.Renderer.Picking.PickingId,
         NativeTriangleRange> Ranges,
+    IReadOnlyList<
+        NativeMaterialBatch> MaterialBatches,
     int LoadedObjectCount,
     int LoadedMeshCount)
 {
     public int TriangleCount =>
         Vertices.Length / 3;
+
+    public int TexturedBatchCount =>
+        MaterialBatches.Count(
+            batch =>
+                !string.IsNullOrWhiteSpace(
+                    batch.TexturePath));
 }
 
 public sealed class NativeObjectTriangleGeometryBuilder
@@ -57,6 +70,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
             new Dictionary<
                 MapStudio.Renderer.Picking.PickingId,
                 NativeTriangleRange>();
+
+        var materialBatches =
+            new List<
+                NativeMaterialBatch>();
 
         var loadedObjects = 0;
         var loadedMeshes = 0;
@@ -131,7 +148,8 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     mesh,
                     terrainOffset,
                     vertices,
-                    pickingVertices);
+                    pickingVertices,
+                    materialBatches);
 
                 if (
                     vertices.Count >
@@ -160,6 +178,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
             vertices.ToArray(),
             pickingVertices.ToArray(),
             ranges,
+            materialBatches.ToArray(),
             loadedObjects,
             loadedMeshes);
     }
@@ -170,7 +189,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
         double terrainOffset,
         List<NativeMapVertex> output,
         List<NativeMapVertex>
-            pickingOutput)
+            pickingOutput,
+        List<NativeMaterialBatch>
+            materialBatches)
     {
         var geometry =
             mesh.Geometry;
@@ -215,6 +236,14 @@ public sealed class NativeObjectTriangleGeometryBuilder
             EncodePickingColor(
                 entity.PickingId);
 
+        var vertexCount =
+            geometry.Positions.Length /
+            3;
+
+        var hasUvs =
+            geometry.Uvs.Length >=
+            vertexCount * 2;
+
         var triangleCount =
             geometry.Indices.Length /
             3;
@@ -224,13 +253,55 @@ public sealed class NativeObjectTriangleGeometryBuilder
             triangle < triangleCount;
             triangle++)
         {
+            var baseIndex =
+                triangle * 3;
+
+            var index0 =
+                checked(
+                    (int)
+                        geometry.Indices[
+                            baseIndex]);
+
+            var index1 =
+                checked(
+                    (int)
+                        geometry.Indices[
+                            baseIndex +
+                            1]);
+
+            var index2 =
+                checked(
+                    (int)
+                        geometry.Indices[
+                            baseIndex +
+                            2]);
+
+            if (
+                index0 < 0 ||
+                index0 >= vertexCount ||
+                index1 < 0 ||
+                index1 >= vertexCount ||
+                index2 < 0 ||
+                index2 >= vertexCount)
+            {
+                continue;
+            }
+
             var color =
                 GetTriangleColor(
                     geometry,
                     triangle);
 
-            var baseIndex =
-                triangle * 3;
+            var texturePath =
+                hasUvs
+                    ? GetTriangleTexturePath(
+                        mesh,
+                        geometry,
+                        triangle)
+                    : null;
+
+            var triangleStart =
+                output.Count;
 
             for (
                 var corner = 0;
@@ -238,22 +309,15 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 corner++)
             {
                 var sourceIndex =
-                    checked(
-                        (int)
-                            geometry.Indices[
-                                baseIndex +
-                                corner]);
+                    corner switch
+                    {
+                        0 => index0,
+                        1 => index1,
+                        _ => index2
+                    };
 
                 var positionOffset =
                     sourceIndex * 3;
-
-                if (
-                    positionOffset + 2 >=
-                    geometry.Positions
-                        .Length)
-                {
-                    continue;
-                }
 
                 var local =
                     new Vector3(
@@ -271,17 +335,109 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         local,
                         worldTransform);
 
+                var uv =
+                    hasUvs
+                        ? new Vector2(
+                            geometry.Uvs[
+                                sourceIndex *
+                                2],
+                            geometry.Uvs[
+                                sourceIndex *
+                                2 +
+                                1])
+                        : Vector2.Zero;
+
                 output.Add(
                     new NativeMapVertex(
                         world,
-                        color));
+                        color,
+                        uv));
 
                 pickingOutput.Add(
                     new NativeMapVertex(
                         world,
                         pickingColor));
             }
+
+            AppendMaterialBatch(
+                materialBatches,
+                triangleStart,
+                3,
+                texturePath);
         }
+    }
+
+    private static void AppendMaterialBatch(
+        List<NativeMaterialBatch> batches,
+        int startVertex,
+        int vertexCount,
+        string? texturePath)
+    {
+        if (
+            batches.Count > 0)
+        {
+            var previous =
+                batches[^1];
+
+            if (
+                previous.StartVertex +
+                    previous.VertexCount ==
+                    startVertex &&
+                string.Equals(
+                    previous.TexturePath,
+                    texturePath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                batches[^1] =
+                    previous with
+                    {
+                        VertexCount =
+                            previous.VertexCount +
+                            vertexCount
+                    };
+
+                return;
+            }
+        }
+
+        batches.Add(
+            new NativeMaterialBatch(
+                startVertex,
+                vertexCount,
+                texturePath));
+    }
+
+    private static string?
+        GetTriangleTexturePath(
+            NativeSceneryMeshAsset mesh,
+            OmsiO3dGeometry geometry,
+            int triangle)
+    {
+        if (
+            triangle >=
+                geometry
+                    .TriangleMaterialIndices
+                    .Length)
+        {
+            return null;
+        }
+
+        var materialIndex =
+            geometry
+                .TriangleMaterialIndices[
+                    triangle];
+
+        if (
+            materialIndex >=
+                mesh.MaterialTexturePaths
+                    .Count)
+        {
+            return null;
+        }
+
+        return mesh
+            .MaterialTexturePaths[
+                materialIndex];
     }
 
     private static Vector4

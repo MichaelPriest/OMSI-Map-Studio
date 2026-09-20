@@ -346,3 +346,15 @@ The **Map** menu can switch between both modes without reopening the map. Switch
 The Explorer gains a tile navigator with X/Y fields, a **Go** action, and four directional controls. In full-map mode, navigation only changes the active tile and focuses the camera on its center. In 3×3 mode, navigation reloads the region around the new tile and rebuilds the viewport with that area's real objects, splines, and terrain.
 
 After any reload, the Inspector, visual history, and terrain tool are synchronized with the new real Core snapshot.
+
+### Checkpoint N3.16 — O3D diffuse textures in Direct3D 11
+
+The native renderer no longer treats every O3D mesh only as a diffuse color. The vertex pipeline now preserves real model UV coordinates and groups triangles into material/texture batches.
+
+`NativeSceneryAssetLoader` resolves real texture files declared by O3D materials through `OmsiTextureAssetPathResolver`, including the Core's safe DDS replacement lookup.
+
+Direct3D 11 loads textures that Windows Imaging Component can decode, creates `ID3D11Texture2D`/Shader Resource Views, and uses a textured pixel shader with a linear-wrap sampler. Low alpha is clipped in the shader so basic fence, vegetation, and masked-material cutouts are no longer rendered as fully opaque blocks.
+
+Missing or undecodable textures do not break the map: the batch falls back to the O3D diffuse color. The cache keeps only textures requested by the current scene and caps the first pass at 256 distinct paths to avoid unbounded memory use on large maps.
+
+This checkpoint covers base diffuse textures for O3D objects. Advanced SCO overrides (`[matl]`, night maps, bump/environment/light maps), spline textures, and terrain paint remain for later checkpoints.

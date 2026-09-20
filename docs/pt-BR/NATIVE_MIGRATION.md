@@ -346,3 +346,15 @@ O menu **Mapa** permite alternar entre os dois modos sem reabrir o mapa. A troca
 O Explorer recebe um navegador de tiles com campos X/Y, botão **Ir** e deslocamento pelas quatro direções. No modo completo, navegar apenas altera o tile ativo e move a câmera para o centro dele. No modo 3×3, a navegação recarrega a região em torno do novo tile e reconstrói o viewport com os objetos, splines e terreno daquela área.
 
 Após qualquer recarregamento, Inspector, histórico visual e ferramenta de terreno são sincronizados com o novo snapshot real do Core.
+
+### Checkpoint N3.16 — texturas difusas O3D no Direct3D 11
+
+O renderer nativo deixa de tratar todos os meshes O3D apenas pela cor difusa. O pipeline de vértices agora preserva as coordenadas UV reais do modelo e agrupa os triângulos em lotes por material/textura.
+
+`NativeSceneryAssetLoader` resolve o caminho real das texturas declaradas pelos materiais O3D usando `OmsiTextureAssetPathResolver`, inclusive a busca segura por substitutos DDS já suportada pelo Core.
+
+O Direct3D 11 carrega as texturas decodificáveis pelo Windows Imaging Component, cria `ID3D11Texture2D`/Shader Resource View e usa um pixel shader texturizado com sampler linear wrap. Alpha baixo usa descarte no shader, permitindo recortes básicos de grades, vegetação e materiais com máscara em vez de transformar toda a superfície em um bloco opaco.
+
+Texturas ausentes ou não decodificáveis não derrubam o mapa: o lote continua usando a cor difusa O3D como fallback. O cache mantém somente texturas solicitadas pela cena atual e limita o primeiro lote a 256 caminhos distintos para evitar consumo descontrolado ao abrir mapas grandes.
+
+Este checkpoint cobre a textura difusa base dos objetos O3D. Overrides avançados SCO (`[matl]`, night map, bump/environment/light map), texturas das splines e pintura do terreno continuam em checkpoints seguintes.

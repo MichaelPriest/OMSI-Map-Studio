@@ -5,9 +5,12 @@ namespace MapStudio.Renderer.Scene;
 
 public sealed record NativeSceneryMeshAsset(
     string DeclaredPath,
+    string FullPath,
     OmsiSceneryMeshTransform Transform,
     double? LodThreshold,
-    OmsiO3dGeometry Geometry);
+    OmsiO3dGeometry Geometry,
+    IReadOnlyList<string?>
+        MaterialTexturePaths);
 
 public sealed record NativeSceneryAsset(
     string SceneryObjectPath,
