@@ -1122,6 +1122,18 @@ code {
   background: #06131e;
 }
 
+.reference-elevation-tools {
+  display: grid;
+  gap: 7px;
+  padding-top: 7px;
+  border-top: 1px solid #183a52;
+}
+
+.reference-elevation-tools .primary-button,
+.reference-elevation-tools .secondary-action {
+  width: 100%;
+}
+
 .reference-attribution {
   position: absolute;
   z-index: 5;
