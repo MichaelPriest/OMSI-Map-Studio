@@ -3,6 +3,8 @@ using System.IO;
 using System.Globalization;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
@@ -10,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
@@ -84,6 +87,11 @@ public partial class MainWindow : Window
 
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
+
+    private CancellationTokenSource?
+        _assetIndexRefreshCancellation;
+
+    private OmsiAssetIndex? _assetIndex;
     private readonly OmsiSceneryObjectReader _sceneryObjectReader = new();
     private readonly OmsiO3dHeaderReader _o3dHeaderReader = new();
     private readonly OmsiO3dStructureReader _o3dStructureReader = new();
@@ -1230,7 +1238,174 @@ public partial class MainWindow : Window
             rootPath
         });
 
+        StartAssetIndexRefresh(
+            rootPath);
+
         return Task.CompletedTask;
+    }
+
+    private void StartAssetIndexRefresh(
+        string rootPath)
+    {
+        _assetIndexRefreshCancellation
+            ?.Cancel();
+        _assetIndexRefreshCancellation
+            ?.Dispose();
+
+        var cancellation =
+            new CancellationTokenSource();
+
+        _assetIndexRefreshCancellation =
+            cancellation;
+
+        var databasePath =
+            BuildAssetIndexPath(
+                rootPath);
+
+        var index =
+            new OmsiAssetIndex(
+                databasePath);
+
+        _assetIndex = index;
+
+        PostMessage(new
+        {
+            type =
+                "assetIndexRefreshStarted"
+        });
+
+        var progress =
+            new Progress<
+                OmsiAssetIndexProgress>(
+                current =>
+                    PostMessage(new
+                    {
+                        type =
+                            "assetIndexRefreshProgress",
+                        current.ExaminedFiles,
+                        current.CandidateFiles,
+                        current.RelativePath
+                    }));
+
+        _ =
+            RefreshAssetIndexAsync(
+                rootPath,
+                index,
+                progress,
+                cancellation.Token);
+    }
+
+    private async Task RefreshAssetIndexAsync(
+        string rootPath,
+        OmsiAssetIndex index,
+        IProgress<OmsiAssetIndexProgress> progress,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result =
+                await index
+                    .RefreshAsync(
+                        rootPath,
+                        progress,
+                        cancellationToken);
+
+            if (
+                cancellationToken
+                    .IsCancellationRequested ||
+                !ReferenceEquals(
+                    _assetIndex,
+                    index))
+            {
+                return;
+            }
+
+            var statistics =
+                await index
+                    .GetStatisticsAsync(
+                        cancellationToken);
+
+            PostMessage(new
+            {
+                type =
+                    "assetIndexRefreshCompleted",
+                result.ExaminedFiles,
+                result.TotalEntries,
+                result.AddedFiles,
+                result.UpdatedFiles,
+                result.UnchangedFiles,
+                result.RemovedFiles,
+                result.DurationMilliseconds,
+                statistics.SceneryObjects,
+                statistics.Splines,
+                statistics.Models,
+                statistics.Textures
+            });
+        }
+        catch (OperationCanceledException)
+            when (
+                cancellationToken
+                    .IsCancellationRequested)
+        {
+            // A new OMSI installation was selected.
+        }
+        catch (Exception exception)
+        {
+            if (
+                cancellationToken
+                    .IsCancellationRequested)
+            {
+                return;
+            }
+
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "assetIndexError",
+                detail =
+                    exception.Message
+            });
+        }
+    }
+
+    private static string BuildAssetIndexPath(
+        string rootPath)
+    {
+        var normalizedRoot =
+            Path.GetFullPath(
+                    rootPath)
+                .TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar)
+                .ToUpperInvariant();
+
+        var hash =
+            Convert.ToHexString(
+                    SHA256.HashData(
+                        Encoding.UTF8.GetBytes(
+                            normalizedRoot)))
+                .ToLowerInvariant();
+
+        var localApplicationData =
+            Environment.GetFolderPath(
+                Environment.SpecialFolder
+                    .LocalApplicationData);
+
+        var cacheRoot =
+            string.IsNullOrWhiteSpace(
+                localApplicationData)
+                ? Path.Combine(
+                    Path.GetTempPath(),
+                    "OMSI Map Studio")
+                : Path.Combine(
+                    localApplicationData,
+                    "OMSI Map Studio");
+
+        return Path.Combine(
+            cacheRoot,
+            "Cache",
+            hash[..16],
+            "assets-v1.sqlite");
     }
 
     private async Task LoadMapCatalogAsync()
