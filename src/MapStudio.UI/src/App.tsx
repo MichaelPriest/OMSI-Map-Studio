@@ -1422,6 +1422,26 @@ export function App() {
           return;
         }
 
+        if (
+          message.type ===
+          "coordinateMapCreated"
+        ) {
+          setCreatingCoordinateMap(false);
+          setGoogleLatitude(
+            String(message.latitude)
+          );
+          setGoogleLongitude(
+            String(message.longitude)
+          );
+          setGoogleReference(undefined);
+          setGoogleElevationGrid(undefined);
+          setReferenceVisible(true);
+          setSaveNotice(
+            `Mapa "${message.displayName}" criado a partir do template NewMap com âncora ${message.latitude}, ${message.longitude}.`
+          );
+          return;
+        }
+
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
           setHiddenTerrainLayerIndices({});
@@ -2303,6 +2323,7 @@ export function App() {
           setLoadingSceneryLibrary(false);
           setLoadingSplineLibrary(false);
           setLoadingMapCatalog(false);
+          setCreatingCoordinateMap(false);
           setLoadingGoogleReference(false);
           setLoadingElevationGrid(false);
           setApplyingElevationGrid(false);
