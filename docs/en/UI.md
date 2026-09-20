@@ -606,3 +606,18 @@ The editor shows a compact 3×3 navigator over the viewport. The center is the a
 ### Real library item preview
 
 Selecting a `.sco` or `.sli` creates a preview at the active tile center using the file's real geometry/profile. The library panel shows the active item, loaded mesh or surface/texture counts, and a **Focus preview** button. Selecting another item replaces only the preview; the map is not written until confirmation.
+
+
+### City-builder-style placement flow
+
+Item placement now follows a city-builder-like workflow without replacing OMSI's real file format. After selecting a real `.sco` object (including trees, water, grass and junction assets when represented by real scenery objects), its real geometry is rendered as a **translucent 3D ghost** and follows the cursor over valid tiles. A click pins the preview position; map files are changed only after the explicit safe-save confirmation.
+
+Regular splines also show a real 3D cursor-following preview. In the road creator, the user selects a real `.sli`, presses at the start point and drags to the desired end point. A lateral **curve** control can then reshape the road; the editor converts that control to the real OMSI arc parameters (`rotation`, `length` and `radius`). Terrain leveling uses the actual curved arc endpoint rather than a straight-line approximation.
+
+The Library contains a 3D preview window for the selected item using loaded real geometry/profile and textures. It does not create synthetic thumbnails.
+
+The **Real map by coordinates** panel is no longer permanently visible over the viewport. It is opened from **Map > Real map by coordinates…** or the matching **View** menu option.
+
+Floating viewport tools have drag handles: tile navigator, terrain leveling, real-map panel, placement bars, camera/tools, layers and the fullscreen dock can be repositioned while editing.
+
+Scene click selection walks up the picked mesh parent chain, so child meshes still resolve to the real placed object when selection metadata lives on a parent node.
