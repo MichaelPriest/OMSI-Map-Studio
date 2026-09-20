@@ -190,6 +190,175 @@ public sealed class NativeViewportRuntime : IDisposable
             spline.GradientEnd);
     }
 
+    public NativePendingTransformEdit?
+        ApplySelectionInfo(
+            NativeSelectionInfo values)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            values);
+
+        CancelGizmoDrag();
+
+        if (
+            Scene is null ||
+            _selectedPickingId.IsNone ||
+            values.Kind !=
+                _selectedPickingId.Kind)
+        {
+            return null;
+        }
+
+        NativeTransformHistoryEntry?
+            history = null;
+
+        if (
+            values.Kind ==
+            PickingKind.Object)
+        {
+            var entity =
+                Scene.Objects
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                            _selectedPickingId &&
+                            item.Object.ObjectId ==
+                            values.EntityId);
+
+            if (entity is null)
+            {
+                return null;
+            }
+
+            var source =
+                entity.Object;
+
+            var updated =
+                source with
+                {
+                    X = values.X,
+                    Y = values.Y,
+                    Z = values.Z,
+                    Rotation =
+                        values.Rotation,
+                    Pitch =
+                        values.Pitch ??
+                        source.Pitch,
+                    Bank =
+                        values.Bank ??
+                        source.Bank
+                };
+
+            var before =
+                CreateObjectEdit(
+                    entity.Tile,
+                    source);
+
+            var after =
+                CreateObjectEdit(
+                    entity.Tile,
+                    updated);
+
+            ReplaceObject(
+                entity,
+                updated);
+
+            SelectObjectEdit(
+                entity.Tile,
+                after.ObjectEdit!);
+
+            history =
+                new NativeTransformHistoryEntry(
+                    before,
+                    after);
+        }
+        else if (
+            values.Kind ==
+            PickingKind.Spline)
+        {
+            var entity =
+                Scene.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                            _selectedPickingId &&
+                            item.Spline.SplineId ==
+                            values.EntityId);
+
+            if (entity is null)
+            {
+                return null;
+            }
+
+            var source =
+                entity.Spline;
+
+            var updated =
+                source with
+                {
+                    X = values.X,
+                    Y = values.Y,
+                    Z = values.Z,
+                    Rotation =
+                        values.Rotation,
+                    Length =
+                        values.Length ??
+                        source.Length,
+                    Radius =
+                        values.Radius ??
+                        source.Radius,
+                    GradientStart =
+                        values.GradientStart ??
+                        source.GradientStart,
+                    GradientEnd =
+                        values.GradientEnd ??
+                        source.GradientEnd
+                };
+
+            var before =
+                CreateSplineEdit(
+                    entity.Tile,
+                    source);
+
+            var after =
+                CreateSplineEdit(
+                    entity.Tile,
+                    updated);
+
+            ReplaceSpline(
+                entity,
+                updated);
+
+            SelectSplineEdit(
+                entity.Tile,
+                after.SplineEdit!);
+
+            history =
+                new NativeTransformHistoryEntry(
+                    before,
+                    after);
+        }
+
+        if (history is null)
+        {
+            return null;
+        }
+
+        _undoStack.Push(
+            history);
+
+        _redoStack.Clear();
+
+        PendingTransformEdit =
+            history.After;
+
+        RefreshSelectedScene();
+
+        return
+            PendingTransformEdit;
+    }
+
     public IntPtr SwapChainPointer =>
         Surface?.NativePointer ??
         IntPtr.Zero;

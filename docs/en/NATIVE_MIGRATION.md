@@ -170,3 +170,12 @@ Snapping can be toggled from the native UI. The initial configuration quantizes 
 The WinUI Inspector now consumes the selected entity state directly from the renderer. For objects it shows ID, tile, SCO path, OMSI coordinates, rotation, pitch, and bank. For splines it shows the SLI path, OMSI coordinates, rotation, length, radius, and start/end gradients.
 
 The Inspector refreshes after ID-buffer selection, gizmo move/rotation, and undo/redo operations. There is no duplicate XAML-side model: displayed values come from the same native snapshot that produces geometry and persisted edits.
+
+
+### Checkpoint N2.5 — numeric editing through the Inspector
+
+The native Inspector is no longer read-only and can edit the selected entity transform. Objects expose X/Y/Z, rotation, pitch, and bank. Splines expose X/Y/Z, rotation, length, radius, and start/end gradients.
+
+Pressing **Apply values** updates the same snapshot used by the viewport, creates a before/after history pair, refreshes native geometry, stages the OMSI transform for persistence, and remains compatible with Undo/Redo and Save changes.
+
+Gizmo and Inspector are therefore two interfaces over the same native editing model, with no duplicated state.

@@ -170,3 +170,12 @@ O snap pode ser ligado ou desligado pela interface. Nesta primeira configuraçã
 O painel Inspector do host WinUI passou a consumir diretamente o estado da entidade selecionada no renderer. Para objetos, exibe ID, tile, caminho SCO, coordenadas OMSI, rotação, pitch e bank. Para splines, exibe caminho SLI, coordenadas OMSI, rotação, comprimento, raio e gradientes inicial/final.
 
 O Inspector é atualizado após seleção por ID Buffer, movimento/rotação por gizmo e operações de desfazer/refazer. Não existe cópia de estado separada no XAML: os valores exibidos vêm do mesmo snapshot nativo que gera a geometria e os edits persistidos.
+
+
+### Checkpoint N2.5 — edição numérica pelo Inspector
+
+O Inspector nativo deixou de ser apenas informativo e passou a editar a transformação da entidade selecionada. Objetos permitem alterar X/Y/Z, rotação, pitch e bank. Splines permitem alterar X/Y/Z, rotação, comprimento, raio e gradientes inicial/final.
+
+Ao clicar em **Aplicar valores**, o runtime atualiza o mesmo snapshot usado pelo viewport, cria um par antes/depois no histórico, atualiza a geometria nativa, registra a transformação OMSI como pendente e mantém compatibilidade com Desfazer/Refazer e Salvar alterações.
+
+Assim, gizmo e Inspector são duas interfaces sobre o mesmo modelo de edição nativo, sem duplicação de estado.

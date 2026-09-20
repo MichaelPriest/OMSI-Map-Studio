@@ -118,43 +118,104 @@
                     Margin="8"
                     Background="#0C2130"
                     CornerRadius="8">
-                <StackPanel Padding="14" Spacing="10">
-                    <TextBlock Text="Inspector"
-                               FontSize="18"
-                               FontWeight="SemiBold" />
-                    <TextBlock x:Name="SelectionText"
-                               Text="Sem seleção"
-                               FontSize="14"
-                               Foreground="#9FB5C5" />
-                    <TextBlock x:Name="InspectorTypeText"
-                               Text="Tipo: —"
-                               FontWeight="SemiBold" />
-                    <TextBlock x:Name="InspectorAssetText"
-                               Text="Arquivo: —"
-                               FontSize="13"
-                               TextWrapping="Wrap"
-                               Foreground="#B9CAD6" />
-                    <TextBlock x:Name="InspectorTileText"
-                               Text="Tile: —"
-                               FontSize="13"
-                               Foreground="#B9CAD6" />
-                    <TextBlock x:Name="InspectorPositionText"
-                               Text="Posição: —"
-                               FontSize="13"
-                               Foreground="#B9CAD6" />
-                    <TextBlock x:Name="InspectorRotationText"
-                               Text="Rotação: —"
-                               FontSize="13"
-                               Foreground="#B9CAD6" />
-                    <TextBlock x:Name="InspectorExtraText"
-                               Text="Detalhes: —"
-                               FontSize="13"
-                               TextWrapping="Wrap"
-                               Foreground="#B9CAD6" />
-                    <TextBlock Text="Seleção: ID Buffer GPU nativo com profundidade real."
-                               TextWrapping="Wrap"
-                               Foreground="#7FA6BF" />
-                </StackPanel>
+                <ScrollViewer
+                    VerticalScrollBarVisibility="Auto">
+                    <StackPanel Padding="14" Spacing="10">
+                        <TextBlock Text="Inspector"
+                                   FontSize="18"
+                                   FontWeight="SemiBold" />
+                        <TextBlock x:Name="SelectionText"
+                                   Text="Sem seleção"
+                                   FontSize="14"
+                                   Foreground="#9FB5C5" />
+                        <TextBlock x:Name="InspectorTypeText"
+                                   Text="Tipo: —"
+                                   FontWeight="SemiBold" />
+                        <TextBlock x:Name="InspectorAssetText"
+                                   Text="Arquivo: —"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   Foreground="#B9CAD6" />
+                        <TextBlock x:Name="InspectorTileText"
+                                   Text="Tile: —"
+                                   FontSize="13"
+                                   Foreground="#B9CAD6" />
+
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <NumberBox x:Name="InspectorXBox"
+                                       Grid.Column="0"
+                                       Header="X"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.25" />
+                            <NumberBox x:Name="InspectorYBox"
+                                       Grid.Column="1"
+                                       Header="Y"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.25" />
+                            <NumberBox x:Name="InspectorZBox"
+                                       Grid.Column="2"
+                                       Header="Z"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.25" />
+                        </Grid>
+
+                        <NumberBox x:Name="InspectorRotationBox"
+                                   Header="Rotação"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="5" />
+
+                        <StackPanel x:Name="InspectorObjectFields"
+                                    Spacing="8"
+                                    Visibility="Collapsed">
+                            <NumberBox x:Name="InspectorPitchBox"
+                                       Header="Pitch"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="5" />
+                            <NumberBox x:Name="InspectorBankBox"
+                                       Header="Bank"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="5" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="InspectorSplineFields"
+                                    Spacing="8"
+                                    Visibility="Collapsed">
+                            <NumberBox x:Name="InspectorLengthBox"
+                                       Header="Comprimento"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.25"
+                                       Minimum="0" />
+                            <NumberBox x:Name="InspectorRadiusBox"
+                                       Header="Raio"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.25" />
+                            <NumberBox x:Name="InspectorGradientStartBox"
+                                       Header="Gradiente inicial (%)"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.1" />
+                            <NumberBox x:Name="InspectorGradientEndBox"
+                                       Header="Gradiente final (%)"
+                                       SpinButtonPlacementMode="Compact"
+                                       SmallChange="0.1" />
+                        </StackPanel>
+
+                        <Button x:Name="ApplyInspectorButton"
+                                Content="Aplicar valores"
+                                HorizontalAlignment="Stretch"
+                                IsEnabled="False"
+                                Click="OnApplyInspectorClick" />
+
+                        <TextBlock Text="Seleção e edição usam o mesmo estado nativo do viewport e do ID Buffer."
+                                   TextWrapping="Wrap"
+                                   Foreground="#7FA6BF" />
+                    </StackPanel>
+                </ScrollViewer>
             </Border>
         </Grid>
 

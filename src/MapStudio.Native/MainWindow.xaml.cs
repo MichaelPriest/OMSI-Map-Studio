@@ -1,6 +1,7 @@
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
+using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -15,6 +16,9 @@ public sealed partial class MainWindow : Window
         new();
 
     private readonly IntPtr _windowHandle;
+
+    private NativeSelectionInfo?
+        _selectionInfo;
 
     public MainWindow()
     {
@@ -73,6 +77,12 @@ public sealed partial class MainWindow : Window
         Viewport.SelectionChanged +=
             info =>
             {
+                _selectionInfo =
+                    info;
+
+                ApplyInspectorButton.IsEnabled =
+                    info is not null;
+
                 if (info is null)
                 {
                     InspectorTypeText.Text =
@@ -84,26 +94,33 @@ public sealed partial class MainWindow : Window
                     InspectorTileText.Text =
                         "Tile: —";
 
-                    InspectorPositionText.Text =
-                        "Posição: —";
+                    InspectorXBox.Value =
+                        double.NaN;
 
-                    InspectorRotationText.Text =
-                        "Rotação: —";
+                    InspectorYBox.Value =
+                        double.NaN;
 
-                    InspectorExtraText.Text =
-                        "Detalhes: —";
+                    InspectorZBox.Value =
+                        double.NaN;
+
+                    InspectorRotationBox.Value =
+                        double.NaN;
+
+                    InspectorObjectFields.Visibility =
+                        Visibility.Collapsed;
+
+                    InspectorSplineFields.Visibility =
+                        Visibility.Collapsed;
 
                     return;
                 }
 
-                var type =
+                var isObject =
                     info.Kind ==
-                        PickingKind.Object
-                        ? "Objeto"
-                        : "Spline";
+                    PickingKind.Object;
 
                 InspectorTypeText.Text =
-                    $"Tipo: {type} #{info.EntityId}";
+                    $"Tipo: {(isObject ? "Objeto" : "Spline")} #{info.EntityId}";
 
                 InspectorAssetText.Text =
                     $"Arquivo: {info.AssetPath}";
@@ -111,18 +128,175 @@ public sealed partial class MainWindow : Window
                 InspectorTileText.Text =
                     $"Tile: {info.TileX}, {info.TileY}";
 
-                InspectorPositionText.Text =
-                    $"OMSI X/Y/Z: {info.X:F3} / {info.Y:F3} / {info.Z:F3}";
+                InspectorXBox.Value =
+                    info.X;
 
-                InspectorRotationText.Text =
-                    $"Rotação: {info.Rotation:F3}°";
+                InspectorYBox.Value =
+                    info.Y;
 
-                InspectorExtraText.Text =
-                    info.Kind ==
-                        PickingKind.Object
-                        ? $"Pitch: {info.Pitch.GetValueOrDefault():F3}° · Bank: {info.Bank.GetValueOrDefault():F3}°"
-                        : $"Comprimento: {info.Length.GetValueOrDefault():F3} m · Raio: {info.Radius.GetValueOrDefault():F3} m · Gradiente: {info.GradientStart.GetValueOrDefault():F3}% → {info.GradientEnd.GetValueOrDefault():F3}%";
+                InspectorZBox.Value =
+                    info.Z;
+
+                InspectorRotationBox.Value =
+                    info.Rotation;
+
+                InspectorObjectFields.Visibility =
+                    isObject
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+
+                InspectorSplineFields.Visibility =
+                    isObject
+                        ? Visibility.Collapsed
+                        : Visibility.Visible;
+
+                if (isObject)
+                {
+                    InspectorPitchBox.Value =
+                        info.Pitch ??
+                        0;
+
+                    InspectorBankBox.Value =
+                        info.Bank ??
+                        0;
+                }
+                else
+                {
+                    InspectorLengthBox.Value =
+                        info.Length ??
+                        0;
+
+                    InspectorRadiusBox.Value =
+                        info.Radius ??
+                        0;
+
+                    InspectorGradientStartBox.Value =
+                        info.GradientStart ??
+                        0;
+
+                    InspectorGradientEndBox.Value =
+                        info.GradientEnd ??
+                        0;
+                }
             };
+    }
+
+    private void OnApplyInspectorClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_selectionInfo is null)
+        {
+            return;
+        }
+
+        var numericValues =
+            new[]
+            {
+                InspectorXBox.Value,
+                InspectorYBox.Value,
+                InspectorZBox.Value,
+                InspectorRotationBox.Value
+            };
+
+        if (
+            numericValues.Any(
+                value =>
+                    !double.IsFinite(
+                        value)))
+        {
+            StatusText.Text =
+                "Inspector contém valor numérico inválido.";
+
+            return;
+        }
+
+        var current =
+            _selectionInfo;
+
+        var updated =
+            current with
+            {
+                X =
+                    InspectorXBox.Value,
+                Y =
+                    InspectorYBox.Value,
+                Z =
+                    InspectorZBox.Value,
+                Rotation =
+                    InspectorRotationBox.Value,
+                Pitch =
+                    current.Kind ==
+                        PickingKind.Object
+                        ? InspectorPitchBox.Value
+                        : null,
+                Bank =
+                    current.Kind ==
+                        PickingKind.Object
+                        ? InspectorBankBox.Value
+                        : null,
+                Length =
+                    current.Kind ==
+                        PickingKind.Spline
+                        ? InspectorLengthBox.Value
+                        : null,
+                Radius =
+                    current.Kind ==
+                        PickingKind.Spline
+                        ? InspectorRadiusBox.Value
+                        : null,
+                GradientStart =
+                    current.Kind ==
+                        PickingKind.Spline
+                        ? InspectorGradientStartBox.Value
+                        : null,
+                GradientEnd =
+                    current.Kind ==
+                        PickingKind.Spline
+                        ? InspectorGradientEndBox.Value
+                        : null
+            };
+
+        var optionalValues =
+            current.Kind ==
+                PickingKind.Object
+                ? new[]
+                {
+                    updated.Pitch
+                        .GetValueOrDefault(),
+                    updated.Bank
+                        .GetValueOrDefault()
+                }
+                : new[]
+                {
+                    updated.Length
+                        .GetValueOrDefault(),
+                    updated.Radius
+                        .GetValueOrDefault(),
+                    updated.GradientStart
+                        .GetValueOrDefault(),
+                    updated.GradientEnd
+                        .GetValueOrDefault()
+                };
+
+        if (
+            optionalValues.Any(
+                value =>
+                    !double.IsFinite(
+                        value)))
+        {
+            StatusText.Text =
+                "Inspector contém valor numérico inválido.";
+
+            return;
+        }
+
+        if (Viewport.ApplySelectionInfo(
+                updated))
+        {
+            StatusText.Text =
+                "Valores do Inspector aplicados ao estado OMSI.";
+        }
     }
 
     private void OnUndoClick(

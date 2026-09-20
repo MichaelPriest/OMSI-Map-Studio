@@ -99,6 +99,34 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public bool ApplySelectionInfo(
+        NativeSelectionInfo values)
+    {
+        var edit =
+            _runtime
+                ?.ApplySelectionInfo(
+                    values);
+
+        if (edit is null)
+        {
+            return false;
+        }
+
+        TransformEditPending
+            ?.Invoke(
+                edit);
+
+        PublishSelectionInfo();
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            edit.IsObject
+                ? "Valores do objeto aplicados pelo Inspector."
+                : "Valores da spline aplicados pelo Inspector.");
+
+        return true;
+    }
+
     public bool Redo()
     {
         var edit =
