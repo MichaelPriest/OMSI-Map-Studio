@@ -1851,6 +1851,7 @@ export function App() {
           );
           setLoadingSceneryLibrary(false);
           setLoadingSplineLibrary(false);
+          setLoadingMapCatalog(false);
           setSaving(false);
           setInsertingObject(false);
           setDeletingObject(false);
@@ -6638,9 +6639,9 @@ export function App() {
           </span>
           <h2>Abrir mapa</h2>
           <p>
-            Escolha manualmente uma pasta dentro
-            de <code>maps</code>. Nenhum mapa é
-            carregado automaticamente.
+            Veja a lista real de mapas instalados
+            em <code>maps</code> e escolha qual deseja
+            abrir no editor.
           </p>
           <button
             type="button"
@@ -6816,7 +6817,7 @@ export function App() {
                 </span>
                 <h2>Escolha o mapa</h2>
                 <p>
-                  Fonte real: <code>{rootPath}\maps</code>
+                  Fonte real: <code>{rootPath}{"\\maps"}</code>
                 </p>
               </div>
 
@@ -6920,7 +6921,7 @@ export function App() {
                     </strong>
                     <span>
                       Verifique se existem pastas com
-                      global.cfg dentro de OMSI 2\maps.
+                      global.cfg dentro de OMSI 2{"\\maps"}.
                     </span>
                   </div>
                 )}
