@@ -353,3 +353,11 @@ This brings F11 mode closer to the approved visual reference without creating a 
 - `delete` for object/spline deletion;
 - `link` for previous/next link editing;
 - actions continue to reuse `preview`, `save`, `discard`, `terrain`, `sco-object`, `sli-spline`, and `profile`.
+
+
+### Ninth migrated batch
+
+- `perspective` and `top-view` for camera modes;
+- `layers` for the layer panel;
+- `night` for Nightmap;
+- `cache` for visual cache clearing.

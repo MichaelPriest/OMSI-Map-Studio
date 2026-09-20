@@ -353,3 +353,11 @@ Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda im
 - `delete` para exclusão de objetos/splines;
 - `link` para edição de vínculos previous/next;
 - ações continuam reutilizando `preview`, `save`, `discard`, `terrain`, `sco-object`, `sli-spline` e `profile`.
+
+
+### Nono lote migrado
+
+- `perspective` e `top-view` para modos de câmera;
+- `layers` para o painel de camadas;
+- `night` para Nightmap;
+- `cache` para limpeza de caches visuais.

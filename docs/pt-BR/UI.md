@@ -960,3 +960,14 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - o gizmo Babylon usa `scaleRatio` levemente maior para facilitar a captura dos eixos sem alterar os valores de transformação;
 - o diagnóstico técnico da seleção passou a ser recolhível para não cobrir o mapa durante edição normal;
 - picking, fallback geométrico, Snap, transformação e persistência continuam usando a mesma lógica existente.
+
+
+### Controles compactos de câmera e camadas
+
+- barra desktop de câmera passa a usar botões compactos com ícones para Perspectiva, Topo e Snap;
+- atalhos 1/2/N permanecem visíveis como dicas secundárias;
+- o estado da ferramenta atual usa o mesmo ícone de Selecionar/Mover/Rotacionar do restante do editor;
+- o painel Camadas ganhou cabeçalho próprio, ícones semânticos e linhas de visibilidade mais compactas;
+- Grade, Objetos, Splines, Perfis, Nightmap, Terreno e Pintura de terreno continuam ligados aos mesmos estados reais;
+- Limpar cache mantém a mesma lógica e passa a usar ação visual própria;
+- no modo tela cheia esses painéis continuam ocultos em favor das docks unificadas já existentes.

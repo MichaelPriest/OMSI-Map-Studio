@@ -960,3 +960,14 @@ All behavior remains connected to real editor state; no fake commands are introd
 - Babylon gizmos use a slightly larger `scaleRatio` to make axes easier to grab without changing transform values;
 - technical selection diagnostics are now collapsible so they do not cover the map during normal editing;
 - picking, geometric fallback, Snap, transform, and persistence continue using the same existing logic.
+
+
+### Compact camera and layer controls
+
+- the desktop camera bar now uses compact icon buttons for Perspective, Top, and Snap;
+- 1/2/N shortcuts remain visible as secondary hints;
+- current tool state uses the same Select/Move/Rotate icons used across the editor;
+- the Layers panel gets its own header, semantic icons, and more compact visibility rows;
+- Grid, Objects, Splines, Profiles, Nightmap, Terrain, and Terrain paint remain wired to the same real states;
+- Clear cache keeps the same behavior and now uses its own visual action;
+- in fullscreen these desktop panels remain hidden in favor of the existing unified docks.
