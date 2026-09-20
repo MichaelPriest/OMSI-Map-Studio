@@ -634,3 +634,20 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 - SCO `[rendertype]` is now preserved by Core and delivered to the viewport;
 - objects declaring `surface`, `on_surface`, or `presurface` use their real diffuse texture through the unlit preview path as well, without changing coordinates or increasing offsets;
 - SLI roads use the same real OMSI texture in the diffuse/emissive channels of the unlit material to avoid black output caused by the previous `disableLighting` plus missing-emissive combination.
+
+
+## Real terrain, coordinate-based creation, and editor — post-test.35
+
+- scene selection uses `multiPick` and walks the real mesh hierarchy; the old selection block on `[worldcoordinates]` maps was removed so visible objects and splines can be selected;
+- selecting an object or spline in the scene opens the Inspector directly on its transform tab;
+- `Ctrl + arrows/WASD` moves the camera by one 300 m tile and synchronizes the active tile;
+- terrain and the flat fallback surface are pickable in Terrain mode; clicking returns tile, local coordinates, and height;
+- objects and splines selected from the libraries appear as real previews at the active tile center before placement;
+- the easy road creator uses two clicks: start point, end point, then derives length/rotation and proposes a gradient from loaded terrain;
+- existing and pending roads provide a terrain-leveling action using the real start/end terrain heights;
+- manual terrain leveling writes the real `.terrain` with circular radius/feather and always creates a preservative backup;
+- the real-map reference uses Google Static Maps only with the user's own API key; imagery is draped over terrain and keeps visible attribution;
+- the elevation grid uses Google Elevation at 9×9, 17×17, 25×25, or 33×33 samples; values are bilinearly resampled to the native `.terrain` resolution and written with backup;
+- vertical offset is explicit: zero applies real elevations in metres; locally shifted maps can set an offset before writing;
+- **Create real map** clones only the user's installed `OMSI 2\template\NewMap` into `maps\<new folder>`, updates name/friendlyname while preserving encoding, creates `.mapstudio/georeference.json`, and opens the new map;
+- this coordinate-based creation does **not yet inject or convert OMSI's official `[worldcoordinates]` format automatically**. The current anchor is Map Studio metadata; official conversion will only be enabled after all OMSI-required fields/files are validated.
