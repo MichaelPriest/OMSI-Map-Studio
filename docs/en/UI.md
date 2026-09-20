@@ -704,3 +704,10 @@ Restoration runs in the desktop host with strict validation that only directorie
 The `.sco` preview computes real O3D geometry dimensions after applying each mesh's declared scale, rotation, and translation, then displays **W × H × D** in meters. `[tree]` objects use their real maximum height/aspect when no O3D mesh exists.
 
 For `.sli`, the preview displays the real profile's total width and vertical range from its surface points. This avoids introducing fake human or bus scale models.
+
+
+### Smart road endpoint snapping
+
+In the road/bridge builder, **Snap to existing road endpoints** finds the nearest endpoint of a normal spline within the configured range. The new road start/end then uses the exact endpoint coordinate, including endpoints of curved splines.
+
+The panel shows the spline ID, which endpoint was used, and the original cursor distance. Snapping never edits, cuts, or reconnects the existing spline automatically; it only positions the new segment on the real endpoint to reduce manual adjustment.

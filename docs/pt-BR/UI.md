@@ -704,3 +704,10 @@ A restauração é feita pelo host desktop com validação rígida para aceitar 
 A prévia de `.sco` calcula as dimensões reais da geometria O3D depois de aplicar escala, rotação e translação declaradas por mesh e mostra **L × A × P** em metros. Objetos `[tree]` usam a altura/aspecto máximos reais quando não possuem malha O3D.
 
 Para `.sli`, a prévia mostra a largura total e a variação vertical do perfil real a partir dos pontos das superfícies. Isso substitui a necessidade de inserir bonecos ou ônibus de escala fictícios.
+
+
+### Snap inteligente de pontas de rua
+
+No criador de rua/ponte, **Encaixar nas pontas de vias existentes** procura a extremidade de spline normal mais próxima dentro do alcance configurado. Início e fim da nova rua passam a usar exatamente a coordenada da ponta encontrada, inclusive quando a spline existente é curva.
+
+O painel informa o ID da spline, qual extremidade foi usada e a distância original do clique. O snap não altera, recorta nem reconecta automaticamente a spline existente; apenas posiciona o novo trecho sobre a ponta real para reduzir ajustes manuais.

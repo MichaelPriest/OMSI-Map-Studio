@@ -2160,6 +2160,123 @@ type RoadPoint = {
   y: number;
 };
 
+type RoadEndpointSnap = {
+  point: RoadPoint;
+  splineId: number;
+  endpoint: "start" | "end";
+  distance: number;
+  heading: number;
+};
+
+const findRoadEndpointSnap = (
+  point: RoadPoint,
+  splines: OmsiPlacedSpline[],
+  maximumDistance: number
+): RoadEndpointSnap | undefined => {
+  const worldX =
+    point.targetTileX * 300 +
+    point.x;
+  const worldY =
+    point.targetTileY * 300 +
+    point.y;
+  let best:
+    | RoadEndpointSnap
+    | undefined;
+
+  const consider = (
+    spline: OmsiPlacedSpline,
+    endpoint: "start" | "end",
+    x: number,
+    y: number,
+    heading: number
+  ) => {
+    const distance =
+      Math.hypot(
+        worldX - x,
+        worldY - y
+      );
+
+    if (
+      distance > maximumDistance ||
+      (
+        best &&
+        distance >= best.distance
+      )
+    ) {
+      return;
+    }
+
+    const tileX =
+      Math.floor(x / 300);
+    const tileY =
+      Math.floor(y / 300);
+
+    best = {
+      point: {
+        targetTileX: tileX,
+        targetTileY: tileY,
+        x: x - tileX * 300,
+        y: y - tileY * 300
+      },
+      splineId:
+        spline.splineId,
+      endpoint,
+      distance,
+      heading
+    };
+  };
+
+  for (const spline of splines) {
+    if (
+      spline.isHeightSpline ||
+      spline.length <= 0
+    ) {
+      continue;
+    }
+
+    const startX =
+      spline.tileX * 300 +
+      spline.x;
+    const startY =
+      spline.tileY * 300 +
+      spline.y;
+    const end =
+      getSplineAxisEnd(spline);
+    const startHeading =
+      spline.rotation;
+    const endHeading =
+      spline.rotation +
+      (
+        Math.abs(spline.radius) >
+          0.001
+          ? (
+              spline.length /
+              spline.radius
+            ) *
+            180 /
+            Math.PI
+          : 0
+      );
+
+    consider(
+      spline,
+      "start",
+      startX,
+      startY,
+      startHeading
+    );
+    consider(
+      spline,
+      "end",
+      end.x,
+      end.y,
+      endHeading
+    );
+  }
+
+  return best;
+};
+
 const deriveRoadArc = (
   start: RoadPoint,
   end: RoadPoint,
@@ -3115,6 +3232,30 @@ export function App() {
     roadElevationOffset,
     setRoadElevationOffset
   ] = useState(0);
+
+  const [
+    roadEndpointSnapEnabled,
+    setRoadEndpointSnapEnabled
+  ] = useState(true);
+
+  const [
+    roadEndpointSnapDistance,
+    setRoadEndpointSnapDistance
+  ] = useState(5);
+
+  const [
+    roadStartSnap,
+    setRoadStartSnap
+  ] = useState<
+    RoadEndpointSnap | undefined
+  >();
+
+  const [
+    roadEndSnap,
+    setRoadEndSnap
+  ] = useState<
+    RoadEndpointSnap | undefined
+  >();
 
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
@@ -9832,15 +9973,27 @@ export function App() {
           easyRoadMode &&
           !splineLibraryPlacementIsHeight
         ) {
+          const snap =
+            roadEndpointSnapEnabled
+              ? findRoadEndpointSnap(
+                  point,
+                  splinesForViewport,
+                  roadEndpointSnapDistance
+                )
+              : undefined;
+          const resolvedPoint =
+            snap?.point ??
+            point;
+
           if (!easyRoadStart) {
             const startHeight =
               (
                 sampleTerrainHeight(
                   activeTiles,
-                  point.targetTileX,
-                  point.targetTileY,
-                  point.x,
-                  point.y
+                  resolvedPoint.targetTileX,
+                  resolvedPoint.targetTileY,
+                  resolvedPoint.x,
+                  resolvedPoint.y
                 ) ??
                 splinePlacementTemplate.z
               ) +
@@ -9851,12 +10004,16 @@ export function App() {
                   : 0
               );
 
-            setEasyRoadStart(point);
+            setEasyRoadStart(
+              resolvedPoint
+            );
             setEasyRoadEnd(undefined);
+            setRoadStartSnap(snap);
+            setRoadEndSnap(undefined);
             setEasyRoadCurveOffset(0);
 
             setPendingSplinePlacement({
-              ...point,
+              ...resolvedPoint,
               z: startHeight,
               rotation: 0,
               length: 0,
@@ -9866,17 +10023,22 @@ export function App() {
             });
 
             setSaveNotice(
-              "Início marcado. Continue segurando e arraste até o fim da rua; depois ajuste a curva pelo controle."
+              snap
+                ? `Início encaixado na ${snap.endpoint === "start" ? "ponta inicial" : "ponta final"} da spline #${snap.splineId}. Arraste até o fim da nova rua.`
+                : "Início marcado. Continue segurando e arraste até o fim da rua; depois ajuste a curva pelo controle."
             );
             return;
           }
 
-          setEasyRoadEnd(point);
+          setEasyRoadEnd(
+            resolvedPoint
+          );
+          setRoadEndSnap(snap);
 
           const updated =
             updateEasyRoadPreview(
               easyRoadStart,
-              point,
+              resolvedPoint,
               easyRoadCurveOffset
             );
 
@@ -9916,8 +10078,11 @@ export function App() {
         easyRoadMode,
         easyRoadStart,
         roadElevationOffset,
+        roadEndpointSnapDistance,
+        roadEndpointSnapEnabled,
         roadPlacementKind,
         splineLibraryPlacementIsHeight,
+        splinesForViewport,
         splinePlacementTemplate,
         updateEasyRoadPreview
       ]
@@ -9941,6 +10106,8 @@ export function App() {
       setEasyRoadStart(undefined);
       setEasyRoadEnd(undefined);
       setEasyRoadCurveOffset(0);
+      setRoadStartSnap(undefined);
+      setRoadEndSnap(undefined);
       setRoadPlacementKind("road");
       setRoadElevationOffset(0);
       setInsertingSpline(false);
@@ -11592,6 +11759,8 @@ export function App() {
           setEasyRoadStart(undefined);
           setEasyRoadEnd(undefined);
           setEasyRoadCurveOffset(0);
+          setRoadStartSnap(undefined);
+          setRoadEndSnap(undefined);
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
@@ -11615,6 +11784,8 @@ export function App() {
         setEasyRoadStart(undefined);
         setEasyRoadEnd(undefined);
         setEasyRoadCurveOffset(0);
+        setRoadStartSnap(undefined);
+        setRoadEndSnap(undefined);
         setRoadPlacementKind("road");
         setRoadElevationOffset(0);
 
@@ -17279,6 +17450,109 @@ export function App() {
                   </>
                 )}
 
+                {easyRoadMode && (
+                  <div className="road-endpoint-snap-control">
+                    <label className="placement-toggle">
+                      <input
+                        type="checkbox"
+                        checked={
+                          roadEndpointSnapEnabled
+                        }
+                        onChange={(event) => {
+                          const enabled =
+                            event.currentTarget
+                              .checked;
+
+                          setRoadEndpointSnapEnabled(
+                            enabled
+                          );
+
+                          if (!enabled) {
+                            setRoadStartSnap(
+                              undefined
+                            );
+                            setRoadEndSnap(
+                              undefined
+                            );
+                          }
+                        }}
+                      />
+                      <span>
+                        Encaixar nas pontas de vias existentes
+                      </span>
+                    </label>
+
+                    {roadEndpointSnapEnabled && (
+                      <label className="placement-field">
+                        <span>
+                          Alcance m
+                        </span>
+                        <input
+                          type="number"
+                          min="0.5"
+                          max="30"
+                          step="0.5"
+                          value={
+                            roadEndpointSnapDistance
+                          }
+                          onChange={(event) => {
+                            const value =
+                              event.currentTarget
+                                .valueAsNumber;
+
+                            if (
+                              Number.isFinite(
+                                value
+                              )
+                            ) {
+                              setRoadEndpointSnapDistance(
+                                Math.max(
+                                  0.5,
+                                  Math.min(
+                                    30,
+                                    value
+                                  )
+                                )
+                              );
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+
+                    <div className="road-snap-status">
+                      {roadStartSnap && (
+                        <span>
+                          Início → spline #{roadStartSnap.splineId}
+                          {" · "}
+                          {roadStartSnap.endpoint ===
+                            "start"
+                            ? "ponta inicial"
+                            : "ponta final"}
+                          {" · "}
+                          {formatNumber(
+                            roadStartSnap.distance
+                          )} m
+                        </span>
+                      )}
+                      {roadEndSnap && (
+                        <span>
+                          Fim → spline #{roadEndSnap.splineId}
+                          {" · "}
+                          {roadEndSnap.endpoint ===
+                            "start"
+                            ? "ponta inicial"
+                            : "ponta final"}
+                          {" · "}
+                          {formatNumber(
+                            roadEndSnap.distance
+                          )} m
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {easyRoadMode &&
                   roadPlacementKind ===
                     "bridge" && (
@@ -17498,6 +17772,8 @@ export function App() {
                       setEasyRoadStart(undefined);
                       setEasyRoadEnd(undefined);
                       setEasyRoadCurveOffset(0);
+                      setRoadStartSnap(undefined);
+                      setRoadEndSnap(undefined);
                       setPendingSplinePlacement(undefined);
                       setSaveNotice(
                         "Clique no início da rua, segure e arraste até o ponto final."

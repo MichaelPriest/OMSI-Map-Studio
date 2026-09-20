@@ -3079,3 +3079,30 @@ code {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+
+.road-endpoint-snap-control {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 5px 7px;
+  border: 1px solid #245070;
+  border-radius: 6px;
+  background: #071b29;
+}
+
+.road-snap-status {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.road-snap-status span {
+  padding: 2px 5px;
+  border: 1px solid #2c6c4a;
+  border-radius: 8px;
+  background: #0a291d;
+  color: #8cd2aa;
+  font-size: 6.5px;
+}
