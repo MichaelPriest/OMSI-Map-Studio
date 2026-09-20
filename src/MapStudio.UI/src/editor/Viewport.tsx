@@ -4639,6 +4639,9 @@ export function Viewport({
     let splinePlacementPreview:
       OmsiPlacedSpline | undefined;
 
+    let splinePlacementPreviewRoot:
+      TransformNode | undefined;
+
     if (
       splinePlacementTemplate &&
       pendingSplinePlacement &&
@@ -4676,9 +4679,37 @@ export function Viewport({
             .gradientEnd
       };
 
+      splinePlacementPreviewRoot =
+        new TransformNode(
+          "omsi-new-spline-preview-root",
+          scene
+        );
+
+      splinePlacementPreviewRoot.position.set(
+        pendingSplinePlacement
+          .targetTileX *
+          300 +
+          pendingSplinePlacement.x,
+        pendingSplinePlacement.z,
+        pendingSplinePlacement
+          .targetTileY *
+          300 +
+          pendingSplinePlacement.y
+      );
+
+      const localPreview:
+        OmsiPlacedSpline = {
+          ...splinePlacementPreview,
+          tileX: 0,
+          tileY: 0,
+          x: 0,
+          y: 0,
+          z: 0
+        };
+
       const points =
         getSplineAxisLine(
-          splinePlacementPreview
+          localPreview
         );
 
       if (points.length >= 2) {
@@ -4697,15 +4728,26 @@ export function Viewport({
           );
 
         axis.isPickable = false;
+        axis.parent =
+          splinePlacementPreviewRoot;
       }
 
       if (splinePlacementProfile) {
         createSelectedSplineProfile(
           scene,
-          splinePlacementPreview,
+          localPreview,
           splinePlacementProfile,
-          textureAssetsByKey
+          textureAssetsByKey,
+          splinePlacementPreviewRoot,
+          "new-spline-preview-profile"
         );
+
+        for (const mesh of
+          splinePlacementPreviewRoot
+            .getChildMeshes()) {
+          mesh.visibility = 0.78;
+          mesh.isPickable = false;
+        }
       }
     }
 
@@ -5212,8 +5254,13 @@ export function Viewport({
 
       if (
         !navigationPointer &&
-        updateObjectHoverPreview(
-          event
+        (
+          updateObjectHoverPreview(
+            event
+          ) ||
+          updateSplineHoverPreview(
+            event
+          )
         )
       ) {
         canvas.style.cursor =
@@ -5876,6 +5923,39 @@ export function Viewport({
         placementGeometry,
         tiles
       );
+
+      return true;
+    };
+
+    const updateSplineHoverPreview = (
+      event: PointerEvent
+    ) => {
+      if (
+        roadDragMode ||
+        !splinePlacementTemplate ||
+        !pendingSplinePlacement ||
+        !splinePlacementPreviewRoot
+      ) {
+        return false;
+      }
+
+      const point =
+        getPlacementPointFromPointer(
+          event
+        );
+
+      if (!point) {
+        return false;
+      }
+
+      splinePlacementPreviewRoot
+        .position.set(
+          point.tileX * 300 +
+            point.x,
+          pendingSplinePlacement.z,
+          point.tileY * 300 +
+            point.y
+        );
 
       return true;
     };
