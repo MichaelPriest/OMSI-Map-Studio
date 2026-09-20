@@ -5719,6 +5719,88 @@ export function Viewport({
         return;
       }
 
+      if (
+        selectionMode === "terrain"
+      ) {
+        const terrainPick =
+          scene.pick(
+            pointerX,
+            pointerY,
+            (mesh) =>
+              mesh.metadata
+                ?.mapStudioKind ===
+              "terrain",
+            false,
+            camera
+          );
+
+        const point =
+          terrainPick?.pickedPoint;
+
+        if (
+          terrainPick?.hit &&
+          point
+        ) {
+          const tileX =
+            Math.floor(
+              point.x / 300
+            );
+          const tileY =
+            Math.floor(
+              point.z / 300
+            );
+
+          const localX =
+            point.x -
+            tileX * 300;
+          const localY =
+            point.z -
+            tileY * 300;
+
+          setViewportDiagnostic({
+            item:
+              `Terreno tile ${tileX},${tileY}`,
+            mesh:
+              terrainPick.pickedMesh
+                ?.name ??
+              "omsi-editor-terrain",
+            material:
+              "groundtex real",
+            texture:
+              terrainMainTextureAsset
+                ?.resolvedPath ??
+              terrainMainTextureAsset
+                ?.errorCode ??
+              "textura base não resolvida",
+            uv:
+              `local ${localX.toFixed(3)}, ${localY.toFixed(3)}`,
+            position:
+              `X ${point.x.toFixed(3)} · Y ${point.y.toFixed(3)} · Z ${point.z.toFixed(3)}`,
+            renderLift: "0.000",
+            origin:
+              "global.cfg / .map.terrain"
+          });
+
+          onSelectObject(undefined);
+          onSelectSpline(undefined);
+
+          onTerrainPoint?.({
+            tileX,
+            tileY,
+            x: localX,
+            y: localY,
+            height: point.y
+          });
+
+          onActiveTileChange?.({
+            x: tileX,
+            y: tileY
+          });
+
+          return;
+        }
+      }
+
       // Selection is handled on pointerdown so React can rebuild the
       // selected-item scene before pointerup. Keep the geometric
       // proximity fallback below for objects without pickable meshes.
@@ -6095,6 +6177,8 @@ export function Viewport({
     splines,
     activeTile,
     onActiveTileChange,
+    onTerrainPoint,
+    referenceOverlay,
     usesWorldCoordinates,
     selectedObject,
     selectedGeometry,
@@ -6118,6 +6202,11 @@ export function Viewport({
         aria-label="Viewport 3D do editor"
         title="Clique seleciona objeto/spline · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
       />
+      {referenceOverlay && (
+        <div className="reference-attribution">
+          Referência: {referenceOverlay.attribution}
+        </div>
+      )}
       {viewportDiagnostic ? (
         <div
           className="viewport-diagnostic"
