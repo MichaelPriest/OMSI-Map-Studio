@@ -2190,7 +2190,11 @@ public partial class MainWindow : Window
         {
             if (_sceneryLibraryCache is null)
             {
+                var indexedEntries =
+                    await TryLoadSceneryLibraryFromIndexAsync();
+
                 var entries =
+                    indexedEntries ??
                     await Task.Run(
                         () =>
                             ScanSceneryLibrary(
@@ -2234,6 +2238,56 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private async Task<IReadOnlyList<SceneryLibraryEntry>?>
+        TryLoadSceneryLibraryFromIndexAsync()
+    {
+        var index =
+            _assetIndex;
+
+        if (index is null)
+        {
+            return null;
+        }
+
+        var entries =
+            await index.GetEntriesAsync(
+                OmsiAssetKind.SceneryObject,
+                limit: 50000);
+
+        if (entries.Count == 0)
+        {
+            return null;
+        }
+
+        var libraryEntries =
+            entries
+                .Select(entry =>
+                {
+                    var declaredPath =
+                        entry.RelativePath
+                            .Replace(
+                                '/',
+                                '\\');
+
+                    _knownSceneryObjectPaths
+                        .TryAdd(
+                            declaredPath,
+                            0);
+
+                    return new SceneryLibraryEntry(
+                        declaredPath,
+                        Path.GetFileName(
+                            declaredPath));
+                })
+                .OrderBy(
+                    entry =>
+                        entry.SceneryObjectPath,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+        return libraryEntries;
     }
 
     private IReadOnlyList<SceneryLibraryEntry>
@@ -2328,7 +2382,11 @@ public partial class MainWindow : Window
         {
             if (_splineLibraryCache is null)
             {
+                var indexedEntries =
+                    await TryLoadSplineLibraryFromIndexAsync();
+
                 var entries =
+                    indexedEntries ??
                     await Task.Run(
                         () =>
                             ScanSplineLibrary(
@@ -2372,6 +2430,56 @@ public partial class MainWindow : Window
                 detail = exception.Message
             });
         }
+    }
+
+    private async Task<IReadOnlyList<SplineLibraryEntry>?>
+        TryLoadSplineLibraryFromIndexAsync()
+    {
+        var index =
+            _assetIndex;
+
+        if (index is null)
+        {
+            return null;
+        }
+
+        var entries =
+            await index.GetEntriesAsync(
+                OmsiAssetKind.Spline,
+                limit: 50000);
+
+        if (entries.Count == 0)
+        {
+            return null;
+        }
+
+        var libraryEntries =
+            entries
+                .Select(entry =>
+                {
+                    var declaredPath =
+                        entry.RelativePath
+                            .Replace(
+                                '/',
+                                '\\');
+
+                    _knownSplinePaths
+                        .TryAdd(
+                            declaredPath,
+                            0);
+
+                    return new SplineLibraryEntry(
+                        declaredPath,
+                        Path.GetFileName(
+                            declaredPath));
+                })
+                .OrderBy(
+                    entry =>
+                        entry.SplinePath,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+        return libraryEntries;
     }
 
     private IReadOnlyList<SplineLibraryEntry>
