@@ -71,6 +71,51 @@ public sealed class OmsiTerrainEditingTests
     }
 
     [Fact]
+    public void ApplyElevationGrid_ResamplesCornersAndCenter()
+    {
+        var terrain =
+            new OmsiTerrainGrid(
+                2,
+                Enumerable
+                    .Repeat(
+                        0f,
+                        9)
+                    .ToArray());
+
+        var result =
+            OmsiTerrainLeveler
+                .ApplyElevationGrid(
+                    terrain,
+                    rows: 2,
+                    columns: 2,
+                    elevations:
+                        new double[]
+                        {
+                            10,
+                            20,
+                            30,
+                            40
+                        },
+                    verticalOffset: 5);
+
+        Assert.Equal(
+            15f,
+            result.Terrain.Heights[0]);
+
+        Assert.Equal(
+            45f,
+            result.Terrain.Heights[8]);
+
+        Assert.Equal(
+            30f,
+            result.Terrain.Heights[4]);
+
+        Assert.Equal(
+            9,
+            result.ChangedSamples);
+    }
+
+    [Fact]
     public void LevelCircularBrush_FeathersOuterRing()
     {
         var terrain =
