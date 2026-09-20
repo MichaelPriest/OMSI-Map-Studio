@@ -1604,39 +1604,52 @@ function createTextureFromAsset(
       ? asset.extension
       : undefined;
 
-  const textureName =
-    `inline-${asset.extension}-${asset.base64Data.length}-${asset.base64Data.slice(0, 16)}`;
+  const dataUri =
+    `data:${mimeType};base64,${asset.base64Data}`;
+
+  const onTextureError = () => {
+    console.error(
+      "OMSI Map Studio: texture upload failed",
+      {
+        extension:
+          asset.extension,
+        sourceExtension:
+          asset.sourceExtension,
+        mimeType,
+        resolvedPath:
+          asset.resolvedPath
+      }
+    );
+  };
 
   const texture =
     forcedExtension
       ? new Texture(
-          `data:${mimeType};base64,${asset.base64Data}`,
+          dataUri,
           scene,
           {
-            forcedExtension
+            forcedExtension,
+            noMipmap: false,
+            invertY: false,
+            samplingMode:
+              Texture.TRILINEAR_SAMPLINGMODE,
+            onError:
+              onTextureError
           }
         )
-      : Texture.CreateFromBase64String(
-          asset.base64Data,
-          textureName,
+      : new Texture(
+          dataUri,
           scene,
           false,
           false,
           Texture.TRILINEAR_SAMPLINGMODE,
           undefined,
-          () => {
-            console.error(
-              "OMSI Map Studio: texture upload failed",
-              {
-                extension:
-                  asset.extension,
-                sourceExtension:
-                  asset.sourceExtension,
-                mimeType
-              }
-            );
-          }
+          onTextureError
         );
+
+  texture.name =
+    asset.resolvedPath ??
+    `inline-${asset.sourceExtension ?? asset.extension}`;
 
   texture.hasAlpha = true;
 
