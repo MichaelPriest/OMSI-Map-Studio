@@ -596,3 +596,8 @@ The **Road** flow lets the user choose a real spline and mark start/end with two
 Under **Real map by coordinates**, the user supplies their own Google API key, latitude/longitude, and chooses roadmap/satellite/hybrid/terrain. Imagery is shown over the terrain as a construction reference. An elevation grid can be fetched for the active tile and applied to the real `.terrain` with backup.
 
 On **Open map**, **Create real map** clones the installed `template\NewMap` and saves the coordinate anchor as Map Studio metadata. This does not yet replace OMSI's official `[worldcoordinates]` conversion.
+
+
+### 3×3 tile navigator
+
+The editor shows a compact 3×3 navigator over the viewport. The center is the active tile and the eight surrounding buttons represent existing neighboring tiles. Clicking a block changes the active tile and moves the camera to that tile center while roughly preserving the current zoom. Missing tiles are disabled. `Ctrl + arrows/WASD` remains available as a keyboard alternative.
