@@ -86,6 +86,7 @@ public sealed class NativeSceneryAssetLoader
                 Array.Empty<
                     NativeSceneryMeshAsset>(),
                 null,
+                false,
                 "scoPathInvalid");
         }
 
@@ -104,6 +105,7 @@ public sealed class NativeSceneryAssetLoader
                 Array.Empty<
                     NativeSceneryMeshAsset>(),
                 null,
+                false,
                 "scoMissing");
         }
 
@@ -185,6 +187,7 @@ public sealed class NativeSceneryAssetLoader
             fullScoPath,
             meshes,
             metadata.Tree,
+            metadata.UsesAbsoluteHeight,
             meshes.Count == 0 &&
             metadata.Tree is null
                 ? "noRenderableMeshes"

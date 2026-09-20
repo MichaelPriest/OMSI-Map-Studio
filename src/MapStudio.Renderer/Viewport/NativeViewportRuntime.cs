@@ -109,10 +109,16 @@ public sealed class NativeViewportRuntime : IDisposable
                 .Build(
                     Scene);
 
+        var terrainGeometry =
+            new NativeTerrainTriangleGeometryBuilder()
+                .Build(
+                    Scene);
+
         MapRenderer.Upload(
             Scene,
             objectGeometry,
-            proxyGeometry);
+            proxyGeometry,
+            terrainGeometry);
 
         LoadedSceneryAssetCount =
             assets.Values.Count(

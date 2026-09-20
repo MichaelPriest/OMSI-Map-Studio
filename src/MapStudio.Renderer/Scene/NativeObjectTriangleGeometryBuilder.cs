@@ -84,6 +84,14 @@ public sealed class NativeObjectTriangleGeometryBuilder
             var objectContributed =
                 false;
 
+            var terrainOffset =
+                asset.UsesAbsoluteHeight
+                    ? 0
+                    : NativeTerrainSampler
+                        .GetHeightAtObject(
+                            scene,
+                            entity);
+
             var lodThresholds =
                 asset.Meshes
                     .Where(
@@ -126,6 +134,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     entity,
                     mesh,
                     projection,
+                    terrainOffset,
                     vertices,
                     pickingVertices);
 
@@ -164,6 +173,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
         NativeObjectEntity entity,
         NativeSceneryMeshAsset mesh,
         NativeSceneProjection projection,
+        double terrainOffset,
         List<NativeMapVertex> output,
         List<NativeMapVertex>
             pickingOutput)
@@ -198,7 +208,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         .Bank)) *
             Matrix4x4.CreateTranslation(
                 entity.WorldX,
-                entity.WorldY,
+                entity.WorldY +
+                    (float)
+                        terrainOffset,
                 entity.WorldZ);
 
         var worldTransform =

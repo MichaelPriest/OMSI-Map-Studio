@@ -91,3 +91,10 @@ The native UI already displays real counts for loaded tiles, objects, splines an
 The native overview now has a viewport transform executed by the vertex shader. Mouse-wheel zoom and right/middle-button pan update only a Direct3D constant buffer; O3D geometry is not rebuilt on every movement.
 
 The same transform is used by both the visible pass and the ID-buffer pass, keeping selection pixels aligned with objects after navigating the map.
+
+
+### Checkpoint N1.2 — real OMSI terrain
+
+The native renderer now converts each tile's real height grid into GPU triangles. The first visualization mode remains top-down, but it already uses real elevation data for color/depth and prepares the same mesh for the upcoming perspective camera.
+
+SCO objects that do not use `[absheight]` also receive bilinear terrain interpolation before O3D transforms, preserving the existing editor rule.

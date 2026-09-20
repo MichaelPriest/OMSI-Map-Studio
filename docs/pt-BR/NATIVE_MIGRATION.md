@@ -91,3 +91,10 @@ O painel nativo já exibe contagens reais de tiles, objetos, splines e terrenos 
 O overview nativo agora possui transformação de viewport executada no vertex shader. Zoom por roda do mouse e pan por botão direito/meio alteram somente um constant buffer Direct3D; a geometria O3D não é reconstruída a cada movimento.
 
 A mesma transformação é usada no passe visível e no ID buffer, mantendo o pixel de seleção alinhado ao objeto mesmo depois de navegar pelo mapa.
+
+
+### Checkpoint N1.2 — terreno OMSI real
+
+O renderer nativo agora transforma a grade de alturas real de cada tile em triângulos GPU. O primeiro modo de visualização continua top-down, mas já usa os dados reais de relevo para cor/profundidade e prepara a mesma malha para a futura câmera perspectiva.
+
+Objetos SCO que não usam `[absheight]` também voltam a receber interpolação bilinear do terreno antes da transformação O3D, preservando a regra do editor existente.

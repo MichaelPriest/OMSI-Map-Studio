@@ -14,6 +14,7 @@ public sealed record NativeSceneryAsset(
     string? FullPath,
     IReadOnlyList<NativeSceneryMeshAsset> Meshes,
     OmsiSceneryTreeDefinition? Tree,
+    bool UsesAbsoluteHeight,
     string? ErrorCode)
 {
     public bool IsLoaded =>

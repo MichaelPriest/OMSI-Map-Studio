@@ -105,6 +105,7 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                         geometry)
                 ],
                 null,
+                false,
                 null);
 
         var result =

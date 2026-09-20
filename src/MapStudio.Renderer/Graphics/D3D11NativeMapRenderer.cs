@@ -36,6 +36,12 @@ public sealed class D3D11NativeMapRenderer :
     private int _vertexCount;
 
     private ID3D11Buffer?
+        _terrainTriangleBuffer;
+
+    private int
+        _terrainTriangleVertexCount;
+
+    private ID3D11Buffer?
         _objectTriangleBuffer;
 
     private int
@@ -166,6 +172,9 @@ public sealed class D3D11NativeMapRenderer :
     public int ObjectTriangleVertexCount =>
         _objectTriangleVertexCount;
 
+    public int TerrainTriangleVertexCount =>
+        _terrainTriangleVertexCount;
+
     public void SetViewTransform(
         Vector4 transform)
     {
@@ -177,13 +186,20 @@ public sealed class D3D11NativeMapRenderer :
         NativeObjectTriangleGeometry?
             objectGeometry = null,
         NativePickingProxyGeometry?
-            proxyGeometry = null)
+            proxyGeometry = null,
+        NativeTerrainTriangleGeometry?
+            terrainGeometry = null)
     {
         ThrowIfDisposed();
 
         _vertexBuffer?.Dispose();
         _vertexBuffer = null;
         _vertexCount = 0;
+
+        _terrainTriangleBuffer
+            ?.Dispose();
+        _terrainTriangleBuffer = null;
+        _terrainTriangleVertexCount = 0;
 
         _objectTriangleBuffer
             ?.Dispose();
@@ -239,6 +255,25 @@ public sealed class D3D11NativeMapRenderer :
 
         _vertexCount =
             geometry.Vertices.Length;
+
+        if (
+            terrainGeometry is not null &&
+            terrainGeometry
+                .Vertices.Length > 0)
+        {
+            _terrainTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        terrainGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _terrainTriangleVertexCount =
+                terrainGeometry
+                    .Vertices.Length;
+        }
 
         if (
             objectGeometry is not null &&
@@ -347,6 +382,30 @@ public sealed class D3D11NativeMapRenderer :
                 context
                     .PSSetShader(
                         _pixelShader);
+
+                if (
+                    _terrainTriangleBuffer
+                        is not null &&
+                    _terrainTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _terrainTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)
+                            _terrainTriangleVertexCount,
+                        0);
+                }
 
                 if (
                     _objectTriangleBuffer
@@ -617,6 +676,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _objectTriangleBuffer
+            ?.Dispose();
+
+        _terrainTriangleBuffer
             ?.Dispose();
 
         _vertexBuffer?.Dispose();

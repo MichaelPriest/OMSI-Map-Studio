@@ -75,6 +75,7 @@ public sealed partial class NativeViewport : UserControl
         RuntimeText.Text =
             $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
             $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
+            $"{_runtime.MapRenderer.TerrainTriangleVertexCount / 3} triângulos terreno · " +
             $"{_runtime.MapRenderer.ObjectTriangleVertexCount / 3} triângulos O3D";
 
         SelectionStatusChanged?.Invoke(
