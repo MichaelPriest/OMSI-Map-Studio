@@ -4937,3 +4937,32 @@ span.active {
     max-width: calc(100vw - 76px);
   }
 }
+
+
+/* Fullscreen semantic layer tools.
+   Letter shortcuts remain visible as secondary hints, while the primary
+   control language uses the shared Map Studio SVG icon pack. */
+.fullscreen-tool-group.compact button {
+  min-width: 36px;
+  padding: 0 7px;
+}
+
+.fullscreen-tool-group.compact button > .mapstudio-icon {
+  color: #9bc4dc;
+}
+
+.fullscreen-tool-group.compact button > span {
+  min-width: 8px;
+  color: #6889a0;
+  font-size: 7px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.fullscreen-tool-group.compact button.active > .mapstudio-icon {
+  color: #fff;
+}
+
+.fullscreen-tool-group.compact button.active > span {
+  color: #d9edff;
+}

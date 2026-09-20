@@ -1,3 +1,6 @@
+import profileIcon from "./icons/profile.svg?raw";
+import gridIcon from "./icons/grid.svg?raw";
+import snapIcon from "./icons/snap.svg?raw";
 import expandIcon from "./icons/expand.svg?raw";
 import collapseIcon from "./icons/collapse.svg?raw";
 import settingsIcon from "./icons/settings.svg?raw";
@@ -40,6 +43,9 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "profile": profileIcon,
+  "grid": gridIcon,
+  "snap": snapIcon,
   "expand": expandIcon,
   "collapse": collapseIcon,
   "settings": settingsIcon,

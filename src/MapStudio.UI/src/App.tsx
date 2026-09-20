@@ -21139,18 +21139,18 @@ export function App() {
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group fullscreen-history">
-                    <button type="button" className={snapEnabled ? "active" : ""} onClick={() => setSnapEnabled((current) => !current)} title="Snap (N)">N</button>
+                    <button type="button" className={snapEnabled ? "active" : ""} onClick={() => setSnapEnabled((current) => !current)} title="Snap (N)" aria-label="Alternar snap"><MapStudioIcon name="snap" size={18} /> <span>N</span></button>
                     <button type="button" disabled={undoPreviewStack.length === 0} onClick={handleUndoPreview} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><MapStudioIcon name="undo" size={18} /></button>
                     <button type="button" disabled={redoPreviewStack.length === 0} onClick={handleRedoPreview} title="Refazer (Ctrl+Y)" aria-label="Refazer"><MapStudioIcon name="redo" size={18} /></button>
                     <button type="button" className="save" disabled={(previewEditCount === 0 && splinePreviewEditCount === 0) || busy} onClick={splinePreviewEditCount > 0 ? handleSaveSplinePreview : handleSavePreviewEdits} title="Salvar com backup (Ctrl+S)"><MapStudioIcon name="save" size={18} /> <span>Salvar</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group compact fullscreen-layers">
-                    <button type="button" className={showTerrain ? "active" : ""} onClick={() => setShowTerrain((current) => !current)} title="Terreno">T</button>
-                    <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((current) => !current)} title="Grade (G)">G</button>
-                    <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)">O</button>
-                    <button type="button" className={showSplines ? "active" : ""} onClick={() => setShowSplines((current) => !current)} title="Splines (L)">L</button>
-                    <button type="button" className={showSplineProfiles ? "active" : ""} onClick={() => setShowSplineProfiles((current) => !current)} title="Perfis reais das splines">P</button>
+                    <button type="button" className={showTerrain ? "active" : ""} onClick={() => setShowTerrain((current) => !current)} title="Terreno (T)" aria-label="Alternar terreno"><MapStudioIcon name="terrain" size={18} /> <span>T</span></button>
+                    <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((current) => !current)} title="Grade (G)" aria-label="Alternar grade"><MapStudioIcon name="grid" size={18} /> <span>G</span></button>
+                    <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)" aria-label="Alternar objetos"><MapStudioIcon name="sco-object" size={18} /> <span>O</span></button>
+                    <button type="button" className={showSplines ? "active" : ""} onClick={() => setShowSplines((current) => !current)} title="Splines (L)" aria-label="Alternar splines"><MapStudioIcon name="sli-spline" size={18} /> <span>L</span></button>
+                    <button type="button" className={showSplineProfiles ? "active" : ""} onClick={() => setShowSplineProfiles((current) => !current)} title="Perfis reais das splines (P)" aria-label="Alternar perfis reais das splines"><MapStudioIcon name="profile" size={18} /> <span>P</span></button>
                     <button
                       type="button"
                       className={

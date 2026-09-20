@@ -36,4 +36,7 @@ export type MapStudioIconName =
   | "tools"
   | "settings"
   | "collapse"
-  | "expand";
+  | "expand"
+  | "snap"
+  | "grid"
+  | "profile";
