@@ -585,3 +585,14 @@ Com o viewport focado, `A/D` e as setas esquerda/direita deslocam a câmera late
 Depois de conectar a pasta do OMSI 2, **Abrir mapa** mostra a lista real de mapas encontrados em `maps`. O usuário pesquisa e escolhe o mapa pelo nome; a seleção manual de pasta continua disponível como fallback.
 
 A barra lateral pode ser recolhida. No editor, **Tudo / Objetos / Splines / Terreno** controlam o tipo clicável. Atalhos: `Alt+1..4` alternam esses filtros; `Alt+R` abre criação de rua por spline; `Alt+C` cruzamento; `Alt+O` objeto; `Alt+T` terreno; `Alt+A` água; `Alt+G` grama; `Alt+Y` árvore. Os atalhos reutilizam somente bibliotecas e assets reais da instalação.
+
+
+## Edição direta, rua fácil e mapa real
+
+No viewport, clique em um objeto ou spline para selecionar e abrir os controles de transformação. No modo Terreno, o clique marca um ponto exato para o pincel de nivelamento. `Ctrl + setas/WASD` avança um bloco/tile de 300 m.
+
+O fluxo **Rua** permite escolher uma spline real e marcar início/fim com dois cliques. Comprimento, rotação e gradiente são calculados; **Nivelar ao terreno** recalcula Z/gradiente pelas alturas do relevo carregado.
+
+Em **Mapa real por coordenadas**, o usuário informa sua própria chave das APIs Google, latitude/longitude e escolhe roadmap/satellite/hybrid/terrain. A imagem fica sobre o terreno como referência. A grade de elevação pode ser buscada para o tile ativo e aplicada ao `.terrain` com backup.
+
+Na tela **Abrir mapa**, **Criar mapa real** clona o `template\NewMap` instalado e salva a âncora em metadados do Map Studio. Isso ainda não substitui a conversão oficial de `[worldcoordinates]` do OMSI.
