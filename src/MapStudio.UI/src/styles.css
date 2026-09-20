@@ -4221,3 +4221,49 @@ span.active {
     max-width: 110px;
   }
 }
+
+
+/* Explorer and Inspector use the shared movable-tool system.
+   Fixed heights replace top+bottom stretching so dragging preserves panel size. */
+.map-editor .city-drawer[data-floating-tool] {
+  bottom: auto;
+  height: calc(100% - 124px);
+  max-height: calc(100% - 24px);
+}
+
+.map-editor.fullscreen-editor .city-drawer[data-floating-tool] {
+  bottom: auto;
+  height: calc(100% - 178px);
+  max-height: calc(100% - 24px);
+}
+
+.city-drawer-drag-grip {
+  position: absolute;
+  z-index: 12;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #2d566f;
+  border-radius: 6px;
+  background: rgb(5 20 30 / 88%);
+  color: #789ab0;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+}
+
+.city-drawer-drag-grip:active {
+  cursor: grabbing;
+}
+
+.map-explorer.city-drawer .explorer-tabs {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+.object-inspector.city-drawer .inspector-heading {
+  padding-left: 36px;
+  padding-right: 34px;
+}
