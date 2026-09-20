@@ -1,4 +1,4 @@
-# Release candidate: v0.1.0-alpha.4-test.1
+# Release candidate: v0.1.0-alpha.5
 name: CI
 
 on:
@@ -78,23 +78,23 @@ jobs:
         if: steps.release.outputs.requested == 'true'
         shell: pwsh
         run: |
-          $version = "v0.1.0-alpha.4-test.1"
+          $version = "v0.1.0-alpha.5"
           $publishDir = "artifacts/OMSI-Map-Studio-$version-win-x64"
           $zipPath = "artifacts/OMSI-Map-Studio-$version-win-x64.zip"
           New-Item -ItemType Directory -Path "artifacts" -Force | Out-Null
           dotnet publish src/MapStudio.Desktop/MapStudio.Desktop.csproj --configuration Release --runtime win-x64 --self-contained true -p:EnableWindowsTargeting=true -p:PublishReadyToRun=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false --output $publishDir
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
-          $pt = Get-Content "docs/pt-BR/releases/v0.1.0-alpha.4-test.1.md" -Raw
-          $en = Get-Content "docs/en/releases/v0.1.0-alpha.4-test.1.md" -Raw
+          $pt = Get-Content "docs/pt-BR/releases/v0.1.0-alpha.5.md" -Raw
+          $en = Get-Content "docs/en/releases/v0.1.0-alpha.5.md" -Raw
           Set-Content "artifacts/release-notes.md" ($pt + "`r`n`r`n---`r`n`r`n" + $en) -Encoding utf8
 
       - name: Upload alpha artifact
         if: steps.release.outputs.requested == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: OMSI-Map-Studio-v0.1.0-alpha.4-test.1-win-x64
-          path: artifacts/OMSI-Map-Studio-v0.1.0-alpha.4-test.1-win-x64.zip
+          name: OMSI-Map-Studio-v0.1.0-alpha.5-win-x64
+          path: artifacts/OMSI-Map-Studio-v0.1.0-alpha.5-win-x64.zip
           compression-level: 0
           if-no-files-found: error
 
@@ -104,7 +104,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.1.0-alpha.4-test.1"
+          $tag = "v0.1.0-alpha.5"
           $zipPath = "artifacts/OMSI-Map-Studio-$tag-win-x64.zip"
           $sha = (git rev-parse HEAD).Trim()
           gh release view $tag *> $null
