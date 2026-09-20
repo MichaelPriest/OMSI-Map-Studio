@@ -56,10 +56,25 @@ public sealed class D3D11NativeMapRenderer :
         _pickingTriangleVertexCount;
 
     private ID3D11Buffer?
+        _hoverTriangleBuffer;
+
+    private int
+        _hoverTriangleVertexCount;
+
+    private ID3D11Buffer?
         _selectionTriangleBuffer;
 
     private int
         _selectionTriangleVertexCount;
+
+    private PickingId _hoverPickingId =
+        PickingId.None;
+
+    private PickingId _selectionPickingId =
+        PickingId.None;
+
+    private Vector3 _cameraPosition =
+        Vector3.Zero;
 
     private NativeMapVertex[]
         _objectVertices =
@@ -194,10 +209,21 @@ public sealed class D3D11NativeMapRenderer :
         _splineTriangleVertexCount;
 
     public void SetViewProjection(
-        Matrix4x4 viewProjection)
+        Matrix4x4 viewProjection,
+        Vector3 cameraPosition)
     {
         _viewProjection =
             viewProjection;
+
+        if (
+            _cameraPosition !=
+            cameraPosition)
+        {
+            _cameraPosition =
+                cameraPosition;
+
+            RebuildHighlights();
+        }
     }
 
     public void Upload(
@@ -237,10 +263,21 @@ public sealed class D3D11NativeMapRenderer :
         _pickingTriangleBuffer = null;
         _pickingTriangleVertexCount = 0;
 
+        _hoverTriangleBuffer
+            ?.Dispose();
+        _hoverTriangleBuffer = null;
+        _hoverTriangleVertexCount = 0;
+
         _selectionTriangleBuffer
             ?.Dispose();
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
+
+        _hoverPickingId =
+            PickingId.None;
+
+        _selectionPickingId =
+            PickingId.None;
 
         _objectVertices =
             Array.Empty<
@@ -512,6 +549,30 @@ public sealed class D3D11NativeMapRenderer :
                 }
 
                 if (
+                    _hoverTriangleBuffer
+                        is not null &&
+                    _hoverTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _hoverTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)
+                            _hoverTriangleVertexCount,
+                        0);
+                }
+
+                if (
                     _selectionTriangleBuffer
                         is not null &&
                     _selectionTriangleVertexCount >
@@ -602,103 +663,225 @@ public sealed class D3D11NativeMapRenderer :
             x,
             y);
 
-    public void SetSelection(
+    public bool SetHover(
         PickingId pickingId)
+    {
+        if (
+            pickingId ==
+            _selectionPickingId)
+        {
+            pickingId =
+                PickingId.None;
+        }
+
+        if (
+            pickingId ==
+            _hoverPickingId)
+        {
+            return false;
+        }
+
+        _hoverPickingId =
+            pickingId;
+
+        RebuildHover();
+
+        return true;
+    }
+
+    public bool SetSelection(
+        PickingId pickingId)
+    {
+        if (
+            pickingId ==
+            _selectionPickingId)
+        {
+            return false;
+        }
+
+        _selectionPickingId =
+            pickingId;
+
+        if (
+            _hoverPickingId ==
+            pickingId)
+        {
+            _hoverPickingId =
+                PickingId.None;
+
+            RebuildHover();
+        }
+
+        RebuildSelection();
+
+        return true;
+    }
+
+    private void RebuildHighlights()
+    {
+        RebuildHover();
+        RebuildSelection();
+    }
+
+    private void RebuildHover()
+    {
+        _hoverTriangleBuffer
+            ?.Dispose();
+
+        _hoverTriangleBuffer = null;
+        _hoverTriangleVertexCount = 0;
+
+        var vertices =
+            BuildHighlight(
+                _hoverPickingId,
+                new Vector4(
+                    0.05f,
+                    0.45f,
+                    1.0f,
+                    1.0f),
+                0.035f);
+
+        if (vertices.Length == 0)
+        {
+            return;
+        }
+
+        _hoverTriangleBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    vertices.AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _hoverTriangleVertexCount =
+            vertices.Length;
+    }
+
+    private void RebuildSelection()
     {
         _selectionTriangleBuffer
             ?.Dispose();
+
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
 
-        if (pickingId.IsNone)
+        var vertices =
+            BuildHighlight(
+                _selectionPickingId,
+                new Vector4(
+                    1.0f,
+                    0.10f,
+                    0.05f,
+                    1.0f),
+                0.065f);
+
+        if (vertices.Length == 0)
         {
             return;
-        }
-
-        NativeMapVertex[] sourceVertices;
-        NativeTriangleRange range;
-
-        if (
-            _objectRanges.TryGetValue(
-                pickingId,
-                out range) &&
-            range.VertexCount > 0 &&
-            range.StartVertex >= 0 &&
-            range.StartVertex +
-                range.VertexCount <=
-            _objectVertices.Length)
-        {
-            sourceVertices =
-                _objectVertices;
-        }
-        else if (
-            _splineRanges.TryGetValue(
-                pickingId,
-                out range) &&
-            range.VertexCount > 0 &&
-            range.StartVertex >= 0 &&
-            range.StartVertex +
-                range.VertexCount <=
-            _splineVertices.Length)
-        {
-            sourceVertices =
-                _splineVertices;
-        }
-        else if (
-            _proxyRanges.TryGetValue(
-                pickingId,
-                out range) &&
-            range.VertexCount > 0 &&
-            range.StartVertex >= 0 &&
-            range.StartVertex +
-                range.VertexCount <=
-            _proxyVertices.Length)
-        {
-            sourceVertices =
-                _proxyVertices;
-        }
-        else
-        {
-            return;
-        }
-
-        var selected =
-            new NativeMapVertex[
-                range.VertexCount];
-
-        var color =
-            new System.Numerics.Vector4(
-                1.0f,
-                0.10f,
-                0.05f,
-                1.0f);
-
-        for (
-            var index = 0;
-            index < selected.Length;
-            index++)
-        {
-            var source =
-                sourceVertices[
-                    range.StartVertex +
-                    index];
-
-            selected[index] =
-                new NativeMapVertex(
-                    source.Position,
-                    color);
         }
 
         _selectionTriangleBuffer =
             _deviceHost.Device
                 .CreateBuffer(
-                    selected.AsSpan(),
+                    vertices.AsSpan(),
                     BindFlags
                         .VertexBuffer);
 
         _selectionTriangleVertexCount =
-            selected.Length;
+            vertices.Length;
     }
+
+    private NativeMapVertex[] BuildHighlight(
+        PickingId pickingId,
+        Vector4 color,
+        float cameraBias)
+    {
+        if (
+            pickingId.IsNone ||
+            !TryGetHighlightSource(
+                pickingId,
+                out var sourceVertices,
+                out var range))
+        {
+            return Array.Empty<
+                NativeMapVertex>();
+        }
+
+        return
+            NativeHighlightGeometryBuilder
+                .Build(
+                    sourceVertices,
+                    range,
+                    _cameraPosition,
+                    color,
+                    cameraBias);
+    }
+
+    private bool TryGetHighlightSource(
+        PickingId pickingId,
+        out NativeMapVertex[] sourceVertices,
+        out NativeTriangleRange range)
+    {
+        if (
+            _objectRanges.TryGetValue(
+                pickingId,
+                out range) &&
+            IsValidRange(
+                _objectVertices,
+                range))
+        {
+            sourceVertices =
+                _objectVertices;
+
+            return true;
+        }
+
+        if (
+            _splineRanges.TryGetValue(
+                pickingId,
+                out range) &&
+            IsValidRange(
+                _splineVertices,
+                range))
+        {
+            sourceVertices =
+                _splineVertices;
+
+            return true;
+        }
+
+        if (
+            _proxyRanges.TryGetValue(
+                pickingId,
+                out range) &&
+            IsValidRange(
+                _proxyVertices,
+                range))
+        {
+            sourceVertices =
+                _proxyVertices;
+
+            return true;
+        }
+
+        sourceVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        range =
+            default;
+
+        return false;
+    }
+
+    private static bool IsValidRange(
+        NativeMapVertex[] vertices,
+        NativeTriangleRange range) =>
+        range.VertexCount > 0 &&
+        range.StartVertex >= 0 &&
+        range.StartVertex +
+            range.VertexCount <=
+        vertices.Length;
 
     private void ApplyViewProjection(
         ID3D11DeviceContext context)
@@ -739,6 +922,9 @@ public sealed class D3D11NativeMapRenderer :
         _disposed = true;
 
         _pickingSurface.Dispose();
+
+        _hoverTriangleBuffer
+            ?.Dispose();
 
         _selectionTriangleBuffer
             ?.Dispose();

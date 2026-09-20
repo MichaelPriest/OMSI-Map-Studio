@@ -127,3 +127,12 @@ A malha usa a largura e a altura do perfil real, raio, rotação e gradientes in
 Também foi corrigida a regra de altura: splines OMSI usam a cota absoluta da própria instância; a interpolação do terreno continua reservada aos objetos relativos. O ID Buffer recebe a mesma malha real da spline, mantendo o proxy apenas como área auxiliar de clique.
 
 Neste checkpoint a geometria do perfil é real, mas a aplicação das texturas SLI ainda fica para o próximo refinamento de materiais.
+
+
+### Checkpoint N1.6 — hover azul e seleção vermelha com depth
+
+O comportamento de interação do editor OMSI foi reproduzido no viewport nativo: o item apenas apontado recebe highlight azul e o item selecionado recebe highlight vermelho.
+
+Hover e seleção usam o mesmo `PickingId` do ID Buffer e preferem a geometria real O3D ou spline; os proxies continuam apenas como fallback de seleção. O hover é limpo ao sair do viewport ou iniciar pan/órbita.
+
+Como o viewport agora usa depth buffer real, a cópia de highlight recebe um deslocamento muito pequeno na direção da câmera. Assim a sobreposição continua visível sem depender da ordem de desenho ou desabilitar a profundidade da cena.

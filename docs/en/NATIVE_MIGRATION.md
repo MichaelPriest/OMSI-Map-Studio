@@ -127,3 +127,12 @@ The mesh uses the real profile width and height together with instance radius, r
 The height rule was also corrected: OMSI splines use their own absolute elevation, while terrain interpolation remains specific to relative scenery objects. The ID Buffer receives the same real spline mesh, keeping the proxy only as an auxiliary click area.
 
 At this checkpoint the profile geometry is real; SLI texture application remains a following material refinement.
+
+
+### Checkpoint N1.6 — blue hover and red selection with depth
+
+The native viewport now mirrors the OMSI editor interaction behavior: an item under the pointer receives a blue highlight and the selected item receives a red highlight.
+
+Hover and selection use the same `PickingId` as the ID Buffer and prefer real O3D or spline geometry; proxies remain only as a selection fallback. Hover is cleared when the pointer leaves the viewport or camera pan/orbit begins.
+
+Because the viewport now has a real depth buffer, highlight copies receive a very small offset toward the camera. This keeps overlays visible without relying on draw order or disabling scene depth.

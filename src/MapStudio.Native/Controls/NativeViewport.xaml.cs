@@ -18,6 +18,11 @@ public sealed partial class NativeViewport : UserControl
     private bool _isOrbiting;
     private double _lastPanX;
     private double _lastPanY;
+    private long _lastHoverTick;
+    private uint _lastHoverPixelX =
+        uint.MaxValue;
+    private uint _lastHoverPixelY =
+        uint.MaxValue;
     private bool _swapChainBound;
 
     public NativeViewport()
@@ -295,6 +300,8 @@ public sealed partial class NativeViewport : UserControl
             _lastPanY =
                 point.Position.Y;
 
+            _runtime?.ClearHover();
+
             InputSurface.CapturePointer(
                 e.Pointer);
 
@@ -462,7 +469,83 @@ public sealed partial class NativeViewport : UserControl
             PointerStatusChanged?.Invoke(
                 this,
                 $"Pointer capturado: X={point.Position.X:F1} Y={point.Position.Y:F1}");
+
+            return;
         }
+
+        UpdateHover(
+            point.Position.X,
+            point.Position.Y);
+    }
+
+    private void UpdateHover(
+        double x,
+        double y)
+    {
+        if (_runtime is null)
+        {
+            return;
+        }
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    x *
+                    scaleX));
+
+        var pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    y *
+                    scaleY));
+
+        var now =
+            Environment
+                .TickCount64;
+
+        if (
+            pixelX ==
+                _lastHoverPixelX &&
+            pixelY ==
+                _lastHoverPixelY)
+        {
+            return;
+        }
+
+        if (
+            now -
+                _lastHoverTick <
+            33)
+        {
+            return;
+        }
+
+        _lastHoverTick =
+            now;
+
+        _lastHoverPixelX =
+            pixelX;
+
+        _lastHoverPixelY =
+            pixelY;
+
+        _runtime.UpdateHover(
+            pixelX,
+            pixelY);
     }
 
     private void OnPointerReleased(
@@ -481,6 +564,19 @@ public sealed partial class NativeViewport : UserControl
         _leftPressed = false;
         _isPanning = false;
         _isOrbiting = false;
+    }
+
+    private void OnPointerExited(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        _lastHoverPixelX =
+            uint.MaxValue;
+
+        _lastHoverPixelY =
+            uint.MaxValue;
+
+        _runtime?.ClearHover();
     }
 
     private void OnPointerWheelChanged(

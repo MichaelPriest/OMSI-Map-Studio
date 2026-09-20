@@ -267,6 +267,48 @@ public sealed class NativeViewportRuntime : IDisposable
         return resolved;
     }
 
+    public bool UpdateHover(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        var pickingId =
+            MapRenderer.Pick(
+                pixelX,
+                pixelY);
+
+        var resolved =
+            Picking.TryResolve(
+                pickingId,
+                out _);
+
+        var changed =
+            MapRenderer.SetHover(
+                resolved
+                    ? pickingId
+                    : PickingId.None);
+
+        if (changed)
+        {
+            RenderInitialFrame();
+        }
+
+        return resolved;
+    }
+
+    public void ClearHover()
+    {
+        ThrowIfDisposed();
+
+        if (
+            MapRenderer.SetHover(
+                PickingId.None))
+        {
+            RenderInitialFrame();
+        }
+    }
+
     public void RenderInitialFrame()
     {
         ThrowIfDisposed();
@@ -299,7 +341,9 @@ public sealed class NativeViewportRuntime : IDisposable
             Navigation
                 .GetViewProjection(
                     Surface.Width,
-                    Surface.Height));
+                    Surface.Height),
+            Navigation
+                .CameraPosition);
     }
 
     private void ThrowIfDisposed()
