@@ -68,6 +68,28 @@ public sealed class OmsiSceneryMaterialOverrideTests
     }
 
     [Fact]
+    public void ReadMetadata_PreservesRenderType()
+    {
+        const string source =
+            "[friendlyname]\n" +
+            "Intersection surface\n" +
+            "[rendertype]\n" +
+            "on_surface\n" +
+            "[mesh]\n" +
+            "model\\intersection.o3d\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            "on_surface",
+            metadata.RenderType);
+    }
+
+    [Fact]
     public void ReadMetadata_AssociatesStaticMaterialOverridesWithMeshOrdinal()
     {
         const string source =
