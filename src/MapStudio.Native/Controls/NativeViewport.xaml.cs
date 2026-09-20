@@ -441,6 +441,27 @@ public sealed partial class NativeViewport : UserControl
         PublishSelectionInfo();
     }
 
+    public bool FocusTile(
+        int tileX,
+        int tileY)
+    {
+        var focused =
+            _runtime
+                ?.FocusTile(
+                    tileX,
+                    tileY) ??
+                false;
+
+        if (focused)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Tile {tileX},{tileY} focado.");
+        }
+
+        return focused;
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

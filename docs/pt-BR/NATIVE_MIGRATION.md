@@ -334,3 +334,15 @@ O usuário pode então ajustar **altura alvo**, **raio do pincel** e **feather**
 Depois da gravação, o tile é relido pelo `MapStudio.Core` e o viewport é reconstruído com a nova topografia. A operação é bloqueada enquanto existem transformações de objeto/spline pendentes, evitando misturar duas transações de edição diferentes.
 
 Este checkpoint cobre nivelamento circular. Ele ainda não inclui elevar/abaixar por arraste, pintura de textura do terreno, criação/remoção de tile ou importação DEM.
+
+### Checkpoint N3.15 — mapa completo, desempenho 3×3 e navegador de tiles
+
+O host WinUI passa a migrar os dois modos de carregamento do editor React. **Mapa completo** é o padrão da arquitetura nativa e carrega todos os tiles do mapa; **Modo desempenho 3×3** mantém apenas a região de raio 1 ao redor do tile ativo.
+
+A leitura do mapa completo é limitada a no máximo seis carregamentos de tile concorrentes, evitando disparar centenas de leituras/parses de uma vez em mapas grandes.
+
+O menu **Mapa** permite alternar entre os dois modos sem reabrir o mapa. A troca é bloqueada enquanto existem transformações pendentes para não descartar edições não salvas.
+
+O Explorer recebe um navegador de tiles com campos X/Y, botão **Ir** e deslocamento pelas quatro direções. No modo completo, navegar apenas altera o tile ativo e move a câmera para o centro dele. No modo 3×3, a navegação recarrega a região em torno do novo tile e reconstrói o viewport com os objetos, splines e terreno daquela área.
+
+Após qualquer recarregamento, Inspector, histórico visual e ferramenta de terreno são sincronizados com o novo snapshot real do Core.

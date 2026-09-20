@@ -334,3 +334,15 @@ The user can then edit **target height**, **brush radius**, and **feather**. **A
 After writing, the tile is read back through `MapStudio.Core` and the viewport is rebuilt using the new topography. The operation is blocked while object/spline transforms are pending so two different edit transactions are not mixed.
 
 This checkpoint covers circular leveling. Raise/lower dragging, terrain texture painting, tile creation/removal, and DEM import are still pending.
+
+### Checkpoint N3.15 — full map, 3×3 performance mode, and tile navigator
+
+The WinUI host now migrates both map loading modes from the React editor. **Full map** is the native architecture default and loads every map tile; **3×3 performance mode** keeps only the radius-1 region around the active tile.
+
+Full-map reading is capped at six concurrent tile loads so large maps do not launch hundreds of file reads/parses at once.
+
+The **Map** menu can switch between both modes without reopening the map. Switching is blocked while transforms are pending so unsaved edits are not discarded.
+
+The Explorer gains a tile navigator with X/Y fields, a **Go** action, and four directional controls. In full-map mode, navigation only changes the active tile and focuses the camera on its center. In 3×3 mode, navigation reloads the region around the new tile and rebuilds the viewport with that area's real objects, splines, and terrain.
+
+After any reload, the Inspector, visual history, and terrain tool are synchronized with the new real Core snapshot.

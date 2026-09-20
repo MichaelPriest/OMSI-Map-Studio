@@ -1417,6 +1417,60 @@ public sealed class NativeViewportRuntime : IDisposable
             GetSelectionInfo();
     }
 
+    public bool FocusTile(
+        int tileX,
+        int tileY)
+    {
+        ThrowIfDisposed();
+
+        if (
+            Scene is null ||
+            !Scene.Tiles.Any(
+                tile =>
+                    tile.Reference.X ==
+                        tileX &&
+                    tile.Reference.Y ==
+                        tileY))
+        {
+            return false;
+        }
+
+        var worldX =
+            tileX *
+            300.0f +
+            150.0f;
+
+        var worldZ =
+            tileY *
+            300.0f +
+            150.0f;
+
+        var worldY =
+            (float)
+                NativeTerrainSampler
+                    .GetHeightAtWorldPoint(
+                        Scene,
+                        worldX,
+                        worldZ);
+
+        Navigation.FocusOn(
+            new Vector3(
+                worldX,
+                worldY,
+                worldZ),
+            preferredDistance:
+                Math.Clamp(
+                    Navigation.Distance *
+                    0.55f,
+                    80.0f,
+                    450.0f));
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public IntPtr SwapChainPointer =>
         Surface?.NativePointer ??
         IntPtr.Zero;

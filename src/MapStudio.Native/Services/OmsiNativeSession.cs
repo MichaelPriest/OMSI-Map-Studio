@@ -1826,9 +1826,20 @@ public sealed class OmsiNativeSession
         return maps;
     }
 
+    public Task<NativeMapSnapshot>
+        OpenMapAsync(
+            string mapDirectory,
+            CancellationToken cancellationToken =
+                default) =>
+        OpenMapAsync(
+            mapDirectory,
+            loadFullMap: true,
+            cancellationToken);
+
     public async Task<NativeMapSnapshot>
         OpenMapAsync(
             string mapDirectory,
+            bool loadFullMap,
             CancellationToken cancellationToken =
                 default)
     {
@@ -1863,8 +1874,7 @@ public sealed class OmsiNativeSession
         if (
             !normalizedMap.StartsWith(
                 requiredPrefix,
-                StringComparison
-                    .OrdinalIgnoreCase))
+                StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidDataException(
                 @"O mapa precisa estar dentro de OMSI 2\maps.");
@@ -1883,47 +1893,200 @@ public sealed class OmsiNativeSession
                     map.Tiles);
 
         var selectedTiles =
-            initialTile is null
-                ? Array.Empty<
-                    OmsiTileReference>()
-                : OmsiTileRegionSelector
-                    .Select(
-                        map.Tiles,
-                        initialTile.X,
-                        initialTile.Y,
-                        radius: 1);
-
-        var loadTasks =
-            selectedTiles
-                .Select(
-                    tile =>
-                        LoadTileAsync(
-                            map,
-                            tile,
-                            cancellationToken))
-                .ToArray();
-
-        var loadedTiles =
-            await Task.WhenAll(
-                loadTasks)
-                .ConfigureAwait(false);
+            loadFullMap
+                ? map.Tiles
+                : initialTile is null
+                    ? Array.Empty<
+                        OmsiTileReference>()
+                    : OmsiTileRegionSelector
+                        .Select(
+                            map.Tiles,
+                            initialTile.X,
+                            initialTile.Y,
+                            radius: 1);
 
         var snapshot =
-            new NativeMapSnapshot(
-                map,
-                initialTile,
-                loadedTiles
-                    .Where(
-                        tile =>
-                            tile is not null)
-                    .Select(
-                        tile => tile!)
-                    .ToArray());
+            await LoadSnapshotAsync(
+                    map,
+                    initialTile,
+                    selectedTiles,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
         CurrentMap = snapshot;
         _pendingTransforms.Clear();
 
         return snapshot;
+    }
+
+    public async Task<NativeMapSnapshot>
+        LoadFullMapAsync(
+            CancellationToken cancellationToken =
+                default)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeMapLoadModeChange");
+        }
+
+        var loaded =
+            await LoadSnapshotAsync(
+                    snapshot.Map,
+                    snapshot.ActiveTile,
+                    snapshot.Map.Tiles,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            loaded;
+
+        return loaded;
+    }
+
+    public async Task<NativeMapSnapshot>
+        LoadRegionAsync(
+            int centerX,
+            int centerY,
+            int radius = 1,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeMapLoadModeChange");
+        }
+
+        var center =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.X ==
+                            centerX &&
+                        tile.Y ==
+                            centerY)
+            ?? throw new InvalidDataException(
+                "mapTileNotFound");
+
+        var selected =
+            OmsiTileRegionSelector
+                .Select(
+                    snapshot.Map.Tiles,
+                    centerX,
+                    centerY,
+                    radius);
+
+        var loaded =
+            await LoadSnapshotAsync(
+                    snapshot.Map,
+                    center,
+                    selected,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            loaded;
+
+        return loaded;
+    }
+
+    public NativeMapSnapshot
+        SetActiveTile(
+            int tileX,
+            int tileY)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var tile =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.X == tileX &&
+                        item.Y == tileY)
+            ?? throw new InvalidDataException(
+                "mapTileNotFound");
+
+        CurrentMap =
+            snapshot with
+            {
+                ActiveTile =
+                    tile
+            };
+
+        return CurrentMap;
+    }
+
+    private async Task<NativeMapSnapshot>
+        LoadSnapshotAsync(
+            OmsiMapDescriptor map,
+            OmsiTileReference? activeTile,
+            IReadOnlyList<
+                OmsiTileReference> selectedTiles,
+            CancellationToken cancellationToken)
+    {
+        using var gate =
+            new SemaphoreSlim(
+                initialCount:
+                    Math.Clamp(
+                        Environment
+                            .ProcessorCount,
+                        2,
+                        6));
+
+        var loadTasks =
+            selectedTiles
+                .Select(
+                    async tile =>
+                    {
+                        await gate
+                            .WaitAsync(
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        try
+                        {
+                            return await LoadTileAsync(
+                                    map,
+                                    tile,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            gate.Release();
+                        }
+                    })
+                .ToArray();
+
+        var loadedTiles =
+            await Task.WhenAll(
+                    loadTasks)
+                .ConfigureAwait(false);
+
+        return new NativeMapSnapshot(
+            map,
+            activeTile,
+            loadedTiles
+                .Where(
+                    tile =>
+                        tile is not null)
+                .Select(
+                    tile => tile!)
+                .ToArray());
     }
 
     private static string CreateNativeBackupPath(

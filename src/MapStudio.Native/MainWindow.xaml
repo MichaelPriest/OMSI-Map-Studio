@@ -68,7 +68,16 @@
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Mapa" />
+                <MenuBarItem Title="Mapa">
+                    <MenuFlyoutItem
+                        x:Name="FullMapModeMenuItem"
+                        Text="Mapa completo"
+                        Click="OnFullMapModeClick" />
+                    <MenuFlyoutItem
+                        x:Name="PerformanceMapModeMenuItem"
+                        Text="Modo desempenho 3×3"
+                        Click="OnPerformanceMapModeClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Ferramentas" />
                 <MenuBarItem Title="Ajuda" />
             </MenuBar>
@@ -168,7 +177,7 @@
                              TextChanged="OnExplorerSearchTextChanged" />
 
                     <StackPanel Grid.Row="3"
-                                Spacing="3">
+                                Spacing="6">
                         <TextBlock x:Name="RootText"
                                    Text="Nenhuma instalação OMSI selecionada."
                                    TextWrapping="Wrap"
@@ -177,6 +186,56 @@
                                    Text="Nenhum mapa aberto."
                                    TextWrapping="Wrap"
                                    Foreground="#9FB5C5" />
+                        <TextBlock x:Name="MapLoadModeText"
+                                   Text="Carregamento: mapa completo"
+                                   FontSize="12"
+                                   Foreground="#7FA6BF" />
+
+                        <Grid ColumnSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <NumberBox x:Name="TileNavigatorXBox"
+                                       Grid.Column="0"
+                                       Header="Tile X"
+                                       SpinButtonPlacementMode="Compact" />
+                            <NumberBox x:Name="TileNavigatorYBox"
+                                       Grid.Column="1"
+                                       Header="Tile Y"
+                                       SpinButtonPlacementMode="Compact" />
+                            <Button Grid.Column="2"
+                                    VerticalAlignment="Bottom"
+                                    Content="Ir"
+                                    Click="OnTileNavigatorGoClick" />
+                        </Grid>
+
+                        <Grid ColumnSpacing="4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Content="←"
+                                    Tag="-1,0"
+                                    Click="OnTileNavigateClick" />
+                            <Button Grid.Column="1"
+                                    Content="↑"
+                                    Tag="0,-1"
+                                    Click="OnTileNavigateClick" />
+                            <Button Grid.Column="2"
+                                    Content="↓"
+                                    Tag="0,1"
+                                    Click="OnTileNavigateClick" />
+                            <Button Grid.Column="3"
+                                    Content="→"
+                                    Tag="1,0"
+                                    Click="OnTileNavigateClick" />
+                        </Grid>
                     </StackPanel>
 
                     <Grid Grid.Row="4">

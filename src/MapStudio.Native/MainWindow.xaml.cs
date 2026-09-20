@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Indexing;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -49,6 +50,8 @@ public sealed partial class MainWindow : Window
 
     private bool _resizingExplorerPanel;
     private bool _resizingInspectorPanel;
+    private bool _fullMapMode = true;
+    private bool _mapLoadModeChanging;
 
     private double _explorerPanelWidth =
         300;
@@ -2438,6 +2441,352 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnFullMapModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _fullMapMode ||
+            _mapLoadModeChanging ||
+            _session.CurrentMap is null)
+        {
+            return;
+        }
+
+        await ChangeMapLoadModeAsync(
+            fullMap: true);
+    }
+
+    private async void OnPerformanceMapModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !_fullMapMode ||
+            _mapLoadModeChanging ||
+            _session.CurrentMap is null)
+        {
+            return;
+        }
+
+        await ChangeMapLoadModeAsync(
+            fullMap: false);
+    }
+
+    private async Task ChangeMapLoadModeAsync(
+        bool fullMap)
+    {
+        var current =
+            _session.CurrentMap;
+
+        if (current is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _mapLoadModeChanging =
+                true;
+
+            StatusText.Text =
+                fullMap
+                    ? "Carregando mapa completo..."
+                    : "Carregando região 3×3...";
+
+            NativeMapSnapshot snapshot;
+
+            if (fullMap)
+            {
+                snapshot =
+                    await _session
+                        .LoadFullMapAsync();
+            }
+            else
+            {
+                var center =
+                    current.ActiveTile ??
+                    OmsiTileRegionSelector
+                        .FindInitialTile(
+                            current.Map.Tiles) ??
+                    throw new InvalidDataException(
+                        "mapTileNotFound");
+
+                snapshot =
+                    await _session
+                        .LoadRegionAsync(
+                            center.X,
+                            center.Y,
+                            radius: 1);
+            }
+
+            _fullMapMode =
+                fullMap;
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile: true);
+
+            StatusText.Text =
+                fullMap
+                    ? $"Mapa completo carregado: {snapshot.Tiles.Count} tiles."
+                    : $"Modo desempenho 3×3 ativo em {snapshot.ActiveTile?.X},{snapshot.ActiveTile?.Y}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao trocar modo de carregamento: {exception.Message}";
+        }
+        finally
+        {
+            _mapLoadModeChanging =
+                false;
+        }
+    }
+
+    private async void OnTileNavigatorGoClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var x =
+            TileNavigatorXBox.Value;
+
+        var y =
+            TileNavigatorYBox.Value;
+
+        if (
+            !double.IsFinite(x) ||
+            !double.IsFinite(y) ||
+            Math.Truncate(x) != x ||
+            Math.Truncate(y) != y ||
+            x < int.MinValue ||
+            x > int.MaxValue ||
+            y < int.MinValue ||
+            y > int.MaxValue)
+        {
+            StatusText.Text =
+                "Informe coordenadas inteiras de tile.";
+
+            return;
+        }
+
+        await NavigateToTileAsync(
+            (int)x,
+            (int)y);
+    }
+
+    private async void OnTileNavigateClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            sender is not Button button ||
+            button.Tag is not string tag)
+        {
+            return;
+        }
+
+        var parts =
+            tag.Split(',');
+
+        if (
+            parts.Length != 2 ||
+            !int.TryParse(
+                parts[0],
+                out var dx) ||
+            !int.TryParse(
+                parts[1],
+                out var dy))
+        {
+            return;
+        }
+
+        var active =
+            _session.CurrentMap
+                ?.ActiveTile;
+
+        if (active is null)
+        {
+            return;
+        }
+
+        await NavigateToTileAsync(
+            active.X + dx,
+            active.Y + dy);
+    }
+
+    private async Task NavigateToTileAsync(
+        int tileX,
+        int tileY)
+    {
+        var current =
+            _session.CurrentMap;
+
+        if (
+            current is null ||
+            _mapLoadModeChanging)
+        {
+            return;
+        }
+
+        if (
+            !current.Map.Tiles.Any(
+                tile =>
+                    tile.X == tileX &&
+                    tile.Y == tileY))
+        {
+            StatusText.Text =
+                $"O mapa não possui o tile {tileX},{tileY}.";
+
+            return;
+        }
+
+        try
+        {
+            _mapLoadModeChanging =
+                true;
+
+            if (_fullMapMode)
+            {
+                var snapshot =
+                    _session.SetActiveTile(
+                        tileX,
+                        tileY);
+
+                UpdateMapSummary(
+                    snapshot);
+
+                TileNavigatorXBox.Value =
+                    tileX;
+
+                TileNavigatorYBox.Value =
+                    tileY;
+
+                if (
+                    !Viewport.FocusTile(
+                        tileX,
+                        tileY))
+                {
+                    StatusText.Text =
+                        $"Tile {tileX},{tileY} não está disponível no viewport.";
+                    return;
+                }
+
+                StatusText.Text =
+                    $"Tile {tileX},{tileY} focado no mapa completo.";
+                return;
+            }
+
+            StatusText.Text =
+                $"Carregando região 3×3 em {tileX},{tileY}...";
+
+            var region =
+                await _session
+                    .LoadRegionAsync(
+                        tileX,
+                        tileY,
+                        radius: 1);
+
+            await ApplyMapSnapshotAsync(
+                region,
+                focusActiveTile: true);
+
+            StatusText.Text =
+                $"Região 3×3 carregada em {tileX},{tileY}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao navegar para o tile: {exception.Message}";
+        }
+        finally
+        {
+            _mapLoadModeChanging =
+                false;
+        }
+    }
+
+    private async Task ApplyMapSnapshotAsync(
+        NativeMapSnapshot snapshot,
+        bool focusActiveTile)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            throw new InvalidOperationException(
+                "Instalação OMSI não selecionada.");
+        }
+
+        await Viewport
+            .SetMapSnapshotAsync(
+                snapshot,
+                _session.OmsiRootPath);
+
+        ClearInspectorSelectionState();
+
+        _terrainEditPoint =
+            null;
+
+        ApplyTerrainLevelButton.IsEnabled =
+            false;
+
+        TerrainPointText.Text =
+            "Nenhum ponto selecionado.";
+
+        RefreshExplorer();
+        UpdateMapSummary(
+            snapshot);
+
+        SaveChangesButton.IsEnabled =
+            false;
+
+        UndoButton.IsEnabled =
+            false;
+
+        RedoButton.IsEnabled =
+            false;
+
+        if (
+            focusActiveTile &&
+            snapshot.ActiveTile is
+                { } active)
+        {
+            Viewport.FocusTile(
+                active.X,
+                active.Y);
+        }
+    }
+
+    private void UpdateMapSummary(
+        NativeMapSnapshot snapshot)
+    {
+        var activeTile =
+            snapshot.ActiveTile is null
+                ? "—"
+                : $"{snapshot.ActiveTile.X}, {snapshot.ActiveTile.Y}";
+
+        MapText.Text =
+            $"{snapshot.Map.DisplayName}\n" +
+            $"Tiles carregados: {snapshot.Tiles.Count} / {snapshot.Map.Tiles.Count}\n" +
+            $"Objetos: {snapshot.ObjectCount} · Splines: {snapshot.SplineCount}\n" +
+            $"Terrenos: {snapshot.TerrainCount} · Tile ativo: {activeTile}";
+
+        MapLoadModeText.Text =
+            _fullMapMode
+                ? "Carregamento: mapa completo"
+                : "Carregamento: desempenho 3×3";
+
+        if (
+            snapshot.ActiveTile is
+                { } active)
+        {
+            TileNavigatorXBox.Value =
+                active.X;
+
+            TileNavigatorYBox.Value =
+                active.Y;
+        }
+    }
+
     private async void OnOpenMapClick(
         object sender,
         RoutedEventArgs e)
@@ -2450,6 +2799,7 @@ public sealed partial class MainWindow : Window
             {
                 StatusText.Text =
                     "Selecione primeiro a instalação do OMSI.";
+
                 return;
             }
 
@@ -2463,38 +2813,25 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            _fullMapMode =
+                true;
+
             StatusText.Text =
-                "Carregando região inicial do mapa...";
+                "Carregando mapa completo...";
 
             var snapshot =
                 await _session
                     .OpenMapAsync(
-                        mapDirectory);
+                        mapDirectory,
+                        loadFullMap: true);
 
-            var activeTile =
-                snapshot.ActiveTile is null
-                    ? "—"
-                    : $"{snapshot.ActiveTile.X}, {snapshot.ActiveTile.Y}";
-
-            MapText.Text =
-                $"{snapshot.Map.DisplayName}\n" +
-                $"Tiles carregados: {snapshot.Tiles.Count} / {snapshot.Map.Tiles.Count}\n" +
-                $"Objetos: {snapshot.ObjectCount} · Splines: {snapshot.SplineCount}\n" +
-                $"Terrenos: {snapshot.TerrainCount} · Tile ativo: {activeTile}";
-
-            await Viewport
-                .SetMapSnapshotAsync(
-                    snapshot,
-                    _session
-                        .OmsiRootPath!);
-
-            RefreshExplorer();
-
-            SaveChangesButton.IsEnabled =
-                false;
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile: false);
 
             StatusText.Text =
-                $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core.";
+                $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core · " +
+                $"{snapshot.Tiles.Count} tiles.";
         }
         catch (Exception exception)
         {
