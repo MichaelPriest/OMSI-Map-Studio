@@ -36,6 +36,14 @@ public partial class MainWindow : Window
     private readonly JsonSerializerOptions _jsonOptions =
         new(JsonSerializerDefaults.Web);
 
+    private static readonly HttpClient
+        GoogleMapsHttpClient =
+            new()
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(30)
+            };
+
     private readonly SemaphoreSlim
         _geometryReadSemaphore =
             new(
@@ -521,6 +529,159 @@ public partial class MainWindow : Window
                             centerX,
                             centerY,
                             radius);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "levelTerrain":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var terrainDirectoryName) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileX",
+                            out var terrainTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "tileY",
+                            out var terrainTileY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "x",
+                            out var terrainX) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "y",
+                            out var terrainY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "targetHeight",
+                            out var terrainTargetHeight) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "radius",
+                            out var terrainRadius) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "feather",
+                            out var terrainFeather))
+                    {
+                        await LevelTerrainAsync(
+                            terrainDirectoryName,
+                            terrainTileX,
+                            terrainTileY,
+                            terrainX,
+                            terrainY,
+                            terrainTargetHeight,
+                            terrainRadius,
+                            terrainFeather);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "loadGoogleMapReference":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "apiKey",
+                            out var googleApiKey) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "latitude",
+                            out var googleLatitude) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "longitude",
+                            out var googleLongitude) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "zoom",
+                            out var googleZoom) &&
+                        TryReadString(
+                            message.RootElement,
+                            "mapType",
+                            out var googleMapType) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "width",
+                            out var googleWidth) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "height",
+                            out var googleHeight))
+                    {
+                        await LoadGoogleMapReferenceAsync(
+                            googleApiKey,
+                            googleLatitude,
+                            googleLongitude,
+                            googleZoom,
+                            googleMapType,
+                            googleWidth,
+                            googleHeight);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
+                case "saveMapGeoreference":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var georefDirectoryName) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "latitude",
+                            out var georefLatitude) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "longitude",
+                            out var georefLongitude) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "anchorTileX",
+                            out var georefTileX) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "anchorTileY",
+                            out var georefTileY) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "anchorX",
+                            out var georefX) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "anchorY",
+                            out var georefY) &&
+                        TryReadInt32(
+                            message.RootElement,
+                            "zoom",
+                            out var georefZoom) &&
+                        TryReadString(
+                            message.RootElement,
+                            "mapType",
+                            out var georefMapType))
+                    {
+                        await SaveMapGeoreferenceAsync(
+                            georefDirectoryName,
+                            georefLatitude,
+                            georefLongitude,
+                            georefTileX,
+                            georefTileY,
+                            georefX,
+                            georefY,
+                            georefZoom,
+                            georefMapType);
                     }
                     else
                     {
@@ -3990,6 +4151,594 @@ public partial class MainWindow : Window
                 out _);
 
             throw;
+        }
+    }
+
+    private async Task LevelTerrainAsync(
+        string? directoryName,
+        int tileX,
+        int tileY,
+        double localX,
+        double localY,
+        double targetHeight,
+        double radius,
+        double feather)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+            return;
+        }
+
+        if (
+            localX < 0 ||
+            localX > 300 ||
+            localY < 0 ||
+            localY > 300 ||
+            radius <= 0 ||
+            radius > 600 ||
+            feather < 0 ||
+            feather > 1 ||
+            !double.IsFinite(
+                targetHeight))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidTerrainBrush"
+            });
+            return;
+        }
+
+        var tile =
+            map.Tiles.FirstOrDefault(
+                candidate =>
+                    candidate.X == tileX &&
+                    candidate.Y == tileY);
+
+        if (
+            tile is null ||
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    map.DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var tilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+            return;
+        }
+
+        var terrainPath =
+            tilePath + ".terrain";
+
+        if (!File.Exists(
+                terrainPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "terrainFileMissing",
+                detail = terrainPath
+            });
+            return;
+        }
+
+        try
+        {
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(
+                        terrainPath);
+
+            var result =
+                OmsiTerrainLeveler
+                    .LevelCircularBrush(
+                        terrain,
+                        localX,
+                        localY,
+                        targetHeight,
+                        radius,
+                        feather);
+
+            if (
+                result.ChangedSamples == 0)
+            {
+                PostMessage(new
+                {
+                    type = "terrainLeveled",
+                    map.DirectoryName,
+                    tileX,
+                    tileY,
+                    changedSamples = 0,
+                    backupDirectory =
+                        string.Empty
+                });
+                return;
+            }
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    terrainPath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTerrainPath");
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            terrainPath,
+                            Path.Combine(
+                                backupRoot,
+                                relativePath),
+                            OmsiTerrainWriter
+                                .Write(
+                                    result.Terrain))
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    tilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type = "terrainLeveled",
+                map.DirectoryName,
+                tileX,
+                tileY,
+                changedSamples =
+                    result.ChangedSamples,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "terrainEditError",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = terrainPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "terrainEditError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task LoadGoogleMapReferenceAsync(
+        string? apiKey,
+        double latitude,
+        double longitude,
+        int zoom,
+        string? mapType,
+        int width,
+        int height)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey) ||
+            latitude is < -90 or > 90 ||
+            longitude is < -180 or > 180 ||
+            zoom is < 0 or > 22 ||
+            width is < 128 or > 640 ||
+            height is < 128 or > 640)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidGoogleReferenceRequest"
+            });
+            return;
+        }
+
+        var normalizedMapType =
+            mapType?.Trim()
+                .ToLowerInvariant();
+
+        if (
+            normalizedMapType is not
+                ("roadmap" or
+                 "satellite" or
+                 "hybrid" or
+                 "terrain"))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidGoogleReferenceRequest"
+            });
+            return;
+        }
+
+        try
+        {
+            var invariant =
+                CultureInfo.InvariantCulture;
+
+            var center =
+                string.Create(
+                    invariant,
+                    $"{latitude:G17},{longitude:G17}");
+
+            var mapUri =
+                "https://maps.googleapis.com/maps/api/staticmap" +
+                "?center=" +
+                Uri.EscapeDataString(
+                    center) +
+                "&zoom=" +
+                zoom.ToString(
+                    invariant) +
+                "&size=" +
+                width.ToString(
+                    invariant) +
+                "x" +
+                height.ToString(
+                    invariant) +
+                "&scale=1&format=png&maptype=" +
+                Uri.EscapeDataString(
+                    normalizedMapType) +
+                "&key=" +
+                Uri.EscapeDataString(
+                    apiKey);
+
+            using var mapResponse =
+                await GoogleMapsHttpClient
+                    .GetAsync(
+                        mapUri);
+
+            if (!mapResponse
+                .IsSuccessStatusCode)
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code = "googleMapsReferenceError",
+                    detail =
+                        $"HTTP {(int)mapResponse.StatusCode}"
+                });
+                return;
+            }
+
+            var mapBytes =
+                await mapResponse.Content
+                    .ReadAsByteArrayAsync();
+
+            if (
+                mapBytes.Length == 0 ||
+                mapBytes.LongLength >
+                    MaxTextureAssetBytes)
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code = "googleMapsReferenceError"
+                });
+                return;
+            }
+
+            var elevationUri =
+                "https://maps.googleapis.com/maps/api/elevation/json" +
+                "?locations=" +
+                Uri.EscapeDataString(
+                    center) +
+                "&key=" +
+                Uri.EscapeDataString(
+                    apiKey);
+
+            using var elevationResponse =
+                await GoogleMapsHttpClient
+                    .GetAsync(
+                        elevationUri);
+
+            double? centerElevation =
+                null;
+
+            if (elevationResponse
+                .IsSuccessStatusCode)
+            {
+                await using var stream =
+                    await elevationResponse
+                        .Content
+                        .ReadAsStreamAsync();
+
+                using var document =
+                    await JsonDocument
+                        .ParseAsync(
+                            stream);
+
+                var root =
+                    document.RootElement;
+
+                if (
+                    root.TryGetProperty(
+                        "status",
+                        out var status) &&
+                    string.Equals(
+                        status.GetString(),
+                        "OK",
+                        StringComparison
+                            .OrdinalIgnoreCase) &&
+                    root.TryGetProperty(
+                        "results",
+                        out var results) &&
+                    results.ValueKind ==
+                        JsonValueKind.Array &&
+                    results.GetArrayLength() >
+                        0 &&
+                    results[0]
+                        .TryGetProperty(
+                            "elevation",
+                            out var elevation) &&
+                    elevation.TryGetDouble(
+                        out var parsedElevation) &&
+                    double.IsFinite(
+                        parsedElevation))
+                {
+                    centerElevation =
+                        parsedElevation;
+                }
+            }
+
+            var metersPerPixel =
+                156543.03392804097 *
+                Math.Cos(
+                    latitude *
+                    Math.PI /
+                    180.0) /
+                Math.Pow(
+                    2,
+                    zoom);
+
+            PostMessage(new
+            {
+                type =
+                    "googleMapReferenceLoaded",
+                latitude,
+                longitude,
+                zoom,
+                mapType =
+                    normalizedMapType,
+                width,
+                height,
+                metersPerPixel,
+                centerElevation,
+                mimeType = "image/png",
+                base64Data =
+                    Convert.ToBase64String(
+                        mapBytes),
+                attribution =
+                    "Google Maps"
+            });
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    HttpRequestException or
+                    TaskCanceledException or
+                    JsonException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "googleMapsReferenceError"
+            });
+        }
+    }
+
+    private async Task SaveMapGeoreferenceAsync(
+        string? directoryName,
+        double latitude,
+        double longitude,
+        int anchorTileX,
+        int anchorTileY,
+        double anchorX,
+        double anchorY,
+        int zoom,
+        string? mapType)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map) ||
+            latitude is < -90 or > 90 ||
+            longitude is < -180 or > 180 ||
+            anchorX is < 0 or > 300 ||
+            anchorY is < 0 or > 300 ||
+            zoom is < 0 or > 22)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidMapGeoreference"
+            });
+            return;
+        }
+
+        var normalizedMapType =
+            mapType?.Trim()
+                .ToLowerInvariant();
+
+        if (
+            normalizedMapType is not
+                ("roadmap" or
+                 "satellite" or
+                 "hybrid" or
+                 "terrain"))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidMapGeoreference"
+            });
+            return;
+        }
+
+        try
+        {
+            var metadataDirectory =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio");
+
+            Directory.CreateDirectory(
+                metadataDirectory);
+
+            var path =
+                Path.Combine(
+                    metadataDirectory,
+                    "georeference.json");
+
+            var payload =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        version = 1,
+                        provider =
+                            "Google Maps",
+                        latitude,
+                        longitude,
+                        anchorTileX,
+                        anchorTileY,
+                        anchorX,
+                        anchorY,
+                        zoom,
+                        mapType =
+                            normalizedMapType,
+                        savedAtUtc =
+                            DateTimeOffset.UtcNow
+                    },
+                    new JsonSerializerOptions(
+                        JsonSerializerDefaults.Web)
+                    {
+                        WriteIndented = true
+                    });
+
+            if (File.Exists(path))
+            {
+                var timestamp =
+                    DateTimeOffset.UtcNow
+                        .ToString(
+                            "yyyyMMdd-HHmmssfff'Z'",
+                            CultureInfo.InvariantCulture);
+
+                var backup =
+                    Path.Combine(
+                        map.DirectoryPath,
+                        ".mapstudio-backups",
+                        timestamp,
+                        ".mapstudio",
+                        "georeference.json");
+
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(
+                        backup)!);
+
+                File.Copy(
+                    path,
+                    backup,
+                    overwrite: false);
+            }
+
+            var tempPath =
+                path +
+                $".{Guid.NewGuid():N}.tmp";
+
+            await File.WriteAllTextAsync(
+                tempPath,
+                payload);
+
+            File.Move(
+                tempPath,
+                path,
+                overwrite: true);
+
+            PostMessage(new
+            {
+                type =
+                    "mapGeoreferenceSaved",
+                map.DirectoryName,
+                path,
+                latitude,
+                longitude,
+                anchorTileX,
+                anchorTileY,
+                anchorX,
+                anchorY,
+                zoom,
+                mapType =
+                    normalizedMapType
+            });
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    IOException or
+                    UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "mapGeoreferenceSaveError",
+                detail =
+                    exception.Message
+            });
         }
     }
 
