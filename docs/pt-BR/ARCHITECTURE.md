@@ -683,3 +683,16 @@ O carregamento regional ganhou o primeiro modelo em anéis:
 - objetos e splines visíveis continuam vindo apenas da região completa para manter picking e identidade reais.
 
 Esta etapa é intermediária. Cache derivado de geometria/material, fila de prioridade completa, LOD/instancing e descarte explícito de recursos Babylon/GPU ainda pertencem à Fase A.
+
+
+### Streaming como modo padrão
+
+A abertura normal de um mapa passa a iniciar em **Streaming automático** em vez de **Mapa completo**.
+
+- o tile ativo e os vizinhos imediatos formam a área 3×3 de conteúdo completo;
+- o anel seguinte permanece em summary/metadata leve;
+- mover o tile ativo solicita automaticamente a próxima região;
+- payloads pesados de terreno fora da janela ativa são descartados da UI;
+- **Mapa completo** permanece disponível explicitamente para diagnóstico, comparação e casos em que o usuário realmente deseja manter todos os tiles carregados.
+
+Essa mudança é deliberada: abrir um mapa grande não deve exigir carregar toda a cena antes de começar a editar.
