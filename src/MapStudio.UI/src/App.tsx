@@ -6476,6 +6476,27 @@ export function App() {
           <strong>OMSI Map Studio</strong>
           <span>Editor moderno para OMSI 2</span>
         </div>
+        <button
+          type="button"
+          className="sidebar-collapse-button"
+          onClick={() =>
+            setSidebarCollapsed(
+              (current) => !current
+            )
+          }
+          title={
+            sidebarCollapsed
+              ? "Expandir barra lateral"
+              : "Recolher barra lateral"
+          }
+          aria-label={
+            sidebarCollapsed
+              ? "Expandir barra lateral"
+              : "Recolher barra lateral"
+          }
+        >
+          {sidebarCollapsed ? "»" : "«"}
+        </button>
       </div>
 
       <nav
@@ -6583,8 +6604,8 @@ export function App() {
         </span>
         <h1>Editor de mapas moderno para OMSI 2</h1>
         <p>
-          Abra sua instalação, escolha manualmente
-          o mapa e edite dados reais com validação,
+          Abra sua instalação, escolha o mapa na
+          lista e edite dados reais com validação,
           backup e gravação preservativa.
         </p>
       </div>
@@ -10356,6 +10377,9 @@ export function App() {
         isFullScreen &&
         view === "editor"
           ? "is-fullscreen"
+          : "",
+        sidebarCollapsed
+          ? "sidebar-collapsed"
           : ""
       ]
         .filter(Boolean)
