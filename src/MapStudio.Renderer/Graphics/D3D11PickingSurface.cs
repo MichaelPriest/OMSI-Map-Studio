@@ -21,6 +21,12 @@ public sealed class D3D11PickingSurface :
     private ID3D11Texture2D?
         _stagingTexture;
 
+    private ID3D11Texture2D?
+        _depthTexture;
+
+    private ID3D11DepthStencilView?
+        _depthStencilView;
+
     private bool _disposed;
 
     public D3D11PickingSurface(
@@ -71,6 +77,22 @@ public sealed class D3D11PickingSurface :
                 .CreateRenderTargetView(
                     _renderTexture);
 
+        _depthTexture =
+            _deviceHost.Device
+                .CreateTexture2D(
+                    Format.D32_Float,
+                    width,
+                    height,
+                    mipLevels: 1,
+                    bindFlags:
+                        BindFlags
+                            .DepthStencil);
+
+        _depthStencilView =
+            _deviceHost.Device
+                .CreateDepthStencilView(
+                    _depthTexture);
+
         var stagingDescription =
             _renderTexture.Description;
 
@@ -105,9 +127,15 @@ public sealed class D3D11PickingSurface :
             throw new InvalidOperationException(
                 "Picking surface is not initialized.");
 
+        var depthStencil =
+            _depthStencilView ??
+            throw new InvalidOperationException(
+                "Picking depth buffer is not initialized.");
+
         _deviceHost.Context
             .OMSetRenderTargets(
-                target);
+                target,
+                depthStencil);
 
         _deviceHost.Context
             .RSSetViewport(
@@ -124,6 +152,13 @@ public sealed class D3D11PickingSurface :
                     0,
                     0,
                     0));
+
+        _deviceHost.Context
+            .ClearDepthStencilView(
+                depthStencil,
+                DepthStencilClearFlags.Depth,
+                1.0f,
+                0);
 
         draw(
             _deviceHost.Context);
@@ -206,6 +241,12 @@ public sealed class D3D11PickingSurface :
 
     private void ReleaseResources()
     {
+        _depthStencilView?.Dispose();
+        _depthStencilView = null;
+
+        _depthTexture?.Dispose();
+        _depthTexture = null;
+
         _renderTargetView?.Dispose();
         _renderTargetView = null;
 

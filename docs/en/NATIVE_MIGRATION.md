@@ -98,3 +98,10 @@ The same transform is used by both the visible pass and the ID-buffer pass, keep
 The native renderer now converts each tile's real height grid into GPU triangles. The first visualization mode remains top-down, but it already uses real elevation data for color/depth and prepares the same mesh for the upcoming perspective camera.
 
 SCO objects that do not use `[absheight]` also receive bilinear terrain interpolation before O3D transforms, preserving the existing editor rule.
+
+
+### Checkpoint N1.3 — real depth for viewport and ID buffer
+
+Both the visible viewport and the selection pass now have their own Direct3D depth buffer. Selection no longer depends on triangle submission order: when objects/proxies overlap, the picking pixel keeps the nearest surface according to depth.
+
+The same depth rule is used by the visible frame and the ID buffer, bringing selector behavior closer to a native 3D editor.

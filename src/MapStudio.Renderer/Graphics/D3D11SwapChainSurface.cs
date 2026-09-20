@@ -15,6 +15,8 @@ public sealed class D3D11SwapChainSurface : IDisposable
 
     private ID3D11Texture2D? _backBuffer;
     private ID3D11RenderTargetView? _renderTargetView;
+    private ID3D11Texture2D? _depthTexture;
+    private ID3D11DepthStencilView? _depthStencilView;
     private bool _disposed;
 
     public D3D11SwapChainSurface(
@@ -125,9 +127,15 @@ public sealed class D3D11SwapChainSurface : IDisposable
             throw new InvalidOperationException(
                 "The native viewport does not have a render target.");
 
+        var depthStencil =
+            _depthStencilView ??
+            throw new InvalidOperationException(
+                "The native viewport does not have a depth buffer.");
+
         _deviceHost.Context
             .OMSetRenderTargets(
-                renderTarget);
+                renderTarget,
+                depthStencil);
 
         _deviceHost.Context
             .RSSetViewport(
@@ -140,6 +148,13 @@ public sealed class D3D11SwapChainSurface : IDisposable
             .ClearRenderTargetView(
                 renderTarget,
                 color);
+
+        _deviceHost.Context
+            .ClearDepthStencilView(
+                depthStencil,
+                DepthStencilClearFlags.Depth,
+                1.0f,
+                0);
 
         draw?.Invoke(
             _deviceHost.Context);
@@ -167,10 +182,32 @@ public sealed class D3D11SwapChainSurface : IDisposable
             _deviceHost.Device
                 .CreateRenderTargetView(
                     _backBuffer);
+
+        _depthTexture =
+            _deviceHost.Device
+                .CreateTexture2D(
+                    Format.D32_Float,
+                    Width,
+                    Height,
+                    mipLevels: 1,
+                    bindFlags:
+                        BindFlags
+                            .DepthStencil);
+
+        _depthStencilView =
+            _deviceHost.Device
+                .CreateDepthStencilView(
+                    _depthTexture);
     }
 
     private void ReleaseBackBufferResources()
     {
+        _depthStencilView?.Dispose();
+        _depthStencilView = null;
+
+        _depthTexture?.Dispose();
+        _depthTexture = null;
+
         _renderTargetView?.Dispose();
         _renderTargetView = null;
 
