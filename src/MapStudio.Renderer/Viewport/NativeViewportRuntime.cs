@@ -123,6 +123,24 @@ public sealed class NativeViewportRuntime : IDisposable
         private set;
     }
 
+    public bool TryPick(
+        uint pixelX,
+        uint pixelY,
+        out PickingId pickingId,
+        out object? item)
+    {
+        ThrowIfDisposed();
+
+        pickingId =
+            MapRenderer.Pick(
+                pixelX,
+                pixelY);
+
+        return Picking.TryResolve(
+            pickingId,
+            out item);
+    }
+
     public void RenderInitialFrame()
     {
         ThrowIfDisposed();

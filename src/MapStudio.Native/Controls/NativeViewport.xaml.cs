@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Scene;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -276,16 +277,66 @@ public sealed partial class NativeViewport : UserControl
         InputSurface.CapturePointer(
             e.Pointer);
 
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    point.Position.X *
+                    scaleX));
+
+        var pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    point.Position.Y *
+                    scaleY));
+
         var message =
-            $"Clique nativo: X={point.Position.X:F1} Y={point.Position.Y:F1}";
+            $"Clique nativo: X={point.Position.X:F1} Y={point.Position.Y:F1} · " +
+            $"pixel {pixelX},{pixelY}";
 
         PointerStatusChanged?.Invoke(
             this,
             message);
 
-        SelectionStatusChanged?.Invoke(
-            this,
-            "ID buffer: cena OMSI será ligada na próxima etapa");
+        if (
+            _runtime is not null &&
+            _runtime.TryPick(
+                pixelX,
+                pixelY,
+                out var pickingId,
+                out var selected))
+        {
+            SelectionStatusChanged?.Invoke(
+                this,
+                selected switch
+                {
+                    OmsiPlacedObject item =>
+                        $"Objeto #{item.ObjectId} · {item.SceneryObjectPath} · ID {pickingId.Value}",
+                    OmsiPlacedSpline item =>
+                        $"Spline #{item.SplineId} · {item.SplinePath} · ID {pickingId.Value}",
+                    _ =>
+                        $"{pickingId.Kind} · ID {pickingId.Value}"
+                });
+        }
+        else
+        {
+            SelectionStatusChanged?.Invoke(
+                this,
+                "Sem seleção.");
+        }
 
         e.Handled = true;
     }

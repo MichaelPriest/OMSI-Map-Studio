@@ -1,3 +1,4 @@
+using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using Vortice.D3DCompiler;
 using Vortice.Direct3D;
@@ -31,6 +32,15 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _objectTriangleVertexCount;
 
+    private ID3D11Buffer?
+        _pickingTriangleBuffer;
+
+    private int
+        _pickingTriangleVertexCount;
+
+    private readonly D3D11PickingSurface
+        _pickingSurface;
+
     private bool _disposed;
 
     public D3D11NativeMapRenderer(
@@ -40,6 +50,10 @@ public sealed class D3D11NativeMapRenderer :
             deviceHost);
 
         _deviceHost = deviceHost;
+
+        _pickingSurface =
+            new D3D11PickingSurface(
+                _deviceHost);
 
         var shaderPath =
             Path.Combine(
@@ -122,6 +136,11 @@ public sealed class D3D11NativeMapRenderer :
         _objectTriangleBuffer = null;
         _objectTriangleVertexCount = 0;
 
+        _pickingTriangleBuffer
+            ?.Dispose();
+        _pickingTriangleBuffer = null;
+        _pickingTriangleVertexCount = 0;
+
         var geometry =
             new NativeMapGeometryBuilder()
                 .Build(scene);
@@ -159,6 +178,26 @@ public sealed class D3D11NativeMapRenderer :
             _objectTriangleVertexCount =
                 objectGeometry
                     .Vertices.Length;
+
+            if (
+                objectGeometry
+                    .PickingVertices
+                    .Length > 0)
+            {
+                _pickingTriangleBuffer =
+                    _deviceHost.Device
+                        .CreateBuffer(
+                            objectGeometry
+                                .PickingVertices
+                                .AsSpan(),
+                            BindFlags
+                                .VertexBuffer);
+
+                _pickingTriangleVertexCount =
+                    objectGeometry
+                        .PickingVertices
+                        .Length;
+            }
         }
     }
 
@@ -231,7 +270,69 @@ public sealed class D3D11NativeMapRenderer :
                     (uint)_vertexCount,
                     0);
             });
+
+        RenderPicking(
+            surface.Width,
+            surface.Height);
     }
+
+    private void RenderPicking(
+        uint width,
+        uint height)
+    {
+        _pickingSurface.EnsureSize(
+            width,
+            height);
+
+        _pickingSurface.Render(
+            context =>
+            {
+                if (
+                    _pickingTriangleBuffer
+                        is null ||
+                    _pickingTriangleVertexCount <=
+                        0)
+                {
+                    return;
+                }
+
+                context
+                    .IASetPrimitiveTopology(
+                        PrimitiveTopology
+                            .TriangleList);
+
+                context
+                    .IASetInputLayout(
+                        _inputLayout);
+
+                context
+                    .IASetVertexBuffer(
+                        0,
+                        _pickingTriangleBuffer,
+                        NativeMapVertex
+                            .SizeInBytes);
+
+                context
+                    .VSSetShader(
+                        _vertexShader);
+
+                context
+                    .PSSetShader(
+                        _pixelShader);
+
+                context.Draw(
+                    (uint)
+                        _pickingTriangleVertexCount,
+                    0);
+            });
+    }
+
+    public PickingId Pick(
+        uint x,
+        uint y) =>
+        _pickingSurface.Read(
+            x,
+            y);
 
     private void ThrowIfDisposed()
     {
@@ -250,8 +351,14 @@ public sealed class D3D11NativeMapRenderer :
 
         _disposed = true;
 
+        _pickingSurface.Dispose();
+
+        _pickingTriangleBuffer
+            ?.Dispose();
+
         _objectTriangleBuffer
             ?.Dispose();
+
         _vertexBuffer?.Dispose();
         _inputLayout.Dispose();
         _pixelShader.Dispose();

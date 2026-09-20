@@ -6,6 +6,7 @@ namespace MapStudio.Renderer.Scene;
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
+    NativeMapVertex[] PickingVertices,
     int LoadedObjectCount,
     int LoadedMeshCount)
 {
@@ -42,6 +43,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 .FromScene(scene);
 
         var vertices =
+            new List<NativeMapVertex>(
+                64_000);
+
+        var pickingVertices =
             new List<NativeMapVertex>(
                 64_000);
 
@@ -106,7 +111,8 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     entity,
                     mesh,
                     projection,
-                    vertices);
+                    vertices,
+                    pickingVertices);
 
                 if (
                     vertices.Count >
@@ -126,6 +132,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
 
         return new NativeObjectTriangleGeometry(
             vertices.ToArray(),
+            pickingVertices.ToArray(),
             loadedObjects,
             loadedMeshes);
     }
@@ -134,7 +141,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
         NativeObjectEntity entity,
         NativeSceneryMeshAsset mesh,
         NativeSceneProjection projection,
-        List<NativeMapVertex> output)
+        List<NativeMapVertex> output,
+        List<NativeMapVertex>
+            pickingOutput)
     {
         var geometry =
             mesh.Geometry;
@@ -172,6 +181,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
         var worldTransform =
             localTransform *
             objectTransform;
+
+        var pickingColor =
+            EncodePickingColor(
+                entity.PickingId);
 
         var triangleCount =
             geometry.Indices.Length /
@@ -250,8 +263,39 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     new NativeMapVertex(
                         clip,
                         color));
+
+                pickingOutput.Add(
+                    new NativeMapVertex(
+                        clip,
+                        pickingColor));
             }
         }
+    }
+
+    private static Vector4
+        EncodePickingColor(
+            MapStudio.Renderer.Picking
+                .PickingId pickingId)
+    {
+        var encoded =
+            MapStudio.Renderer.Picking
+                .PickingColorCodec
+                .Encode(pickingId);
+
+        return new Vector4(
+            (encoded & 0xFF) / 255f,
+            (
+                (encoded >> 8) &
+                0xFF
+            ) / 255f,
+            (
+                (encoded >> 16) &
+                0xFF
+            ) / 255f,
+            (
+                (encoded >> 24) &
+                0xFF
+            ) / 255f);
     }
 
     private static Matrix4x4
