@@ -2965,6 +2965,16 @@ export function App() {
     "explorer" | "inspector" | undefined
   >();
 
+  const [
+    desktopExplorerOpen,
+    setDesktopExplorerOpen
+  ] = useState(false);
+
+  const [
+    desktopInspectorOpen,
+    setDesktopInspectorOpen
+  ] = useState(false);
+
   useEffect(() => {
     if (!isFullScreen) {
       setFullScreenPanel(undefined);
@@ -4722,6 +4732,8 @@ export function App() {
           setFullMapProgress(undefined);
           setLoadedFullMapFor(undefined);
           setInspectorTab("general");
+          setDesktopExplorerOpen(false);
+          setDesktopInspectorOpen(false);
           setSaving(false);
           setSaveNotice(undefined);
           setExplorerSearch("");
@@ -10111,11 +10123,22 @@ export function App() {
           setSelectedSpline(undefined);
           setSelectionMode("object");
           setInspectorTab("transform");
+          setEditorTool("select");
+
+          if (isFullScreen) {
+            setFullScreenPanel(
+              "inspector"
+            );
+          } else {
+            setDesktopInspectorOpen(
+              true
+            );
+          }
         }
 
         setError(undefined);
       },
-      []
+      [isFullScreen]
     );
 
   const handleSplineSelection =
@@ -10142,11 +10165,23 @@ export function App() {
           setSelectedObject(undefined);
           setSelectionMode("spline");
           setInspectorTab("transform");
+          setEditorTool("select");
+
+          if (isFullScreen) {
+            setFullScreenPanel(
+              "inspector"
+            );
+          } else {
+            setDesktopInspectorOpen(
+              true
+            );
+          }
         }
 
         setError(undefined);
       },
       [
+        isFullScreen,
         previewSplineTransforms
       ]
     );
@@ -13419,6 +13454,16 @@ export function App() {
       ) => {
         setExplorerPanelTab(tab);
 
+        if (isFullScreen) {
+          setFullScreenPanel(
+            "explorer"
+          );
+        } else {
+          setDesktopExplorerOpen(
+            true
+          );
+        }
+
         if (
           tab === "library" &&
           sceneryLibrary.length === 0 &&
@@ -13461,6 +13506,7 @@ export function App() {
       },
       [
         bridgeAvailable,
+        isFullScreen,
         loadingSceneryLibrary,
         loadingSplineLibrary,
         sceneryLibrary.length,
@@ -17004,25 +17050,42 @@ export function App() {
         <div className="editor-grid">
           <aside
             className={[
-              "map-explorer",
+              "map-explorer city-drawer city-drawer-left",
               isFullScreen
                 ? "fullscreen-drawer fullscreen-left"
-                : "",
-              isFullScreen &&
-              fullScreenPanel === "explorer"
+                : "desktop-drawer",
+              (
+                isFullScreen
+                  ? fullScreenPanel ===
+                    "explorer"
+                  : desktopExplorerOpen
+              )
                 ? "open"
-                : ""
+                : "closed"
             ]
               .filter(Boolean)
               .join(" ")}
           >
-            {isFullScreen && (
+            {(
+              isFullScreen
+                ? fullScreenPanel ===
+                  "explorer"
+                : desktopExplorerOpen
+            ) && (
               <button
                 type="button"
-                className="fullscreen-drawer-close"
-                onClick={() =>
-                  setFullScreenPanel(undefined)
-                }
+                className="fullscreen-drawer-close city-drawer-close"
+                onClick={() => {
+                  if (isFullScreen) {
+                    setFullScreenPanel(
+                      undefined
+                    );
+                  } else {
+                    setDesktopExplorerOpen(
+                      false
+                    );
+                  }
+                }}
                 title="Fechar painel"
               >
                 ×
@@ -18764,6 +18827,277 @@ export function App() {
           </aside>
 
           <section className="editor-viewport">
+            <div
+              className="citybuilder-hud"
+              aria-label="Ferramentas principais do editor"
+            >
+              <div className="citybuilder-context">
+                <button
+                  type="button"
+                  className={
+                    editorTool === "select" &&
+                    !activeConstructionTool
+                      ? "city-hud-action active"
+                      : "city-hud-action"
+                  }
+                  onClick={() => {
+                    handleCancelPlacement();
+                    handleCancelSplinePlacement();
+                    setActiveConstructionTool(
+                      undefined
+                    );
+                    setEditorTool("select");
+                    setSelectionMode("all");
+                  }}
+                  title="Selecionar no mapa (Q)"
+                >
+                  <span>↖</span>
+                  <small>Selecionar</small>
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    (
+                      isFullScreen
+                        ? fullScreenPanel ===
+                          "explorer"
+                        : desktopExplorerOpen
+                    )
+                      ? "city-hud-action active"
+                      : "city-hud-action"
+                  }
+                  onClick={() => {
+                    if (isFullScreen) {
+                      setFullScreenPanel(
+                        fullScreenPanel ===
+                          "explorer"
+                          ? undefined
+                          : "explorer"
+                      );
+                    } else {
+                      setDesktopExplorerOpen(
+                        (current) =>
+                          !current
+                      );
+                    }
+                  }}
+                  title="Explorador e bibliotecas"
+                >
+                  <span>☰</span>
+                  <small>Explorar</small>
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    (
+                      isFullScreen
+                        ? fullScreenPanel ===
+                          "inspector"
+                        : desktopInspectorOpen
+                    )
+                      ? "city-hud-action active"
+                      : "city-hud-action"
+                  }
+                  onClick={() => {
+                    if (isFullScreen) {
+                      setFullScreenPanel(
+                        fullScreenPanel ===
+                          "inspector"
+                          ? undefined
+                          : "inspector"
+                      );
+                    } else {
+                      setDesktopInspectorOpen(
+                        (current) =>
+                          !current
+                      );
+                    }
+                  }}
+                  title="Inspetor da seleção"
+                >
+                  <span>ⓘ</span>
+                  <small>Inspetor</small>
+                </button>
+              </div>
+
+              <div className="citybuilder-main-tools">
+                {([
+                  ["road", "═", "Ruas"],
+                  ["junction", "✣", "Cruzamentos"],
+                  ["bridge", "⌁", "Pontes"],
+                  ["building", "⌂", "Prédios"],
+                  ["tree", "♣", "Vegetação"],
+                  ["transit", "▤", "Transporte"],
+                  ["street", "⚑", "Mobiliário"],
+                  ["utilities", "⚙", "Infra"],
+                  ["terrain", "▱", "Terreno"]
+                ] as const).map(
+                  ([tool, icon, label]) => (
+                    <button
+                      type="button"
+                      key={tool}
+                      className={
+                        activeConstructionTool ===
+                        tool
+                          ? "city-construction-tool active"
+                          : "city-construction-tool"
+                      }
+                      onClick={() =>
+                        openQuickCreate(
+                          tool
+                        )
+                      }
+                      title={label}
+                    >
+                      <span>{icon}</span>
+                      <small>{label}</small>
+                    </button>
+                  )
+                )}
+              </div>
+
+              <div className="citybuilder-context citybuilder-context-right">
+                <button
+                  type="button"
+                  className={
+                    showConstructionSetPanel
+                      ? "city-hud-action active"
+                      : "city-hud-action"
+                  }
+                  onClick={() =>
+                    setShowConstructionSetPanel(
+                      (current) =>
+                        !current
+                    )
+                  }
+                  title="Conjuntos de construção"
+                >
+                  <span>▦</span>
+                  <small>Conjuntos</small>
+                </button>
+
+                <button
+                  type="button"
+                  className={
+                    showMapHealthPanel
+                      ? "city-hud-action active"
+                      : mapHealthIssueCount >
+                          0
+                        ? "city-hud-action warning"
+                        : "city-hud-action"
+                  }
+                  onClick={() =>
+                    setShowMapHealthPanel(
+                      (current) =>
+                        !current
+                    )
+                  }
+                  title="Saúde do mapa"
+                >
+                  <span>
+                    {mapHealthIssueCount >
+                    0
+                      ? "⚠"
+                      : "✓"}
+                  </span>
+                  <small>Saúde</small>
+                </button>
+              </div>
+
+              <div className="citybuilder-subbar">
+                <div className="citybuilder-current-mode">
+                  <strong>
+                    {selectedObject
+                      ? getObjectName(
+                          selectedObject
+                            .sceneryObjectPath
+                        )
+                      : selectedSpline
+                        ? getObjectName(
+                            selectedSpline
+                              .splinePath
+                          )
+                        : activeConstructionTool
+                          ? "Modo de construção"
+                          : "Seleção livre"}
+                  </strong>
+                  <span>
+                    {selectedObject
+                      ? `Objeto #${selectedObject.objectId} · clique em outro item para trocar a seleção`
+                      : selectedSpline
+                        ? `Spline #${selectedSpline.splineId} · clique em outra via para trocar a seleção`
+                        : activeConstructionTool
+                          ? "Escolha o asset e clique no mapa para construir"
+                          : "Clique diretamente em objeto ou spline no mapa"}
+                  </span>
+                </div>
+
+                <div className="citybuilder-selection-filters">
+                  {([
+                    ["all", "Tudo"],
+                    ["object", "Objetos"],
+                    ["spline", "Splines"],
+                    ["terrain", "Terreno"]
+                  ] as const).map(
+                    ([mode, label]) => (
+                      <button
+                        type="button"
+                        key={mode}
+                        className={
+                          selectionMode ===
+                          mode
+                            ? "active"
+                            : ""
+                        }
+                        onClick={() => {
+                          setSelectionMode(
+                            mode
+                          );
+                          setEditorTool(
+                            "select"
+                          );
+                          setActiveConstructionTool(
+                            undefined
+                          );
+
+                          if (
+                            mode ===
+                            "terrain"
+                          ) {
+                            setShowTerrain(
+                              true
+                            );
+                          }
+                        }}
+                      >
+                        {label}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className={
+                    snapEnabled
+                      ? "city-sub-action active"
+                      : "city-sub-action"
+                  }
+                  onClick={() =>
+                    setSnapEnabled(
+                      (current) =>
+                        !current
+                    )
+                  }
+                  title="Alternar snap (N)"
+                >
+                  Snap
+                </button>
+              </div>
+            </div>
+
             {isFullScreen && (
               <>
                 <div
@@ -18779,7 +19113,7 @@ export function App() {
                   >
                     ⋮⋮
                   </button>
-                  <div className="fullscreen-tool-group">
+                  <div className="fullscreen-tool-group fullscreen-primary">
                     <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)">↖ <span>Q</span></button>
                     <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)">✥ <span>W</span></button>
                     <button type="button" className={editorTool === "rotate" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("rotate")} title="Rotacionar (E)">⟳ <span>E</span></button>
@@ -18787,21 +19121,21 @@ export function App() {
                     <button type="button" disabled={!selectedObject && !selectedSpline} onClick={() => requestCameraAction("focus")} title="Focar seleção (F)">◎ <span>F</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
-                  <div className="fullscreen-tool-group">
+                  <div className="fullscreen-tool-group fullscreen-panels">
                     <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("map"); }} title="Abrir Explorador">☰ <span>Explorar</span></button>
                     <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("library"); }} title="Criar/colocar objeto real">＋ <span>Objeto</span></button>
                     <button type="button" onClick={() => { setFullScreenPanel("explorer"); handleExplorerPanelTab("splineLibrary"); }} title="Criar/colocar spline real">⌇＋ <span>Spline</span></button>
                     <button type="button" onClick={() => setFullScreenPanel((current) => current === "inspector" ? undefined : "inspector")} title="Abrir Inspetor">ⓘ <span>Inspetor</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
-                  <div className="fullscreen-tool-group">
+                  <div className="fullscreen-tool-group fullscreen-history">
                     <button type="button" className={snapEnabled ? "active" : ""} onClick={() => setSnapEnabled((current) => !current)} title="Snap (N)">N</button>
                     <button type="button" disabled={undoPreviewStack.length === 0} onClick={handleUndoPreview} title="Desfazer (Ctrl+Z)">↶</button>
                     <button type="button" disabled={redoPreviewStack.length === 0} onClick={handleRedoPreview} title="Refazer (Ctrl+Y)">↷</button>
                     <button type="button" className="save" disabled={(previewEditCount === 0 && splinePreviewEditCount === 0) || busy} onClick={splinePreviewEditCount > 0 ? handleSaveSplinePreview : handleSavePreviewEdits} title="Salvar com backup (Ctrl+S)">✓ <span>Salvar</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
-                  <div className="fullscreen-tool-group compact">
+                  <div className="fullscreen-tool-group compact fullscreen-layers">
                     <button type="button" className={showTerrain ? "active" : ""} onClick={() => setShowTerrain((current) => !current)} title="Terreno">T</button>
                     <button type="button" className={showGrid ? "active" : ""} onClick={() => setShowGrid((current) => !current)} title="Grade (G)">G</button>
                     <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)">O</button>
@@ -21897,25 +22231,42 @@ export function App() {
 
           <aside
             className={[
-              "object-inspector",
+              "object-inspector city-drawer city-drawer-right",
               isFullScreen
                 ? "fullscreen-drawer fullscreen-right"
-                : "",
-              isFullScreen &&
-              fullScreenPanel === "inspector"
+                : "desktop-drawer",
+              (
+                isFullScreen
+                  ? fullScreenPanel ===
+                    "inspector"
+                  : desktopInspectorOpen
+              )
                 ? "open"
-                : ""
+                : "closed"
             ]
               .filter(Boolean)
               .join(" ")}
           >
-            {isFullScreen && (
+            {(
+              isFullScreen
+                ? fullScreenPanel ===
+                  "inspector"
+                : desktopInspectorOpen
+            ) && (
               <button
                 type="button"
-                className="fullscreen-drawer-close"
-                onClick={() =>
-                  setFullScreenPanel(undefined)
-                }
+                className="fullscreen-drawer-close city-drawer-close"
+                onClick={() => {
+                  if (isFullScreen) {
+                    setFullScreenPanel(
+                      undefined
+                    );
+                  } else {
+                    setDesktopInspectorOpen(
+                      false
+                    );
+                  }
+                }}
                 title="Fechar painel"
               >
                 ×
