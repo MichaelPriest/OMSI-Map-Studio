@@ -646,3 +646,12 @@ Expected manual Windows validation:
 3. confirm the outer ring remains summary/metadata only and does not inject objects into the viewport;
 4. move the camera into another tile and confirm the region changes automatically;
 5. use **View → Full map** and confirm the full mode can still be selected explicitly.
+
+
+### Fast movement between regions
+
+1. use **Automatic streaming**;
+2. move quickly across several tiles without waiting for each load to finish;
+3. confirm the final region matches the current active tile;
+4. confirm objects, splines, and terrain from an older response do not reappear later;
+5. switch to **Full map** while a regional read is active and confirm an old regional response does not replace the full state.
