@@ -683,3 +683,16 @@ Regional loading now has its first ring-based model:
 - visible objects and splines still come only from the fully loaded region so real picking and identity are preserved.
 
 This is an intermediate step. Derived geometry/material caching, a complete priority queue, LOD/instancing, and explicit Babylon/GPU resource eviction still belong to Phase A.
+
+
+### Streaming as the default mode
+
+Normal map opening now starts in **Automatic streaming** instead of **Full map**.
+
+- the active tile and its immediate neighbors form the full-content 3×3 region;
+- the next ring stays as lightweight summary/metadata;
+- moving the active tile automatically requests the next region;
+- heavy terrain payloads outside the active window are evicted from UI state;
+- **Full map** remains explicitly available for diagnostics, comparisons, and cases where the user really wants every tile loaded.
+
+This change is intentional: opening a large map should not require loading the entire scene before editing can begin.
