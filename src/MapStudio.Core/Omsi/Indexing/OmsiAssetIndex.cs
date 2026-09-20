@@ -484,7 +484,9 @@ public sealed class OmsiAssetIndex
                     counts[
                         (OmsiAssetKind)
                             reader.GetInt32(0)] =
-                        reader.GetInt32(1);
+                        checked(
+                            (int)reader
+                                .GetInt64(1));
                 }
             }
         }
@@ -749,9 +751,7 @@ public sealed class OmsiAssetIndex
                     when (
                         exception is
                             IOException or
-                            UnauthorizedAccessException or
-                            FileNotFoundException or
-                            DirectoryNotFoundException)
+                            UnauthorizedAccessException)
                 {
                     // A file can disappear while an external tool
                     // updates the OMSI installation. The next scan
@@ -842,8 +842,7 @@ public sealed class OmsiAssetIndex
                     when (
                         exception is
                             IOException or
-                            UnauthorizedAccessException or
-                            DirectoryNotFoundException)
+                            UnauthorizedAccessException)
                 {
                     continue;
                 }
