@@ -11020,6 +11020,12 @@ export function App() {
                   }
 
                   setActiveTile(tile);
+                  setTerrainEditPoint(
+                    undefined
+                  );
+                  setGoogleElevationGrid(
+                    undefined
+                  );
 
                   if (
                     mapLoadMode ===
