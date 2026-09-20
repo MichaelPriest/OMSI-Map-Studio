@@ -854,25 +854,37 @@ public sealed class D3D11NativeMapRenderer :
                 continue;
             }
 
+            NativeGpuTexture? texture =
+                null;
+
             var hasTexture =
+                false;
+
+            if (
                 batch.TexturePath is
                     { Length: > 0 }
-                    texturePath &&
-                _textureCache
-                    .TryGetValue(
-                        texturePath,
-                        out var texture);
+                    texturePath)
+            {
+                hasTexture =
+                    _textureCache
+                        .TryGetValue(
+                            texturePath,
+                            out texture);
+            }
 
             if (
                 batch.MaskTexturePath is
                     { Length: > 0 }
                     maskPath)
             {
+                NativeGpuTexture? maskTexture =
+                    null;
+
                 var hasMask =
                     _textureCache
                         .TryGetValue(
                             maskPath,
-                            out var maskTexture);
+                            out maskTexture);
 
                 if (
                     !hasTexture ||
