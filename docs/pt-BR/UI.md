@@ -821,3 +821,10 @@ A interface preserva a semântica do editor de mapas do OMSI: objetos `.sco`, sp
 O fluxo visual adota padrões de editores city-builder modernos: construção principal concentrada na parte inferior, biblioteca pesquisável, inspetor contextual e guias visuais de via/snap. Esses padrões servem apenas como referência de interação; nenhum asset proprietário de terceiros é reutilizado.
 
 O fullscreen desktop usa agora os limites físicos do monitor atual em vez de depender apenas de `WindowState.Maximized`. O menu compacto e a barra de status permanecem acessíveis. O viewport Babylon usa `ResizeObserver` no contêiner real para manter renderização e coordenadas de picking sincronizadas durante fullscreen, redimensionamento e movimentação de painéis.
+
+
+### Feedback de seleção e guia de via
+
+O viewport agora usa outline leve no item real sob o cursor e um outline distinto na seleção ativa. O efeito não substitui material/textura e não torna ghosts, gizmos, terreno ou overlays selecionáveis como objetos reais. Esse feedback segue a ideia do editor OMSI de deixar evidente qual item receberá o clique, sem aplicar o preenchimento azul intenso típico de alguns city-builders.
+
+Quando o criador fácil de rua/ponte está ativo, a barra inferior mostra um guia contextual compacto com a sequência início → fim → curva, estado de snap de pontas, conexão automática `previous/next`, confirmação dos endpoints encaixados e elevação no modo ponte.
