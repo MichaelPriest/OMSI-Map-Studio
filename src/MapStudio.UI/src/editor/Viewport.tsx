@@ -5269,16 +5269,25 @@ export function Viewport({
     let lastSelectionHoverAt = 0;
     let selectionHoverActive = false;
     let hoveredSelectionMesh:
-      | Mesh
+      | {
+          mesh: Mesh;
+          renderOutline: boolean;
+          outlineColor: Color3;
+          outlineWidth: number;
+        }
       | undefined;
 
     const clearSelectionHover = () => {
       if (
         hoveredSelectionMesh &&
-        !hoveredSelectionMesh.isDisposed()
+        !hoveredSelectionMesh.mesh.isDisposed()
       ) {
-        hoveredSelectionMesh.renderOutline =
-          false;
+        hoveredSelectionMesh.mesh.renderOutline =
+          hoveredSelectionMesh.renderOutline;
+        hoveredSelectionMesh.mesh.outlineColor =
+          hoveredSelectionMesh.outlineColor;
+        hoveredSelectionMesh.mesh.outlineWidth =
+          hoveredSelectionMesh.outlineWidth;
       }
 
       hoveredSelectionMesh = undefined;
@@ -5287,7 +5296,10 @@ export function Viewport({
     const setSelectionHoverMesh = (
       mesh: Mesh | undefined
     ) => {
-      if (hoveredSelectionMesh === mesh) {
+      if (
+        hoveredSelectionMesh?.mesh ===
+        mesh
+      ) {
         return;
       }
 
@@ -5297,11 +5309,22 @@ export function Viewport({
         return;
       }
 
-      hoveredSelectionMesh = mesh;
+      hoveredSelectionMesh = {
+        mesh,
+        renderOutline:
+          mesh.renderOutline,
+        outlineColor:
+          mesh.outlineColor.clone(),
+        outlineWidth:
+          mesh.outlineWidth
+      };
+
+      // Classic OMSI editor semantics: an unselected item under the
+      // mouse is highlighted blue.
       mesh.renderOutline = true;
       mesh.outlineColor =
-        new Color3(0.32, 0.68, 0.9);
-      mesh.outlineWidth = 0.022;
+        new Color3(0.12, 0.48, 1);
+      mesh.outlineWidth = 0.032;
     };
 
     const clampCameraRadius = (
@@ -5902,15 +5925,19 @@ export function Viewport({
         return undefined;
       }
 
+      // Babylon already tracks pointer coordinates relative to the canvas
+      // and applies its own engine/hardware scaling rules. Re-scaling the
+      // browser coordinates to render-buffer pixels made picking drift on
+      // Windows/WebView2 DPI scaling.
       const pointerX =
-        (event.clientX - rect.left) *
-        (engine.getRenderWidth() /
-          rect.width);
+        Number.isFinite(scene.pointerX)
+          ? scene.pointerX
+          : event.clientX - rect.left;
 
       const pointerY =
-        (event.clientY - rect.top) *
-        (engine.getRenderHeight() /
-          rect.height);
+        Number.isFinite(scene.pointerY)
+          ? scene.pointerY
+          : event.clientY - rect.top;
 
       const picks =
         scene.multiPick(
@@ -6120,10 +6147,12 @@ export function Viewport({
             closest
           );
 
-        const renderHeight =
+        // Keep fallback tolerance in CSS/screen pixels, not framebuffer
+        // pixels. This matches what the user actually sees and clicks.
+        const viewportHeight =
           Math.max(
             1,
-            engine.getRenderHeight()
+            rect.height
           );
 
         const threshold =
@@ -6138,7 +6167,7 @@ export function Viewport({
                 ) *
                 (
                   selectionPixelRadius /
-                  renderHeight
+                  viewportHeight
                 )
             )
           );
@@ -7703,6 +7732,73 @@ export function Viewport({
       > |
       undefined;
 
+    const selectedOutlineState:
+      Array<{
+        mesh: AbstractMesh;
+        renderOutline: boolean;
+        outlineColor: Color3;
+        outlineWidth: number;
+      }> = [];
+
+    const markSelectedMesh = (
+      mesh: AbstractMesh
+    ) => {
+      selectedOutlineState.push({
+        mesh,
+        renderOutline:
+          mesh.renderOutline,
+        outlineColor:
+          mesh.outlineColor.clone(),
+        outlineWidth:
+          mesh.outlineWidth
+      });
+
+      mesh.renderOutline = true;
+      mesh.outlineColor =
+        new Color3(
+          0.96,
+          0.12,
+          0.08
+        );
+      mesh.outlineWidth = 0.035;
+    };
+
+    for (const mesh of scene.meshes) {
+      const metadata =
+        mesh.metadata;
+
+      if (
+        showObjects &&
+        selectedObject &&
+        metadata?.mapStudioKind ===
+          "object" &&
+        metadata.placedObject &&
+        isSameObject(
+          metadata.placedObject as
+            OmsiPlacedObject,
+          selectedObject
+        )
+      ) {
+        markSelectedMesh(mesh);
+        continue;
+      }
+
+      if (
+        showSplines &&
+        selectedSpline &&
+        metadata?.mapStudioKind ===
+          "spline" &&
+        metadata.placedSpline &&
+        isSameSpline(
+          metadata.placedSpline as
+            OmsiPlacedSpline,
+          selectedSpline
+        )
+      ) {
+        markSelectedMesh(mesh);
+      }
+    }
+
     if (
       showGrid &&
       activeTile &&
@@ -7758,9 +7854,9 @@ export function Viewport({
 
       objectMarker.color =
         new Color3(
-          0.1,
-          0.92,
-          1
+          0.96,
+          0.12,
+          0.08
         );
       objectMarker.visibility =
         0.96;
@@ -7867,9 +7963,9 @@ export function Viewport({
 
         splineMarker.color =
           new Color3(
-            0.1,
-            0.92,
-            1
+            0.96,
+            0.12,
+            0.08
           );
         splineMarker.visibility =
           0.98;
@@ -7900,6 +7996,18 @@ export function Viewport({
         !activeTileMarker.isDisposed()
       ) {
         activeTileMarker.dispose();
+      }
+
+      for (const entry of
+        selectedOutlineState) {
+        if (!entry.mesh.isDisposed()) {
+          entry.mesh.renderOutline =
+            entry.renderOutline;
+          entry.mesh.outlineColor =
+            entry.outlineColor;
+          entry.mesh.outlineWidth =
+            entry.outlineWidth;
+        }
       }
     };
   }, [

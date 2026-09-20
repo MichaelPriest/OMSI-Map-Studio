@@ -12534,6 +12534,7 @@ export function App() {
 
       if (key === "q") {
         setEditorTool("select");
+        setSelectionMode("all");
         return;
       }
 
@@ -12598,6 +12599,7 @@ export function App() {
 
       if (event.key === "Escape") {
         setEditorTool("select");
+        setSelectionMode("all");
       }
     };
 
@@ -17980,10 +17982,11 @@ export function App() {
                 ? "tool active"
                 : "tool"
             }
-            title="Selecionar (Q)"
-            onClick={() =>
-              setEditorTool("select")
-            }
+            title="Selecionar qualquer item do mapa (Q)"
+            onClick={() => {
+              setEditorTool("select");
+              setSelectionMode("all");
+            }}
           >
             <MapStudioIcon name="select" size={20} />
           </button>
@@ -21263,7 +21266,7 @@ export function App() {
                     <MapStudioIcon name="drag" size={14} />
                   </button>
                   <div className="fullscreen-tool-group fullscreen-primary">
-                    <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)"><MapStudioIcon name="select" size={18} /> <span>Q</span></button>
+                    <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => { setEditorTool("select"); setSelectionMode("all"); }} title="Selecionar qualquer item (Q)"><MapStudioIcon name="select" size={18} /> <span>Q</span></button>
                     <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)"><MapStudioIcon name="move" size={18} /> <span>W</span></button>
                     <button type="button" className={editorTool === "rotate" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("rotate")} title="Rotacionar (E)"><MapStudioIcon name="rotate" size={18} /> <span>E</span></button>
                     <button type="button" onClick={() => requestCameraAction("fit")} title="Enquadrar mapa (Home)" aria-label="Enquadrar mapa"><MapStudioIcon name="fit-view" size={18} /></button>

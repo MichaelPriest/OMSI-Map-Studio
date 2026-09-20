@@ -1003,3 +1003,22 @@ When a structural change still requires rebuilding the Babylon `Scene`, the view
 ### Gizmos independent from the structural scene
 
 **Move** and **Rotate** now run in their own editing layer. Selecting another object/spline while either tool is active no longer rebuilds the whole map: the base item is temporarily hidden, a real editable copy receives the gizmo, and the base visualization is restored when editing or selection changes. Snap still uses the configured real values. The duplicate pointer-up selection fallback was also removed; all selection now goes through the same mesh + screen-proximity resolver.
+
+
+## Selection aligned with the classic OMSI editor workflow
+
+The primary selector follows the documented classic OMSI editor behavior:
+
+- **Select / Q** always returns to **All**, allowing direct object or spline clicks instead of remaining locked to the previous filter;
+- an unselected item under the pointer is highlighted **blue**;
+- the selected item is highlighted **red**;
+- left click selects an item;
+- clicking empty map space clears the selection;
+- a repeated quick click keeps the existing Map Studio focus/centering behavior;
+- **Objects**, **Splines** and **Terrain** remain available only when the user explicitly wants to restrict selection.
+
+Picking now uses pointer coordinates maintained by Babylon on the canvas. This avoids cursor/raycast drift in WebView2/Windows when display DPI scaling differs from 100%.
+
+### Explorer readability
+
+The desktop Explorer is wider and uses a larger typography scale for names, metadata, search, Library categories and the 3D preview. The change prioritizes readability on Windows displays using scaling above 100% without reducing the viewport to a narrow column.

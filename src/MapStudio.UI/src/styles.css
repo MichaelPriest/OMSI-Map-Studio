@@ -6306,3 +6306,168 @@ span.active {
   background: #071824;
   color: #7f9fb3;
 }
+
+
+/* Explorer readability pass — tuned for desktop/WebView2 DPI scaling.
+   The viewport remains dominant, but Explorer text must stay legible. */
+.map-explorer.city-drawer {
+  width: min(430px, calc(100% - 32px));
+  grid-template-rows: 42px minmax(0, 1fr) 48px;
+}
+
+.fullscreen-editor .map-explorer.city-drawer {
+  width: min(450px, calc(100% - 32px));
+}
+
+.map-explorer .explorer-tabs button {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.map-explorer .explorer-tree {
+  padding: 11px 10px;
+}
+
+.map-explorer .tree-root,
+.map-explorer .tree-node {
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.map-explorer .tree-node strong {
+  font-size: 11px;
+}
+
+.map-explorer .tree-node small {
+  font-size: 9.5px;
+}
+
+.map-explorer .explorer-search {
+  gap: 7px;
+  padding: 9px 10px;
+}
+
+.map-explorer .explorer-search input {
+  height: 34px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.map-explorer .explorer-search span {
+  font-size: 9.5px;
+}
+
+.map-explorer .explorer-object-list {
+  gap: 4px;
+  padding: 0 10px 10px;
+}
+
+.map-explorer .explorer-object {
+  gap: 4px;
+  padding: 9px 10px;
+}
+
+.map-explorer .explorer-object-name {
+  font-size: 11.5px;
+}
+
+.map-explorer .explorer-object small,
+.map-explorer .explorer-empty {
+  font-size: 9.5px;
+}
+
+.map-explorer .explorer-section-label {
+  padding: 9px 10px 7px;
+  font-size: 10px;
+}
+
+.map-explorer .asset-preview-card {
+  gap: 9px;
+  margin: 10px;
+  padding: 11px;
+}
+
+.map-explorer .asset-preview-heading strong {
+  font-size: 12px;
+}
+
+.map-explorer .asset-preview-heading span,
+.map-explorer .asset-preview-details span {
+  font-size: 9.5px;
+}
+
+.map-explorer .asset-preview-3d {
+  height: 200px;
+}
+
+.map-explorer .asset-preview-3d-badge {
+  font-size: 9px;
+}
+
+.map-explorer .scenery-library-list {
+  gap: 5px;
+  padding: 0 10px 10px;
+}
+
+.map-explorer .scenery-library-entry {
+  gap: 4px 9px;
+  padding: 9px;
+}
+
+.map-explorer .scenery-library-entry strong,
+.map-explorer .library-entry-copy strong {
+  font-size: 11px;
+}
+
+.map-explorer .scenery-library-entry span,
+.map-explorer .library-entry-copy span {
+  font-size: 9px;
+}
+
+.map-explorer .library-entry-copy small {
+  font-size: 8.5px;
+}
+
+.map-explorer .scenery-library-entry button,
+.map-explorer .library-view-tabs button,
+.map-explorer .library-filter-row select,
+.map-explorer .library-collection-create input {
+  font-size: 9px;
+}
+
+.map-explorer .library-group-tabs > button > span:not(.library-group-icon) {
+  font-size: 10px;
+}
+
+.map-explorer .library-group-tabs > button > small {
+  font-size: 8.5px;
+}
+
+.map-explorer .library-entry-badges em,
+.map-explorer .asset-inspector-grid > span,
+.map-explorer .asset-inspector-grid strong {
+  font-size: 8.5px;
+}
+
+.map-explorer .city-library-grid {
+  grid-template-columns:
+    repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  padding: 10px;
+}
+
+/* Make the active selection scope obvious. The main Select command resets
+   this to "Tudo", matching the original OMSI editor's click-any-object flow. */
+.citybuilder-selection-filters button {
+  min-width: 48px;
+  font-size: 9px;
+}
+
+.citybuilder-selection-filters::before {
+  content: "Seleção";
+  font-size: 8px;
+}
