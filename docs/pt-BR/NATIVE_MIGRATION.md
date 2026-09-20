@@ -253,3 +253,14 @@ A ferramenta SLI ganhou o modo **Continuar segmentos**, ativado por padrão na b
 Isso elimina a necessidade de voltar à biblioteca e clicar novamente no ponto de junção. Em modo reto, cada segmento seguinte exige apenas o novo ponto final. Em modo curva, o início já fica fixado e o usuário define o novo fim e o ponto de curvatura.
 
 O encadeamento deste checkpoint garante continuidade geométrica de posição e altura. A atualização automática dos campos `PreviousSplineId` / `NextSplineId` ficará em um refinamento separado do Core, porque o editor atual desses campos valida os vínculos existentes mas ainda não os reescreve.
+
+
+### Checkpoint N3.8 — encadeamento lógico Previous/Next
+
+A construção sequencial agora também preserva a ligação lógica usada pelo formato OMSI. O request do próximo segmento carrega o ID da spline anterior. Ao inserir, a nova seção `[spline]` recebe esse valor em `PreviousSplineId` e a spline anterior é atualizada para apontar o novo ID em `NextSplineId`.
+
+Foi adicionado ao Core um editor dedicado de links de spline. Ele valida ordinal, caminho, ID e os valores Previous/Next originais antes de escrever, evitando alterar silenciosamente um arquivo que mudou desde a leitura.
+
+Quando os dois segmentos estão no mesmo tile, a inserção e a atualização do link são combinadas no mesmo documento. Quando estão em tiles diferentes, os dois arquivos entram juntos no `SafeFileTransaction`; ambos recebem backup e a operação é tratada como uma única gravação transacional.
+
+Com isso, a ferramenta contínua deixa de produzir apenas segmentos geometricamente encostados: a sequência também fica encadeada pelos IDs do mapa OMSI.

@@ -253,3 +253,14 @@ The SLI tool now has a **Continue segments** mode, enabled by default in the lib
 This removes the need to return to the library and click the joint again. In straight mode, each following segment only needs its new endpoint. In curve mode, the start is already fixed and the user defines the new end plus the curvature control point.
 
 This checkpoint guarantees geometric position and height continuity. Automatic `PreviousSplineId` / `NextSplineId` rewriting remains a separate Core refinement because the current editor validates those links but does not rewrite them yet.
+
+
+### Checkpoint N3.8 — logical Previous/Next chaining
+
+Sequential construction now also preserves the logical links used by the OMSI format. The next segment request carries the previous spline ID. During insertion, the new `[spline]` section receives that value as `PreviousSplineId`, while the previous spline is updated to point to the new ID through `NextSplineId`.
+
+Core now has a dedicated spline-link editor. It validates ordinal, path, ID, and the original Previous/Next values before writing, preventing silent edits when a source file changed after it was read.
+
+When both segments live in the same tile, insertion and link update are combined in the same document. When they span different tiles, both files are included in the same `SafeFileTransaction`; each receives a backup and the operation is handled as one transactional write.
+
+This means continuous construction no longer creates only geometrically touching segments: the sequence is also linked through the OMSI map IDs.

@@ -6,6 +6,7 @@ namespace MapStudio.Renderer.Viewport;
 public sealed record NativeSplinePlacementRequest(
     OmsiTileReference Tile,
     string SplinePath,
+    int PreviousSplineId,
     double X,
     double Y,
     double Z,

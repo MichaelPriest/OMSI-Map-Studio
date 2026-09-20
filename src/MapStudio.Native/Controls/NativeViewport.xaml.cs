@@ -209,10 +209,13 @@ public sealed partial class NativeViewport : UserControl
         false;
 
     public bool SeedSplinePlacementStart(
-        System.Numerics.Vector3 start) =>
+        System.Numerics.Vector3 start,
+        int previousSplineId =
+            -1) =>
         _runtime
             ?.SeedSplinePlacementStart(
-                start) ??
+                start,
+                previousSplineId) ??
         false;
 
     public async Task<bool>

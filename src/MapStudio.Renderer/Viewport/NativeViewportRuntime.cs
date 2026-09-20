@@ -74,6 +74,8 @@ public sealed class NativeViewportRuntime : IDisposable
     private Vector3? _splineEndWorld;
     private Vector3? _splinePointerWorld;
     private NativeSplinePlacementShape? _splinePlacementShape;
+    private int _splinePreviousId =
+        -1;
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
 
@@ -153,7 +155,9 @@ public sealed class NativeViewportRuntime : IDisposable
         _splinePlacementStage;
 
     public bool SeedSplinePlacementStart(
-        Vector3 start)
+        Vector3 start,
+        int previousSplineId =
+            -1)
     {
         ThrowIfDisposed();
 
@@ -187,6 +191,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _splineStartWorld =
             start;
+
+        _splinePreviousId =
+            previousSplineId;
 
         _splineEndWorld =
             null;
@@ -257,6 +264,7 @@ public sealed class NativeViewportRuntime : IDisposable
         _splineEndWorld = null;
         _splinePointerWorld = null;
         _splinePlacementShape = null;
+        _splinePreviousId = -1;
         _splinePlacementStage =
             NativeSplinePlacementStage.AwaitingStart;
 
@@ -482,6 +490,7 @@ public sealed class NativeViewportRuntime : IDisposable
         _splineEndWorld = null;
         _splinePointerWorld = null;
         _splinePlacementShape = null;
+        _splinePreviousId = -1;
         _splinePlacementStage =
             NativeSplinePlacementStage.AwaitingStart;
 
@@ -2931,6 +2940,7 @@ public sealed class NativeViewportRuntime : IDisposable
         return new NativeSplinePlacementRequest(
             tile.Reference,
             _placementSplinePath,
+            _splinePreviousId,
             shape.Start.X -
                 tileX *
                 300.0,

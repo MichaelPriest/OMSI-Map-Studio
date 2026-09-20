@@ -570,10 +570,13 @@ public sealed partial class MainWindow : Window
                     ? "Inserindo spline curva com backup..."
                     : "Inserindo spline reta com backup...";
 
-            var snapshot =
+            var insertion =
                 await _session
                     .InsertSplineAsync(
                         request);
+
+            var snapshot =
+                insertion.Snapshot;
 
             await Viewport
                 .SetMapSnapshotAsync(
@@ -611,7 +614,8 @@ public sealed partial class MainWindow : Window
                 if (
                     restarted &&
                     Viewport.SeedSplinePlacementStart(
-                        request.EndWorld))
+                        request.EndWorld,
+                        insertion.SplineId))
                 {
                     PlaceAssetButton.IsEnabled =
                         true;

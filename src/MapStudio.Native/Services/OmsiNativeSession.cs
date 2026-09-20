@@ -398,7 +398,7 @@ public sealed class OmsiNativeSession
         return CurrentMap;
     }
 
-    public async Task<NativeMapSnapshot>
+    public async Task<NativeSplineInsertionResult>
         InsertSplineAsync(
             NativeSplinePlacementRequest request,
             CancellationToken cancellationToken = default)
@@ -422,9 +422,11 @@ public sealed class OmsiNativeSession
                 tile => tile.Content,
                 StringComparer.OrdinalIgnoreCase);
 
-        var contents =
-            new List<OmsiTileContent>(
-                snapshot.Map.Tiles.Count);
+        var mapContents =
+            new List<(
+                OmsiTileReference Reference,
+                OmsiTileContent Content)>(
+                    snapshot.Map.Tiles.Count);
 
         foreach (var tile in snapshot.Map.Tiles)
         {
@@ -435,7 +437,9 @@ public sealed class OmsiNativeSession
                     tile.RelativeMapPath,
                     out var loaded))
             {
-                contents.Add(loaded);
+                mapContents.Add(
+                    (tile, loaded));
+
                 continue;
             }
 
@@ -448,13 +452,21 @@ public sealed class OmsiNativeSession
                 continue;
             }
 
-            contents.Add(
-                await _tileReader
-                    .ReadContentAsync(
-                        path,
-                        cancellationToken)
-                    .ConfigureAwait(false));
+            mapContents.Add(
+                (
+                    tile,
+                    await _tileReader
+                        .ReadContentAsync(
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false)
+                ));
         }
+
+        var contents =
+            mapContents
+                .Select(item => item.Content)
+                .ToArray();
 
         var maxUsedId =
             contents
@@ -473,6 +485,9 @@ public sealed class OmsiNativeSession
             throw new InvalidDataException(
                 "splineIdExhausted");
         }
+
+        var newSplineId =
+            checked(maxUsedId + 1);
 
         var template =
             contents
@@ -506,7 +521,7 @@ public sealed class OmsiNativeSession
                 "splinePlacementTilePathInvalid");
         }
 
-        var document =
+        var targetDocument =
             await OmsiConfigParser
                 .ParseFileAsync(
                     targetPath,
@@ -515,12 +530,12 @@ public sealed class OmsiNativeSession
 
         var insertion =
             OmsiTileSplineInserter.Append(
-                document,
+                targetDocument,
                 new OmsiNewPlacedSpline(
                     headerValue,
                     request.SplinePath,
-                    checked(maxUsedId + 1),
-                    -1,
+                    newSplineId,
+                    request.PreviousSplineId,
                     -1,
                     request.X,
                     request.Z,
@@ -533,59 +548,189 @@ public sealed class OmsiNativeSession
                     false,
                     extraValues));
 
-        var backupDirectory =
-            Path.Combine(
-                snapshot.Map.DirectoryPath,
-                ".mapstudio-backups");
+        var targetBytes =
+            insertion.Bytes;
 
-        var backupPath =
-            Path.Combine(
-                backupDirectory,
-                Path.GetFileName(targetPath) +
-                "." +
-                DateTime.UtcNow.ToString(
-                    "yyyyMMdd-HHmmssfff") +
-                "." +
-                Guid.NewGuid().ToString("N") +
-                ".bak");
+        var writes =
+            new List<PendingFileWrite>();
+
+        var affectedPaths =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                request.Tile.RelativeMapPath
+            };
+
+        if (request.PreviousSplineId > 0)
+        {
+            OmsiTileReference? previousTile =
+                null;
+
+            OmsiPlacedSpline? previousSpline =
+                null;
+
+            foreach (var entry in mapContents)
+            {
+                var match =
+                    entry.Content.Splines
+                        .FirstOrDefault(
+                            item =>
+                                item.SplineId ==
+                                request.PreviousSplineId);
+
+                if (match is null)
+                {
+                    continue;
+                }
+
+                previousTile =
+                    entry.Reference;
+
+                previousSpline =
+                    match;
+
+                break;
+            }
+
+            if (
+                previousTile is null ||
+                previousSpline is null)
+            {
+                throw new InvalidDataException(
+                    "previousSplineNotFound");
+            }
+
+            if (previousSpline.NextSplineId > 0)
+            {
+                throw new InvalidDataException(
+                    "previousSplineAlreadyLinked");
+            }
+
+            if (
+                !OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    previousTile.RelativeMapPath,
+                    out var previousPath))
+            {
+                throw new InvalidDataException(
+                    "previousSplineTilePathInvalid");
+            }
+
+            var linkEdit =
+                new OmsiSplineLinkEdit(
+                    previousSpline.SourceSectionOrdinal,
+                    previousSpline.SplinePath,
+                    previousSpline.SplineId,
+                    previousSpline.PreviousSplineId,
+                    previousSpline.NextSplineId,
+                    previousSpline.IsHeightSpline,
+                    previousSpline.PreviousSplineId,
+                    newSplineId);
+
+            if (
+                string.Equals(
+                    previousPath,
+                    targetPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var combinedDocument =
+                    OmsiConfigParser.ParseBytes(
+                        targetBytes);
+
+                targetBytes =
+                    OmsiTileSplineLinkEditor
+                        .ApplyLinks(
+                            combinedDocument,
+                            [linkEdit])
+                        .Bytes;
+            }
+            else
+            {
+                var previousDocument =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            previousPath,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                var previousBytes =
+                    OmsiTileSplineLinkEditor
+                        .ApplyLinks(
+                            previousDocument,
+                            [linkEdit])
+                        .Bytes;
+
+                writes.Add(
+                    new PendingFileWrite(
+                        previousPath,
+                        CreateNativeBackupPath(
+                            snapshot.Map.DirectoryPath,
+                            previousPath),
+                        previousBytes));
+
+                affectedPaths.Add(
+                    previousTile.RelativeMapPath);
+            }
+        }
+
+        writes.Add(
+            new PendingFileWrite(
+                targetPath,
+                CreateNativeBackupPath(
+                    snapshot.Map.DirectoryPath,
+                    targetPath),
+                targetBytes));
 
         await SafeFileTransaction
             .WriteAllAsync(
-                [
-                    new PendingFileWrite(
-                        targetPath,
-                        backupPath,
-                        insertion.Bytes)
-                ],
+                writes,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var refreshedContent =
-            await _tileReader
-                .ReadContentAsync(
-                    targetPath,
-                    cancellationToken)
-                .ConfigureAwait(false);
+        var refreshed =
+            new List<NativeLoadedTile>(
+                snapshot.Tiles.Count);
+
+        foreach (var tile in snapshot.Tiles)
+        {
+            if (
+                !affectedPaths.Contains(
+                    tile.Reference.RelativeMapPath))
+            {
+                refreshed.Add(tile);
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    tile.Reference.RelativeMapPath,
+                    out var path))
+            {
+                throw new InvalidDataException(
+                    "splineReloadTilePathInvalid");
+            }
+
+            refreshed.Add(
+                new NativeLoadedTile(
+                    tile.Reference,
+                    await _tileReader
+                        .ReadContentAsync(
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false)));
+        }
 
         CurrentMap =
             snapshot with
             {
                 Tiles =
-                    snapshot.Tiles
-                        .Select(
-                            tile =>
-                                tile.Reference.X ==
-                                    request.Tile.X &&
-                                tile.Reference.Y ==
-                                    request.Tile.Y
-                                    ? new NativeLoadedTile(
-                                        tile.Reference,
-                                        refreshedContent)
-                                    : tile)
-                        .ToArray()
+                    refreshed.ToArray()
             };
 
-        return CurrentMap;
+        return new NativeSplineInsertionResult(
+            CurrentMap,
+            newSplineId);
     }
 
     public async Task<NativeMapSnapshot>
@@ -944,6 +1089,26 @@ public sealed class OmsiNativeSession
         _pendingTransforms.Clear();
 
         return snapshot;
+    }
+
+    private static string CreateNativeBackupPath(
+        string mapDirectory,
+        string targetPath)
+    {
+        var backupDirectory =
+            Path.Combine(
+                mapDirectory,
+                ".mapstudio-backups");
+
+        return Path.Combine(
+            backupDirectory,
+            Path.GetFileName(targetPath) +
+            "." +
+            DateTime.UtcNow.ToString(
+                "yyyyMMdd-HHmmssfff") +
+            "." +
+            Guid.NewGuid().ToString("N") +
+            ".bak");
     }
 
     private static string GetAssetIndexPath(
