@@ -107,6 +107,12 @@ The index should progressively cover:
 
 The index never replaces OMSI files. It is derived data and can be rebuilt.
 
+### Phase A implementation — first step
+
+The first implemented step uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
+
+Regional loading has also started moving from a fixed 3×3 concept to rings: the active 3×3 region is loaded fully while the outer 5×5 ring receives summary/metadata only. This is still an intermediate step toward the final streaming model described below.
+
 ### 3.2 Derived cache
 
 Cache may contain:
@@ -273,17 +279,20 @@ Legend:
 
 Highest priority before greatly expanding system count.
 
-Implement:
+Current Phase A status:
 
-- Asset Index;
-- persistent cache;
-- incremental invalidation;
-- tile streaming;
-- priority loading queue;
-- memory/GPU management;
-- safe instancing and LOD;
-- internal map-opening metrics;
-- cache diagnostics.
+- 🟡 **Asset Index:** SQLite v1 already indexes `.sco`, `.sli`, `.o3d`, `.x`, and textures under `Sceneryobjects`, `Splines`, and `Texture`;
+- 🟡 **persistent cache:** the index lives under `LocalApplicationData/OMSI Map Studio/Cache/<installation>/assets-v1.sqlite` and can be rebuilt;
+- 🟡 **incremental invalidation:** path, kind, size, and modification time distinguish new, changed, unchanged, and removed files;
+- 🟡 **indexed libraries:** object and spline catalogs can consume the persistent index and retain direct scanning as a safe fallback;
+- 🟡 **tile streaming:** Streaming 3×3 keeps rings 0–1 fully loaded and reads ring 2 as lightweight metadata; heavy terrain outside the active region is evicted from UI state;
+- ⬜ complete priority loading queue;
+- ⬜ complete memory/GPU management;
+- ⬜ safe instancing and LOD;
+- ⬜ complete internal map-opening metrics;
+- 🟡 cache diagnostics: Asset Index progress and counts are already shown on the OMSI installation screen.
+
+Derived geometry/material/thumbnail caching plus full GPU resource eviction/LOD are still required before Phase A can be marked ✅.
 
 Completion criteria:
 
