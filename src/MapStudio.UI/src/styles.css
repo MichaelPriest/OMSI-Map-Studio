@@ -1077,6 +1077,87 @@ code {
 }
 
 
+.tile-navigator {
+  position: absolute;
+  z-index: 9;
+  top: 12px;
+  left: 12px;
+  display: grid;
+  gap: 6px;
+  width: 178px;
+  padding: 9px;
+  border: 1px solid #28506f;
+  border-radius: 8px;
+  background: rgb(5 18 29 / 94%);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 34%);
+  color: #b8ccdc;
+  backdrop-filter: blur(8px);
+}
+
+.tile-navigator-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tile-navigator-title strong {
+  color: #e0effa;
+  font-size: 10px;
+}
+
+.tile-navigator-title span,
+.tile-navigator > small {
+  color: #7999b2;
+  font-size: 8px;
+}
+
+.tile-navigator-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.tile-navigator-grid button {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  min-width: 0;
+  height: 41px;
+  padding: 3px;
+  border: 1px solid #244b67;
+  border-radius: 5px;
+  background: #071521;
+  color: #aac4d7;
+  cursor: pointer;
+}
+
+.tile-navigator-grid button:hover:not(:disabled) {
+  border-color: #3b78a1;
+  background: #0a2234;
+}
+
+.tile-navigator-grid button.active {
+  border-color: #5ea5d1;
+  background: #103047;
+  color: #eff9ff;
+}
+
+.tile-navigator-grid button:disabled {
+  opacity: 0.24;
+  cursor: default;
+}
+
+.tile-navigator-grid button span {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.tile-navigator-grid button small {
+  font-size: 7px;
+  white-space: nowrap;
+}
+
 .terrain-edit-panel,
 .real-map-panel {
   position: absolute;
