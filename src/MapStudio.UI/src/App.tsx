@@ -7497,6 +7497,58 @@ export function App() {
     loadMapCatalog();
   };
 
+  const handleCreateCoordinateMap = () => {
+    if (
+      !rootPath ||
+      !bridgeAvailable ||
+      creatingCoordinateMap
+    ) {
+      return;
+    }
+
+    const latitude =
+      Number(
+        newMapLatitude
+          .replace(",", ".")
+      );
+
+    const longitude =
+      Number(
+        newMapLongitude
+          .replace(",", ".")
+      );
+
+    if (
+      !newMapDisplayName.trim() ||
+      !newMapDirectoryName.trim() ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude) ||
+      latitude < -90 ||
+      latitude > 90 ||
+      longitude < -180 ||
+      longitude > 180
+    ) {
+      setError(
+        errorMessages
+          .invalidCoordinateMapRequest
+      );
+      return;
+    }
+
+    setCreatingCoordinateMap(true);
+    setError(undefined);
+    setSaveNotice(undefined);
+
+    createCoordinateMap({
+      directoryName:
+        newMapDirectoryName.trim(),
+      displayName:
+        newMapDisplayName.trim(),
+      latitude,
+      longitude
+    });
+  };
+
   const handleOpenCatalogMap = (
     entry: OmsiMapCatalogEntry
   ) => {
