@@ -5100,7 +5100,8 @@ export function App() {
 
         if (placedObject) {
           setSelectedSpline(undefined);
-          setInspectorTab("general");
+          setSelectionMode("object");
+          setInspectorTab("transform");
         }
 
         setError(undefined);
@@ -5130,7 +5131,8 @@ export function App() {
 
         if (placedSpline) {
           setSelectedObject(undefined);
-          setInspectorTab("general");
+          setSelectionMode("spline");
+          setInspectorTab("transform");
         }
 
         setError(undefined);
