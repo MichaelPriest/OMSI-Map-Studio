@@ -24,6 +24,45 @@ public static class NativeTerrainSampler
         return 0;
     }
 
+    public static double GetHeightAtWorldPoint(
+        NativeSceneSnapshot scene,
+        double worldX,
+        double worldZ)
+    {
+        ArgumentNullException.ThrowIfNull(scene);
+
+        var tileX =
+            (int)Math.Floor(
+                worldX /
+                300.0);
+
+        var tileY =
+            (int)Math.Floor(
+                worldZ /
+                300.0);
+
+        foreach (var tile in scene.Tiles)
+        {
+            if (
+                tile.Reference.X != tileX ||
+                tile.Reference.Y != tileY)
+            {
+                continue;
+            }
+
+            return GetHeightAtLocalPoint(
+                tile,
+                worldX -
+                tileX *
+                300.0,
+                worldZ -
+                tileY *
+                300.0);
+        }
+
+        return 0;
+    }
+
     public static double GetHeightAtLocalPoint(
         NativeSceneTile tile,
         double localX,
@@ -44,21 +83,71 @@ public static class NativeTerrainSampler
             return 0;
         }
 
-        var gridX = Math.Clamp(localX / 300.0 * cellCount, 0, cellCount);
-        var gridY = Math.Clamp(localY / 300.0 * cellCount, 0, cellCount);
+        var gridX =
+            Math.Clamp(
+                localX /
+                300.0 *
+                cellCount,
+                0,
+                cellCount);
 
-        var column0 = (int)Math.Floor(gridX);
-        var row0 = (int)Math.Floor(gridY);
-        var column1 = Math.Min(cellCount, column0 + 1);
-        var row1 = Math.Min(cellCount, row0 + 1);
+        var gridY =
+            Math.Clamp(
+                localY /
+                300.0 *
+                cellCount,
+                0,
+                cellCount);
 
-        var fractionX = gridX - column0;
-        var fractionY = gridY - row0;
+        var column0 =
+            (int)Math.Floor(
+                gridX);
 
-        var height00 = terrain.Heights[row0 * sampleCount + column0];
-        var height10 = terrain.Heights[row0 * sampleCount + column1];
-        var height01 = terrain.Heights[row1 * sampleCount + column0];
-        var height11 = terrain.Heights[row1 * sampleCount + column1];
+        var row0 =
+            (int)Math.Floor(
+                gridY);
+
+        var column1 =
+            Math.Min(
+                cellCount,
+                column0 + 1);
+
+        var row1 =
+            Math.Min(
+                cellCount,
+                row0 + 1);
+
+        var fractionX =
+            gridX -
+            column0;
+
+        var fractionY =
+            gridY -
+            row0;
+
+        var height00 =
+            terrain.Heights[
+                row0 *
+                sampleCount +
+                column0];
+
+        var height10 =
+            terrain.Heights[
+                row0 *
+                sampleCount +
+                column1];
+
+        var height01 =
+            terrain.Heights[
+                row1 *
+                sampleCount +
+                column0];
+
+        var height11 =
+            terrain.Heights[
+                row1 *
+                sampleCount +
+                column1];
 
         if (
             !float.IsFinite(height00) ||
@@ -69,9 +158,19 @@ public static class NativeTerrainSampler
             return 0;
         }
 
-        var top = height00 + (height10 - height00) * fractionX;
-        var bottom = height01 + (height11 - height01) * fractionX;
+        var top =
+            height00 +
+            (height10 - height00) *
+            fractionX;
 
-        return top + (bottom - top) * fractionY;
+        var bottom =
+            height01 +
+            (height11 - height01) *
+            fractionX;
+
+        return
+            top +
+            (bottom - top) *
+            fractionY;
     }
 }

@@ -105,3 +105,14 @@ SCO objects that do not use `[absheight]` also receive bilinear terrain interpol
 Both the visible viewport and the selection pass now have their own Direct3D depth buffer. Selection no longer depends on triangle submission order: when objects/proxies overlap, the picking pixel keeps the nearest surface according to depth.
 
 The same depth rule is used by the visible frame and the ID buffer, bringing selector behavior closer to a native 3D editor.
+
+
+### Checkpoint N1.4 — perspective 3D camera and world-space geometry
+
+The native viewport no longer pre-projects terrain, splines, and O3D meshes into a 2D overview. GPU buffers now preserve real X/Y/Z world coordinates and the vertex shader receives a perspective `ViewProjection` matrix.
+
+The camera frames the loaded OMSI region, uses the mouse wheel for dolly/zoom, the middle button for map-plane panning, and the right button for 3D orbiting. Resize and DPI changes recalculate projection without rebuilding geometry.
+
+Terrain uses the OMSI elevation as the real Y axis. O3D objects keep SCO/O3D transforms and bilinear terrain placement before reaching the GPU. Splines and selection proxies are world-space as well.
+
+The visible frame and ID Buffer use the exact same camera matrix and their independent depth buffers, so picking remains aligned in 3D perspective.

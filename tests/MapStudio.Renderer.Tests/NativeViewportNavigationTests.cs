@@ -1,3 +1,4 @@
+using System.Numerics;
 using MapStudio.Renderer.Viewport;
 using Xunit;
 
@@ -6,28 +7,48 @@ namespace MapStudio.Renderer.Tests;
 public sealed class NativeViewportNavigationTests
 {
     [Fact]
-    public void WheelZoomChangesGpuTransformWithoutChangingSceneGeometry()
+    public void WheelZoomChangesCameraDistanceAndProjection()
     {
         var navigation =
             new NativeViewportNavigation();
+
+        var beforeDistance =
+            navigation.Distance;
+
+        var before =
+            navigation.GetViewProjection(
+                1280,
+                720);
 
         navigation.ZoomByWheel(
             120);
 
-        Assert.True(
-            navigation.Zoom > 1.0f);
+        var after =
+            navigation.GetViewProjection(
+                1280,
+                720);
 
-        Assert.Equal(
-            navigation.Zoom,
-            navigation
-                .ShaderTransform.Z);
+        Assert.True(
+            navigation.Distance <
+            beforeDistance);
+
+        Assert.True(
+            navigation.Zoom >
+            1.0f);
+
+        Assert.NotEqual(
+            before,
+            after);
     }
 
     [Fact]
-    public void PanConvertsPhysicalPixelsToClipSpace()
+    public void PanMovesCameraTargetInWorldSpace()
     {
         var navigation =
             new NativeViewportNavigation();
+
+        var before =
+            navigation.Target;
 
         navigation.PanPixels(
             100,
@@ -35,22 +56,47 @@ public sealed class NativeViewportNavigationTests
             1000,
             500);
 
-        Assert.InRange(
-            navigation.OffsetX,
-            0.199f,
-            0.201f);
-
-        Assert.InRange(
-            navigation.OffsetY,
-            -0.201f,
-            -0.199f);
+        Assert.NotEqual(
+            before,
+            navigation.Target);
     }
 
     [Fact]
-    public void ResetRestoresDefaultViewportTransform()
+    public void OrbitChangesYawAndPitch()
     {
         var navigation =
             new NativeViewportNavigation();
+
+        var yaw =
+            navigation.Yaw;
+
+        var pitch =
+            navigation.Pitch;
+
+        navigation.OrbitPixels(
+            50,
+            -25);
+
+        Assert.NotEqual(
+            yaw,
+            navigation.Yaw);
+
+        Assert.NotEqual(
+            pitch,
+            navigation.Pitch);
+    }
+
+    [Fact]
+    public void ResetRestoresPerspectiveHomeCamera()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var homeTarget =
+            navigation.Target;
+
+        var homeDistance =
+            navigation.Distance;
 
         navigation.ZoomByWheel(
             240);
@@ -61,18 +107,25 @@ public sealed class NativeViewportNavigationTests
             1000,
             500);
 
+        navigation.OrbitPixels(
+            20,
+            20);
+
         navigation.Reset();
 
         Assert.Equal(
-            1.0f,
-            navigation.Zoom);
+            homeTarget,
+            navigation.Target);
 
         Assert.Equal(
-            0.0f,
-            navigation.OffsetX);
+            homeDistance,
+            navigation.Distance);
 
-        Assert.Equal(
-            0.0f,
-            navigation.OffsetY);
+        Assert.NotEqual(
+            Matrix4x4.Identity,
+            navigation
+                .GetViewProjection(
+                    1280,
+                    720));
     }
 }

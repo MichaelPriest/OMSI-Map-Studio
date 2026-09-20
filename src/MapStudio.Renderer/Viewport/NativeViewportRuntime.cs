@@ -58,13 +58,15 @@ public sealed class NativeViewportRuntime : IDisposable
                     Device,
                     width,
                     height);
-
-            return;
+        }
+        else
+        {
+            Surface.Resize(
+                width,
+                height);
         }
 
-        Surface.Resize(
-            width,
-            height);
+        UpdateCameraTransform();
     }
 
     public async Task<
@@ -84,11 +86,10 @@ public sealed class NativeViewportRuntime : IDisposable
                     tiles,
                     Picking);
 
-        Navigation.Reset();
+        Navigation.FitToScene(
+            Scene);
 
-        MapRenderer.SetViewTransform(
-            Navigation
-                .ShaderTransform);
+        UpdateCameraTransform();
 
         var assets =
             await new NativeSceneryAssetLoader()
@@ -107,7 +108,8 @@ public sealed class NativeViewportRuntime : IDisposable
         var proxyGeometry =
             new NativePickingProxyGeometryBuilder()
                 .Build(
-                    Scene);
+                    Scene,
+                    assets);
 
         var terrainGeometry =
             new NativeTerrainTriangleGeometryBuilder()
@@ -152,10 +154,7 @@ public sealed class NativeViewportRuntime : IDisposable
         Navigation.ZoomByWheel(
             wheelDelta);
 
-        MapRenderer.SetViewTransform(
-            Navigation
-                .ShaderTransform);
-
+        UpdateCameraTransform();
         RenderInitialFrame();
     }
 
@@ -176,10 +175,21 @@ public sealed class NativeViewportRuntime : IDisposable
             Surface.Width,
             Surface.Height);
 
-        MapRenderer.SetViewTransform(
-            Navigation
-                .ShaderTransform);
+        UpdateCameraTransform();
+        RenderInitialFrame();
+    }
 
+    public void Orbit(
+        double deltaPixelX,
+        double deltaPixelY)
+    {
+        ThrowIfDisposed();
+
+        Navigation.OrbitPixels(
+            deltaPixelX,
+            deltaPixelY);
+
+        UpdateCameraTransform();
         RenderInitialFrame();
     }
 
@@ -189,10 +199,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         Navigation.Reset();
 
-        MapRenderer.SetViewTransform(
-            Navigation
-                .ShaderTransform);
-
+        UpdateCameraTransform();
         RenderInitialFrame();
     }
 
@@ -233,9 +240,7 @@ public sealed class NativeViewportRuntime : IDisposable
             return;
         }
 
-        if (
-            Scene is null ||
-            MapRenderer.VertexCount == 0)
+        if (Scene is null)
         {
             Surface.ClearAndPresent(
                 InitialClearColor);
@@ -245,6 +250,20 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.Render(
             Surface);
+    }
+
+    private void UpdateCameraTransform()
+    {
+        if (Surface is null)
+        {
+            return;
+        }
+
+        MapRenderer.SetViewProjection(
+            Navigation
+                .GetViewProjection(
+                    Surface.Width,
+                    Surface.Height));
     }
 
     private void ThrowIfDisposed()

@@ -59,5 +59,13 @@ public sealed class NativeTerrainTests
 
         Assert.Equal(2, geometry.TriangleCount);
         Assert.Equal(6, geometry.Vertices.Length);
+
+        Assert.Contains(
+            geometry.Vertices,
+            vertex =>
+                Math.Abs(
+                    vertex.Position.Y -
+                    30.0f) <
+                0.001f);
     }
 }

@@ -12,21 +12,21 @@ public sealed record NativePickingProxyGeometry(
 public sealed class NativePickingProxyGeometryBuilder
 {
     public NativePickingProxyGeometry Build(
-        NativeSceneSnapshot scene)
+        NativeSceneSnapshot scene,
+        IReadOnlyDictionary<
+            string,
+            NativeSceneryAsset>?
+            assets = null)
     {
         ArgumentNullException.ThrowIfNull(
             scene);
-
-        var projection =
-            NativeSceneProjection
-                .FromScene(scene);
 
         var vertices =
             new List<NativeMapVertex>(
                 Math.Max(
                     1024,
                     scene.SelectableCount *
-                    12));
+                    36));
 
         var ranges =
             new Dictionary<
@@ -40,8 +40,9 @@ public sealed class NativePickingProxyGeometryBuilder
                 vertices.Count;
 
             AppendObjectProxy(
+                scene,
                 entity,
-                projection,
+                assets,
                 vertices);
 
             ranges[
@@ -59,8 +60,8 @@ public sealed class NativePickingProxyGeometryBuilder
                 vertices.Count;
 
             AppendSplineProxy(
+                scene,
                 entity,
-                projection,
                 vertices);
 
             if (
@@ -81,60 +82,69 @@ public sealed class NativePickingProxyGeometryBuilder
     }
 
     private static void AppendObjectProxy(
+        NativeSceneSnapshot scene,
         NativeObjectEntity entity,
-        NativeSceneProjection projection,
+        IReadOnlyDictionary<
+            string,
+            NativeSceneryAsset>?
+            assets,
         List<NativeMapVertex> output)
     {
-        const double halfSize = 4.0;
+        var usesAbsoluteHeight =
+            assets is not null &&
+            assets.TryGetValue(
+                entity.Object
+                    .SceneryObjectPath,
+                out var asset) &&
+            asset.UsesAbsoluteHeight;
 
-        var left =
-            entity.WorldX -
-            halfSize;
+        var terrainOffset =
+            usesAbsoluteHeight
+                ? 0.0
+                : NativeTerrainSampler
+                    .GetHeightAtObject(
+                        scene,
+                        entity);
 
-        var right =
-            entity.WorldX +
-            halfSize;
+        var baseY =
+            entity.WorldY +
+            terrainOffset;
 
-        var top =
-            entity.WorldZ -
-            halfSize;
+        const float halfSize =
+            3.5f;
 
-        var bottom =
-            entity.WorldZ +
-            halfSize;
+        const float proxyHeight =
+            7.0f;
 
-        var color =
+        var min =
+            new Vector3(
+                entity.WorldX -
+                halfSize,
+                (float)baseY +
+                0.10f,
+                entity.WorldZ -
+                halfSize);
+
+        var max =
+            new Vector3(
+                entity.WorldX +
+                halfSize,
+                (float)baseY +
+                proxyHeight,
+                entity.WorldZ +
+                halfSize);
+
+        AppendBox(
+            min,
+            max,
             EncodePickingColor(
-                entity.PickingId);
-
-        AppendQuad(
-            projection
-                .ProjectTopDown(
-                    left,
-                    top,
-                    0.80f),
-            projection
-                .ProjectTopDown(
-                    right,
-                    top,
-                    0.80f),
-            projection
-                .ProjectTopDown(
-                    right,
-                    bottom,
-                    0.80f),
-            projection
-                .ProjectTopDown(
-                    left,
-                    bottom,
-                    0.80f),
-            color,
+                entity.PickingId),
             output);
     }
 
     private static void AppendSplineProxy(
+        NativeSceneSnapshot scene,
         NativeSplineEntity entity,
-        NativeSceneProjection projection,
         List<NativeMapVertex> output)
     {
         var spline =
@@ -163,6 +173,7 @@ public sealed class NativePickingProxyGeometryBuilder
 
         var previous =
             GetSplinePoint(
+                scene,
                 entity,
                 0);
 
@@ -173,6 +184,7 @@ public sealed class NativePickingProxyGeometryBuilder
         {
             var current =
                 GetSplinePoint(
+                    scene,
                     entity,
                     length *
                     index /
@@ -181,7 +193,6 @@ public sealed class NativePickingProxyGeometryBuilder
             AppendThickSegment(
                 previous,
                 current,
-                projection,
                 color,
                 output);
 
@@ -189,12 +200,10 @@ public sealed class NativePickingProxyGeometryBuilder
         }
     }
 
-    private static (
-        double X,
-        double Z)
-        GetSplinePoint(
-            NativeSplineEntity entity,
-            double distance)
+    private static Vector3 GetSplinePoint(
+        NativeSceneSnapshot scene,
+        NativeSplineEntity entity,
+        double distance)
     {
         var spline =
             entity.Spline;
@@ -238,27 +247,44 @@ public sealed class NativePickingProxyGeometryBuilder
         var sinYaw =
             Math.Sin(yaw);
 
-        return (
+        var worldX =
             entity.WorldX +
             localX * cosYaw +
-            localZ * sinYaw,
+            localZ * sinYaw;
+
+        var worldZ =
             entity.WorldZ -
             localX * sinYaw +
-            localZ * cosYaw);
+            localZ * cosYaw;
+
+        var worldY =
+            entity.WorldY +
+            NativeTerrainSampler
+                .GetHeightAtWorldPoint(
+                    scene,
+                    worldX,
+                    worldZ) +
+            0.45;
+
+        return new Vector3(
+            (float)worldX,
+            (float)worldY,
+            (float)worldZ);
     }
 
     private static void AppendThickSegment(
-        (double X, double Z) start,
-        (double X, double Z) end,
-        NativeSceneProjection projection,
+        Vector3 start,
+        Vector3 end,
         Vector4 color,
         List<NativeMapVertex> output)
     {
         var dx =
-            end.X - start.X;
+            end.X -
+            start.X;
 
         var dz =
-            end.Z - start.Z;
+            end.Z -
+            start.Z;
 
         var length =
             Math.Sqrt(
@@ -270,42 +296,63 @@ public sealed class NativePickingProxyGeometryBuilder
             return;
         }
 
-        const double halfWidth =
-            3.0;
+        const float halfWidth =
+            3.0f;
 
         var px =
-            -dz /
-            length *
-            halfWidth;
+            (float)(
+                -dz /
+                length *
+                halfWidth);
 
         var pz =
-            dx /
-            length *
-            halfWidth;
+            (float)(
+                dx /
+                length *
+                halfWidth);
 
         AppendQuad(
-            projection
-                .ProjectTopDown(
-                    start.X + px,
-                    start.Z + pz,
-                    0.75f),
-            projection
-                .ProjectTopDown(
-                    end.X + px,
-                    end.Z + pz,
-                    0.75f),
-            projection
-                .ProjectTopDown(
-                    end.X - px,
-                    end.Z - pz,
-                    0.75f),
-            projection
-                .ProjectTopDown(
-                    start.X - px,
-                    start.Z - pz,
-                    0.75f),
+            new Vector3(
+                start.X + px,
+                start.Y,
+                start.Z + pz),
+            new Vector3(
+                end.X + px,
+                end.Y,
+                end.Z + pz),
+            new Vector3(
+                end.X - px,
+                end.Y,
+                end.Z - pz),
+            new Vector3(
+                start.X - px,
+                start.Y,
+                start.Z - pz),
             color,
             output);
+    }
+
+    private static void AppendBox(
+        Vector3 min,
+        Vector3 max,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var a = new Vector3(min.X, min.Y, min.Z);
+        var b = new Vector3(max.X, min.Y, min.Z);
+        var c = new Vector3(max.X, min.Y, max.Z);
+        var d = new Vector3(min.X, min.Y, max.Z);
+        var e = new Vector3(min.X, max.Y, min.Z);
+        var f = new Vector3(max.X, max.Y, min.Z);
+        var g = new Vector3(max.X, max.Y, max.Z);
+        var h = new Vector3(min.X, max.Y, max.Z);
+
+        AppendQuad(a, d, c, b, color, output);
+        AppendQuad(e, f, g, h, color, output);
+        AppendQuad(a, b, f, e, color, output);
+        AppendQuad(b, c, g, f, color, output);
+        AppendQuad(c, d, h, g, color, output);
+        AppendQuad(d, a, e, h, color, output);
     }
 
     private static void AppendQuad(
@@ -316,40 +363,16 @@ public sealed class NativePickingProxyGeometryBuilder
         Vector4 color,
         List<NativeMapVertex> output)
     {
-        output.Add(
-            new NativeMapVertex(
-                a,
-                color));
-
-        output.Add(
-            new NativeMapVertex(
-                b,
-                color));
-
-        output.Add(
-            new NativeMapVertex(
-                c,
-                color));
-
-        output.Add(
-            new NativeMapVertex(
-                a,
-                color));
-
-        output.Add(
-            new NativeMapVertex(
-                c,
-                color));
-
-        output.Add(
-            new NativeMapVertex(
-                d,
-                color));
+        output.Add(new NativeMapVertex(a, color));
+        output.Add(new NativeMapVertex(b, color));
+        output.Add(new NativeMapVertex(c, color));
+        output.Add(new NativeMapVertex(a, color));
+        output.Add(new NativeMapVertex(c, color));
+        output.Add(new NativeMapVertex(d, color));
     }
 
-    private static Vector4
-        EncodePickingColor(
-            PickingId pickingId)
+    private static Vector4 EncodePickingColor(
+        PickingId pickingId)
     {
         var encoded =
             PickingColorCodec

@@ -23,14 +23,10 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11InputLayout _inputLayout;
-    private readonly ID3D11Buffer _viewTransformBuffer;
+    private readonly ID3D11Buffer _viewProjectionBuffer;
 
-    private Vector4 _viewTransform =
-        new(
-            0,
-            0,
-            1,
-            0);
+    private Matrix4x4 _viewProjection =
+        Matrix4x4.Identity;
 
     private ID3D11Buffer? _vertexBuffer;
     private int _vertexCount;
@@ -160,10 +156,10 @@ public sealed class D3D11NativeMapRenderer :
                     vertexShaderBytecode
                         .Span);
 
-        _viewTransformBuffer =
+        _viewProjectionBuffer =
             _deviceHost.Device
                 .CreateConstantBuffer<
-                    Vector4>();
+                    Matrix4x4>();
     }
 
     public int VertexCount =>
@@ -175,10 +171,11 @@ public sealed class D3D11NativeMapRenderer :
     public int TerrainTriangleVertexCount =>
         _terrainTriangleVertexCount;
 
-    public void SetViewTransform(
-        Vector4 transform)
+    public void SetViewProjection(
+        Matrix4x4 viewProjection)
     {
-        _viewTransform = transform;
+        _viewProjection =
+            viewProjection;
     }
 
     public void Upload(
@@ -376,7 +373,7 @@ public sealed class D3D11NativeMapRenderer :
                     .VSSetShader(
                         _vertexShader);
 
-                ApplyViewTransform(
+                ApplyViewProjection(
                     context);
 
                 context
@@ -523,7 +520,7 @@ public sealed class D3D11NativeMapRenderer :
                     .VSSetShader(
                         _vertexShader);
 
-                ApplyViewTransform(
+                ApplyViewProjection(
                     context);
 
                 context
@@ -629,16 +626,16 @@ public sealed class D3D11NativeMapRenderer :
             selected.Length;
     }
 
-    private void ApplyViewTransform(
+    private void ApplyViewProjection(
         ID3D11DeviceContext context)
     {
-        Span<Vector4> data =
-            stackalloc Vector4[1];
+        Span<Matrix4x4> data =
+            stackalloc Matrix4x4[1];
 
         data[0] =
-            _viewTransform;
+            _viewProjection;
 
-        _viewTransformBuffer
+        _viewProjectionBuffer
             .SetData(
                 context,
                 data,
@@ -647,7 +644,7 @@ public sealed class D3D11NativeMapRenderer :
         context
             .VSSetConstantBuffer(
                 0,
-                _viewTransformBuffer);
+                _viewProjectionBuffer);
     }
 
     private void ThrowIfDisposed()
@@ -682,7 +679,7 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _vertexBuffer?.Dispose();
-        _viewTransformBuffer.Dispose();
+        _viewProjectionBuffer.Dispose();
         _inputLayout.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();

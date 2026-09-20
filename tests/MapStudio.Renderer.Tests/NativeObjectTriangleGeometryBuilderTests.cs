@@ -10,7 +10,7 @@ namespace MapStudio.Renderer.Tests;
 public sealed class NativeObjectTriangleGeometryBuilderTests
 {
     [Fact]
-    public void BuildTransformsRealO3dTriangleIntoMapProjection()
+    public void BuildKeepsRealO3dTriangleInWorldSpace()
     {
         var tile =
             new OmsiTileReference(
@@ -153,13 +153,18 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
             {
                 Assert.InRange(
                     vertex.Position.X,
-                    -1.0f,
-                    1.0f);
+                    148.0f,
+                    152.0f);
 
                 Assert.InRange(
                     vertex.Position.Y,
-                    -1.0f,
-                    1.0f);
+                    1.999f,
+                    2.001f);
+
+                Assert.InRange(
+                    vertex.Position.Z,
+                    148.0f,
+                    152.0f);
             });
     }
 }

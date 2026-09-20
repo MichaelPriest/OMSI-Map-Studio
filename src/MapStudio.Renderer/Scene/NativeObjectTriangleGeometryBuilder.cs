@@ -45,10 +45,6 @@ public sealed class NativeObjectTriangleGeometryBuilder
         ArgumentNullException.ThrowIfNull(
             assets);
 
-        var projection =
-            NativeSceneProjection
-                .FromScene(scene);
-
         var vertices =
             new List<NativeMapVertex>(
                 64_000);
@@ -133,7 +129,6 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 AppendMesh(
                     entity,
                     mesh,
-                    projection,
                     terrainOffset,
                     vertices,
                     pickingVertices);
@@ -172,7 +167,6 @@ public sealed class NativeObjectTriangleGeometryBuilder
     private static void AppendMesh(
         NativeObjectEntity entity,
         NativeSceneryMeshAsset mesh,
-        NativeSceneProjection projection,
         double terrainOffset,
         List<NativeMapVertex> output,
         List<NativeMapVertex>
@@ -277,31 +271,14 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         local,
                         worldTransform);
 
-                // First native geometry checkpoint: project the real O3D
-                // triangles onto the same top-down map overview. The next
-                // camera checkpoint will keep these world vertices and move
-                // projection to the shader.
-                var clip =
-                    projection
-                        .ProjectTopDown(
-                            world.X,
-                            world.Z,
-                            depth:
-                                Math.Clamp(
-                                    0.55f -
-                                    world.Y *
-                                    0.0005f,
-                                    0.05f,
-                                    0.95f));
-
                 output.Add(
                     new NativeMapVertex(
-                        clip,
+                        world,
                         color));
 
                 pickingOutput.Add(
                     new NativeMapVertex(
-                        clip,
+                        world,
                         pickingColor));
             }
         }

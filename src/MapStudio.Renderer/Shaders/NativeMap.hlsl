@@ -1,6 +1,6 @@
-cbuffer ViewportTransform : register(b0)
+cbuffer ViewportCamera : register(b0)
 {
-    float4 ViewTransform;
+    row_major float4x4 ViewProjection;
 };
 
 struct VSInput
@@ -18,17 +18,17 @@ struct PSInput
 PSInput VSMain(VSInput input)
 {
     PSInput output;
-    float2 transformed =
-        input.Position.xy *
-        ViewTransform.z +
-        ViewTransform.xy;
 
     output.Position =
-        float4(
-            transformed,
-            input.Position.z,
-            1.0f);
-    output.Color = input.Color;
+        mul(
+            float4(
+                input.Position,
+                1.0f),
+            ViewProjection);
+
+    output.Color =
+        input.Color;
+
     return output;
 }
 

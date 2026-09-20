@@ -105,3 +105,14 @@ Objetos SCO que não usam `[absheight]` também voltam a receber interpolação 
 O viewport visível e o passe de seleção agora possuem depth buffer Direct3D próprio. A seleção deixa de depender da ordem em que os triângulos foram desenhados: quando objetos/proxies se sobrepõem, o pixel de picking preserva a superfície mais próxima segundo a profundidade.
 
 O mesmo critério é usado no frame visível e no ID buffer, aproximando o comportamento do seletor de um editor 3D nativo.
+
+
+### Checkpoint N1.4 — câmera 3D perspectiva e geometria em espaço mundial
+
+O viewport nativo deixou de pré-projetar terreno, splines e O3D em um overview 2D. Os buffers GPU agora preservam coordenadas mundiais X/Y/Z reais e o vertex shader recebe uma matriz `ViewProjection` perspectiva.
+
+A câmera enquadra a região OMSI carregada, usa roda do mouse para dolly/zoom, botão do meio para pan sobre o plano do mapa e botão direito para órbita 3D. Redimensionamento e DPI recalculam a projeção sem reconstruir a geometria.
+
+O terreno usa a altura OMSI como eixo Y real. Objetos O3D mantêm a transformação SCO/O3D e a interpolação bilinear do terreno antes de chegar à GPU. Splines e proxies de seleção também passaram para espaço mundial.
+
+O frame visível e o ID Buffer usam exatamente a mesma matriz de câmera e seus depth buffers independentes, portanto o picking continua alinhado na perspectiva 3D.

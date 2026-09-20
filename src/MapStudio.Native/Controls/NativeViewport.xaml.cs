@@ -15,6 +15,7 @@ public sealed partial class NativeViewport : UserControl
     private NativeViewportRuntime? _runtime;
     private bool _leftPressed;
     private bool _isPanning;
+    private bool _isOrbiting;
     private double _lastPanX;
     private double _lastPanY;
     private bool _swapChainBound;
@@ -271,13 +272,21 @@ public sealed partial class NativeViewport : UserControl
 
         var panPressed =
             point.Properties
-                .IsMiddleButtonPressed ||
+                .IsMiddleButtonPressed;
+
+        var orbitPressed =
             point.Properties
                 .IsRightButtonPressed;
 
-        if (panPressed)
+        if (
+            panPressed ||
+            orbitPressed)
         {
-            _isPanning = true;
+            _isPanning =
+                panPressed;
+
+            _isOrbiting =
+                orbitPressed;
             _lastPanX =
                 point.Position.X;
             _lastPanY =
@@ -288,7 +297,9 @@ public sealed partial class NativeViewport : UserControl
 
             PointerStatusChanged?.Invoke(
                 this,
-                "Pan nativo ativo");
+                _isOrbiting
+                    ? "Órbita 3D nativa ativa"
+                    : "Pan 3D nativo ativo");
 
             e.Handled = true;
             return;
@@ -382,7 +393,10 @@ public sealed partial class NativeViewport : UserControl
             $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
 
         if (
-            _isPanning &&
+            (
+                _isPanning ||
+                _isOrbiting
+            ) &&
             _runtime is not null)
         {
             var scaleX =
@@ -417,13 +431,24 @@ public sealed partial class NativeViewport : UserControl
             _lastPanY =
                 point.Position.Y;
 
-            _runtime.Pan(
-                deltaX,
-                deltaY);
+            if (_isOrbiting)
+            {
+                _runtime.Orbit(
+                    deltaX,
+                    deltaY);
+            }
+            else
+            {
+                _runtime.Pan(
+                    deltaX,
+                    deltaY);
+            }
 
             PointerStatusChanged?.Invoke(
                 this,
-                $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
+                _isOrbiting
+                    ? $"Órbita · zoom {_runtime.Navigation.Zoom:F2}×"
+                    : $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
 
             e.Handled = true;
             return;
@@ -443,7 +468,8 @@ public sealed partial class NativeViewport : UserControl
     {
         if (
             _leftPressed ||
-            _isPanning)
+            _isPanning ||
+            _isOrbiting)
         {
             InputSurface.ReleasePointerCapture(
                 e.Pointer);
@@ -451,6 +477,7 @@ public sealed partial class NativeViewport : UserControl
 
         _leftPressed = false;
         _isPanning = false;
+        _isOrbiting = false;
     }
 
     private void OnPointerWheelChanged(

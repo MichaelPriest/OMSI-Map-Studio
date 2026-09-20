@@ -15,8 +15,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
     {
         ArgumentNullException.ThrowIfNull(scene);
 
-        var projection = NativeSceneProjection.FromScene(scene);
-        var vertices = new List<NativeMapVertex>(32_768);
+        var vertices =
+            new List<NativeMapVertex>(
+                32_768);
 
         foreach (var tile in scene.Tiles)
         {
@@ -67,37 +68,83 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     var z0 = originZ + row * spacing;
                     var z1 = z0 + spacing;
 
-                    var averageHeight = (h00 + h10 + h01 + h11) / 4.0f;
-                    var color = GetTerrainColor(averageHeight);
+                    var averageHeight =
+                        (h00 + h10 + h01 + h11) /
+                        4.0f;
 
-                    AppendTriangle(projection, x0, z0, h00, x1, z1, h11, x1, z0, h10, color, vertices);
-                    AppendTriangle(projection, x0, z0, h00, x0, z1, h01, x1, z1, h11, color, vertices);
+                    var color =
+                        GetTerrainColor(
+                            averageHeight);
+
+                    AppendTriangle(
+                        x0, z0, h00,
+                        x1, z1, h11,
+                        x1, z0, h10,
+                        color,
+                        vertices);
+
+                    AppendTriangle(
+                        x0, z0, h00,
+                        x0, z1, h01,
+                        x1, z1, h11,
+                        color,
+                        vertices);
                 }
             }
         }
 
-        return new NativeTerrainTriangleGeometry(vertices.ToArray());
+        return new NativeTerrainTriangleGeometry(
+            vertices.ToArray());
     }
 
     private static void AppendTriangle(
-        NativeSceneProjection projection,
-        double x0, double z0, float height0,
-        double x1, double z1, float height1,
-        double x2, double z2, float height2,
+        double x0,
+        double z0,
+        float height0,
+        double x1,
+        double z1,
+        float height1,
+        double x2,
+        double z2,
+        float height2,
         Vector4 color,
         List<NativeMapVertex> output)
     {
-        output.Add(new NativeMapVertex(projection.ProjectTopDown(x0, z0, GetDepth(height0)), color));
-        output.Add(new NativeMapVertex(projection.ProjectTopDown(x1, z1, GetDepth(height1)), color));
-        output.Add(new NativeMapVertex(projection.ProjectTopDown(x2, z2, GetDepth(height2)), color));
+        output.Add(
+            new NativeMapVertex(
+                new Vector3(
+                    (float)x0,
+                    height0,
+                    (float)z0),
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                new Vector3(
+                    (float)x1,
+                    height1,
+                    (float)z1),
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                new Vector3(
+                    (float)x2,
+                    height2,
+                    (float)z2),
+                color));
     }
 
-    private static float GetDepth(float height) =>
-        Math.Clamp(0.92f - height * 0.00025f, 0.70f, 0.96f);
-
-    private static Vector4 GetTerrainColor(float height)
+    private static Vector4 GetTerrainColor(
+        float height)
     {
-        var normalized = Math.Clamp(0.5f + height / 120.0f, 0.0f, 1.0f);
+        var normalized =
+            Math.Clamp(
+                0.5f +
+                height /
+                120.0f,
+                0.0f,
+                1.0f);
 
         return new Vector4(
             0.10f + normalized * 0.08f,
