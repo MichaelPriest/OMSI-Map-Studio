@@ -948,3 +948,15 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - transformação de splines permanece em grade de 2 colunas para acomodar comprimento, raio e gradientes;
 - botões de prévia, copiar, excluir, salvar, nivelar, vínculos e descartar passam a usar ações SVG consistentes;
 - todos os handlers, validações preservativas e fluxos de backup permanecem inalterados.
+
+
+### Viewport visual v2
+
+- seleção ativa usa outline ciano mais forte enquanto hover permanece mais discreto;
+- marcador de objeto e eixo de spline selecionados seguem a mesma cor de seleção;
+- grade normal foi suavizada, tiles ausentes continuam destacados em vermelho e o tile ativo permanece verde;
+- splines não selecionadas ficam visualmente mais leves e a spline ativa recebe maior contraste;
+- o viewport exibe um cartão compacto com tipo/ID do item selecionado, nome do asset, ferramenta atual e estado do Snap;
+- o gizmo Babylon usa `scaleRatio` levemente maior para facilitar a captura dos eixos sem alterar os valores de transformação;
+- o diagnóstico técnico da seleção passou a ser recolhível para não cobrir o mapa durante edição normal;
+- picking, fallback geométrico, Snap, transformação e persistência continuam usando a mesma lógica existente.

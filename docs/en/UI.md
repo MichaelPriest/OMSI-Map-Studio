@@ -948,3 +948,15 @@ All behavior remains connected to real editor state; no fake commands are introd
 - spline transforms keep a 2-column grid to fit length, radius, and gradients;
 - preview, copy, delete, save, level, link, and discard actions now use consistent SVG controls;
 - all existing handlers, preservative validation, and backup flows remain unchanged.
+
+
+### Viewport visual v2
+
+- active selection uses a stronger cyan outline while hover remains more subtle;
+- selected object markers and spline axes follow the same selection color;
+- the normal grid is softer, missing tiles remain red, and the active tile remains green;
+- unselected splines are visually lighter while the active spline gets stronger contrast;
+- the viewport shows a compact real-state card with selected type/ID, asset name, current tool, and Snap state;
+- Babylon gizmos use a slightly larger `scaleRatio` to make axes easier to grab without changing transform values;
+- technical selection diagnostics are now collapsible so they do not cover the map during normal editing;
+- picking, geometric fallback, Snap, transform, and persistence continue using the same existing logic.
