@@ -988,3 +988,8 @@ O `Engine` do Babylon permanece associado ao canvas durante atualizações norma
 ### Overlay de seleção desacoplado
 
 A seleção visual foi separada da reconstrução estrutural da cena. Em modo **Selecionar**, trocar de objeto ou spline atualiza apenas o contorno/guia de seleção; o mapa, terreno, objetos e perfis já renderizados permanecem na cena. A reconstrução estrutural continua reservada para mudanças que realmente alteram conteúdo, visibilidade ou edição com gizmos. Isso aproxima o comportamento do editor clássico do OMSI e reduz interrupções ao clicar repetidamente no cenário.
+
+
+### Ações de câmera sem reconstrução da cena
+
+Perspectiva, topo, enquadrar, focar e centralizar em tile agora operam diretamente sobre a câmera Babylon já existente. Esses comandos não entram mais na lista de dependências que reconstrói a cena 3D, evitando apagar e recriar terreno/objetos apenas porque o usuário mudou a visão.

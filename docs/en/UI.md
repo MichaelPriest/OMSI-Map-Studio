@@ -988,3 +988,8 @@ The Babylon `Engine` now stays attached to the canvas during normal state update
 ### Decoupled selection overlay
 
 The visual selection layer is now separate from structural scene rebuilding. In **Select** mode, choosing another object or spline updates only the selection outline/guide; the map, terrain, objects and already rendered profiles remain in the scene. Structural rebuilding is reserved for changes that actually alter content, visibility or gizmo editing. This is closer to the classic OMSI editor workflow and reduces interruptions while clicking through scenery.
+
+
+### Camera actions without scene rebuilding
+
+Perspective, top, fit, focus and tile-centering commands now operate directly on the existing Babylon camera. These commands no longer participate in the dependency list that rebuilds the 3D scene, avoiding terrain/object teardown just because the user changed the view.

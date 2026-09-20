@@ -4019,6 +4019,18 @@ export function Viewport({
     useRef<boolean | undefined>(undefined);
   const sceneRef =
     useRef<Scene | undefined>(undefined);
+  const cameraRef =
+    useRef<ArcRotateCamera | undefined>(
+      undefined
+    );
+  const defaultCameraTargetRef =
+    useRef<Vector3 | undefined>(
+      undefined
+    );
+  const defaultCameraRadiusRef =
+    useRef<number | undefined>(
+      undefined
+    );
   const selectedObjectRef =
     useRef(selectedObject);
   const selectedSplineRef =
@@ -4300,15 +4312,13 @@ export function Viewport({
         radius * 4
       );
 
-    const hasNewCameraAction =
-      cameraAction !== undefined &&
-      cameraAction.token !==
-        lastCameraActionTokenRef.current;
+    cameraRef.current = camera;
+    defaultCameraTargetRef.current =
+      target.clone();
+    defaultCameraRadiusRef.current =
+      radius;
 
-    if (
-      !hasNewCameraAction &&
-      cameraStateRef.current
-    ) {
+    if (cameraStateRef.current) {
       const state =
         cameraStateRef.current;
 
@@ -4331,204 +4341,6 @@ export function Viewport({
           state.target.z
         )
       );
-    } else if (
-      cameraAction?.type ===
-        "perspective"
-    ) {
-      camera.alpha =
-        -Math.PI / 2;
-      camera.beta =
-        Math.PI / 3;
-    } else if (
-      cameraAction?.type === "top"
-    ) {
-      camera.alpha =
-        -Math.PI / 2;
-      camera.beta =
-        0.01;
-    } else if (
-      cameraAction?.type === "focus"
-    ) {
-      const focusObject =
-        selectedObjectRef.current;
-      const focusSpline =
-        selectedSplineRef.current;
-
-      if (focusObject) {
-        camera.setTarget(
-          getObjectWorldPosition(
-            focusObject,
-            objectGeometryByPath[
-              focusObject
-                .sceneryObjectPath
-            ],
-            tiles
-          )
-        );
-        camera.radius =
-          usesWorldCoordinates
-            ? 4
-            : 55;
-      } else if (focusSpline) {
-        camera.setTarget(
-          getSplineFrame(
-            focusSpline,
-            focusSpline.length / 2
-          ).center
-        );
-        camera.radius =
-          usesWorldCoordinates
-            ? 4
-            : Math.max(
-                40,
-                Math.min(
-                  180,
-                  focusSpline.length *
-                    1.5
-                )
-              );
-      } else if (
-        pendingPlacement
-      ) {
-        camera.setTarget(
-          new Vector3(
-            pendingPlacement.tileX *
-              300 +
-              pendingPlacement.x,
-            pendingPlacement.z,
-            pendingPlacement.tileY *
-              300 +
-              pendingPlacement.y
-          )
-        );
-        camera.radius = 45;
-      } else if (
-        pendingSplinePlacement
-      ) {
-        const previewSpline:
-          OmsiPlacedSpline = {
-            tileX:
-              pendingSplinePlacement
-                .targetTileX,
-            tileY:
-              pendingSplinePlacement
-                .targetTileY,
-            headerValue: "",
-            splinePath:
-              splinePlacementTemplate
-                ?.splinePath ?? "",
-            splineId: -1,
-            sourceSectionOrdinal: -1,
-            previousSplineId: -1,
-            nextSplineId: -1,
-            x:
-              pendingSplinePlacement.x,
-            y:
-              pendingSplinePlacement.y,
-            z:
-              pendingSplinePlacement.z,
-            rotation:
-              pendingSplinePlacement
-                .rotation,
-            length:
-              pendingSplinePlacement
-                .length,
-            radius:
-              pendingSplinePlacement
-                .radius,
-            gradientStart:
-              pendingSplinePlacement
-                .gradientStart,
-            gradientEnd:
-              pendingSplinePlacement
-                .gradientEnd,
-            isHeightSpline:
-              splinePlacementTemplate
-                ?.isHeightSpline ??
-              false
-          };
-
-        camera.setTarget(
-          getSplineFrame(
-            previewSpline,
-            previewSpline.length / 2
-          ).center
-        );
-
-        camera.radius =
-          Math.max(
-            40,
-            Math.min(
-              180,
-              Math.max(
-                20,
-                previewSpline.length
-              ) *
-                1.5
-            )
-          );
-      }
-    } else if (
-      cameraAction?.type === "tile" &&
-      Number.isFinite(
-        cameraAction.tileX
-      ) &&
-      Number.isFinite(
-        cameraAction.tileY
-      ) &&
-      !usesWorldCoordinates
-    ) {
-      const tileX =
-        cameraAction.tileX!;
-      const tileY =
-        cameraAction.tileY!;
-
-      const centerX =
-        tileX * 300 +
-        150;
-      const centerZ =
-        tileY * 300 +
-        150;
-
-      const centerHeight =
-        getTerrainHeightAtWorldPoint(
-          tiles,
-          centerX,
-          centerZ
-        );
-
-      camera.setTarget(
-        new Vector3(
-          centerX,
-          centerHeight,
-          centerZ
-        )
-      );
-
-      const previousRadius =
-        cameraStateRef.current
-          ?.radius;
-
-      camera.radius =
-        Math.min(
-          camera.upperRadiusLimit ??
-            radius,
-          Math.max(
-            90,
-            previousRadius ??
-              240
-          )
-        );
-    } else if (
-      cameraAction?.type === "fit"
-    ) {
-      camera.setTarget(target);
-      camera.radius = radius;
-    }
-
-    if (cameraAction) {
-      lastCameraActionTokenRef.current =
-        cameraAction.token;
     }
 
     createOmsiSky(
@@ -8157,6 +7969,13 @@ export function Viewport({
           undefined;
       }
 
+      if (
+        cameraRef.current === camera
+      ) {
+        cameraRef.current =
+          undefined;
+      }
+
       scene.dispose();
     };
   }, [
@@ -8178,7 +7997,6 @@ export function Viewport({
     showAllSplineProfiles,
     nightPreviewEnabled,
     skyTextureAsset,
-    cameraAction,
     placementAssetPath,
     placementGeometry,
     pendingPlacement,
@@ -8442,6 +8260,260 @@ export function Viewport({
     selectedSpline,
     objectGeometryByPath,
     tiles
+  ]);
+
+  useEffect(() => {
+    const camera =
+      cameraRef.current;
+
+    if (
+      !camera ||
+      !cameraAction ||
+      cameraAction.token ===
+        lastCameraActionTokenRef.current
+    ) {
+      return;
+    }
+
+    const clampRadius = (
+      nextRadius: number
+    ) =>
+      Math.min(
+        camera.upperRadiusLimit ??
+          nextRadius,
+        Math.max(
+          camera.lowerRadiusLimit ??
+            nextRadius,
+          nextRadius
+        )
+      );
+
+    if (
+      cameraAction.type ===
+      "perspective"
+    ) {
+      camera.alpha =
+        -Math.PI / 2;
+      camera.beta =
+        Math.PI / 3;
+    } else if (
+      cameraAction.type === "top"
+    ) {
+      camera.alpha =
+        -Math.PI / 2;
+      camera.beta = 0.01;
+    } else if (
+      cameraAction.type === "focus"
+    ) {
+      const focusObject =
+        selectedObjectRef.current;
+      const focusSpline =
+        selectedSplineRef.current;
+
+      if (focusObject) {
+        camera.setTarget(
+          getObjectWorldPosition(
+            focusObject,
+            objectGeometryByPath[
+              focusObject
+                .sceneryObjectPath
+            ],
+            tiles
+          )
+        );
+        camera.radius =
+          clampRadius(
+            usesWorldCoordinates
+              ? 4
+              : 55
+          );
+      } else if (focusSpline) {
+        camera.setTarget(
+          getSplineFrame(
+            focusSpline,
+            focusSpline.length / 2
+          ).center
+        );
+        camera.radius =
+          clampRadius(
+            usesWorldCoordinates
+              ? 4
+              : Math.max(
+                  40,
+                  Math.min(
+                    180,
+                    focusSpline.length *
+                      1.5
+                  )
+                )
+          );
+      } else if (
+        pendingPlacement
+      ) {
+        camera.setTarget(
+          new Vector3(
+            pendingPlacement.tileX *
+              300 +
+              pendingPlacement.x,
+            pendingPlacement.z,
+            pendingPlacement.tileY *
+              300 +
+              pendingPlacement.y
+          )
+        );
+        camera.radius =
+          clampRadius(45);
+      } else if (
+        pendingSplinePlacement
+      ) {
+        const previewSpline:
+          OmsiPlacedSpline = {
+            tileX:
+              pendingSplinePlacement
+                .targetTileX,
+            tileY:
+              pendingSplinePlacement
+                .targetTileY,
+            headerValue: "",
+            splinePath:
+              splinePlacementTemplate
+                ?.splinePath ?? "",
+            splineId: -1,
+            sourceSectionOrdinal: -1,
+            previousSplineId: -1,
+            nextSplineId: -1,
+            x:
+              pendingSplinePlacement.x,
+            y:
+              pendingSplinePlacement.y,
+            z:
+              pendingSplinePlacement.z,
+            rotation:
+              pendingSplinePlacement
+                .rotation,
+            length:
+              pendingSplinePlacement
+                .length,
+            radius:
+              pendingSplinePlacement
+                .radius,
+            gradientStart:
+              pendingSplinePlacement
+                .gradientStart,
+            gradientEnd:
+              pendingSplinePlacement
+                .gradientEnd,
+            isHeightSpline:
+              splinePlacementTemplate
+                ?.isHeightSpline ??
+              false
+          };
+
+        camera.setTarget(
+          getSplineFrame(
+            previewSpline,
+            previewSpline.length / 2
+          ).center
+        );
+
+        camera.radius =
+          clampRadius(
+            Math.max(
+              40,
+              Math.min(
+                180,
+                Math.max(
+                  20,
+                  previewSpline.length
+                ) *
+                  1.5
+              )
+            )
+          );
+      }
+    } else if (
+      cameraAction.type === "tile" &&
+      Number.isFinite(
+        cameraAction.tileX
+      ) &&
+      Number.isFinite(
+        cameraAction.tileY
+      ) &&
+      !usesWorldCoordinates
+    ) {
+      const tileX =
+        cameraAction.tileX!;
+      const tileY =
+        cameraAction.tileY!;
+
+      const centerX =
+        tileX * 300 + 150;
+      const centerZ =
+        tileY * 300 + 150;
+      const centerHeight =
+        getTerrainHeightAtWorldPoint(
+          tiles,
+          centerX,
+          centerZ
+        );
+
+      camera.setTarget(
+        new Vector3(
+          centerX,
+          centerHeight,
+          centerZ
+        )
+      );
+
+      camera.radius =
+        clampRadius(
+          Math.max(
+            90,
+            camera.radius
+          )
+        );
+    } else if (
+      cameraAction.type === "fit"
+    ) {
+      const target =
+        defaultCameraTargetRef.current;
+      const radius =
+        defaultCameraRadiusRef.current;
+
+      if (target) {
+        camera.setTarget(
+          target
+        );
+      }
+
+      if (radius !== undefined) {
+        camera.radius =
+          clampRadius(radius);
+      }
+    }
+
+    lastCameraActionTokenRef.current =
+      cameraAction.token;
+
+    cameraStateRef.current = {
+      alpha: camera.alpha,
+      beta: camera.beta,
+      radius: camera.radius,
+      target: {
+        x: camera.target.x,
+        y: camera.target.y,
+        z: camera.target.z
+      }
+    };
+  }, [
+    sceneRevision,
+    cameraAction,
+    usesWorldCoordinates,
+    tiles,
+    objectGeometryByPath,
+    pendingPlacement,
+    pendingSplinePlacement,
+    splinePlacementTemplate
   ]);
 
   // The scene effect above intentionally survives ordinary App renders
