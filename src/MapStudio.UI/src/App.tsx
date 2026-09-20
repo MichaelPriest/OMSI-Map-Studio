@@ -23185,17 +23185,35 @@ export function App() {
                       )
                     }
                   >
-                    ×
+                    <MapStudioIcon
+                      name="discard"
+                      size={13}
+                    />
                   </button>
                 </div>
 
                 <div className="map-health-score">
-                  <strong>
-                    {mapHealthIssueCount === 0
-                      ? "✓ Sem problemas confirmados"
-                      : "⚠ " +
-                        mapHealthIssueCount +
-                        " grupo(s) de problema"}
+                  <strong
+                    className={
+                      mapHealthIssueCount === 0
+                        ? "map-health-state ready"
+                        : "map-health-state warning"
+                    }
+                  >
+                    <MapStudioIcon
+                      name={
+                        mapHealthIssueCount === 0
+                          ? "success"
+                          : "warning"
+                      }
+                      size={15}
+                    />
+                    <span>
+                      {mapHealthIssueCount === 0
+                        ? "Sem problemas confirmados"
+                        : mapHealthIssueCount +
+                          " grupo(s) de problema"}
+                    </span>
                   </strong>
                   <span>
                     Assets ainda não carregados não são classificados como defeituosos.
@@ -23371,7 +23389,10 @@ export function App() {
                       )
                     }
                   >
-                    ×
+                    <MapStudioIcon
+                      name="discard"
+                      size={13}
+                    />
                   </button>
                 </div>
 
@@ -23668,8 +23689,14 @@ export function App() {
                     {activeConstructionSetMissingTemplates
                       .length > 0 && (
                       <div className="construction-set-warning">
-                        <strong>
-                          ⚠ Templates ausentes no mapa
+                        <strong className="construction-set-warning-title">
+                          <MapStudioIcon
+                            name="warning"
+                            size={14}
+                          />
+                          <span>
+                            Templates ausentes no mapa
+                          </span>
                         </strong>
                         <span>
                           {activeConstructionSetMissingTemplates

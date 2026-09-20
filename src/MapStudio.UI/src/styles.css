@@ -5326,3 +5326,36 @@ span.active {
 .city-drawer-drag-grip:hover > .mapstudio-icon {
   color: #c6dfed;
 }
+
+
+/* Shared semantic states inside floating diagnostic/configuration panels. */
+.map-health-state,
+.construction-set-warning-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.map-health-state.ready {
+  color: #71dda0;
+}
+
+.map-health-state.warning,
+.construction-set-warning-title {
+  color: #efbb6d;
+}
+
+.map-health-heading > button,
+.construction-set-heading > button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  color: #8eaabd;
+}
+
+.map-health-heading > button:hover,
+.construction-set-heading > button:hover {
+  color: #f1f9fd;
+}
