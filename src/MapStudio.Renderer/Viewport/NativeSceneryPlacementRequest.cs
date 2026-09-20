@@ -9,5 +9,8 @@ public sealed record NativeSceneryPlacementRequest(
     double X,
     double Y,
     double Z,
+    double Rotation,
+    double Pitch,
+    double Bank,
     Vector3 WorldPoint,
     bool UsesAbsoluteHeight);

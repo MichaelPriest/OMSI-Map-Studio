@@ -62,6 +62,10 @@ public sealed class NativeViewportRuntime : IDisposable
     private bool _sceneryPlacementActive;
     private string? _placementSceneryPath;
     private bool _placementUsesAbsoluteHeight;
+    private double? _placementZOverride;
+    private double _placementRotation;
+    private double _placementPitch;
+    private double _placementBank;
     private NativeAssetPreviewGeometry?
         _placementGeometry;
     private Vector3? _placementWorldPoint;
@@ -502,10 +506,29 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public Task<bool>
+        BeginSceneryPlacementAsync(
+            string omsiRoot,
+            string sceneryObjectPath,
+            CancellationToken cancellationToken =
+                default) =>
+        BeginSceneryPlacementAsync(
+            omsiRoot,
+            sceneryObjectPath,
+            null,
+            0,
+            0,
+            0,
+            cancellationToken);
+
     public async Task<bool>
         BeginSceneryPlacementAsync(
             string omsiRoot,
             string sceneryObjectPath,
+            double? zOverride,
+            double rotation,
+            double pitch,
+            double bank,
             CancellationToken cancellationToken =
                 default)
     {
@@ -557,6 +580,18 @@ public sealed class NativeViewportRuntime : IDisposable
         _placementUsesAbsoluteHeight =
             asset.UsesAbsoluteHeight;
 
+        _placementZOverride =
+            zOverride;
+
+        _placementRotation =
+            rotation;
+
+        _placementPitch =
+            pitch;
+
+        _placementBank =
+            bank;
+
         _placementGeometry =
             geometry;
 
@@ -574,7 +609,20 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetPlacementPreview(
             geometry,
-            Matrix4x4.Identity);
+            Matrix4x4
+                .CreateFromYawPitchRoll(
+                    (float)(
+                        _placementRotation *
+                        Math.PI /
+                        180.0),
+                    (float)(
+                        _placementPitch *
+                        Math.PI /
+                        180.0),
+                    (float)(
+                        _placementBank *
+                        Math.PI /
+                        180.0)));
 
         return true;
     }
@@ -693,13 +741,34 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         point.Y =
-            height;
+            _placementZOverride.HasValue
+                ? _placementUsesAbsoluteHeight
+                    ? (float)
+                        _placementZOverride.Value
+                    : height +
+                        (float)
+                            _placementZOverride.Value
+                : height;
 
         _placementWorldPoint =
             point;
 
         MapRenderer
             .SetPlacementPreviewTransform(
+                Matrix4x4
+                    .CreateFromYawPitchRoll(
+                        (float)(
+                            _placementRotation *
+                            Math.PI /
+                            180.0),
+                        (float)(
+                            _placementPitch *
+                            Math.PI /
+                            180.0),
+                        (float)(
+                            _placementBank *
+                            Math.PI /
+                            180.0)) *
                 Matrix4x4
                     .CreateTranslation(
                         point));
@@ -763,9 +832,15 @@ public sealed class NativeViewportRuntime : IDisposable
                 point.Z -
                     tileY *
                     300.0,
-                _placementUsesAbsoluteHeight
-                    ? point.Y
-                    : 0.0,
+                _placementZOverride ??
+                    (
+                        _placementUsesAbsoluteHeight
+                            ? point.Y
+                            : 0.0
+                    ),
+                _placementRotation,
+                _placementPitch,
+                _placementBank,
                 point,
                 _placementUsesAbsoluteHeight);
 
@@ -786,6 +861,18 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _placementSceneryPath =
             null;
+
+        _placementZOverride =
+            null;
+
+        _placementRotation =
+            0;
+
+        _placementPitch =
+            0;
+
+        _placementBank =
+            0;
 
         _placementGeometry =
             null;
@@ -1374,6 +1461,18 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _placementSceneryPath =
             null;
+
+        _placementZOverride =
+            null;
+
+        _placementRotation =
+            0;
+
+        _placementPitch =
+            0;
+
+        _placementBank =
+            0;
 
         _placementGeometry =
             null;

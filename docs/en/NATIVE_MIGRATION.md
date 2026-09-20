@@ -303,3 +303,13 @@ Deletion is blocked while transforms are pending or while a placement/constructi
 
 After completion, affected loaded tiles are read back through Core so the viewport, Explorer, and Inspector return to the real persisted map state.
 
+### Checkpoint N3.12 — native object copy with real placement
+
+The React editor's **Place copy** flow has been migrated into the WinUI Inspector. When a real object is selected, the **Place copy** button and **Ctrl+D** start a new placement using the same SCO file.
+
+The copy initially preserves the selected object's real transform fields: **Z, rotation, pitch, and bank**. The next terrain click defines the new horizontal X/Y position. For relative objects, the ghost adds the preserved Z offset to the real terrain height; for absolute-height objects it keeps the selected absolute Z.
+
+The 3D ghost uses the same rotation/pitch/bank that will be persisted, avoiding a mismatch between preview and saved output. The new instance still receives a free global ID and is written through the existing `OmsiTileObjectInserter` + `SafeFileTransaction` flow with automatic backup.
+
+Ctrl+D does not intercept typing while focus is inside an editable field, and the flow remains disabled for `worldcoordinates` maps until the dedicated georeferencing migration is implemented.
+

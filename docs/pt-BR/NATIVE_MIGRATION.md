@@ -303,3 +303,13 @@ A exclusão é bloqueada enquanto existem transformações pendentes ou uma ferr
 
 Depois da operação, os tiles carregados afetados são relidos pelo Core e o viewport, Explorer e Inspector voltam a refletir o estado real do mapa.
 
+### Checkpoint N3.12 — cópia nativa de objetos com placement real
+
+O fluxo **Colocar cópia** da versão React foi migrado para o Inspector WinUI. Quando um objeto real está selecionado, o botão **Colocar cópia** e o atalho **Ctrl+D** iniciam um novo placement usando o mesmo arquivo SCO.
+
+A cópia preserva inicialmente os campos reais de transformação da seleção: **Z, rotação, pitch e bank**. O próximo clique sobre o terreno define a nova posição horizontal X/Y. Para objetos relativos, o ghost soma o Z preservado à altura real do terreno; para objetos com altura absoluta, mantém o Z absoluto da seleção.
+
+O ghost 3D usa a mesma rotação/pitch/bank que será persistida, evitando diferença entre a prévia e o resultado salvo. A nova instância continua recebendo ID global livre e é gravada pelo fluxo existente de `OmsiTileObjectInserter` + `SafeFileTransaction`, com backup automático.
+
+O atalho Ctrl+D não intercepta digitação quando o foco está em campos editáveis e o fluxo permanece bloqueado para mapas com `worldcoordinates` até a migração específica de georreferenciamento.
+

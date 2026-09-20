@@ -298,6 +298,46 @@ public sealed partial class NativeViewport : UserControl
         return started;
     }
 
+    public async Task<bool>
+        BeginSceneryPlacementCopyAsync(
+            string omsiRoot,
+            string sceneryObjectPath,
+            double z,
+            double rotation,
+            double pitch,
+            double bank,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var started =
+            await _runtime
+                .BeginSceneryPlacementAsync(
+                    omsiRoot,
+                    sceneryObjectPath,
+                    z,
+                    rotation,
+                    pitch,
+                    bank,
+                    cancellationToken);
+
+        if (started)
+        {
+            RuntimeText.Text =
+                $"Posicionando cópia · {sceneryObjectPath}";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                "Cópia ativa: o próximo clique define X/Y e preserva Z, rotação, pitch e bank.");
+        }
+
+        return started;
+    }
+
     public void CancelSceneryPlacement()
     {
         _runtime

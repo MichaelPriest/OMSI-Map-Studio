@@ -27,6 +27,9 @@
                                  Invoked="OnEscapeAcceleratorInvoked" />
             <KeyboardAccelerator Key="Delete"
                                  Invoked="OnDeleteAcceleratorInvoked" />
+            <KeyboardAccelerator Key="D"
+                                 Modifiers="Control"
+                                 Invoked="OnDuplicateAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -359,6 +362,12 @@
                                 HorizontalAlignment="Stretch"
                                 IsEnabled="False"
                                 Click="OnApplyInspectorClick" />
+
+                        <Button x:Name="DuplicateSelectionButton"
+                                Content="Colocar cópia"
+                                HorizontalAlignment="Stretch"
+                                IsEnabled="False"
+                                Click="OnDuplicateSelectionClick" />
 
                         <Button x:Name="DeleteSelectionButton"
                                 Content="Excluir selecionado"

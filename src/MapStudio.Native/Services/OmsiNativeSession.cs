@@ -335,9 +335,9 @@ public sealed class OmsiNativeSession
                         request.X,
                         request.Y,
                         request.Z,
-                        0,
-                        0,
-                        0,
+                        request.Rotation,
+                        request.Pitch,
+                        request.Bank,
                         extraValues));
 
         var backupDirectory =

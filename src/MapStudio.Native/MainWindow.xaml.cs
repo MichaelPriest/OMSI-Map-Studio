@@ -133,6 +133,10 @@ public sealed partial class MainWindow : Window
                 DeleteSelectionButton.IsEnabled =
                     info is not null;
 
+                DuplicateSelectionButton.IsEnabled =
+                    info?.Kind ==
+                    PickingKind.Object;
+
                 if (info is null)
                 {
                     InspectorTypeText.Text =
@@ -1030,6 +1034,88 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnDuplicateSelectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await StartObjectCopyPlacementAsync();
+    }
+
+    private async Task StartObjectCopyPlacementAsync()
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Object)
+        {
+            return;
+        }
+
+        if (
+            _session.OmsiRootPath is null ||
+            _session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Abra um mapa OMSI antes de criar uma cópia.";
+
+            return;
+        }
+
+        if (
+            _session.CurrentMap.Map
+                .UsesWorldCoordinates)
+        {
+            StatusText.Text =
+                "Cópia de objeto em mapa com worldcoordinates ainda não está habilitada no host nativo.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento atual antes de criar a cópia.";
+
+            return;
+        }
+
+        Viewport.RestoreSceneView();
+
+        try
+        {
+            var started =
+                await Viewport
+                    .BeginSceneryPlacementCopyAsync(
+                        _session.OmsiRootPath,
+                        selection.AssetPath,
+                        selection.Z,
+                        selection.Rotation,
+                        selection.Pitch ?? 0,
+                        selection.Bank ?? 0);
+
+            if (!started)
+            {
+                StatusText.Text =
+                    $"Não foi possível preparar a cópia de {selection.AssetPath}.";
+
+                return;
+            }
+
+            StatusText.Text =
+                $"Cópia do objeto #{selection.EntityId}: clique no terreno para definir a nova posição.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao iniciar cópia: {exception.Message}";
+        }
+    }
+
     private async void OnDeleteSelectionClick(
         object sender,
         RoutedEventArgs e)
@@ -1716,6 +1802,27 @@ public sealed partial class MainWindow : Window
 
         RedoTransform();
         args.Handled = true;
+    }
+
+    private async void OnDuplicateAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Object)
+        {
+            return;
+        }
+
+        args.Handled = true;
+
+        await StartObjectCopyPlacementAsync();
     }
 
     private async void OnDeleteAcceleratorInvoked(
