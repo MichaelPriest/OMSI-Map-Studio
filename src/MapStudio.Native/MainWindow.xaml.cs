@@ -96,6 +96,13 @@ public sealed partial class MainWindow : Window
                     $"{_session.PendingTransformCount} alteração(ões) pendente(s).";
             };
 
+        Viewport.SceneryPlacementRequested +=
+            async request =>
+            {
+                await HandleSceneryPlacementAsync(
+                    request);
+            };
+
         Viewport.SelectionChanged +=
             info =>
             {
@@ -233,7 +240,11 @@ public sealed partial class MainWindow : Window
         _assetPreviewCancellation =
             null;
 
+        Viewport.CancelSceneryPlacement();
         Viewport.RestoreSceneView();
+
+        PlaceAssetButton.Content =
+            "Posicionar no mapa";
 
         _libraryMode =
             false;
@@ -338,6 +349,14 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
+        PlaceAssetButton.IsEnabled =
+            _session.CurrentMap is not null &&
+            AssetLibraryListView.SelectedItem is
+                OmsiAssetIndexEntry selected &&
+            selected.Kind ==
+                OmsiAssetKind
+                    .SceneryObject;
+
         if (
             !_libraryMode ||
             _session.OmsiRootPath is null ||
@@ -389,6 +408,144 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Falha na prévia do asset: {exception.Message}";
+        }
+    }
+
+    private async void OnPlaceAssetClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (Viewport.IsSceneryPlacementActive)
+        {
+            Viewport.CancelSceneryPlacement();
+
+            PlaceAssetButton.Content =
+                "Posicionar no mapa";
+
+            StatusText.Text =
+                "Posicionamento cancelado.";
+
+            return;
+        }
+
+        if (
+            _session.OmsiRootPath is null ||
+            _session.CurrentMap is null ||
+            AssetLibraryListView.SelectedItem is not
+                OmsiAssetIndexEntry asset ||
+            asset.Kind !=
+                OmsiAssetKind.SceneryObject)
+        {
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.RestoreSceneView();
+
+        try
+        {
+            var started =
+                await Viewport
+                    .BeginSceneryPlacementAsync(
+                        _session.OmsiRootPath,
+                        asset);
+
+            if (!started)
+            {
+                StatusText.Text =
+                    $"Não foi possível preparar o objeto para posicionamento: {asset.RelativePath}.";
+
+                return;
+            }
+
+            PlaceAssetButton.Content =
+                "Cancelar posicionamento";
+
+            StatusText.Text =
+                "Mova o ghost sobre o terreno e clique para inserir.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao iniciar posicionamento: {exception.Message}";
+        }
+    }
+
+    private async Task HandleSceneryPlacementAsync(
+        NativeSceneryPlacementRequest
+            request)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            PlaceAssetButton.Content =
+                "Posicionar no mapa";
+
+            PlaceAssetButton.IsEnabled =
+                false;
+
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                StatusText.Text =
+                    "Salvando transformações antes da inserção...";
+
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                "Inserindo objeto no tile OMSI com backup...";
+
+            var snapshot =
+                await _session
+                    .InsertSceneryObjectAsync(
+                        request);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            RefreshExplorer();
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
+                false;
+
+            PlaceAssetButton.IsEnabled =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry asset &&
+                asset.Kind ==
+                    OmsiAssetKind
+                        .SceneryObject;
+
+            StatusText.Text =
+                $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro.";
+        }
+        catch (Exception exception)
+        {
+            PlaceAssetButton.IsEnabled =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry asset &&
+                asset.Kind ==
+                    OmsiAssetKind
+                        .SceneryObject;
+
+            StatusText.Text =
+                $"Falha ao inserir objeto: {exception.Message}";
         }
     }
 

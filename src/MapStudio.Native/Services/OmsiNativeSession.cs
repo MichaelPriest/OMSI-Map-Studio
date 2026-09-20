@@ -2,7 +2,9 @@ using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Renderer.Viewport;
+using System.Globalization;
 
 namespace MapStudio.Native.Services;
 
@@ -137,6 +139,263 @@ public sealed class OmsiNativeSession
 
         _pendingTransforms[key] =
             edit;
+    }
+
+    public async Task<NativeMapSnapshot>
+        InsertSceneryObjectAsync(
+            NativeSceneryPlacementRequest
+                request,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            request);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Instalação OMSI não selecionada.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeInsertion");
+        }
+
+        if (
+            !snapshot.Tiles.Any(
+                tile =>
+                    tile.Reference.X ==
+                        request.Tile.X &&
+                    tile.Reference.Y ==
+                        request.Tile.Y))
+        {
+            throw new InvalidDataException(
+                "placementTileNotLoaded");
+        }
+
+        var loadedByPath =
+            snapshot.Tiles
+                .ToDictionary(
+                    tile =>
+                        tile.Reference
+                            .RelativeMapPath,
+                    tile =>
+                        tile.Content,
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var contents =
+            new List<
+                OmsiTileContent>(
+                    snapshot.Map.Tiles.Count);
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            if (
+                loadedByPath.TryGetValue(
+                    tile.RelativeMapPath,
+                    out var loaded))
+            {
+                contents.Add(
+                    loaded);
+
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var path))
+            {
+                continue;
+            }
+
+            contents.Add(
+                await _tileReader
+                    .ReadContentAsync(
+                        path,
+                        cancellationToken)
+                    .ConfigureAwait(false));
+        }
+
+        var analysis =
+            OmsiObjectInsertionAnalyzer
+                .Analyze(
+                    contents,
+                    request
+                        .SceneryObjectPath);
+
+        var template =
+            analysis
+                .MatchingObjectTemplate;
+
+        var headerValue =
+            template?.HeaderValue ??
+            "0";
+
+        IReadOnlyList<string>
+            extraValues =
+                template?.ExtraValues ??
+                Array.Empty<string>();
+
+        if (
+            template is null &&
+            OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    root,
+                    request
+                        .SceneryObjectPath,
+                    out var fullScoPath))
+        {
+            var metadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        fullScoPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (
+                metadata.Tree is
+                    { } tree)
+            {
+                var height =
+                    (
+                        tree.MinimumHeight +
+                        tree.MaximumHeight
+                    ) /
+                    2.0;
+
+                var aspect =
+                    (
+                        tree.MinimumAspect +
+                        tree.MaximumAspect
+                    ) /
+                    2.0;
+
+                extraValues =
+                    [
+                        "4",
+                        tree.TextureName,
+                        height.ToString(
+                            "G17",
+                            CultureInfo
+                                .InvariantCulture),
+                        aspect.ToString(
+                            "G17",
+                            CultureInfo
+                                .InvariantCulture)
+                    ];
+            }
+        }
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map
+                        .DirectoryPath,
+                    request.Tile
+                        .RelativeMapPath,
+                    out var targetPath))
+        {
+            throw new InvalidDataException(
+                "placementTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    targetPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var insertion =
+            OmsiTileObjectInserter
+                .Append(
+                    document,
+                    new OmsiNewPlacedObject(
+                        headerValue,
+                        request
+                            .SceneryObjectPath,
+                        analysis.GetNextId(),
+                        request.X,
+                        request.Y,
+                        request.Z,
+                        0,
+                        0,
+                        0,
+                        extraValues));
+
+        var backupDirectory =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                ".mapstudio-backups");
+
+        var backupPath =
+            Path.Combine(
+                backupDirectory,
+                Path.GetFileName(
+                    targetPath) +
+                "." +
+                DateTime.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff") +
+                "." +
+                Guid.NewGuid()
+                    .ToString("N") +
+                ".bak");
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        targetPath,
+                        backupPath,
+                        insertion.Bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshedContent =
+            await _tileReader
+                .ReadContentAsync(
+                    targetPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                tile.Reference.X ==
+                                    request.Tile.X &&
+                                tile.Reference.Y ==
+                                    request.Tile.Y
+                                    ? new NativeLoadedTile(
+                                        tile.Reference,
+                                        refreshedContent)
+                                    : tile)
+                        .ToArray()
+            };
+
+        return CurrentMap;
     }
 
     public async Task<NativeMapSnapshot>

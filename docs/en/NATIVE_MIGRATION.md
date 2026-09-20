@@ -208,3 +208,14 @@ For SCO assets, the preview uses the real O3D/X meshes, SCO-declared transforms,
 The viewport temporarily enters preview mode and frames the asset bounds. Orbit, pan, and zoom keep using the same Direct3D camera. Returning to **Scene** restores the map buffers from the in-memory snapshot and already loaded assets, without reopening the whole map.
 
 Standalone models and textures remain available in the index, but this checkpoint intentionally limits visual preview to SCO/O3D and SLI; those categories will expand together with materials/textures and placement.
+
+
+### Checkpoint N3.4 — native SCO object placement
+
+The library can now start placement of a SCO object directly on the open map. The viewport restores the scene, loads the asset's real geometry, and shows a separate **blue 3D ghost** outside the ID Buffer, so the preview cannot be mistaken for an existing entity.
+
+The pointer is converted into a perspective-camera world ray. Intersection is refined against the loaded terrain's real height and, when snapping is enabled, X/Z are quantized to 0.25 m before the final height sample. Placement is accepted only inside an actually loaded tile.
+
+On click, the host converts the world position into OMSI tile-local coordinates and uses `OmsiTileObjectInserter` to append a real `[object]` section. The next ID is computed across objects and splines from every map tile to avoid collisions. When the same asset already exists in the map, its header and extra values are preserved as a template; tree assets without a template use the real texture/height/aspect metadata declared by the SCO.
+
+Insertion is persisted immediately through `SafeFileTransaction`, with a backup under `.mapstudio-backups`, and the changed tile is read back through Core before the viewport is refreshed. Splines remain outside this checkpoint because correct spline placement needs a point/curve construction tool rather than treating them as ordinary objects.

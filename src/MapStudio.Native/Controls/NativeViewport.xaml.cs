@@ -52,6 +52,10 @@ public sealed partial class NativeViewport : UserControl
         NativeSelectionInfo?>?
         SelectionChanged;
 
+    public event Action<
+        NativeSceneryPlacementRequest>?
+        SceneryPlacementRequested;
+
     public IReadOnlyList<
         NativeExplorerItem>
         GetExplorerItems() =>
@@ -188,6 +192,53 @@ public sealed partial class NativeViewport : UserControl
             "Transformação refeita.");
 
         return true;
+    }
+
+    public bool IsSceneryPlacementActive =>
+        _runtime
+            ?.IsSceneryPlacementActive ??
+        false;
+
+    public async Task<bool>
+        BeginSceneryPlacementAsync(
+            string omsiRoot,
+            OmsiAssetIndexEntry asset,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (
+            _runtime is null ||
+            asset.Kind !=
+                OmsiAssetKind
+                    .SceneryObject)
+        {
+            return false;
+        }
+
+        var started =
+            await _runtime
+                .BeginSceneryPlacementAsync(
+                    omsiRoot,
+                    asset.RelativePath,
+                    cancellationToken);
+
+        if (started)
+        {
+            RuntimeText.Text =
+                $"Posicionando · {asset.RelativePath}";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                "Mova o cursor sobre o terreno e clique para posicionar o objeto.");
+        }
+
+        return started;
+    }
+
+    public void CancelSceneryPlacement()
+    {
+        _runtime
+            ?.CancelSceneryPlacement();
     }
 
     public async Task<NativeAssetPreviewResult?>
@@ -554,6 +605,33 @@ public sealed partial class NativeViewport : UserControl
 
         if (
             _runtime is not null &&
+            _runtime.IsSceneryPlacementActive)
+        {
+            _runtime.UpdateSceneryPlacement(
+                pixelX,
+                pixelY);
+
+            if (
+                _runtime.TryFinishSceneryPlacement(
+                    out var placement) &&
+                placement is not null)
+            {
+                SceneryPlacementRequested
+                    ?.Invoke(
+                        placement);
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    $"Posicionamento solicitado em {placement.WorldPoint.X:F2}, " +
+                    $"{placement.WorldPoint.Y:F2}, {placement.WorldPoint.Z:F2}.");
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
             _runtime.TryBeginGizmoDrag(
                 pixelX,
                 pixelY,
@@ -726,6 +804,50 @@ public sealed partial class NativeViewport : UserControl
                 _isOrbiting
                     ? $"Órbita · zoom {_runtime.Navigation.Zoom:F2}×"
                     : $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime.IsSceneryPlacementActive)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                _runtime.UpdateSceneryPlacement(
+                    pixelX,
+                    pixelY))
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Posicionamento: clique para inserir · botão do meio pan · botão direito órbita");
+            }
 
             e.Handled = true;
             return;

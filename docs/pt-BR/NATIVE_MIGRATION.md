@@ -208,3 +208,14 @@ Para SCO, a prévia usa os meshes O3D/X reais, transformações declaradas no SC
 O viewport entra temporariamente em modo de prévia e ajusta a câmera aos limites do asset. Órbita, pan e zoom continuam usando a mesma câmera Direct3D. Ao voltar para **Cena**, os buffers do mapa são restaurados a partir do snapshot e dos assets já carregados, sem nova leitura completa do mapa.
 
 Modelos avulsos e texturas continuam listados pelo índice, mas a prévia deste checkpoint é deliberadamente limitada a SCO/O3D e SLI; essas categorias serão expandidas junto com materiais/texturas e placement.
+
+
+### Checkpoint N3.4 — placement nativo de objetos SCO
+
+A biblioteca agora pode iniciar o posicionamento de um objeto SCO diretamente sobre o mapa aberto. O viewport restaura a cena, carrega a geometria real do asset e exibe um **ghost 3D azul** separado do ID Buffer, de forma que a prévia não seja confundida com uma entidade já existente.
+
+O cursor é convertido em um raio da câmera perspectiva para o mundo. A interseção é refinada contra a altura real do terreno carregado e, quando o snap está ativo, X/Z são quantizados em 0,25 m antes da amostragem final de altura. O placement é aceito somente dentro de um tile realmente carregado.
+
+Ao clicar, o host converte a posição mundial para as coordenadas locais do tile OMSI e usa `OmsiTileObjectInserter` para inserir uma seção `[object]` real. O próximo ID é calculado considerando objetos e splines de todos os tiles do mapa, evitando colisão com IDs já usados. Quando há um objeto do mesmo asset no mapa, header e valores extras são preservados como template; árvores sem template usam os dados reais de textura/altura/aspecto declarados no SCO.
+
+A inserção é persistida imediatamente por `SafeFileTransaction`, com backup em `.mapstudio-backups`, e o tile alterado é relido pelo Core antes de atualizar o viewport. Splines continuam fora deste checkpoint porque o placement correto exige a ferramenta de construção por pontos/curvas em vez de tratá-las como um objeto comum.

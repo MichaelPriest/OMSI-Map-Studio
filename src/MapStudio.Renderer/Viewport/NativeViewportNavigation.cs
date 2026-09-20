@@ -266,6 +266,107 @@ public sealed class NativeViewportNavigation
             projection;
     }
 
+    public bool TryGetWorldRay(
+        uint pixelX,
+        uint pixelY,
+        uint viewportWidth,
+        uint viewportHeight,
+        out Vector3 origin,
+        out Vector3 direction)
+    {
+        origin =
+            Vector3.Zero;
+
+        direction =
+            Vector3.Zero;
+
+        if (
+            viewportWidth == 0 ||
+            viewportHeight == 0)
+        {
+            return false;
+        }
+
+        var viewProjection =
+            GetViewProjection(
+                viewportWidth,
+                viewportHeight);
+
+        if (
+            !Matrix4x4.Invert(
+                viewProjection,
+                out var inverse))
+        {
+            return false;
+        }
+
+        var ndcX =
+            pixelX /
+            (float)viewportWidth *
+            2.0f -
+            1.0f;
+
+        var ndcY =
+            1.0f -
+            pixelY /
+            (float)viewportHeight *
+            2.0f;
+
+        Vector3 Unproject(
+            float depth)
+        {
+            var point =
+                Vector4.Transform(
+                    new Vector4(
+                        ndcX,
+                        ndcY,
+                        depth,
+                        1.0f),
+                    inverse);
+
+            if (
+                Math.Abs(point.W) >
+                0.000001f)
+            {
+                point /=
+                    point.W;
+            }
+
+            return new Vector3(
+                point.X,
+                point.Y,
+                point.Z);
+        }
+
+        var near =
+            Unproject(
+                0.0f);
+
+        var far =
+            Unproject(
+                1.0f);
+
+        var delta =
+            far -
+            near;
+
+        if (
+            delta.LengthSquared() <
+            0.000001f)
+        {
+            return false;
+        }
+
+        origin =
+            near;
+
+        direction =
+            Vector3.Normalize(
+                delta);
+
+        return true;
+    }
+
     public void FocusOn(
         Vector3 target,
         float preferredDistance =

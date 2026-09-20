@@ -73,6 +73,16 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _gizmoTriangleVertexCount;
 
+    private ID3D11Buffer?
+        _placementPreviewBuffer;
+
+    private int
+        _placementPreviewVertexCount;
+
+    private Matrix4x4
+        _placementPreviewTransform =
+            Matrix4x4.Identity;
+
     private PickingId _hoverPickingId =
         PickingId.None;
 
@@ -297,6 +307,13 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
         _gizmoTriangleBuffer = null;
         _gizmoTriangleVertexCount = 0;
+
+        _placementPreviewBuffer
+            ?.Dispose();
+        _placementPreviewBuffer = null;
+        _placementPreviewVertexCount = 0;
+        _placementPreviewTransform =
+            Matrix4x4.Identity;
 
         _scenePickingVertices =
             Array.Empty<
@@ -641,6 +658,35 @@ public sealed class D3D11NativeMapRenderer :
                             _gizmoTriangleVertexCount,
                         0);
                 }
+
+                if (
+                    _placementPreviewBuffer
+                        is not null &&
+                    _placementPreviewVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _placementPreviewBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    ApplyViewProjection(
+                        context,
+                        _placementPreviewTransform *
+                        _viewProjection);
+
+                    context.Draw(
+                        (uint)
+                            _placementPreviewVertexCount,
+                        0);
+                }
             });
 
         RenderPicking(
@@ -708,6 +754,56 @@ public sealed class D3D11NativeMapRenderer :
         _pickingSurface.Read(
             x,
             y);
+
+    public void SetPlacementPreview(
+        NativeAssetPreviewGeometry? geometry,
+        Matrix4x4 transform)
+    {
+        _placementPreviewBuffer
+            ?.Dispose();
+
+        _placementPreviewBuffer = null;
+        _placementPreviewVertexCount = 0;
+        _placementPreviewTransform =
+            transform;
+
+        if (
+            geometry is null ||
+            geometry.Vertices.Length == 0)
+        {
+            return;
+        }
+
+        var vertices =
+            geometry.Vertices
+                .Select(
+                    vertex =>
+                        new NativeMapVertex(
+                            vertex.Position,
+                            new Vector4(
+                                0.10f,
+                                0.72f,
+                                1.0f,
+                                1.0f)))
+                .ToArray();
+
+        _placementPreviewBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    vertices.AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _placementPreviewVertexCount =
+            vertices.Length;
+    }
+
+    public void SetPlacementPreviewTransform(
+        Matrix4x4 transform)
+    {
+        _placementPreviewTransform =
+            transform;
+    }
 
     public void SetGizmoGeometry(
         NativeGizmoGeometry? geometry)
@@ -1032,13 +1128,20 @@ public sealed class D3D11NativeMapRenderer :
         vertices.Length;
 
     private void ApplyViewProjection(
-        ID3D11DeviceContext context)
+        ID3D11DeviceContext context) =>
+        ApplyViewProjection(
+            context,
+            _viewProjection);
+
+    private void ApplyViewProjection(
+        ID3D11DeviceContext context,
+        Matrix4x4 viewProjection)
     {
         Span<Matrix4x4> data =
             stackalloc Matrix4x4[1];
 
         data[0] =
-            _viewProjection;
+            viewProjection;
 
         _viewProjectionBuffer
             .SetData(
@@ -1078,6 +1181,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _gizmoTriangleBuffer
+            ?.Dispose();
+
+        _placementPreviewBuffer
             ?.Dispose();
 
         _pickingTriangleBuffer

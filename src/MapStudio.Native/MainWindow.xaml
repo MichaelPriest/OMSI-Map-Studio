@@ -148,6 +148,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
@@ -163,15 +164,22 @@
                                 <ComboBoxItem Content="Texturas" />
                             </ComboBox>
 
+                            <Button x:Name="PlaceAssetButton"
+                                    Grid.Row="1"
+                                    Content="Posicionar no mapa"
+                                    IsEnabled="False"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnPlaceAssetClick" />
+
                             <TextBlock x:Name="LibraryStatusText"
-                                       Grid.Row="1"
+                                       Grid.Row="2"
                                        Text="Índice de assets não carregado."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#9FB5C5" />
 
                             <ListView x:Name="AssetLibraryListView"
-                                      Grid.Row="2"
+                                      Grid.Row="3"
                                       SelectionMode="Single"
                                       DisplayMemberPath="RelativePath"
                                       SelectionChanged="OnAssetLibrarySelectionChanged"

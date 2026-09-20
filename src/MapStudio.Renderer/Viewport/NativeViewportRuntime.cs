@@ -59,6 +59,12 @@ public sealed class NativeViewportRuntime : IDisposable
     private uint _lastDragPixelX;
     private uint _lastDragPixelY;
     private bool _assetPreviewActive;
+    private bool _sceneryPlacementActive;
+    private string? _placementSceneryPath;
+    private bool _placementUsesAbsoluteHeight;
+    private NativeAssetPreviewGeometry?
+        _placementGeometry;
+    private Vector3? _placementWorldPoint;
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -122,6 +128,307 @@ public sealed class NativeViewportRuntime : IDisposable
     public bool IsAssetPreviewActive =>
         _assetPreviewActive;
 
+    public bool IsSceneryPlacementActive =>
+        _sceneryPlacementActive;
+
+    public async Task<bool>
+        BeginSceneryPlacementAsync(
+            string omsiRoot,
+            string sceneryObjectPath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ThrowIfDisposed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            omsiRoot);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            sceneryObjectPath);
+
+        if (_assetPreviewActive)
+        {
+            RestoreSceneView();
+        }
+
+        if (Scene is null)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+
+        var asset =
+            await new NativeSceneryAssetLoader()
+                .LoadAssetAsync(
+                    omsiRoot,
+                    sceneryObjectPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var geometry =
+            new NativeAssetPreviewGeometryBuilder()
+                .BuildScenery(
+                    asset);
+
+        if (!geometry.IsRenderable)
+        {
+            return false;
+        }
+
+        _sceneryPlacementActive =
+            true;
+
+        _placementSceneryPath =
+            sceneryObjectPath;
+
+        _placementUsesAbsoluteHeight =
+            asset.UsesAbsoluteHeight;
+
+        _placementGeometry =
+            geometry;
+
+        _placementWorldPoint =
+            null;
+
+        MapRenderer.SetHover(
+            PickingId.None);
+
+        MapRenderer.SetSelection(
+            PickingId.None);
+
+        MapRenderer.SetGizmoGeometry(
+            null);
+
+        MapRenderer.SetPlacementPreview(
+            geometry,
+            Matrix4x4.Identity);
+
+        return true;
+    }
+
+    public bool UpdateSceneryPlacement(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !_sceneryPlacementActive ||
+            Scene is null ||
+            Surface is null ||
+            _placementGeometry is null)
+        {
+            return false;
+        }
+
+        if (
+            !Navigation.TryGetWorldRay(
+                pixelX,
+                pixelY,
+                Surface.Width,
+                Surface.Height,
+                out var origin,
+                out var direction) ||
+            Math.Abs(
+                direction.Y) <
+            0.00001f)
+        {
+            return false;
+        }
+
+        var height =
+            Navigation.Target.Y;
+
+        Vector3 point =
+            default;
+
+        for (
+            var iteration = 0;
+            iteration < 4;
+            iteration++)
+        {
+            var distance =
+                (
+                    height -
+                    origin.Y
+                ) /
+                direction.Y;
+
+            if (
+                distance <=
+                0)
+            {
+                return false;
+            }
+
+            point =
+                origin +
+                direction *
+                distance;
+
+            height =
+                (float)
+                    NativeTerrainSampler
+                        .GetHeightAtWorldPoint(
+                            Scene,
+                            point.X,
+                            point.Z);
+        }
+
+        if (SnapEnabled)
+        {
+            point.X =
+                MathF.Round(
+                    point.X /
+                    MoveSnapMeters) *
+                MoveSnapMeters;
+
+            point.Z =
+                MathF.Round(
+                    point.Z /
+                    MoveSnapMeters) *
+                MoveSnapMeters;
+
+            height =
+                (float)
+                    NativeTerrainSampler
+                        .GetHeightAtWorldPoint(
+                            Scene,
+                            point.X,
+                            point.Z);
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                point.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                point.Z /
+                300.0f);
+
+        if (
+            !Scene.Tiles.Any(
+                tile =>
+                    tile.Reference.X ==
+                        tileX &&
+                    tile.Reference.Y ==
+                        tileY))
+        {
+            return false;
+        }
+
+        point.Y =
+            height;
+
+        _placementWorldPoint =
+            point;
+
+        MapRenderer
+            .SetPlacementPreviewTransform(
+                Matrix4x4
+                    .CreateTranslation(
+                        point));
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool TryFinishSceneryPlacement(
+        out NativeSceneryPlacementRequest?
+            request)
+    {
+        ThrowIfDisposed();
+
+        request =
+            null;
+
+        if (
+            !_sceneryPlacementActive ||
+            Scene is null ||
+            _placementWorldPoint is not
+                { } point ||
+            string.IsNullOrWhiteSpace(
+                _placementSceneryPath))
+        {
+            return false;
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                point.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                point.Z /
+                300.0f);
+
+        var tile =
+            Scene.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            tileX &&
+                        item.Reference.Y ==
+                            tileY);
+
+        if (tile is null)
+        {
+            return false;
+        }
+
+        request =
+            new NativeSceneryPlacementRequest(
+                tile.Reference,
+                _placementSceneryPath,
+                point.X -
+                    tileX *
+                    300.0,
+                point.Z -
+                    tileY *
+                    300.0,
+                _placementUsesAbsoluteHeight
+                    ? point.Y
+                    : 0.0,
+                point,
+                _placementUsesAbsoluteHeight);
+
+        CancelSceneryPlacement();
+
+        return true;
+    }
+
+    public void CancelSceneryPlacement()
+    {
+        if (!_sceneryPlacementActive)
+        {
+            return;
+        }
+
+        _sceneryPlacementActive =
+            false;
+
+        _placementSceneryPath =
+            null;
+
+        _placementGeometry =
+            null;
+
+        _placementWorldPoint =
+            null;
+
+        MapRenderer.SetPlacementPreview(
+            null,
+            Matrix4x4.Identity);
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+    }
+
     public async Task<NativeAssetPreviewResult>
         PreviewAssetAsync(
             string omsiRoot,
@@ -139,6 +446,7 @@ public sealed class NativeViewportRuntime : IDisposable
             relativePath);
 
         CancelGizmoDrag();
+        CancelSceneryPlacement();
 
         var builder =
             new NativeAssetPreviewGeometryBuilder();
@@ -688,6 +996,18 @@ public sealed class NativeViewportRuntime : IDisposable
         _assetPreviewActive =
             false;
 
+        _sceneryPlacementActive =
+            false;
+
+        _placementSceneryPath =
+            null;
+
+        _placementGeometry =
+            null;
+
+        _placementWorldPoint =
+            null;
+
         Scene =
             new NativeSceneBuilder()
                 .Build(
@@ -873,7 +1193,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         item = null;
 
-        if (_assetPreviewActive)
+        if (
+            _assetPreviewActive ||
+            _sceneryPlacementActive)
         {
             pickingId =
                 PickingId.None;
@@ -931,6 +1253,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _assetPreviewActive ||
+            _sceneryPlacementActive ||
             Surface is null ||
             Scene is null ||
             _selectedPickingId.IsNone)
@@ -1257,6 +1580,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _assetPreviewActive ||
+            _sceneryPlacementActive ||
             IsManipulating)
         {
             return false;
@@ -2012,7 +2336,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private void UpdateGizmoGeometry()
     {
-        if (_assetPreviewActive)
+        if (
+            _assetPreviewActive ||
+            _sceneryPlacementActive)
         {
             MapRenderer.SetGizmoGeometry(
                 null);
