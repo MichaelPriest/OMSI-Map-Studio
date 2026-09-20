@@ -621,3 +621,5 @@ The **Real map by coordinates** panel is no longer permanently visible over the 
 Floating viewport tools have drag handles: tile navigator, terrain leveling, real-map panel, placement bars, camera/tools, layers and the fullscreen dock can be repositioned while editing.
 
 Scene click selection walks up the picked mesh parent chain, so child meshes still resolve to the real placed object when selection metadata lives on a parent node.
+
+After a road has start and end points, the viewport shows a **blue control sphere** connected to the middle of the alignment. Dragging this sphere sideways changes curvature live, in a city-builder-style workflow; the placement-bar slider remains available for fine adjustment. The visual control still produces only the real parameters supported by an OMSI spline.
