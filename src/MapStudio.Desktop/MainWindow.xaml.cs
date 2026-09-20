@@ -1360,8 +1360,8 @@ public partial class MainWindow : Window
 
             PostMessage(new
             {
-                type = "hostError",
-                code = "assetIndexError",
+                type =
+                    "assetIndexRefreshFailed",
                 detail =
                     exception.Message
             });
