@@ -4017,6 +4017,43 @@ export function Viewport({
     useRef<Engine | undefined>(undefined);
   const engineCaptureThumbnailRef =
     useRef<boolean | undefined>(undefined);
+  const sceneRef =
+    useRef<Scene | undefined>(undefined);
+  const selectedObjectRef =
+    useRef(selectedObject);
+  const selectedSplineRef =
+    useRef(selectedSpline);
+
+  selectedObjectRef.current =
+    selectedObject;
+  selectedSplineRef.current =
+    selectedSpline;
+
+  const [
+    sceneRevision,
+    setSceneRevision
+  ] = useState(0);
+
+  const sceneEditObject =
+    editorTool === "select"
+      ? undefined
+      : selectedObject;
+
+  const sceneEditGeometry =
+    sceneEditObject
+      ? selectedGeometry
+      : undefined;
+
+  const sceneEditSpline =
+    editorTool === "select"
+      ? undefined
+      : selectedSpline;
+
+  const sceneEditSplineProfile =
+    sceneEditSpline
+      ? selectedSplineProfile
+      : undefined;
+
   const thumbnailCallbackRef =
     useRef(onThumbnailReady);
   thumbnailCallbackRef.current =
@@ -4164,6 +4201,7 @@ export function Viewport({
         captureThumbnail;
     }
     const scene = new Scene(engine);
+    sceneRef.current = scene;
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
     const tileSize = usesWorldCoordinates ? 1 : 300;
@@ -4306,12 +4344,17 @@ export function Viewport({
     } else if (
       cameraAction?.type === "focus"
     ) {
-      if (selectedObject) {
+      const focusObject =
+        selectedObjectRef.current;
+      const focusSpline =
+        selectedSplineRef.current;
+
+      if (focusObject) {
         camera.setTarget(
           getObjectWorldPosition(
-            selectedObject,
+            focusObject,
             objectGeometryByPath[
-              selectedObject
+              focusObject
                 .sceneryObjectPath
             ],
             tiles
@@ -4321,11 +4364,11 @@ export function Viewport({
           usesWorldCoordinates
             ? 4
             : 55;
-      } else if (selectedSpline) {
+      } else if (focusSpline) {
         camera.setTarget(
           getSplineFrame(
-            selectedSpline,
-            selectedSpline.length / 2
+            focusSpline,
+            focusSpline.length / 2
           ).center
         );
         camera.radius =
@@ -4335,7 +4378,7 @@ export function Viewport({
                 40,
                 Math.min(
                   180,
-                  selectedSpline.length *
+                  focusSpline.length *
                     1.5
                 )
               );
@@ -4496,165 +4539,6 @@ export function Viewport({
     const objectLodInstances:
       ObjectLodInstance[] = [];
 
-    let selectionMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | undefined;
-    let splineSelectionMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | undefined;
-
-    const showSelection = (placedObject: OmsiPlacedObject | undefined) => {
-      selectionMarker?.dispose();
-      selectionMarker = undefined;
-
-      if (!placedObject) {
-        return;
-      }
-
-      selectionMarker = MeshBuilder.CreateLineSystem(
-        "omsi-selected-object",
-        {
-          lines:
-            createSelectedMarkerLines(
-              placedObject,
-              objectGeometryByPath[
-                placedObject
-                  .sceneryObjectPath
-              ],
-              tiles
-            )
-        },
-        scene
-      );
-      selectionMarker.color =
-        new Color3(
-          0.1,
-          0.92,
-          1
-        );
-      selectionMarker.visibility = 0.96;
-      selectionMarker.isPickable = false;
-      selectionMarker.renderingGroupId = 3;
-    };
-
-    const showSplineSelection = (
-      placedSpline:
-        | OmsiPlacedSpline
-        | undefined
-    ) => {
-      splineSelectionMarker?.dispose();
-      splineSelectionMarker =
-        undefined;
-
-      if (!placedSpline) {
-        return;
-      }
-
-      const axis =
-        getSplineAxisLine(
-          placedSpline
-        );
-
-      if (axis.length < 2) {
-        return;
-      }
-
-      const lifted =
-        axis.map((point) =>
-          point.add(
-            new Vector3(
-              0,
-              0.38,
-              0
-            )
-          )
-        );
-
-      const start =
-        lifted[0];
-      const end =
-        lifted[
-          lifted.length - 1
-        ];
-      const markerRadius = 2.2;
-
-      splineSelectionMarker =
-        MeshBuilder.CreateLineSystem(
-          "omsi-selected-spline",
-          {
-            lines: [
-              lifted,
-              [
-                new Vector3(
-                  start.x -
-                    markerRadius,
-                  start.y,
-                  start.z
-                ),
-                new Vector3(
-                  start.x +
-                    markerRadius,
-                  start.y,
-                  start.z
-                )
-              ],
-              [
-                new Vector3(
-                  start.x,
-                  start.y,
-                  start.z -
-                    markerRadius
-                ),
-                new Vector3(
-                  start.x,
-                  start.y,
-                  start.z +
-                    markerRadius
-                )
-              ],
-              [
-                new Vector3(
-                  end.x -
-                    markerRadius,
-                  end.y,
-                  end.z
-                ),
-                new Vector3(
-                  end.x +
-                    markerRadius,
-                  end.y,
-                  end.z
-                )
-              ],
-              [
-                new Vector3(
-                  end.x,
-                  end.y,
-                  end.z -
-                    markerRadius
-                ),
-                new Vector3(
-                  end.x,
-                  end.y,
-                  end.z +
-                    markerRadius
-                )
-              ]
-            ]
-          },
-          scene
-        );
-
-      splineSelectionMarker.color =
-        new Color3(
-          0.1,
-          0.92,
-          1
-        );
-      splineSelectionMarker.visibility =
-        0.98;
-      splineSelectionMarker.isPickable =
-        false;
-      splineSelectionMarker
-        .renderingGroupId = 3;
-    };
-
     if (tiles.length) {
       if (
         showGrid ||
@@ -4777,7 +4661,7 @@ export function Viewport({
             scene,
             splines,
             activeTile,
-            selectedSpline,
+            sceneEditSpline,
             splineProfilesByPath,
             textureAssetsByKey,
             showAllSplineProfiles
@@ -4793,7 +4677,7 @@ export function Viewport({
               editorTool !== "select" &&
               isSameSpline(
                 placedSpline,
-                selectedSpline
+                sceneEditSpline
               )
             ) {
               return;
@@ -4818,28 +4702,14 @@ export function Viewport({
               );
 
             splineAxis.color =
-              isSameSpline(
-                placedSpline,
-                selectedSpline
-              )
-                ? new Color3(
-                    0.1,
-                    0.92,
-                    1
-                  )
-                : new Color3(
-                    0.2,
-                    0.48,
-                    0.78
-                  );
+              new Color3(
+                0.2,
+                0.48,
+                0.78
+              );
 
             splineAxis.visibility =
-              isSameSpline(
-                placedSpline,
-                selectedSpline
-              )
-                ? 0.98
-                : 0.72;
+              0.72;
 
             splineAxis.isPickable =
               true;
@@ -5511,59 +5381,6 @@ export function Viewport({
       }
     }
 
-    if (
-      showSplines &&
-      !usesWorldCoordinates &&
-      selectedSpline &&
-      selectedSplineProfile &&
-      editorTool === "select"
-    ) {
-      createSelectedSplineProfile(
-        scene,
-        selectedSpline,
-        selectedSplineProfile,
-        textureAssetsByKey
-      );
-    }
-
-    if (
-      showObjects &&
-      editorTool === "select" &&
-      !usesWorldCoordinates &&
-      selectedObject &&
-      selectedGeometry &&
-      !hasRenderableObjectVisual(
-        selectedObject,
-        objectGeometryByPath[
-          selectedObject
-            .sceneryObjectPath
-        ],
-        textureAssetsByKey
-      )
-    ) {
-      createSelectedGeometry(
-        scene,
-        selectedObject,
-        selectedGeometry,
-        textureAssetsByKey,
-        nightPreviewEnabled,
-        objectLodInstances,
-        tiles
-      );
-    }
-
-    showSelection(
-      showObjects
-        ? selectedObject
-        : undefined
-    );
-
-    showSplineSelection(
-      showSplines
-        ? selectedSpline
-        : undefined
-    );
-
     let editRoot:
       TransformNode | undefined;
 
@@ -5572,22 +5389,21 @@ export function Viewport({
     if (
       !placementAssetPath &&
       !usesWorldCoordinates &&
-      selectedObject &&
-      editorTool !== "select"
+      sceneEditObject
     ) {
       if (
-        selectedGeometry &&
+        sceneEditGeometry &&
         hasRenderableObjectVisual(
-          selectedObject,
-          selectedGeometry,
+          sceneEditObject,
+          sceneEditGeometry,
           textureAssetsByKey
         )
       ) {
         editRoot =
           createSelectedGeometry(
             scene,
-            selectedObject,
-            selectedGeometry,
+            sceneEditObject,
+            sceneEditGeometry,
             textureAssetsByKey,
             nightPreviewEnabled,
             objectLodInstances,
@@ -5602,10 +5418,10 @@ export function Viewport({
 
         configureObjectRoot(
           editRoot,
-          selectedObject,
-          selectedGeometry ??
+          sceneEditObject,
+          sceneEditGeometry ??
             objectGeometryByPath[
-              selectedObject
+              sceneEditObject
                 .sceneryObjectPath
             ],
           tiles
@@ -5615,14 +5431,13 @@ export function Viewport({
       !placementAssetPath &&
       !usesWorldCoordinates &&
       showSplines &&
-      selectedSpline &&
-      editorTool !== "select"
+      sceneEditSpline
     ) {
       editRoot =
         createSplineEditRoot(
           scene,
-          selectedSpline,
-          selectedSplineProfile,
+          sceneEditSpline,
+          sceneEditSplineProfile,
           textureAssetsByKey
         );
 
@@ -5707,24 +5522,24 @@ export function Viewport({
             ?.toEulerAngles() ??
           editRoot.rotation;
 
-        if (selectedObject) {
+        if (sceneEditObject) {
           callbacksRef.current.onPreviewObjectTransform({
-            ...selectedObject,
+            ...sceneEditObject,
             x:
               editRoot.position.x -
-              selectedObject.tileX *
+              sceneEditObject.tileX *
                 300,
             y:
               editRoot.position.z -
-              selectedObject.tileY *
+              sceneEditObject.tileY *
                 300,
             z:
               editRoot.position.y -
               getObjectTerrainOffset(
-                selectedObject,
-                selectedGeometry ??
+                sceneEditObject,
+                sceneEditGeometry ??
                   objectGeometryByPath[
-                    selectedObject
+                    sceneEditObject
                       .sceneryObjectPath
                   ],
                 tiles
@@ -5743,16 +5558,16 @@ export function Viewport({
           return;
         }
 
-        if (selectedSpline) {
+        if (sceneEditSpline) {
           callbacksRef.current.onPreviewSplineTransform({
-            ...selectedSpline,
+            ...sceneEditSpline,
             x:
               editRoot.position.x -
-              selectedSpline.tileX *
+              sceneEditSpline.tileX *
                 300,
             y:
               editRoot.position.z -
-              selectedSpline.tileY *
+              sceneEditSpline.tileY *
                 300,
             z: editRoot.position.y,
             rotation:
@@ -6901,11 +6716,11 @@ export function Viewport({
         picked.kind === "object"
           ? isSameObject(
               picked.item,
-              selectedObject
+              selectedObjectRef.current
             )
           : isSameSpline(
               picked.item,
-              selectedSpline
+              selectedSplineRef.current
             );
 
       if (alreadySelected) {
@@ -8271,6 +8086,10 @@ export function Viewport({
     );
     resize();
 
+    setSceneRevision(
+      (current) => current + 1
+    );
+
     return () => {
       engine.stopRenderLoop(
         renderFrame
@@ -8356,6 +8175,14 @@ export function Viewport({
 
       canvas.style.cursor = "";
       gizmoManager?.dispose();
+
+      if (
+        sceneRef.current === scene
+      ) {
+        sceneRef.current =
+          undefined;
+      }
+
       scene.dispose();
     };
   }, [
@@ -8393,13 +8220,206 @@ export function Viewport({
     activeTile,
     referenceOverlay,
     usesWorldCoordinates,
-    selectedObject,
-    selectedGeometry,
+    sceneEditObject,
+    sceneEditGeometry,
     objectGeometryByPath,
     textureAssetsByKey,
     splineProfilesByPath,
+    sceneEditSpline,
+    sceneEditSplineProfile,
+  ]);
+
+  useEffect(() => {
+    const scene =
+      sceneRef.current;
+
+    if (
+      !scene ||
+      scene.isDisposed()
+    ) {
+      return;
+    }
+
+    let objectMarker:
+      ReturnType<
+        typeof MeshBuilder.CreateLineSystem
+      > |
+      undefined;
+
+    let splineMarker:
+      ReturnType<
+        typeof MeshBuilder.CreateLineSystem
+      > |
+      undefined;
+
+    if (
+      showObjects &&
+      selectedObject
+    ) {
+      objectMarker =
+        MeshBuilder.CreateLineSystem(
+          "omsi-selected-object",
+          {
+            lines:
+              createSelectedMarkerLines(
+                selectedObject,
+                objectGeometryByPath[
+                  selectedObject
+                    .sceneryObjectPath
+                ],
+                tiles
+              )
+          },
+          scene
+        );
+
+      objectMarker.color =
+        new Color3(
+          0.1,
+          0.92,
+          1
+        );
+      objectMarker.visibility =
+        0.96;
+      objectMarker.isPickable =
+        false;
+      objectMarker.renderingGroupId =
+        3;
+    }
+
+    if (
+      showSplines &&
+      selectedSpline
+    ) {
+      const axis =
+        getSplineAxisLine(
+          selectedSpline
+        );
+
+      if (axis.length >= 2) {
+        const lifted =
+          axis.map((point) =>
+            point.add(
+              new Vector3(
+                0,
+                0.38,
+                0
+              )
+            )
+          );
+
+        const start = lifted[0];
+        const end =
+          lifted[
+            lifted.length - 1
+          ];
+        const markerRadius = 2.2;
+
+        splineMarker =
+          MeshBuilder.CreateLineSystem(
+            "omsi-selected-spline",
+            {
+              lines: [
+                lifted,
+                [
+                  new Vector3(
+                    start.x -
+                      markerRadius,
+                    start.y,
+                    start.z
+                  ),
+                  new Vector3(
+                    start.x +
+                      markerRadius,
+                    start.y,
+                    start.z
+                  )
+                ],
+                [
+                  new Vector3(
+                    start.x,
+                    start.y,
+                    start.z -
+                      markerRadius
+                  ),
+                  new Vector3(
+                    start.x,
+                    start.y,
+                    start.z +
+                      markerRadius
+                  )
+                ],
+                [
+                  new Vector3(
+                    end.x -
+                      markerRadius,
+                    end.y,
+                    end.z
+                  ),
+                  new Vector3(
+                    end.x +
+                      markerRadius,
+                    end.y,
+                    end.z
+                  )
+                ],
+                [
+                  new Vector3(
+                    end.x,
+                    end.y,
+                    end.z -
+                      markerRadius
+                  ),
+                  new Vector3(
+                    end.x,
+                    end.y,
+                    end.z +
+                      markerRadius
+                  )
+                ]
+              ]
+            },
+            scene
+          );
+
+        splineMarker.color =
+          new Color3(
+            0.1,
+            0.92,
+            1
+          );
+        splineMarker.visibility =
+          0.98;
+        splineMarker.isPickable =
+          false;
+        splineMarker
+          .renderingGroupId = 3;
+      }
+    }
+
+    return () => {
+      if (
+        objectMarker &&
+        !objectMarker.isDisposed()
+      ) {
+        objectMarker.dispose();
+      }
+
+      if (
+        splineMarker &&
+        !splineMarker.isDisposed()
+      ) {
+        splineMarker.dispose();
+      }
+    };
+  }, [
+    sceneRevision,
+    showObjects,
+    showSplines,
+    selectedObject,
     selectedSpline,
-    selectedSplineProfile,
+    objectGeometryByPath,
+    tiles
   ]);
 
   // The scene effect above intentionally survives ordinary App renders

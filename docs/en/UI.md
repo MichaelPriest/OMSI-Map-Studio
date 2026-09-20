@@ -983,3 +983,8 @@ All behavior remains connected to real editor state; no fake commands are introd
 - clicking empty map space clears the selection without changing the tool the user explicitly chose.
 
 The Babylon `Engine` now stays attached to the canvas during normal state updates; only the required scene content is updated/rebuilt. This avoids the black flash caused by destroying and recreating the graphics context during streaming, selection and Inspector opening.
+
+
+### Decoupled selection overlay
+
+The visual selection layer is now separate from structural scene rebuilding. In **Select** mode, choosing another object or spline updates only the selection outline/guide; the map, terrain, objects and already rendered profiles remain in the scene. Structural rebuilding is reserved for changes that actually alter content, visibility or gizmo editing. This is closer to the classic OMSI editor workflow and reduces interruptions while clicking through scenery.

@@ -983,3 +983,8 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - clicar em área vazia limpa a seleção sem alterar a ferramenta explicitamente escolhida.
 
 O `Engine` do Babylon permanece associado ao canvas durante atualizações normais de estado; apenas a cena necessária é atualizada/recriada. Isso evita o flash preto causado por destruir e recriar o contexto gráfico durante streaming, seleção e abertura do inspetor.
+
+
+### Overlay de seleção desacoplado
+
+A seleção visual foi separada da reconstrução estrutural da cena. Em modo **Selecionar**, trocar de objeto ou spline atualiza apenas o contorno/guia de seleção; o mapa, terreno, objetos e perfis já renderizados permanecem na cena. A reconstrução estrutural continua reservada para mudanças que realmente alteram conteúdo, visibilidade ou edição com gizmos. Isso aproxima o comportamento do editor clássico do OMSI e reduz interrupções ao clicar repetidamente no cenário.
