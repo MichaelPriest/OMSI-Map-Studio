@@ -14938,7 +14938,12 @@ export function App() {
                   : "status-message"
               }
             >
-              <strong>
+              <div className="status-message-heading">
+                <MapStudioIcon
+                  name="asset-index"
+                  size={20}
+                />
+                <strong>
                 {assetIndexStatus.state ===
                 "indexing"
                   ? "Indexando assets locais…"
@@ -14949,7 +14954,8 @@ export function App() {
                         "error"
                       ? "Índice local indisponível"
                       : "Preparando índice local"}
-              </strong>
+                </strong>
+              </div>
               <span>
                 {assetIndexStatus.state ===
                 "indexing"
@@ -17604,6 +17610,10 @@ export function App() {
                   "performance"
                     ? "✓ "
                     : ""}
+                  <MapStudioIcon
+                    name="streaming"
+                    size={16}
+                  />{" "}
                   Streaming automático
                 </button>
                 <button
