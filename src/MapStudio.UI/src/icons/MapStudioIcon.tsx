@@ -1,3 +1,8 @@
+import cacheIcon from "./icons/cache.svg?raw";
+import nightIcon from "./icons/night.svg?raw";
+import layersIcon from "./icons/layers.svg?raw";
+import topViewIcon from "./icons/top-view.svg?raw";
+import perspectiveIcon from "./icons/perspective.svg?raw";
 import linkIcon from "./icons/link.svg?raw";
 import deleteIcon from "./icons/delete.svg?raw";
 import duplicateIcon from "./icons/duplicate.svg?raw";
@@ -55,6 +60,11 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "perspective": perspectiveIcon,
+  "top-view": topViewIcon,
+  "layers": layersIcon,
+  "night": nightIcon,
+  "cache": cacheIcon,
   "link": linkIcon,
   "delete": deleteIcon,
   "duplicate": duplicateIcon,

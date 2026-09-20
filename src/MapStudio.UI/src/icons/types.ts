@@ -51,4 +51,9 @@ export type MapStudioIconName =
   | "materials"
   | "duplicate"
   | "delete"
-  | "link";
+  | "link"
+  | "perspective"
+  | "top-view"
+  | "layers"
+  | "night"
+  | "cache";

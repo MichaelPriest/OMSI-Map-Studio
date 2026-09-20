@@ -6096,3 +6096,213 @@ span.active {
   right: 12px;
   bottom: 92px;
 }
+
+
+/* Compact desktop viewport controls. Fullscreen keeps using the unified top
+   docks and intentionally hides these desktop-only surfaces. */
+.viewport-toolbar {
+  gap: 4px;
+  padding: 5px;
+  border-color: rgb(52 96 126 / 76%);
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(8 29 43 / 94%),
+      rgb(5 18 28 / 92%)
+    );
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 30%);
+  backdrop-filter: blur(12px);
+}
+
+.viewport-toolbar .viewport-mode {
+  display: inline-flex;
+  height: 29px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-color: #244a62;
+  border-radius: 6px;
+  background: #071a27;
+  color: #8cabbf;
+  font-size: 7px;
+}
+
+.viewport-toolbar .viewport-mode > .mapstudio-icon {
+  color: #70a8cb;
+}
+
+.viewport-toolbar .viewport-mode kbd {
+  min-width: 14px;
+  padding: 1px 3px;
+  border: 1px solid #294f67;
+  border-radius: 3px;
+  background: #0b2637;
+  color: #68899e;
+  font: inherit;
+  font-size: 6px;
+}
+
+.viewport-toolbar .viewport-mode.active {
+  border-color: #3c94ca;
+  background:
+    linear-gradient(
+      180deg,
+      #124968,
+      #0c334b
+    );
+  color: #ecf8ff;
+}
+
+.viewport-toolbar .viewport-mode.active > .mapstudio-icon {
+  color: #8dd6ff;
+}
+
+.viewport-toolbar .viewport-mode.active kbd {
+  border-color: #4b8db5;
+  color: #bce7ff;
+}
+
+.viewport-toolbar .snap-field {
+  display: inline-flex;
+  height: 29px;
+  align-items: center;
+  gap: 3px;
+  padding: 0 5px;
+  border: 1px solid #23465d;
+  border-radius: 6px;
+  background: #061722;
+}
+
+.viewport-toolbar .snap-field span {
+  color: #65879d;
+  font-size: 6.5px;
+}
+
+.viewport-toolbar .snap-field input {
+  width: 46px;
+  height: 21px;
+  padding: 0 4px;
+  border-color: #244b63;
+  background: #081e2c;
+  color: #c4d8e5;
+  font-size: 7px;
+}
+
+.viewport-tool-state,
+.viewport-toolbar .preview-warning {
+  display: inline-flex;
+  height: 29px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border: 1px solid #1e4055;
+  border-radius: 6px;
+  background: #061722;
+  color: #7596aa;
+  font-size: 7px;
+}
+
+.viewport-toolbar .preview-warning {
+  border-color: #765829;
+  background: #281d09;
+  color: #deb875;
+}
+
+.viewport-layers {
+  width: 190px;
+  gap: 3px;
+  padding: 7px;
+  border-color: rgb(52 96 126 / 76%);
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(8 29 43 / 95%),
+      rgb(5 18 28 / 94%)
+    );
+  box-shadow:
+    0 10px 28px rgb(0 0 0 / 30%);
+  backdrop-filter: blur(12px);
+}
+
+.viewport-layers-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 3px 4px 6px;
+  border-bottom: 1px solid #17394d;
+}
+
+.viewport-layers-heading > .mapstudio-icon {
+  color: #7bbce4;
+}
+
+.viewport-layers-heading > div {
+  display: grid;
+  gap: 1px;
+}
+
+.viewport-layers-heading strong {
+  color: #d9eaf4;
+  font-size: 8px;
+}
+
+.viewport-layers-heading span {
+  color: #688ca3;
+  font-size: 6px;
+}
+
+.viewport-layers label {
+  display: grid;
+  min-height: 27px;
+  grid-template-columns: 14px 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: #91adbf;
+  font-size: 7px;
+}
+
+.viewport-layers label:hover {
+  border-color: #21475e;
+  background: #081d2a;
+}
+
+.viewport-layers label > .mapstudio-icon {
+  color: #6d9bb8;
+}
+
+.viewport-layers label input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+}
+
+.viewport-layers label:has(input:checked) {
+  background: rgb(13 49 70 / 56%);
+  color: #d8eaf4;
+}
+
+.viewport-layers label:has(input:checked)
+> .mapstudio-icon {
+  color: #83cdf7;
+}
+
+.viewport-layers .texture-cache-clear {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 4px;
+  border-color: #294c61;
+  border-radius: 6px;
+  background: #071824;
+  color: #7f9fb3;
+}

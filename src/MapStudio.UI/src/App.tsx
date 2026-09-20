@@ -24164,7 +24164,12 @@ export function App() {
                   );
                 }}
               >
-                Perspectiva · 1
+                <MapStudioIcon
+                  name="perspective"
+                  size={14}
+                />
+                <span>Perspectiva</span>
+                <kbd>1</kbd>
               </button>
 
               <button
@@ -24181,7 +24186,12 @@ export function App() {
                   );
                 }}
               >
-                Topo · 2
+                <MapStudioIcon
+                  name="top-view"
+                  size={14}
+                />
+                <span>Topo</span>
+                <kbd>2</kbd>
               </button>
 
               <button
@@ -24199,7 +24209,12 @@ export function App() {
                 }
                 title="Alternar snap (N)"
               >
-                Snap · N
+                <MapStudioIcon
+                  name="snap"
+                  size={14}
+                />
+                <span>Snap</span>
+                <kbd>N</kbd>
               </button>
 
               <label className="snap-field">
@@ -24255,16 +24270,28 @@ export function App() {
               </label>
 
               <span className="viewport-tool-state">
-                Ferramenta:{" "}
-                {editorTool === "select"
-                  ? "Selecionar"
-                  : editorTool === "move"
-                    ? "Mover"
-                    : "Rotacionar"}
+                <MapStudioIcon
+                  name={
+                    editorTool === "select"
+                      ? "select"
+                      : editorTool === "move"
+                        ? "move"
+                        : "rotate"
+                  }
+                  size={13}
+                />
+                <span>
+                  {editorTool === "select"
+                    ? "Selecionar"
+                    : editorTool === "move"
+                      ? "Mover"
+                      : "Rotacionar"}
+                </span>
               </span>
 
               {previewEditCount > 0 && (
                 <span className="preview-warning">
+                  <MapStudioIcon name="warning" size={12} />
                   Prévia objeto ·{" "}
                   {previewEditCount}
                 </span>
@@ -24272,6 +24299,7 @@ export function App() {
 
               {splinePreviewEditCount > 0 && (
                 <span className="preview-warning">
+                  <MapStudioIcon name="warning" size={12} />
                   Prévia spline ·{" "}
                   {splinePreviewEditCount}
                 </span>
@@ -24291,6 +24319,16 @@ export function App() {
               >
                 <MapStudioIcon name="drag" size={14} />
               </button>
+              <div className="viewport-layers-heading">
+                <MapStudioIcon
+                  name="layers"
+                  size={15}
+                />
+                <div>
+                  <strong>Camadas</strong>
+                  <span>Visibilidade do mapa</span>
+                </div>
+              </div>
               <label>
                 <input
                   type="checkbox"
@@ -24301,7 +24339,8 @@ export function App() {
                     )
                   }
                 />
-                Grade / tiles
+                <MapStudioIcon name="grid" size={13} />
+                <span>Grade / tiles</span>
               </label>
               <label>
                 <input
@@ -24313,7 +24352,8 @@ export function App() {
                     )
                   }
                 />
-                Objetos
+                <MapStudioIcon name="sco-object" size={13} />
+                <span>Objetos</span>
               </label>
               <label>
                 <input
@@ -24325,7 +24365,8 @@ export function App() {
                     )
                   }
                 />
-                Splines
+                <MapStudioIcon name="sli-spline" size={13} />
+                <span>Splines</span>
               </label>
               <label>
                 <input
@@ -24340,7 +24381,8 @@ export function App() {
                     )
                   }
                 />
-                Perfis spline
+                <MapStudioIcon name="profile" size={13} />
+                <span>Perfis spline</span>
               </label>
               <label>
                 <input
@@ -24354,7 +24396,8 @@ export function App() {
                     )
                   }
                 />
-                Nightmap
+                <MapStudioIcon name="night" size={13} />
+                <span>Nightmap</span>
               </label>
               <label>
                 <input
@@ -24370,7 +24413,8 @@ export function App() {
                     )
                   }
                 />
-                Terreno
+                <MapStudioIcon name="terrain" size={13} />
+                <span>Terreno</span>
               </label>
               <label>
                 <input
@@ -24389,7 +24433,8 @@ export function App() {
                     )
                   }
                 />
-                Pintura terreno
+                <MapStudioIcon name="terrain" size={13} />
+                <span>Pintura terreno</span>
               </label>
 
               <button
@@ -24442,7 +24487,11 @@ export function App() {
                 }}
                 title="Limpar texturas de objetos, splines, terreno e máscaras sem descarregar o mapa"
               >
-                Limpar cache
+                <MapStudioIcon
+                  name="cache"
+                  size={13}
+                />
+                <span>Limpar cache</span>
               </button>
             </div>
 
