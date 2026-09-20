@@ -621,3 +621,16 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 - the second quick click on the same object/spline still focuses the camera;
 - the viewport shows real selection diagnostics with object/spline, mesh/material, declared and physically resolved texture, UV range, final world position, `render lift`, and SCO/SLI/O3D origin;
 - the physical resolved texture path is sent by the host only for local editor diagnostics; no fake/mock production data is introduced.
+
+
+## Map catalog, selection, and construction — post-test.34
+
+- after selecting the OMSI root, the host uses `OmsiMapCatalog.DiscoverWithProgressAsync` to enumerate only real maps containing `global.cfg`;
+- the UI lists display name, directory, tile count, and `[worldcoordinates]` usage, with search and explicit user selection; the manual folder picker remains only as a fallback;
+- the main sidebar can be collapsed without removing access to application areas;
+- the viewport has selection filters for all items, objects, splines, and terrain;
+- construction shortcuts open the existing real libraries: roads use `.sli`; junctions, objects, water, grass, and trees use `.sco` / `[tree]`; no fake entries are created;
+- Terrain mode selects the real tile and clearly keeps persistent height editing unavailable until its preservative write path is validated;
+- SCO `[rendertype]` is now preserved by Core and delivered to the viewport;
+- objects declaring `surface`, `on_surface`, or `presurface` use their real diffuse texture through the unlit preview path as well, without changing coordinates or increasing offsets;
+- SLI roads use the same real OMSI texture in the diffuse/emissive channels of the unlit material to avoid black output caused by the previous `disableLighting` plus missing-emissive combination.
