@@ -130,6 +130,7 @@ type ViewportProps = {
       y: number;
     }
   ) => void;
+  roadDragMode?: boolean;
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -3809,6 +3810,7 @@ export function Viewport({
   splinePlacementProfile,
   pendingSplinePlacement,
   onSplinePlacementPoint,
+  roadDragMode,
   objects,
   splines,
   activeTile,
@@ -4948,6 +4950,10 @@ export function Viewport({
     let pointerDownHandledSelection =
       false;
 
+    let splineRoadDragPointer:
+      | number
+      | undefined;
+
     const getMapItemClickKey = (
       kind: "object" | "spline",
       item:
@@ -5183,6 +5189,15 @@ export function Viewport({
     const handlePointerMove = (
       event: PointerEvent
     ) => {
+      if (
+        splineRoadDragPointer ===
+          event.pointerId
+      ) {
+        emitSplineRoadPoint(event);
+        event.preventDefault();
+        return;
+      }
+
       if (
         !navigationPointer ||
         navigationPointer.pointerId !==
@@ -5689,6 +5704,132 @@ export function Viewport({
       return true;
     };
 
+    const emitSplineRoadPoint = (
+      event: PointerEvent
+    ) => {
+      if (
+        !splinePlacementTemplate ||
+        !onSplinePlacementPoint ||
+        usesWorldCoordinates
+      ) {
+        return false;
+      }
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const pointerX =
+        (event.clientX - rect.left) *
+        (
+          engine.getRenderWidth() /
+          rect.width
+        );
+
+      const pointerY =
+        (event.clientY - rect.top) *
+        (
+          engine.getRenderHeight() /
+          rect.height
+        );
+
+      const ray =
+        scene.createPickingRay(
+          pointerX,
+          pointerY,
+          Matrix.Identity(),
+          camera,
+          false
+        );
+
+      const direction =
+        ray.direction
+          .normalizeToNew();
+
+      if (
+        Math.abs(direction.y) <=
+        0.000001
+      ) {
+        return false;
+      }
+
+      const distanceToGround =
+        -ray.origin.y /
+        direction.y;
+
+      if (distanceToGround <= 0) {
+        return false;
+      }
+
+      const groundPoint =
+        ray.origin.add(
+          direction.scale(
+            distanceToGround
+          )
+        );
+
+      const tileX =
+        Math.floor(
+          groundPoint.x / 300
+        );
+
+      const tileY =
+        Math.floor(
+          groundPoint.z / 300
+        );
+
+      const tileExists =
+        tiles.some(
+          (tile) =>
+            tile.x === tileX &&
+            tile.y === tileY &&
+            (
+              !tile.detailsLoaded ||
+              tile.fileExists
+            )
+        );
+
+      if (!tileExists) {
+        return false;
+      }
+
+      const rawX =
+        groundPoint.x -
+        tileX * 300;
+      const rawY =
+        groundPoint.z -
+        tileY * 300;
+
+      const x =
+        snapEnabled &&
+        moveSnap > 0
+          ? Math.round(
+              rawX / moveSnap
+            ) * moveSnap
+          : rawX;
+
+      const y =
+        snapEnabled &&
+        moveSnap > 0
+          ? Math.round(
+              rawY / moveSnap
+            ) * moveSnap
+          : rawY;
+
+      onSplinePlacementPoint({
+        targetTileX: tileX,
+        targetTileY: tileY,
+        x,
+        y
+      });
+
+      onActiveTileChange?.({
+        x: tileX,
+        y: tileY
+      });
+
+      return true;
+    };
+
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -5705,6 +5846,23 @@ export function Viewport({
         y: event.clientY
       };
 
+      if (
+        roadDragMode &&
+        splinePlacementTemplate &&
+        onSplinePlacementPoint &&
+        emitSplineRoadPoint(event)
+      ) {
+        splineRoadDragPointer =
+          event.pointerId;
+        pointerDownHandledSelection =
+          false;
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+        event.preventDefault();
+        return;
+      }
+
       pointerDownHandledSelection =
         selectPickedMapItem(
           event
@@ -5712,6 +5870,30 @@ export function Viewport({
     };
 
     const handlePointerUp = (event: PointerEvent) => {
+      if (
+        splineRoadDragPointer ===
+        event.pointerId
+      ) {
+        emitSplineRoadPoint(event);
+
+        if (
+          canvas.hasPointerCapture(
+            event.pointerId
+          )
+        ) {
+          canvas.releasePointerCapture(
+            event.pointerId
+          );
+        }
+
+        splineRoadDragPointer =
+          undefined;
+        pointerStart = undefined;
+        pointerDownHandledSelection =
+          false;
+        return;
+      }
+
       if (event.button !== 0 || !pointerStart) {
         pointerStart = undefined;
         return;
@@ -6168,6 +6350,14 @@ export function Viewport({
     const handlePointerCancel = (
       event: PointerEvent
     ) => {
+      if (
+        splineRoadDragPointer ===
+        event.pointerId
+      ) {
+        splineRoadDragPointer =
+          undefined;
+      }
+
       pointerStart = undefined;
       finishNavigationPointer(event);
     };
@@ -6330,6 +6520,7 @@ export function Viewport({
     splinePlacementProfile,
     pendingSplinePlacement,
     onSplinePlacementPoint,
+    roadDragMode,
     objects,
     splines,
     activeTile,
