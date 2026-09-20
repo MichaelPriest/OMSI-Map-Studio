@@ -13910,6 +13910,9 @@ export function App() {
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
+          setSplineLibraryView("groups");
+          setSplineTechnicalFilter("all");
+          setSplineSubcategory("all");
           setSplineLibraryGroup(
             isBridge
               ? "bridges"
@@ -13948,6 +13951,9 @@ export function App() {
         setSelectionMode("object");
         setShowObjects(true);
         setLibrarySearch("");
+        setSceneryLibraryView("groups");
+        setSceneryTechnicalFilter("all");
+        setScenerySubcategory("all");
         setSceneryLibraryGroup(
           tool === "junction"
             ? "junctions"
@@ -19475,6 +19481,465 @@ export function App() {
                   <small>Saúde</small>
                 </button>
               </div>
+
+              {activeConstructionTool &&
+                activeConstructionTool !==
+                  "terrain" && (
+                <div
+                  className="citybuilder-asset-shelf"
+                  aria-label="Assets da categoria de construção ativa"
+                >
+                  <div className="citybuilder-asset-shelf-heading">
+                    <span>
+                      {activeConstructionTool ===
+                        "road"
+                        ? "═"
+                        : activeConstructionTool ===
+                            "bridge"
+                          ? "⌁"
+                          : activeConstructionTool ===
+                              "junction"
+                            ? "✣"
+                            : activeConstructionTool ===
+                                "building"
+                              ? "⌂"
+                              : activeConstructionTool ===
+                                  "tree" ||
+                                  activeConstructionTool ===
+                                    "grass"
+                                ? "♣"
+                                : activeConstructionTool ===
+                                    "transit"
+                                  ? "▤"
+                                  : activeConstructionTool ===
+                                      "street"
+                                    ? "⚑"
+                                    : activeConstructionTool ===
+                                        "utilities"
+                                      ? "⚙"
+                                      : "◇"}
+                    </span>
+                    <div>
+                      <strong>
+                        {activeConstructionTool ===
+                          "road"
+                          ? "Ruas"
+                          : activeConstructionTool ===
+                              "bridge"
+                            ? "Pontes / elevados"
+                            : activeConstructionTool ===
+                                "junction"
+                              ? "Cruzamentos"
+                              : activeConstructionTool ===
+                                  "building"
+                                ? "Casas / prédios"
+                                : activeConstructionTool ===
+                                      "tree" ||
+                                    activeConstructionTool ===
+                                      "grass"
+                                  ? "Vegetação"
+                                  : activeConstructionTool ===
+                                      "transit"
+                                    ? "Transporte"
+                                    : activeConstructionTool ===
+                                        "street"
+                                      ? "Mobiliário"
+                                      : activeConstructionTool ===
+                                          "utilities"
+                                        ? "Infraestrutura"
+                                        : activeConstructionTool ===
+                                            "water"
+                                          ? "Água / cenário"
+                                          : "Objetos"}
+                      </strong>
+                      <small>
+                        Clique para selecionar um asset real e depois posicione no mapa
+                      </small>
+                    </div>
+                  </div>
+
+                  <div className="citybuilder-asset-track">
+                    {(
+                      activeConstructionTool ===
+                        "road" ||
+                      activeConstructionTool ===
+                        "bridge"
+                    ) ? (
+                      loadingSplineLibrary ? (
+                        <span className="citybuilder-asset-empty">
+                          Lendo Splines reais…
+                        </span>
+                      ) : filteredSplineLibrary
+                          .slice()
+                          .sort((left, right) => {
+                            const leftFavorite =
+                              splineFavorites.includes(
+                                left.splinePath
+                              )
+                                ? 1
+                                : 0;
+                            const rightFavorite =
+                              splineFavorites.includes(
+                                right.splinePath
+                              )
+                                ? 1
+                                : 0;
+
+                            if (
+                              leftFavorite !==
+                              rightFavorite
+                            ) {
+                              return (
+                                rightFavorite -
+                                leftFavorite
+                              );
+                            }
+
+                            const leftRecent =
+                              splineRecent.indexOf(
+                                left.splinePath
+                              );
+                            const rightRecent =
+                              splineRecent.indexOf(
+                                right.splinePath
+                              );
+
+                            if (
+                              leftRecent !== -1 ||
+                              rightRecent !== -1
+                            ) {
+                              if (
+                                leftRecent === -1
+                              ) {
+                                return 1;
+                              }
+
+                              if (
+                                rightRecent === -1
+                              ) {
+                                return -1;
+                              }
+
+                              if (
+                                leftRecent !==
+                                rightRecent
+                              ) {
+                                return (
+                                  leftRecent -
+                                  rightRecent
+                                );
+                              }
+                            }
+
+                            return (
+                              (splineUsage[
+                                right.splinePath
+                              ] ?? 0) -
+                              (splineUsage[
+                                left.splinePath
+                              ] ?? 0)
+                            );
+                          })
+                          .slice(0, 14)
+                          .map((entry) => {
+                            const assetKey =
+                              "sli:" +
+                              entry.splinePath;
+                            const selected =
+                              splineLibraryPlacementAsset
+                                ?.splinePath ===
+                              entry.splinePath;
+                            const groupInfo =
+                              splineLibraryGroups.find(
+                                (group) =>
+                                  group.id ===
+                                  getSplineLibraryGroup(
+                                    entry
+                                  )
+                              );
+
+                            return (
+                              <button
+                                type="button"
+                                key={
+                                  entry.splinePath
+                                }
+                                className={
+                                  selected
+                                    ? "citybuilder-asset-card active"
+                                    : "citybuilder-asset-card"
+                                }
+                                onClick={() =>
+                                  handleSelectSplineLibraryAsset(
+                                    entry,
+                                    false
+                                  )
+                                }
+                                onDoubleClick={() => {
+                                  handlePreviewSplineLibraryAsset(
+                                    entry
+                                  );
+                                  handleExplorerPanelTab(
+                                    "splineLibrary"
+                                  );
+                                }}
+                                title={
+                                  entry.splinePath +
+                                  " · duplo clique abre a prévia 3D"
+                                }
+                              >
+                                {assetThumbnailCache[
+                                  assetKey
+                                ] ? (
+                                  <img
+                                    src={
+                                      assetThumbnailCache[
+                                        assetKey
+                                      ]
+                                    }
+                                    alt=""
+                                    draggable={
+                                      false
+                                    }
+                                  />
+                                ) : (
+                                  <span
+                                    className="citybuilder-asset-icon"
+                                    aria-hidden="true"
+                                  >
+                                    {groupInfo?.icon ??
+                                      "═"}
+                                  </span>
+                                )}
+                                <strong>
+                                  {entry.fileName}
+                                </strong>
+                                <small>
+                                  {splineFavorites.includes(
+                                    entry.splinePath
+                                  )
+                                    ? "★ "
+                                    : ""}
+                                  {getSplineLibrarySubcategory(
+                                    entry,
+                                    getSplineLibraryGroup(
+                                      entry
+                                    )
+                                  )}
+                                </small>
+                              </button>
+                            );
+                          })
+                    ) : loadingSceneryLibrary ? (
+                      <span className="citybuilder-asset-empty">
+                        Lendo Sceneryobjects reais…
+                      </span>
+                    ) : filteredSceneryLibrary
+                        .slice()
+                        .sort((left, right) => {
+                          const leftFavorite =
+                            sceneryFavorites.includes(
+                              left.sceneryObjectPath
+                            )
+                              ? 1
+                              : 0;
+                          const rightFavorite =
+                            sceneryFavorites.includes(
+                              right.sceneryObjectPath
+                            )
+                              ? 1
+                              : 0;
+
+                          if (
+                            leftFavorite !==
+                            rightFavorite
+                          ) {
+                            return (
+                              rightFavorite -
+                              leftFavorite
+                            );
+                          }
+
+                          const leftRecent =
+                            sceneryRecent.indexOf(
+                              left.sceneryObjectPath
+                            );
+                          const rightRecent =
+                            sceneryRecent.indexOf(
+                              right.sceneryObjectPath
+                            );
+
+                          if (
+                            leftRecent !== -1 ||
+                            rightRecent !== -1
+                          ) {
+                            if (
+                              leftRecent === -1
+                            ) {
+                              return 1;
+                            }
+
+                            if (
+                              rightRecent === -1
+                            ) {
+                              return -1;
+                            }
+
+                            if (
+                              leftRecent !==
+                              rightRecent
+                            ) {
+                              return (
+                                leftRecent -
+                                rightRecent
+                              );
+                            }
+                          }
+
+                          return (
+                            (sceneryUsage[
+                              right.sceneryObjectPath
+                            ] ?? 0) -
+                            (sceneryUsage[
+                              left.sceneryObjectPath
+                            ] ?? 0)
+                          );
+                        })
+                        .slice(0, 14)
+                        .map((entry) => {
+                          const group =
+                            getSceneryLibraryGroup(
+                              entry,
+                              sceneryMetadataByPath[
+                                entry.sceneryObjectPath
+                              ],
+                              geometryByPath[
+                                entry.sceneryObjectPath
+                              ]
+                            );
+                          const groupInfo =
+                            sceneryLibraryGroups.find(
+                              (candidate) =>
+                                candidate.id ===
+                                group
+                            );
+                          const assetKey =
+                            "sco:" +
+                            entry.sceneryObjectPath;
+                          const selected =
+                            placementAsset
+                              ?.sceneryObjectPath ===
+                            entry.sceneryObjectPath;
+
+                          return (
+                            <button
+                              type="button"
+                              key={
+                                entry.sceneryObjectPath
+                              }
+                              className={
+                                selected
+                                  ? "citybuilder-asset-card active"
+                                  : "citybuilder-asset-card"
+                              }
+                              onClick={() =>
+                                handleSelectPlacementAsset(
+                                  entry
+                                )
+                              }
+                              onDoubleClick={() => {
+                                handlePreviewSceneryLibraryAsset(
+                                  entry
+                                );
+                                handleExplorerPanelTab(
+                                  "library"
+                                );
+                              }}
+                              title={
+                                entry.sceneryObjectPath +
+                                " · duplo clique abre a prévia 3D"
+                              }
+                            >
+                              {assetThumbnailCache[
+                                assetKey
+                              ] ? (
+                                <img
+                                  src={
+                                    assetThumbnailCache[
+                                      assetKey
+                                    ]
+                                  }
+                                  alt=""
+                                  draggable={
+                                    false
+                                  }
+                                />
+                              ) : (
+                                <span
+                                  className="citybuilder-asset-icon"
+                                  aria-hidden="true"
+                                >
+                                  {groupInfo?.icon ??
+                                    "◇"}
+                                </span>
+                              )}
+                              <strong>
+                                {entry.fileName}
+                              </strong>
+                              <small>
+                                {sceneryFavorites.includes(
+                                  entry.sceneryObjectPath
+                                )
+                                  ? "★ "
+                                  : ""}
+                                {getSceneryLibrarySubcategory(
+                                  entry,
+                                  group
+                                )}
+                              </small>
+                            </button>
+                          );
+                        })}
+
+                    {!loadingSplineLibrary &&
+                      !loadingSceneryLibrary &&
+                      (
+                        (
+                          activeConstructionTool ===
+                            "road" ||
+                          activeConstructionTool ===
+                            "bridge"
+                        )
+                          ? filteredSplineLibrary
+                              .length === 0
+                          : filteredSceneryLibrary
+                              .length === 0
+                      ) && (
+                        <span className="citybuilder-asset-empty">
+                          Nenhum asset real encontrado nesta categoria.
+                        </span>
+                      )}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="citybuilder-open-library"
+                    onClick={() =>
+                      handleExplorerPanelTab(
+                        activeConstructionTool ===
+                            "road" ||
+                          activeConstructionTool ===
+                            "bridge"
+                          ? "splineLibrary"
+                          : "library"
+                      )
+                    }
+                    title="Abrir biblioteca completa com busca, grupos, filtros e prévia 3D"
+                  >
+                    ☰ Biblioteca
+                  </button>
+                </div>
+              )}
 
               <div className="citybuilder-subbar">
                 <div className="citybuilder-current-mode">
