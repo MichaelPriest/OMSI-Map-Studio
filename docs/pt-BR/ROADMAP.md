@@ -602,3 +602,22 @@ A sequência recomendada a partir do estado atual é:
 10. consolidar Map Health/validation até atingir paridade operacional.
 
 Esta ordem pode ser ajustada quando uma dependência técnica exigir, mas nenhuma família listada acima deve ser esquecida.
+
+
+---
+
+## 13. Regra de manutenção do roadmap
+
+Este arquivo não é apenas uma lista de ideias.
+
+Ao implementar uma família de recursos descrita aqui:
+
+- atualizar o estado correspondente de ⬜ para 🟡 ou ✅;
+- registrar limitações que permanecerem;
+- acrescentar novas dependências descobertas;
+- mover tarefas entre fases somente quando existir motivo técnico;
+- nunca remover uma lacuna apenas porque ficou difícil;
+- manter pt-BR e en sincronizados;
+- quando uma decisão arquitetural mudar, registrar a nova decisão e o motivo.
+
+Novas ideias relevantes para substituir o editor original ou ampliar o editor moderno devem entrar neste roadmap antes de serem consideradas “lembradas pelo projeto”.
