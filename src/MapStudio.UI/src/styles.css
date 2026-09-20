@@ -1028,6 +1028,124 @@ code {
 }
 
 
+.terrain-edit-panel,
+.real-map-panel {
+  position: absolute;
+  z-index: 8;
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid #28506f;
+  border-radius: 8px;
+  background: rgb(5 18 29 / 94%);
+  box-shadow: 0 12px 34px rgb(0 0 0 / 34%);
+  color: #b8ccdc;
+  backdrop-filter: blur(8px);
+}
+
+.terrain-edit-panel {
+  left: 12px;
+  bottom: 12px;
+  grid-template-columns: repeat(3, minmax(76px, 1fr)) auto;
+  width: min(660px, calc(100% - 24px));
+  align-items: end;
+}
+
+.real-map-panel {
+  top: 132px;
+  right: 10px;
+  width: min(300px, calc(100% - 20px));
+  max-height: calc(100% - 154px);
+  overflow: auto;
+}
+
+.panel-title-row {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 2px;
+}
+
+.panel-title-row strong {
+  color: #e0effa;
+  font-size: 10px;
+}
+
+.panel-title-row span,
+.reference-meta span {
+  color: #7fa0ba;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.terrain-edit-panel label,
+.real-map-panel label {
+  display: grid;
+  gap: 3px;
+  color: #8ba8bd;
+  font-size: 8px;
+}
+
+.terrain-edit-panel input,
+.real-map-panel input,
+.real-map-panel select {
+  min-width: 0;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid #284b66;
+  border-radius: 5px;
+  background: #071521;
+  color: #d5e7f4;
+  font-size: 9px;
+}
+
+.real-map-panel input[type="range"] {
+  padding: 0;
+}
+
+.reference-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 6px !important;
+}
+
+.reference-toggle input {
+  width: 14px;
+  height: 14px;
+}
+
+.reference-meta {
+  display: grid;
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid #183a52;
+  border-radius: 5px;
+  background: #06131e;
+}
+
+.reference-attribution {
+  position: absolute;
+  z-index: 5;
+  right: 12px;
+  bottom: 12px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: rgb(2 10 16 / 82%);
+  color: #b8cad8;
+  font-size: 8px;
+  pointer-events: none;
+}
+
+@media (max-width: 1080px) {
+  .terrain-edit-panel {
+    grid-template-columns: repeat(2, minmax(90px, 1fr));
+  }
+
+  .real-map-panel {
+    top: 116px;
+    width: min(270px, calc(100% - 20px));
+  }
+}
+
 .viewport-diagnostic {
   position: absolute;
   right: 10px;
