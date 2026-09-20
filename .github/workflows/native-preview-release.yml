@@ -7,8 +7,8 @@ on:
     paths:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
-      - "docs/pt-BR/releases/v0.2.0-alpha.1-native.md"
-      - "docs/en/releases/v0.2.0-alpha.1-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.2-native.md"
+      - "docs/en/releases/v0.2.0-alpha.2-native.md"
   workflow_dispatch:
 
 permissions:
@@ -19,8 +19,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.1-native
-  TAG: v0.2.0-alpha.1-native
+  VERSION: 0.2.0-alpha.2-native
+  TAG: v0.2.0-alpha.2-native
 
 jobs:
   build-native-preview:
@@ -61,6 +61,12 @@ jobs:
           if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.exe")) {
             throw "MapStudio.Native.exe was not produced."
           }
+
+          if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.pri")) {
+            throw "MapStudio.Native.pri was not published. WinUI XAML resources would fail at startup."
+          }
+
+          Write-Host "Verified MapStudio.Native.pri is present in publish output."
 
       - name: Create portable ZIP
         shell: pwsh
@@ -106,11 +112,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.1-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.2-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.1-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.2-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
