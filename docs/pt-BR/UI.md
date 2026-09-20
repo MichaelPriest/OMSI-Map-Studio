@@ -662,3 +662,10 @@ Objetos `.sco` possuem quatro modos de construção: **Único**, **Repetir**, **
 Operações com mais de um item usam o comando nativo `insertObjectBatch`. O host valida o asset e os tiles, reserva IDs globais únicos, agrupa gravações por tile e usa uma única `SafeFileTransaction` e um único diretório de backup para toda a operação.
 
 **Encaixar/alinha à rua** procura a spline normal mais próxima dentro do alcance configurado, projeta o ponto no eixo da spline e adota a direção local da rua. O viewport mostra até 96 ghosts simultâneos para manter a prévia leve; o lote salvo continua limitado a 256 itens.
+
+
+### Matriz, círculo, lotes e presets
+
+A colocação em lote ganhou **Matriz**, **Círculo** e **Lotes**. Matriz cria linhas/colunas com espaçamento X/Y; Círculo distribui itens no perímetro e pode orientar cada asset pela tangente; Lotes usa dois pontos como frente de rua e distribui casas/prédios com espaçamento e recuo configuráveis.
+
+Presets incluídos: **Arborização de avenida**, **Postes de iluminação**, **Casas alinhadas**, **Praça arborizada** e **Grade/estacionamento**. Os presets só configuram as ferramentas; a gravação continua usando o `.sco` real selecionado e o fluxo transacional de lote.
