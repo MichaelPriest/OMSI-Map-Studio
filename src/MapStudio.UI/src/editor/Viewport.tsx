@@ -3300,6 +3300,12 @@ function createSplineEditRoot(
       0
     );
 
+  root.metadata = {
+    ...(root.metadata ?? {}),
+    mapStudioKind: "spline",
+    placedSpline
+  };
+
   const localSpline: OmsiPlacedSpline = {
     ...placedSpline,
     tileX: 0,
@@ -3342,6 +3348,23 @@ function createSplineEditRoot(
       textureAssetsByKey,
       root
     );
+
+    // The profile is built from a local zero-based spline so it can follow
+    // the edit root. Keep the original placed spline identity on its
+    // pickable meshes; otherwise a click on the W/E preview could select
+    // the synthetic local copy instead of the real map item.
+    for (const mesh of root.getChildMeshes()) {
+      if (
+        mesh.metadata?.mapStudioKind ===
+        "spline"
+      ) {
+        mesh.isPickable = true;
+        mesh.metadata = {
+          ...(mesh.metadata ?? {}),
+          placedSpline
+        };
+      }
+    }
   }
 
   return root;
@@ -3434,6 +3457,15 @@ function createSelectedGeometry(
     tiles
   );
 
+  // Keep the editable preview attached to the same real OMSI item.
+  // This lets click selection keep working after switching to move/rotate
+  // instead of resolving only the untouched map instance behind it.
+  root.metadata = {
+    ...(root.metadata ?? {}),
+    mapStudioKind: "object",
+    placedObject
+  };
+
   const meshes =
     geometry.tree
       ? []
@@ -3457,10 +3489,22 @@ function createSelectedGeometry(
 
   if (tree) {
     tree.parent = root;
+    tree.isPickable = true;
+    tree.metadata = {
+      ...(tree.metadata ?? {}),
+      mapStudioKind: "object",
+      placedObject
+    };
   }
 
   for (const mesh of meshes) {
     mesh.parent = root;
+    mesh.isPickable = true;
+    mesh.metadata = {
+      ...(mesh.metadata ?? {}),
+      mapStudioKind: "object",
+      placedObject
+    };
   }
 
   const lodInstance =

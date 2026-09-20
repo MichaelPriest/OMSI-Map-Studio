@@ -623,3 +623,8 @@ Floating viewport tools have drag handles: tile navigator, terrain leveling, rea
 Scene click selection walks up the picked mesh parent chain, so child meshes still resolve to the real placed object when selection metadata lives on a parent node.
 
 After a road has start and end points, the viewport shows a **blue control sphere** connected to the middle of the alignment. Dragging this sphere sideways changes curvature live, in a city-builder-style workflow; the placement-bar slider remains available for fine adjustment. The visual control still produces only the real parameters supported by an OMSI spline.
+
+
+### Selection while moving/rotating
+
+The temporary geometry used by **Move (W)** and **Rotate (E)** keeps the original OMSI object/spline identity in its picking metadata. Clicking the editable preview therefore keeps selecting the same real item, including `[tree]` billboards and spline profiles, without depending on the untouched map instance that remains visible until save. This changes hit-testing/selection only and does not modify OMSI coordinates, materials, textures or files.

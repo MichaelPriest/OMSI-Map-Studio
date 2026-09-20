@@ -623,3 +623,8 @@ Os painéis flutuantes do viewport possuem alças de arraste: navegador de bloco
 A seleção por clique percorre os pais do mesh atingido, portanto filhos de um objeto continuam resolvendo para o objeto real mesmo quando o metadado de seleção está no nó pai.
 
 No criador de rua, depois que início e fim existem, o viewport mostra uma **esfera azul de controle** ligada ao meio do traçado. Arrastar essa esfera lateralmente altera a curvatura em tempo real, no estilo de um editor city-builder; o slider da barra continua disponível para ajuste fino. O controle visual continua gerando somente os parâmetros reais suportados pela spline do OMSI.
+
+
+### Seleção durante mover/rotacionar
+
+A geometria temporária usada pelas ferramentas **Mover (W)** e **Rotacionar (E)** mantém a identidade do objeto/spline OMSI original nos metadados de picking. Assim, clicar diretamente na prévia editável continua selecionando o mesmo item real, inclusive para árvores `[tree]` e perfis de spline, sem depender do objeto antigo que permanece no mapa até o salvamento. Isso altera apenas hit-test/seleção e não modifica coordenadas, materiais, texturas ou arquivos OMSI.
