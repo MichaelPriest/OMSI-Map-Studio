@@ -601,3 +601,8 @@ Na tela **Abrir mapa**, **Criar mapa real** clona o `template\NewMap` instalado 
 ### Navegador de blocos 3×3
 
 O editor mostra um navegador compacto 3×3 sobre o viewport. O centro representa o tile ativo e os oito botões ao redor correspondem aos tiles vizinhos existentes. Clicar em um bloco troca o tile ativo e move a câmera para o centro daquele tile, preservando aproximadamente o zoom atual. Tiles inexistentes ficam desabilitados. `Ctrl + setas/WASD` continua disponível como alternativa de teclado.
+
+
+### Prévia real de itens da biblioteca
+
+Ao escolher um `.sco` ou `.sli`, o editor cria a prévia no centro do tile ativo usando a geometria/perfil real do arquivo. O painel da biblioteca mostra o item ativo, quantidade de meshes ou superfícies/texturas carregadas e um botão **Focar prévia**. Trocar de item substitui somente a prévia e não grava o mapa até a confirmação.
