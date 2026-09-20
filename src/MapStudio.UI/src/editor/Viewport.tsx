@@ -78,8 +78,11 @@ type ViewportProps = {
       | "fit"
       | "focus"
       | "perspective"
-      | "top";
+      | "top"
+      | "tile";
     token: number;
+    tileX?: number;
+    tileY?: number;
   };
   placementAssetPath?: string;
   placementGeometry?: OmsiSceneryObjectGeometry;
@@ -4053,6 +4056,57 @@ export function Viewport({
                 )
               );
       }
+    } else if (
+      cameraAction?.type === "tile" &&
+      Number.isFinite(
+        cameraAction.tileX
+      ) &&
+      Number.isFinite(
+        cameraAction.tileY
+      ) &&
+      !usesWorldCoordinates
+    ) {
+      const tileX =
+        cameraAction.tileX!;
+      const tileY =
+        cameraAction.tileY!;
+
+      const centerX =
+        tileX * 300 +
+        150;
+      const centerZ =
+        tileY * 300 +
+        150;
+
+      const centerHeight =
+        getTerrainHeightAtWorldPoint(
+          tiles,
+          centerX,
+          centerZ
+        );
+
+      camera.setTarget(
+        new Vector3(
+          centerX,
+          centerHeight,
+          centerZ
+        )
+      );
+
+      const previousRadius =
+        cameraStateRef.current
+          ?.radius;
+
+      camera.radius =
+        Math.min(
+          camera.upperRadiusLimit ??
+            radius,
+          Math.max(
+            90,
+            previousRadius ??
+              240
+          )
+        );
     } else if (
       cameraAction?.type === "fit"
     ) {
