@@ -995,6 +995,8 @@ public sealed class NativeViewportRuntime : IDisposable
                 new Dictionary<
                     PickingId,
                     NativeTriangleRange>(),
+                Array.Empty<
+                    NativeMaterialBatch>(),
                 kind ==
                     OmsiAssetKind.SceneryObject
                     ? 1
