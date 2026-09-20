@@ -122,10 +122,6 @@ public sealed class D3D11NativeMapRenderer :
                 PickingId,
                 NativeTriangleRange>();
 
-        _objectMaterialBatches =
-            Array.Empty<
-                NativeMaterialBatch>();
-
     private IReadOnlyList<
         NativeMaterialBatch>
         _objectMaterialBatches =
