@@ -651,3 +651,8 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 - o offset vertical é explícito: zero aplica altitude real em metros; mapas que usam datum local podem informar um deslocamento antes de gravar;
 - **Criar mapa real** clona exclusivamente `OMSI 2\template\NewMap` da instalação do usuário para `maps\<nova pasta>`, altera nome/friendlyname preservando encoding, cria `.mapstudio/georeference.json` e abre o mapa criado;
 - essa criação por coordenadas ainda **não injeta nem converte automaticamente o formato oficial `[worldcoordinates]` do OMSI**. A âncora atual pertence ao Map Studio; a conversão oficial será liberada somente após validarmos todos os campos/arquivos exigidos pelo OMSI.
+
+
+## Roadmap arquitetural
+
+A arquitetura alvo, incluindo Asset Index persistente, cache incremental, streaming por tiles, etapas de paridade com o editor OMSI e critérios de conclusão, está consolidada em [ROADMAP.md](ROADMAP.md). Quando este documento e o roadmap tratarem do mesmo tema, a implementação atual pertence a este documento e a direção futura pertence ao roadmap.
