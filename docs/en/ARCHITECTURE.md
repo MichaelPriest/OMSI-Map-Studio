@@ -703,3 +703,17 @@ This change is intentional: opening a large map should not require loading the e
 Each region request receives a monotonic generation in the host. Opening another map, switching to Full map, or requesting a newer region invalidates the previous generation.
 
 If an older read finishes after a newer region, its result is discarded before `mapRegionLoaded`. This prevents fast camera movement from reapplying tiles/metadata from an earlier position over the current state.
+
+
+## React/renderer boundary
+
+The Alpha.8 audit showed that the viewport component accumulated too many responsibilities. Architecture now requires an explicit boundary:
+
+- React owns layout, menus, Explorer, Inspector and high-level business state;
+- Babylon owns Scene, Camera, meshes, proxies, hover, picking and gizmos;
+- Engine/Scene lifecycle must not depend on ordinary React renders;
+- pointer input must not be interpreted by multiple competing paths;
+- selection must be resolved by one authority and only then published to React;
+- every loaded object/spline must have a stable OMSI identity in the renderer registry.
+
+This separation is required before considering a 3D engine replacement.

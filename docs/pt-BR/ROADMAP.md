@@ -234,7 +234,7 @@ Legenda:
 |---|---|
 | Objetos `.sco` | ✅ |
 | Splines `.sli` | ✅ |
-| Selecionar / mover / rotacionar | ✅ |
+| Selecionar / mover / rotacionar | 🟡 — seleção ainda em estabilização |
 | Curva, comprimento e gradiente de spline | ✅ |
 | Biblioteca moderna / preview | ✅ |
 | Ferramentas de construção em massa | ✅ |
@@ -637,3 +637,51 @@ Novas ideias relevantes para substituir o editor original ou ampliar o editor mo
 O Map Studio usará um pacote SVG próprio, inspirado na atmosfera técnica do OMSI sem copiar assets proprietários. A especificação completa está em [ICON_SYSTEM.md](ICON_SYSTEM.md).
 
 A migração acontecerá por grupos: barra rápida, HUD de construção, Explorer/Inspector, menus, biblioteca, diagnósticos e futuras ferramentas OMSI. O primeiro lote já migrou a barra rápida e o HUD principal de construção; os demais grupos continuam em progresso.
+
+
+---
+
+## Fase de estabilização do viewport — prioridade imediata
+
+Antes de ampliar novas ferramentas de construção, o viewport precisa ser simplificado e estabilizado.
+
+### Auditoria do estado atual
+
+A UI cresceu além do ponto seguro para continuar corrigindo seleção por adição de novos fallbacks:
+
+- `Viewport.tsx` possui cerca de **9,5 mil linhas**;
+- `App.tsx` possui cerca de **25 mil linhas**;
+- o viewport registra múltiplos listeners de ponteiro/teclado e contém mais de uma estratégia de picking;
+- seleção, hover, câmera, placement, gizmos, splines, terreno e lifecycle da cena ainda dividem o mesmo componente;
+- existem atualmente raycast de malha, seleção por caixa projetada, volume visual e fallback geométrico.
+
+Isso torna difícil provar qual rota decidiu o clique e aumenta o risco de um ajuste corrigir um cenário e quebrar outro.
+
+### Decisão
+
+**Não trocar a stack inteira neste momento.** O Core .NET, parsing, persistência, React e a ponte WebView2 permanecem válidos.
+
+A próxima etapa será reescrever o viewport como um runtime imperativo isolado do React:
+
+1. `ViewportRuntime` — cria Engine/Scene/Camera uma única vez;
+2. `ViewportInputController` — única autoridade sobre mouse/teclado;
+3. `ViewportSelectionController` — uma única rota de seleção;
+4. `ViewportObjectRegistry` — associa IDs OMSI aos meshes/proxies;
+5. `ViewportSplineRegistry` — associa IDs OMSI aos perfis/eixos;
+6. `ViewportGizmoController` — mover/rotacionar sem recriar a cena;
+7. React recebe somente eventos de alto nível, como `objectSelected` e `splineSelected`.
+
+O seletor de produção deverá usar **proxies de picking simples e determinísticos**, independentes de material/textura do O3D. Raycast contra geometria visual será apenas otimização, não requisito para conseguir selecionar.
+
+### Critério para trocar tecnologia
+
+Babylon/WebView2 só será substituído se um protótipo isolado, sem React controlando o lifecycle, falhar em algum destes critérios:
+
+- clique 1:1 em DPI 100%, 125%, 150% e 200%;
+- seleção consistente de objetos, árvores e splines;
+- mover/rotacionar sem recriar Scene;
+- mapa Gundorf sem flicker;
+- navegação e seleção simultâneas sem conflito;
+- centenas de objetos selecionáveis sem degradação perceptível.
+
+Se esses critérios falharem no runtime mínimo, a substituição deve atingir **somente o renderer/viewport**, preservando MapStudio.Core, formatos, cache, persistência e o restante do produto.

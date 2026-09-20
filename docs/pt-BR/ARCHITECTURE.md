@@ -703,3 +703,17 @@ Essa mudança é deliberada: abrir um mapa grande não deve exigir carregar toda
 Cada solicitação de região recebe uma geração monotônica no host. Ao abrir outro mapa, entrar em Mapa completo ou pedir uma nova região, a geração anterior deixa de ser atual.
 
 Se uma leitura antiga terminar depois de uma região mais nova, seu resultado é descartado antes de `mapRegionLoaded`. Isso evita que movimento rápido da câmera reaplique tiles/metadata de uma posição anterior sobre o estado atual.
+
+
+## Limite entre React e o renderer
+
+A auditoria da Alpha.8 mostrou que o componente de viewport acumulou responsabilidades demais. A arquitetura passa a exigir uma fronteira explícita:
+
+- React controla layout, menus, Explorer, Inspector e estado de negócio de alto nível;
+- Babylon controla Scene, Camera, meshes, proxies, hover, picking e gizmos;
+- o lifecycle de Engine/Scene não pode depender de renders comuns do React;
+- ponteiros não podem ser interpretados por múltiplas rotas concorrentes;
+- seleção deve ser resolvida por uma única autoridade e depois publicada ao React;
+- cada objeto/spline carregado deve possuir uma identidade OMSI estável no registry do renderer.
+
+Essa separação é requisito antes de considerar mudança de engine 3D.
