@@ -25,6 +25,8 @@
                                  Invoked="OnRedoAcceleratorInvoked" />
             <KeyboardAccelerator Key="Escape"
                                  Invoked="OnEscapeAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Delete"
+                                 Invoked="OnDeleteAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -357,6 +359,12 @@
                                 HorizontalAlignment="Stretch"
                                 IsEnabled="False"
                                 Click="OnApplyInspectorClick" />
+
+                        <Button x:Name="DeleteSelectionButton"
+                                Content="Excluir selecionado"
+                                HorizontalAlignment="Stretch"
+                                IsEnabled="False"
+                                Click="OnDeleteSelectionClick" />
 
                         <TextBlock Text="Seleção e edição usam o mesmo estado nativo do viewport e do ID Buffer."
                                    TextWrapping="Wrap"

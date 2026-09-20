@@ -130,6 +130,9 @@ public sealed partial class MainWindow : Window
                 ApplyInspectorButton.IsEnabled =
                     info is not null;
 
+                DeleteSelectionButton.IsEnabled =
+                    info is not null;
+
                 if (info is null)
                 {
                     InspectorTypeText.Text =
@@ -1027,6 +1030,159 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnDeleteSelectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await DeleteCurrentSelectionAsync();
+    }
+
+    private async Task DeleteCurrentSelectionAsync()
+    {
+        var selection =
+            _selectionInfo;
+
+        if (selection is null)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de excluir.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento antes de excluir.";
+
+            return;
+        }
+
+        var isObject =
+            selection.Kind ==
+            PickingKind.Object;
+
+        var label =
+            isObject
+                ? $"objeto #{selection.EntityId}"
+                : $"spline #{selection.EntityId}";
+
+        var detail =
+            isObject
+                ? "O objeto será removido do tile OMSI."
+                : "A spline será removida e os vínculos recíprocos dos vizinhos serão liberados.";
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Excluir {label}?",
+                Content =
+                    $"{detail}\n\nUm backup seguro será criado antes de gravar.",
+                PrimaryButtonText =
+                    "Excluir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Close
+            };
+
+        var result =
+            await dialog.ShowAsync();
+
+        if (
+            result !=
+            ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            DeleteSelectionButton.IsEnabled =
+                false;
+
+            ApplyInspectorButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Excluindo {label} com backup seguro...";
+
+            var snapshot =
+                await _session
+                    .DeleteSelectionAsync(
+                        selection);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            _selectionInfo =
+                null;
+
+            SelectionText.Text =
+                "Sem seleção";
+
+            InspectorTypeText.Text =
+                "Tipo: —";
+
+            InspectorAssetText.Text =
+                "Arquivo: —";
+
+            InspectorTileText.Text =
+                "Tile: —";
+
+            InspectorObjectFields.Visibility =
+                Visibility.Collapsed;
+
+            InspectorSplineFields.Visibility =
+                Visibility.Collapsed;
+
+            RefreshExplorer();
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
+                false;
+
+            SaveChangesButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"{(isObject ? "Objeto" : "Spline")} #{selection.EntityId} excluído(a) com backup.";
+        }
+        catch (Exception exception)
+        {
+            DeleteSelectionButton.IsEnabled =
+                _selectionInfo is not null;
+
+            ApplyInspectorButton.IsEnabled =
+                _selectionInfo is not null;
+
+            StatusText.Text =
+                $"Falha ao excluir {label}: {exception.Message}";
+        }
+    }
+
     private void OnApplyInspectorClick(
         object sender,
         RoutedEventArgs e)
@@ -1560,6 +1716,20 @@ public sealed partial class MainWindow : Window
 
         RedoTransform();
         args.Handled = true;
+    }
+
+    private async void OnDeleteAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        args.Handled = true;
+
+        await DeleteCurrentSelectionAsync();
     }
 
     private void OnEscapeAcceleratorInvoked(

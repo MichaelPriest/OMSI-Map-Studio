@@ -290,3 +290,16 @@ The WinUI workspace no longer relies on rigid widths for Explorer and Inspector.
 Explorer can range from 220 to 520 px and Inspector from 240 to 560 px, with additional limits that preserve a useful minimum viewport area. The latest widths are kept in memory when a panel is collapsed.
 
 The **View** menu can now toggle Explorer and Inspector independently. Collapsing sets both the panel and splitter column to zero width; restoring brings the panel back at its last used width. The `SwapChainPanel` continues reacting to `SizeChanged`, so the Direct3D backbuffer immediately follows the newly available space.
+
+### Checkpoint N3.11 — safe native object and spline deletion
+
+Entity deletion from the React editor has been migrated into the WinUI host. The Inspector now exposes **Delete selected**, and the **Delete** key triggers the same flow whenever focus is not inside a text input.
+
+For objects, the host validates tile, ID, SCO path, and source section ordinal before removing the `[object]` section through `OmsiTileObjectDeleter`.
+
+For splines, the operation reads map-wide IDs, rejects duplicate spline IDs, and uses `OmsiSplineLinkPlanner` to safely release reciprocal Previous/Next links on neighboring splines before removing the selected spline section. Changes spanning multiple tiles are committed in a single `SafeFileTransaction`.
+
+Deletion is blocked while transforms are pending or while a placement/construction tool is active. The UI asks for confirmation before writing and states that a backup will be created under `.mapstudio-backups`.
+
+After completion, affected loaded tiles are read back through Core so the viewport, Explorer, and Inspector return to the real persisted map state.
+

@@ -290,3 +290,16 @@ O workspace WinUI deixa de usar larguras rígidas para Explorer e Inspector. Doi
 O Explorer pode variar entre 220 e 520 px e o Inspector entre 240 e 560 px, com limites adicionais para preservar uma área mínima útil do viewport. As últimas larguras são mantidas em memória ao recolher o painel.
 
 O menu **Visualizar** agora permite alternar Explorer e Inspector individualmente. Ao recolher, tanto o painel quanto a coluna do separador ficam com largura zero; ao restaurar, o painel retorna à última largura usada. O `SwapChainPanel` continua reagindo ao `SizeChanged`, então o backbuffer Direct3D acompanha imediatamente o novo espaço disponível.
+
+### Checkpoint N3.11 — exclusão nativa segura de objetos e splines
+
+A exclusão de entidades da versão React foi migrada para o host WinUI. O Inspector agora oferece **Excluir selecionado**, e a tecla **Delete** aciona o mesmo fluxo quando o foco não está em um campo de texto.
+
+Para objetos, o host valida tile, ID, caminho SCO e ordinal da seção antes de remover a seção `[object]` pelo `OmsiTileObjectDeleter`.
+
+Para splines, a operação lê os IDs do mapa inteiro, detecta IDs duplicados e usa `OmsiSplineLinkPlanner` para liberar com segurança os vínculos recíprocos Previous/Next dos vizinhos antes de remover a seção da spline selecionada. Alterações em vários tiles entram na mesma `SafeFileTransaction`.
+
+A exclusão é bloqueada enquanto existem transformações pendentes ou uma ferramenta de placement/construção está ativa. Antes da gravação, a interface pede confirmação e informa que será criado backup em `.mapstudio-backups`.
+
+Depois da operação, os tiles carregados afetados são relidos pelo Core e o viewport, Explorer e Inspector voltam a refletir o estado real do mapa.
+
