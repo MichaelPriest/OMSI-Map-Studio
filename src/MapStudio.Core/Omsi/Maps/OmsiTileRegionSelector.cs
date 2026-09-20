@@ -1,5 +1,73 @@
 namespace MapStudio.Core.Omsi.Maps;
 
+public enum OmsiTileStreamDetail
+{
+    Full = 0,
+    Summary = 1
+    public static IReadOnlyList<
+        OmsiTileStreamSelection>
+        SelectForStreaming(
+            IReadOnlyList<OmsiTileReference> tiles,
+            int centerX,
+            int centerY,
+            int fullRadius,
+            int metadataRadius)
+    {
+        ArgumentNullException.ThrowIfNull(
+            tiles);
+
+        if (fullRadius < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(fullRadius));
+        }
+
+        if (metadataRadius < fullRadius)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(metadataRadius));
+        }
+
+        return tiles
+            .Select(tile =>
+            {
+                var ring =
+                    Math.Max(
+                        Math.Abs(
+                            tile.X - centerX),
+                        Math.Abs(
+                            tile.Y - centerY));
+
+                return new
+                    OmsiTileStreamSelection(
+                        tile,
+                        ring,
+                        ring <= fullRadius
+                            ? OmsiTileStreamDetail
+                                .Full
+                            : OmsiTileStreamDetail
+                                .Summary);
+            })
+            .Where(selection =>
+                selection.Ring <=
+                    metadataRadius)
+            .OrderBy(selection =>
+                selection.Ring)
+            .ThenBy(selection =>
+                selection.Detail)
+            .ThenBy(selection =>
+                selection.Tile.Y)
+            .ThenBy(selection =>
+                selection.Tile.X)
+            .ToArray();
+    }
+}
+
+public sealed record OmsiTileStreamSelection(
+    OmsiTileReference Tile,
+    int Ring,
+    OmsiTileStreamDetail Detail);
+
 public static class OmsiTileRegionSelector
 {
     public static OmsiTileReference? FindInitialTile(
