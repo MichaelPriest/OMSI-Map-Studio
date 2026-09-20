@@ -5941,6 +5941,14 @@ public partial class MainWindow : Window
                         loaded.Tile.Y,
                         loaded.Tile.RelativeMapPath,
                         detailsLoaded = true,
+                        streamDetail =
+                            loaded.Detail ==
+                                OmsiTileStreamDetail
+                                    .Full
+                                ? "full"
+                                : "summary",
+                        streamRing =
+                            loaded.Ring,
                         fileExists =
                             loaded.Content.Summary.Exists,
                         objectCount =
@@ -6038,38 +6046,79 @@ public partial class MainWindow : Window
 
         try
         {
+            var metadataRadius =
+                Math.Min(
+                    MaxTileStreamRadius,
+                    radius + 1);
+
             var requestedTiles =
-                OmsiTileRegionSelector.Select(
-                    map.Tiles,
-                    centerX,
-                    centerY,
-                    radius);
+                OmsiTileRegionSelector
+                    .SelectForStreaming(
+                        map.Tiles,
+                        centerX,
+                        centerY,
+                        fullRadius: radius,
+                        metadataRadius);
 
             using var semaphore =
                 new SemaphoreSlim(
                     MaxConcurrentTileReads);
 
             var tasks = requestedTiles
-                .Select(async (tile, index) =>
+                .Select(
+                    async (selection, index) =>
                 {
                     await semaphore.WaitAsync();
 
                     try
                     {
-                        var content =
-                            OmsiMapPathResolver
+                        var tile =
+                            selection.Tile;
+
+                        OmsiTileContent content;
+
+                        if (
+                            !OmsiMapPathResolver
                                 .TryResolveTilePath(
                                     map.DirectoryPath,
                                     tile.RelativeMapPath,
-                                    out var tilePath)
-                            ? await ReadTileCachedAsync(
-                                tilePath)
-                            : OmsiTileContent.Missing;
+                                    out var tilePath))
+                        {
+                            content =
+                                OmsiTileContent
+                                    .Missing;
+                        }
+                        else if (
+                            selection.Detail ==
+                            OmsiTileStreamDetail
+                                .Full)
+                        {
+                            content =
+                                await ReadTileCachedAsync(
+                                    tilePath);
+                        }
+                        else
+                        {
+                            var summary =
+                                await _tileReader
+                                    .ReadSummaryLightAsync(
+                                        tilePath);
+
+                            content =
+                                new OmsiTileContent(
+                                    summary,
+                                    Array.Empty<
+                                        OmsiPlacedObject>(),
+                                    Array.Empty<
+                                        OmsiPlacedSpline>());
+                        }
 
                         return (
                             Index: index,
                             Tile: tile,
-                            Content: content);
+                            Content: content,
+                            selection.Detail,
+                            selection.Ring);
                     }
                     finally
                     {
