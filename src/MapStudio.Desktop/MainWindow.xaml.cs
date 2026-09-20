@@ -212,6 +212,26 @@ public partial class MainWindow : Window
                     await SelectMapAsync();
                     break;
 
+                case "loadMapCatalog":
+                    await LoadMapCatalogAsync();
+                    break;
+
+                case "openMapFromCatalog":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var catalogDirectoryName))
+                    {
+                        await OpenMapFromCatalogAsync(
+                            catalogDirectoryName);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadSceneryLibrary":
                     await LoadSceneryLibraryAsync();
                     break;
@@ -770,6 +790,169 @@ public partial class MainWindow : Window
         return Task.CompletedTask;
     }
 
+    private async Task LoadMapCatalogAsync()
+    {
+        if (_omsiRootPath is null)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "omsiRootRequired"
+            });
+
+            return;
+        }
+
+        try
+        {
+            PostMessage(new
+            {
+                type = "mapCatalogLoadingStarted"
+            });
+
+            var progress =
+                new Progress<OmsiMapDiscoveryProgress>(
+                    current =>
+                        PostMessage(new
+                        {
+                            type =
+                                "mapCatalogLoadingProgress",
+                            current.Completed,
+                            current.Total,
+                            current.Skipped,
+                            current.DirectoryName
+                        }));
+
+            var result =
+                await _mapCatalog
+                    .DiscoverWithProgressAsync(
+                        _omsiRootPath,
+                        progress);
+
+            _knownMaps =
+                result.Maps.ToDictionary(
+                    map => map.DirectoryName,
+                    StringComparer.OrdinalIgnoreCase);
+
+            PostMessage(new
+            {
+                type = "mapCatalogLoaded",
+                skippedMaps =
+                    result.SkippedMaps,
+                entries =
+                    result.Maps.Select(
+                        map => new
+                        {
+                            map.DirectoryName,
+                            map.DisplayName,
+                            map.DirectoryPath,
+                            tileCount =
+                                map.Tiles.Count,
+                            map.UsesWorldCoordinates
+                        })
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = _omsiRootPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "ioError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private Task OpenMapFromCatalogAsync(
+        string directoryName)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap",
+                detail = directoryName
+            });
+
+            return Task.CompletedTask;
+        }
+
+        OpenKnownMap(map);
+        return Task.CompletedTask;
+    }
+
+    private void OpenKnownMap(
+        OmsiMapDescriptor map)
+    {
+        _knownSceneryObjectPaths.Clear();
+        _knownSplinePaths.Clear();
+        _tileContentCache.Clear();
+        _splineDefinitionCache.Clear();
+        _sceneryGeometryCache.Clear();
+        _sceneryMetadataCache.Clear();
+        _meshGeometryCache.Clear();
+        _textureAssetCache.Clear();
+
+        var initialTile =
+            OmsiTileRegionSelector
+                .FindInitialTile(
+                    map.Tiles);
+
+        PostMessage(new
+        {
+            type = "mapOpened",
+            initialTile = initialTile is null
+                ? null
+                : new
+                {
+                    x = initialTile.X,
+                    y = initialTile.Y
+                },
+            map = new
+            {
+                map.DirectoryName,
+                map.DisplayName,
+                map.DirectoryPath,
+                map.GlobalConfigPath,
+                map.UsesWorldCoordinates,
+                groundTextures =
+                    map.GroundTextures,
+                tiles = map.Tiles.Select(
+                    tile => new
+                    {
+                        tile.X,
+                        tile.Y,
+                        tile.RelativeMapPath,
+                        detailsLoaded = false,
+                        fileExists = false,
+                        objectCount = 0,
+                        splineCount = 0,
+                        splineAttachmentCount = 0,
+                        terrainMarkerPresent =
+                            false,
+                        terrainFileExists =
+                            false,
+                        terrainFileSize = 0
+                    })
+            }
+        });
+    }
+
     private async Task SelectMapAsync()
     {
         if (_omsiRootPath is null)
@@ -858,59 +1041,15 @@ public partial class MainWindow : Window
                 await OmsiMapCatalog.OpenMapAsync(
                     selectedDirectory);
 
-            _knownSceneryObjectPaths.Clear();
-            _tileContentCache.Clear();
-
             _knownMaps =
                 new Dictionary<string, OmsiMapDescriptor>(
+                    _knownMaps,
                     StringComparer.OrdinalIgnoreCase)
                 {
                     [map.DirectoryName] = map
                 };
 
-            var initialTile =
-                OmsiTileRegionSelector
-                    .FindInitialTile(
-                        map.Tiles);
-
-            PostMessage(new
-            {
-                type = "mapOpened",
-                initialTile = initialTile is null
-                    ? null
-                    : new
-                    {
-                        x = initialTile.X,
-                        y = initialTile.Y
-                    },
-                map = new
-                {
-                    map.DirectoryName,
-                    map.DisplayName,
-                    map.DirectoryPath,
-                    map.GlobalConfigPath,
-                    map.UsesWorldCoordinates,
-                    groundTextures =
-                        map.GroundTextures,
-                    tiles = map.Tiles.Select(
-                        tile => new
-                        {
-                            tile.X,
-                            tile.Y,
-                            tile.RelativeMapPath,
-                            detailsLoaded = false,
-                            fileExists = false,
-                            objectCount = 0,
-                            splineCount = 0,
-                            splineAttachmentCount = 0,
-                            terrainMarkerPresent =
-                                false,
-                            terrainFileExists =
-                                false,
-                            terrainFileSize = 0
-                        })
-                }
-            });
+            OpenKnownMap(map);
         }
         catch (UnauthorizedAccessException)
         {
