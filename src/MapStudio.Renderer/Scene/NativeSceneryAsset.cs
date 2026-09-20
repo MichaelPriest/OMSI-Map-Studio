@@ -10,7 +10,16 @@ public sealed record NativeSceneryMeshAsset(
     double? LodThreshold,
     OmsiO3dGeometry Geometry,
     IReadOnlyList<string?>
-        MaterialTexturePaths);
+        MaterialTexturePaths,
+    IReadOnlyList<string?>?
+        MaterialNightTexturePaths =
+            null,
+    IReadOnlyList<string?>?
+        MaterialLightTexturePaths =
+            null,
+    IReadOnlyList<int?>?
+        MaterialAlphaModes =
+            null);
 
 public sealed record NativeSceneryAsset(
     string SceneryObjectPath,

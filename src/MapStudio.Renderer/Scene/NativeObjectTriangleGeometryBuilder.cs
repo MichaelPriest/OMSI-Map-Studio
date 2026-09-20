@@ -12,7 +12,10 @@ public readonly record struct NativeMaterialBatch(
     int StartVertex,
     int VertexCount,
     string? TexturePath,
-    string? MaskTexturePath = null);
+    string? MaskTexturePath = null,
+    string? NightTexturePath = null,
+    string? LightTexturePath = null,
+    int? AlphaMode = null);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
@@ -293,13 +296,36 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     geometry,
                     triangle);
 
+            var materialIndex =
+                GetTriangleMaterialIndex(
+                    geometry,
+                    triangle);
+
             var texturePath =
                 hasUvs
-                    ? GetTriangleTexturePath(
+                    ? GetMaterialTexturePath(
                         mesh,
-                        geometry,
-                        triangle)
+                        materialIndex)
                     : null;
+
+            var nightTexturePath =
+                hasUvs
+                    ? GetMaterialOverridePath(
+                        mesh.MaterialNightTexturePaths,
+                        materialIndex)
+                    : null;
+
+            var lightTexturePath =
+                hasUvs
+                    ? GetMaterialOverridePath(
+                        mesh.MaterialLightTexturePaths,
+                        materialIndex)
+                    : null;
+
+            var alphaMode =
+                GetMaterialAlphaMode(
+                    mesh,
+                    materialIndex);
 
             var triangleStart =
                 output.Count;
@@ -364,7 +390,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 materialBatches,
                 triangleStart,
                 3,
-                texturePath);
+                texturePath,
+                nightTexturePath,
+                lightTexturePath,
+                alphaMode);
         }
     }
 
@@ -372,7 +401,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
         List<NativeMaterialBatch> batches,
         int startVertex,
         int vertexCount,
-        string? texturePath)
+        string? texturePath,
+        string? nightTexturePath,
+        string? lightTexturePath,
+        int? alphaMode)
     {
         if (
             batches.Count > 0)
@@ -387,7 +419,17 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 string.Equals(
                     previous.TexturePath,
                     texturePath,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    previous.NightTexturePath,
+                    nightTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    previous.LightTexturePath,
+                    lightTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                previous.AlphaMode ==
+                    alphaMode)
             {
                 batches[^1] =
                     previous with
@@ -405,16 +447,20 @@ public sealed class NativeObjectTriangleGeometryBuilder
             new NativeMaterialBatch(
                 startVertex,
                 vertexCount,
-                texturePath));
+                texturePath,
+                null,
+                nightTexturePath,
+                lightTexturePath,
+                alphaMode));
     }
 
-    private static string?
-        GetTriangleTexturePath(
-            NativeSceneryMeshAsset mesh,
+    private static int?
+        GetTriangleMaterialIndex(
             OmsiO3dGeometry geometry,
             int triangle)
     {
         if (
+            triangle < 0 ||
             triangle >=
                 geometry
                     .TriangleMaterialIndices
@@ -423,13 +469,20 @@ public sealed class NativeObjectTriangleGeometryBuilder
             return null;
         }
 
-        var materialIndex =
-            geometry
-                .TriangleMaterialIndices[
-                    triangle];
+        return geometry
+            .TriangleMaterialIndices[
+                triangle];
+    }
 
+    private static string?
+        GetMaterialTexturePath(
+            NativeSceneryMeshAsset mesh,
+            int? materialIndex)
+    {
         if (
-            materialIndex >=
+            materialIndex is not int index ||
+            index < 0 ||
+            index >=
                 mesh.MaterialTexturePaths
                     .Count)
         {
@@ -438,7 +491,45 @@ public sealed class NativeObjectTriangleGeometryBuilder
 
         return mesh
             .MaterialTexturePaths[
-                materialIndex];
+                index];
+    }
+
+    private static string?
+        GetMaterialOverridePath(
+            IReadOnlyList<string?>? paths,
+            int? materialIndex)
+    {
+        if (
+            paths is null ||
+            materialIndex is not int index ||
+            index < 0 ||
+            index >= paths.Count)
+        {
+            return null;
+        }
+
+        return paths[index];
+    }
+
+    private static int?
+        GetMaterialAlphaMode(
+            NativeSceneryMeshAsset mesh,
+            int? materialIndex)
+    {
+        if (
+            mesh.MaterialAlphaModes is null ||
+            materialIndex is not int index ||
+            index < 0 ||
+            index >=
+                mesh.MaterialAlphaModes
+                    .Count)
+        {
+            return null;
+        }
+
+        return mesh
+            .MaterialAlphaModes[
+                index];
     }
 
     private static Vector4

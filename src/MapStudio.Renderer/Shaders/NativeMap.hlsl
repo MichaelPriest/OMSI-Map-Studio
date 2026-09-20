@@ -5,6 +5,7 @@ cbuffer ViewportCamera : register(b0)
 
 Texture2D DiffuseTexture : register(t0);
 Texture2D MaskTexture : register(t1);
+Texture2D SecondaryTexture : register(t2);
 
 SamplerState DiffuseSampler : register(s0);
 SamplerState MaskSampler : register(s1);
@@ -67,6 +68,36 @@ float4 PSTextured(
 
     return sampled *
         input.Color;
+}
+
+float4 PSNightMaterial(
+    PSInput input) : SV_TARGET
+{
+    float4 baseColor =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float4 secondary =
+        SecondaryTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    clip(
+        baseColor.a -
+        0.05f);
+
+    float3 previewColor =
+        saturate(
+            baseColor.rgb *
+                0.30f +
+            secondary.rgb);
+
+    return float4(
+        previewColor *
+            input.Color.rgb,
+        baseColor.a *
+            input.Color.a);
 }
 
 float4 PSTerrainLayer(

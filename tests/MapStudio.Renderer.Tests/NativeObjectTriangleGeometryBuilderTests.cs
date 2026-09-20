@@ -104,7 +104,10 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                             .Identity,
                         null,
                         geometry,
-                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house.dds"])
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house.dds"],
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house_night.dds"],
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house_light.dds"],
+                        [1])
                 ],
                 null,
                 false,
@@ -143,6 +146,18 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
         Assert.Equal(
             @"C:\OMSI\Sceneryobjects\Test\Texture\house.dds",
             materialBatch.TexturePath);
+
+        Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house_night.dds",
+            materialBatch.NightTexturePath);
+
+        Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house_light.dds",
+            materialBatch.LightTexturePath);
+
+        Assert.Equal(
+            1,
+            materialBatch.AlphaMode);
 
         Assert.Equal(
             new System.Numerics.Vector2(

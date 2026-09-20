@@ -407,3 +407,15 @@ O mapeamento horizontal replica a inversão usada no viewport React e o eixo ver
 
 A barra superior do host nativo recebe a opção **Noite**, que alterna imediatamente entre o céu diurno e noturno sem recarregar o mapa.
 
+### Checkpoint N3.21 — overrides SCO de nightmap/lightmap no renderer nativo
+
+O pipeline nativo passa a carregar overrides de material definidos no SCO para cada mesh e índice de material.
+
+`NativeSceneryAssetLoader` usa os `MaterialOverrides` já parseados pelo `MapStudio.Core` e resolve `[matl_nightmap]` e `[matl_lightmap]` pelo mesmo resolvedor seguro de texturas usado nos materiais O3D normais.
+
+Os lotes de material preservam agora textura base, night map, light map e o valor de `matl_alpha` para etapas seguintes. No modo diurno, o comportamento permanece idêntico ao pipeline difuso atual. Quando **Noite** está ativo, o renderer seleciona primeiro o night map e, quando ele não existe, usa o light map como textura secundária do material.
+
+O shader noturno combina a textura base com a textura secundária sem alterar os arquivos do mapa. O mesmo botão **Noite** que troca o céu passa portanto a dar também uma prévia visual das fachadas, placas e superfícies que possuem mapa noturno.
+
+Este checkpoint ainda não altera depth state nem blending de `matl_alpha`, `matl_noZwrite` e `matl_noZcheck`; bump map e environment map também permanecem para um checkpoint separado.
+

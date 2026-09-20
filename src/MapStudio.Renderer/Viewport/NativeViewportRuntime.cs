@@ -1652,6 +1652,9 @@ public sealed class NativeViewportRuntime : IDisposable
         _nightPreviewEnabled =
             enabled;
 
+        MapRenderer.SetNightPreview(
+            enabled);
+
         ApplySkyTexture();
         RenderInitialFrame();
     }

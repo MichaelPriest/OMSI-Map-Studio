@@ -210,6 +210,80 @@ public sealed class NativeSceneryAssetLoader
                         })
                     .ToArray();
 
+            var materialNightTexturePaths =
+                new string?[
+                    geometry.Materials.Count];
+
+            var materialLightTexturePaths =
+                new string?[
+                    geometry.Materials.Count];
+
+            var materialAlphaModes =
+                new int?[
+                    geometry.Materials.Count];
+
+            foreach (
+                var materialOverride in
+                    metadata.MaterialOverrides
+                        .Where(
+                            item =>
+                                item.MeshOrdinal ==
+                                    index))
+            {
+                var materialIndex =
+                    materialOverride
+                        .MaterialIndex;
+
+                if (
+                    materialIndex < 0 ||
+                    materialIndex >=
+                        geometry.Materials.Count)
+                {
+                    continue;
+                }
+
+                materialAlphaModes[
+                    materialIndex] =
+                    materialOverride
+                        .AlphaMode;
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        materialOverride
+                            .NightMapTextureName) &&
+                    OmsiTextureAssetPathResolver
+                        .TryResolveSceneryTexture(
+                            omsiRoot,
+                            fullScoPath,
+                            meshPath,
+                            materialOverride
+                                .NightMapTextureName!,
+                            out var nightTexturePath))
+                {
+                    materialNightTexturePaths[
+                        materialIndex] =
+                        nightTexturePath;
+                }
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        materialOverride
+                            .LightMapTextureName) &&
+                    OmsiTextureAssetPathResolver
+                        .TryResolveSceneryTexture(
+                            omsiRoot,
+                            fullScoPath,
+                            meshPath,
+                            materialOverride
+                                .LightMapTextureName!,
+                            out var lightTexturePath))
+                {
+                    materialLightTexturePaths[
+                        materialIndex] =
+                        lightTexturePath;
+                }
+            }
+
             meshes.Add(
                 new NativeSceneryMeshAsset(
                     declaredPath,
@@ -217,7 +291,10 @@ public sealed class NativeSceneryAssetLoader
                     transform,
                     lodThreshold,
                     geometry,
-                    materialTexturePaths));
+                    materialTexturePaths,
+                    materialNightTexturePaths,
+                    materialLightTexturePaths,
+                    materialAlphaModes));
         }
 
         return new NativeSceneryAsset(

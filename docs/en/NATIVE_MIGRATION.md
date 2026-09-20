@@ -407,3 +407,15 @@ Horizontal mapping mirrors the React viewport orientation while vertical samplin
 
 The native host top bar now exposes a **Night** option that switches between daytime and nighttime sky immediately without reloading the map.
 
+### Checkpoint N3.21 — SCO nightmap/lightmap overrides in the native renderer
+
+The native pipeline now loads SCO material overrides for each mesh and material index.
+
+`NativeSceneryAssetLoader` uses the `MaterialOverrides` already parsed by `MapStudio.Core` and resolves `[matl_nightmap]` and `[matl_lightmap]` through the same safe scenery texture resolver used by normal O3D materials.
+
+Material batches now preserve the base texture, night map, light map, and the `matl_alpha` value for following stages. Day mode keeps the current diffuse rendering behavior. When **Night** is enabled, the renderer selects the night map first and falls back to the light map when no night map exists.
+
+The night shader combines the base texture with the secondary texture without changing map files. The same **Night** control that swaps the sky can therefore also preview façades, signs, and other surfaces that provide nighttime material maps.
+
+This checkpoint does not yet change depth state or blending for `matl_alpha`, `matl_noZwrite`, and `matl_noZcheck`; bump maps and environment maps remain for a separate checkpoint.
+

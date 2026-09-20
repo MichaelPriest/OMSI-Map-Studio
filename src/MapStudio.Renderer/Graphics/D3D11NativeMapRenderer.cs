@@ -23,6 +23,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11PixelShader _texturedPixelShader;
+    private readonly ID3D11PixelShader _nightMaterialPixelShader;
     private readonly ID3D11PixelShader _terrainLayerPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
@@ -37,6 +38,7 @@ public sealed class D3D11NativeMapRenderer :
 
     private NativeGpuTexture? _skyTexture;
     private string? _skyTexturePath;
+    private bool _nightPreviewEnabled;
 
     private readonly Dictionary<
         string,
@@ -235,6 +237,13 @@ public sealed class D3D11NativeMapRenderer :
                     "ps_4_0");
 
         ReadOnlyMemory<byte>
+            nightMaterialPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSNightMaterial",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
             terrainLayerPixelShaderBytecode =
                 Compiler.CompileFromFile(
                     shaderPath,
@@ -257,6 +266,12 @@ public sealed class D3D11NativeMapRenderer :
             _deviceHost.Device
                 .CreatePixelShader(
                     texturedPixelShaderBytecode
+                        .Span);
+
+        _nightMaterialPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    nightMaterialPixelShaderBytecode
                         .Span);
 
         _terrainLayerPixelShader =
@@ -385,6 +400,18 @@ public sealed class D3D11NativeMapRenderer :
 
     public string? SkyTexturePath =>
         _skyTexturePath;
+
+    public bool NightPreviewEnabled =>
+        _nightPreviewEnabled;
+
+    public void SetNightPreview(
+        bool enabled)
+    {
+        ThrowIfDisposed();
+
+        _nightPreviewEnabled =
+            enabled;
+    }
 
     public bool SetSkyTexture(
         string? path)
@@ -1095,9 +1122,45 @@ public sealed class D3D11NativeMapRenderer :
                     .PSUnsetShaderResource(
                         1);
 
-                context
-                    .PSSetShader(
-                        _texturedPixelShader);
+                NativeGpuTexture?
+                    secondaryTexture =
+                        null;
+
+                var secondaryPath =
+                    _nightPreviewEnabled
+                        ? batch.NightTexturePath ??
+                            batch.LightTexturePath
+                        : null;
+
+                var hasSecondary =
+                    secondaryPath is
+                        { Length: > 0 } &&
+                    _textureCache
+                        .TryGetValue(
+                            secondaryPath,
+                            out secondaryTexture);
+
+                if (hasSecondary)
+                {
+                    context
+                        .PSSetShader(
+                            _nightMaterialPixelShader);
+
+                    context
+                        .PSSetShaderResource(
+                            2,
+                            secondaryTexture!.View);
+                }
+                else
+                {
+                    context
+                        .PSUnsetShaderResource(
+                            2);
+
+                    context
+                        .PSSetShader(
+                            _texturedPixelShader);
+                }
 
                 context
                     .PSSetShaderResource(
@@ -1143,6 +1206,10 @@ public sealed class D3D11NativeMapRenderer :
                 1);
 
         context
+            .PSUnsetShaderResource(
+                2);
+
+        context
             .PSSetShader(
                 _pixelShader);
     }
@@ -1181,14 +1248,35 @@ public sealed class D3D11NativeMapRenderer :
                     StringComparer
                         .OrdinalIgnoreCase);
 
+        var secondaryPaths =
+            batches
+                .SelectMany(
+                    batch =>
+                        new[]
+                        {
+                            batch.NightTexturePath,
+                            batch.LightTexturePath
+                        })
+                .Where(
+                    path =>
+                        !string.IsNullOrWhiteSpace(
+                            path))
+                .Select(
+                    path => path!)
+                .Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
         var requested =
             diffusePaths
                 .Concat(
                     maskPaths)
+                .Concat(
+                    secondaryPaths)
                 .Distinct(
                     StringComparer
                         .OrdinalIgnoreCase)
-                .Take(512)
+                .Take(768)
                 .ToHashSet(
                     StringComparer
                         .OrdinalIgnoreCase);
@@ -1781,6 +1869,7 @@ public sealed class D3D11NativeMapRenderer :
         _textureSampler.Dispose();
         _inputLayout.Dispose();
         _terrainLayerPixelShader.Dispose();
+        _nightMaterialPixelShader.Dispose();
         _texturedPixelShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();
