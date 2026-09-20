@@ -828,3 +828,15 @@ Desktop fullscreen now uses the physical bounds of the current monitor instead o
 The viewport now uses a light outline on the real item under the cursor and a distinct outline on the active selection. The effect does not replace real materials/textures and does not make ghosts, gizmos, terrain, or overlays selectable as real map objects. This follows the OMSI editor principle of clearly showing which item will receive the click without applying an aggressive solid-blue tint.
 
 When the easy road/bridge builder is active, the bottom bar shows a compact contextual guide with the start → end → curve sequence, endpoint snap state, automatic `previous/next` linking, snapped endpoint confirmation, and bridge elevation.
+
+
+## Functional top menu and editing flow
+
+The editor top menu has been simplified to expose only actions already supported by OMSI Map Studio:
+
+- **File** saves pending object or spline transforms, discards previews, and opens another map;
+- **Edit** exposes transform undo/redo, construction history, and Select/Move/Rotate tools;
+- **View** controls Explorer, Inspector, tile navigation, fit, focus, and fullscreen;
+- **Map** groups real-map coordinates, Map Health, dependency auditing, and Construction Sets.
+
+The old disabled placeholders were removed from the active surface. The top bar now also shows a compact pending-edit count and the current map loading mode. The same pattern remains available in desktop and fullscreen, while the bottom bar stays the primary category-based construction surface.
