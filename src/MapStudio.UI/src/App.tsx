@@ -11913,6 +11913,23 @@ export function App() {
                 easyRoadMode &&
                 !splineLibraryPlacementIsHeight
               }
+              roadCurveControl={
+                easyRoadMode &&
+                easyRoadStart &&
+                easyRoadEnd
+                  ? {
+                      start:
+                        easyRoadStart,
+                      end:
+                        easyRoadEnd,
+                      offset:
+                        easyRoadCurveOffset
+                    }
+                  : undefined
+              }
+              onRoadCurveOffsetChange={
+                handleEasyRoadCurveChange
+              }
               activeTile={activeTile}
               onTerrainPoint={
                 handleTerrainPoint
@@ -12504,7 +12521,7 @@ export function App() {
                     <div>
                       <strong>Curva</strong>
                       <span>
-                        Arraste o controle para curvar a rua mantendo início e fim.
+                        Arraste a esfera azul no cenário ou use o controle abaixo para curvar a rua mantendo início e fim.
                       </span>
                     </div>
                     <input
