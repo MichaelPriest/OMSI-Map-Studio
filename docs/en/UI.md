@@ -628,3 +628,12 @@ After a road has start and end points, the viewport shows a **blue control spher
 ### Selection while moving/rotating
 
 The temporary geometry used by **Move (W)** and **Rotate (E)** keeps the original OMSI object/spline identity in its picking metadata. Clicking the editable preview therefore keeps selecting the same real item, including `[tree]` billboards and spline profiles, without depending on the untouched map instance that remains visible until save. This changes hit-testing/selection only and does not modify OMSI coordinates, materials, textures or files.
+
+
+### Grouped construction library
+
+The real `.sco` and `.sli` libraries now use city-builder-style visual navigation. Scenery objects are separated into **Junctions**, **Bridges**, **Houses / buildings**, **Trees / vegetation**, **Transit**, **Street furniture**, **Infrastructure**, and **Other**. Splines are separated into **Roads**, **Sidewalks / paths**, **Rail**, **Bridges / tunnels**, **Markings**, and **Other**.
+
+Classification is derived from the real asset name/path, already-loaded `.sco` metadata, and the real `[tree]` definition when available. Assets that cannot be identified safely remain under **Other**; no asset is invented or replaced with a mock.
+
+Each card has a visual category and separate **Preview** and **Place/Create** actions. **Preview** loads the real geometry/profile in the 3D viewer without starting a map edit. Creation still uses only real `.sco/.sli` assets and the existing preservation rules.

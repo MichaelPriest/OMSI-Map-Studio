@@ -628,3 +628,12 @@ No criador de rua, depois que início e fim existem, o viewport mostra uma **esf
 ### Seleção durante mover/rotacionar
 
 A geometria temporária usada pelas ferramentas **Mover (W)** e **Rotacionar (E)** mantém a identidade do objeto/spline OMSI original nos metadados de picking. Assim, clicar diretamente na prévia editável continua selecionando o mesmo item real, inclusive para árvores `[tree]` e perfis de spline, sem depender do objeto antigo que permanece no mapa até o salvamento. Isso altera apenas hit-test/seleção e não modifica coordenadas, materiais, texturas ou arquivos OMSI.
+
+
+### Biblioteca de construção por grupos
+
+As bibliotecas reais de `.sco` e `.sli` agora usam uma navegação visual no estilo city-builder. Objetos são separados em **Cruzamentos**, **Pontes**, **Casas / prédios**, **Árvores / verde**, **Transporte**, **Mobiliário**, **Infraestrutura** e **Outros**. Splines são separadas em **Ruas**, **Calçadas / caminhos**, **Trilhos**, **Pontes / túneis**, **Faixas / marcas** e **Outras**.
+
+A classificação é derivada do nome/caminho real do asset, metadados `.sco` já lidos e da definição real `[tree]` quando disponível. Um item que não possa ser identificado com segurança permanece em **Outros**; nenhum asset é inventado ou substituído por mock.
+
+Cada cartão possui categoria visual e ações separadas para **Prévia** e **Colocar/Criar**. **Prévia** carrega a geometria/perfil real no visualizador 3D sem iniciar uma alteração no mapa. A criação continua usando somente `.sco/.sli` reais e as regras preservativas existentes.

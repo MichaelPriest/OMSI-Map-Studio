@@ -94,6 +94,314 @@ type QuickCreateTool =
   | "grass"
   | "tree";
 
+type SceneryLibraryGroup =
+  | "all"
+  | "junctions"
+  | "bridges"
+  | "buildings"
+  | "vegetation"
+  | "transit"
+  | "street"
+  | "utilities"
+  | "other";
+
+type SplineLibraryGroup =
+  | "all"
+  | "roads"
+  | "paths"
+  | "rail"
+  | "bridges"
+  | "markings"
+  | "other";
+
+const sceneryLibraryGroups: Array<{
+  id: SceneryLibraryGroup;
+  label: string;
+  icon: string;
+}> = [
+  { id: "all", label: "Todos", icon: "▦" },
+  { id: "junctions", label: "Cruzamentos", icon: "✣" },
+  { id: "bridges", label: "Pontes", icon: "⌁" },
+  { id: "buildings", label: "Casas / prédios", icon: "⌂" },
+  { id: "vegetation", label: "Árvores / verde", icon: "♣" },
+  { id: "transit", label: "Transporte", icon: "▤" },
+  { id: "street", label: "Mobiliário", icon: "⚑" },
+  { id: "utilities", label: "Infraestrutura", icon: "⚙" },
+  { id: "other", label: "Outros", icon: "◇" }
+];
+
+const splineLibraryGroups: Array<{
+  id: SplineLibraryGroup;
+  label: string;
+  icon: string;
+}> = [
+  { id: "all", label: "Todas", icon: "▦" },
+  { id: "roads", label: "Ruas", icon: "═" },
+  { id: "paths", label: "Calçadas / caminhos", icon: "┄" },
+  { id: "rail", label: "Trilhos", icon: "≋" },
+  { id: "bridges", label: "Pontes / túneis", icon: "⌁" },
+  { id: "markings", label: "Faixas / marcas", icon: "⋯" },
+  { id: "other", label: "Outras", icon: "◇" }
+];
+
+const normalizeAssetClassifierText = (
+  value: string
+) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\\/g, "/")
+    .toLocaleLowerCase("en-US");
+
+const containsAnyAssetTerm = (
+  text: string,
+  terms: string[]
+) =>
+  terms.some((term) =>
+    text.includes(term)
+  );
+
+const getSceneryLibraryGroup = (
+  entry: SceneryLibraryEntry,
+  metadata:
+    | OmsiSceneryObjectMetadata
+    | undefined,
+  geometry:
+    | OmsiSceneryObjectGeometry
+    | undefined
+): Exclude<SceneryLibraryGroup, "all"> => {
+  if (geometry?.tree) {
+    return "vegetation";
+  }
+
+  const text =
+    normalizeAssetClassifierText(
+      [
+        entry.fileName,
+        entry.sceneryObjectPath,
+        metadata?.friendlyName ?? ""
+      ].join(" ")
+    );
+
+  if (
+    containsAnyAssetTerm(text, [
+      "junction",
+      "intersection",
+      "kreuzung",
+      "crossing",
+      "cruzamento",
+      "rotatoria",
+      "roundabout"
+    ])
+  ) {
+    return "junctions";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "bridge",
+      "bruecke",
+      "brucke",
+      "ponte",
+      "viaduct",
+      "viaduto",
+      "overpass",
+      "elevated"
+    ])
+  ) {
+    return "bridges";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "tree",
+      "baum",
+      "bush",
+      "shrub",
+      "hedge",
+      "grass",
+      "vegetation",
+      "flora",
+      "arvore",
+      "arbusto"
+    ])
+  ) {
+    return "vegetation";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "busstop",
+      "bus stop",
+      "haltestelle",
+      "terminal",
+      "bahnhof",
+      "station",
+      "shelter",
+      "depot",
+      "garage"
+    ])
+  ) {
+    return "transit";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "house",
+      "haus",
+      "building",
+      "gebaeude",
+      "wohn",
+      "apartment",
+      "shop",
+      "store",
+      "factory",
+      "warehouse",
+      "school",
+      "hospital",
+      "igreja",
+      "church",
+      "predio",
+      "casa"
+    ])
+  ) {
+    return "buildings";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "lamp",
+      "light",
+      "bench",
+      "bank",
+      "bin",
+      "trash",
+      "sign",
+      "schild",
+      "traffic",
+      "fence",
+      "zaun",
+      "bollard",
+      "pole",
+      "poste",
+      "placa",
+      "semaforo"
+    ])
+  ) {
+    return "street";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "power",
+      "utility",
+      "substation",
+      "transformer",
+      "water",
+      "wasser",
+      "sewer",
+      "gas",
+      "pipeline",
+      "tower",
+      "antenna",
+      "infra"
+    ])
+  ) {
+    return "utilities";
+  }
+
+  return "other";
+};
+
+const getSplineLibraryGroup = (
+  entry: SplineLibraryEntry
+): Exclude<SplineLibraryGroup, "all"> => {
+  const text =
+    normalizeAssetClassifierText(
+      entry.fileName +
+        " " +
+        entry.splinePath
+    );
+
+  if (
+    containsAnyAssetTerm(text, [
+      "bridge",
+      "bruecke",
+      "brucke",
+      "ponte",
+      "viaduct",
+      "viaduto",
+      "tunnel",
+      "elevated"
+    ])
+  ) {
+    return "bridges";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "rail",
+      "track",
+      "gleis",
+      "tram",
+      "strab",
+      "bahn",
+      "metro"
+    ])
+  ) {
+    return "rail";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "sidewalk",
+      "foot",
+      "path",
+      "walk",
+      "cycle",
+      "bike",
+      "radweg",
+      "gehweg",
+      "calcada",
+      "caminho"
+    ])
+  ) {
+    return "paths";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "mark",
+      "line",
+      "stripe",
+      "lane",
+      "roadmark",
+      "fahrbahnmark",
+      "faixa"
+    ])
+  ) {
+    return "markings";
+  }
+
+  if (
+    containsAnyAssetTerm(text, [
+      "road",
+      "street",
+      "strasse",
+      "strabe",
+      "asphalt",
+      "avenue",
+      "allee",
+      "rua",
+      "avenida"
+    ])
+  ) {
+    return "roads";
+  }
+
+  return "other";
+};
+
 type ViewportCameraAction = {
   type:
     | "fit"
@@ -1449,6 +1757,18 @@ export function App() {
   ] = useState("");
 
   const [
+    sceneryLibraryGroup,
+    setSceneryLibraryGroup
+  ] = useState<SceneryLibraryGroup>(
+    "all"
+  );
+
+  const [
+    sceneryLibraryPreviewAsset,
+    setSceneryLibraryPreviewAsset
+  ] = useState<SceneryLibraryEntry>();
+
+  const [
     loadingSceneryLibrary,
     setLoadingSceneryLibrary
   ] = useState(false);
@@ -1532,6 +1852,18 @@ export function App() {
     splineLibrarySearch,
     setSplineLibrarySearch
   ] = useState("");
+
+  const [
+    splineLibraryGroup,
+    setSplineLibraryGroup
+  ] = useState<SplineLibraryGroup>(
+    "all"
+  );
+
+  const [
+    splineLibraryPreviewAsset,
+    setSplineLibraryPreviewAsset
+  ] = useState<SplineLibraryEntry>();
 
   const [
     loadingSplineLibrary,
@@ -1883,6 +2215,14 @@ export function App() {
           setSaveNotice(undefined);
           setExplorerSearch("");
           setExplorerPanelTab("map");
+          setSceneryLibraryGroup("all");
+          setSplineLibraryGroup("all");
+          setSceneryLibraryPreviewAsset(
+            undefined
+          );
+          setSplineLibraryPreviewAsset(
+            undefined
+          );
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
           setInsertingObject(false);
@@ -5003,20 +5343,17 @@ export function App() {
       .trim()
       .toLocaleLowerCase("pt-BR");
 
-  const filteredSceneryLibrary =
-    useMemo(() => {
-      const entries =
+  const sceneryLibrarySearchEntries =
+    useMemo(
+      () =>
         normalizedLibrarySearch
           ? sceneryLibrary.filter(
               (entry) =>
-                entry.fileName
-                  .toLocaleLowerCase(
-                    "pt-BR"
-                  )
-                  .includes(
-                    normalizedLibrarySearch
-                  ) ||
-                entry.sceneryObjectPath
+                (
+                  entry.fileName +
+                  " " +
+                  entry.sceneryObjectPath
+                )
                   .toLocaleLowerCase(
                     "pt-BR"
                   )
@@ -5024,50 +5361,99 @@ export function App() {
                     normalizedLibrarySearch
                   )
             )
-          : sceneryLibrary;
+          : sceneryLibrary,
+      [
+        normalizedLibrarySearch,
+        sceneryLibrary
+      ]
+    );
 
-      return entries.slice(
-        0,
-        300
-      );
-    }, [
-      normalizedLibrarySearch,
-      sceneryLibrary
-    ]);
-
-  const sceneryLibraryResultCount =
+  const sceneryLibraryGroupCounts =
     useMemo(() => {
-      if (!normalizedLibrarySearch) {
-        return sceneryLibrary.length;
+      const counts:
+        Record<SceneryLibraryGroup, number> = {
+          all:
+            sceneryLibrarySearchEntries.length,
+          junctions: 0,
+          bridges: 0,
+          buildings: 0,
+          vegetation: 0,
+          transit: 0,
+          street: 0,
+          utilities: 0,
+          other: 0
+        };
+
+      for (const entry of
+        sceneryLibrarySearchEntries) {
+        const group =
+          getSceneryLibraryGroup(
+            entry,
+            sceneryMetadataByPath[
+              entry.sceneryObjectPath
+            ],
+            geometryByPath[
+              entry.sceneryObjectPath
+            ]
+          );
+
+        counts[group] += 1;
       }
 
-      return sceneryLibrary.filter(
-        (entry) =>
-          (
-            entry.fileName +
-            " " +
-            entry.sceneryObjectPath
-          )
-            .toLocaleLowerCase(
-              "pt-BR"
-            )
-            .includes(
-              normalizedLibrarySearch
-            )
-      ).length;
+      return counts;
     }, [
-      normalizedLibrarySearch,
-      sceneryLibrary
+      geometryByPath,
+      sceneryLibrarySearchEntries,
+      sceneryMetadataByPath
     ]);
+
+  const filteredSceneryLibrary =
+    useMemo(
+      () =>
+        sceneryLibrarySearchEntries
+          .filter((entry) => {
+            if (
+              sceneryLibraryGroup ===
+              "all"
+            ) {
+              return true;
+            }
+
+            return (
+              getSceneryLibraryGroup(
+                entry,
+                sceneryMetadataByPath[
+                  entry.sceneryObjectPath
+                ],
+                geometryByPath[
+                  entry.sceneryObjectPath
+                ]
+              ) ===
+              sceneryLibraryGroup
+            );
+          })
+          .slice(0, 300),
+      [
+        geometryByPath,
+        sceneryLibraryGroup,
+        sceneryLibrarySearchEntries,
+        sceneryMetadataByPath
+      ]
+    );
+
+  const sceneryLibraryResultCount =
+    sceneryLibraryGroupCounts[
+      sceneryLibraryGroup
+    ];
 
   const normalizedSplineLibrarySearch =
     splineLibrarySearch
       .trim()
       .toLocaleLowerCase("pt-BR");
 
-  const filteredSplineLibrary =
-    useMemo(() => {
-      const entries =
+  const splineLibrarySearchEntries =
+    useMemo(
+      () =>
         normalizedSplineLibrarySearch
           ? splineLibrary.filter(
               (entry) =>
@@ -5083,43 +5469,60 @@ export function App() {
                     normalizedSplineLibrarySearch
                   )
             )
-          : splineLibrary;
+          : splineLibrary,
+      [
+        normalizedSplineLibrarySearch,
+        splineLibrary
+      ]
+    );
 
-      return entries.slice(
-        0,
-        300
-      );
-    }, [
-      normalizedSplineLibrarySearch,
-      splineLibrary
-    ]);
-
-  const splineLibraryResultCount =
+  const splineLibraryGroupCounts =
     useMemo(() => {
-      if (
-        !normalizedSplineLibrarySearch
-      ) {
-        return splineLibrary.length;
+      const counts:
+        Record<SplineLibraryGroup, number> = {
+          all:
+            splineLibrarySearchEntries.length,
+          roads: 0,
+          paths: 0,
+          rail: 0,
+          bridges: 0,
+          markings: 0,
+          other: 0
+        };
+
+      for (const entry of
+        splineLibrarySearchEntries) {
+        counts[
+          getSplineLibraryGroup(entry)
+        ] += 1;
       }
 
-      return splineLibrary.filter(
-        (entry) =>
-          (
-            entry.fileName +
-            " " +
-            entry.splinePath
+      return counts;
+    }, [splineLibrarySearchEntries]);
+
+  const filteredSplineLibrary =
+    useMemo(
+      () =>
+        splineLibrarySearchEntries
+          .filter((entry) =>
+            splineLibraryGroup === "all"
+              ? true
+              : getSplineLibraryGroup(
+                  entry
+                ) ===
+                splineLibraryGroup
           )
-            .toLocaleLowerCase(
-              "pt-BR"
-            )
-            .includes(
-              normalizedSplineLibrarySearch
-            )
-      ).length;
-    }, [
-      normalizedSplineLibrarySearch,
-      splineLibrary
-    ]);
+          .slice(0, 300),
+      [
+        splineLibraryGroup,
+        splineLibrarySearchEntries
+      ]
+    );
+
+  const splineLibraryResultCount =
+    splineLibraryGroupCounts[
+      splineLibraryGroup
+    ];
 
   const explorerSplineResultCount =
     useMemo(() => {
@@ -6713,6 +7116,9 @@ export function App() {
           return;
         }
 
+        setSplineLibraryPreviewAsset(
+          entry
+        );
         setSplineLibraryPlacementAsset(
           entry
         );
@@ -7478,6 +7884,65 @@ export function App() {
     splinePreviewEditCount
   ]);
 
+  const handlePreviewSceneryLibraryAsset =
+    useCallback(
+      (entry: SceneryLibraryEntry) => {
+        setSceneryLibraryPreviewAsset(
+          entry
+        );
+
+        if (
+          !Object.hasOwn(
+            geometryByPath,
+            entry.sceneryObjectPath
+          )
+        ) {
+          loadSceneryObjectGeometry(
+            entry.sceneryObjectPath
+          );
+        }
+
+        if (
+          !Object.hasOwn(
+            sceneryMetadataByPath,
+            entry.sceneryObjectPath
+          )
+        ) {
+          loadSceneryObjectMetadata(
+            entry.sceneryObjectPath
+          );
+        }
+      },
+      [
+        geometryByPath,
+        sceneryMetadataByPath
+      ]
+    );
+
+  const handlePreviewSplineLibraryAsset =
+    useCallback(
+      (entry: SplineLibraryEntry) => {
+        setSplineLibraryPreviewAsset(
+          entry
+        );
+
+        if (
+          !Object.hasOwn(
+            splineProfilesByPath,
+            entry.splinePath
+          )
+        ) {
+          setLoadingSplineFor(
+            entry.splinePath
+          );
+          loadSplineProfile(
+            entry.splinePath
+          );
+        }
+      },
+      [splineProfilesByPath]
+    );
+
   const handleSelectPlacementAsset =
     useCallback(
       (
@@ -7516,6 +7981,9 @@ export function App() {
 
         setPlacementTransformDefaults(
           transformDefaults
+        );
+        setSceneryLibraryPreviewAsset(
+          entry
         );
         setPlacementAsset(entry);
         setPendingPlacement(
@@ -7793,6 +8261,7 @@ export function App() {
           setSelectionMode("spline");
           setShowSplines(true);
           setSplineLibrarySearch("");
+          setSplineLibraryGroup("roads");
           handleExplorerPanelTab(
             "splineLibrary"
           );
@@ -7820,6 +8289,14 @@ export function App() {
         setSelectionMode("object");
         setShowObjects(true);
         setLibrarySearch("");
+        setSceneryLibraryGroup(
+          tool === "junction"
+            ? "junctions"
+            : tool === "tree" ||
+                tool === "grass"
+              ? "vegetation"
+              : "all"
+        );
         handleExplorerPanelTab("library");
 
         const label =
@@ -11319,41 +11796,99 @@ export function App() {
                   </span>
                 </div>
 
-                {placementAsset && (
+                <div
+                  className="library-group-tabs"
+                  role="tablist"
+                  aria-label="Grupos de objetos"
+                >
+                  {sceneryLibraryGroups.map(
+                    (group) => (
+                      <button
+                        type="button"
+                        role="tab"
+                        key={group.id}
+                        className={
+                          sceneryLibraryGroup ===
+                          group.id
+                            ? "active"
+                            : ""
+                        }
+                        aria-selected={
+                          sceneryLibraryGroup ===
+                          group.id
+                        }
+                        onClick={() =>
+                          setSceneryLibraryGroup(
+                            group.id
+                          )
+                        }
+                      >
+                        <span
+                          className="library-group-icon"
+                          aria-hidden="true"
+                        >
+                          {group.icon}
+                        </span>
+                        <span>
+                          {group.label}
+                        </span>
+                        <small>
+                          {sceneryLibraryGroupCounts[
+                            group.id
+                          ]}
+                        </small>
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {sceneryLibraryPreviewAsset && (
                   <div className="asset-preview-card">
                     <div className="asset-preview-heading">
                       <div>
-                        <strong>Prévia no cenário</strong>
+                        <strong>Prévia 3D real</strong>
                         <span>
-                          {placementAsset.fileName}
+                          {sceneryLibraryPreviewAsset.fileName}
                         </span>
                       </div>
                       <button
                         type="button"
                         className="secondary-action"
+                        disabled={
+                          insertingObject ||
+                          placementAsset
+                            ?.sceneryObjectPath ===
+                            sceneryLibraryPreviewAsset
+                              .sceneryObjectPath
+                        }
                         onClick={() =>
-                          requestCameraAction(
-                            "focus"
+                          handleSelectPlacementAsset(
+                            sceneryLibraryPreviewAsset
                           )
                         }
                       >
-                        Focar prévia
+                        {placementAsset
+                          ?.sceneryObjectPath ===
+                        sceneryLibraryPreviewAsset
+                          .sceneryObjectPath
+                          ? "Em colocação"
+                          : "Colocar"}
                       </button>
                     </div>
 
                     {geometryByPath[
-                      placementAsset
+                      sceneryLibraryPreviewAsset
                         .sceneryObjectPath
                     ] && (
                       <AssetPreview3D
                         kind="object"
                         assetPath={
-                          placementAsset
+                          sceneryLibraryPreviewAsset
                             .sceneryObjectPath
                         }
                         geometry={
                           geometryByPath[
-                            placementAsset
+                            sceneryLibraryPreviewAsset
                               .sceneryObjectPath
                           ]
                         }
@@ -11365,17 +11900,37 @@ export function App() {
 
                     <div className="asset-preview-details">
                       <span>
+                        Grupo:{" "}
+                        {
+                          sceneryLibraryGroups.find(
+                            (group) =>
+                              group.id ===
+                              getSceneryLibraryGroup(
+                                sceneryLibraryPreviewAsset,
+                                sceneryMetadataByPath[
+                                  sceneryLibraryPreviewAsset
+                                    .sceneryObjectPath
+                                ],
+                                geometryByPath[
+                                  sceneryLibraryPreviewAsset
+                                    .sceneryObjectPath
+                                ]
+                              )
+                          )?.label
+                        }
+                      </span>
+                      <span>
                         {geometryByPath[
-                          placementAsset
+                          sceneryLibraryPreviewAsset
                             .sceneryObjectPath
                         ]
                           ? geometryByPath[
-                              placementAsset
+                              sceneryLibraryPreviewAsset
                                 .sceneryObjectPath
                             ].meshes.length +
                             " mesh(es) reais" +
                             (geometryByPath[
-                              placementAsset
+                              sceneryLibraryPreviewAsset
                                 .sceneryObjectPath
                             ].tree
                               ? " · árvore billboard"
@@ -11384,67 +11939,117 @@ export function App() {
                       </span>
                       <span>
                         {sceneryMetadataByPath[
-                          placementAsset
+                          sceneryLibraryPreviewAsset
                             .sceneryObjectPath
                         ]?.friendlyName ??
-                          placementAsset
+                          sceneryLibraryPreviewAsset
                             .sceneryObjectPath}
-                      </span>
-                      <span>
-                        Selecione outro item para trocar a prévia sem gravar nada no mapa.
                       </span>
                     </div>
                   </div>
                 )}
 
-                <div className="scenery-library-list">
+                <div className="scenery-library-list city-library-grid">
                   {filteredSceneryLibrary.map(
-                    (entry) => (
-                      <div
-                        className={
-                          placementAsset
-                            ?.sceneryObjectPath ===
-                          entry.sceneryObjectPath
-                            ? "scenery-library-entry active"
-                            : "scenery-library-entry"
-                        }
-                        key={
-                          entry.sceneryObjectPath
-                        }
-                      >
-                        <strong
-                          title={
+                    (entry) => {
+                      const group =
+                        getSceneryLibraryGroup(
+                          entry,
+                          sceneryMetadataByPath[
+                            entry.sceneryObjectPath
+                          ],
+                          geometryByPath[
+                            entry.sceneryObjectPath
+                          ]
+                        );
+
+                      const groupInfo =
+                        sceneryLibraryGroups.find(
+                          (candidate) =>
+                            candidate.id ===
+                            group
+                        );
+
+                      return (
+                        <div
+                          className={
+                            sceneryLibraryPreviewAsset
+                              ?.sceneryObjectPath ===
+                            entry.sceneryObjectPath
+                              ? "scenery-library-entry active"
+                              : "scenery-library-entry"
+                          }
+                          key={
                             entry.sceneryObjectPath
                           }
                         >
-                          {entry.fileName}
-                        </strong>
-                        <span>
-                          {entry.sceneryObjectPath}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleSelectPlacementAsset(
-                              entry
-                            )
-                          }
-                          disabled={
-                            insertingObject
-                          }
-                          title="Selecionar para colocação no mapa"
-                        >
-                          Colocar
-                        </button>
-                      </div>
-                    )
+                          <button
+                            type="button"
+                            className="library-entry-preview-button"
+                            onClick={() =>
+                              handlePreviewSceneryLibraryAsset(
+                                entry
+                              )
+                            }
+                            title="Carregar prévia 3D real"
+                          >
+                            <span
+                              className="library-entry-icon"
+                              aria-hidden="true"
+                            >
+                              {groupInfo?.icon ??
+                                "◇"}
+                            </span>
+                            <span className="library-entry-copy">
+                              <strong>
+                                {entry.fileName}
+                              </strong>
+                              <span>
+                                {groupInfo?.label ??
+                                  "Outros"}
+                              </span>
+                              <small>
+                                {entry.sceneryObjectPath}
+                              </small>
+                            </span>
+                          </button>
+
+                          <div className="library-entry-actions">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePreviewSceneryLibraryAsset(
+                                  entry
+                                )
+                              }
+                            >
+                              Prévia
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSelectPlacementAsset(
+                                  entry
+                                )
+                              }
+                              disabled={
+                                insertingObject
+                              }
+                              title="Selecionar para colocação no mapa"
+                            >
+                              Colocar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
                   )}
 
                   {!loadingSceneryLibrary &&
                     filteredSceneryLibrary.length ===
                       0 && (
                       <div className="explorer-empty">
-                        Nenhum arquivo .sco encontrado.
+                        Nenhum .sco encontrado neste grupo.
                       </div>
                     )}
                 </div>
@@ -11471,14 +12076,59 @@ export function App() {
                   </span>
                 </div>
 
-                {splineLibraryPlacementAsset &&
-                  splinePlacementTemplate && (
+                <div
+                  className="library-group-tabs"
+                  role="tablist"
+                  aria-label="Grupos de splines"
+                >
+                  {splineLibraryGroups.map(
+                    (group) => (
+                      <button
+                        type="button"
+                        role="tab"
+                        key={group.id}
+                        className={
+                          splineLibraryGroup ===
+                          group.id
+                            ? "active"
+                            : ""
+                        }
+                        aria-selected={
+                          splineLibraryGroup ===
+                          group.id
+                        }
+                        onClick={() =>
+                          setSplineLibraryGroup(
+                            group.id
+                          )
+                        }
+                      >
+                        <span
+                          className="library-group-icon"
+                          aria-hidden="true"
+                        >
+                          {group.icon}
+                        </span>
+                        <span>
+                          {group.label}
+                        </span>
+                        <small>
+                          {splineLibraryGroupCounts[
+                            group.id
+                          ]}
+                        </small>
+                      </button>
+                    )
+                  )}
+                </div>
+
+                {splineLibraryPreviewAsset && (
                   <div className="asset-preview-card">
                     <div className="asset-preview-heading">
                       <div>
                         <strong>Prévia da rua/spline</strong>
                         <span>
-                          {splineLibraryPlacementAsset.fileName}
+                          {splineLibraryPreviewAsset.fileName}
                         </span>
                       </div>
                       <button
@@ -11495,17 +12145,44 @@ export function App() {
                     </div>
 
                     {splineProfilesByPath[
-                      splineLibraryPlacementAsset
+                      splineLibraryPreviewAsset
                         .splinePath
                     ] && (
                       <AssetPreview3D
                         kind="spline"
                         template={
+                          splineLibraryPlacementAsset
+                            ?.splinePath ===
+                            splineLibraryPreviewAsset
+                              .splinePath &&
                           splinePlacementTemplate
+                            ? splinePlacementTemplate
+                            : {
+                                tileX: 0,
+                                tileY: 0,
+                                headerValue: "",
+                                splinePath:
+                                  splineLibraryPreviewAsset
+                                    .splinePath,
+                                splineId: -1,
+                                sourceSectionOrdinal:
+                                  -1,
+                                previousSplineId: -1,
+                                nextSplineId: -1,
+                                x: 0,
+                                y: 0,
+                                z: 0,
+                                rotation: 0,
+                                length: 20,
+                                radius: 0,
+                                gradientStart: 0,
+                                gradientEnd: 0,
+                                isHeightSpline: false
+                              }
                         }
                         profile={
                           splineProfilesByPath[
-                            splineLibraryPlacementAsset
+                            splineLibraryPreviewAsset
                               .splinePath
                           ]
                         }
@@ -11529,17 +12206,29 @@ export function App() {
 
                     <div className="asset-preview-details">
                       <span>
+                        Grupo:{" "}
+                        {
+                          splineLibraryGroups.find(
+                            (group) =>
+                              group.id ===
+                              getSplineLibraryGroup(
+                                splineLibraryPreviewAsset
+                              )
+                          )?.label
+                        }
+                      </span>
+                      <span>
                         {splineProfilesByPath[
                           splineLibraryPlacementAsset
                             .splinePath
                         ]
                           ? splineProfilesByPath[
-                              splineLibraryPlacementAsset
+                              splineLibraryPreviewAsset
                                 .splinePath
                             ].surfaces.length +
                             " superfície(s) · " +
                             splineProfilesByPath[
-                              splineLibraryPlacementAsset
+                              splineLibraryPreviewAsset
                                 .splinePath
                             ].textures.length +
                             " textura(s)"
@@ -11569,73 +12258,117 @@ export function App() {
                   </div>
                 )}
 
-                <div className="scenery-library-list">
+                <div className="scenery-library-list city-library-grid">
                   {filteredSplineLibrary.map(
-                    (entry) => (
-                      <div
-                        className={
-                          splineLibraryPlacementAsset
-                            ?.splinePath ===
-                          entry.splinePath
-                            ? "scenery-library-entry active"
-                            : "scenery-library-entry"
-                        }
-                        key={
-                          entry.splinePath
-                        }
-                      >
-                        <strong
-                          title={
+                    (entry) => {
+                      const group =
+                        getSplineLibraryGroup(
+                          entry
+                        );
+                      const groupInfo =
+                        splineLibraryGroups.find(
+                          (candidate) =>
+                            candidate.id ===
+                            group
+                        );
+
+                      return (
+                        <div
+                          className={
+                            splineLibraryPreviewAsset
+                              ?.splinePath ===
+                            entry.splinePath
+                              ? "scenery-library-entry active"
+                              : "scenery-library-entry"
+                          }
+                          key={
                             entry.splinePath
                           }
                         >
-                          {entry.fileName}
-                        </strong>
-                        <span>
-                          {entry.splinePath}
-                        </span>
-                        <div className="library-entry-actions">
                           <button
                             type="button"
+                            className="library-entry-preview-button"
                             onClick={() =>
-                              handleSelectSplineLibraryAsset(
-                                entry,
-                                false
+                              handlePreviewSplineLibraryAsset(
+                                entry
                               )
                             }
-                            disabled={
-                              insertingSpline
-                            }
-                            title="Criar uma nova [spline] normal usando este .sli"
+                            title="Carregar prévia 3D real da spline"
                           >
-                            Normal
+                            <span
+                              className="library-entry-icon"
+                              aria-hidden="true"
+                            >
+                              {groupInfo?.icon ??
+                                "◇"}
+                            </span>
+                            <span className="library-entry-copy">
+                              <strong>
+                                {entry.fileName}
+                              </strong>
+                              <span>
+                                {groupInfo?.label ??
+                                  "Outras"}
+                              </span>
+                              <small>
+                                {entry.splinePath}
+                              </small>
+                            </span>
                           </button>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleSelectSplineLibraryAsset(
-                                entry,
-                                true
-                              )
-                            }
-                            disabled={
-                              insertingSpline
-                            }
-                            title="Criar uma nova [spline_h] usando este .sli"
-                          >
-                            Altura
-                          </button>
+                          <div className="library-entry-actions">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handlePreviewSplineLibraryAsset(
+                                  entry
+                                )
+                              }
+                            >
+                              Prévia
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSelectSplineLibraryAsset(
+                                  entry,
+                                  false
+                                )
+                              }
+                              disabled={
+                                insertingSpline
+                              }
+                              title="Criar uma nova [spline] normal usando este .sli"
+                            >
+                              Normal
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSelectSplineLibraryAsset(
+                                  entry,
+                                  true
+                                )
+                              }
+                              disabled={
+                                insertingSpline
+                              }
+                              title="Criar uma nova [spline_h] usando este .sli"
+                            >
+                              Altura
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )
+                      );
+                    }
                   )}
 
                   {!loadingSplineLibrary &&
                     filteredSplineLibrary.length ===
                       0 && (
                       <div className="explorer-empty">
-                        Nenhum arquivo .sli encontrado.
+                        Nenhum .sli encontrado neste grupo.
                       </div>
                     )}
                 </div>
