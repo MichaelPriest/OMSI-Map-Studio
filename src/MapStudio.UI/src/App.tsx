@@ -543,6 +543,22 @@ export function App() {
     }
   }, [isFullScreen]);
 
+  useEffect(() => {
+    if (
+      !rootPath ||
+      !bridgeAvailable
+    ) {
+      return;
+    }
+
+    setLoadingMapCatalog(true);
+    setMapCatalogProgress(undefined);
+    loadMapCatalog();
+  }, [
+    bridgeAvailable,
+    rootPath
+  ]);
+
   const [
     previewObjectTransforms,
     setPreviewObjectTransforms
@@ -975,6 +991,10 @@ export function App() {
         ) {
           setRootPath(message.rootPath);
           setSelectedMap(undefined);
+          setAvailableMaps([]);
+          setLoadingMapCatalog(true);
+          setMapCatalogProgress(undefined);
+          setMapSearch("");
           setHiddenTerrainLayerIndices({});
           setObjects([]);
           setSplines([]);
@@ -1001,6 +1021,7 @@ export function App() {
           setUndoPreviewStack([]);
           setRedoPreviewStack([]);
           setEditorTool("select");
+          setSelectionMode("all");
           setPreloadingGeometryFor(undefined);
           setPreloadingSplineProfileFor(
             undefined
@@ -1047,6 +1068,58 @@ export function App() {
           return;
         }
 
+        if (
+          message.type ===
+          "mapCatalogLoadingStarted"
+        ) {
+          setLoadingMapCatalog(true);
+          setMapCatalogProgress({
+            completed: 0,
+            total: 0,
+            skipped: 0,
+            directoryName: null
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapCatalogLoadingProgress"
+        ) {
+          setLoadingMapCatalog(true);
+          setMapCatalogProgress({
+            completed: message.completed,
+            total: message.total,
+            skipped: message.skipped,
+            directoryName:
+              message.directoryName
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapCatalogLoaded"
+        ) {
+          setAvailableMaps(
+            message.entries
+          );
+          setLoadingMapCatalog(false);
+          setMapCatalogProgress(
+            (current) =>
+              current
+                ? {
+                    ...current,
+                    completed:
+                      current.total,
+                    skipped:
+                      message.skippedMaps
+                  }
+                : undefined
+          );
+          return;
+        }
+
         if (message.type === "mapOpened") {
           setSelectedMap(message.map);
           setHiddenTerrainLayerIndices({});
@@ -1080,6 +1153,7 @@ export function App() {
           setSelectingMap(false);
           setMapLoadMode("full");
           setEditorTool("select");
+          setSelectionMode("all");
           setCameraMode("perspective");
           setPreviewObjectTransforms({});
           setPreviewSplineTransforms({});
