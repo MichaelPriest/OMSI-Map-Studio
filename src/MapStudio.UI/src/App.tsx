@@ -875,7 +875,18 @@ type ObjectPlacementMode =
   | "single"
   | "repeat"
   | "line"
-  | "area";
+  | "area"
+  | "matrix"
+  | "circle"
+  | "lot";
+
+type ConstructionPresetId =
+  | "none"
+  | "avenueTrees"
+  | "streetLights"
+  | "housingLots"
+  | "greenSquare"
+  | "parkingGrid";
 
 type PlacementTransformDefaults = Pick<
   PendingObjectPlacement,
@@ -1216,6 +1227,297 @@ const buildAreaPlacements = (
     }
   );
 };
+
+const buildMatrixPlacements = (
+  center: PendingObjectPlacement,
+  rows: number,
+  columns: number,
+  spacingX: number,
+  spacingY: number,
+  randomRotation: boolean
+) => {
+  const origin =
+    placementWorldPoint(center);
+  const safeRows =
+    Math.max(
+      1,
+      Math.min(
+        16,
+        Math.floor(rows)
+      )
+    );
+  const safeColumns =
+    Math.max(
+      1,
+      Math.min(
+        16,
+        Math.floor(columns)
+      )
+    );
+  const sx =
+    Math.max(0.5, spacingX);
+  const sy =
+    Math.max(0.5, spacingY);
+  const total =
+    Math.min(
+      256,
+      safeRows * safeColumns
+    );
+  const placements:
+    PendingObjectPlacement[] = [];
+
+  for (
+    let index = 0;
+    index < total;
+    index++
+  ) {
+    const row =
+      Math.floor(
+        index / safeColumns
+      );
+    const column =
+      index % safeColumns;
+    const offsetX =
+      (
+        column -
+        (safeColumns - 1) / 2
+      ) *
+      sx;
+    const offsetY =
+      (
+        row -
+        (safeRows - 1) / 2
+      ) *
+      sy;
+
+    placements.push(
+      placementFromWorldPoint(
+        origin.x + offsetX,
+        origin.y + offsetY,
+        {
+          z: center.z,
+          rotation:
+            randomRotation
+              ? (
+                  center.rotation +
+                  index *
+                    137.507764
+                ) %
+                360
+              : center.rotation,
+          pitch: center.pitch,
+          bank: center.bank
+        }
+      )
+    );
+  }
+
+  return placements;
+};
+
+const buildCirclePlacements = (
+  center: PendingObjectPlacement,
+  radius: number,
+  count: number,
+  tangentRotation: boolean,
+  randomRotation: boolean
+) => {
+  const origin =
+    placementWorldPoint(center);
+  const safeRadius =
+    Math.max(0.5, radius);
+  const safeCount =
+    Math.max(
+      1,
+      Math.min(
+        256,
+        Math.floor(count)
+      )
+    );
+
+  return Array.from(
+    { length: safeCount },
+    (_, index) => {
+      const angle =
+        (
+          index /
+          safeCount
+        ) *
+        Math.PI *
+        2;
+      const baseRotation =
+        tangentRotation
+          ? (
+              angle *
+              180 /
+              Math.PI +
+              90
+            ) %
+            360
+          : center.rotation;
+
+      return placementFromWorldPoint(
+        origin.x +
+          Math.cos(angle) *
+            safeRadius,
+        origin.y +
+          Math.sin(angle) *
+            safeRadius,
+        {
+          z: center.z,
+          rotation:
+            randomRotation
+              ? (
+                  baseRotation +
+                  index *
+                    137.507764
+                ) %
+                360
+              : baseRotation,
+          pitch: center.pitch,
+          bank: center.bank
+        }
+      );
+    }
+  );
+};
+
+const buildLotPlacements = (
+  start: PendingObjectPlacement,
+  end: PendingObjectPlacement,
+  spacing: number,
+  setback: number,
+  randomRotation: boolean
+) => {
+  const from =
+    placementWorldPoint(start);
+  const to =
+    placementWorldPoint(end);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const distance =
+    Math.hypot(dx, dy);
+
+  if (distance < 0.5) {
+    return [start];
+  }
+
+  const count =
+    Math.max(
+      1,
+      Math.min(
+        256,
+        Math.floor(
+          distance /
+          Math.max(1, spacing)
+        ) +
+          1
+      )
+    );
+  const normalX =
+    -dy / distance;
+  const normalY =
+    dx / distance;
+  const heading =
+    Math.atan2(dx, dy) *
+    180 /
+    Math.PI;
+
+  return Array.from(
+    { length: count },
+    (_, index) => {
+      const t =
+        count === 1
+          ? 0
+          : index /
+            (count - 1);
+
+      return placementFromWorldPoint(
+        from.x +
+          dx * t +
+          normalX *
+            setback,
+        from.y +
+          dy * t +
+          normalY *
+            setback,
+        {
+          z: start.z,
+          rotation:
+            randomRotation
+              ? (
+                  heading +
+                  index *
+                    137.507764
+                ) %
+                360
+              : heading,
+          pitch: start.pitch,
+          bank: start.bank
+        }
+      );
+    }
+  );
+};
+
+const constructionPresets: Array<{
+  id: ConstructionPresetId;
+  label: string;
+  mode?: ObjectPlacementMode;
+  spacing?: number;
+  brushRadius?: number;
+  brushCount?: number;
+  matrixRows?: number;
+  matrixColumns?: number;
+  matrixSpacingX?: number;
+  matrixSpacingY?: number;
+  lotSetback?: number;
+  randomRotation?: boolean;
+  alignRoad?: boolean;
+}> = [
+  {
+    id: "none",
+    label: "Personalizado"
+  },
+  {
+    id: "avenueTrees",
+    label: "Arborização de avenida",
+    mode: "line",
+    spacing: 8,
+    randomRotation: true
+  },
+  {
+    id: "streetLights",
+    label: "Postes de iluminação",
+    mode: "line",
+    spacing: 25,
+    alignRoad: true
+  },
+  {
+    id: "housingLots",
+    label: "Casas alinhadas",
+    mode: "lot",
+    spacing: 18,
+    lotSetback: 7
+  },
+  {
+    id: "greenSquare",
+    label: "Praça arborizada",
+    mode: "area",
+    brushRadius: 25,
+    brushCount: 30,
+    randomRotation: true
+  },
+  {
+    id: "parkingGrid",
+    label: "Grade / estacionamento",
+    mode: "matrix",
+    matrixRows: 5,
+    matrixColumns: 8,
+    matrixSpacingX: 3,
+    matrixSpacingY: 6
+  }
+];
 
 const defaultPlacementTransform:
   PlacementTransformDefaults = {
@@ -2843,6 +3145,53 @@ export function App() {
     placementBrushCount,
     setPlacementBrushCount
   ] = useState(18);
+
+  const [
+    placementMatrixRows,
+    setPlacementMatrixRows
+  ] = useState(4);
+
+  const [
+    placementMatrixColumns,
+    setPlacementMatrixColumns
+  ] = useState(4);
+
+  const [
+    placementMatrixSpacingX,
+    setPlacementMatrixSpacingX
+  ] = useState(6);
+
+  const [
+    placementMatrixSpacingY,
+    setPlacementMatrixSpacingY
+  ] = useState(6);
+
+  const [
+    placementCircleRadius,
+    setPlacementCircleRadius
+  ] = useState(15);
+
+  const [
+    placementCircleCount,
+    setPlacementCircleCount
+  ] = useState(12);
+
+  const [
+    placementCircleTangent,
+    setPlacementCircleTangent
+  ] = useState(true);
+
+  const [
+    placementLotSetback,
+    setPlacementLotSetback
+  ] = useState(7);
+
+  const [
+    constructionPreset,
+    setConstructionPreset
+  ] = useState<ConstructionPresetId>(
+    "none"
+  );
 
   const [
     placementRandomRotation,
@@ -9790,6 +10139,116 @@ export function App() {
       ]
     );
 
+  const applyConstructionPreset =
+    useCallback(
+      (presetId: ConstructionPresetId) => {
+        setConstructionPreset(presetId);
+
+        const preset =
+          constructionPresets.find(
+            (candidate) =>
+              candidate.id ===
+              presetId
+          );
+
+        if (!preset) {
+          return;
+        }
+
+        if (preset.mode) {
+          setPlacementMode(
+            preset.mode
+          );
+        }
+        if (
+          preset.spacing !==
+          undefined
+        ) {
+          setPlacementSpacing(
+            preset.spacing
+          );
+        }
+        if (
+          preset.brushRadius !==
+          undefined
+        ) {
+          setPlacementBrushRadius(
+            preset.brushRadius
+          );
+        }
+        if (
+          preset.brushCount !==
+          undefined
+        ) {
+          setPlacementBrushCount(
+            preset.brushCount
+          );
+        }
+        if (
+          preset.matrixRows !==
+          undefined
+        ) {
+          setPlacementMatrixRows(
+            preset.matrixRows
+          );
+        }
+        if (
+          preset.matrixColumns !==
+          undefined
+        ) {
+          setPlacementMatrixColumns(
+            preset.matrixColumns
+          );
+        }
+        if (
+          preset.matrixSpacingX !==
+          undefined
+        ) {
+          setPlacementMatrixSpacingX(
+            preset.matrixSpacingX
+          );
+        }
+        if (
+          preset.matrixSpacingY !==
+          undefined
+        ) {
+          setPlacementMatrixSpacingY(
+            preset.matrixSpacingY
+          );
+        }
+        if (
+          preset.lotSetback !==
+          undefined
+        ) {
+          setPlacementLotSetback(
+            preset.lotSetback
+          );
+        }
+        if (
+          preset.randomRotation !==
+          undefined
+        ) {
+          setPlacementRandomRotation(
+            preset.randomRotation
+          );
+        }
+        if (
+          preset.alignRoad !==
+          undefined
+        ) {
+          setPlacementAlignRoad(
+            preset.alignRoad
+          );
+        }
+
+        setPendingPlacementBatch([]);
+        setPlacementLineStart(
+          undefined
+        );
+      },
+      []
+    );
+
   const handlePlacementPoint =
     useCallback(
       (
@@ -9845,7 +10304,10 @@ export function App() {
           return;
         }
 
-        if (placementMode === "line") {
+        if (
+          placementMode === "line" ||
+          placementMode === "lot"
+        ) {
           if (!placementLineStart) {
             setPlacementLineStart(next);
             setPendingPlacement(next);
@@ -9859,11 +10321,21 @@ export function App() {
           }
 
           const batch =
-            buildLinePlacements(
-              placementLineStart,
-              next,
-              placementSpacing,
-              placementRandomRotation
+            (
+              placementMode === "lot"
+                ? buildLotPlacements(
+                    placementLineStart,
+                    next,
+                    placementSpacing,
+                    placementLotSetback,
+                    placementRandomRotation
+                  )
+                : buildLinePlacements(
+                    placementLineStart,
+                    next,
+                    placementSpacing,
+                    placementRandomRotation
+                  )
             ).filter(keepOnMap);
 
           setPendingPlacement(next);
@@ -9871,7 +10343,60 @@ export function App() {
             batch
           );
           setSaveNotice(
-            `Linha pronta: ${batch.length} objeto(s). Confirme para salvar em uma única transação.`
+            placementMode === "lot"
+              ? `Lotes prontos: ${batch.length} objeto(s).`
+              : `Linha pronta: ${batch.length} objeto(s).`
+          );
+          return;
+        }
+
+        if (
+          placementMode === "matrix"
+        ) {
+          const batch =
+            buildMatrixPlacements(
+              next,
+              placementMatrixRows,
+              placementMatrixColumns,
+              placementMatrixSpacingX,
+              placementMatrixSpacingY,
+              placementRandomRotation
+            ).filter(keepOnMap);
+
+          setPlacementLineStart(
+            undefined
+          );
+          setPendingPlacement(next);
+          setPendingPlacementBatch(
+            batch
+          );
+          setSaveNotice(
+            `Matriz pronta: ${batch.length} objeto(s).`
+          );
+          return;
+        }
+
+        if (
+          placementMode === "circle"
+        ) {
+          const batch =
+            buildCirclePlacements(
+              next,
+              placementCircleRadius,
+              placementCircleCount,
+              placementCircleTangent,
+              placementRandomRotation
+            ).filter(keepOnMap);
+
+          setPlacementLineStart(
+            undefined
+          );
+          setPendingPlacement(next);
+          setPendingPlacementBatch(
+            batch
+          );
+          setSaveNotice(
+            `Círculo pronto: ${batch.length} objeto(s).`
           );
           return;
         }
@@ -9899,7 +10424,15 @@ export function App() {
         placementAlignRoad,
         placementBrushCount,
         placementBrushRadius,
+        placementCircleCount,
+        placementCircleRadius,
+        placementCircleTangent,
         placementLineStart,
+        placementLotSetback,
+        placementMatrixColumns,
+        placementMatrixRows,
+        placementMatrixSpacingX,
+        placementMatrixSpacingY,
         placementMode,
         placementRandomRotation,
         placementRoadSnapDistance,
@@ -15913,12 +16446,41 @@ export function App() {
                 </div>
 
                 <div className="placement-mode-panel">
+                  <label className="placement-field placement-preset-field">
+                    <span>Preset</span>
+                    <select
+                      value={
+                        constructionPreset
+                      }
+                      onChange={(event) =>
+                        applyConstructionPreset(
+                          event.currentTarget
+                            .value as ConstructionPresetId
+                        )
+                      }
+                    >
+                      {constructionPresets.map(
+                        (preset) => (
+                          <option
+                            key={preset.id}
+                            value={preset.id}
+                          >
+                            {preset.label}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </label>
+
                   <div className="placement-mode-tabs">
                     {([
                       ["single", "Único"],
                       ["repeat", "Repetir"],
                       ["line", "Linha"],
-                      ["area", "Pincel"]
+                      ["area", "Pincel"],
+                      ["matrix", "Matriz"],
+                      ["circle", "Círculo"],
+                      ["lot", "Lotes"]
                     ] as const).map(
                       ([mode, label]) => (
                         <button
@@ -15937,6 +16499,9 @@ export function App() {
                             setPlacementMode(
                               mode
                             );
+                            setConstructionPreset(
+                              "none"
+                            );
                             setPendingPlacementBatch(
                               []
                             );
@@ -15953,6 +16518,8 @@ export function App() {
 
                   {(placementMode ===
                       "line" ||
+                    placementMode ===
+                      "lot" ||
                     placementMode ===
                       "repeat") && (
                     <label className="placement-field">
@@ -16055,6 +16622,194 @@ export function App() {
                     </>
                   )}
 
+                  {placementMode ===
+                    "matrix" && (
+                    <>
+                      <label className="placement-field">
+                        <span>Linhas</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="16"
+                          step="1"
+                          value={placementMatrixRows}
+                          onChange={(event) =>
+                            setPlacementMatrixRows(
+                              Math.max(
+                                1,
+                                Math.min(
+                                  16,
+                                  Math.floor(
+                                    event.currentTarget
+                                      .valueAsNumber ||
+                                      1
+                                  )
+                                )
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="placement-field">
+                        <span>Colunas</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="16"
+                          step="1"
+                          value={placementMatrixColumns}
+                          onChange={(event) =>
+                            setPlacementMatrixColumns(
+                              Math.max(
+                                1,
+                                Math.min(
+                                  16,
+                                  Math.floor(
+                                    event.currentTarget
+                                      .valueAsNumber ||
+                                      1
+                                  )
+                                )
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="placement-field">
+                        <span>Esp. X</span>
+                        <input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={placementMatrixSpacingX}
+                          onChange={(event) =>
+                            setPlacementMatrixSpacingX(
+                              Math.max(
+                                0.5,
+                                event.currentTarget
+                                  .valueAsNumber ||
+                                  0.5
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="placement-field">
+                        <span>Esp. Y</span>
+                        <input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={placementMatrixSpacingY}
+                          onChange={(event) =>
+                            setPlacementMatrixSpacingY(
+                              Math.max(
+                                0.5,
+                                event.currentTarget
+                                  .valueAsNumber ||
+                                  0.5
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                    </>
+                  )}
+
+                  {placementMode ===
+                    "circle" && (
+                    <>
+                      <label className="placement-field">
+                        <span>Raio m</span>
+                        <input
+                          type="number"
+                          min="0.5"
+                          step="0.5"
+                          value={placementCircleRadius}
+                          onChange={(event) =>
+                            setPlacementCircleRadius(
+                              Math.max(
+                                0.5,
+                                event.currentTarget
+                                  .valueAsNumber ||
+                                  0.5
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="placement-field">
+                        <span>Qtd.</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="256"
+                          step="1"
+                          value={placementCircleCount}
+                          onChange={(event) =>
+                            setPlacementCircleCount(
+                              Math.max(
+                                1,
+                                Math.min(
+                                  256,
+                                  Math.floor(
+                                    event.currentTarget
+                                      .valueAsNumber ||
+                                      1
+                                  )
+                                )
+                              )
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="placement-toggle">
+                        <input
+                          type="checkbox"
+                          checked={placementCircleTangent}
+                          onChange={(event) =>
+                            setPlacementCircleTangent(
+                              event.currentTarget
+                                .checked
+                            )
+                          }
+                        />
+                        <span>
+                          Orientar tangente
+                        </span>
+                      </label>
+                    </>
+                  )}
+
+                  {placementMode ===
+                    "lot" && (
+                    <label className="placement-field">
+                      <span>Recuo m</span>
+                      <input
+                        type="number"
+                        min="-50"
+                        max="50"
+                        step="0.5"
+                        value={placementLotSetback}
+                        onChange={(event) => {
+                          const value =
+                            event.currentTarget
+                              .valueAsNumber;
+
+                          if (
+                            Number.isFinite(
+                              value
+                            )
+                          ) {
+                            setPlacementLotSetback(
+                              value
+                            );
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+
                   <label className="placement-toggle">
                     <input
                       type="checkbox"
@@ -16123,8 +16878,10 @@ export function App() {
                     </label>
                   )}
 
-                  {placementMode ===
-                    "line" &&
+                  {(placementMode ===
+                      "line" ||
+                    placementMode ===
+                      "lot") &&
                     placementLineStart && (
                     <button
                       type="button"
