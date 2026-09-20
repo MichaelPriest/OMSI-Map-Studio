@@ -312,6 +312,7 @@ function createMeshFromVertexData(
 
   mesh.material = material;
   mesh.isPickable = false;
+  return mesh;
 }
 
 function createTileSurface(
@@ -482,21 +483,30 @@ function createTileSurface(
     );
   }
 
-  createMeshFromVertexData(
-    scene,
-    "omsi-editor-terrain",
-    terrainPositions,
-    terrainIndices,
-    new Color3(
-      0.16,
-      0.24,
-      0.12
-    ),
-    1,
-    terrainUvs,
-    terrainMainTextureAsset,
-    terrainMainTextureRepeating
-  );
+  const terrainMesh =
+    createMeshFromVertexData(
+      scene,
+      "omsi-editor-terrain",
+      terrainPositions,
+      terrainIndices,
+      new Color3(
+        0.16,
+        0.24,
+        0.12
+      ),
+      1,
+      terrainUvs,
+      terrainMainTextureAsset,
+      terrainMainTextureRepeating
+    );
+
+  if (terrainMesh) {
+    terrainMesh.isPickable = true;
+    terrainMesh.metadata = {
+      ...(terrainMesh.metadata ?? {}),
+      mapStudioKind: "terrain"
+    };
+  }
 
   for (const overlay of
     terrainOverlays) {
@@ -735,18 +745,27 @@ function createTileSurface(
     mesh.isPickable = false;
   }
 
-  createMeshFromVertexData(
-    scene,
-    "omsi-editor-tile-surface",
-    flatPositions,
-    flatIndices,
-    new Color3(
-      0.045,
-      0.095,
-      0.14
-    ),
-    0.92
-  );
+  const flatSurface =
+    createMeshFromVertexData(
+      scene,
+      "omsi-editor-tile-surface",
+      flatPositions,
+      flatIndices,
+      new Color3(
+        0.045,
+        0.095,
+        0.14
+      ),
+      0.92
+    );
+
+  if (flatSurface) {
+    flatSurface.isPickable = true;
+    flatSurface.metadata = {
+      ...(flatSurface.metadata ?? {}),
+      mapStudioKind: "terrain"
+    };
+  }
 }
 
 function createActiveTileOutline(
