@@ -868,3 +868,10 @@ O guia contextual de ruas/pontes na barra inferior agora também é interativo. 
 ### Inspector contextual automático
 
 Ao escolher um objeto ou spline na prateleira de construção ou na biblioteca, o **Inspetor** abre automaticamente e passa a acompanhar o asset real em colocação. Em tela cheia ele substitui o drawer anterior, liberando o viewport; no desktop ele abre como painel flutuante. O conteúdo mostra arquivo, grupo, subcategoria, estado da prévia/perfil, destino ou geometria pendente e ações para abrir a prévia completa ou cancelar a colocação.
+
+
+### Barra rápida unificada
+
+O editor desktop e o modo tela cheia agora usam a mesma **barra rápida flutuante e movível** para seleção, mover/rotacionar, enquadrar/focar, snap, desfazer/refazer, salvar e controlar camadas. A posição é persistida junto das demais ferramentas flutuantes.
+
+A toolbar horizontal antiga foi retirada do layout ativo para reduzir duplicação visual. Suas funções continuam disponíveis na barra rápida, na barra de construção inferior e nos menus superiores. Os modos **Mapa completo** e **Desempenho 3×3** ficam em **Visualizar** e o modo atual continua visível no status do menu.
