@@ -613,3 +613,27 @@ In Grundorf, confirm `[tree]` billboards still render while the large gray panel
 3. confirm bank/pitch objects no longer tilt around the wrong axis;
 4. confirm meshes using `[rot_x]`, `[rot_y]`, or `[rot_z]` keep the correct local orientation;
 5. rotate an object with the gizmo, save, and reopen to confirm orientation persists.
+
+
+## Phase A — Asset Index and ring streaming
+
+Added automated validation:
+
+- first indexing pass discovers supported assets;
+- second pass reuses unchanged files;
+- a changed file is counted as an update;
+- a removed file is deleted from the index;
+- statistics separate SCO, SLI, models, and textures;
+- the 5×5 streaming selector classifies the 3×3 area as full and the outer ring as summary;
+- `ReadSummaryLightAsync` counts objects/splines and detects terrain without loading the heavy payload.
+
+Expected manual Windows validation:
+
+1. select the OMSI root and confirm the UI remains usable while indexing runs;
+2. confirm the **local index ready** status and counts;
+3. close/reopen and confirm a high unchanged/reused count when nothing changed;
+4. open the object and spline libraries and confirm the same real assets;
+5. use **Streaming 3×3**, move between tiles, and confirm objects/splines/terrain follow the active area;
+6. return to a previously visited tile and confirm correct reload;
+7. test selection/picking after multiple tile changes;
+8. confirm **Full map** still works as a fallback/diagnostic mode.
