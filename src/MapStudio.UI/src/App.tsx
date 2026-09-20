@@ -11243,6 +11243,28 @@ export function App() {
                       </button>
                     </div>
 
+                    {geometryByPath[
+                      placementAsset
+                        .sceneryObjectPath
+                    ] && (
+                      <AssetPreview3D
+                        kind="object"
+                        assetPath={
+                          placementAsset
+                            .sceneryObjectPath
+                        }
+                        geometry={
+                          geometryByPath[
+                            placementAsset
+                              .sceneryObjectPath
+                          ]
+                        }
+                        textureAssetsByKey={
+                          textureAssetsByKey
+                        }
+                      />
+                    )}
+
                     <div className="asset-preview-details">
                       <span>
                         {geometryByPath[
@@ -11373,6 +11395,39 @@ export function App() {
                         Focar prévia
                       </button>
                     </div>
+
+                    {splineProfilesByPath[
+                      splineLibraryPlacementAsset
+                        .splinePath
+                    ] && (
+                      <AssetPreview3D
+                        kind="spline"
+                        template={
+                          splinePlacementTemplate
+                        }
+                        profile={
+                          splineProfilesByPath[
+                            splineLibraryPlacementAsset
+                              .splinePath
+                          ]
+                        }
+                        textureAssetsByKey={
+                          textureAssetsByKey
+                        }
+                        length={
+                          pendingSplinePlacement
+                            ?.length
+                        }
+                        radius={
+                          pendingSplinePlacement
+                            ?.radius
+                        }
+                        rotation={
+                          pendingSplinePlacement
+                            ?.rotation
+                        }
+                      />
+                    )}
 
                     <div className="asset-preview-details">
                       <span>
