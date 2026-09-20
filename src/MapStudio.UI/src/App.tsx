@@ -17,6 +17,7 @@ import {
   insertSpline,
   insertSplineFromLibrary,
   applyTerrainElevationGrid,
+  createCoordinateMap,
   isDesktopBridgeAvailable,
   levelTerrain,
   loadGoogleElevationGrid,
@@ -239,6 +240,16 @@ const errorMessages: Record<string, string> = {
     "O arquivo do tile não pôde ser resolvido com segurança.",
   mapOpenError:
     "Não foi possível abrir esse mapa.",
+  invalidCoordinateMapRequest:
+    "Revise o nome da pasta, nome do mapa e coordenadas antes de criar o projeto.",
+  newMapTemplateMissing:
+    "A instalação do OMSI não possui template\\NewMap, necessário para criar um mapa compatível sem inventar arquivos.",
+  newMapTemplateInvalid:
+    "O template NewMap da instalação não contém um global.cfg válido.",
+  coordinateMapAlreadyExists:
+    "Já existe um mapa com essa pasta em OMSI 2\\maps.",
+  coordinateMapCreateError:
+    "Não foi possível criar o mapa a partir do template NewMap.",
   invalidTerrainBrush:
     "Os parâmetros da ferramenta de nivelamento de terreno são inválidos.",
   terrainFileMissing:
@@ -559,6 +570,31 @@ export function App() {
 
   const [mapSearch, setMapSearch] =
     useState("");
+
+  const [
+    newMapDisplayName,
+    setNewMapDisplayName
+  ] = useState("");
+
+  const [
+    newMapDirectoryName,
+    setNewMapDirectoryName
+  ] = useState("");
+
+  const [
+    newMapLatitude,
+    setNewMapLatitude
+  ] = useState("");
+
+  const [
+    newMapLongitude,
+    setNewMapLongitude
+  ] = useState("");
+
+  const [
+    creatingCoordinateMap,
+    setCreatingCoordinateMap
+  ] = useState(false);
 
   const [
     sidebarCollapsed,
