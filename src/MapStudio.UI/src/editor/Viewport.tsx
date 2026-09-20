@@ -7142,7 +7142,9 @@ export function Viewport({
           ? "object"
           : "spline",
         assetPath:
-          sceneryPath || splinePath,
+          sceneryPath ||
+          splinePath ||
+          "",
         point
       });
 
