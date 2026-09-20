@@ -8383,7 +8383,10 @@ export function Viewport({
         title="Clique seleciona qualquer objeto/spline visível ou por posição OMSI · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
       />
       {(selectedObject || selectedSpline) && (
-        <div className="viewport-selection-state">
+        <div
+          className="viewport-selection-state"
+          aria-live="polite"
+        >
           <span
             className={
               selectedObject
