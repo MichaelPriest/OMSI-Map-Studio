@@ -1,0 +1,144 @@
+name: alpha3 test36 prerelease with EXE
+
+on:
+  push:
+    branches:
+      - publish/alpha3-test36
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpha3-test36-prerelease
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout exact source HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ffa95443b4c6de102ef8467aff2e894622181dc8
+          fetch-depth: 1
+
+      - name: Verify exact source HEAD
+        shell: pwsh
+        run: |
+          $expected = "ffa95443b4c6de102ef8467aff2e894622181dc8"
+          $actual = (git rev-parse HEAD).Trim()
+          Write-Host "Expected: $expected"
+          Write-Host "Actual:   $actual"
+          if ($actual -ne $expected) { throw "Source HEAD mismatch." }
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Test Core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release
+
+      - name: Install UI dependencies
+        working-directory: src/MapStudio.UI
+        run: npm install --no-audit --no-fund
+
+      - name: Build React UI
+        working-directory: src/MapStudio.UI
+        run: npm run build
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows EXE installer
+        shell: pwsh
+        run: ./installer/build-installer.ps1 -Version "0.1.0-alpha.3-test.36" -SkipUiBuild
+
+      - name: Package portable ZIP and checksums
+        shell: pwsh
+        run: |
+          $publishDir = "artifacts/publish/win-x64"
+          $zipPath = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.36-win-x64.zip"
+          if (-not (Test-Path "$publishDir/OMSI Map Studio.exe")) { throw "Desktop EXE missing." }
+          if (-not (Test-Path "$publishDir/ui/index.html")) { throw "React UI missing." }
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
+          $zipHash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$zipHash  OMSI-Map-Studio-v0.1.0-alpha.3-test.36-win-x64.zip" | Set-Content "$zipPath.sha256" -Encoding ascii
+
+          $installerPath = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.36-win-x64.exe"
+          $installerHashPath = "$installerPath.sha256"
+          if (-not (Test-Path $installerPath)) { throw "Installer EXE missing: $installerPath" }
+          if (-not (Test-Path $installerHashPath)) { throw "Installer checksum missing: $installerHashPath" }
+
+          $notes = @"
+          # OMSI Map Studio v0.1.0-alpha.3-test.36
+
+          Build de teste / Test build
+
+          Source HEAD: ffa95443b4c6de102ef8467aff2e894622181dc8
+
+          PT-BR:
+          - Seleção de objetos/splines no cenário usa multi-pick e percorre a hierarquia real dos meshes.
+          - Ao clicar em objeto/spline, o Inspetor abre direto na transformação.
+          - Ctrl+setas/WASD avança um tile de 300 m e sincroniza o bloco ativo.
+          - Prévia real de objetos e splines no tile ativo.
+          - Criador fácil de rua por dois cliques com comprimento, rotação e gradiente calculados.
+          - Nivelamento de ruas usando as alturas reais do terreno.
+          - Nivelamento manual do .terrain com pincel, raio, suavização e backup automático.
+          - Google Maps como referência visual sobre o terreno usando chave do próprio usuário.
+          - Grade Google Elevation de 9x9 até 33x33 e aplicação ao .terrain com reamostragem e backup.
+          - Criar mapa real a partir do template NewMap instalado, com âncora de coordenadas em .mapstudio/georeference.json.
+          - CI #447 passou Core, React/UI e Desktop antes desta publicação.
+          - A conversão oficial para [worldcoordinates] do OMSI ainda não é feita automaticamente.
+
+          EN:
+          - Scene object/spline selection uses multi-pick and walks the real mesh hierarchy.
+          - Clicking an object/spline opens the Inspector directly on transform controls.
+          - Ctrl+arrows/WASD moves one 300 m tile and synchronizes the active block.
+          - Real object and spline preview at the active tile.
+          - Easy two-click road creator with derived length, rotation, and grade.
+          - Road leveling from real terrain heights.
+          - Manual .terrain leveling brush with radius, feather, and automatic backup.
+          - Google Maps visual reference draped over terrain using the user's own API key.
+          - Google Elevation grids from 9x9 to 33x33 and terrain application with resampling and backup.
+          - Create a real map from the installed NewMap template with coordinate anchor stored in .mapstudio/georeference.json.
+          - CI #447 passed Core, React/UI, and Desktop before this publication.
+          - Official OMSI [worldcoordinates] conversion is not automated yet.
+          "@
+          Set-Content "artifacts/release-notes.md" $notes -Encoding utf8
+
+      - name: Upload EXE and portable artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-v0.1.0-alpha.3-test.36-windows
+          path: |
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.36-win-x64.exe
+            artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.36-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.36-win-x64.zip
+            artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.36-win-x64.zip.sha256
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.1.0-alpha.3-test.36"
+          $sourceHead = "ffa95443b4c6de102ef8467aff2e894622181dc8"
+          $installer = "artifacts/OMSI-Map-Studio-Setup-0.1.0-alpha.3-test.36-win-x64.exe"
+          $installerSha = "$installer.sha256"
+          $zip = "artifacts/OMSI-Map-Studio-v0.1.0-alpha.3-test.36-win-x64.zip"
+          $zipSha = "$zip.sha256"
+
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; refusing to overwrite." }
+
+          gh release create $tag $installer $installerSha $zip $zipSha --target $sourceHead --title "OMSI Map Studio $tag" --notes-file "artifacts/release-notes.md" --prerelease
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
