@@ -68,6 +68,37 @@ public sealed class NativeGizmoManipulationMathTests
     }
 
     [Fact]
+    public void SnapTranslationRoundsEachWorldAxis()
+    {
+        var snapped =
+            NativeGizmoManipulationMath
+                .SnapTranslation(
+                    new Vector3(
+                        1.12f,
+                        -0.61f,
+                        2.37f),
+                    0.25f);
+
+        Assert.Equal(
+            new Vector3(
+                1.0f,
+                -0.5f,
+                2.25f),
+            snapped);
+    }
+
+    [Fact]
+    public void SnapRotationUsesConfiguredIncrement()
+    {
+        Assert.Equal(
+            15.0f,
+            NativeGizmoManipulationMath
+                .SnapRotation(
+                    13.2f,
+                    5.0f));
+    }
+
+    [Fact]
     public void RotationPreviewKeepsAnchorFixed()
     {
         var anchor =

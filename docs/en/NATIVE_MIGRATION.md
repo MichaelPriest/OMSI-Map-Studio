@@ -156,3 +156,10 @@ Transforms produced by the gizmos can now be accumulated by the native host and 
 Persistence reuses `OmsiTileObjectEditor` and `OmsiTileSplineEditor`; no parallel format is introduced. Every modified tile is processed through `SafeFileTransaction`, which creates a backup under `.mapstudio-backups`, stages a temporary file, and performs atomic replacement with rollback on failure.
 
 After a successful write, affected tiles are read again through `MapStudio.Core` and pending state is cleared. The WinUI interface exposes **Save changes** only while transforms are pending.
+
+
+### Checkpoint N2.3 — native undo/redo and snapping
+
+The runtime keeps transform history as before/after pairs using the same `OmsiObjectTransformEdit` and `OmsiSplineTransformEdit` types used for persistence. **Undo** and **Redo** reapply these states to the snapshot, rebuild the required renderer state, and stage the resulting version again for safe persistence.
+
+Snapping can be toggled from the native UI. The initial configuration quantizes movement to **0.25 m** and rotation to **5°**. The snapped value drives the red preview, the gizmo, and the final OMSI edit so the saved result matches what was displayed during dragging.

@@ -112,6 +112,51 @@ public static class NativeGizmoManipulationMath
             ) *
             0.35);
 
+    public static Vector3 SnapTranslation(
+        Vector3 translation,
+        float increment)
+    {
+        if (
+            increment <=
+            0)
+        {
+            return translation;
+        }
+
+        float Snap(
+            float value) =>
+            MathF.Round(
+                value /
+                increment) *
+            increment;
+
+        return new Vector3(
+            Snap(
+                translation.X),
+            Snap(
+                translation.Y),
+            Snap(
+                translation.Z));
+    }
+
+    public static float SnapRotation(
+        float degrees,
+        float increment)
+    {
+        if (
+            increment <=
+            0)
+        {
+            return degrees;
+        }
+
+        return
+            MathF.Round(
+                degrees /
+                increment) *
+            increment;
+    }
+
     public static Matrix4x4
         CreateRotationPreview(
             NativeGizmoHandle handle,

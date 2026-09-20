@@ -48,6 +48,20 @@
                     IsEnabled="False"
                     Click="OnSaveChangesClick" />
                 <Button
+                    x:Name="UndoButton"
+                    Content="Desfazer"
+                    IsEnabled="False"
+                    Click="OnUndoClick" />
+                <Button
+                    x:Name="RedoButton"
+                    Content="Refazer"
+                    IsEnabled="False"
+                    Click="OnRedoClick" />
+                <Button
+                    x:Name="SnapButton"
+                    Content="Snap: off"
+                    Click="OnSnapClick" />
+                <Button
                     Content="Mover"
                     ToolTipService.ToolTip="Gizmo mover (W)"
                     Click="OnMoveGizmoClick" />

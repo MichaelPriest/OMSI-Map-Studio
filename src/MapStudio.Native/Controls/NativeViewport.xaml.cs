@@ -47,6 +47,73 @@ public sealed partial class NativeViewport : UserControl
         NativePendingTransformEdit>?
         TransformEditPending;
 
+    public bool CanUndo =>
+        _runtime?.CanUndo ??
+        false;
+
+    public bool CanRedo =>
+        _runtime?.CanRedo ??
+        false;
+
+    public bool SnapEnabled =>
+        _runtime?.SnapEnabled ??
+        false;
+
+    public void SetSnapEnabled(
+        bool enabled)
+    {
+        _runtime?.SetSnapEnabled(
+            enabled);
+
+        PointerStatusChanged?.Invoke(
+            this,
+            enabled
+                ? "Snap ativo: 0,25 m / 5°"
+                : "Snap desativado");
+    }
+
+    public bool Undo()
+    {
+        var edit =
+            _runtime?.Undo();
+
+        if (edit is null)
+        {
+            return false;
+        }
+
+        TransformEditPending
+            ?.Invoke(
+                edit);
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            "Última transformação desfeita.");
+
+        return true;
+    }
+
+    public bool Redo()
+    {
+        var edit =
+            _runtime?.Redo();
+
+        if (edit is null)
+        {
+            return false;
+        }
+
+        TransformEditPending
+            ?.Invoke(
+                edit);
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            "Transformação refeita.");
+
+        return true;
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

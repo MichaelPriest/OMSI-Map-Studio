@@ -59,9 +59,70 @@ public sealed partial class MainWindow : Window
                     _session.PendingTransformCount >
                     0;
 
+                UndoButton.IsEnabled =
+                    Viewport.CanUndo;
+
+                RedoButton.IsEnabled =
+                    Viewport.CanRedo;
+
                 StatusText.Text =
                     $"{_session.PendingTransformCount} alteração(ões) pendente(s).";
             };
+    }
+
+    private void OnUndoClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (Viewport.Undo())
+        {
+            StatusText.Text =
+                "Transformação desfeita.";
+
+            UndoButton.IsEnabled =
+                Viewport.CanUndo;
+
+            RedoButton.IsEnabled =
+                Viewport.CanRedo;
+        }
+    }
+
+    private void OnRedoClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (Viewport.Redo())
+        {
+            StatusText.Text =
+                "Transformação refeita.";
+
+            UndoButton.IsEnabled =
+                Viewport.CanUndo;
+
+            RedoButton.IsEnabled =
+                Viewport.CanRedo;
+        }
+    }
+
+    private void OnSnapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var enabled =
+            !Viewport.SnapEnabled;
+
+        Viewport.SetSnapEnabled(
+            enabled);
+
+        SnapButton.Content =
+            enabled
+                ? "Snap: 0,25m / 5°"
+                : "Snap: off";
+
+        StatusText.Text =
+            enabled
+                ? "Snap de transformação ativo."
+                : "Snap de transformação desativado.";
     }
 
     private async void OnSaveChangesClick(
@@ -91,6 +152,12 @@ public sealed partial class MainWindow : Window
                 .SavePendingTransformsAsync();
 
             SaveChangesButton.IsEnabled =
+                false;
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
                 false;
 
             StatusText.Text =

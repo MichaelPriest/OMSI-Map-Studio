@@ -36,6 +36,16 @@ public sealed class NativeViewportRuntime : IDisposable
                 StringComparer
                     .OrdinalIgnoreCase);
 
+    private readonly Stack<
+        NativeTransformHistoryEntry>
+        _undoStack =
+            new();
+
+    private readonly Stack<
+        NativeTransformHistoryEntry>
+        _redoStack =
+            new();
+
     private PickingId _selectedPickingId =
         PickingId.None;
 
@@ -80,6 +90,26 @@ public sealed class NativeViewportRuntime : IDisposable
         get;
         private set;
     }
+
+    public bool SnapEnabled
+    {
+        get;
+        private set;
+    }
+
+    public float MoveSnapMeters { get; } =
+        0.25f;
+
+    public float RotateSnapDegrees { get; } =
+        5.0f;
+
+    public bool CanUndo =>
+        _undoStack.Count >
+        0;
+
+    public bool CanRedo =>
+        _redoStack.Count >
+        0;
 
     public bool IsManipulating =>
         _activeGizmoHandle !=
@@ -137,6 +167,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         PendingTransformEdit =
             null;
+
+        _undoStack.Clear();
+        _redoStack.Clear();
 
         Navigation.FitToScene(
             Scene);
@@ -196,6 +229,20 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         get;
         private set;
+    }
+
+    public void SetSnapEnabled(
+        bool enabled)
+    {
+        ThrowIfDisposed();
+
+        CancelGizmoDrag();
+
+        SnapEnabled =
+            enabled;
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
     }
 
     public void SetGizmoMode(
@@ -446,11 +493,14 @@ public sealed class NativeViewportRuntime : IDisposable
                         deltaX,
                         deltaY);
 
+            var effectiveTranslation =
+                GetEffectiveTranslation();
+
             MapRenderer
                 .SetSelectionPreviewTransform(
                     Matrix4x4
                         .CreateTranslation(
-                            _dragTranslation));
+                            effectiveTranslation));
         }
         else
         {
@@ -460,13 +510,16 @@ public sealed class NativeViewportRuntime : IDisposable
                         deltaX,
                         deltaY);
 
+            var effectiveRotation =
+                GetEffectiveRotation();
+
             MapRenderer
                 .SetSelectionPreviewTransform(
                     NativeGizmoManipulationMath
                         .CreateRotationPreview(
                             _activeGizmoHandle,
                             _dragAnchor,
-                            _dragRotationDegrees));
+                            effectiveRotation));
         }
 
         UpdateGizmoGeometry();
@@ -491,11 +544,17 @@ public sealed class NativeViewportRuntime : IDisposable
         _activeGizmoHandle =
             NativeGizmoHandle.None;
 
+        var effectiveTranslation =
+            GetEffectiveTranslation();
+
+        var effectiveRotation =
+            GetEffectiveRotation();
+
         if (
-            _dragTranslation.LengthSquared() <
+            effectiveTranslation.LengthSquared() <
                 0.0000001f &&
             Math.Abs(
-                _dragRotationDegrees) <
+                effectiveRotation) <
                 0.0001f)
         {
             MapRenderer
@@ -508,11 +567,27 @@ public sealed class NativeViewportRuntime : IDisposable
             return null;
         }
 
-        PendingTransformEdit =
+        var history =
             ApplyManipulationToScene(
                 handle,
-                _dragTranslation,
-                _dragRotationDegrees);
+                effectiveTranslation,
+                effectiveRotation);
+
+        if (history is not null)
+        {
+            _undoStack.Push(
+                history);
+
+            _redoStack.Clear();
+
+            PendingTransformEdit =
+                history.After;
+        }
+        else
+        {
+            PendingTransformEdit =
+                null;
+        }
 
         _dragTranslation =
             Vector3.Zero;
@@ -557,6 +632,80 @@ public sealed class NativeViewportRuntime : IDisposable
                 Matrix4x4.Identity);
 
         UpdateGizmoGeometry();
+    }
+
+    public NativePendingTransformEdit?
+        Undo()
+    {
+        ThrowIfDisposed();
+
+        CancelGizmoDrag();
+
+        if (_undoStack.Count == 0)
+        {
+            return null;
+        }
+
+        var entry =
+            _undoStack.Pop();
+
+        if (
+            !ApplyPendingTransformToScene(
+                entry.Before))
+        {
+            _undoStack.Push(
+                entry);
+
+            return null;
+        }
+
+        _redoStack.Push(
+            entry);
+
+        PendingTransformEdit =
+            entry.Before;
+
+        RefreshSelectedScene();
+
+        return
+            PendingTransformEdit;
+    }
+
+    public NativePendingTransformEdit?
+        Redo()
+    {
+        ThrowIfDisposed();
+
+        CancelGizmoDrag();
+
+        if (_redoStack.Count == 0)
+        {
+            return null;
+        }
+
+        var entry =
+            _redoStack.Pop();
+
+        if (
+            !ApplyPendingTransformToScene(
+                entry.After))
+        {
+            _redoStack.Push(
+                entry);
+
+            return null;
+        }
+
+        _undoStack.Push(
+            entry);
+
+        PendingTransformEdit =
+            entry.After;
+
+        RefreshSelectedScene();
+
+        return
+            PendingTransformEdit;
     }
 
     public bool UpdateHover(
@@ -679,7 +828,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .RenderedSurfaceCount;
     }
 
-    private NativePendingTransformEdit?
+    private NativeTransformHistoryEntry?
         ApplyManipulationToScene(
             NativeGizmoHandle handle,
             Vector3 translation,
@@ -742,26 +891,24 @@ public sealed class NativeViewportRuntime : IDisposable
                         )
                 };
 
+            var before =
+                CreateObjectEdit(
+                    objectEntity.Tile,
+                    source);
+
+            var after =
+                CreateObjectEdit(
+                    objectEntity.Tile,
+                    updated);
+
             ReplaceObject(
                 objectEntity,
                 updated);
 
-            return new NativePendingTransformEdit(
-                objectEntity.Tile,
-                new OmsiObjectTransformEdit(
-                    updated
-                        .SourceSectionOrdinal,
-                    updated
-                        .SceneryObjectPath,
-                    updated
-                        .ObjectId,
-                    updated.X,
-                    updated.Y,
-                    updated.Z,
-                    updated.Rotation,
-                    updated.Pitch,
-                    updated.Bank),
-                null);
+            return
+                new NativeTransformHistoryEntry(
+                    before,
+                    after);
         }
 
         var splineEntity =
@@ -801,37 +948,280 @@ public sealed class NativeViewportRuntime : IDisposable
                     )
             };
 
+        var before =
+            CreateSplineEdit(
+                splineEntity.Tile,
+                spline);
+
+        var after =
+            CreateSplineEdit(
+                splineEntity.Tile,
+                updatedSpline);
+
         ReplaceSpline(
             splineEntity,
             updatedSpline);
 
-        return new NativePendingTransformEdit(
-            splineEntity.Tile,
+        return
+            new NativeTransformHistoryEntry(
+                before,
+                after);
+    }
+
+    private NativePendingTransformEdit
+        CreateObjectEdit(
+            OmsiTileReference tile,
+            OmsiPlacedObject item) =>
+        new(
+            tile,
+            new OmsiObjectTransformEdit(
+                item.SourceSectionOrdinal,
+                item.SceneryObjectPath,
+                item.ObjectId,
+                item.X,
+                item.Y,
+                item.Z,
+                item.Rotation,
+                item.Pitch,
+                item.Bank),
+            null);
+
+    private NativePendingTransformEdit
+        CreateSplineEdit(
+            OmsiTileReference tile,
+            OmsiPlacedSpline item) =>
+        new(
+            tile,
             null,
             new OmsiSplineTransformEdit(
-                updatedSpline
-                    .SourceSectionOrdinal,
-                updatedSpline
-                    .SplinePath,
-                updatedSpline
-                    .SplineId,
-                updatedSpline
-                    .PreviousSplineId,
-                updatedSpline
-                    .NextSplineId,
-                updatedSpline
-                    .IsHeightSpline,
-                updatedSpline.X,
-                updatedSpline.Z,
-                updatedSpline.Y,
-                updatedSpline.Rotation,
-                updatedSpline.Length,
-                updatedSpline.Radius,
-                updatedSpline
-                    .GradientStart,
-                updatedSpline
-                    .GradientEnd));
+                item.SourceSectionOrdinal,
+                item.SplinePath,
+                item.SplineId,
+                item.PreviousSplineId,
+                item.NextSplineId,
+                item.IsHeightSpline,
+                item.X,
+                item.Z,
+                item.Y,
+                item.Rotation,
+                item.Length,
+                item.Radius,
+                item.GradientStart,
+                item.GradientEnd));
+
+    private bool ApplyPendingTransformToScene(
+        NativePendingTransformEdit edit)
+    {
+        if (Scene is null)
+        {
+            return false;
+        }
+
+        if (
+            edit.ObjectEdit is
+                { } objectEdit)
+        {
+            var entity =
+                Scene.Objects
+                    .FirstOrDefault(
+                        item =>
+                            item.Tile.X ==
+                                edit.Tile.X &&
+                            item.Tile.Y ==
+                                edit.Tile.Y &&
+                            item.Object
+                                .SourceSectionOrdinal ==
+                                objectEdit
+                                    .SourceSectionOrdinal &&
+                            item.Object.ObjectId ==
+                                objectEdit.ObjectId &&
+                            string.Equals(
+                                item.Object
+                                    .SceneryObjectPath,
+                                objectEdit
+                                    .SceneryObjectPath,
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+
+            if (entity is null)
+            {
+                return false;
+            }
+
+            var updated =
+                entity.Object with
+                {
+                    X = objectEdit.X,
+                    Y = objectEdit.Y,
+                    Z = objectEdit.Z,
+                    Rotation =
+                        objectEdit.Rotation,
+                    Pitch =
+                        objectEdit.Pitch,
+                    Bank =
+                        objectEdit.Bank
+                };
+
+            ReplaceObject(
+                entity,
+                updated);
+
+            SelectObjectEdit(
+                edit.Tile,
+                objectEdit);
+
+            return true;
+        }
+
+        if (
+            edit.SplineEdit is not
+                { } splineEdit)
+        {
+            return false;
+        }
+
+        var splineEntity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.Tile.X ==
+                            edit.Tile.X &&
+                        item.Tile.Y ==
+                            edit.Tile.Y &&
+                        item.Spline
+                            .SourceSectionOrdinal ==
+                            splineEdit
+                                .SourceSectionOrdinal &&
+                        item.Spline.SplineId ==
+                            splineEdit.SplineId &&
+                        string.Equals(
+                            item.Spline
+                                .SplinePath,
+                            splineEdit
+                                .SplinePath,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+        if (splineEntity is null)
+        {
+            return false;
+        }
+
+        var updatedSpline =
+            splineEntity.Spline with
+            {
+                X = splineEdit.X,
+                Z = splineEdit.Z,
+                Y = splineEdit.Y,
+                Rotation =
+                    splineEdit.Rotation,
+                Length =
+                    splineEdit.Length,
+                Radius =
+                    splineEdit.Radius,
+                GradientStart =
+                    splineEdit
+                        .GradientStart,
+                GradientEnd =
+                    splineEdit
+                        .GradientEnd
+            };
+
+        ReplaceSpline(
+            splineEntity,
+            updatedSpline);
+
+        SelectSplineEdit(
+            edit.Tile,
+            splineEdit);
+
+        return true;
     }
+
+    private void SelectObjectEdit(
+        OmsiTileReference tile,
+        OmsiObjectTransformEdit edit)
+    {
+        if (Scene is null)
+        {
+            return;
+        }
+
+        _selectedPickingId =
+            Scene.Objects
+                .FirstOrDefault(
+                    item =>
+                        item.Tile.X ==
+                            tile.X &&
+                        item.Tile.Y ==
+                            tile.Y &&
+                        item.Object
+                            .SourceSectionOrdinal ==
+                            edit
+                                .SourceSectionOrdinal &&
+                        item.Object.ObjectId ==
+                            edit.ObjectId)
+                ?.PickingId ??
+            PickingId.None;
+    }
+
+    private void SelectSplineEdit(
+        OmsiTileReference tile,
+        OmsiSplineTransformEdit edit)
+    {
+        if (Scene is null)
+        {
+            return;
+        }
+
+        _selectedPickingId =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.Tile.X ==
+                            tile.X &&
+                        item.Tile.Y ==
+                            tile.Y &&
+                        item.Spline
+                            .SourceSectionOrdinal ==
+                            edit
+                                .SourceSectionOrdinal &&
+                        item.Spline.SplineId ==
+                            edit.SplineId)
+                ?.PickingId ??
+            PickingId.None;
+    }
+
+    private void RefreshSelectedScene()
+    {
+        MapRenderer
+            .SetSelectionPreviewTransform(
+                Matrix4x4.Identity);
+
+        UploadSceneGeometry();
+
+        MapRenderer.SetSelection(
+            _selectedPickingId);
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+    }
+
+    private Vector3 GetEffectiveTranslation() =>
+        SnapEnabled
+            ? NativeGizmoManipulationMath
+                .SnapTranslation(
+                    _dragTranslation,
+                    MoveSnapMeters)
+            : _dragTranslation;
+
+    private float GetEffectiveRotation() =>
+        SnapEnabled
+            ? NativeGizmoManipulationMath
+                .SnapRotation(
+                    _dragRotationDegrees,
+                    RotateSnapDegrees)
+            : _dragRotationDegrees;
 
     private void ReplaceObject(
         NativeObjectEntity entity,
@@ -1098,7 +1488,7 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             anchor =
                 _dragAnchor +
-                _dragTranslation;
+                GetEffectiveTranslation();
         }
 
         var size =

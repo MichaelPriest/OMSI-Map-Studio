@@ -156,3 +156,10 @@ As transformações produzidas pelos gizmos agora podem ser acumuladas no host n
 A persistência reutiliza `OmsiTileObjectEditor` e `OmsiTileSplineEditor`; nenhum formato paralelo é criado. Cada tile alterado é processado pelo `SafeFileTransaction`, que cria backup em `.mapstudio-backups`, escreve em arquivo temporário e usa substituição atômica com restauração em caso de falha.
 
 Depois de uma gravação bem-sucedida, os tiles afetados são relidos pelo `MapStudio.Core` e o estado pendente é limpo. A interface WinUI expõe **Salvar alterações** apenas quando há transformações pendentes.
+
+
+### Checkpoint N2.3 — undo/redo e snap nativos
+
+O runtime mantém histórico de transformações em pares antes/depois usando os mesmos `OmsiObjectTransformEdit` e `OmsiSplineTransformEdit` usados para persistência. **Desfazer** e **Refazer** reaplicam esses estados ao snapshot, reconstroem somente o estado necessário do renderer e voltam a registrar a versão resultante como edição pendente para o salvamento seguro.
+
+O snap pode ser ligado ou desligado pela interface. Nesta primeira configuração, movimento é quantizado em **0,25 m** e rotação em **5°**. O valor quantizado é aplicado ao preview vermelho, ao gizmo e ao edit OMSI final, evitando diferença entre o que o usuário vê durante o drag e o que será gravado.
