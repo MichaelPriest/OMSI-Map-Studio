@@ -1225,7 +1225,8 @@ export function App() {
     loadingFullMap ||
     Boolean(loadingRegionKey) ||
     loadingSceneryLibrary ||
-    loadingSplineLibrary;
+    loadingSplineLibrary ||
+    creatingCoordinateMap;
 
   useEffect(() => {
     if (!interactionLocked) {
@@ -2234,39 +2235,10 @@ export function App() {
             message.grid
           );
 
-          const centerIndex =
-            Math.floor(
-              message.grid.rows / 2
-            ) *
-              message.grid.columns +
-            Math.floor(
-              message.grid.columns / 2
-            );
-
-          const realCenter =
-            message.grid.elevations[
-              centerIndex
-            ];
-
-          const currentCenter =
-            sampleTerrainHeight(
-              activeTiles,
-              message.grid.tileX,
-              message.grid.tileY,
-              150,
-              150
-            );
-
-          const suggestedOffset =
-            currentCenter !== undefined &&
-            Number.isFinite(realCenter)
-              ? currentCenter -
-                realCenter
-              : 0;
-
-          setElevationVerticalOffset(
-            suggestedOffset
-          );
+          // Zero means the Google elevations are applied in
+          // real metres. The user can enter an explicit local offset
+          // before writing the .terrain if the map uses a shifted datum.
+          setElevationVerticalOffset(0);
 
           setSaveNotice(
             `Grade real carregada: ${message.grid.rows}×${message.grid.columns} · ${formatNumber(message.grid.minimumElevation)} a ${formatNumber(message.grid.maximumElevation)} m.`
@@ -7602,6 +7574,14 @@ export function App() {
         title: "Conectando ao OMSI 2",
         detail:
           "Validando a instalação e preparando a lista real de mapas."
+      };
+    }
+
+    if (creatingCoordinateMap) {
+      return {
+        title: "Criando mapa real",
+        detail:
+          "Copiando o template NewMap da instalação, gravando a âncora de coordenadas e validando o projeto."
       };
     }
 
