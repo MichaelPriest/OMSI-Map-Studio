@@ -812,3 +812,12 @@ Fullscreen now updates the React layout immediately and, in the desktop app, rei
 Visible objects and splines are now always clickable regardless of the current Object/Spline/All filter. Terrain handling receives the click only when no real object/spline was hit.
 
 Objects whose O3D has no renderable visual or is missing now receive an individual pickable marker carrying the real object identity, so incomplete items can also be selected and repaired. Selection filters are now visual/organization filters rather than picking blockers.
+
+
+### OMSI editor semantics and city-builder interaction references
+
+The interface preserves OMSI Map Editor semantics: `.sco` objects, `.sli` splines, terrain, and traffic tooling remain distinct real entities/modes, while spline editing continues to respect real map length, radius, gradients, and links. The modernized workflow does not replace those values with synthetic abstractions.
+
+The visual flow adopts modern city-builder interaction patterns: primary construction tools concentrated at the bottom, searchable asset libraries, a contextual inspector, and visible road/snap guides. These are interaction references only; no proprietary third-party assets are reused.
+
+Desktop fullscreen now uses the physical bounds of the current monitor instead of relying only on `WindowState.Maximized`. The compact menu and status bar remain accessible. The Babylon viewport uses a `ResizeObserver` on its real container so render dimensions and picking coordinates remain synchronized during fullscreen, resizing, and movable-panel layout changes.
