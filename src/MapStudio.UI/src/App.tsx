@@ -5895,6 +5895,105 @@ export function App() {
       googleZoom
     ]);
 
+  const handleLoadElevationGrid =
+    useCallback(() => {
+      if (
+        !googleReference ||
+        !activeTile ||
+        !googleApiKey.trim() ||
+        loadingElevationGrid
+      ) {
+        setError(
+          "Carregue a referência do Google e mantenha um tile ativo antes de buscar o relevo."
+        );
+        return;
+      }
+
+      setLoadingElevationGrid(true);
+      setGoogleElevationGrid(undefined);
+      setError(undefined);
+      setSaveNotice(undefined);
+
+      loadGoogleElevationGrid(
+        googleApiKey.trim(),
+        {
+          latitude:
+            googleReference.latitude,
+          longitude:
+            googleReference.longitude,
+          anchorTileX:
+            georefAnchor.tileX,
+          anchorTileY:
+            georefAnchor.tileY,
+          anchorX:
+            georefAnchor.x,
+          anchorY:
+            georefAnchor.y,
+          tileX:
+            activeTile.x,
+          tileY:
+            activeTile.y,
+          sampleCount:
+            elevationSampleCount
+        }
+      );
+    }, [
+      activeTile,
+      elevationSampleCount,
+      georefAnchor,
+      googleApiKey,
+      googleReference,
+      loadingElevationGrid
+    ]);
+
+  const handleApplyElevationGrid =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !googleElevationGrid ||
+        applyingElevationGrid
+      ) {
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          `Aplicar o relevo real ao tile ${googleElevationGrid.tileX},${googleElevationGrid.tileY}?\n\nO arquivo .terrain atual será salvo em backup antes da alteração.`
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      setApplyingElevationGrid(true);
+      setError(undefined);
+      setSaveNotice(undefined);
+
+      applyTerrainElevationGrid(
+        selectedMap.directoryName,
+        {
+          tileX:
+            googleElevationGrid.tileX,
+          tileY:
+            googleElevationGrid.tileY,
+          rows:
+            googleElevationGrid.rows,
+          columns:
+            googleElevationGrid.columns,
+          elevations:
+            googleElevationGrid
+              .elevations,
+          verticalOffset:
+            elevationVerticalOffset
+        }
+      );
+    }, [
+      applyingElevationGrid,
+      elevationVerticalOffset,
+      googleElevationGrid,
+      selectedMap
+    ]);
+
   const handleSaveMapGeoreference =
     useCallback(() => {
       if (
