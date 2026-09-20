@@ -18,7 +18,7 @@ O **OMSI Map Studio** é um editor moderno e independente de mapas para **OMSI 2
 
 ## Primeira versão de teste
 
-A prerelease atual é **v0.1.0-alpha.3**. A gravação ainda é experimental, mas já inclui transformações de objetos existentes e inserção preservativa de novos objetos quando existe um template seguro do mesmo `.sco`, sempre com backup automático.
+A prerelease atual é **v0.1.0-alpha.4**. A gravação ainda é experimental, mas já inclui transformações de objetos existentes e inserção preservativa de novos objetos quando existe um template seguro do mesmo `.sco`, sempre com backup automático.
 
 Ela permite selecionar uma instalação real do OMSI 2, abrir manualmente um mapa, trabalhar em Mapa completo ou modo 3×3, visualizar objetos O3D e splines reais, editar X/Y/Z/rotação/pitch/bank, desfazer/refazer prévias, inserir objetos pela Biblioteca e usar **Colocar cópia** no objeto selecionado. Consulte [Testes da Alpha](docs/pt-BR/TESTING.md) para limitações e roteiro de validação.
 
@@ -64,7 +64,7 @@ Documentação de arquitetura:
 
 ### Biblioteca de Splines
 
-A Alpha.3 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
+A Alpha.4 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
 
 
 ## Roadmap do projeto
