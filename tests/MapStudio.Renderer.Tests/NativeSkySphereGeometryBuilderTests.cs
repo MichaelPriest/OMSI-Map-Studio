@@ -15,11 +15,11 @@ public sealed class NativeSkySphereGeometryBuilderTests
                     latitudeSegments: 4);
 
         Assert.Equal(
-            64,
+            128,
             geometry.TriangleCount);
 
         Assert.Equal(
-            192,
+            384,
             geometry.Vertices.Length);
 
         Assert.All(
