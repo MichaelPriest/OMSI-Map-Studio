@@ -781,3 +781,10 @@ O botão **Saúde** reúne o diagnóstico técnico disponível sem transformar a
 As bibliotecas ganharam o filtro técnico **⚠ Com problemas**. Ele lista apenas assets para os quais o Map Studio já possui evidência de falha — por exemplo O3D declarado ausente, geometria que falhou ao carregar ou textura solicitada que retornou ausente/erro. Um asset que ainda não foi carregado não entra nesse filtro.
 
 Os cartões do painel Saúde abrem diretamente a biblioteca filtrada ou a auditoria de dependências, acelerando a correção de mapas incompletos.
+
+
+### Posição persistente das ferramentas móveis
+
+As janelas e barras marcadas como ferramentas móveis agora guardam sua última posição no armazenamento local da interface. A restauração também funciona para painéis que são montados dinamicamente, como **Saúde do mapa**, **Conjuntos**, assistente de cruzamentos, barras de colocação e ferramentas em tela cheia.
+
+Ao restaurar, a posição é limitada às dimensões atuais do contêiner. Assim, mudar resolução, tamanho da janela ou modo de tela cheia não deixa uma ferramenta permanentemente fora da área visível. Falhas de armazenamento local não interferem na edição do mapa.
