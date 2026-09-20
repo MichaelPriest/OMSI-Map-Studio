@@ -306,6 +306,29 @@ export type HostMessage =
       rootPath: string;
     }
   | {
+      type: "assetIndexRefreshStarted";
+    }
+  | {
+      type: "assetIndexRefreshProgress";
+      examinedFiles: number;
+      candidateFiles: number;
+      relativePath: string | null;
+    }
+  | {
+      type: "assetIndexRefreshCompleted";
+      examinedFiles: number;
+      totalEntries: number;
+      addedFiles: number;
+      updatedFiles: number;
+      unchangedFiles: number;
+      removedFiles: number;
+      durationMilliseconds: number;
+      sceneryObjects: number;
+      splines: number;
+      models: number;
+      textures: number;
+    }
+  | {
       type: "mapCatalogLoadingStarted";
     }
   | {
