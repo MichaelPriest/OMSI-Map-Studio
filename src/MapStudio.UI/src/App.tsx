@@ -10120,6 +10120,34 @@ export function App() {
         );
 
         if (placedObject) {
+          setPlacementAsset(undefined);
+          setPendingPlacement(undefined);
+          setPendingPlacementBatch([]);
+          setPlacementLineStart(undefined);
+          setInsertingObject(false);
+
+          setSplinePlacementTemplate(
+            undefined
+          );
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
+          setSplineLibraryPlacementIsHeight(
+            false
+          );
+          setPendingSplinePlacement(
+            undefined
+          );
+          setEasyRoadMode(false);
+          setEasyRoadStart(undefined);
+          setEasyRoadEnd(undefined);
+          setEasyRoadCurveOffset(0);
+          setRoadStartSnap(undefined);
+          setRoadEndSnap(undefined);
+          setActiveConstructionTool(
+            undefined
+          );
+
           setSelectedSpline(undefined);
           setSelectionMode("object");
           setInspectorTab("transform");
@@ -10162,6 +10190,34 @@ export function App() {
         );
 
         if (placedSpline) {
+          setPlacementAsset(undefined);
+          setPendingPlacement(undefined);
+          setPendingPlacementBatch([]);
+          setPlacementLineStart(undefined);
+          setInsertingObject(false);
+
+          setSplinePlacementTemplate(
+            undefined
+          );
+          setSplineLibraryPlacementAsset(
+            undefined
+          );
+          setSplineLibraryPlacementIsHeight(
+            false
+          );
+          setPendingSplinePlacement(
+            undefined
+          );
+          setEasyRoadMode(false);
+          setEasyRoadStart(undefined);
+          setEasyRoadEnd(undefined);
+          setEasyRoadCurveOffset(0);
+          setRoadStartSnap(undefined);
+          setRoadEndSnap(undefined);
+          setActiveConstructionTool(
+            undefined
+          );
+
           setSelectedObject(undefined);
           setSelectionMode("spline");
           setInspectorTab("transform");

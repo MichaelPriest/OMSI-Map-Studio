@@ -1925,20 +1925,71 @@ function createSelectedMarkerLines(
       geometry,
       tiles
     );
-  const radius = 4;
-  const height = 8;
+  const radius = 4.5;
+  const height = 7.5;
+  const bottomY =
+    position.y + 0.18;
+  const topY =
+    bottomY + height;
+
+  const bottom = [
+    new Vector3(position.x - radius, bottomY, position.z - radius),
+    new Vector3(position.x + radius, bottomY, position.z - radius),
+    new Vector3(position.x + radius, bottomY, position.z + radius),
+    new Vector3(position.x - radius, bottomY, position.z + radius),
+    new Vector3(position.x - radius, bottomY, position.z - radius)
+  ];
+
+  const top = [
+    new Vector3(position.x - radius, topY, position.z - radius),
+    new Vector3(position.x + radius, topY, position.z - radius),
+    new Vector3(position.x + radius, topY, position.z + radius),
+    new Vector3(position.x - radius, topY, position.z + radius),
+    new Vector3(position.x - radius, topY, position.z - radius)
+  ];
 
   return [
+    bottom,
+    top,
     [
-      new Vector3(position.x - radius, position.y, position.z - radius),
-      new Vector3(position.x + radius, position.y, position.z - radius),
-      new Vector3(position.x + radius, position.y, position.z + radius),
-      new Vector3(position.x - radius, position.y, position.z + radius),
-      new Vector3(position.x - radius, position.y, position.z - radius)
+      bottom[0],
+      top[0]
     ],
     [
-      new Vector3(position.x, position.y, position.z),
-      new Vector3(position.x, position.y + height, position.z)
+      bottom[1],
+      top[1]
+    ],
+    [
+      bottom[2],
+      top[2]
+    ],
+    [
+      bottom[3],
+      top[3]
+    ],
+    [
+      new Vector3(
+        position.x - 1.4,
+        bottomY,
+        position.z
+      ),
+      new Vector3(
+        position.x + 1.4,
+        bottomY,
+        position.z
+      )
+    ],
+    [
+      new Vector3(
+        position.x,
+        bottomY,
+        position.z - 1.4
+      ),
+      new Vector3(
+        position.x,
+        bottomY,
+        position.z + 1.4
+      )
     ]
   ];
 }
@@ -4366,6 +4417,7 @@ export function Viewport({
       ObjectLodInstance[] = [];
 
     let selectionMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | undefined;
+    let splineSelectionMarker: ReturnType<typeof MeshBuilder.CreateLineSystem> | undefined;
 
     const showSelection = (placedObject: OmsiPlacedObject | undefined) => {
       selectionMarker?.dispose();
@@ -4390,8 +4442,134 @@ export function Viewport({
         },
         scene
       );
-      selectionMarker.color = new Color3(1, 0.96, 0.68);
+      selectionMarker.color =
+        new Color3(
+          0.16,
+          0.78,
+          1
+        );
       selectionMarker.isPickable = false;
+      selectionMarker.renderingGroupId = 3;
+    };
+
+    const showSplineSelection = (
+      placedSpline:
+        | OmsiPlacedSpline
+        | undefined
+    ) => {
+      splineSelectionMarker?.dispose();
+      splineSelectionMarker =
+        undefined;
+
+      if (!placedSpline) {
+        return;
+      }
+
+      const axis =
+        getSplineAxisLine(
+          placedSpline
+        );
+
+      if (axis.length < 2) {
+        return;
+      }
+
+      const lifted =
+        axis.map((point) =>
+          point.add(
+            new Vector3(
+              0,
+              0.38,
+              0
+            )
+          )
+        );
+
+      const start =
+        lifted[0];
+      const end =
+        lifted[
+          lifted.length - 1
+        ];
+      const markerRadius = 2.2;
+
+      splineSelectionMarker =
+        MeshBuilder.CreateLineSystem(
+          "omsi-selected-spline",
+          {
+            lines: [
+              lifted,
+              [
+                new Vector3(
+                  start.x -
+                    markerRadius,
+                  start.y,
+                  start.z
+                ),
+                new Vector3(
+                  start.x +
+                    markerRadius,
+                  start.y,
+                  start.z
+                )
+              ],
+              [
+                new Vector3(
+                  start.x,
+                  start.y,
+                  start.z -
+                    markerRadius
+                ),
+                new Vector3(
+                  start.x,
+                  start.y,
+                  start.z +
+                    markerRadius
+                )
+              ],
+              [
+                new Vector3(
+                  end.x -
+                    markerRadius,
+                  end.y,
+                  end.z
+                ),
+                new Vector3(
+                  end.x +
+                    markerRadius,
+                  end.y,
+                  end.z
+                )
+              ],
+              [
+                new Vector3(
+                  end.x,
+                  end.y,
+                  end.z -
+                    markerRadius
+                ),
+                new Vector3(
+                  end.x,
+                  end.y,
+                  end.z +
+                    markerRadius
+                )
+              ]
+            ]
+          },
+          scene
+        );
+
+      splineSelectionMarker.color =
+        new Color3(
+          0.16,
+          0.78,
+          1
+        );
+      splineSelectionMarker.isPickable =
+        false;
+      splineSelectionMarker
+        .renderingGroupId = 3;
     };
 
     if (tiles.length) {
@@ -5266,9 +5444,14 @@ export function Viewport({
     }
 
     showSelection(
-      showObjects &&
-      !placementAssetPath
+      showObjects
         ? selectedObject
+        : undefined
+    );
+
+    showSplineSelection(
+      showSplines
+        ? selectedSpline
         : undefined
     );
 
