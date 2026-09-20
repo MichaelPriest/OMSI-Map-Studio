@@ -11656,7 +11656,19 @@ export function App() {
           <section className="editor-viewport">
             {isFullScreen && (
               <>
-                <div className="fullscreen-tool-dock">
+                <div
+                  className="fullscreen-tool-dock floating-tool"
+                  data-floating-tool
+                >
+                  <button
+                    type="button"
+                    className="tool-drag-grip drag-handle"
+                    data-drag-handle
+                    title="Arraste para mover as ferramentas"
+                    aria-label="Mover barra de ferramentas"
+                  >
+                    ⋮⋮
+                  </button>
                   <div className="fullscreen-tool-group">
                     <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)">↖ <span>Q</span></button>
                     <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)">✥ <span>W</span></button>
@@ -12820,7 +12832,19 @@ export function App() {
               </div>
             )}
 
-            <div className="viewport-toolbar">
+            <div
+              className="viewport-toolbar floating-tool"
+              data-floating-tool
+            >
+              <button
+                type="button"
+                className="tool-drag-grip drag-handle"
+                data-drag-handle
+                title="Arraste para mover esta barra"
+                aria-label="Mover ferramentas do viewport"
+              >
+                ⋮⋮
+              </button>
               <button
                 type="button"
                 className={
@@ -12952,7 +12976,19 @@ export function App() {
               )}
             </div>
 
-            <div className="viewport-layers">
+            <div
+              className="viewport-layers floating-tool"
+              data-floating-tool
+            >
+              <button
+                type="button"
+                className="tool-drag-grip drag-handle"
+                data-drag-handle
+                title="Arraste para mover este painel"
+                aria-label="Mover painel de camadas"
+              >
+                ⋮⋮
+              </button>
               <label>
                 <input
                   type="checkbox"
