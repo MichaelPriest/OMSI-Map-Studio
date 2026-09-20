@@ -114,6 +114,176 @@ type SplineLibraryGroup =
   | "markings"
   | "other";
 
+type LibraryViewMode =
+  | "groups"
+  | "favorites"
+  | "recent"
+  | "frequent"
+  | "collection";
+
+type SceneryTechnicalFilter =
+  | "all"
+  | "used"
+  | "tree"
+  | "loaded";
+
+type SplineTechnicalFilter =
+  | "all"
+  | "used"
+  | "loaded";
+
+const libraryStorageKeys = {
+  sceneryFavorites:
+    "omsi-map-studio:library:scenery-favorites",
+  sceneryRecent:
+    "omsi-map-studio:library:scenery-recent",
+  sceneryUsage:
+    "omsi-map-studio:library:scenery-usage",
+  splineFavorites:
+    "omsi-map-studio:library:spline-favorites",
+  splineRecent:
+    "omsi-map-studio:library:spline-recent",
+  splineUsage:
+    "omsi-map-studio:library:spline-usage",
+  collections:
+    "omsi-map-studio:library:collections"
+} as const;
+
+const readStoredJson = <T,>(
+  key: string,
+  fallback: T
+): T => {
+  try {
+    const raw =
+      window.localStorage.getItem(key);
+
+    return raw
+      ? (JSON.parse(raw) as T)
+      : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeStoredJson = (
+  key: string,
+  value: unknown
+) => {
+  try {
+    window.localStorage.setItem(
+      key,
+      JSON.stringify(value)
+    );
+  } catch {
+    // Library personalization must never block
+    // real map editing if browser storage is full.
+  }
+};
+
+const assetSearchSynonyms:
+  Record<string, string[]> = {
+    rua: [
+      "rua",
+      "road",
+      "street",
+      "strasse",
+      "straße"
+    ],
+    avenida: [
+      "avenida",
+      "avenue",
+      "allee",
+      "boulevard"
+    ],
+    arvore: [
+      "arvore",
+      "árvore",
+      "tree",
+      "baum"
+    ],
+    casa: [
+      "casa",
+      "house",
+      "haus",
+      "wohn"
+    ],
+    predio: [
+      "predio",
+      "prédio",
+      "building",
+      "gebaeude",
+      "gebäude"
+    ],
+    ponte: [
+      "ponte",
+      "bridge",
+      "bruecke",
+      "brücke"
+    ],
+    cruzamento: [
+      "cruzamento",
+      "junction",
+      "intersection",
+      "kreuzung"
+    ],
+    calcada: [
+      "calcada",
+      "calçada",
+      "sidewalk",
+      "gehweg"
+    ],
+    trilho: [
+      "trilho",
+      "rail",
+      "track",
+      "gleis",
+      "tram"
+    ],
+    poste: [
+      "poste",
+      "pole",
+      "lamp",
+      "light"
+    ],
+    ponto: [
+      "ponto",
+      "busstop",
+      "bus stop",
+      "haltestelle"
+    ]
+  };
+
+const matchesSmartAssetSearch = (
+  rawText: string,
+  rawQuery: string
+) => {
+  const text =
+    normalizeAssetClassifierText(
+      rawText
+    );
+  const tokens =
+    normalizeAssetClassifierText(
+      rawQuery
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+
+  return tokens.every((token) => {
+    const alternatives =
+      assetSearchSynonyms[token] ??
+      [token];
+
+    return alternatives.some(
+      (candidate) =>
+        text.includes(
+          normalizeAssetClassifierText(
+            candidate
+          )
+        )
+    );
+  });
+};
+
 const sceneryLibraryGroups: Array<{
   id: SceneryLibraryGroup;
   label: string;
@@ -400,6 +570,272 @@ const getSplineLibraryGroup = (
   }
 
   return "other";
+};
+
+const getSceneryLibrarySubcategory = (
+  entry: SceneryLibraryEntry,
+  group: Exclude<
+    SceneryLibraryGroup,
+    "all"
+  >
+) => {
+  const text =
+    normalizeAssetClassifierText(
+      entry.fileName +
+        " " +
+        entry.sceneryObjectPath
+    );
+
+  if (group === "junctions") {
+    return containsAnyAssetTerm(
+      text,
+      ["roundabout", "rotatoria"]
+    )
+      ? "Rotatórias"
+      : "Interseções";
+  }
+
+  if (group === "bridges") {
+    if (
+      containsAnyAssetTerm(text, [
+        "viaduct",
+        "viaduto",
+        "overpass",
+        "elevated"
+      ])
+    ) {
+      return "Viadutos / elevados";
+    }
+    return "Pontes";
+  }
+
+  if (group === "buildings") {
+    if (
+      containsAnyAssetTerm(text, [
+        "shop",
+        "store",
+        "commercial",
+        "laden"
+      ])
+    ) {
+      return "Comercial";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "factory",
+        "industrial",
+        "warehouse"
+      ])
+    ) {
+      return "Industrial";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "school",
+        "hospital",
+        "church",
+        "igreja",
+        "public"
+      ])
+    ) {
+      return "Público";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "house",
+        "haus",
+        "wohn",
+        "apartment",
+        "casa"
+      ])
+    ) {
+      return "Residencial";
+    }
+    return "Edificações";
+  }
+
+  if (group === "vegetation") {
+    if (
+      containsAnyAssetTerm(text, [
+        "grass",
+        "grama"
+      ])
+    ) {
+      return "Grama";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "bush",
+        "shrub",
+        "hedge",
+        "arbusto"
+      ])
+    ) {
+      return "Arbustos";
+    }
+    return "Árvores";
+  }
+
+  if (group === "transit") {
+    if (
+      containsAnyAssetTerm(text, [
+        "depot",
+        "garage"
+      ])
+    ) {
+      return "Garagens / depósitos";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "terminal",
+        "station",
+        "bahnhof"
+      ])
+    ) {
+      return "Terminais / estações";
+    }
+    return "Pontos / abrigos";
+  }
+
+  if (group === "street") {
+    if (
+      containsAnyAssetTerm(text, [
+        "lamp",
+        "light",
+        "poste"
+      ])
+    ) {
+      return "Iluminação";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "sign",
+        "schild",
+        "traffic",
+        "placa",
+        "semaforo"
+      ])
+    ) {
+      return "Sinalização";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "fence",
+        "zaun",
+        "barrier",
+        "bollard"
+      ])
+    ) {
+      return "Cercas / barreiras";
+    }
+    return "Mobiliário urbano";
+  }
+
+  if (group === "utilities") {
+    if (
+      containsAnyAssetTerm(text, [
+        "power",
+        "transformer",
+        "substation"
+      ])
+    ) {
+      return "Energia";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "water",
+        "wasser",
+        "sewer"
+      ])
+    ) {
+      return "Água / saneamento";
+    }
+    return "Infraestrutura";
+  }
+
+  return "Geral";
+};
+
+const getSplineLibrarySubcategory = (
+  entry: SplineLibraryEntry,
+  group: Exclude<
+    SplineLibraryGroup,
+    "all"
+  >
+) => {
+  const text =
+    normalizeAssetClassifierText(
+      entry.fileName +
+        " " +
+        entry.splinePath
+    );
+
+  if (group === "roads") {
+    if (
+      containsAnyAssetTerm(text, [
+        "oneway",
+        "one way",
+        "einbahn"
+      ])
+    ) {
+      return "Mão única";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "avenue",
+        "allee",
+        "multi",
+        "4lane",
+        "6lane"
+      ])
+    ) {
+      return "Avenidas";
+    }
+    if (
+      containsAnyAssetTerm(text, [
+        "country",
+        "rural",
+        "landstr",
+        "highway"
+      ])
+    ) {
+      return "Estradas";
+    }
+    return "Ruas urbanas";
+  }
+
+  if (group === "paths") {
+    return containsAnyAssetTerm(
+      text,
+      ["cycle", "bike", "radweg"]
+    )
+      ? "Ciclovias"
+      : "Calçadas / caminhos";
+  }
+
+  if (group === "rail") {
+    return containsAnyAssetTerm(
+      text,
+      ["tram", "strab"]
+    )
+      ? "Bonde / tram"
+      : "Ferrovia";
+  }
+
+  if (group === "bridges") {
+    return containsAnyAssetTerm(
+      text,
+      ["tunnel"]
+    )
+      ? "Túneis"
+      : "Pontes / elevados";
+  }
+
+  if (group === "markings") {
+    return "Marcação viária";
+  }
+
+  return "Geral";
 };
 
 type ViewportCameraAction = {
@@ -1769,6 +2205,56 @@ export function App() {
   ] = useState<SceneryLibraryEntry>();
 
   const [
+    sceneryLibraryView,
+    setSceneryLibraryView
+  ] = useState<LibraryViewMode>(
+    "groups"
+  );
+
+  const [
+    sceneryTechnicalFilter,
+    setSceneryTechnicalFilter
+  ] = useState<SceneryTechnicalFilter>(
+    "all"
+  );
+
+  const [
+    scenerySubcategory,
+    setScenerySubcategory
+  ] = useState("all");
+
+  const [
+    sceneryFavorites,
+    setSceneryFavorites
+  ] = useState<string[]>(() =>
+    readStoredJson(
+      libraryStorageKeys.sceneryFavorites,
+      []
+    )
+  );
+
+  const [
+    sceneryRecent,
+    setSceneryRecent
+  ] = useState<string[]>(() =>
+    readStoredJson(
+      libraryStorageKeys.sceneryRecent,
+      []
+    )
+  );
+
+  const [
+    sceneryUsage,
+    setSceneryUsage
+  ] = useState<Record<string, number>>(
+    () =>
+      readStoredJson(
+        libraryStorageKeys.sceneryUsage,
+        {}
+      )
+  );
+
+  const [
     loadingSceneryLibrary,
     setLoadingSceneryLibrary
   ] = useState(false);
@@ -1866,6 +2352,77 @@ export function App() {
   ] = useState<SplineLibraryEntry>();
 
   const [
+    splineLibraryView,
+    setSplineLibraryView
+  ] = useState<LibraryViewMode>(
+    "groups"
+  );
+
+  const [
+    splineTechnicalFilter,
+    setSplineTechnicalFilter
+  ] = useState<SplineTechnicalFilter>(
+    "all"
+  );
+
+  const [
+    splineSubcategory,
+    setSplineSubcategory
+  ] = useState("all");
+
+  const [
+    splineFavorites,
+    setSplineFavorites
+  ] = useState<string[]>(() =>
+    readStoredJson(
+      libraryStorageKeys.splineFavorites,
+      []
+    )
+  );
+
+  const [
+    splineRecent,
+    setSplineRecent
+  ] = useState<string[]>(() =>
+    readStoredJson(
+      libraryStorageKeys.splineRecent,
+      []
+    )
+  );
+
+  const [
+    splineUsage,
+    setSplineUsage
+  ] = useState<Record<string, number>>(
+    () =>
+      readStoredJson(
+        libraryStorageKeys.splineUsage,
+        {}
+      )
+  );
+
+  const [
+    libraryCollections,
+    setLibraryCollections
+  ] = useState<Record<string, string[]>>(
+    () =>
+      readStoredJson(
+        libraryStorageKeys.collections,
+        {}
+      )
+  );
+
+  const [
+    activeLibraryCollection,
+    setActiveLibraryCollection
+  ] = useState("");
+
+  const [
+    newCollectionName,
+    setNewCollectionName
+  ] = useState("");
+
+  const [
     loadingSplineLibrary,
     setLoadingSplineLibrary
   ] = useState(false);
@@ -1940,6 +2497,55 @@ export function App() {
 
   const [saveNotice, setSaveNotice] =
     useState<string>();
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.sceneryFavorites,
+      sceneryFavorites
+    );
+  }, [sceneryFavorites]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.sceneryRecent,
+      sceneryRecent
+    );
+  }, [sceneryRecent]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.sceneryUsage,
+      sceneryUsage
+    );
+  }, [sceneryUsage]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.splineFavorites,
+      splineFavorites
+    );
+  }, [splineFavorites]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.splineRecent,
+      splineRecent
+    );
+  }, [splineRecent]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.splineUsage,
+      splineUsage
+    );
+  }, [splineUsage]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.collections,
+      libraryCollections
+    );
+  }, [libraryCollections]);
 
   const interactionLocked =
     selectingRoot ||
@@ -5339,9 +5945,7 @@ export function App() {
   ]);
 
   const normalizedLibrarySearch =
-    librarySearch
-      .trim()
-      .toLocaleLowerCase("pt-BR");
+    librarySearch.trim();
 
   const sceneryLibrarySearchEntries =
     useMemo(
@@ -5349,31 +5953,179 @@ export function App() {
         normalizedLibrarySearch
           ? sceneryLibrary.filter(
               (entry) =>
-                (
+                matchesSmartAssetSearch(
                   entry.fileName +
-                  " " +
-                  entry.sceneryObjectPath
+                    " " +
+                    entry.sceneryObjectPath +
+                    " " +
+                    (
+                      sceneryMetadataByPath[
+                        entry.sceneryObjectPath
+                      ]?.friendlyName ?? ""
+                    ),
+                  normalizedLibrarySearch
                 )
-                  .toLocaleLowerCase(
-                    "pt-BR"
-                  )
-                  .includes(
-                    normalizedLibrarySearch
-                  )
             )
           : sceneryLibrary,
       [
         normalizedLibrarySearch,
-        sceneryLibrary
+        sceneryLibrary,
+        sceneryMetadataByPath
       ]
     );
+
+  const usedSceneryPaths =
+    useMemo(
+      () =>
+        new Set(
+          objects.map(
+            (item) =>
+              item.sceneryObjectPath
+          )
+        ),
+      [objects]
+    );
+
+  const activeCollectionItems =
+    libraryCollections[
+      activeLibraryCollection
+    ] ?? [];
+
+  const sceneryLibraryEligibleEntries =
+    useMemo(() => {
+      const favoriteSet =
+        new Set(sceneryFavorites);
+      const recentIndex =
+        new Map(
+          sceneryRecent.map(
+            (path, index) => [
+              path,
+              index
+            ]
+          )
+        );
+      const collectionSet =
+        new Set(
+          activeCollectionItems
+            .filter((item) =>
+              item.startsWith("sco:")
+            )
+            .map((item) =>
+              item.slice(4)
+            )
+        );
+
+      const entries =
+        sceneryLibrarySearchEntries
+          .filter((entry) => {
+            const path =
+              entry.sceneryObjectPath;
+
+            if (
+              sceneryLibraryView ===
+                "favorites" &&
+              !favoriteSet.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryLibraryView ===
+                "recent" &&
+              !recentIndex.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryLibraryView ===
+                "frequent" &&
+              !sceneryUsage[path]
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryLibraryView ===
+                "collection" &&
+              !collectionSet.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryTechnicalFilter ===
+                "used" &&
+              !usedSceneryPaths.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryTechnicalFilter ===
+                "tree" &&
+              !geometryByPath[path]?.tree
+            ) {
+              return false;
+            }
+
+            if (
+              sceneryTechnicalFilter ===
+                "loaded" &&
+              !geometryByPath[path]
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+
+      if (
+        sceneryLibraryView === "recent"
+      ) {
+        entries.sort(
+          (left, right) =>
+            (recentIndex.get(
+              left.sceneryObjectPath
+            ) ?? 9999) -
+            (recentIndex.get(
+              right.sceneryObjectPath
+            ) ?? 9999)
+        );
+      } else if (
+        sceneryLibraryView ===
+        "frequent"
+      ) {
+        entries.sort(
+          (left, right) =>
+            (sceneryUsage[
+              right.sceneryObjectPath
+            ] ?? 0) -
+            (sceneryUsage[
+              left.sceneryObjectPath
+            ] ?? 0)
+        );
+      }
+
+      return entries;
+    }, [
+      activeCollectionItems,
+      geometryByPath,
+      sceneryFavorites,
+      sceneryLibrarySearchEntries,
+      sceneryLibraryView,
+      sceneryRecent,
+      sceneryTechnicalFilter,
+      sceneryUsage,
+      usedSceneryPaths
+    ]);
 
   const sceneryLibraryGroupCounts =
     useMemo(() => {
       const counts:
         Record<SceneryLibraryGroup, number> = {
           all:
-            sceneryLibrarySearchEntries.length,
+            sceneryLibraryEligibleEntries.length,
           junctions: 0,
           bridges: 0,
           buildings: 0,
@@ -5385,7 +6137,7 @@ export function App() {
         };
 
       for (const entry of
-        sceneryLibrarySearchEntries) {
+        sceneryLibraryEligibleEntries) {
         const group =
           getSceneryLibraryGroup(
             entry,
@@ -5403,23 +6155,62 @@ export function App() {
       return counts;
     }, [
       geometryByPath,
-      sceneryLibrarySearchEntries,
+      sceneryLibraryEligibleEntries,
+      sceneryMetadataByPath
+    ]);
+
+  const scenerySubcategories =
+    useMemo(() => {
+      const values = new Set<string>();
+
+      for (const entry of
+        sceneryLibraryEligibleEntries) {
+        const group =
+          getSceneryLibraryGroup(
+            entry,
+            sceneryMetadataByPath[
+              entry.sceneryObjectPath
+            ],
+            geometryByPath[
+              entry.sceneryObjectPath
+            ]
+          );
+
+        if (
+          sceneryLibraryGroup !== "all" &&
+          group !== sceneryLibraryGroup
+        ) {
+          continue;
+        }
+
+        values.add(
+          getSceneryLibrarySubcategory(
+            entry,
+            group
+          )
+        );
+      }
+
+      return Array.from(values).sort(
+        (left, right) =>
+          left.localeCompare(
+            right,
+            "pt-BR"
+          )
+      );
+    }, [
+      geometryByPath,
+      sceneryLibraryEligibleEntries,
+      sceneryLibraryGroup,
       sceneryMetadataByPath
     ]);
 
   const filteredSceneryLibrary =
     useMemo(
       () =>
-        sceneryLibrarySearchEntries
+        sceneryLibraryEligibleEntries
           .filter((entry) => {
-            if (
-              sceneryLibraryGroup ===
-              "all"
-            ) {
-              return true;
-            }
-
-            return (
+            const group =
               getSceneryLibraryGroup(
                 entry,
                 sceneryMetadataByPath[
@@ -5428,28 +6219,42 @@ export function App() {
                 geometryByPath[
                   entry.sceneryObjectPath
                 ]
+              );
+
+            if (
+              sceneryLibraryGroup !==
+                "all" &&
+              group !==
+                sceneryLibraryGroup
+            ) {
+              return false;
+            }
+
+            return (
+              scenerySubcategory ===
+                "all" ||
+              getSceneryLibrarySubcategory(
+                entry,
+                group
               ) ===
-              sceneryLibraryGroup
+                scenerySubcategory
             );
           })
           .slice(0, 300),
       [
         geometryByPath,
+        sceneryLibraryEligibleEntries,
         sceneryLibraryGroup,
-        sceneryLibrarySearchEntries,
-        sceneryMetadataByPath
+        sceneryMetadataByPath,
+        scenerySubcategory
       ]
     );
 
   const sceneryLibraryResultCount =
-    sceneryLibraryGroupCounts[
-      sceneryLibraryGroup
-    ];
+    filteredSceneryLibrary.length;
 
   const normalizedSplineLibrarySearch =
-    splineLibrarySearch
-      .trim()
-      .toLocaleLowerCase("pt-BR");
+    splineLibrarySearch.trim();
 
   const splineLibrarySearchEntries =
     useMemo(
@@ -5457,17 +6262,12 @@ export function App() {
         normalizedSplineLibrarySearch
           ? splineLibrary.filter(
               (entry) =>
-                (
+                matchesSmartAssetSearch(
                   entry.fileName +
-                  " " +
-                  entry.splinePath
+                    " " +
+                    entry.splinePath,
+                  normalizedSplineLibrarySearch
                 )
-                  .toLocaleLowerCase(
-                    "pt-BR"
-                  )
-                  .includes(
-                    normalizedSplineLibrarySearch
-                  )
             )
           : splineLibrary,
       [
@@ -5476,12 +6276,145 @@ export function App() {
       ]
     );
 
+  const usedSplinePaths =
+    useMemo(
+      () =>
+        new Set(
+          splines.map(
+            (item) =>
+              item.splinePath
+          )
+        ),
+      [splines]
+    );
+
+  const splineLibraryEligibleEntries =
+    useMemo(() => {
+      const favoriteSet =
+        new Set(splineFavorites);
+      const recentIndex =
+        new Map(
+          splineRecent.map(
+            (path, index) => [
+              path,
+              index
+            ]
+          )
+        );
+      const collectionSet =
+        new Set(
+          activeCollectionItems
+            .filter((item) =>
+              item.startsWith("sli:")
+            )
+            .map((item) =>
+              item.slice(4)
+            )
+        );
+
+      const entries =
+        splineLibrarySearchEntries
+          .filter((entry) => {
+            const path =
+              entry.splinePath;
+
+            if (
+              splineLibraryView ===
+                "favorites" &&
+              !favoriteSet.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              splineLibraryView ===
+                "recent" &&
+              !recentIndex.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              splineLibraryView ===
+                "frequent" &&
+              !splineUsage[path]
+            ) {
+              return false;
+            }
+
+            if (
+              splineLibraryView ===
+                "collection" &&
+              !collectionSet.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              splineTechnicalFilter ===
+                "used" &&
+              !usedSplinePaths.has(path)
+            ) {
+              return false;
+            }
+
+            if (
+              splineTechnicalFilter ===
+                "loaded" &&
+              !splineProfilesByPath[path]
+            ) {
+              return false;
+            }
+
+            return true;
+          });
+
+      if (
+        splineLibraryView === "recent"
+      ) {
+        entries.sort(
+          (left, right) =>
+            (recentIndex.get(
+              left.splinePath
+            ) ?? 9999) -
+            (recentIndex.get(
+              right.splinePath
+            ) ?? 9999)
+        );
+      } else if (
+        splineLibraryView ===
+        "frequent"
+      ) {
+        entries.sort(
+          (left, right) =>
+            (splineUsage[
+              right.splinePath
+            ] ?? 0) -
+            (splineUsage[
+              left.splinePath
+            ] ?? 0)
+        );
+      }
+
+      return entries;
+    }, [
+      activeCollectionItems,
+      splineFavorites,
+      splineLibrarySearchEntries,
+      splineLibraryView,
+      splineProfilesByPath,
+      splineRecent,
+      splineTechnicalFilter,
+      splineUsage,
+      usedSplinePaths
+    ]);
+
   const splineLibraryGroupCounts =
     useMemo(() => {
       const counts:
         Record<SplineLibraryGroup, number> = {
           all:
-            splineLibrarySearchEntries.length,
+            splineLibraryEligibleEntries.length,
           roads: 0,
           paths: 0,
           rail: 0,
@@ -5491,38 +6424,88 @@ export function App() {
         };
 
       for (const entry of
-        splineLibrarySearchEntries) {
+        splineLibraryEligibleEntries) {
         counts[
           getSplineLibraryGroup(entry)
         ] += 1;
       }
 
       return counts;
-    }, [splineLibrarySearchEntries]);
+    }, [splineLibraryEligibleEntries]);
+
+  const splineSubcategories =
+    useMemo(() => {
+      const values = new Set<string>();
+
+      for (const entry of
+        splineLibraryEligibleEntries) {
+        const group =
+          getSplineLibraryGroup(entry);
+
+        if (
+          splineLibraryGroup !== "all" &&
+          group !== splineLibraryGroup
+        ) {
+          continue;
+        }
+
+        values.add(
+          getSplineLibrarySubcategory(
+            entry,
+            group
+          )
+        );
+      }
+
+      return Array.from(values).sort(
+        (left, right) =>
+          left.localeCompare(
+            right,
+            "pt-BR"
+          )
+      );
+    }, [
+      splineLibraryEligibleEntries,
+      splineLibraryGroup
+    ]);
 
   const filteredSplineLibrary =
     useMemo(
       () =>
-        splineLibrarySearchEntries
-          .filter((entry) =>
-            splineLibraryGroup === "all"
-              ? true
-              : getSplineLibraryGroup(
-                  entry
-                ) ===
+        splineLibraryEligibleEntries
+          .filter((entry) => {
+            const group =
+              getSplineLibraryGroup(entry);
+
+            if (
+              splineLibraryGroup !==
+                "all" &&
+              group !==
                 splineLibraryGroup
-          )
+            ) {
+              return false;
+            }
+
+            return (
+              splineSubcategory ===
+                "all" ||
+              getSplineLibrarySubcategory(
+                entry,
+                group
+              ) ===
+                splineSubcategory
+            );
+          })
           .slice(0, 300),
       [
+        splineLibraryEligibleEntries,
         splineLibraryGroup,
-        splineLibrarySearchEntries
+        splineSubcategory
       ]
     );
 
   const splineLibraryResultCount =
-    splineLibraryGroupCounts[
-      splineLibraryGroup
-    ];
+    filteredSplineLibrary.length;
 
   const explorerSplineResultCount =
     useMemo(() => {
@@ -7116,6 +8099,10 @@ export function App() {
           return;
         }
 
+        registerSplineLibraryUse(
+          entry.splinePath,
+          true
+        );
         setSplineLibraryPreviewAsset(
           entry
         );
@@ -7204,6 +8191,7 @@ export function App() {
         activeTile,
         easyRoadMode,
         placementAsset,
+        registerSplineLibraryUse,
         previewEditCount,
         selectedMap,
         splinePreviewEditCount,
@@ -7884,9 +8872,140 @@ export function App() {
     splinePreviewEditCount
   ]);
 
+  const toggleSceneryFavorite =
+    useCallback((path: string) => {
+      setSceneryFavorites((current) =>
+        current.includes(path)
+          ? current.filter(
+              (item) => item !== path
+            )
+          : [path, ...current]
+      );
+    }, []);
+
+  const toggleSplineFavorite =
+    useCallback((path: string) => {
+      setSplineFavorites((current) =>
+        current.includes(path)
+          ? current.filter(
+              (item) => item !== path
+            )
+          : [path, ...current]
+      );
+    }, []);
+
+  const registerSceneryLibraryUse =
+    useCallback(
+      (
+        path: string,
+        incrementUsage: boolean
+      ) => {
+        setSceneryRecent((current) => [
+          path,
+          ...current.filter(
+            (item) => item !== path
+          )
+        ].slice(0, 24));
+
+        if (incrementUsage) {
+          setSceneryUsage(
+            (current) => ({
+              ...current,
+              [path]:
+                (current[path] ?? 0) +
+                1
+            })
+          );
+        }
+      },
+      []
+    );
+
+  const registerSplineLibraryUse =
+    useCallback(
+      (
+        path: string,
+        incrementUsage: boolean
+      ) => {
+        setSplineRecent((current) => [
+          path,
+          ...current.filter(
+            (item) => item !== path
+          )
+        ].slice(0, 24));
+
+        if (incrementUsage) {
+          setSplineUsage(
+            (current) => ({
+              ...current,
+              [path]:
+                (current[path] ?? 0) +
+                1
+            })
+          );
+        }
+      },
+      []
+    );
+
+  const handleCreateLibraryCollection =
+    useCallback(() => {
+      const name =
+        newCollectionName.trim();
+
+      if (!name) {
+        return;
+      }
+
+      setLibraryCollections(
+        (current) => ({
+          ...current,
+          [name]: current[name] ?? []
+        })
+      );
+      setActiveLibraryCollection(name);
+      setNewCollectionName("");
+    }, [newCollectionName]);
+
+  const toggleAssetInCollection =
+    useCallback(
+      (assetKey: string) => {
+        if (!activeLibraryCollection) {
+          return;
+        }
+
+        setLibraryCollections(
+          (current) => {
+            const items =
+              current[
+                activeLibraryCollection
+              ] ?? [];
+            const next =
+              items.includes(assetKey)
+                ? items.filter(
+                    (item) =>
+                      item !== assetKey
+                  )
+                : [...items, assetKey];
+
+            return {
+              ...current,
+              [activeLibraryCollection]:
+                next
+            };
+          }
+        );
+      },
+      [activeLibraryCollection]
+    );
+
   const handlePreviewSceneryLibraryAsset =
     useCallback(
       (entry: SceneryLibraryEntry) => {
+        registerSceneryLibraryUse(
+          entry.sceneryObjectPath,
+          false
+        );
         setSceneryLibraryPreviewAsset(
           entry
         );
@@ -7915,6 +9034,7 @@ export function App() {
       },
       [
         geometryByPath,
+        registerSceneryLibraryUse,
         sceneryMetadataByPath
       ]
     );
@@ -7922,6 +9042,10 @@ export function App() {
   const handlePreviewSplineLibraryAsset =
     useCallback(
       (entry: SplineLibraryEntry) => {
+        registerSplineLibraryUse(
+          entry.splinePath,
+          false
+        );
         setSplineLibraryPreviewAsset(
           entry
         );
@@ -7940,7 +9064,10 @@ export function App() {
           );
         }
       },
-      [splineProfilesByPath]
+      [
+        registerSplineLibraryUse,
+        splineProfilesByPath
+      ]
     );
 
   const handleSelectPlacementAsset =
@@ -7979,6 +9106,10 @@ export function App() {
           return;
         }
 
+        registerSceneryLibraryUse(
+          entry.sceneryObjectPath,
+          true
+        );
         setPlacementTransformDefaults(
           transformDefaults
         );
@@ -8028,6 +9159,7 @@ export function App() {
       [
         activeTile,
         geometryByPath,
+        registerSceneryLibraryUse,
         sceneryMetadataByPath,
         selectedMap,
         splinePlacementTemplate,
@@ -11796,6 +12928,158 @@ export function App() {
                   </span>
                 </div>
 
+                <div className="library-smart-toolbar">
+                  <div className="library-view-tabs">
+                    {([
+                      ["groups", "Grupos"],
+                      ["favorites", "★ Favoritos"],
+                      ["recent", "Recentes"],
+                      ["frequent", "Mais usados"],
+                      ["collection", "Coleção"]
+                    ] as const).map(
+                      ([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={
+                            sceneryLibraryView ===
+                            value
+                              ? "active"
+                              : ""
+                          }
+                          onClick={() =>
+                            setSceneryLibraryView(
+                              value
+                            )
+                          }
+                        >
+                          {label}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  <div className="library-filter-row">
+                    <select
+                      value={
+                        sceneryTechnicalFilter
+                      }
+                      onChange={(event) =>
+                        setSceneryTechnicalFilter(
+                          event.currentTarget
+                            .value as SceneryTechnicalFilter
+                        )
+                      }
+                      aria-label="Filtro técnico de objetos"
+                    >
+                      <option value="all">
+                        Todos os assets
+                      </option>
+                      <option value="used">
+                        Usados no mapa
+                      </option>
+                      <option value="tree">
+                        Árvores [tree] detectadas
+                      </option>
+                      <option value="loaded">
+                        Geometria carregada
+                      </option>
+                    </select>
+
+                    <select
+                      value={
+                        scenerySubcategory
+                      }
+                      onChange={(event) =>
+                        setScenerySubcategory(
+                          event.currentTarget
+                            .value
+                        )
+                      }
+                      aria-label="Subcategoria de objetos"
+                    >
+                      <option value="all">
+                        Todas as subcategorias
+                      </option>
+                      {scenerySubcategories.map(
+                        (subcategory) => (
+                          <option
+                            key={subcategory}
+                            value={subcategory}
+                          >
+                            {subcategory}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    <select
+                      value={
+                        activeLibraryCollection
+                      }
+                      onChange={(event) =>
+                        setActiveLibraryCollection(
+                          event.currentTarget
+                            .value
+                        )
+                      }
+                      aria-label="Coleção de assets"
+                    >
+                      <option value="">
+                        Sem coleção
+                      </option>
+                      {Object.keys(
+                        libraryCollections
+                      )
+                        .sort((a, b) =>
+                          a.localeCompare(
+                            b,
+                            "pt-BR"
+                          )
+                        )
+                        .map((name) => (
+                          <option
+                            key={name}
+                            value={name}
+                          >
+                            {name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div className="library-collection-create">
+                    <input
+                      value={newCollectionName}
+                      onChange={(event) =>
+                        setNewCollectionName(
+                          event.currentTarget
+                            .value
+                        )
+                      }
+                      placeholder="Nova coleção..."
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter"
+                        ) {
+                          handleCreateLibraryCollection();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={
+                        !newCollectionName.trim()
+                      }
+                      onClick={
+                        handleCreateLibraryCollection
+                      }
+                    >
+                      Criar
+                    </button>
+                  </div>
+                </div>
+
                 <div
                   className="library-group-tabs"
                   role="tablist"
@@ -11817,11 +13101,14 @@ export function App() {
                           sceneryLibraryGroup ===
                           group.id
                         }
-                        onClick={() =>
+                        onClick={() => {
                           setSceneryLibraryGroup(
                             group.id
-                          )
-                        }
+                          );
+                          setScenerySubcategory(
+                            "all"
+                          );
+                        }}
                       >
                         <span
                           className="library-group-icon"
@@ -11946,6 +13233,55 @@ export function App() {
                             .sceneryObjectPath}
                       </span>
                     </div>
+
+                    <div className="asset-inspector-grid">
+                      <span>
+                        <strong>Uso no mapa</strong>
+                        {
+                          objects.filter(
+                            (item) =>
+                              item.sceneryObjectPath ===
+                              sceneryLibraryPreviewAsset
+                                .sceneryObjectPath
+                          ).length
+                        }
+                      </span>
+                      <span>
+                        <strong>Uso pela biblioteca</strong>
+                        {
+                          sceneryUsage[
+                            sceneryLibraryPreviewAsset
+                              .sceneryObjectPath
+                          ] ?? 0
+                        }
+                      </span>
+                      <span>
+                        <strong>Subcategoria</strong>
+                        {getSceneryLibrarySubcategory(
+                          sceneryLibraryPreviewAsset,
+                          getSceneryLibraryGroup(
+                            sceneryLibraryPreviewAsset,
+                            sceneryMetadataByPath[
+                              sceneryLibraryPreviewAsset
+                                .sceneryObjectPath
+                            ],
+                            geometryByPath[
+                              sceneryLibraryPreviewAsset
+                                .sceneryObjectPath
+                            ]
+                          )
+                        )}
+                      </span>
+                      <span>
+                        <strong>Status</strong>
+                        {geometryByPath[
+                          sceneryLibraryPreviewAsset
+                            .sceneryObjectPath
+                        ]
+                          ? "3D carregado"
+                          : "Aguardando 3D"}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -11969,6 +13305,22 @@ export function App() {
                             candidate.id ===
                             group
                         );
+                      const subcategory =
+                        getSceneryLibrarySubcategory(
+                          entry,
+                          group
+                        );
+                      const assetKey =
+                        "sco:" +
+                        entry.sceneryObjectPath;
+                      const inCollection =
+                        activeLibraryCollection
+                          ? (
+                              libraryCollections[
+                                activeLibraryCollection
+                              ] ?? []
+                            ).includes(assetKey)
+                          : false;
 
                       return (
                         <div
@@ -12007,14 +13359,80 @@ export function App() {
                               <span>
                                 {groupInfo?.label ??
                                   "Outros"}
+                                {" · "}
+                                {subcategory}
                               </span>
                               <small>
                                 {entry.sceneryObjectPath}
                               </small>
+                              <span className="library-entry-badges">
+                                {usedSceneryPaths.has(
+                                  entry.sceneryObjectPath
+                                ) && (
+                                  <em>no mapa</em>
+                                )}
+                                {geometryByPath[
+                                  entry.sceneryObjectPath
+                                ] && (
+                                  <em>3D</em>
+                                )}
+                                {(sceneryUsage[
+                                  entry.sceneryObjectPath
+                                ] ?? 0) > 0 && (
+                                  <em>
+                                    {sceneryUsage[
+                                      entry.sceneryObjectPath
+                                    ]}x
+                                  </em>
+                                )}
+                              </span>
                             </span>
                           </button>
 
                           <div className="library-entry-actions">
+                            <button
+                              type="button"
+                              className={
+                                sceneryFavorites.includes(
+                                  entry.sceneryObjectPath
+                                )
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                toggleSceneryFavorite(
+                                  entry.sceneryObjectPath
+                                )
+                              }
+                              title="Favoritar"
+                            >
+                              {sceneryFavorites.includes(
+                                entry.sceneryObjectPath
+                              )
+                                ? "★"
+                                : "☆"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                !activeLibraryCollection
+                              }
+                              className={
+                                inCollection
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                toggleAssetInCollection(
+                                  assetKey
+                                )
+                              }
+                              title="Adicionar/remover da coleção ativa"
+                            >
+                              {inCollection
+                                ? "✓ Coleção"
+                                : "+ Coleção"}
+                            </button>
                             <button
                               type="button"
                               onClick={() =>
@@ -12076,6 +13494,122 @@ export function App() {
                   </span>
                 </div>
 
+                <div className="library-smart-toolbar">
+                  <div className="library-view-tabs">
+                    {([
+                      ["groups", "Grupos"],
+                      ["favorites", "★ Favoritos"],
+                      ["recent", "Recentes"],
+                      ["frequent", "Mais usados"],
+                      ["collection", "Coleção"]
+                    ] as const).map(
+                      ([value, label]) => (
+                        <button
+                          type="button"
+                          key={value}
+                          className={
+                            splineLibraryView ===
+                            value
+                              ? "active"
+                              : ""
+                          }
+                          onClick={() =>
+                            setSplineLibraryView(
+                              value
+                            )
+                          }
+                        >
+                          {label}
+                        </button>
+                      )
+                    )}
+                  </div>
+
+                  <div className="library-filter-row">
+                    <select
+                      value={
+                        splineTechnicalFilter
+                      }
+                      onChange={(event) =>
+                        setSplineTechnicalFilter(
+                          event.currentTarget
+                            .value as SplineTechnicalFilter
+                        )
+                      }
+                      aria-label="Filtro técnico de splines"
+                    >
+                      <option value="all">
+                        Todas as splines
+                      </option>
+                      <option value="used">
+                        Usadas no mapa
+                      </option>
+                      <option value="loaded">
+                        Perfil carregado
+                      </option>
+                    </select>
+
+                    <select
+                      value={splineSubcategory}
+                      onChange={(event) =>
+                        setSplineSubcategory(
+                          event.currentTarget
+                            .value
+                        )
+                      }
+                      aria-label="Subcategoria de splines"
+                    >
+                      <option value="all">
+                        Todas as subcategorias
+                      </option>
+                      {splineSubcategories.map(
+                        (subcategory) => (
+                          <option
+                            key={subcategory}
+                            value={subcategory}
+                          >
+                            {subcategory}
+                          </option>
+                        )
+                      )}
+                    </select>
+
+                    <select
+                      value={
+                        activeLibraryCollection
+                      }
+                      onChange={(event) =>
+                        setActiveLibraryCollection(
+                          event.currentTarget
+                            .value
+                        )
+                      }
+                      aria-label="Coleção de assets"
+                    >
+                      <option value="">
+                        Sem coleção
+                      </option>
+                      {Object.keys(
+                        libraryCollections
+                      )
+                        .sort((a, b) =>
+                          a.localeCompare(
+                            b,
+                            "pt-BR"
+                          )
+                        )
+                        .map((name) => (
+                          <option
+                            key={name}
+                            value={name}
+                          >
+                            {name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+
                 <div
                   className="library-group-tabs"
                   role="tablist"
@@ -12097,11 +13631,14 @@ export function App() {
                           splineLibraryGroup ===
                           group.id
                         }
-                        onClick={() =>
+                        onClick={() => {
                           setSplineLibraryGroup(
                             group.id
-                          )
-                        }
+                          );
+                          setSplineSubcategory(
+                            "all"
+                          );
+                        }}
                       >
                         <span
                           className="library-group-icon"
@@ -12289,6 +13826,47 @@ export function App() {
                           : "A prévia ainda não altera o arquivo do mapa."}
                       </span>
                     </div>
+
+                    <div className="asset-inspector-grid">
+                      <span>
+                        <strong>Uso no mapa</strong>
+                        {
+                          splines.filter(
+                            (item) =>
+                              item.splinePath ===
+                              splineLibraryPreviewAsset
+                                .splinePath
+                          ).length
+                        }
+                      </span>
+                      <span>
+                        <strong>Uso pela biblioteca</strong>
+                        {
+                          splineUsage[
+                            splineLibraryPreviewAsset
+                              .splinePath
+                          ] ?? 0
+                        }
+                      </span>
+                      <span>
+                        <strong>Subcategoria</strong>
+                        {getSplineLibrarySubcategory(
+                          splineLibraryPreviewAsset,
+                          getSplineLibraryGroup(
+                            splineLibraryPreviewAsset
+                          )
+                        )}
+                      </span>
+                      <span>
+                        <strong>Status</strong>
+                        {splineProfilesByPath[
+                          splineLibraryPreviewAsset
+                            .splinePath
+                        ]
+                          ? "Perfil carregado"
+                          : "Aguardando perfil"}
+                      </span>
+                    </div>
                   </div>
                 )}
 
@@ -12305,6 +13883,22 @@ export function App() {
                             candidate.id ===
                             group
                         );
+                      const subcategory =
+                        getSplineLibrarySubcategory(
+                          entry,
+                          group
+                        );
+                      const assetKey =
+                        "sli:" +
+                        entry.splinePath;
+                      const inCollection =
+                        activeLibraryCollection
+                          ? (
+                              libraryCollections[
+                                activeLibraryCollection
+                              ] ?? []
+                            ).includes(assetKey)
+                          : false;
 
                       return (
                         <div
@@ -12343,14 +13937,80 @@ export function App() {
                               <span>
                                 {groupInfo?.label ??
                                   "Outras"}
+                                {" · "}
+                                {subcategory}
                               </span>
                               <small>
                                 {entry.splinePath}
                               </small>
+                              <span className="library-entry-badges">
+                                {usedSplinePaths.has(
+                                  entry.splinePath
+                                ) && (
+                                  <em>no mapa</em>
+                                )}
+                                {splineProfilesByPath[
+                                  entry.splinePath
+                                ] && (
+                                  <em>perfil</em>
+                                )}
+                                {(splineUsage[
+                                  entry.splinePath
+                                ] ?? 0) > 0 && (
+                                  <em>
+                                    {splineUsage[
+                                      entry.splinePath
+                                    ]}x
+                                  </em>
+                                )}
+                              </span>
                             </span>
                           </button>
 
                           <div className="library-entry-actions">
+                            <button
+                              type="button"
+                              className={
+                                splineFavorites.includes(
+                                  entry.splinePath
+                                )
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                toggleSplineFavorite(
+                                  entry.splinePath
+                                )
+                              }
+                              title="Favoritar"
+                            >
+                              {splineFavorites.includes(
+                                entry.splinePath
+                              )
+                                ? "★"
+                                : "☆"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={
+                                !activeLibraryCollection
+                              }
+                              className={
+                                inCollection
+                                  ? "active"
+                                  : ""
+                              }
+                              onClick={() =>
+                                toggleAssetInCollection(
+                                  assetKey
+                                )
+                              }
+                              title="Adicionar/remover da coleção ativa"
+                            >
+                              {inCollection
+                                ? "✓ Coleção"
+                                : "+ Coleção"}
+                            </button>
                             <button
                               type="button"
                               onClick={() =>

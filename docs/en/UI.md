@@ -637,3 +637,12 @@ The real `.sco` and `.sli` libraries now use city-builder-style visual navigatio
 Classification is derived from the real asset name/path, already-loaded `.sco` metadata, and the real `[tree]` definition when available. Assets that cannot be identified safely remain under **Other**; no asset is invented or replaced with a mock.
 
 Each card has a visual category and separate **Preview** and **Place/Create** actions. **Preview** loads the real geometry/profile in the 3D viewer without starting a map edit. Creation still uses only real `.sco/.sli` assets and the existing preservation rules.
+
+
+### Advanced library: favorites, recent items, collections, and filters
+
+The city-builder library now keeps local **Favorites**, **Recent**, and **Most used** views for scenery objects and splines. Users can also create custom **Collections**, including mixed `.sco` and `.sli` references, without changing the OMSI installation or map files.
+
+Search recognizes common Portuguese, English, and German synonyms (for example rua/road/straße, árvore/tree/baum, and ponte/bridge/brücke). Groups expose contextual subcategories such as residential/commercial/industrial, lighting/signage, avenues/roads/one-way streets, cycle paths, and rail.
+
+Technical filters can highlight assets used by the map, actually detected `[tree]` objects, already loaded `.sco` geometry, and loaded `.sli` profiles. Cards and the inspector show map usage, library frequency, subcategory, and 3D/profile status. Preferences live in UI-local storage; storage failures or quota limits never block real map editing or saving.

@@ -637,3 +637,12 @@ As bibliotecas reais de `.sco` e `.sli` agora usam uma navegação visual no est
 A classificação é derivada do nome/caminho real do asset, metadados `.sco` já lidos e da definição real `[tree]` quando disponível. Um item que não possa ser identificado com segurança permanece em **Outros**; nenhum asset é inventado ou substituído por mock.
 
 Cada cartão possui categoria visual e ações separadas para **Prévia** e **Colocar/Criar**. **Prévia** carrega a geometria/perfil real no visualizador 3D sem iniciar uma alteração no mapa. A criação continua usando somente `.sco/.sli` reais e as regras preservativas existentes.
+
+
+### Biblioteca avançada: favoritos, recentes, coleções e filtros
+
+A biblioteca city-builder passou a manter localmente **Favoritos**, **Recentes** e **Mais usados** para objetos e splines. Também é possível criar **Coleções** personalizadas, inclusive misturando referências `.sco` e `.sli`, sem alterar a instalação do OMSI nem os arquivos do mapa.
+
+A busca reconhece sinônimos comuns em português, inglês e alemão (por exemplo rua/road/straße, árvore/tree/baum e ponte/bridge/brücke). Grupos possuem subcategorias contextuais, como residencial/comercial/industrial, iluminação/sinalização, avenidas/estradas/mão única, ciclovias e trilhos.
+
+Filtros técnicos permitem destacar assets usados no mapa, árvores `[tree]` realmente detectadas, geometria `.sco` já carregada e perfis `.sli` carregados. Os cartões e o inspetor mostram uso no mapa, frequência na biblioteca, subcategoria e estado do 3D/perfil. Preferências ficam no armazenamento local da interface; falhas ou limite de armazenamento nunca bloqueiam edição ou salvamento real.
