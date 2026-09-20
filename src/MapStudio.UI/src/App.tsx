@@ -11149,6 +11149,111 @@ export function App() {
                     </span>
                   </div>
 
+                  <div className="reference-elevation-tools">
+                    <label>
+                      <span>Amostras do tile</span>
+                      <select
+                        value={elevationSampleCount}
+                        onChange={(event) =>
+                          setElevationSampleCount(
+                            Number(
+                              event.target.value
+                            )
+                          )
+                        }
+                      >
+                        <option value={9}>9×9 · rápido</option>
+                        <option value={17}>17×17 · recomendado</option>
+                        <option value={25}>25×25 · detalhado</option>
+                        <option value={33}>33×33 · máximo</option>
+                      </select>
+                    </label>
+
+                    <button
+                      type="button"
+                      className="secondary-action"
+                      disabled={
+                        !activeTile ||
+                        loadingElevationGrid
+                      }
+                      onClick={
+                        handleLoadElevationGrid
+                      }
+                    >
+                      {loadingElevationGrid
+                        ? "Lendo relevo..."
+                        : activeTile
+                          ? `Buscar relevo tile ${activeTile.x},${activeTile.y}`
+                          : "Selecione um tile"}
+                    </button>
+
+                    {googleElevationGrid && (
+                      <>
+                        <div className="reference-meta">
+                          <span>
+                            Grade: {googleElevationGrid.rows}×{googleElevationGrid.columns}
+                          </span>
+                          <span>
+                            Mín.: {formatNumber(
+                              googleElevationGrid
+                                .minimumElevation
+                            )} m
+                          </span>
+                          <span>
+                            Máx.: {formatNumber(
+                              googleElevationGrid
+                                .maximumElevation
+                            )} m
+                          </span>
+                        </div>
+
+                        <label>
+                          <span>
+                            Offset vertical (m)
+                          </span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={
+                              elevationVerticalOffset
+                            }
+                            onChange={(event) => {
+                              const value =
+                                event.currentTarget
+                                  .valueAsNumber;
+
+                              if (
+                                Number.isFinite(
+                                  value
+                                )
+                              ) {
+                                setElevationVerticalOffset(
+                                  value
+                                );
+                              }
+                            }}
+                          />
+                        </label>
+
+                        <button
+                          type="button"
+                          className="primary-button"
+                          disabled={
+                            applyingElevationGrid
+                          }
+                          onClick={
+                            handleApplyElevationGrid
+                          }
+                          title="Reamostrar a grade Google para o .terrain real do tile e criar backup"
+                        >
+                          {applyingElevationGrid
+                            ? "Aplicando relevo..."
+                            : "Aplicar relevo real ao tile"}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     className="secondary-action"
