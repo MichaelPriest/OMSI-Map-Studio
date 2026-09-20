@@ -662,3 +662,10 @@ Once a real 3D preview finishes rendering, the UI captures a lightweight JPEG th
 Operations with more than one item use the native `insertObjectBatch` command. The host validates the asset and target tiles, reserves globally unique IDs, groups writes per tile, and uses one `SafeFileTransaction` plus one backup directory for the complete operation.
 
 **Snap/align to road** finds the nearest normal spline within the configured distance, projects the placement onto the spline axis, and adopts the local road heading. The viewport displays up to 96 simultaneous ghosts to keep preview rendering light; saved batches remain capped at 256 items.
+
+
+### Matrix, circle, lots, and presets
+
+Batch placement now includes **Matrix**, **Circle**, and **Lots**. Matrix creates rows/columns with X/Y spacing; Circle distributes items around a perimeter and can orient each asset tangentially; Lots uses two points as a street frontage and distributes houses/buildings with configurable spacing and setback.
+
+Built-in presets include **Avenue trees**, **Street lights**, **Aligned houses**, **Green square**, and **Grid/parking**. Presets only configure placement tools; saving still uses the selected real `.sco` asset and the transactional batch pipeline.
