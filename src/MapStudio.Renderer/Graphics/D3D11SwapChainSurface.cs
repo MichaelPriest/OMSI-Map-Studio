@@ -113,8 +113,10 @@ public sealed class D3D11SwapChainSurface : IDisposable
         CreateBackBufferResources();
     }
 
-    public void ClearAndPresent(
-        Color4 color)
+    public void RenderAndPresent(
+        Color4 color,
+        Action<ID3D11DeviceContext>? draw =
+            null)
     {
         ThrowIfDisposed();
 
@@ -139,11 +141,19 @@ public sealed class D3D11SwapChainSurface : IDisposable
                 renderTarget,
                 color);
 
+        draw?.Invoke(
+            _deviceHost.Context);
+
         SwapChain.Present(
             1,
             PresentFlags.None)
             .CheckError();
     }
+
+    public void ClearAndPresent(
+        Color4 color) =>
+        RenderAndPresent(
+            color);
 
     private void CreateBackBufferResources()
     {

@@ -19,11 +19,17 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeViewportRuntime()
     {
         Device = new D3D11DeviceHost();
+
+        MapRenderer =
+            new D3D11NativeMapRenderer(
+                Device);
     }
 
     public D3D11DeviceHost Device { get; }
 
     public D3D11SwapChainSurface? Surface { get; private set; }
+
+    public D3D11NativeMapRenderer MapRenderer { get; }
 
     public PickingRegistry<object> Picking { get; } =
         new();
@@ -69,6 +75,9 @@ public sealed class NativeViewportRuntime : IDisposable
                     tiles,
                     Picking);
 
+        MapRenderer.Upload(
+            Scene);
+
         return Scene;
     }
 
@@ -76,8 +85,23 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
-        Surface?.ClearAndPresent(
-            InitialClearColor);
+        if (Surface is null)
+        {
+            return;
+        }
+
+        if (
+            Scene is null ||
+            MapRenderer.VertexCount == 0)
+        {
+            Surface.ClearAndPresent(
+                InitialClearColor);
+
+            return;
+        }
+
+        MapRenderer.Render(
+            Surface);
     }
 
     private void ThrowIfDisposed()
@@ -102,6 +126,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         Scene = null;
         Picking.Clear();
+        MapRenderer.Dispose();
         Device.Dispose();
     }
 }

@@ -56,10 +56,12 @@ public sealed partial class NativeViewport : UserControl
                                 tile.Content))
                     .ToArray());
 
+        _runtime.RenderInitialFrame();
+
         RuntimeText.Text =
             $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
             $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
-            $"{scene.SelectableCount} IDs de seleção";
+            $"{_runtime.MapRenderer.VertexCount} vértices GPU";
 
         SelectionStatusChanged?.Invoke(
             this,
