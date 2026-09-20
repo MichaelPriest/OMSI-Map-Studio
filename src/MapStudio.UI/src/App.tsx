@@ -852,6 +852,188 @@ export function App() {
   }, [isFullScreen]);
 
   useEffect(() => {
+    let drag:
+      | {
+          panel: HTMLElement;
+          pointerId: number;
+          offsetX: number;
+          offsetY: number;
+          parentRect: DOMRect;
+        }
+      | undefined;
+
+    const handlePointerDown = (
+      event: PointerEvent
+    ) => {
+      if (
+        event.button !== 0 ||
+        !(event.target instanceof
+          HTMLElement)
+      ) {
+        return;
+      }
+
+      const handle =
+        event.target.closest(
+          "[data-drag-handle]"
+        ) as HTMLElement | null;
+
+      const panel =
+        handle?.closest(
+          "[data-floating-tool]"
+        ) as HTMLElement | null;
+
+      if (!handle || !panel) {
+        return;
+      }
+
+      const rect =
+        panel.getBoundingClientRect();
+      const parent =
+        panel.offsetParent as
+          HTMLElement | null;
+      const parentRect =
+        parent?.getBoundingClientRect() ??
+        new DOMRect(
+          0,
+          0,
+          window.innerWidth,
+          window.innerHeight
+        );
+
+      panel.style.left =
+        `${rect.left -
+        parentRect.left}px`;
+      panel.style.top =
+        `${rect.top -
+        parentRect.top}px`;
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+
+      drag = {
+        panel,
+        pointerId:
+          event.pointerId,
+        offsetX:
+          event.clientX -
+          rect.left,
+        offsetY:
+          event.clientY -
+          rect.top,
+        parentRect
+      };
+
+      handle.setPointerCapture?.(
+        event.pointerId
+      );
+      event.preventDefault();
+    };
+
+    const handlePointerMove = (
+      event: PointerEvent
+    ) => {
+      if (
+        !drag ||
+        drag.pointerId !==
+          event.pointerId
+      ) {
+        return;
+      }
+
+      const panelRect =
+        drag.panel
+          .getBoundingClientRect();
+
+      const maximumLeft =
+        Math.max(
+          0,
+          drag.parentRect.width -
+            panelRect.width
+        );
+      const maximumTop =
+        Math.max(
+          0,
+          drag.parentRect.height -
+            panelRect.height
+        );
+
+      const left =
+        Math.min(
+          maximumLeft,
+          Math.max(
+            0,
+            event.clientX -
+              drag.parentRect.left -
+              drag.offsetX
+          )
+        );
+
+      const top =
+        Math.min(
+          maximumTop,
+          Math.max(
+            0,
+            event.clientY -
+              drag.parentRect.top -
+              drag.offsetY
+          )
+        );
+
+      drag.panel.style.left =
+        `${left}px`;
+      drag.panel.style.top =
+        `${top}px`;
+    };
+
+    const handlePointerUp = (
+      event: PointerEvent
+    ) => {
+      if (
+        drag?.pointerId ===
+        event.pointerId
+      ) {
+        drag = undefined;
+      }
+    };
+
+    document.addEventListener(
+      "pointerdown",
+      handlePointerDown
+    );
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove
+    );
+    window.addEventListener(
+      "pointerup",
+      handlePointerUp
+    );
+    window.addEventListener(
+      "pointercancel",
+      handlePointerUp
+    );
+
+    return () => {
+      document.removeEventListener(
+        "pointerdown",
+        handlePointerDown
+      );
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove
+      );
+      window.removeEventListener(
+        "pointerup",
+        handlePointerUp
+      );
+      window.removeEventListener(
+        "pointercancel",
+        handlePointerUp
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     if (
       !rootPath ||
       !bridgeAvailable
@@ -10095,12 +10277,129 @@ export function App() {
         <div className="editor-menubar">
           {[
             "Arquivo",
-            "Editar",
-            "Visualizar",
+            "Editar"
+          ].map((item) => (
+            <button
+              key={item}
+              type="button"
+              disabled
+            >
+              {item}
+            </button>
+          ))}
+
+          <div className="editor-menu-root">
+            <button
+              type="button"
+              className={
+                activeTopMenu === "view"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "view"
+                      ? undefined
+                      : "view"
+                )
+              }
+            >
+              Visualizar
+            </button>
+
+            {activeTopMenu === "view" && (
+              <div className="editor-menu-popup">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowTileNavigator(
+                      (current) => !current
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {showTileNavigator
+                    ? "✓ "
+                    : ""}
+                  Navegador de blocos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRealMapPanel(
+                      (current) => !current
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  {showRealMapPanel
+                    ? "✓ "
+                    : ""}
+                  Mapa real por coordenadas
+                </button>
+              </div>
+            )}
+          </div>
+
+          {[
             "Objetos",
             "Terreno",
-            "Splines",
-            "Mapa",
+            "Splines"
+          ].map((item) => (
+            <button
+              key={item}
+              type="button"
+              disabled
+            >
+              {item}
+            </button>
+          ))}
+
+          <div className="editor-menu-root">
+            <button
+              type="button"
+              className={
+                activeTopMenu === "map"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "map"
+                      ? undefined
+                      : "map"
+                )
+              }
+            >
+              Mapa
+            </button>
+
+            {activeTopMenu === "map" && (
+              <div className="editor-menu-popup">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowRealMapPanel(
+                      true
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Mapa real por coordenadas…
+                </button>
+              </div>
+            )}
+          </div>
+
+          {[
             "Ferramentas",
             "Ajuda"
           ].map((item) => (
@@ -11249,12 +11548,18 @@ export function App() {
                 </div>
               </>
             )}
-            {activeTile && (
+            {showTileNavigator &&
+              activeTile && (
               <div
-                className="tile-navigator"
+                className="tile-navigator floating-tool"
+                data-floating-tool
                 aria-label="Navegação entre blocos do mapa"
               >
-                <div className="tile-navigator-title">
+                <div
+                  className="tile-navigator-title drag-handle"
+                  data-drag-handle
+                  title="Arraste para mover esta ferramenta"
+                >
                   <strong>Blocos</strong>
                   <span>
                     Tile {activeTile.x},{activeTile.y}
@@ -11517,8 +11822,15 @@ export function App() {
             />
 
             {selectionMode === "terrain" && (
-              <div className="terrain-edit-panel">
-                <div className="panel-title-row">
+              <div
+                className="terrain-edit-panel floating-tool"
+                data-floating-tool
+              >
+                <div
+                  className="panel-title-row drag-handle"
+                  data-drag-handle
+                  title="Arraste para mover esta ferramenta"
+                >
                   <strong>Nivelamento manual</strong>
                   <span>
                     {terrainEditPoint
@@ -11605,8 +11917,16 @@ export function App() {
               </div>
             )}
 
-            <div className="real-map-panel">
-              <div className="panel-title-row">
+            {showRealMapPanel && (
+              <div
+                className="real-map-panel floating-tool"
+                data-floating-tool
+              >
+              <div
+                className="panel-title-row drag-handle"
+                data-drag-handle
+                title="Arraste para mover esta ferramenta"
+              >
                 <strong>Mapa real por coordenadas</strong>
                 <span>
                   Google Maps + elevação como referência visual sobre o terreno.
@@ -11887,6 +12207,7 @@ export function App() {
                 </>
               )}
             </div>
+            )}
 
             {splinePlacementTemplate && (
               <div className="placement-bar">
