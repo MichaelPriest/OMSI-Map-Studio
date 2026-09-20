@@ -601,3 +601,8 @@ On **Open map**, **Create real map** clones the installed `template\NewMap` and 
 ### 3×3 tile navigator
 
 The editor shows a compact 3×3 navigator over the viewport. The center is the active tile and the eight surrounding buttons represent existing neighboring tiles. Clicking a block changes the active tile and moves the camera to that tile center while roughly preserving the current zoom. Missing tiles are disabled. `Ctrl + arrows/WASD` remains available as a keyboard alternative.
+
+
+### Real library item preview
+
+Selecting a `.sco` or `.sli` creates a preview at the active tile center using the file's real geometry/profile. The library panel shows the active item, loaded mesh or surface/texture counts, and a **Focus preview** button. Selecting another item replaces only the preview; the map is not written until confirmation.
