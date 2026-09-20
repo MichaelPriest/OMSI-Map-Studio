@@ -4267,3 +4267,219 @@ span.active {
   padding-left: 36px;
   padding-right: 34px;
 }
+
+
+/* Contextual construction asset shelf.
+   Uses real library entries/thumbnails close to the active construction tool,
+   while the full Explorer remains available for advanced search and filters. */
+.citybuilder-asset-shelf {
+  grid-column: 1 / -1;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: stretch;
+  padding: 6px;
+  border: 1px solid rgb(64 105 135 / 72%);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(12 31 45 / 96%),
+      rgb(6 20 31 / 95%)
+    );
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 36%);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+
+.citybuilder-asset-shelf-heading {
+  display: flex;
+  min-width: 150px;
+  max-width: 210px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 6px;
+}
+
+.citybuilder-asset-shelf-heading > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #315e7b;
+  border-radius: 9px;
+  background: #092236;
+  color: #71c3f5;
+  font-size: 18px;
+}
+
+.citybuilder-asset-shelf-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.citybuilder-asset-shelf-heading strong {
+  overflow: hidden;
+  color: #d9edf8;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citybuilder-asset-shelf-heading small {
+  max-width: 170px;
+  color: #67879c;
+  font-size: 6px;
+  line-height: 1.3;
+}
+
+.citybuilder-asset-track {
+  display: flex;
+  min-width: 0;
+  gap: 5px;
+  align-items: stretch;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1px 0 3px;
+  scrollbar-width: thin;
+}
+
+.citybuilder-asset-card {
+  display: grid;
+  width: 82px;
+  min-width: 82px;
+  grid-template-rows: 44px auto auto;
+  gap: 2px;
+  padding: 4px;
+  overflow: hidden;
+  border: 1px solid #264960;
+  border-radius: 8px;
+  background: #081b29;
+  color: #a9c2d2;
+  text-align: left;
+}
+
+.citybuilder-asset-card:hover {
+  border-color: #4389b8;
+  background: #0c2a3e;
+}
+
+.citybuilder-asset-card.active {
+  border-color: #4ab4ff;
+  background:
+    linear-gradient(
+      180deg,
+      #0d608f,
+      #0a3c5b
+    );
+  box-shadow:
+    0 0 0 1px rgb(74 180 255 / 18%);
+}
+
+.citybuilder-asset-card img,
+.citybuilder-asset-icon {
+  width: 100%;
+  height: 44px;
+  border-radius: 5px;
+  object-fit: cover;
+  background: #05131e;
+}
+
+.citybuilder-asset-icon {
+  display: grid;
+  place-items: center;
+  color: #80aac3;
+  font-size: 22px;
+}
+
+.citybuilder-asset-card strong,
+.citybuilder-asset-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.citybuilder-asset-card strong {
+  color: #d4e7f2;
+  font-size: 6.8px;
+}
+
+.citybuilder-asset-card small {
+  color: #6f91a8;
+  font-size: 5.8px;
+}
+
+.citybuilder-asset-card.active strong,
+.citybuilder-asset-card.active small {
+  color: #fff;
+}
+
+.citybuilder-asset-empty {
+  display: grid;
+  min-width: 180px;
+  place-items: center start;
+  padding: 0 10px;
+  color: #7899ad;
+  font-size: 7px;
+}
+
+.citybuilder-open-library {
+  min-width: 78px;
+  padding: 0 9px;
+  border: 1px solid #315a73;
+  border-radius: 8px;
+  background: #0a2232;
+  color: #9bb8ca;
+  font-size: 7px;
+}
+
+.citybuilder-open-library:hover {
+  border-color: #4891bd;
+  background: #0d3046;
+  color: #e2f3fc;
+}
+
+/* When the asset shelf is open, default movable drawers stay above the
+   construction surface instead of obscuring the horizontal asset cards. */
+.editor-grid:has(.citybuilder-asset-shelf)
+.city-drawer[data-floating-tool] {
+  height: calc(100% - 218px);
+}
+
+.map-editor.fullscreen-editor
+.editor-grid:has(.citybuilder-asset-shelf)
+.city-drawer[data-floating-tool] {
+  height: calc(100% - 260px);
+}
+
+@media (max-width: 1120px) {
+  .citybuilder-asset-shelf {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .citybuilder-asset-shelf-heading {
+    display: none;
+  }
+
+  .citybuilder-asset-card {
+    width: 76px;
+    min-width: 76px;
+  }
+}
+
+@media (max-width: 720px) {
+  .citybuilder-open-library {
+    min-width: 42px;
+    padding: 0 6px;
+    font-size: 0;
+  }
+
+  .citybuilder-open-library::before {
+    content: "☰";
+    font-size: 14px;
+  }
+}
