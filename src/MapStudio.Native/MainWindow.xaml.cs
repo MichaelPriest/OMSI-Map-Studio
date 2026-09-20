@@ -257,6 +257,9 @@ public sealed partial class MainWindow : Window
         SplineCurveCheckBox.Visibility =
             Visibility.Collapsed;
 
+        SplineContinuousCheckBox.Visibility =
+            Visibility.Collapsed;
+
         _libraryMode =
             false;
 
@@ -380,6 +383,12 @@ public sealed partial class MainWindow : Window
                 : "Posicionar no mapa";
 
         SplineCurveCheckBox.Visibility =
+            selected?.Kind ==
+                OmsiAssetKind.Spline
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SplineContinuousCheckBox.Visibility =
             selected?.Kind ==
                 OmsiAssetKind.Spline
                 ? Visibility.Visible
@@ -579,10 +588,46 @@ public sealed partial class MainWindow : Window
             RedoButton.IsEnabled =
                 false;
 
+            var selectedAsset =
+                AssetLibraryListView.SelectedItem as
+                    OmsiAssetIndexEntry;
+
+            var canContinue =
+                SplineContinuousCheckBox.IsChecked ==
+                    true &&
+                selectedAsset?.Kind ==
+                    OmsiAssetKind.Spline;
+
+            if (canContinue)
+            {
+                var restarted =
+                    await Viewport
+                        .BeginSplinePlacementAsync(
+                            _session.OmsiRootPath,
+                            selectedAsset!,
+                            SplineCurveCheckBox.IsChecked ==
+                                true);
+
+                if (
+                    restarted &&
+                    Viewport.SeedSplinePlacementStart(
+                        request.EndWorld))
+                {
+                    PlaceAssetButton.IsEnabled =
+                        true;
+
+                    PlaceAssetButton.Content =
+                        "Cancelar posicionamento";
+
+                    StatusText.Text =
+                        $"Spline inserida ({request.Length:F1} m). Próximo segmento iniciado no endpoint anterior.";
+
+                    return;
+                }
+            }
+
             PlaceAssetButton.IsEnabled =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry asset &&
-                asset.Kind is
+                selectedAsset?.Kind is
                     OmsiAssetKind.SceneryObject or
                     OmsiAssetKind.Spline;
 

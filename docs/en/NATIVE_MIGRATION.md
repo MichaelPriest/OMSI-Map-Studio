@@ -244,3 +244,12 @@ The construction tool snap now recognizes the actual endpoints of already loaded
 When an endpoint is found, the new point uses that endpoint's exact X/Z position and Y height. This prevents small gaps and vertical mismatches when starting or ending a segment near an existing road.
 
 The final endpoint is calculated from the spline's real parametric geometry through NativeSplinePathMath, so curved and graded segments are supported as well.
+
+
+### Checkpoint N3.7 — sequential spline construction
+
+The SLI tool now has a **Continue segments** mode, enabled by default in the library. After a segment is persisted and the tile is reloaded, the viewport restarts the same tool and uses the previous segment's exact `EndWorld` as the next segment start.
+
+This removes the need to return to the library and click the joint again. In straight mode, each following segment only needs its new endpoint. In curve mode, the start is already fixed and the user defines the new end plus the curvature control point.
+
+This checkpoint guarantees geometric position and height continuity. Automatic `PreviousSplineId` / `NextSplineId` rewriting remains a separate Core refinement because the current editor validates those links but does not rewrite them yet.

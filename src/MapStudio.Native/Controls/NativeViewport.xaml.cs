@@ -208,6 +208,13 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public bool SeedSplinePlacementStart(
+        System.Numerics.Vector3 start) =>
+        _runtime
+            ?.SeedSplinePlacementStart(
+                start) ??
+        false;
+
     public async Task<bool>
         BeginSplinePlacementAsync(
             string omsiRoot,

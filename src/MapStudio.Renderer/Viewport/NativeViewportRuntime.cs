@@ -152,6 +152,64 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
 
+    public bool SeedSplinePlacementStart(
+        Vector3 start)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !_splinePlacementActive ||
+            Scene is null)
+        {
+            return false;
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                start.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                start.Z /
+                300.0f);
+
+        if (
+            !Scene.Tiles.Any(
+                tile =>
+                    tile.Reference.X ==
+                        tileX &&
+                    tile.Reference.Y ==
+                        tileY))
+        {
+            return false;
+        }
+
+        _splineStartWorld =
+            start;
+
+        _splineEndWorld =
+            null;
+
+        _splinePointerWorld =
+            start;
+
+        _splinePlacementShape =
+            null;
+
+        _splinePlacementStage =
+            NativeSplinePlacementStage
+                .AwaitingEnd;
+
+        MapRenderer.SetPlacementPreview(
+            null,
+            Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public async Task<bool>
         BeginSplinePlacementAsync(
             string omsiRoot,

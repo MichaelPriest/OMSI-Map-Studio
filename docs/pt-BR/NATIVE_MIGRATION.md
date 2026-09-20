@@ -244,3 +244,12 @@ O snap da ferramenta de construção passou a reconhecer as extremidades reais d
 Quando uma extremidade é encontrada, a posição usa exatamente o X/Z e a altura Y do endpoint existente. Isso evita pequenas frestas e diferenças verticais ao começar ou terminar um segmento próximo de uma rua já existente.
 
 O cálculo usa a geometria paramétrica real da spline por NativeSplinePathMath para obter o endpoint final, portanto também funciona em segmentos curvos e com gradiente.
+
+
+### Checkpoint N3.7 — construção sequencial de splines
+
+A ferramenta SLI ganhou o modo **Continuar segmentos**, ativado por padrão na biblioteca. Depois que um segmento é persistido e o tile é relido, o viewport reinicia a mesma ferramenta e usa exatamente o `EndWorld` do segmento anterior como início do próximo.
+
+Isso elimina a necessidade de voltar à biblioteca e clicar novamente no ponto de junção. Em modo reto, cada segmento seguinte exige apenas o novo ponto final. Em modo curva, o início já fica fixado e o usuário define o novo fim e o ponto de curvatura.
+
+O encadeamento deste checkpoint garante continuidade geométrica de posição e altura. A atualização automática dos campos `PreviousSplineId` / `NextSplineId` ficará em um refinamento separado do Core, porque o editor atual desses campos valida os vínculos existentes mas ainda não os reescreve.
