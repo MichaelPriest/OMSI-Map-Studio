@@ -2823,3 +2823,18 @@ code {
   color: #8ed5ad;
   font-size: 7px;
 }
+
+
+.placement-preset-field {
+  min-width: 145px;
+}
+
+.placement-preset-field select {
+  min-width: 120px;
+  height: 23px;
+  border: 1px solid #214661;
+  border-radius: 4px;
+  background: #071824;
+  color: #bdd1df;
+  font-size: 7px;
+}
