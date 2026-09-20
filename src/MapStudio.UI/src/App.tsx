@@ -969,6 +969,7 @@ export function App() {
         parentRect.top}px`;
       panel.style.right = "auto";
       panel.style.bottom = "auto";
+      panel.style.transform = "none";
 
       drag = {
         panel,
