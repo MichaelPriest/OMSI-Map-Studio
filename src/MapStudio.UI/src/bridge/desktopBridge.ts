@@ -329,6 +329,10 @@ export type HostMessage =
       textures: number;
     }
   | {
+      type: "assetIndexRefreshFailed";
+      detail: string;
+    }
+  | {
       type: "mapCatalogLoadingStarted";
     }
   | {
