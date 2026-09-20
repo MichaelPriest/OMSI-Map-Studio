@@ -199,6 +199,7 @@ code {
 }
 
 .sidebar-collapsed .nav-item {
+  position: relative;
   grid-template-columns: 1fr;
   justify-items: center;
   min-height: 42px;
