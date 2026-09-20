@@ -30,14 +30,17 @@
             </StackPanel>
         </Border>
 
-        <TextBlock
-            x:Name="PointerText"
+        <Border
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             Margin="12"
             Padding="8,4"
-            Text="x: 0 · y: 0"
-            Foreground="#9FC7DE"
-            Background="#AA07131D" />
+            Background="#AA07131D"
+            CornerRadius="4">
+            <TextBlock
+                x:Name="PointerText"
+                Text="x: 0 · y: 0"
+                Foreground="#9FC7DE" />
+        </Border>
     </Grid>
 </UserControl>
