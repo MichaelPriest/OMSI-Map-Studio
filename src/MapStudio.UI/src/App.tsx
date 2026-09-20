@@ -18901,10 +18901,23 @@ export function App() {
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
+                              onClick={() => {
                                 handleSelectPlacementAsset(
                                   entry
-                                )
+                                );
+
+                                if (isFullScreen) {
+                                  setFullScreenPanel(
+                                    "inspector"
+                                  );
+                                } else {
+                                  setDesktopExplorerOpen(
+                                    false
+                                  );
+                                  setDesktopInspectorOpen(
+                                    true
+                                  );
+                                }
                               }
                               disabled={
                                 insertingObject
@@ -19996,11 +20009,24 @@ export function App() {
                                     ? "citybuilder-asset-card active"
                                     : "citybuilder-asset-card"
                                 }
-                                onClick={() =>
+                                onClick={() => {
                                   handleSelectSplineLibraryAsset(
                                     entry,
                                     false
-                                  )
+                                  );
+
+                                  if (isFullScreen) {
+                                    setFullScreenPanel(
+                                      "inspector"
+                                    );
+                                  } else {
+                                    setDesktopExplorerOpen(
+                                      false
+                                    );
+                                    setDesktopInspectorOpen(
+                                      true
+                                    );
+                                  }
                                 }
                                 onDoubleClick={() => {
                                   handlePreviewSplineLibraryAsset(
