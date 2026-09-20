@@ -1375,11 +1375,34 @@ function createSelectedSplineProfile(
       mapStudioTextureName:
         surface.textureName ?? null,
       mapStudioResolvedTexture:
-        resolvedTextureAsset?.resolvedPath ??
-        resolvedTextureAsset?.errorCode ??
-        (resolvedTextureAsset
-          ? "asset carregado sem caminho"
-          : "asset pendente/ausente"),
+        (() => {
+          const asset = resolvedTextureAsset;
+
+          if (!asset) {
+            return "asset pendente/ausente";
+          }
+
+          if (!asset.exists) {
+            return asset.errorCode ??
+              "asset ausente";
+          }
+
+          const dimensions =
+            asset.width &&
+            asset.height
+              ? `${asset.width}x${asset.height}`
+              : "dimensões n/d";
+
+          return [
+            asset.resolvedPath ??
+              "caminho não exposto",
+            dimensions,
+            asset.pixelFormat ??
+              asset.sourceExtension ??
+              asset.extension ??
+              "formato n/d"
+          ].join(" · ");
+        })(),
       mapStudioRenderLift: 0.12
     };
 
@@ -2780,13 +2803,34 @@ function createGeometryMeshes(
           diagnosticMaterialData
             ?.textureName ?? null,
         mapStudioResolvedTexture:
-          diagnosticTextureAsset
-            ?.resolvedPath ??
-          diagnosticTextureAsset
-            ?.errorCode ??
-          (diagnosticTextureAsset
-            ? "asset carregado sem caminho"
-            : "asset pendente/ausente")
+          (() => {
+          const asset = diagnosticTextureAsset;
+
+          if (!asset) {
+            return "asset pendente/ausente";
+          }
+
+          if (!asset.exists) {
+            return asset.errorCode ??
+              "asset ausente";
+          }
+
+          const dimensions =
+            asset.width &&
+            asset.height
+              ? `${asset.width}x${asset.height}`
+              : "dimensões n/d";
+
+          return [
+            asset.resolvedPath ??
+              "caminho não exposto",
+            dimensions,
+            asset.pixelFormat ??
+              asset.sourceExtension ??
+              asset.extension ??
+              "formato n/d"
+          ].join(" · ");
+        })()
       };
 
       mesh.isPickable = false;
@@ -4882,8 +4926,15 @@ export function Viewport({
                 .toFixed(3)
             : "0.000",
         origin:
-          metadata.mapStudioOrigin ??
-          fallbackOrigin
+          [
+            metadata.mapStudioOrigin ??
+              fallbackOrigin,
+            metadata.mapStudioRenderType
+              ? `rendertype=${metadata.mapStudioRenderType}`
+              : null
+          ]
+            .filter(Boolean)
+            .join(" · ")
       };
     };
 
