@@ -4054,6 +4054,11 @@ export function Viewport({
       ? selectedSplineProfile
       : undefined;
 
+  const sceneProfileActiveTile =
+    showAllSplineProfiles
+      ? undefined
+      : activeTile;
+
   const thumbnailCallbackRef =
     useRef(onThumbnailReady);
   thumbnailCallbackRef.current =
@@ -4621,37 +4626,6 @@ export function Viewport({
       }
 
       if (
-        showGrid &&
-        activeTile &&
-        !usesWorldCoordinates
-      ) {
-        const activeGrid =
-          MeshBuilder.CreateLines(
-            "omsi-active-tile",
-            {
-              points:
-                createActiveTileOutline(
-                  activeTile,
-                  tileSize
-                )
-            },
-            scene
-          );
-
-        activeGrid.color =
-          new Color3(
-            0.16,
-            0.9,
-            0.56
-          );
-        activeGrid.visibility = 0.96;
-        activeGrid.renderingGroupId = 3;
-
-        activeGrid.isPickable =
-          false;
-      }
-
-      if (
         showSplines &&
         !usesWorldCoordinates &&
         splines.length
@@ -4660,7 +4634,7 @@ export function Viewport({
           createMapSplineProfiles(
             scene,
             splines,
-            activeTile,
+            sceneProfileActiveTile,
             sceneEditSpline,
             splineProfilesByPath,
             textureAssetsByKey,
@@ -8217,7 +8191,7 @@ export function Viewport({
     roadCurveControl,
     objects,
     splines,
-    activeTile,
+    sceneProfileActiveTile,
     referenceOverlay,
     usesWorldCoordinates,
     sceneEditObject,
@@ -8251,6 +8225,44 @@ export function Viewport({
         typeof MeshBuilder.CreateLineSystem
       > |
       undefined;
+
+    let activeTileMarker:
+      ReturnType<
+        typeof MeshBuilder.CreateLines
+      > |
+      undefined;
+
+    if (
+      showGrid &&
+      activeTile &&
+      !usesWorldCoordinates
+    ) {
+      activeTileMarker =
+        MeshBuilder.CreateLines(
+          "omsi-active-tile",
+          {
+            points:
+              createActiveTileOutline(
+                activeTile,
+                300
+              )
+          },
+          scene
+        );
+
+      activeTileMarker.color =
+        new Color3(
+          0.16,
+          0.9,
+          0.56
+        );
+      activeTileMarker.visibility =
+        0.96;
+      activeTileMarker
+        .renderingGroupId = 3;
+      activeTileMarker.isPickable =
+        false;
+    }
 
     if (
       showObjects &&
@@ -8411,11 +8423,21 @@ export function Viewport({
       ) {
         splineMarker.dispose();
       }
+
+      if (
+        activeTileMarker &&
+        !activeTileMarker.isDisposed()
+      ) {
+        activeTileMarker.dispose();
+      }
     };
   }, [
     sceneRevision,
+    showGrid,
     showObjects,
     showSplines,
+    activeTile,
+    usesWorldCoordinates,
     selectedObject,
     selectedSpline,
     objectGeometryByPath,
