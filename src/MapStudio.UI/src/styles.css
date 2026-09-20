@@ -4688,3 +4688,14 @@ span.active {
 .citybuilder-open-library > .mapstudio-icon {
   pointer-events: none;
 }
+
+
+.status-message-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-message-heading .mapstudio-icon {
+  flex: 0 0 auto;
+}
