@@ -3360,3 +3360,20 @@ code {
 .construction-set-actions button {
   flex: 1 1 0;
 }
+
+
+.road-auto-connect-toggle {
+  padding-left: 4px;
+}
+
+.road-snap-status span.link-ready {
+  border-color: #2e7a50;
+  background: #0a2b1d;
+  color: #9de0b8;
+}
+
+.road-snap-status span.link-blocked {
+  border-color: #805f30;
+  background: #271d0b;
+  color: #d6b074;
+}

@@ -3416,6 +3416,30 @@ export function App() {
     RoadEndpointSnap | undefined
   >();
 
+  const [
+    roadAutoConnectEnabled,
+    setRoadAutoConnectEnabled
+  ] = useState(true);
+
+  const pendingRoadAutoLinkRef =
+    useRef<
+      | {
+          previousSplineId: number;
+          nextSplineId: number;
+        }
+      | undefined
+    >(undefined);
+
+  const pendingConstructionSetAfterLinkRef =
+    useRef<
+      ConstructionSetDefinition | undefined
+    >(undefined);
+
+  const pendingConstructionSetSplineRef =
+    useRef<
+      OmsiPlacedSpline | undefined
+    >(undefined);
+
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
 
@@ -4168,6 +4192,114 @@ export function App() {
     }, [
       activeConstructionSet,
       objects
+    ]);
+
+  const roadAutoLinkPlan =
+    useMemo(() => {
+      if (!roadAutoConnectEnabled) {
+        return {
+          previousSplineId: -1,
+          nextSplineId: -1,
+          previousStatus:
+            "desativado",
+          nextStatus:
+            "desativado"
+        };
+      }
+
+      let previousSplineId = -1;
+      let nextSplineId = -1;
+      let previousStatus =
+        "sem encaixe";
+      let nextStatus =
+        "sem encaixe";
+
+      if (roadStartSnap) {
+        const target =
+          splinesForViewport.find(
+            (spline) =>
+              spline.splineId ===
+              roadStartSnap.splineId
+          );
+
+        if (
+          roadStartSnap.endpoint !==
+          "end"
+        ) {
+          previousStatus =
+            "ponta incompatível";
+        } else if (
+          !target
+        ) {
+          previousStatus =
+            "spline não carregada";
+        } else if (
+          target.nextSplineId !== -1
+        ) {
+          previousStatus =
+            "ponta já vinculada";
+        } else {
+          previousSplineId =
+            target.splineId;
+          previousStatus =
+            "pronto";
+        }
+      }
+
+      if (roadEndSnap) {
+        const target =
+          splinesForViewport.find(
+            (spline) =>
+              spline.splineId ===
+              roadEndSnap.splineId
+          );
+
+        if (
+          roadEndSnap.endpoint !==
+          "start"
+        ) {
+          nextStatus =
+            "ponta incompatível";
+        } else if (
+          !target
+        ) {
+          nextStatus =
+            "spline não carregada";
+        } else if (
+          target.previousSplineId !==
+          -1
+        ) {
+          nextStatus =
+            "ponta já vinculada";
+        } else {
+          nextSplineId =
+            target.splineId;
+          nextStatus =
+            "pronto";
+        }
+      }
+
+      if (
+        previousSplineId !== -1 &&
+        previousSplineId ===
+          nextSplineId
+      ) {
+        nextSplineId = -1;
+        nextStatus =
+          "mesma spline usada no início";
+      }
+
+      return {
+        previousSplineId,
+        nextSplineId,
+        previousStatus,
+        nextStatus
+      };
+    }, [
+      roadAutoConnectEnabled,
+      roadEndSnap,
+      roadStartSnap,
+      splinesForViewport
     ]);
 
   const interactionLocked =
@@ -5224,11 +5356,50 @@ export function App() {
           const constructionSet =
             pendingConstructionSetRef
               .current;
+          const autoLink =
+            pendingRoadAutoLinkRef
+              .current;
 
           pendingConstructionSetRef.current =
             undefined;
+          pendingRoadAutoLinkRef.current =
+            undefined;
+
+          const hasAutoLink =
+            Boolean(
+              autoLink &&
+              (
+                autoLink
+                  .previousSplineId !==
+                  -1 ||
+                autoLink
+                  .nextSplineId !==
+                  -1
+              )
+            );
 
           if (
+            hasAutoLink &&
+            autoLink
+          ) {
+            pendingConstructionSetAfterLinkRef
+              .current =
+              constructionSet;
+            pendingConstructionSetSplineRef
+              .current =
+              message.placedSpline;
+
+            updateSplineLinks(
+              message.directoryName,
+              message.placedSpline,
+              autoLink.previousSplineId,
+              autoLink.nextSplineId
+            );
+
+            setSaveNotice(
+              `Spline #${message.placedSpline.splineId} inserida; conectando vínculos OMSI automaticamente.`
+            );
+          } else if (
             constructionSet &&
             constructionSet.companions
               .length > 0
@@ -5292,6 +5463,68 @@ export function App() {
           message.type ===
           "splineLinksUpdated"
         ) {
+          if (
+            message.linksUpdated > 0 &&
+            message.backupDirectory
+          ) {
+            setConstructionUndoStack(
+              (current) => [
+                ...current,
+                {
+                  label:
+                    "Vínculos spline #" +
+                    message.splineId,
+                  backupDirectory:
+                    message
+                      .backupDirectory
+                }
+              ].slice(-40)
+            );
+            setConstructionRedoStack([]);
+          }
+
+          const deferredSet =
+            pendingConstructionSetAfterLinkRef
+              .current;
+          const deferredSpline =
+            pendingConstructionSetSplineRef
+              .current;
+
+          pendingConstructionSetAfterLinkRef
+            .current =
+            undefined;
+          pendingConstructionSetSplineRef.current =
+            undefined;
+
+          if (
+            deferredSet &&
+            deferredSpline &&
+            deferredSet.companions
+              .length > 0
+          ) {
+            const groups =
+              buildConstructionSetObjectGroups(
+                deferredSpline,
+                deferredSet
+              );
+
+            if (groups.length > 0) {
+              pendingConstructionSetLabelRef
+                .current =
+                "Conjunto " +
+                deferredSet.name;
+
+              insertObjectMultiBatch(
+                message.directoryName,
+                groups
+              );
+
+              setSaveNotice(
+                `Vínculos da spline #${message.splineId} atualizados; aplicando conjunto "${deferredSet.name}".`
+              );
+            }
+          }
+
           setSavingSplineLinks(false);
           setSelectedSpline(undefined);
           setEditorTool("select");
@@ -5534,6 +5767,12 @@ export function App() {
           pendingConstructionSetRef.current =
             undefined;
           pendingConstructionSetLabelRef.current =
+            undefined;
+          pendingRoadAutoLinkRef.current =
+            undefined;
+          pendingConstructionSetAfterLinkRef.current =
+            undefined;
+          pendingConstructionSetSplineRef.current =
             undefined;
 
           setError(
@@ -10878,6 +11117,12 @@ export function App() {
         undefined;
       pendingConstructionSetLabelRef.current =
         undefined;
+      pendingRoadAutoLinkRef.current =
+        undefined;
+      pendingConstructionSetAfterLinkRef.current =
+        undefined;
+      pendingConstructionSetSplineRef.current =
+        undefined;
       setInsertingSpline(false);
     }, []);
 
@@ -10919,6 +11164,27 @@ export function App() {
           ? activeConstructionSet
           : undefined;
 
+      pendingRoadAutoLinkRef.current =
+        easyRoadMode &&
+        roadAutoConnectEnabled &&
+        (
+          roadAutoLinkPlan
+            .previousSplineId !==
+            -1 ||
+          roadAutoLinkPlan
+            .nextSplineId !==
+            -1
+        )
+          ? {
+              previousSplineId:
+                roadAutoLinkPlan
+                  .previousSplineId,
+              nextSplineId:
+                roadAutoLinkPlan
+                  .nextSplineId
+            }
+          : undefined;
+
       if (
         splineLibraryPlacementAsset
       ) {
@@ -10939,8 +11205,11 @@ export function App() {
     }, [
       activeConstructionSet,
       applyConstructionSet,
+      easyRoadMode,
       insertingSpline,
       pendingSplinePlacement,
+      roadAutoConnectEnabled,
+      roadAutoLinkPlan,
       selectedMap,
       splineLibraryPlacementAsset,
       splineLibraryPlacementIsHeight,
@@ -18761,6 +19030,24 @@ export function App() {
                       </label>
                     )}
 
+                    <label className="placement-toggle road-auto-connect-toggle">
+                      <input
+                        type="checkbox"
+                        checked={
+                          roadAutoConnectEnabled
+                        }
+                        onChange={(event) =>
+                          setRoadAutoConnectEnabled(
+                            event.currentTarget
+                              .checked
+                          )
+                        }
+                      />
+                      <span>
+                        Conectar vínculos previous/next automaticamente
+                      </span>
+                    </label>
+
                     <div className="road-snap-status">
                       {roadStartSnap && (
                         <span>
@@ -18788,6 +19075,40 @@ export function App() {
                           {formatNumber(
                             roadEndSnap.distance
                           )} m
+                        </span>
+                      )}
+
+                      {roadAutoConnectEnabled &&
+                        roadStartSnap && (
+                        <span
+                          className={
+                            roadAutoLinkPlan
+                              .previousSplineId !==
+                            -1
+                              ? "link-ready"
+                              : "link-blocked"
+                          }
+                        >
+                          previous:{" "}
+                          {roadAutoLinkPlan
+                            .previousStatus}
+                        </span>
+                      )}
+
+                      {roadAutoConnectEnabled &&
+                        roadEndSnap && (
+                        <span
+                          className={
+                            roadAutoLinkPlan
+                              .nextSplineId !==
+                            -1
+                              ? "link-ready"
+                              : "link-blocked"
+                          }
+                        >
+                          next:{" "}
+                          {roadAutoLinkPlan
+                            .nextStatus}
                         </span>
                       )}
                     </div>

@@ -743,3 +743,16 @@ Each companion `.sco` must have a preservation template in the current map. This
 In addition to the blue curvature handle, road/bridge drawing now shows a **green** start handle and a **red** end handle. Both can be dragged directly in the viewport; preview length, rotation, radius, and gradient are recalculated while the point moves.
 
 Endpoint handles reuse existing spline-end snapping. When a handle enters the configured snap range it can lock exactly onto a real road endpoint. The existing spline remains untouched; only the new unsaved road is adjusted.
+
+
+### Automatic previous/next linking for snapped roads
+
+Endpoint snapping can now also create OMSI links for the new spline. Automatic linking is armed only in safe cases:
+
+- new road start snapped to the end of an existing spline → previous;
+- new road end snapped to the start of an existing spline → next;
+- the target endpoint must have the corresponding link slot free.
+
+An incompatible or already-busy endpoint remains position-snapped only and is marked as blocked in the panel. Saving reuses the existing OmsiSplineLinkPlanner, which updates reciprocal links and rejects conflicts.
+
+When a Construction Set is active too, operations are serialized: the spline is inserted first, links are updated second, and only then is the companion-object multi-batch written. This avoids concurrent transactions against the same tiles.

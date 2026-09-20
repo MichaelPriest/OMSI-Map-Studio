@@ -743,3 +743,16 @@ O editor exige que cada `.sco` companheiro possua template preservativo no mapa 
 Além da alça azul de curvatura, o traçado de rua/ponte agora mostra uma alça **verde** no início e uma **vermelha** no fim. As duas podem ser arrastadas diretamente no viewport; o comprimento, rotação, raio e gradiente do preview são recalculados enquanto o ponto se move.
 
 As alças de extremidade reutilizam o snap de pontas de splines existentes. Quando uma alça entra no alcance configurado, ela pode encaixar exatamente numa ponta real de via. A spline existente continua intacta; somente o novo traçado é ajustado antes do salvamento.
+
+
+### Conexão automática previous/next ao encaixar vias
+
+O snap de ponta pode agora criar também os vínculos OMSI da nova spline. A conexão automática só é armada em casos seguros:
+
+- início da nova via encaixado no fim de uma spline existente → previous;
+- fim da nova via encaixado no início de uma spline existente → next;
+- a ponta-alvo precisa estar livre no vínculo correspondente.
+
+Ponta incompatível ou já ocupada continua apenas encaixada visualmente e é marcada no painel como bloqueada. O salvamento usa o OmsiSplineLinkPlanner existente, que atualiza reciprocidade e recusa conflito.
+
+Quando um Conjunto de Construção também está ativo, as operações são serializadas: primeiro a spline é inserida, depois os vínculos são atualizados e só então o multi-lote de objetos companheiros é gravado. Isso evita transações concorrentes sobre os mesmos tiles.
