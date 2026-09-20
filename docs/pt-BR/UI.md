@@ -971,3 +971,15 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - Grade, Objetos, Splines, Perfis, Nightmap, Terreno e Pintura de terreno continuam ligados aos mesmos estados reais;
 - Limpar cache mantém a mesma lógica e passa a usar ação visual própria;
 - no modo tela cheia esses painéis continuam ocultos em favor das docks unificadas já existentes.
+
+
+## Seleção no estilo do OMSI Editor
+
+- o clique simples é confirmado ao soltar o botão esquerdo, evitando reconstruir a cena no meio do mesmo clique;
+- objetos e splines visíveis continuam usando picking real da malha;
+- assets sem malha clicável utilizam uma tolerância de seleção em espaço de tela, mantendo o alvo previsível em diferentes níveis de zoom;
+- selecionar um item não troca automaticamente o filtro de seleção nem desarma **Mover**/**Rotacionar**;
+- clique rápido repetido no mesmo item mantém o comportamento de foco;
+- clicar em área vazia limpa a seleção sem alterar a ferramenta explicitamente escolhida.
+
+O `Engine` do Babylon permanece associado ao canvas durante atualizações normais de estado; apenas a cena necessária é atualizada/recriada. Isso evita o flash preto causado por destruir e recriar o contexto gráfico durante streaming, seleção e abertura do inspetor.

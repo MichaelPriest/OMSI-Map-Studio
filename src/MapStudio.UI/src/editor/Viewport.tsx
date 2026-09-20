@@ -4013,6 +4013,10 @@ export function Viewport({
   onPreviewSplineTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef =
+    useRef<Engine | undefined>(undefined);
+  const engineCaptureThumbnailRef =
+    useRef<boolean | undefined>(undefined);
   const thumbnailCallbackRef =
     useRef(onThumbnailReady);
   thumbnailCallbackRef.current =
@@ -4131,15 +4135,34 @@ export function Viewport({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const engine = new Engine(
-      canvas,
-      true,
-      {
-        preserveDrawingBuffer:
-          captureThumbnail,
-        stencil: true
-      }
-    );
+    let engine =
+      engineRef.current;
+
+    // Keep the Babylon Engine attached to the canvas across ordinary
+    // React state updates. Rebuilding the Scene may still be required
+    // while real OMSI assets stream in, but destroying the GPU engine
+    // on every state change produces the visible black flash/flicker.
+    if (
+      !engine ||
+      engineCaptureThumbnailRef.current !==
+        captureThumbnail
+    ) {
+      engine?.dispose();
+
+      engine = new Engine(
+        canvas,
+        true,
+        {
+          preserveDrawingBuffer:
+            captureThumbnail,
+          stencil: true
+        }
+      );
+
+      engineRef.current = engine;
+      engineCaptureThumbnailRef.current =
+        captureThumbnail;
+    }
     const scene = new Scene(engine);
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
@@ -5754,9 +5777,6 @@ export function Viewport({
       | { x: number; y: number }
       | undefined;
 
-    let pointerDownHandledSelection =
-      false;
-
     const getMapItemClickKey = (
       kind: "object" | "spline",
       item:
@@ -6666,15 +6686,12 @@ export function Viewport({
         ray.direction
           .normalizeToNew();
 
-      const threshold =
-        Math.max(
-          2.5,
-          Math.min(
-            24,
-            camera.radius *
-              0.006
-          )
-        );
+      // OMSI Editor-style fallback: use an approximately constant
+      // screen-space click radius instead of a fixed world-space radius.
+      // This keeps thin/missing-helper assets selectable at both close
+      // and distant camera zoom levels.
+      const selectionPixelRadius =
+        14;
 
       let fallback:
         | {
@@ -6729,6 +6746,29 @@ export function Viewport({
           Vector3.Distance(
             point,
             closest
+          );
+
+        const renderHeight =
+          Math.max(
+            1,
+            engine.getRenderHeight()
+          );
+
+        const threshold =
+          Math.max(
+            1.2,
+            Math.min(
+              24,
+              2 *
+                depth *
+                Math.tan(
+                  camera.fov / 2
+                ) *
+                (
+                  selectionPixelRadius /
+                  renderHeight
+                )
+            )
           );
 
         if (
@@ -7371,8 +7411,6 @@ export function Viewport({
         roadEndpointLastEmitRef
           .current =
           performance.now();
-        pointerDownHandledSelection =
-          false;
         canvas.setPointerCapture(
           event.pointerId
         );
@@ -7389,8 +7427,6 @@ export function Viewport({
           event.pointerId;
         roadCurveLastEmitRef.current =
           performance.now();
-        pointerDownHandledSelection =
-          false;
         canvas.setPointerCapture(
           event.pointerId
         );
@@ -7408,8 +7444,6 @@ export function Viewport({
           event.pointerId;
         roadDragLastEmitRef.current =
           performance.now();
-        pointerDownHandledSelection =
-          false;
         canvas.setPointerCapture(
           event.pointerId
         );
@@ -7417,10 +7451,9 @@ export function Viewport({
         return;
       }
 
-      pointerDownHandledSelection =
-        selectPickedMapItem(
-          event
-        );
+      // Selection is committed on pointerup, like the classic OMSI
+      // editor. This prevents a React state update from rebuilding the
+      // scene halfway through the same mouse click.
     };
 
     const handlePointerUp = (event: PointerEvent) => {
@@ -7471,8 +7504,6 @@ export function Viewport({
           .current =
           undefined;
         pointerStart = undefined;
-        pointerDownHandledSelection =
-          false;
         return;
       }
 
@@ -7506,8 +7537,6 @@ export function Viewport({
         roadCurveDragPointerRef.current =
           undefined;
         pointerStart = undefined;
-        pointerDownHandledSelection =
-          false;
         return;
       }
 
@@ -7530,8 +7559,6 @@ export function Viewport({
         roadDragPointerRef.current =
           undefined;
         pointerStart = undefined;
-        pointerDownHandledSelection =
-          false;
         return;
       }
 
@@ -7547,25 +7574,20 @@ export function Viewport({
       pointerStart = undefined;
 
       if (dragDistance > 5) {
-        pointerDownHandledSelection =
-          false;
         return;
       }
 
-      // A real mesh hit was already selected on pointerdown. Do not run
-      // the pointerup proximity fallback for the same click, otherwise
-      // a valid selection can be immediately cleared and the second
-      // quick click never reaches the focus logic.
+      const selectingMapItem =
+        !placementAssetPath &&
+        !splinePlacementTemplate &&
+        selectionMode !== "terrain";
+
       if (
-        pointerDownHandledSelection
+        selectingMapItem &&
+        selectPickedMapItem(event)
       ) {
-        pointerDownHandledSelection =
-          false;
         return;
       }
-
-      pointerDownHandledSelection =
-        false;
 
       const rect = canvas.getBoundingClientRect();
       const pointerX =
@@ -8172,7 +8194,7 @@ export function Viewport({
     let thumbnailFrame = 0;
     let thumbnailSent = false;
 
-    engine.runRenderLoop(() => {
+    const renderFrame = () => {
       scene.render();
 
       if (
@@ -8206,7 +8228,11 @@ export function Viewport({
           }
         }
       }
-    });
+    };
+
+    engine.runRenderLoop(
+      renderFrame
+    );
 
     let resizeFrame:
       | number
@@ -8246,6 +8272,10 @@ export function Viewport({
     resize();
 
     return () => {
+      engine.stopRenderLoop(
+        renderFrame
+      );
+
       cameraStateRef.current = {
         alpha: camera.alpha,
         beta: camera.beta,
@@ -8327,7 +8357,6 @@ export function Viewport({
       canvas.style.cursor = "";
       gizmoManager?.dispose();
       scene.dispose();
-      engine.dispose();
     };
   }, [
     tiles,
@@ -8372,6 +8401,23 @@ export function Viewport({
     selectedSpline,
     selectedSplineProfile,
   ]);
+
+  // The scene effect above intentionally survives ordinary App renders
+  // with the same Engine. Dispose the GPU engine only when the Viewport
+  // component itself is removed (or capture mode requires a new engine).
+  useEffect(
+    () => () => {
+      const engine =
+        engineRef.current;
+
+      engineRef.current =
+        undefined;
+      engineCaptureThumbnailRef.current =
+        undefined;
+      engine?.dispose();
+    },
+    []
+  );
 
   const selectedViewportPath =
     selectedObject?.sceneryObjectPath ??

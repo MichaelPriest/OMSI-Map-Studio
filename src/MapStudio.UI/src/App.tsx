@@ -10420,10 +10420,12 @@ export function App() {
             undefined
           );
 
+          // Match the classic OMSI editor workflow: selecting an item
+          // must not silently change the user's current filter or tool.
+          // This allows "Mover"/"Rotacionar" to stay armed while the
+          // user clicks a different object in the map.
           setSelectedSpline(undefined);
-          setSelectionMode("object");
           setInspectorTab("transform");
-          setEditorTool("select");
 
           if (isFullScreen) {
             setFullScreenPanel(
@@ -10490,10 +10492,11 @@ export function App() {
             undefined
           );
 
+          // Keep the current selection filter and transform tool.
+          // A spline click should select the spline, not switch the
+          // editor out of the mode the user explicitly chose.
           setSelectedObject(undefined);
-          setSelectionMode("spline");
           setInspectorTab("transform");
-          setEditorTool("select");
 
           if (isFullScreen) {
             setFullScreenPanel(

@@ -971,3 +971,15 @@ All behavior remains connected to real editor state; no fake commands are introd
 - Grid, Objects, Splines, Profiles, Nightmap, Terrain, and Terrain paint remain wired to the same real states;
 - Clear cache keeps the same behavior and now uses its own visual action;
 - in fullscreen these desktop panels remain hidden in favor of the existing unified docks.
+
+
+## OMSI Editor-style selection
+
+- a simple click is committed on left-button release, avoiding a scene rebuild halfway through the same click;
+- visible objects and splines continue to use real mesh picking;
+- assets without a usable pickable mesh use a screen-space selection tolerance, keeping the target predictable at different zoom levels;
+- selecting an item no longer changes the selection filter or disarms **Move**/**Rotate** automatically;
+- a repeated quick click on the same item keeps the focus behavior;
+- clicking empty map space clears the selection without changing the tool the user explicitly chose.
+
+The Babylon `Engine` now stays attached to the canvas during normal state updates; only the required scene content is updated/rebuilt. This avoids the black flash caused by destroying and recreating the graphics context during streaming, selection and Inspector opening.
