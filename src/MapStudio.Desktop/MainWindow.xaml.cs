@@ -4686,6 +4686,512 @@ public partial class MainWindow : Window
         }
     }
 
+    private async Task LoadGoogleElevationGridAsync(
+        string? apiKey,
+        double latitude,
+        double longitude,
+        int anchorTileX,
+        int anchorTileY,
+        double anchorX,
+        double anchorY,
+        int tileX,
+        int tileY,
+        int sampleCount)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey) ||
+            latitude is < -90 or > 90 ||
+            longitude is < -180 or > 180 ||
+            anchorX is < 0 or > 300 ||
+            anchorY is < 0 or > 300 ||
+            sampleCount is < 3 or > 33)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "invalidGoogleElevationRequest"
+            });
+            return;
+        }
+
+        try
+        {
+            const double earthRadius =
+                6378137.0;
+
+            var invariant =
+                CultureInfo.InvariantCulture;
+
+            var anchorWorldX =
+                anchorTileX * 300.0 +
+                anchorX;
+
+            var anchorWorldY =
+                anchorTileY * 300.0 +
+                anchorY;
+
+            var coordinates =
+                new List<(
+                    double Latitude,
+                    double Longitude)>(
+                    checked(
+                        sampleCount *
+                        sampleCount));
+
+            for (
+                var row = 0;
+                row < sampleCount;
+                row++)
+            {
+                var localY =
+                    sampleCount == 1
+                        ? 0
+                        : row *
+                          300.0 /
+                          (sampleCount - 1);
+
+                for (
+                    var column = 0;
+                    column < sampleCount;
+                    column++)
+                {
+                    var localX =
+                        sampleCount == 1
+                            ? 0
+                            : column *
+                              300.0 /
+                              (sampleCount - 1);
+
+                    var worldX =
+                        tileX * 300.0 +
+                        localX;
+
+                    var worldY =
+                        tileY * 300.0 +
+                        localY;
+
+                    var eastMeters =
+                        worldX -
+                        anchorWorldX;
+
+                    // The editor draws north at the top of the viewport,
+                    // therefore increasing tile Y runs south.
+                    var northMeters =
+                        -(
+                            worldY -
+                            anchorWorldY);
+
+                    var latitudeDelta =
+                        northMeters /
+                        earthRadius *
+                        180.0 /
+                        Math.PI;
+
+                    var longitudeScale =
+                        Math.Cos(
+                            latitude *
+                            Math.PI /
+                            180.0);
+
+                    if (
+                        Math.Abs(
+                            longitudeScale) <
+                        0.000001)
+                    {
+                        throw new InvalidDataException(
+                            "invalidGoogleElevationRequest");
+                    }
+
+                    var longitudeDelta =
+                        eastMeters /
+                        (
+                            earthRadius *
+                            longitudeScale
+                        ) *
+                        180.0 /
+                        Math.PI;
+
+                    coordinates.Add(
+                        (
+                            latitude +
+                            latitudeDelta,
+                            longitude +
+                            longitudeDelta
+                        ));
+                }
+            }
+
+            var elevations =
+                new List<double>(
+                    coordinates.Count);
+
+            const int batchSize = 64;
+
+            for (
+                var offset = 0;
+                offset < coordinates.Count;
+                offset += batchSize)
+            {
+                var batch =
+                    coordinates
+                        .Skip(offset)
+                        .Take(
+                            Math.Min(
+                                batchSize,
+                                coordinates.Count -
+                                offset))
+                        .Select(
+                            coordinate =>
+                                string.Create(
+                                    invariant,
+                                    $"{coordinate.Latitude:G17},{coordinate.Longitude:G17}"))
+                        .ToArray();
+
+                var uri =
+                    "https://maps.googleapis.com/maps/api/elevation/json" +
+                    "?locations=" +
+                    Uri.EscapeDataString(
+                        string.Join(
+                            "|",
+                            batch)) +
+                    "&key=" +
+                    Uri.EscapeDataString(
+                        apiKey);
+
+                using var response =
+                    await GoogleMapsHttpClient
+                        .GetAsync(
+                            uri);
+
+                if (!response
+                    .IsSuccessStatusCode)
+                {
+                    PostMessage(new
+                    {
+                        type = "hostError",
+                        code =
+                            "googleElevationGridError",
+                        detail =
+                            $"HTTP {(int)response.StatusCode}"
+                    });
+                    return;
+                }
+
+                await using var stream =
+                    await response.Content
+                        .ReadAsStreamAsync();
+
+                using var document =
+                    await JsonDocument
+                        .ParseAsync(
+                            stream);
+
+                var root =
+                    document.RootElement;
+
+                if (
+                    !root.TryGetProperty(
+                        "status",
+                        out var status) ||
+                    !string.Equals(
+                        status.GetString(),
+                        "OK",
+                        StringComparison
+                            .OrdinalIgnoreCase) ||
+                    !root.TryGetProperty(
+                        "results",
+                        out var results) ||
+                    results.ValueKind !=
+                        JsonValueKind.Array ||
+                    results.GetArrayLength() !=
+                        batch.Length)
+                {
+                    PostMessage(new
+                    {
+                        type = "hostError",
+                        code =
+                            "googleElevationGridError",
+                        detail =
+                            status.ValueKind ==
+                                JsonValueKind.String
+                                ? status.GetString()
+                                : null
+                    });
+                    return;
+                }
+
+                foreach (
+                    var result in
+                        results.EnumerateArray())
+                {
+                    if (
+                        !result.TryGetProperty(
+                            "elevation",
+                            out var elevation) ||
+                        !elevation.TryGetDouble(
+                            out var value) ||
+                        !double.IsFinite(value))
+                    {
+                        PostMessage(new
+                        {
+                            type = "hostError",
+                            code =
+                                "googleElevationGridError"
+                        });
+                        return;
+                    }
+
+                    elevations.Add(value);
+                }
+            }
+
+            if (
+                elevations.Count !=
+                coordinates.Count)
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "googleElevationGridError"
+                });
+                return;
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "googleElevationGridLoaded",
+                grid = new
+                {
+                    tileX,
+                    tileY,
+                    rows = sampleCount,
+                    columns =
+                        sampleCount,
+                    elevations,
+                    minimumElevation =
+                        elevations.Min(),
+                    maximumElevation =
+                        elevations.Max(),
+                    anchorLatitude =
+                        latitude,
+                    anchorLongitude =
+                        longitude
+                }
+            });
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    HttpRequestException or
+                    TaskCanceledException or
+                    JsonException or
+                    InvalidDataException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "invalidGoogleElevationRequest"
+                        ? "invalidGoogleElevationRequest"
+                        : "googleElevationGridError"
+            });
+        }
+    }
+
+    private async Task ApplyTerrainElevationGridAsync(
+        string? directoryName,
+        int tileX,
+        int tileY,
+        int rows,
+        int columns,
+        IReadOnlyList<double> elevations,
+        double verticalOffset)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+            return;
+        }
+
+        var tile =
+            map.Tiles.FirstOrDefault(
+                candidate =>
+                    candidate.X == tileX &&
+                    candidate.Y == tileY);
+
+        if (
+            tile is null ||
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    map.DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var tilePath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownTile"
+            });
+            return;
+        }
+
+        var terrainPath =
+            tilePath + ".terrain";
+
+        if (!File.Exists(terrainPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "terrainFileMissing",
+                detail = terrainPath
+            });
+            return;
+        }
+
+        try
+        {
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(
+                        terrainPath);
+
+            var result =
+                OmsiTerrainLeveler
+                    .ApplyElevationGrid(
+                        terrain,
+                        rows,
+                        columns,
+                        elevations,
+                        verticalOffset);
+
+            if (
+                result.ChangedSamples == 0)
+            {
+                PostMessage(new
+                {
+                    type =
+                        "terrainElevationGridApplied",
+                    map.DirectoryName,
+                    tileX,
+                    tileY,
+                    changedSamples = 0,
+                    backupDirectory =
+                        string.Empty
+                });
+                return;
+            }
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var relativePath =
+                Path.GetRelativePath(
+                    map.DirectoryPath,
+                    terrainPath);
+
+            if (
+                relativePath.StartsWith(
+                    "..",
+                    StringComparison.Ordinal) ||
+                Path.IsPathRooted(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidTerrainPath");
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            terrainPath,
+                            Path.Combine(
+                                backupRoot,
+                                relativePath),
+                            OmsiTerrainWriter
+                                .Write(
+                                    result.Terrain))
+                    ]);
+
+            _tileContentCache
+                .TryRemove(
+                    tilePath,
+                    out _);
+
+            PostMessage(new
+            {
+                type =
+                    "terrainElevationGridApplied",
+                map.DirectoryName,
+                tileX,
+                tileY,
+                changedSamples =
+                    result.ChangedSamples,
+                backupDirectory =
+                    backupRoot
+            });
+        }
+        catch (
+            InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "invalidElevationGrid"
+                        ? "invalidElevationGrid"
+                        : "terrainEditError",
+                detail = exception.Message
+            });
+        }
+        catch (
+            UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied",
+                detail = terrainPath
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "terrainEditError",
+                detail = exception.Message
+            });
+        }
+    }
+
     private async Task SaveMapGeoreferenceAsync(
         string? directoryName,
         double latitude,
@@ -6691,6 +7197,57 @@ public partial class MainWindow : Window
         }
 
         return false;
+    }
+
+    private static bool TryReadDoubleArray(
+        JsonElement element,
+        string propertyName,
+        out double[] values)
+    {
+        values =
+            Array.Empty<double>();
+
+        if (
+            !element.TryGetProperty(
+                propertyName,
+                out var property) ||
+            property.ValueKind !=
+                JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var parsed =
+            new List<double>();
+
+        foreach (
+            var item in
+                property.EnumerateArray())
+        {
+            if (
+                item.ValueKind !=
+                    JsonValueKind.Number ||
+                !item.TryGetDouble(
+                    out var value) ||
+                !double.IsFinite(value))
+            {
+                return false;
+            }
+
+            parsed.Add(value);
+        }
+
+        if (
+            parsed.Count == 0 ||
+            parsed.Count > 100000)
+        {
+            return false;
+        }
+
+        values =
+            parsed.ToArray();
+
+        return true;
     }
 
     private static bool TryReadDouble(
