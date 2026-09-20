@@ -696,3 +696,10 @@ A abertura normal de um mapa passa a iniciar em **Streaming automático** em vez
 - **Mapa completo** permanece disponível explicitamente para diagnóstico, comparação e casos em que o usuário realmente deseja manter todos os tiles carregados.
 
 Essa mudança é deliberada: abrir um mapa grande não deve exigir carregar toda a cena antes de começar a editar.
+
+
+### Proteção contra resposta regional obsoleta
+
+Cada solicitação de região recebe uma geração monotônica no host. Ao abrir outro mapa, entrar em Mapa completo ou pedir uma nova região, a geração anterior deixa de ser atual.
+
+Se uma leitura antiga terminar depois de uma região mais nova, seu resultado é descartado antes de `mapRegionLoaded`. Isso evita que movimento rápido da câmera reaplique tiles/metadata de uma posição anterior sobre o estado atual.
