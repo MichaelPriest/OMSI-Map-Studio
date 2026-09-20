@@ -646,3 +646,10 @@ The city-builder library now keeps local **Favorites**, **Recent**, and **Most u
 Search recognizes common Portuguese, English, and German synonyms (for example rua/road/straße, árvore/tree/baum, and ponte/bridge/brücke). Groups expose contextual subcategories such as residential/commercial/industrial, lighting/signage, avenues/roads/one-way streets, cycle paths, and rail.
 
 Technical filters can highlight assets used by the map, actually detected `[tree]` objects, already loaded `.sco` geometry, and loaded `.sli` profiles. Cards and the inspector show map usage, library frequency, subcategory, and 3D/profile status. Preferences live in UI-local storage; storage failures or quota limits never block real map editing or saving.
+
+
+### Cached 3D thumbnails and drag-and-drop
+
+Once a real 3D preview finishes rendering, the UI captures a lightweight JPEG thumbnail and keeps it in a local cache (up to 48 entries). The thumbnail replaces the generic card icon, producing a visual library without reloading and rendering every asset at once.
+
+`.sco` and `.sli` cards can be dragged directly into the viewport. Drop uses the editor's existing raycast to convert screen position into a real tile/map coordinate. Objects enter the normal placement flow; splines start as a normal 20 m segment. Saving still goes through the existing bridges and backup rules.

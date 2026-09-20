@@ -12,6 +12,9 @@ type AssetPreview3DProps =
       assetPath: string;
       geometry: OmsiSceneryObjectGeometry;
       textureAssetsByKey: Record<string, OmsiTextureAsset>;
+      onThumbnailReady?: (
+        dataUrl: string
+      ) => void;
     }
   | {
       kind: "spline";
@@ -21,6 +24,9 @@ type AssetPreview3DProps =
       length?: number;
       radius?: number;
       rotation?: number;
+      onThumbnailReady?: (
+        dataUrl: string
+      ) => void;
     };
 
 const noopObjectSelection = () => {};
@@ -137,6 +143,9 @@ export function AssetPreview3D(
         }
         onPlacementPoint={
           noopPlacementPoint
+        }
+        onThumbnailReady={
+          props.onThumbnailReady
         }
         splinePlacementTemplate={
           previewSplineTemplate

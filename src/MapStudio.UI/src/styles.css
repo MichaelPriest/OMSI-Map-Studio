@@ -2753,3 +2753,21 @@ code {
   color: #d0e4f2;
   font-size: 7px;
 }
+
+
+.library-entry-thumbnail {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border: 1px solid #2b5874;
+  border-radius: 6px;
+  background: #02080d;
+}
+
+.library-entry-preview-button[draggable="true"] {
+  cursor: grab;
+}
+
+.library-entry-preview-button[draggable="true"]:active {
+  cursor: grabbing;
+}

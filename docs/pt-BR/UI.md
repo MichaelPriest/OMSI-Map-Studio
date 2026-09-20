@@ -646,3 +646,10 @@ A biblioteca city-builder passou a manter localmente **Favoritos**, **Recentes**
 A busca reconhece sinônimos comuns em português, inglês e alemão (por exemplo rua/road/straße, árvore/tree/baum e ponte/bridge/brücke). Grupos possuem subcategorias contextuais, como residencial/comercial/industrial, iluminação/sinalização, avenidas/estradas/mão única, ciclovias e trilhos.
 
 Filtros técnicos permitem destacar assets usados no mapa, árvores `[tree]` realmente detectadas, geometria `.sco` já carregada e perfis `.sli` carregados. Os cartões e o inspetor mostram uso no mapa, frequência na biblioteca, subcategoria e estado do 3D/perfil. Preferências ficam no armazenamento local da interface; falhas ou limite de armazenamento nunca bloqueiam edição ou salvamento real.
+
+
+### Miniaturas 3D em cache e drag-and-drop
+
+Quando uma prévia 3D real termina de renderizar, a interface captura uma miniatura JPEG leve e a mantém em cache local (até 48 entradas). A miniatura passa a substituir o ícone genérico no cartão, deixando a biblioteca visual sem reler ou renderizar todos os assets ao mesmo tempo.
+
+Cartões de `.sco` e `.sli` podem ser arrastados diretamente para o viewport. O drop usa o mesmo raycast do editor para converter a posição da tela em tile/coordenada real. Objetos entram no fluxo normal de colocação; splines entram como trecho normal inicial de 20 m. O salvamento continua passando pelos bridges existentes e suas regras de backup.

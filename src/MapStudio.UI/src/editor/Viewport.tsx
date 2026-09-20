@@ -108,6 +108,21 @@ type ViewportProps = {
       bank: number;
     }
   ) => void;
+  onLibraryAssetDrop?: (
+    payload: {
+      kind: "object" | "spline";
+      assetPath: string;
+      point: {
+        tileX: number;
+        tileY: number;
+        x: number;
+        y: number;
+      };
+    }
+  ) => void;
+  onThumbnailReady?: (
+    dataUrl: string
+  ) => void;
   splinePlacementTemplate?: OmsiPlacedSpline;
   splinePlacementProfile?: OmsiSplineDefinition;
   pendingSplinePlacement?: {
@@ -3868,6 +3883,8 @@ export function Viewport({
   placementGeometry,
   pendingPlacement,
   onPlacementPoint,
+  onLibraryAssetDrop,
+  onThumbnailReady,
   splinePlacementTemplate,
   splinePlacementProfile,
   pendingSplinePlacement,
@@ -3895,6 +3912,12 @@ export function Viewport({
   onPreviewSplineTransform
 }: ViewportProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const thumbnailCallbackRef =
+    useRef(onThumbnailReady);
+  thumbnailCallbackRef.current =
+    onThumbnailReady;
+  const captureThumbnail =
+    Boolean(onThumbnailReady);
 
   const [
     viewportDiagnostic,
@@ -3966,7 +3989,15 @@ export function Viewport({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const engine = new Engine(canvas, true);
+    const engine = new Engine(
+      canvas,
+      true,
+      {
+        preserveDrawingBuffer:
+          captureThumbnail,
+        stencil: true
+      }
+    );
     const scene = new Scene(engine);
     scene.clearColor.set(0.045, 0.055, 0.07, 1);
 
@@ -6035,7 +6066,10 @@ export function Viewport({
     };
 
     const getPlacementPointFromPointer = (
-      event: PointerEvent
+      event: {
+        clientX: number;
+        clientY: number;
+      }
     ) => {
       if (usesWorldCoordinates) {
         return undefined;
@@ -6948,6 +6982,78 @@ export function Viewport({
       }
     };
 
+    const handleAssetDragOver = (
+      event: DragEvent
+    ) => {
+      if (
+        !onLibraryAssetDrop ||
+        !Array.from(
+          event.dataTransfer?.types ?? []
+        ).some(
+          (type) =>
+            type ===
+              "application/x-omsi-map-studio-scenery" ||
+            type ===
+              "application/x-omsi-map-studio-spline"
+        )
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect =
+          "copy";
+      }
+    };
+
+    const handleAssetDrop = (
+      event: DragEvent
+    ) => {
+      if (!onLibraryAssetDrop) {
+        return;
+      }
+
+      const sceneryPath =
+        event.dataTransfer?.getData(
+          "application/x-omsi-map-studio-scenery"
+        );
+      const splinePath =
+        event.dataTransfer?.getData(
+          "application/x-omsi-map-studio-spline"
+        );
+
+      if (!sceneryPath && !splinePath) {
+        return;
+      }
+
+      const point =
+        getPlacementPointFromPointer(
+          event
+        );
+
+      if (!point) {
+        return;
+      }
+
+      event.preventDefault();
+
+      onLibraryAssetDrop({
+        kind: sceneryPath
+          ? "object"
+          : "spline",
+        assetPath:
+          sceneryPath || splinePath,
+        point
+      });
+
+      onActiveTileChange?.({
+        x: point.tileX,
+        y: point.tileY
+      });
+    };
+
     const handlePointerCancel = (
       event: PointerEvent
     ) => {
@@ -7008,6 +7114,14 @@ export function Viewport({
       "contextmenu",
       handleContextMenu
     );
+    canvas.addEventListener(
+      "dragover",
+      handleAssetDragOver
+    );
+    canvas.addEventListener(
+      "drop",
+      handleAssetDrop
+    );
 
     const refreshObjectLods =
       () => {
@@ -7036,7 +7150,44 @@ export function Viewport({
         }
       );
 
-    engine.runRenderLoop(() => scene.render());
+    let thumbnailFrame = 0;
+    let thumbnailSent = false;
+
+    engine.runRenderLoop(() => {
+      scene.render();
+
+      if (
+        captureThumbnail &&
+        !thumbnailSent &&
+        thumbnailCallbackRef.current
+      ) {
+        thumbnailFrame += 1;
+
+        if (thumbnailFrame >= 24) {
+          try {
+            const dataUrl =
+              canvas.toDataURL(
+                "image/jpeg",
+                0.72
+              );
+
+            if (
+              dataUrl.startsWith(
+                "data:image/"
+              ) &&
+              dataUrl.length > 256
+            ) {
+              thumbnailSent = true;
+              thumbnailCallbackRef.current(
+                dataUrl
+              );
+            }
+          } catch {
+            thumbnailSent = true;
+          }
+        }
+      }
+    });
 
     const resize = () => engine.resize();
     window.addEventListener("resize", resize);
@@ -7089,6 +7240,14 @@ export function Viewport({
         "contextmenu",
         handleContextMenu
       );
+      canvas.removeEventListener(
+        "dragover",
+        handleAssetDragOver
+      );
+      canvas.removeEventListener(
+        "drop",
+        handleAssetDrop
+      );
       window.removeEventListener("resize", resize);
 
       if (lodObserver) {
@@ -7126,6 +7285,8 @@ export function Viewport({
     placementGeometry,
     pendingPlacement,
     onPlacementPoint,
+    onLibraryAssetDrop,
+    captureThumbnail,
     splinePlacementTemplate,
     splinePlacementProfile,
     pendingSplinePlacement,

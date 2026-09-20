@@ -146,7 +146,9 @@ const libraryStorageKeys = {
   splineUsage:
     "omsi-map-studio:library:spline-usage",
   collections:
-    "omsi-map-studio:library:collections"
+    "omsi-map-studio:library:collections",
+  thumbnails:
+    "omsi-map-studio:library:thumbnails-v1"
 } as const;
 
 const readStoredJson = <T,>(
@@ -2413,6 +2415,17 @@ export function App() {
   );
 
   const [
+    assetThumbnailCache,
+    setAssetThumbnailCache
+  ] = useState<Record<string, string>>(
+    () =>
+      readStoredJson(
+        libraryStorageKeys.thumbnails,
+        {}
+      )
+  );
+
+  const [
     activeLibraryCollection,
     setActiveLibraryCollection
   ] = useState("");
@@ -2546,6 +2559,13 @@ export function App() {
       libraryCollections
     );
   }, [libraryCollections]);
+
+  useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys.thumbnails,
+      assetThumbnailCache
+    );
+  }, [assetThumbnailCache]);
 
   const interactionLocked =
     selectingRoot ||
@@ -8999,6 +9019,44 @@ export function App() {
       [activeLibraryCollection]
     );
 
+  const handleAssetThumbnail =
+    useCallback(
+      (
+        assetKey: string,
+        dataUrl: string
+      ) => {
+        setAssetThumbnailCache(
+          (current) => {
+            if (
+              current[assetKey] ===
+              dataUrl
+            ) {
+              return current;
+            }
+
+            const next = {
+              ...current,
+              [assetKey]: dataUrl
+            };
+            const keys =
+              Object.keys(next);
+
+            while (keys.length > 48) {
+              const oldest =
+                keys.shift();
+
+              if (oldest) {
+                delete next[oldest];
+              }
+            }
+
+            return next;
+          }
+        );
+      },
+      []
+    );
+
   const handlePreviewSceneryLibraryAsset =
     useCallback(
       (entry: SceneryLibraryEntry) => {
@@ -9195,6 +9253,82 @@ export function App() {
       handleSelectPlacementAsset,
       selectedObject
     ]);
+
+  const handleLibraryAssetDrop =
+    useCallback(
+      (payload: {
+        kind: "object" | "spline";
+        assetPath: string;
+        point: {
+          tileX: number;
+          tileY: number;
+          x: number;
+          y: number;
+        };
+      }) => {
+        if (payload.kind === "object") {
+          const entry =
+            sceneryLibrary.find(
+              (candidate) =>
+                candidate.sceneryObjectPath ===
+                payload.assetPath
+            );
+
+          if (!entry) {
+            return;
+          }
+
+          handleSelectPlacementAsset(
+            entry
+          );
+          setPendingPlacement({
+            tileX: payload.point.tileX,
+            tileY: payload.point.tileY,
+            x: payload.point.x,
+            y: payload.point.y,
+            ...defaultPlacementTransform
+          });
+          return;
+        }
+
+        const entry =
+          splineLibrary.find(
+            (candidate) =>
+              candidate.splinePath ===
+              payload.assetPath
+          );
+
+        if (!entry) {
+          return;
+        }
+
+        handleSelectSplineLibraryAsset(
+          entry,
+          false
+        );
+        setEasyRoadMode(false);
+        setPendingSplinePlacement({
+          targetTileX:
+            payload.point.tileX,
+          targetTileY:
+            payload.point.tileY,
+          x: payload.point.x,
+          y: payload.point.y,
+          z: 0,
+          rotation: 0,
+          length: 20,
+          radius: 0,
+          gradientStart: 0,
+          gradientEnd: 0
+        });
+      },
+      [
+        handleSelectPlacementAsset,
+        handleSelectSplineLibraryAsset,
+        sceneryLibrary,
+        splineLibrary
+      ]
+    );
 
   const handlePlacementPoint =
     useCallback(
@@ -13182,6 +13316,16 @@ export function App() {
                         textureAssetsByKey={
                           textureAssetsByKey
                         }
+                        onThumbnailReady={(
+                          dataUrl
+                        ) =>
+                          handleAssetThumbnail(
+                            "sco:" +
+                              sceneryLibraryPreviewAsset
+                                .sceneryObjectPath,
+                            dataUrl
+                          )
+                        }
                       />
                     )}
 
@@ -13338,20 +13482,44 @@ export function App() {
                           <button
                             type="button"
                             className="library-entry-preview-button"
+                            draggable
+                            onDragStart={(event) => {
+                              event.dataTransfer.effectAllowed =
+                                "copy";
+                              event.dataTransfer.setData(
+                                "application/x-omsi-map-studio-scenery",
+                                entry.sceneryObjectPath
+                              );
+                            }}
                             onClick={() =>
                               handlePreviewSceneryLibraryAsset(
                                 entry
                               )
                             }
-                            title="Carregar prévia 3D real"
+                            title="Carregar prévia 3D real · arraste para o mapa para posicionar"
                           >
-                            <span
-                              className="library-entry-icon"
-                              aria-hidden="true"
-                            >
-                              {groupInfo?.icon ??
-                                "◇"}
-                            </span>
+                            {assetThumbnailCache[
+                              assetKey
+                            ] ? (
+                              <img
+                                className="library-entry-thumbnail"
+                                src={
+                                  assetThumbnailCache[
+                                    assetKey
+                                  ]
+                                }
+                                alt=""
+                                draggable={false}
+                              />
+                            ) : (
+                              <span
+                                className="library-entry-icon"
+                                aria-hidden="true"
+                              >
+                                {groupInfo?.icon ??
+                                  "◇"}
+                              </span>
+                            )}
                             <span className="library-entry-copy">
                               <strong>
                                 {entry.fileName}
@@ -13741,6 +13909,16 @@ export function App() {
                         textureAssetsByKey={
                           textureAssetsByKey
                         }
+                        onThumbnailReady={(
+                          dataUrl
+                        ) =>
+                          handleAssetThumbnail(
+                            "sli:" +
+                              splineLibraryPreviewAsset
+                                .splinePath,
+                            dataUrl
+                          )
+                        }
                         length={
                           splineLibraryPlacementAsset
                             ?.splinePath ===
@@ -13916,20 +14094,44 @@ export function App() {
                           <button
                             type="button"
                             className="library-entry-preview-button"
+                            draggable
+                            onDragStart={(event) => {
+                              event.dataTransfer.effectAllowed =
+                                "copy";
+                              event.dataTransfer.setData(
+                                "application/x-omsi-map-studio-spline",
+                                entry.splinePath
+                              );
+                            }}
                             onClick={() =>
                               handlePreviewSplineLibraryAsset(
                                 entry
                               )
                             }
-                            title="Carregar prévia 3D real da spline"
+                            title="Carregar prévia 3D real da spline · arraste para o mapa"
                           >
-                            <span
-                              className="library-entry-icon"
-                              aria-hidden="true"
-                            >
-                              {groupInfo?.icon ??
-                                "◇"}
-                            </span>
+                            {assetThumbnailCache[
+                              assetKey
+                            ] ? (
+                              <img
+                                className="library-entry-thumbnail"
+                                src={
+                                  assetThumbnailCache[
+                                    assetKey
+                                  ]
+                                }
+                                alt=""
+                                draggable={false}
+                              />
+                            ) : (
+                              <span
+                                className="library-entry-icon"
+                                aria-hidden="true"
+                              >
+                                {groupInfo?.icon ??
+                                  "◇"}
+                              </span>
+                            )}
                             <span className="library-entry-copy">
                               <strong>
                                 {entry.fileName}
@@ -14318,6 +14520,9 @@ export function App() {
               }
               onPlacementPoint={
                 handlePlacementPoint
+              }
+              onLibraryAssetDrop={
+                handleLibraryAssetDrop
               }
               splinePlacementTemplate={
                 splinePlacementTemplate
