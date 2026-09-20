@@ -895,3 +895,16 @@ O modo tela cheia passa a seguir a direção visual aprovada para o editor:
 - a abertura da prateleira de assets reposiciona dock e painéis para evitar sobreposição.
 
 A alteração é somente de UX/layout: o viewport continua consumindo o estado real do host C# e não introduz dados fictícios.
+
+
+### Menus Ferramentas e Ajuda
+
+A barra superior do editor passa a seguir a referência visual aprovada sem criar comandos decorativos:
+
+- **Ferramentas** concentra a auditoria real de dependências e os conjuntos de construção;
+- **Ajuda** abre um painel móvel de atalhos do editor;
+- o painel de atalhos reutiliza o sistema `floating-tool`, portanto pode ser reposicionado sem bloquear o viewport;
+- o bloco antigo de atalhos exclusivo do fullscreen foi removido em favor de um único painel compartilhado entre desktop e F11;
+- **Mapa** permanece focado em ações do mapa, como mapa real por coordenadas e saúde do mapa.
+
+Todo o comportamento continua ligado ao estado real do editor; não há comandos fictícios.

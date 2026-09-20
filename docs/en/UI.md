@@ -895,3 +895,16 @@ Fullscreen now follows the approved editor visual direction:
 - opening the asset shelf repositions the dock and floating panels to avoid overlap.
 
 This is a UX/layout change only: the viewport still consumes real C# host state and introduces no fake data.
+
+
+### Tools and Help menus
+
+The editor top bar now follows the approved visual reference without adding decorative commands:
+
+- **Tools** contains the real dependency audit and construction sets;
+- **Help** opens a movable editor-shortcuts panel;
+- the shortcut panel reuses the `floating-tool` system, so it can be repositioned without blocking the viewport;
+- the old fullscreen-only shortcut strip was removed in favor of one shared panel for desktop and F11;
+- **Map** stays focused on map actions such as real-map-by-coordinates and map health.
+
+All behavior remains connected to real editor state; no fake commands are introduced.
