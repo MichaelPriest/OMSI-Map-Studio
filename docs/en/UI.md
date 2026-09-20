@@ -585,3 +585,14 @@ With the viewport focused, `A/D` and left/right arrows pan sideways; `W/S` and u
 After connecting the OMSI 2 folder, **Open map** displays the real maps found under `maps`. The user can search and choose a map by name; manual folder selection remains available as a fallback.
 
 The main sidebar can be collapsed. In the editor, **All / Objects / Splines / Terrain** control which item type is clickable. Shortcuts: `Alt+1..4` switch those filters; `Alt+R` opens road creation from the spline library; `Alt+C` junction; `Alt+O` object; `Alt+T` terrain; `Alt+A` water; `Alt+G` grass; `Alt+Y` tree. These shortcuts reuse only real installed libraries and assets.
+
+
+## Direct editing, easy roads, and real maps
+
+In the viewport, click an object or spline to select it and open transform controls. In Terrain mode, clicking marks an exact point for the leveling brush. `Ctrl + arrows/WASD` advances one 300 m tile.
+
+The **Road** flow lets the user choose a real spline and mark start/end with two clicks. Length, rotation, and grade are derived; **Level to terrain** recalculates Z/grade from the loaded terrain heights.
+
+Under **Real map by coordinates**, the user supplies their own Google API key, latitude/longitude, and chooses roadmap/satellite/hybrid/terrain. Imagery is shown over the terrain as a construction reference. An elevation grid can be fetched for the active tile and applied to the real `.terrain` with backup.
+
+On **Open map**, **Create real map** clones the installed `template\NewMap` and saves the coordinate anchor as Map Studio metadata. This does not yet replace OMSI's official `[worldcoordinates]` conversion.
