@@ -1042,3 +1042,6 @@ A adaptação usa o tamanho do próprio painel, não apenas a resolução global
 #### Ajuste manual opcional
 
 Além do dimensionamento automático, o Explorer/Biblioteca possui uma alça no canto inferior direito. O usuário pode ampliar ou reduzir o painel quando precisar de mais espaço para cards, filtros ou preview 3D. O tamanho escolhido é persistido localmente e restaurado na próxima abertura. O redimensionamento é limitado à área útil do editor para impedir que o painel fique fora da tela.
+
+
+Um **duplo clique na alça de redimensionamento** remove o tamanho manual salvo e devolve imediatamente o painel ao modo de dimensionamento automático por conteúdo e resolução.

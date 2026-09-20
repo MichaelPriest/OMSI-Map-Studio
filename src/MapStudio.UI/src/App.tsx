@@ -3108,6 +3108,41 @@ export function App() {
       }
     };
 
+    const resetPanelSize = (
+      panel: HTMLElement
+    ) => {
+      const key =
+        getPanelKey(panel);
+
+      try {
+        const current =
+          readPositions();
+        const saved =
+          current[key];
+
+        if (saved) {
+          const {
+            width: _width,
+            height: _height,
+            ...position
+          } = saved;
+
+          window.localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              ...current,
+              [key]: position
+            })
+          );
+        }
+      } catch {
+        // Visual personalization must never block editing.
+      }
+
+      panel.style.width = "";
+      panel.style.height = "";
+    };
+
     const getPanelKey = (
       panel: HTMLElement
     ) => {
@@ -3633,9 +3668,42 @@ export function App() {
       drag = undefined;
     };
 
+    const handleDoubleClick = (
+      event: MouseEvent
+    ) => {
+      if (
+        !(event.target instanceof
+          HTMLElement)
+      ) {
+        return;
+      }
+
+      const handle =
+        event.target.closest(
+          "[data-resize-handle]"
+        ) as HTMLElement | null;
+
+      const panel =
+        handle?.closest(
+          "[data-resizable-tool]"
+        ) as HTMLElement | null;
+
+      if (!handle || !panel) {
+        return;
+      }
+
+      resetPanelSize(panel);
+      event.preventDefault();
+    };
+
     document.addEventListener(
       "pointerdown",
       handlePointerDown
+    );
+
+    document.addEventListener(
+      "dblclick",
+      handleDoubleClick
     );
 
     window.addEventListener(
@@ -3659,6 +3727,11 @@ export function App() {
       document.removeEventListener(
         "pointerdown",
         handlePointerDown
+      );
+
+      document.removeEventListener(
+        "dblclick",
+        handleDoubleClick
       );
 
       window.removeEventListener(
@@ -18737,7 +18810,7 @@ export function App() {
               type="button"
               className="city-drawer-resize-handle"
               data-resize-handle
-              title="Arraste para redimensionar o Explorer/Biblioteca"
+              title="Arraste para redimensionar · duplo clique restaura tamanho automático"
               aria-label="Redimensionar Explorer e bibliotecas"
             >
               ↘

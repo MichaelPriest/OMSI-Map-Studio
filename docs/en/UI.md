@@ -1042,3 +1042,6 @@ Adaptation is based on the drawer's own size, not only the global window resolut
 #### Optional manual sizing
 
 In addition to automatic sizing, Explorer/Library now has a lower-right resize handle. Users can enlarge or shrink the drawer when more room is needed for cards, filters or the 3D preview. The chosen size is persisted locally and restored on the next opening. Resizing is clamped to the usable editor area so the drawer cannot be moved off-screen by its size.
+
+
+A **double-click on the resize handle** removes the saved manual size and immediately returns the drawer to automatic content/window sizing.
