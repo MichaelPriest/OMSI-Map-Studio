@@ -321,6 +321,13 @@ export type HostMessage =
       entries: OmsiMapCatalogEntry[];
     }
   | {
+      type: "coordinateMapCreated";
+      directoryName: string;
+      displayName: string;
+      latitude: number;
+      longitude: number;
+    }
+  | {
       type: "mapOpened";
       initialTile: {
         x: number;
@@ -542,6 +549,20 @@ export function selectMap() {
 export function loadMapCatalog() {
   getWebView()?.postMessage({
     type: "loadMapCatalog"
+  });
+}
+
+export function createCoordinateMap(
+  request: {
+    directoryName: string;
+    displayName: string;
+    latitude: number;
+    longitude: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "createCoordinateMap",
+    ...request
   });
 }
 
