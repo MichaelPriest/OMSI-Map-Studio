@@ -225,6 +225,37 @@ public partial class MainWindow : Window
                     await LoadMapCatalogAsync();
                     break;
 
+                case "createCoordinateMap":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var createDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "displayName",
+                            out var createDisplayName) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "latitude",
+                            out var createLatitude) &&
+                        TryReadDouble(
+                            message.RootElement,
+                            "longitude",
+                            out var createLongitude))
+                    {
+                        await CreateCoordinateMapAsync(
+                            createDirectoryName,
+                            createDisplayName,
+                            createLatitude,
+                            createLongitude);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "openMapFromCatalog":
                     if (
                         TryReadString(
