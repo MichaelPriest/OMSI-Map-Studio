@@ -637,3 +637,12 @@ Expected manual Windows validation:
 6. return to a previously visited tile and confirm correct reload;
 7. test selection/picking after multiple tile changes;
 8. confirm **Full map** still works as a fallback/diagnostic mode.
+
+
+### Automatic streaming as the default
+
+1. open a map from the catalog and confirm it enters **Automatic streaming** directly instead of starting a full-map load;
+2. confirm the central 3×3 region receives full terrain, objects, and splines;
+3. confirm the outer ring remains summary/metadata only and does not inject objects into the viewport;
+4. move the camera into another tile and confirm the region changes automatically;
+5. use **View → Full map** and confirm the full mode can still be selected explicitly.
