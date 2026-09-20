@@ -786,6 +786,48 @@ code {
   opacity: 1;
 }
 
+.editor-menu-root {
+  position: relative;
+  height: 100%;
+}
+
+.editor-menubar .editor-menu-root > button {
+  cursor: pointer;
+}
+
+.editor-menubar .editor-menu-root > button.active,
+.editor-menubar .editor-menu-root > button:hover {
+  background: #12324a;
+  color: #eef8ff;
+}
+
+.editor-menu-popup {
+  position: absolute;
+  z-index: 80;
+  top: 100%;
+  left: 0;
+  display: grid;
+  min-width: 210px;
+  padding: 5px;
+  border: 1px solid #285674;
+  border-radius: 0 0 7px 7px;
+  background: #071725;
+  box-shadow: 0 16px 36px rgb(0 0 0 / 42%);
+}
+
+.editor-menubar .editor-menu-popup button {
+  height: 30px;
+  padding: 0 10px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.editor-menubar .editor-menu-popup button:hover {
+  background: #12324a;
+  color: #fff;
+}
+
 .editor-toolbar {
   gap: 5px;
   padding: 0 8px;
@@ -1092,6 +1134,20 @@ code {
   box-shadow: 0 12px 34px rgb(0 0 0 / 34%);
   color: #b8ccdc;
   backdrop-filter: blur(8px);
+}
+
+.floating-tool {
+  touch-action: none;
+}
+
+.drag-handle {
+  cursor: move;
+  cursor: grab;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
 }
 
 .tile-navigator-title {
@@ -2015,6 +2071,38 @@ code {
   gap: 3px;
 }
 
+.asset-preview-3d {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+  border: 1px solid #214966;
+  border-radius: 6px;
+  background: #030a10;
+}
+
+.asset-preview-3d .viewport-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.asset-preview-3d .viewport-diagnostic,
+.asset-preview-3d .reference-attribution {
+  display: none;
+}
+
+.asset-preview-3d-badge {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 3px 6px;
+  border: 1px solid #2d607f;
+  border-radius: 4px;
+  background: rgb(5 20 31 / 86%);
+  color: #a9cce3;
+  font-size: 7px;
+  pointer-events: none;
+}
+
 .scenery-library-list {
   display: flex;
   min-height: 0;
@@ -2082,9 +2170,10 @@ code {
   top: 12px;
   left: 50%;
   display: flex;
+  max-width: min(920px, calc(100% - 40px));
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  max-width: min(720px, calc(100% - 40px));
   padding: 8px 10px;
   border: 1px solid #9a5b1e;
   border-radius: 7px;
@@ -2135,6 +2224,44 @@ code {
   gap: 4px;
   color: #b8946d;
   font-size: 8px;
+}
+
+.road-curve-control {
+  display: grid !important;
+  min-width: 220px;
+  flex: 1 1 260px !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px !important;
+  padding: 6px 8px;
+  border: 1px solid #70451e;
+  border-radius: 5px;
+  background: #160f09;
+}
+
+.road-curve-control > div {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 1px;
+}
+
+.road-curve-control > div span,
+.road-curve-value {
+  color: #b8946d;
+  font-size: 8px;
+}
+
+.road-curve-control input[type="range"] {
+  width: 100%;
+  min-width: 120px;
+  accent-color: #e09145;
+}
+
+.road-curve-control .secondary-action {
+  height: 25px;
+}
+
+.road-curve-value {
+  grid-column: 1 / -1;
 }
 
 .placement-field input {
