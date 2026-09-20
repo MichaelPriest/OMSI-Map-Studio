@@ -1,3 +1,9 @@
+import expandIcon from "./icons/expand.svg?raw";
+import collapseIcon from "./icons/collapse.svg?raw";
+import settingsIcon from "./icons/settings.svg?raw";
+import toolsIcon from "./icons/tools.svg?raw";
+import openIcon from "./icons/open.svg?raw";
+import homeIcon from "./icons/home.svg?raw";
 import icon31 from "./icons/success.svg?raw";
 import icon30 from "./icons/warning.svg?raw";
 import icon29 from "./icons/discard.svg?raw";
@@ -34,6 +40,12 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "expand": expandIcon,
+  "collapse": collapseIcon,
+  "settings": settingsIcon,
+  "tools": toolsIcon,
+  "open": openIcon,
+  "home": homeIcon,
   "success": icon31,
   "warning": icon30,
   "discard": icon29,

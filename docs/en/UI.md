@@ -880,3 +880,18 @@ The old horizontal toolbar has been removed from the active layout to reduce dup
 ### Selection filters in real viewport picking
 
 The **All / Objects / Splines / Terrain** filters are now enforced directly by viewport picking, including real meshes, child hierarchies and geometric fallback. In **Objects** mode splines cannot steal the click; in **Splines** mode objects cannot steal it; and in **Terrain** mode pointerdown no longer selects scenery before terrain picking is processed.
+
+### Fullscreen visual alignment
+
+Fullscreen now follows the approved editor visual direction:
+
+- a compact project rail keeps Map Studio identity and icon navigation visible;
+- functional menus and real status remain visible at the top;
+- construction categories live at the top of the viewport;
+- the quick editing dock sits directly below the categories;
+- Explorer, Inspector, and tile navigation remain floating panels over the map;
+- the contextual subbar stays accessible near the bottom of the viewport;
+- top status exposes map-ready/dirty state, load mode, local index, and map health;
+- opening the asset shelf repositions the dock and floating panels to avoid overlap.
+
+This is a UX/layout change only: the viewport still consumes real C# host state and introduces no fake data.

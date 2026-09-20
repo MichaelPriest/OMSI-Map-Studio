@@ -293,3 +293,17 @@ Os SVGs são originais do Map Studio e não reutilizam arquivos gráficos do OMS
 - ícone da categoria ativa na prateleira de assets.
 
 Novos SVGs deste lote: `scale`, `construction-set`, `dependency`, `discard`, `warning` e `success`.
+
+### Terceiro lote migrado
+
+- navegação principal: Início, Abrir, Explorador, Ferramentas e Configurações;
+- recolher/expandir a barra lateral;
+- indicadores de etapa concluída usam o ícone `success`;
+- grupos das bibliotecas de objetos e splines usam nomes semânticos do pacote SVG em vez de símbolos Unicode;
+- fallbacks dos cartões/prateleiras de assets usam `MapStudioIcon`;
+- conjuntos de construção no HUD usam o mesmo ícone compartilhado;
+- status do menu combina `success`, `warning`, `streaming`, `asset-index` e `map-health`.
+
+Novos SVGs deste lote: `home`, `open`, `tools`, `settings`, `collapse` e `expand`.
+
+O modo tela cheia também reutiliza este mesmo sistema na navegação compacta, evitando uma identidade visual separada entre desktop e fullscreen.

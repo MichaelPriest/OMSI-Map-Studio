@@ -4699,3 +4699,241 @@ span.active {
 .status-message-heading .mapstudio-icon {
   flex: 0 0 auto;
 }
+
+
+/* Approved fullscreen concept alignment.
+   Fullscreen keeps a compact project rail, the real menu/status row,
+   construction categories at the top, a second editing dock below it,
+   and movable Explorer/Inspector panels over the viewport. */
+.studio-shell.is-fullscreen {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+
+.studio-shell.is-fullscreen > .studio-sidebar {
+  display: flex !important;
+  z-index: 10001;
+  width: 64px;
+  min-width: 64px;
+  border-right: 1px solid rgb(48 84 108 / 72%);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(8 24 37 / 98%),
+      rgb(5 16 26 / 98%)
+    );
+}
+
+.studio-shell.is-fullscreen .sidebar-brand {
+  justify-content: center;
+  min-height: 58px;
+  gap: 0;
+  padding: 9px 6px;
+}
+
+.studio-shell.is-fullscreen .brand-logo {
+  width: 34px;
+  height: 34px;
+}
+
+.studio-shell.is-fullscreen
+.sidebar-brand > div,
+.studio-shell.is-fullscreen
+.sidebar-footer,
+.studio-shell.is-fullscreen
+.sidebar-collapse-button {
+  display: none;
+}
+
+.studio-shell.is-fullscreen .sidebar-nav {
+  gap: 8px;
+  padding: 14px 7px 10px;
+}
+
+.studio-shell.is-fullscreen .nav-item {
+  position: relative;
+  display: grid;
+  min-height: 46px;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  gap: 0;
+  padding: 8px 5px;
+  overflow: visible;
+  border-radius: 9px;
+  font-size: 0;
+}
+
+.studio-shell.is-fullscreen .nav-icon {
+  display: grid;
+  place-items: center;
+  color: #a7c2d5;
+}
+
+.studio-shell.is-fullscreen .nav-check {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  width: 14px;
+  height: 14px;
+  place-items: center;
+  border-radius: 50%;
+  background: #092819;
+  color: #5fe083;
+}
+
+.map-editor.fullscreen-editor
+.citybuilder-hud {
+  top: 10px;
+  bottom: auto;
+  width: min(780px, calc(100% - 28px));
+  max-width: min(780px, calc(100% - 28px));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 6px;
+}
+
+.map-editor.fullscreen-editor
+.citybuilder-context {
+  display: none;
+}
+
+.map-editor.fullscreen-editor
+.citybuilder-main-tools {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.map-editor.fullscreen-editor
+.citybuilder-asset-shelf {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.map-editor.fullscreen-editor
+.citybuilder-subbar {
+  position: fixed;
+  z-index: 10015;
+  right: auto;
+  bottom: 30px;
+  left: calc(50% + 32px);
+  width: min(760px, calc(100vw - 104px));
+  max-width: calc(100vw - 104px);
+  transform: translateX(-50%);
+}
+
+.map-editor.fullscreen-editor
+.fullscreen-tool-dock {
+  top: 72px;
+  right: auto;
+  left: 50%;
+  max-width: calc(100% - 28px);
+  transform: translateX(-50%);
+}
+
+.map-editor.fullscreen-editor
+.fullscreen-panels {
+  display: flex;
+}
+
+.map-editor.fullscreen-editor
+.city-drawer,
+.map-editor.fullscreen-editor
+.tile-navigator {
+  top: 116px;
+}
+
+.map-editor.fullscreen-editor
+.editor-viewport:has(.citybuilder-asset-shelf)
+.fullscreen-tool-dock {
+  top: 146px;
+}
+
+.map-editor.fullscreen-editor
+.editor-viewport:has(.citybuilder-asset-shelf)
+.city-drawer,
+.map-editor.fullscreen-editor
+.editor-viewport:has(.citybuilder-asset-shelf)
+.tile-navigator {
+  top: 190px;
+}
+
+.editor-menu-status {
+  gap: 5px;
+}
+
+.editor-status-chip {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid #24485f;
+  border-radius: 999px;
+  background: #071a28;
+  color: #86a6ba;
+}
+
+.editor-status-chip strong {
+  max-width: 130px;
+  color: #9fb9c9;
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.editor-status-chip.ready {
+  border-color: #285f48;
+  color: #67d893;
+}
+
+.editor-status-chip.warning {
+  border-color: #76562b;
+  color: #f0bd68;
+}
+
+.library-group-icon,
+.library-entry-icon,
+.citybuilder-asset-icon {
+  display: grid;
+  place-items: center;
+}
+
+.library-group-icon > .mapstudio-icon,
+.library-entry-icon > .mapstudio-icon,
+.citybuilder-asset-icon > .mapstudio-icon {
+  margin: auto;
+}
+
+@media (max-width: 1180px) {
+  .editor-menu-status
+  .editor-status-chip:nth-of-type(3),
+  .editor-menu-status
+  .editor-status-chip:nth-of-type(4) {
+    display: none;
+  }
+
+  .map-editor.fullscreen-editor
+  .citybuilder-main-tools {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .studio-shell.is-fullscreen {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .studio-shell.is-fullscreen > .studio-sidebar {
+    width: 52px;
+    min-width: 52px;
+  }
+
+  .map-editor.fullscreen-editor
+  .citybuilder-subbar {
+    left: calc(50% + 26px);
+    width: calc(100vw - 76px);
+    max-width: calc(100vw - 76px);
+  }
+}

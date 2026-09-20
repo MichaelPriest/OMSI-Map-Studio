@@ -293,3 +293,17 @@ All SVG drawings are original Map Studio assets and do not reuse OMSI 2 graphica
 - active construction-category icon in the asset shelf.
 
 New SVGs in this batch: `scale`, `construction-set`, `dependency`, `discard`, `warning`, and `success`.
+
+### Third migrated batch
+
+- primary navigation: Home, Open, Explorer, Tools, and Settings;
+- sidebar collapse/expand controls;
+- completed setup steps use the shared `success` icon;
+- scenery and spline library groups use semantic SVG icon names instead of Unicode symbols;
+- asset-card/shelf fallbacks use `MapStudioIcon`;
+- construction sets in the HUD use the same shared icon;
+- menu status combines `success`, `warning`, `streaming`, `asset-index`, and `map-health`.
+
+New SVGs in this batch: `home`, `open`, `tools`, `settings`, `collapse`, and `expand`.
+
+Fullscreen also reuses the same icon system in its compact navigation rail so desktop and fullscreen do not drift into separate visual identities.

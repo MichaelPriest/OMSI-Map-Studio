@@ -30,4 +30,10 @@ export type MapStudioIconName =
   | "dependency"
   | "discard"
   | "warning"
-  | "success";
+  | "success"
+  | "home"
+  | "open"
+  | "tools"
+  | "settings"
+  | "collapse"
+  | "expand";

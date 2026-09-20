@@ -880,3 +880,18 @@ A toolbar horizontal antiga foi retirada do layout ativo para reduzir duplicaç�
 ### Filtros de seleção no picking real
 
 Os filtros **Tudo / Objetos / Splines / Terreno** agora são aplicados diretamente no picking do viewport, incluindo mesh real, hierarquia de filhos e fallback geométrico. No modo **Objetos**, splines não roubam o clique; no modo **Splines**, objetos não roubam o clique; e no modo **Terreno** o pointerdown não seleciona cenário antes do clique de terreno ser processado.
+
+### Alinhamento visual do modo tela cheia
+
+O modo tela cheia passa a seguir a direção visual aprovada para o editor:
+
+- trilho lateral compacto com identidade do Map Studio e navegação por ícones;
+- menu funcional e status reais permanecem visíveis no topo;
+- categorias de construção ficam no topo do viewport;
+- a barra rápida de edição fica logo abaixo das categorias;
+- Explorer, Inspetor e navegador de blocos continuam como painéis flutuantes sobre o mapa;
+- a subbarra contextual permanece acessível próxima à base do viewport;
+- o status superior expõe mapa pronto/alterações, modo de carregamento, índice local e saúde do mapa;
+- a abertura da prateleira de assets reposiciona dock e painéis para evitar sobreposição.
+
+A alteração é somente de UX/layout: o viewport continua consumindo o estado real do host C# e não introduz dados fictícios.

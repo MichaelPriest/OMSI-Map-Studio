@@ -65,7 +65,7 @@ import {
 } from "./bridge/desktopBridge";
 import { AssetPreview3D } from "./editor/AssetPreview3D";
 import { Viewport } from "./editor/Viewport";
-import { MapStudioIcon } from "./icons";
+import { MapStudioIcon, type MapStudioIconName } from "./icons";
 
 type AppView =
   | "home"
@@ -303,31 +303,31 @@ const matchesSmartAssetSearch = (
 const sceneryLibraryGroups: Array<{
   id: SceneryLibraryGroup;
   label: string;
-  icon: string;
+  icon: MapStudioIconName;
 }> = [
-  { id: "all", label: "Todos", icon: "▦" },
-  { id: "junctions", label: "Cruzamentos", icon: "✣" },
-  { id: "bridges", label: "Pontes", icon: "⌁" },
-  { id: "buildings", label: "Casas / prédios", icon: "⌂" },
-  { id: "vegetation", label: "Árvores / verde", icon: "♣" },
-  { id: "transit", label: "Transporte", icon: "▤" },
-  { id: "street", label: "Mobiliário", icon: "⚑" },
-  { id: "utilities", label: "Infraestrutura", icon: "⚙" },
-  { id: "other", label: "Outros", icon: "◇" }
+  { id: "all", label: "Todos", icon: "construction-set" },
+  { id: "junctions", label: "Cruzamentos", icon: "intersection" },
+  { id: "bridges", label: "Pontes", icon: "bridge" },
+  { id: "buildings", label: "Casas / prédios", icon: "building" },
+  { id: "vegetation", label: "Árvores / verde", icon: "tree" },
+  { id: "transit", label: "Transporte", icon: "transit" },
+  { id: "street", label: "Mobiliário", icon: "street-furniture" },
+  { id: "utilities", label: "Infraestrutura", icon: "utility" },
+  { id: "other", label: "Outros", icon: "sco-object" }
 ];
 
 const splineLibraryGroups: Array<{
   id: SplineLibraryGroup;
   label: string;
-  icon: string;
+  icon: MapStudioIconName;
 }> = [
-  { id: "all", label: "Todas", icon: "▦" },
-  { id: "roads", label: "Ruas", icon: "═" },
-  { id: "paths", label: "Calçadas / caminhos", icon: "┄" },
-  { id: "rail", label: "Trilhos", icon: "≋" },
-  { id: "bridges", label: "Pontes / túneis", icon: "⌁" },
-  { id: "markings", label: "Faixas / marcas", icon: "⋯" },
-  { id: "other", label: "Outras", icon: "◇" }
+  { id: "all", label: "Todas", icon: "sli-spline" },
+  { id: "roads", label: "Ruas", icon: "road" },
+  { id: "paths", label: "Calçadas / caminhos", icon: "street-furniture" },
+  { id: "rail", label: "Trilhos", icon: "transit" },
+  { id: "bridges", label: "Pontes / túneis", icon: "bridge" },
+  { id: "markings", label: "Faixas / marcas", icon: "dependency" },
+  { id: "other", label: "Outras", icon: "sli-spline" }
 ];
 
 const normalizeAssetClassifierText = (
@@ -14651,7 +14651,14 @@ export function App() {
               : "Recolher barra lateral"
           }
         >
-          {sidebarCollapsed ? "»" : "«"}
+          <MapStudioIcon
+            name={
+              sidebarCollapsed
+                ? "expand"
+                : "collapse"
+            }
+            size={15}
+          />
         </button>
       </div>
 
@@ -14668,7 +14675,7 @@ export function App() {
           }
           onClick={() => setView("home")}
         >
-          <span className="nav-icon">⌂</span>
+          <span className="nav-icon"><MapStudioIcon name="home" size={18} /></span>
           Início
         </button>
 
@@ -14681,10 +14688,10 @@ export function App() {
           }
           onClick={() => setView("omsi")}
         >
-          <span className="nav-icon">▣</span>
+          <span className="nav-icon"><MapStudioIcon name="open" size={18} /></span>
           Abrir OMSI
           {rootPath && (
-            <span className="nav-check">✓</span>
+            <span className="nav-check"><MapStudioIcon name="success" size={11} /></span>
           )}
         </button>
 
@@ -14697,10 +14704,10 @@ export function App() {
           }
           onClick={() => setView("map")}
         >
-          <span className="nav-icon">▰</span>
+          <span className="nav-icon"><MapStudioIcon name="open" size={18} /></span>
           Abrir mapa
           {selectedMap && (
-            <span className="nav-check">✓</span>
+            <span className="nav-check"><MapStudioIcon name="success" size={11} /></span>
           )}
         </button>
 
@@ -14714,7 +14721,7 @@ export function App() {
           onClick={() => setView("editor")}
           disabled={!selectedMap}
         >
-          <span className="nav-icon">◇</span>
+          <span className="nav-icon"><MapStudioIcon name="explorer" size={18} /></span>
           Explorador
         </button>
 
@@ -14727,7 +14734,7 @@ export function App() {
           }
           onClick={() => setView("tools")}
         >
-          <span className="nav-icon">⌘</span>
+          <span className="nav-icon"><MapStudioIcon name="tools" size={18} /></span>
           Ferramentas
         </button>
 
@@ -14740,7 +14747,7 @@ export function App() {
           }
           onClick={() => setView("settings")}
         >
-          <span className="nav-icon">⚙</span>
+          <span className="nav-icon"><MapStudioIcon name="settings" size={18} /></span>
           Configurações
         </button>
       </nav>
@@ -17735,17 +17742,79 @@ export function App() {
             className="editor-menu-status"
             title="Estado atual da edição"
           >
-            <strong>
-              {previewEditCount +
-                splinePreviewEditCount >
-              0
-                ? `${previewEditCount + splinePreviewEditCount} alteração(ões)`
-                : "Mapa pronto"}
-            </strong>
-            <span>
-              {mapLoadMode === "full"
-                ? "Mapa completo"
-                : "Streaming automático"}
+            <span
+              className={
+                previewEditCount +
+                    splinePreviewEditCount >
+                  0
+                  ? "editor-status-chip warning"
+                  : "editor-status-chip ready"
+              }
+            >
+              <MapStudioIcon
+                name={
+                  previewEditCount +
+                      splinePreviewEditCount >
+                    0
+                    ? "warning"
+                    : "success"
+                }
+                size={13}
+              />
+              <strong>
+                {previewEditCount +
+                    splinePreviewEditCount >
+                  0
+                  ? `${previewEditCount + splinePreviewEditCount} alteração(ões)`
+                  : "Mapa pronto"}
+              </strong>
+            </span>
+            <span className="editor-status-chip">
+              <MapStudioIcon
+                name="streaming"
+                size={13}
+              />
+              <strong>
+                {mapLoadMode === "full"
+                  ? "Mapa completo"
+                  : "Streaming automático"}
+              </strong>
+            </span>
+            <span className="editor-status-chip">
+              <MapStudioIcon
+                name="asset-index"
+                size={13}
+              />
+              <strong>
+                {assetIndexStatus.state ===
+                "indexing"
+                  ? `Índice ${assetIndexStatus.candidateFiles}`
+                  : assetIndexStatus.state ===
+                      "ready"
+                    ? `Índice ${assetIndexStatus.totalEntries}`
+                    : "Índice local"}
+              </strong>
+            </span>
+            <span
+              className={
+                mapHealthIssueCount > 0
+                  ? "editor-status-chip warning"
+                  : "editor-status-chip ready"
+              }
+            >
+              <MapStudioIcon
+                name={
+                  mapHealthIssueCount > 0
+                    ? "warning"
+                    : "map-health"
+                }
+                size={13}
+              />
+              <strong>
+                {mapHealthIssueCount > 0
+                  ? `Saúde ${mapHealthIssueCount}`
+                  : "Saúde OK"}
+              </strong>
             </span>
           </div>
         </div>
@@ -18878,7 +18947,10 @@ export function App() {
                           className="library-group-icon"
                           aria-hidden="true"
                         >
-                          {group.icon}
+                          <MapStudioIcon
+                            name={group.icon}
+                            size={22}
+                          />
                         </span>
                         <span>
                           {group.label}
@@ -19230,8 +19302,7 @@ export function App() {
                                 className="library-entry-icon"
                                 aria-hidden="true"
                               >
-                                {groupInfo?.icon ??
-                                  "◇"}
+                                <MapStudioIcon name={groupInfo?.icon ?? "sco-object"} size={24} />
                               </span>
                             )}
                             <span className="library-entry-copy">
@@ -19542,7 +19613,10 @@ export function App() {
                           className="library-group-icon"
                           aria-hidden="true"
                         >
-                          {group.icon}
+                          <MapStudioIcon
+                            name={group.icon}
+                            size={22}
+                          />
                         </span>
                         <span>
                           {group.label}
@@ -19914,8 +19988,7 @@ export function App() {
                                 className="library-entry-icon"
                                 aria-hidden="true"
                               >
-                                {groupInfo?.icon ??
-                                  "◇"}
+                                <MapStudioIcon name={groupInfo?.icon ?? "sco-object"} size={24} />
                               </span>
                             )}
                             <span className="library-entry-copy">
@@ -20216,7 +20289,10 @@ export function App() {
                   }
                   title="Conjuntos de construção"
                 >
-                  <span>▦</span>
+                  <MapStudioIcon
+                    name="construction-set"
+                    size={24}
+                  />
                   <small>Conjuntos</small>
                 </button>
 
@@ -20492,8 +20568,7 @@ export function App() {
                                     className="citybuilder-asset-icon"
                                     aria-hidden="true"
                                   >
-                                    {groupInfo?.icon ??
-                                      "═"}
+                                    <MapStudioIcon name={groupInfo?.icon ?? "sli-spline"} size={24} />
                                   </span>
                                 )}
                                 <strong>
@@ -20677,8 +20752,7 @@ export function App() {
                                   className="citybuilder-asset-icon"
                                   aria-hidden="true"
                                 >
-                                  {groupInfo?.icon ??
-                                    "◇"}
+                                  <MapStudioIcon name={groupInfo?.icon ?? "sco-object"} size={24} />
                                 </span>
                               )}
                               <strong>
