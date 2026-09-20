@@ -131,6 +131,24 @@ type ViewportProps = {
     }
   ) => void;
   roadDragMode?: boolean;
+  roadCurveControl?: {
+    start: {
+      targetTileX: number;
+      targetTileY: number;
+      x: number;
+      y: number;
+    };
+    end: {
+      targetTileX: number;
+      targetTileY: number;
+      x: number;
+      y: number;
+    };
+    offset: number;
+  };
+  onRoadCurveOffsetChange?: (
+    offset: number
+  ) => void;
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -3811,6 +3829,8 @@ export function Viewport({
   pendingSplinePlacement,
   onSplinePlacementPoint,
   roadDragMode,
+  roadCurveControl,
+  onRoadCurveOffsetChange,
   objects,
   splines,
   activeTile,
@@ -3864,6 +3884,14 @@ export function Viewport({
     );
 
   const roadDragLastEmitRef =
+    useRef(0);
+
+  const roadCurveDragPointerRef =
+    useRef<number | undefined>(
+      undefined
+    );
+
+  const roadCurveLastEmitRef =
     useRef(0);
 
   const lastMapItemClickRef =
@@ -4755,6 +4783,144 @@ export function Viewport({
     }
 
     if (
+      roadCurveControl &&
+      onRoadCurveOffsetChange &&
+      !usesWorldCoordinates
+    ) {
+      const startX =
+        roadCurveControl.start
+          .targetTileX *
+          300 +
+        roadCurveControl.start.x;
+      const startZ =
+        roadCurveControl.start
+          .targetTileY *
+          300 +
+        roadCurveControl.start.y;
+      const endX =
+        roadCurveControl.end
+          .targetTileX *
+          300 +
+        roadCurveControl.end.x;
+      const endZ =
+        roadCurveControl.end
+          .targetTileY *
+          300 +
+        roadCurveControl.end.y;
+      const deltaX =
+        endX - startX;
+      const deltaZ =
+        endZ - startZ;
+      const chord =
+        Math.hypot(
+          deltaX,
+          deltaZ
+        );
+
+      if (chord > 0.001) {
+        const middleX =
+          (startX + endX) / 2;
+        const middleZ =
+          (startZ + endZ) / 2;
+        const normalX =
+          -deltaZ / chord;
+        const normalZ =
+          deltaX / chord;
+        const handleX =
+          middleX +
+          normalX *
+            roadCurveControl.offset;
+        const handleZ =
+          middleZ +
+          normalZ *
+            roadCurveControl.offset;
+        const handleY =
+          getTerrainHeightAtWorldPoint(
+            tiles,
+            handleX,
+            handleZ
+          ) + 1.2;
+
+        const guide =
+          MeshBuilder.CreateLines(
+            "road-curve-control-guide",
+            {
+              points: [
+                new Vector3(
+                  middleX,
+                  getTerrainHeightAtWorldPoint(
+                    tiles,
+                    middleX,
+                    middleZ
+                  ) + 0.35,
+                  middleZ
+                ),
+                new Vector3(
+                  handleX,
+                  handleY,
+                  handleZ
+                )
+              ]
+            },
+            scene
+          );
+
+        guide.color =
+          new Color3(
+            0.2,
+            0.82,
+            1
+          );
+        guide.isPickable = false;
+
+        const handle =
+          MeshBuilder.CreateSphere(
+            "road-curve-control-handle",
+            {
+              diameter: 2.4,
+              segments: 12
+            },
+            scene
+          );
+
+        handle.position.set(
+          handleX,
+          handleY,
+          handleZ
+        );
+
+        const handleMaterial =
+          new StandardMaterial(
+            "road-curve-control-handle-material",
+            scene
+          );
+
+        handleMaterial.diffuseColor =
+          new Color3(
+            0.15,
+            0.65,
+            0.95
+          );
+        handleMaterial.emissiveColor =
+          new Color3(
+            0.08,
+            0.34,
+            0.52
+          );
+        handleMaterial.specularColor =
+          Color3.Black();
+
+        handle.material =
+          handleMaterial;
+        handle.isPickable = true;
+        handle.metadata = {
+          mapStudioKind:
+            "roadControl"
+        };
+      }
+    }
+
+    if (
       showSplines &&
       !usesWorldCoordinates &&
       selectedSpline &&
@@ -5246,6 +5412,38 @@ export function Viewport({
     const handlePointerMove = (
       event: PointerEvent
     ) => {
+      if (
+        roadCurveDragPointerRef.current ===
+          event.pointerId
+      ) {
+        const now =
+          performance.now();
+
+        if (
+          now -
+            roadCurveLastEmitRef.current >=
+            40
+        ) {
+          const offset =
+            getRoadCurveOffsetFromPointer(
+              event
+            );
+
+          if (
+            offset !== undefined
+          ) {
+            roadCurveLastEmitRef.current =
+              now;
+            onRoadCurveOffsetChange?.(
+              offset
+            );
+          }
+        }
+
+        event.preventDefault();
+        return;
+      }
+
       if (
         roadDragPointerRef.current ===
           event.pointerId
@@ -6005,6 +6203,135 @@ export function Viewport({
       return true;
     };
 
+    const getRoadCurveOffsetFromPointer = (
+      event: PointerEvent
+    ) => {
+      if (!roadCurveControl) {
+        return undefined;
+      }
+
+      const point =
+        getPlacementPointFromPointer(
+          event
+        );
+
+      if (!point) {
+        return undefined;
+      }
+
+      const startX =
+        roadCurveControl.start
+          .targetTileX *
+          300 +
+        roadCurveControl.start.x;
+      const startZ =
+        roadCurveControl.start
+          .targetTileY *
+          300 +
+        roadCurveControl.start.y;
+      const endX =
+        roadCurveControl.end
+          .targetTileX *
+          300 +
+        roadCurveControl.end.x;
+      const endZ =
+        roadCurveControl.end
+          .targetTileY *
+          300 +
+        roadCurveControl.end.y;
+      const deltaX =
+        endX - startX;
+      const deltaZ =
+        endZ - startZ;
+      const chord =
+        Math.hypot(
+          deltaX,
+          deltaZ
+        );
+
+      if (chord < 0.001) {
+        return undefined;
+      }
+
+      const middleX =
+        (startX + endX) / 2;
+      const middleZ =
+        (startZ + endZ) / 2;
+      const normalX =
+        -deltaZ / chord;
+      const normalZ =
+        deltaX / chord;
+      const pointX =
+        point.tileX * 300 +
+        point.x;
+      const pointZ =
+        point.tileY * 300 +
+        point.y;
+
+      const rawOffset =
+        (
+          pointX - middleX
+        ) *
+          normalX +
+        (
+          pointZ - middleZ
+        ) *
+          normalZ;
+
+      const maximum =
+        chord * 0.49;
+
+      return Math.max(
+        -maximum,
+        Math.min(
+          maximum,
+          rawOffset
+        )
+      );
+    };
+
+    const pickRoadCurveControl = (
+      event: PointerEvent
+    ) => {
+      if (
+        !roadCurveControl ||
+        !onRoadCurveOffsetChange
+      ) {
+        return false;
+      }
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const pick =
+        scene.pick(
+          (
+            event.clientX -
+            rect.left
+          ) *
+            (
+              engine.getRenderWidth() /
+              rect.width
+            ),
+          (
+            event.clientY -
+            rect.top
+          ) *
+            (
+              engine.getRenderHeight() /
+              rect.height
+            ),
+          (mesh) =>
+            mesh.metadata
+              ?.mapStudioKind ===
+            "roadControl",
+          false,
+          camera
+        );
+
+      return Boolean(pick?.hit);
+    };
+
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -6020,6 +6347,24 @@ export function Viewport({
         x: event.clientX,
         y: event.clientY
       };
+
+      if (
+        pickRoadCurveControl(
+          event
+        )
+      ) {
+        roadCurveDragPointerRef.current =
+          event.pointerId;
+        roadCurveLastEmitRef.current =
+          performance.now();
+        pointerDownHandledSelection =
+          false;
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+        event.preventDefault();
+        return;
+      }
 
       if (
         roadDragMode &&
@@ -6047,6 +6392,41 @@ export function Viewport({
     };
 
     const handlePointerUp = (event: PointerEvent) => {
+      if (
+        roadCurveDragPointerRef.current ===
+          event.pointerId
+      ) {
+        const offset =
+          getRoadCurveOffsetFromPointer(
+            event
+          );
+
+        if (
+          offset !== undefined
+        ) {
+          onRoadCurveOffsetChange?.(
+            offset
+          );
+        }
+
+        if (
+          canvas.hasPointerCapture(
+            event.pointerId
+          )
+        ) {
+          canvas.releasePointerCapture(
+            event.pointerId
+          );
+        }
+
+        roadCurveDragPointerRef.current =
+          undefined;
+        pointerStart = undefined;
+        pointerDownHandledSelection =
+          false;
+        return;
+      }
+
       if (
         roadDragPointerRef.current ===
         event.pointerId
@@ -6528,6 +6908,14 @@ export function Viewport({
       event: PointerEvent
     ) => {
       if (
+        roadCurveDragPointerRef.current ===
+        event.pointerId
+      ) {
+        roadCurveDragPointerRef.current =
+          undefined;
+      }
+
+      if (
         roadDragPointerRef.current ===
         event.pointerId
       ) {
@@ -6699,6 +7087,8 @@ export function Viewport({
     pendingSplinePlacement,
     onSplinePlacementPoint,
     roadDragMode,
+    roadCurveControl,
+    onRoadCurveOffsetChange,
     objects,
     splines,
     activeTile,
