@@ -55,6 +55,13 @@
                     <MenuFlyoutItem
                         Text="Tela cheia (F11)"
                         Click="OnFullscreenClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
+                        Text="Alternar Explorer"
+                        Click="OnToggleExplorerClick" />
+                    <MenuFlyoutItem
+                        Text="Alternar Inspector"
+                        Click="OnToggleInspectorClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Mapa" />
                 <MenuBarItem Title="Ferramentas" />
@@ -104,14 +111,22 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="1">
+        <Grid x:Name="WorkspaceGrid"
+              Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" />
+                <ColumnDefinition x:Name="ExplorerColumn"
+                                  Width="300" />
+                <ColumnDefinition x:Name="ExplorerSplitterColumn"
+                                  Width="6" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="320" />
+                <ColumnDefinition x:Name="InspectorSplitterColumn"
+                                  Width="6" />
+                <ColumnDefinition x:Name="InspectorColumn"
+                                  Width="320" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0"
+            <Border x:Name="ExplorerPanel"
+                    Grid.Column="0"
                     Margin="8"
                     Background="#0C2130"
                     CornerRadius="8">
@@ -222,12 +237,31 @@
                 </Grid>
             </Border>
 
+            <Border x:Name="ExplorerSplitter"
+                    Grid.Column="1"
+                    Margin="1,8"
+                    Background="#173347"
+                    CornerRadius="3"
+                    PointerPressed="OnPanelSplitterPointerPressed"
+                    PointerMoved="OnPanelSplitterPointerMoved"
+                    PointerReleased="OnPanelSplitterPointerReleased" />
+
             <controls:NativeViewport
                 x:Name="Viewport"
-                Grid.Column="1"
+                Grid.Column="2"
                 Margin="0,8" />
 
-            <Border Grid.Column="2"
+            <Border x:Name="InspectorSplitter"
+                    Grid.Column="3"
+                    Margin="1,8"
+                    Background="#173347"
+                    CornerRadius="3"
+                    PointerPressed="OnPanelSplitterPointerPressed"
+                    PointerMoved="OnPanelSplitterPointerMoved"
+                    PointerReleased="OnPanelSplitterPointerReleased" />
+
+            <Border x:Name="InspectorPanel"
+                    Grid.Column="4"
                     Margin="8"
                     Background="#0C2130"
                     CornerRadius="8">

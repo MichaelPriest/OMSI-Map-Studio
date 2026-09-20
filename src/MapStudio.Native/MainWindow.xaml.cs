@@ -44,6 +44,15 @@ public sealed partial class MainWindow : Window
     private CancellationTokenSource?
         _assetPreviewCancellation;
 
+    private bool _resizingExplorerPanel;
+    private bool _resizingInspectorPanel;
+
+    private double _explorerPanelWidth =
+        300;
+
+    private double _inspectorPanelWidth =
+        320;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -1259,6 +1268,220 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e) =>
         ToggleFullscreen();
+
+    private void OnToggleExplorerClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleExplorerPanel();
+
+    private void OnToggleInspectorClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleInspectorPanel();
+
+    private void ToggleExplorerPanel()
+    {
+        var visible =
+            ExplorerColumn.Width.Value >
+            0;
+
+        if (visible)
+        {
+            _explorerPanelWidth =
+                Math.Max(
+                    220,
+                    ExplorerColumn
+                        .Width.Value);
+
+            ExplorerColumn.Width =
+                new GridLength(0);
+
+            ExplorerSplitterColumn.Width =
+                new GridLength(0);
+
+            ExplorerPanel.Visibility =
+                Visibility.Collapsed;
+
+            StatusText.Text =
+                "Explorer recolhido.";
+
+            return;
+        }
+
+        ExplorerPanel.Visibility =
+            Visibility.Visible;
+
+        ExplorerColumn.Width =
+            new GridLength(
+                Math.Clamp(
+                    _explorerPanelWidth,
+                    220,
+                    520));
+
+        ExplorerSplitterColumn.Width =
+            new GridLength(6);
+
+        StatusText.Text =
+            "Explorer restaurado.";
+    }
+
+    private void ToggleInspectorPanel()
+    {
+        var visible =
+            InspectorColumn.Width.Value >
+            0;
+
+        if (visible)
+        {
+            _inspectorPanelWidth =
+                Math.Max(
+                    240,
+                    InspectorColumn
+                        .Width.Value);
+
+            InspectorColumn.Width =
+                new GridLength(0);
+
+            InspectorSplitterColumn.Width =
+                new GridLength(0);
+
+            InspectorPanel.Visibility =
+                Visibility.Collapsed;
+
+            StatusText.Text =
+                "Inspector recolhido.";
+
+            return;
+        }
+
+        InspectorPanel.Visibility =
+            Visibility.Visible;
+
+        InspectorColumn.Width =
+            new GridLength(
+                Math.Clamp(
+                    _inspectorPanelWidth,
+                    240,
+                    560));
+
+        InspectorSplitterColumn.Width =
+            new GridLength(6);
+
+        StatusText.Text =
+            "Inspector restaurado.";
+    }
+
+    private void OnPanelSplitterPointerPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (sender is not UIElement element)
+        {
+            return;
+        }
+
+        _resizingExplorerPanel =
+            ReferenceEquals(
+                sender,
+                ExplorerSplitter);
+
+        _resizingInspectorPanel =
+            ReferenceEquals(
+                sender,
+                InspectorSplitter);
+
+        if (
+            !_resizingExplorerPanel &&
+            !_resizingInspectorPanel)
+        {
+            return;
+        }
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled = true;
+    }
+
+    private void OnPanelSplitterPointerMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingExplorerPanel &&
+            !_resizingInspectorPanel)
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                WorkspaceGrid);
+
+        if (_resizingExplorerPanel)
+        {
+            var maximum =
+                Math.Max(
+                    220,
+                    Math.Min(
+                        520,
+                        WorkspaceGrid.ActualWidth -
+                            420));
+
+            _explorerPanelWidth =
+                Math.Clamp(
+                    point.Position.X,
+                    220,
+                    maximum);
+
+            ExplorerColumn.Width =
+                new GridLength(
+                    _explorerPanelWidth);
+        }
+        else if (_resizingInspectorPanel)
+        {
+            var maximum =
+                Math.Max(
+                    240,
+                    Math.Min(
+                        560,
+                        WorkspaceGrid.ActualWidth -
+                            420));
+
+            _inspectorPanelWidth =
+                Math.Clamp(
+                    WorkspaceGrid.ActualWidth -
+                        point.Position.X,
+                    240,
+                    maximum);
+
+            InspectorColumn.Width =
+                new GridLength(
+                    _inspectorPanelWidth);
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnPanelSplitterPointerReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        _resizingExplorerPanel =
+            false;
+
+        _resizingInspectorPanel =
+            false;
+
+        e.Handled = true;
+    }
+
 
     private void OnFullscreenAcceleratorInvoked(
         KeyboardAccelerator sender,

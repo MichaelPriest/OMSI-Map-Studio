@@ -281,3 +281,12 @@ Core editor shortcuts now live directly in the native host:
 - **Esc** cancels placement/construction or exits fullscreen.
 
 W/E and Ctrl+Z/Ctrl+Y do not intercept keys while focus is inside a `TextBox`, `RichEditBox`, `PasswordBox`, or `NumberBox`, preserving typing and Inspector field editing. Focus is resolved through `FocusManager` using the window `XamlRoot`.
+
+
+### Checkpoint N3.10 — resizable and collapsible native panels
+
+The WinUI workspace no longer relies on rigid widths for Explorer and Inspector. Two native separators between the side panels and the viewport let users resize them by dragging without affecting the Direct3D surface architecture.
+
+Explorer can range from 220 to 520 px and Inspector from 240 to 560 px, with additional limits that preserve a useful minimum viewport area. The latest widths are kept in memory when a panel is collapsed.
+
+The **View** menu can now toggle Explorer and Inspector independently. Collapsing sets both the panel and splitter column to zero width; restoring brings the panel back at its last used width. The `SwapChainPanel` continues reacting to `SizeChanged`, so the Direct3D backbuffer immediately follows the newly available space.

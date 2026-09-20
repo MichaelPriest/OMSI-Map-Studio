@@ -281,3 +281,12 @@ Os atalhos principais agora ficam no próprio host nativo:
 - **Esc** cancela placement/construção ou sai da tela cheia.
 
 W/E e Ctrl+Z/Ctrl+Y não interceptam teclas quando o foco está em `TextBox`, `RichEditBox`, `PasswordBox` ou `NumberBox`, preservando digitação e edição dos campos do Inspector. O foco é consultado pelo `FocusManager` usando o `XamlRoot` da janela.
+
+
+### Checkpoint N3.10 — painéis nativos redimensionáveis e recolhíveis
+
+O workspace WinUI deixa de usar larguras rígidas para Explorer e Inspector. Dois separadores nativos entre os painéis e o viewport permitem ajustar a largura por arraste sem afetar a superfície Direct3D.
+
+O Explorer pode variar entre 220 e 520 px e o Inspector entre 240 e 560 px, com limites adicionais para preservar uma área mínima útil do viewport. As últimas larguras são mantidas em memória ao recolher o painel.
+
+O menu **Visualizar** agora permite alternar Explorer e Inspector individualmente. Ao recolher, tanto o painel quanto a coluna do separador ficam com largura zero; ao restaurar, o painel retorna à última largura usada. O `SwapChainPanel` continua reagindo ao `SizeChanged`, então o backbuffer Direct3D acompanha imediatamente o novo espaço disponível.
