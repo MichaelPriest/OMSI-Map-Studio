@@ -4172,3 +4172,52 @@ span.active {
     max-width: 42vw;
   }
 }
+
+
+/* Functional compact top menu: real editor actions only, with current map/edit state
+   kept visible in both desktop and fullscreen. */
+.editor-menu-spacer {
+  flex: 1 1 auto;
+  min-width: 10px;
+}
+
+.editor-menu-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  color: #66879d;
+  font-size: 7px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.editor-menu-status strong {
+  overflow: hidden;
+  max-width: 180px;
+  color: #a7c1d2;
+  font-size: 7px;
+  text-overflow: ellipsis;
+}
+
+.editor-menubar .editor-menu-popup button:disabled {
+  color: #476173;
+  cursor: default;
+  opacity: 0.58;
+}
+
+.editor-menubar .editor-menu-popup button:disabled:hover {
+  background: transparent;
+  color: #476173;
+}
+
+@media (max-width: 860px) {
+  .editor-menu-status span {
+    display: none;
+  }
+
+  .editor-menu-status strong {
+    max-width: 110px;
+  }
+}
