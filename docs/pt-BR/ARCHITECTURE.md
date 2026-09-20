@@ -634,3 +634,20 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 - `[rendertype]` dos SCOs passa a ser preservado no Core e entregue ao viewport;
 - objetos declarados como `surface`, `on_surface` ou `presurface` usam a textura diffuse real também no caminho não iluminado do preview, sem alterar coordenadas nem aumentar offsets;
 - ruas SLI usam a própria textura OMSI nos canais diffuse/emissive do material não iluminado para evitar o preto causado pela combinação anterior de `disableLighting` com emissive ausente.
+
+
+## Terreno real, criação por coordenadas e editor — pós-test.35
+
+- o clique no cenário usa `multiPick` e percorre a hierarquia real dos meshes; o bloqueio antigo em mapas com `[worldcoordinates]` foi removido da seleção, permitindo selecionar objetos e splines visíveis;
+- ao selecionar objeto ou spline pelo cenário, o Inspetor abre diretamente a aba de transformação para editar o item marcado;
+- `Ctrl + setas/WASD` desloca a câmera em incrementos de um tile de 300 m e sincroniza o tile ativo;
+- terreno e superfície plana de fallback são pickables no modo Terreno; o clique retorna tile, coordenadas locais e altura;
+- objetos e splines escolhidos nas bibliotecas aparecem como prévia real no centro do tile ativo antes da colocação definitiva;
+- o criador fácil de rua usa dois cliques: primeiro ponto, segundo ponto, cálculo de comprimento/rotação e sugestão de gradiente com base no terreno carregado;
+- ruas existentes e ruas em prévia possuem ação de nivelamento pela altura real do terreno no início e fim;
+- o nivelamento manual de terreno grava o `.terrain` real com pincel circular, raio e feather, sempre com backup preservativo;
+- a referência de mapa real usa Google Static Maps somente quando o usuário fornece sua própria chave; a imagem é projetada sobre o relevo e mantém atribuição visual;
+- a grade de elevação usa Google Elevation em amostras 9×9, 17×17, 25×25 ou 33×33; os valores são reamostrados bilinearmente para a resolução nativa do `.terrain` e escritos com backup;
+- o offset vertical é explícito: zero aplica altitude real em metros; mapas que usam datum local podem informar um deslocamento antes de gravar;
+- **Criar mapa real** clona exclusivamente `OMSI 2\template\NewMap` da instalação do usuário para `maps\<nova pasta>`, altera nome/friendlyname preservando encoding, cria `.mapstudio/georeference.json` e abre o mapa criado;
+- essa criação por coordenadas ainda **não injeta nem converte automaticamente o formato oficial `[worldcoordinates]` do OMSI**. A âncora atual pertence ao Map Studio; a conversão oficial será liberada somente após validarmos todos os campos/arquivos exigidos pelo OMSI.
