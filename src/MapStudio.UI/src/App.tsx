@@ -9205,6 +9205,9 @@ export function App() {
                         }
                         key={key}
                         onClick={() => {
+                          setSelectionMode(
+                            "object"
+                          );
                           handleObjectSelection(
                             placedObject
                           );
@@ -9279,6 +9282,9 @@ export function App() {
                         }
                         key={key}
                         onClick={() => {
+                          setSelectionMode(
+                            "spline"
+                          );
                           handleSplineSelection(
                             placedSpline
                           );
