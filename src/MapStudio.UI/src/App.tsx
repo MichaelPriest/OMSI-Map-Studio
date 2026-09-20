@@ -3052,6 +3052,8 @@ export function App() {
     type FloatingPosition = {
       left: number;
       top: number;
+      width?: number;
+      height?: number;
     };
 
     const storageKey =
@@ -3080,7 +3082,8 @@ export function App() {
 
     const writePosition = (
       key: string,
-      position: FloatingPosition
+      position:
+        Partial<FloatingPosition>
     ) => {
       try {
         const current =
@@ -3090,7 +3093,13 @@ export function App() {
           storageKey,
           JSON.stringify({
             ...current,
-            [key]: position
+            [key]: {
+              ...(current[key] ?? {
+                left: 0,
+                top: 0
+              }),
+              ...position
+            }
           })
         );
       } catch {
@@ -3161,6 +3170,52 @@ export function App() {
           window.innerWidth,
           window.innerHeight
         );
+
+      if (
+        panel.hasAttribute(
+          "data-resizable-tool"
+        )
+      ) {
+        if (
+          typeof position.width ===
+            "number" &&
+          Number.isFinite(
+            position.width
+          )
+        ) {
+          panel.style.width =
+            `${Math.min(
+              Math.max(
+                340,
+                position.width
+              ),
+              Math.max(
+                340,
+                parentRect.width - 16
+              )
+            )}px`;
+        }
+
+        if (
+          typeof position.height ===
+            "number" &&
+          Number.isFinite(
+            position.height
+          )
+        ) {
+          panel.style.height =
+            `${Math.min(
+              Math.max(
+                360,
+                position.height
+              ),
+              Math.max(
+                360,
+                parentRect.height - 16
+              )
+            )}px`;
+        }
+      }
 
       const panelRect =
         panel.getBoundingClientRect();
@@ -3240,6 +3295,19 @@ export function App() {
         }
       | undefined;
 
+    let resize:
+      | {
+          panel: HTMLElement;
+          key: string;
+          pointerId: number;
+          startX: number;
+          startY: number;
+          startWidth: number;
+          startHeight: number;
+          parentRect: DOMRect;
+        }
+      | undefined;
+
     const handlePointerDown = (
       event: PointerEvent
     ) => {
@@ -3248,6 +3316,74 @@ export function App() {
         !(event.target instanceof
           HTMLElement)
       ) {
+        return;
+      }
+
+      const resizeHandle =
+        event.target.closest(
+          "[data-resize-handle]"
+        ) as HTMLElement | null;
+
+      const resizePanel =
+        resizeHandle?.closest(
+          "[data-floating-tool]"
+        ) as HTMLElement | null;
+
+      if (
+        resizeHandle &&
+        resizePanel &&
+        resizePanel.hasAttribute(
+          "data-resizable-tool"
+        )
+      ) {
+        applySavedPosition(
+          resizePanel
+        );
+
+        const rect =
+          resizePanel
+            .getBoundingClientRect();
+
+        const parent =
+          resizePanel.offsetParent as
+            | HTMLElement
+            | null;
+
+        const parentRect =
+          parent
+            ?.getBoundingClientRect() ??
+          new DOMRect(
+            0,
+            0,
+            window.innerWidth,
+            window.innerHeight
+          );
+
+        resize = {
+          panel: resizePanel,
+          key:
+            getPanelKey(
+              resizePanel
+            ),
+          pointerId:
+            event.pointerId,
+          startX:
+            event.clientX,
+          startY:
+            event.clientY,
+          startWidth:
+            rect.width,
+          startHeight:
+            rect.height,
+          parentRect
+        };
+
+        resizeHandle
+          .setPointerCapture?.(
+            event.pointerId
+          );
+
+        event.preventDefault();
         return;
       }
 
@@ -3322,6 +3458,69 @@ export function App() {
       event: PointerEvent
     ) => {
       if (
+        resize &&
+        resize.pointerId ===
+          event.pointerId
+      ) {
+        const panelRect =
+          resize.panel
+            .getBoundingClientRect();
+
+        const left =
+          panelRect.left -
+          resize.parentRect.left;
+        const top =
+          panelRect.top -
+          resize.parentRect.top;
+
+        const maximumWidth =
+          Math.max(
+            340,
+            resize.parentRect.width -
+              Math.max(0, left) -
+              8
+          );
+
+        const maximumHeight =
+          Math.max(
+            360,
+            resize.parentRect.height -
+              Math.max(0, top) -
+              8
+          );
+
+        const width =
+          Math.min(
+            maximumWidth,
+            Math.max(
+              340,
+              resize.startWidth +
+                event.clientX -
+                resize.startX
+            )
+          );
+
+        const height =
+          Math.min(
+            maximumHeight,
+            Math.max(
+              360,
+              resize.startHeight +
+                event.clientY -
+                resize.startY
+            )
+          );
+
+        resize.panel.style.width =
+          `${width}px`;
+        resize.panel.style.height =
+          `${height}px`;
+
+        event.preventDefault();
+        return;
+      }
+
+      if (
         !drag ||
         drag.pointerId !==
           event.pointerId
@@ -3379,6 +3578,27 @@ export function App() {
     const handlePointerUp = (
       event: PointerEvent
     ) => {
+      if (
+        resize &&
+        resize.pointerId ===
+          event.pointerId
+      ) {
+        const rect =
+          resize.panel
+            .getBoundingClientRect();
+
+        writePosition(
+          resize.key,
+          {
+            width: rect.width,
+            height: rect.height
+          }
+        );
+
+        resize = undefined;
+        return;
+      }
+
       if (
         !drag ||
         drag.pointerId !==
@@ -18493,6 +18713,7 @@ export function App() {
         <div className="editor-grid">
           <aside
             data-floating-tool
+            data-resizable-tool
             data-floating-tool-id="explorer-drawer"
             className={[
               "map-explorer city-drawer city-drawer-left",
@@ -18512,6 +18733,15 @@ export function App() {
               .filter(Boolean)
               .join(" ")}
           >
+            <button
+              type="button"
+              className="city-drawer-resize-handle"
+              data-resize-handle
+              title="Arraste para redimensionar o Explorer/Biblioteca"
+              aria-label="Redimensionar Explorer e bibliotecas"
+            >
+              ↘
+            </button>
             <button
               type="button"
               className="city-drawer-drag-grip"

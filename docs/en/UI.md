@@ -1037,3 +1037,8 @@ The side drawer no longer uses one fixed width for every kind of content. Its si
 - height is bounded by the real editor area to avoid clipped content on smaller displays.
 
 Adaptation is based on the drawer's own size, not only the global window resolution, so content remains organized in fullscreen and after moving the floating panel.
+
+
+#### Optional manual sizing
+
+In addition to automatic sizing, Explorer/Library now has a lower-right resize handle. Users can enlarge or shrink the drawer when more room is needed for cards, filters or the 3D preview. The chosen size is persisted locally and restored on the next opening. Resizing is clamped to the usable editor area so the drawer cannot be moved off-screen by its size.

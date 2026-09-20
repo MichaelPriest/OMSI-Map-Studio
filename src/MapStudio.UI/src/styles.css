@@ -6602,3 +6602,39 @@ span.active {
       calc(100vw - 28px);
   }
 }
+
+
+/* Manual override for the adaptive Explorer/Library.
+   Automatic sizing remains the default; drag the lower-right corner
+   when a specific library needs more working space. */
+.city-drawer-resize-handle {
+  position: absolute;
+  z-index: 14;
+  right: 5px;
+  bottom: 5px;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid #315d78;
+  border-radius: 5px;
+  background: rgb(6 24 36 / 92%);
+  color: #7ea9c5;
+  font-size: 12px;
+  line-height: 1;
+  cursor: nwse-resize;
+  touch-action: none;
+  opacity: 0.76;
+}
+
+.city-drawer-resize-handle:hover {
+  border-color: #4c9bd0;
+  color: #c3e7fb;
+  opacity: 1;
+}
+
+.map-explorer[data-resizable-tool] {
+  min-width: 340px;
+  min-height: 360px;
+}

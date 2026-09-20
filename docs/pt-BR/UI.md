@@ -1037,3 +1037,8 @@ O painel lateral não usa mais uma única largura fixa para todos os conteúdos.
 - a altura é limitada pela área real do editor para evitar conteúdo cortado em resoluções menores.
 
 A adaptação usa o tamanho do próprio painel, não apenas a resolução global da janela, de modo que o conteúdo continue organizado mesmo em fullscreen ou quando o painel flutuante é reposicionado.
+
+
+#### Ajuste manual opcional
+
+Além do dimensionamento automático, o Explorer/Biblioteca possui uma alça no canto inferior direito. O usuário pode ampliar ou reduzir o painel quando precisar de mais espaço para cards, filtros ou preview 3D. O tamanho escolhido é persistido localmente e restaurado na próxima abertura. O redimensionamento é limitado à área útil do editor para impedir que o painel fique fora da tela.
