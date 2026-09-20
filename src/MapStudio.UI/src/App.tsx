@@ -2993,6 +2993,42 @@ export function App() {
     }
   }, [isFullScreen]);
 
+  const handleViewportActiveTileChange =
+    useCallback(
+      (tile: {
+        x: number;
+        y: number;
+      }) => {
+        if (
+          tile.x === activeTile?.x &&
+          tile.y === activeTile?.y
+        ) {
+          return;
+        }
+
+        setActiveTile(tile);
+        setTerrainEditPoint(undefined);
+        setGoogleElevationGrid(undefined);
+
+        if (
+          mapLoadMode ===
+          "performance"
+        ) {
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+        }
+
+        setSelectedObject(undefined);
+        setSelectedSpline(undefined);
+      },
+      [
+        activeTile?.x,
+        activeTile?.y,
+        mapLoadMode
+      ]
+    );
+
   const requestFullScreen =
     useCallback(
       (enabled: boolean) => {
@@ -21668,42 +21704,7 @@ export function App() {
                 referenceOverlay
               }
               onActiveTileChange={
-                (tile) => {
-                  if (
-                    tile.x ===
-                      activeTile?.x &&
-                    tile.y ===
-                      activeTile?.y
-                  ) {
-                    return;
-                  }
-
-                  setActiveTile(tile);
-                  setTerrainEditPoint(
-                    undefined
-                  );
-                  setGoogleElevationGrid(
-                    undefined
-                  );
-
-                  if (
-                    mapLoadMode ===
-                    "performance"
-                  ) {
-                    setLoadedRegionKey(
-                      undefined
-                    );
-                    setObjects([]);
-                    setSplines([]);
-                  }
-
-                  setSelectedObject(
-                    undefined
-                  );
-                  setSelectedSpline(
-                    undefined
-                  );
-                }
+                handleViewportActiveTileChange
               }
               usesWorldCoordinates={
                 selectedMap.usesWorldCoordinates

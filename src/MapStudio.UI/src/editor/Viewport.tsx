@@ -4020,6 +4020,34 @@ export function Viewport({
   const captureThumbnail =
     Boolean(onThumbnailReady);
 
+  const callbacksRef = useRef({
+    onPlacementPoint,
+    onLibraryAssetDrop,
+    onSplinePlacementPoint,
+    onRoadCurveOffsetChange,
+    onRoadControlPointChange,
+    onActiveTileChange,
+    onTerrainPoint,
+    onSelectObject,
+    onSelectSpline,
+    onPreviewObjectTransform,
+    onPreviewSplineTransform
+  });
+
+  callbacksRef.current = {
+    onPlacementPoint,
+    onLibraryAssetDrop,
+    onSplinePlacementPoint,
+    onRoadCurveOffsetChange,
+    onRoadControlPointChange,
+    onActiveTileChange,
+    onTerrainPoint,
+    onSelectObject,
+    onSelectSpline,
+    onPreviewObjectTransform,
+    onPreviewSplineTransform
+  };
+
   const [
     viewportDiagnostic,
     setViewportDiagnostic
@@ -5216,7 +5244,7 @@ export function Viewport({
 
     if (
       roadCurveControl &&
-      onRoadCurveOffsetChange &&
+      callbacksRef.current.onRoadCurveOffsetChange &&
       !usesWorldCoordinates
     ) {
       const startX =
@@ -5354,7 +5382,7 @@ export function Viewport({
 
     if (
       roadCurveControl &&
-      onRoadControlPointChange &&
+      callbacksRef.current.onRoadControlPointChange &&
       !usesWorldCoordinates
     ) {
       const endpointDefinitions:
@@ -5657,7 +5685,7 @@ export function Viewport({
           editRoot.rotation;
 
         if (selectedObject) {
-          onPreviewObjectTransform({
+          callbacksRef.current.onPreviewObjectTransform({
             ...selectedObject,
             x:
               editRoot.position.x -
@@ -5693,7 +5721,7 @@ export function Viewport({
         }
 
         if (selectedSpline) {
-          onPreviewSplineTransform({
+          callbacksRef.current.onPreviewSplineTransform({
             ...selectedSpline,
             x:
               editRoot.position.x -
@@ -5913,7 +5941,7 @@ export function Viewport({
     const syncActiveTileToTarget = () => {
       if (
         usesWorldCoordinates ||
-        !onActiveTileChange ||
+        !callbacksRef.current.onActiveTileChange ||
         tiles.length === 0
       ) {
         return;
@@ -5935,7 +5963,7 @@ export function Viewport({
             tile.y === tileY
         )
       ) {
-        onActiveTileChange({
+        callbacksRef.current.onActiveTileChange({
           x: tileX,
           y: tileY
         });
@@ -6037,7 +6065,7 @@ export function Viewport({
             roadEndpointLastEmitRef
               .current =
               now;
-            onRoadControlPointChange?.(
+            callbacksRef.current.onRoadControlPointChange?.(
               control,
               {
                 targetTileX:
@@ -6077,7 +6105,7 @@ export function Viewport({
           ) {
             roadCurveLastEmitRef.current =
               now;
-            onRoadCurveOffsetChange?.(
+            callbacksRef.current.onRoadCurveOffsetChange?.(
               offset
             );
           }
@@ -6872,8 +6900,8 @@ export function Viewport({
           picked.diagnostic
         );
 
-        onSelectSpline(undefined);
-        onSelectObject(
+        callbacksRef.current.onSelectSpline(undefined);
+        callbacksRef.current.onSelectObject(
           picked.item
         );
 
@@ -6896,8 +6924,8 @@ export function Viewport({
         picked.diagnostic
       );
 
-      onSelectObject(undefined);
-      onSelectSpline(
+      callbacksRef.current.onSelectObject(undefined);
+      callbacksRef.current.onSelectSpline(
         picked.item
       );
 
@@ -7101,7 +7129,7 @@ export function Viewport({
     ) => {
       if (
         !splinePlacementTemplate ||
-        !onSplinePlacementPoint ||
+        !callbacksRef.current.onSplinePlacementPoint ||
         usesWorldCoordinates
       ) {
         return false;
@@ -7116,7 +7144,7 @@ export function Viewport({
         return false;
       }
 
-      onSplinePlacementPoint({
+      callbacksRef.current.onSplinePlacementPoint({
         targetTileX: point.tileX,
         targetTileY: point.tileY,
         x: point.x,
@@ -7221,7 +7249,7 @@ export function Viewport({
       | undefined => {
       if (
         !roadCurveControl ||
-        !onRoadControlPointChange
+        !callbacksRef.current.onRoadControlPointChange
       ) {
         return undefined;
       }
@@ -7275,7 +7303,7 @@ export function Viewport({
     ) => {
       if (
         !roadCurveControl ||
-        !onRoadCurveOffsetChange
+        !callbacksRef.current.onRoadCurveOffsetChange
       ) {
         return false;
       }
@@ -7373,7 +7401,7 @@ export function Viewport({
       if (
         roadDragMode &&
         splinePlacementTemplate &&
-        onSplinePlacementPoint &&
+        callbacksRef.current.onSplinePlacementPoint &&
         emitSplineRoadPoint(event)
       ) {
         roadDragPointerRef.current =
@@ -7413,7 +7441,7 @@ export function Viewport({
           point &&
           control
         ) {
-          onRoadControlPointChange?.(
+          callbacksRef.current.onRoadControlPointChange?.(
             control,
             {
               targetTileX:
@@ -7460,7 +7488,7 @@ export function Viewport({
         if (
           offset !== undefined
         ) {
-          onRoadCurveOffsetChange?.(
+          callbacksRef.current.onRoadCurveOffsetChange?.(
             offset
           );
         }
@@ -7557,11 +7585,11 @@ export function Viewport({
       if (
         (
           placementAssetPath &&
-          onPlacementPoint
+          callbacksRef.current.onPlacementPoint
         ) ||
         (
           splinePlacementTemplate &&
-          onSplinePlacementPoint
+          callbacksRef.current.onSplinePlacementPoint
         )
       ) {
         if (
@@ -7630,9 +7658,9 @@ export function Viewport({
 
               if (
                 placementAssetPath &&
-                onPlacementPoint
+                callbacksRef.current.onPlacementPoint
               ) {
-                onPlacementPoint({
+                callbacksRef.current.onPlacementPoint({
                   tileX,
                   tileY,
                   x: snappedX,
@@ -7646,9 +7674,9 @@ export function Viewport({
 
               if (
                 splinePlacementTemplate &&
-                onSplinePlacementPoint
+                callbacksRef.current.onSplinePlacementPoint
               ) {
-                onSplinePlacementPoint({
+                callbacksRef.current.onSplinePlacementPoint({
                   targetTileX: tileX,
                   targetTileY: tileY,
                   x: snappedX,
@@ -7657,9 +7685,9 @@ export function Viewport({
               }
 
               if (
-                onActiveTileChange
+                callbacksRef.current.onActiveTileChange
               ) {
-                onActiveTileChange({
+                callbacksRef.current.onActiveTileChange({
                   x: tileX,
                   y: tileY
                 });
@@ -7733,10 +7761,10 @@ export function Viewport({
               "global.cfg / .map.terrain"
           });
 
-          onSelectObject(undefined);
-          onSelectSpline(undefined);
+          callbacksRef.current.onSelectObject(undefined);
+          callbacksRef.current.onSelectSpline(undefined);
 
-          onTerrainPoint?.({
+          callbacksRef.current.onTerrainPoint?.({
             tileX,
             tileY,
             x: localX,
@@ -7744,7 +7772,7 @@ export function Viewport({
             height: point.y
           });
 
-          onActiveTileChange?.({
+          callbacksRef.current.onActiveTileChange?.({
             x: tileX,
             y: tileY
           });
@@ -7825,8 +7853,8 @@ export function Viewport({
             selected.sceneryObjectPath
         });
 
-        onSelectSpline(undefined);
-        onSelectObject(selected);
+        callbacksRef.current.onSelectSpline(undefined);
+        callbacksRef.current.onSelectObject(selected);
         return;
       }
 
@@ -7862,8 +7890,8 @@ export function Viewport({
           splines[splineIndex];
 
         if (placedSpline) {
-          onSelectObject(undefined);
-          onSelectSpline(
+          callbacksRef.current.onSelectObject(undefined);
+          callbacksRef.current.onSelectSpline(
             placedSpline
           );
           return;
@@ -7873,12 +7901,12 @@ export function Viewport({
       setViewportDiagnostic(
         undefined
       );
-      onSelectObject(undefined);
-      onSelectSpline(undefined);
+      callbacksRef.current.onSelectObject(undefined);
+      callbacksRef.current.onSelectSpline(undefined);
 
       if (
         !usesWorldCoordinates &&
-        onActiveTileChange &&
+        callbacksRef.current.onActiveTileChange &&
         Math.abs(direction.y) >
           0.000001
       ) {
@@ -7939,7 +7967,7 @@ export function Viewport({
               });
             }
 
-            onActiveTileChange({
+            callbacksRef.current.onActiveTileChange({
               x: tileX,
               y: tileY
             });
@@ -7952,7 +7980,7 @@ export function Viewport({
       event: DragEvent
     ) => {
       if (
-        !onLibraryAssetDrop ||
+        !callbacksRef.current.onLibraryAssetDrop ||
         !Array.from(
           event.dataTransfer?.types ?? []
         ).some(
@@ -7977,7 +8005,7 @@ export function Viewport({
     const handleAssetDrop = (
       event: DragEvent
     ) => {
-      if (!onLibraryAssetDrop) {
+      if (!callbacksRef.current.onLibraryAssetDrop) {
         return;
       }
 
@@ -8005,7 +8033,7 @@ export function Viewport({
 
       event.preventDefault();
 
-      onLibraryAssetDrop({
+      callbacksRef.current.onLibraryAssetDrop({
         kind: sceneryPath
           ? "object"
           : "spline",
@@ -8016,7 +8044,7 @@ export function Viewport({
         point
       });
 
-      onActiveTileChange?.({
+      callbacksRef.current.onActiveTileChange?.({
         x: point.tileX,
         y: point.tileY
       });
@@ -8325,22 +8353,15 @@ export function Viewport({
     placementGeometry,
     pendingPlacement,
     pendingPlacementBatch,
-    onPlacementPoint,
-    onLibraryAssetDrop,
     captureThumbnail,
     splinePlacementTemplate,
     splinePlacementProfile,
     pendingSplinePlacement,
-    onSplinePlacementPoint,
     roadDragMode,
     roadCurveControl,
-    onRoadCurveOffsetChange,
-    onRoadControlPointChange,
     objects,
     splines,
     activeTile,
-    onActiveTileChange,
-    onTerrainPoint,
     referenceOverlay,
     usesWorldCoordinates,
     selectedObject,
@@ -8350,10 +8371,6 @@ export function Viewport({
     splineProfilesByPath,
     selectedSpline,
     selectedSplineProfile,
-    onSelectObject,
-    onSelectSpline,
-    onPreviewObjectTransform,
-    onPreviewSplineTransform
   ]);
 
   const selectedViewportPath =
