@@ -5448,6 +5448,430 @@ export function App() {
       ]
     );
 
+  const handleLevelSelectedSplineToTerrain =
+    useCallback(() => {
+      if (!selectedSpline) {
+        return;
+      }
+
+      const startHeight =
+        sampleTerrainHeight(
+          activeTiles,
+          selectedSpline.tileX,
+          selectedSpline.tileY,
+          selectedSpline.x,
+          selectedSpline.y
+        );
+
+      if (
+        startHeight === undefined ||
+        selectedSpline.length <= 0
+      ) {
+        setError(
+          "Não há terreno carregado suficiente para nivelar esta rua."
+        );
+        return;
+      }
+
+      const yaw =
+        selectedSpline.rotation *
+        Math.PI /
+        180;
+
+      const endWorldX =
+        selectedSpline.tileX *
+          300 +
+        selectedSpline.x +
+        Math.sin(yaw) *
+          selectedSpline.length;
+
+      const endWorldY =
+        selectedSpline.tileY *
+          300 +
+        selectedSpline.y +
+        Math.cos(yaw) *
+          selectedSpline.length;
+
+      const endTileX =
+        Math.floor(
+          endWorldX / 300
+        );
+      const endTileY =
+        Math.floor(
+          endWorldY / 300
+        );
+
+      const endHeight =
+        sampleTerrainHeight(
+          activeTiles,
+          endTileX,
+          endTileY,
+          endWorldX -
+            endTileX * 300,
+          endWorldY -
+            endTileY * 300
+        );
+
+      if (endHeight === undefined) {
+        setError(
+          "O terreno do fim da rua não está carregado. Mova para o bloco vizinho ou use o mapa completo."
+        );
+        return;
+      }
+
+      const gradient =
+        (
+          (endHeight -
+            startHeight) /
+          selectedSpline.length
+        ) *
+        100;
+
+      handlePreviewSplineTransform({
+        ...selectedSpline,
+        z: startHeight,
+        gradientStart: gradient,
+        gradientEnd: gradient
+      });
+
+      setEditorTool("move");
+      setSaveNotice(
+        `Rua nivelada pela altura real do terreno: ${formatNumber(startHeight)} → ${formatNumber(endHeight)} m.`
+      );
+      setError(undefined);
+    }, [
+      activeTiles,
+      handlePreviewSplineTransform,
+      selectedSpline
+    ]);
+
+  const handleLevelPendingRoadToTerrain =
+    useCallback(() => {
+      if (
+        !pendingSplinePlacement ||
+        pendingSplinePlacement.length <= 0
+      ) {
+        return;
+      }
+
+      const startHeight =
+        sampleTerrainHeight(
+          activeTiles,
+          pendingSplinePlacement
+            .targetTileX,
+          pendingSplinePlacement
+            .targetTileY,
+          pendingSplinePlacement.x,
+          pendingSplinePlacement.y
+        );
+
+      if (startHeight === undefined) {
+        setError(
+          "O terreno no início da rua não está carregado."
+        );
+        return;
+      }
+
+      const yaw =
+        pendingSplinePlacement
+          .rotation *
+        Math.PI /
+        180;
+
+      const endWorldX =
+        pendingSplinePlacement
+          .targetTileX *
+          300 +
+        pendingSplinePlacement.x +
+        Math.sin(yaw) *
+          pendingSplinePlacement
+            .length;
+
+      const endWorldY =
+        pendingSplinePlacement
+          .targetTileY *
+          300 +
+        pendingSplinePlacement.y +
+        Math.cos(yaw) *
+          pendingSplinePlacement
+            .length;
+
+      const endTileX =
+        Math.floor(
+          endWorldX / 300
+        );
+      const endTileY =
+        Math.floor(
+          endWorldY / 300
+        );
+
+      const endHeight =
+        sampleTerrainHeight(
+          activeTiles,
+          endTileX,
+          endTileY,
+          endWorldX -
+            endTileX * 300,
+          endWorldY -
+            endTileY * 300
+        );
+
+      if (endHeight === undefined) {
+        setError(
+          "O terreno no fim da rua não está carregado."
+        );
+        return;
+      }
+
+      const gradient =
+        (
+          (endHeight -
+            startHeight) /
+          pendingSplinePlacement
+            .length
+        ) *
+        100;
+
+      setPendingSplinePlacement(
+        (current) =>
+          current
+            ? {
+                ...current,
+                z: startHeight,
+                gradientStart:
+                  gradient,
+                gradientEnd:
+                  gradient
+              }
+            : current
+      );
+
+      setSaveNotice(
+        `Nivelamento sugerido pelo terreno: ${formatNumber(startHeight)} → ${formatNumber(endHeight)} m.`
+      );
+      setError(undefined);
+    }, [
+      activeTiles,
+      pendingSplinePlacement
+    ]);
+
+  const handleTerrainPoint =
+    useCallback(
+      (point: {
+        tileX: number;
+        tileY: number;
+        x: number;
+        y: number;
+        height: number;
+      }) => {
+        setTerrainEditPoint(
+          point
+        );
+        setTerrainTargetHeight(
+          point.height
+        );
+        setGeorefAnchor({
+          tileX: point.tileX,
+          tileY: point.tileY,
+          x: point.x,
+          y: point.y
+        });
+        setInspectorTab(
+          "transform"
+        );
+      },
+      []
+    );
+
+  const handleLevelTerrain =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !terrainEditPoint ||
+        savingTerrain
+      ) {
+        return;
+      }
+
+      setSavingTerrain(true);
+      setError(undefined);
+      setSaveNotice(undefined);
+
+      levelTerrain(
+        selectedMap.directoryName,
+        {
+          tileX:
+            terrainEditPoint.tileX,
+          tileY:
+            terrainEditPoint.tileY,
+          x: terrainEditPoint.x,
+          y: terrainEditPoint.y,
+          targetHeight:
+            terrainTargetHeight,
+          radius:
+            terrainBrushRadius,
+          feather:
+            terrainBrushFeather
+        }
+      );
+    }, [
+      savingTerrain,
+      selectedMap,
+      terrainBrushFeather,
+      terrainBrushRadius,
+      terrainEditPoint,
+      terrainTargetHeight
+    ]);
+
+  const handleLoadGoogleReference =
+    useCallback(() => {
+      const latitude =
+        Number(
+          googleLatitude
+            .replace(",", ".")
+        );
+
+      const longitude =
+        Number(
+          googleLongitude
+            .replace(",", ".")
+        );
+
+      if (
+        !bridgeAvailable ||
+        !googleApiKey.trim() ||
+        !Number.isFinite(
+          latitude) ||
+        !Number.isFinite(
+          longitude)
+      ) {
+        setError(
+          "Informe a chave da API do Google e coordenadas válidas."
+        );
+        return;
+      }
+
+      if (activeTile) {
+        setGeorefAnchor(
+          (current) => ({
+            ...current,
+            tileX:
+              activeTile.x,
+            tileY:
+              activeTile.y
+          })
+        );
+      }
+
+      setLoadingGoogleReference(
+        true
+      );
+      setError(undefined);
+      setSaveNotice(undefined);
+
+      loadGoogleMapReference(
+        googleApiKey.trim(),
+        {
+          latitude,
+          longitude,
+          zoom: googleZoom,
+          mapType:
+            googleMapType,
+          width: 640,
+          height: 640
+        }
+      );
+    }, [
+      activeTile,
+      bridgeAvailable,
+      googleApiKey,
+      googleLatitude,
+      googleLongitude,
+      googleMapType,
+      googleZoom
+    ]);
+
+  const handleSaveMapGeoreference =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !googleReference
+      ) {
+        return;
+      }
+
+      saveMapGeoreference(
+        selectedMap.directoryName,
+        {
+          latitude:
+            googleReference
+              .latitude,
+          longitude:
+            googleReference
+              .longitude,
+          anchorTileX:
+            georefAnchor.tileX,
+          anchorTileY:
+            georefAnchor.tileY,
+          anchorX:
+            georefAnchor.x,
+          anchorY:
+            georefAnchor.y,
+          zoom:
+            googleReference.zoom,
+          mapType:
+            googleReference
+              .mapType
+        }
+      );
+    }, [
+      georefAnchor,
+      googleReference,
+      selectedMap
+    ]);
+
+  const referenceOverlay =
+    useMemo(
+      () =>
+        googleReference &&
+        referenceVisible
+          ? {
+              base64Data:
+                googleReference
+                  .base64Data,
+              mimeType:
+                googleReference
+                  .mimeType,
+              width:
+                googleReference.width,
+              height:
+                googleReference.height,
+              metersPerPixel:
+                googleReference
+                  .metersPerPixel,
+              anchorWorldX:
+                georefAnchor.tileX *
+                  300 +
+                georefAnchor.x,
+              anchorWorldZ:
+                georefAnchor.tileY *
+                  300 +
+                georefAnchor.y,
+              opacity:
+                referenceOpacity,
+              attribution:
+                googleReference
+                  .attribution
+            }
+          : undefined,
+      [
+        georefAnchor,
+        googleReference,
+        referenceOpacity,
+        referenceVisible
+      ]
+    );
+
   const handleSaveSplineLinks =
     useCallback(() => {
       if (
