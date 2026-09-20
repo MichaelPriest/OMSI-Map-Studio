@@ -3799,6 +3799,44 @@ export function App() {
   const [selectingRoot, setSelectingRoot] =
     useState(false);
 
+  const [
+    assetIndexStatus,
+    setAssetIndexStatus
+  ] = useState<{
+    state:
+      | "idle"
+      | "indexing"
+      | "ready"
+      | "error";
+    examinedFiles: number;
+    candidateFiles: number;
+    totalEntries: number;
+    addedFiles: number;
+    updatedFiles: number;
+    unchangedFiles: number;
+    removedFiles: number;
+    durationMilliseconds: number;
+    sceneryObjects: number;
+    splines: number;
+    models: number;
+    textures: number;
+    detail?: string;
+  }>({
+    state: "idle",
+    examinedFiles: 0,
+    candidateFiles: 0,
+    totalEntries: 0,
+    addedFiles: 0,
+    updatedFiles: 0,
+    unchangedFiles: 0,
+    removedFiles: 0,
+    durationMilliseconds: 0,
+    sceneryObjects: 0,
+    splines: 0,
+    models: 0,
+    textures: 0
+  });
+
   const [selectingMap, setSelectingMap] =
     useState(false);
 
@@ -4593,6 +4631,21 @@ export function App() {
           "omsiRootSelected"
         ) {
           setRootPath(message.rootPath);
+          setAssetIndexStatus({
+            state: "idle",
+            examinedFiles: 0,
+            candidateFiles: 0,
+            totalEntries: 0,
+            addedFiles: 0,
+            updatedFiles: 0,
+            unchangedFiles: 0,
+            removedFiles: 0,
+            durationMilliseconds: 0,
+            sceneryObjects: 0,
+            splines: 0,
+            models: 0,
+            textures: 0
+          });
           setSelectedMap(undefined);
           setAvailableMaps([]);
           setLoadingMapCatalog(true);
@@ -4670,6 +4723,93 @@ export function App() {
           setSavingSplineLinks(false);
           setError(undefined);
           setView("map");
+          return;
+        }
+
+        if (
+          message.type ===
+          "assetIndexRefreshStarted"
+        ) {
+          setAssetIndexStatus({
+            state: "indexing",
+            examinedFiles: 0,
+            candidateFiles: 0,
+            totalEntries: 0,
+            addedFiles: 0,
+            updatedFiles: 0,
+            unchangedFiles: 0,
+            removedFiles: 0,
+            durationMilliseconds: 0,
+            sceneryObjects: 0,
+            splines: 0,
+            models: 0,
+            textures: 0
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "assetIndexRefreshProgress"
+        ) {
+          setAssetIndexStatus(
+            (current) => ({
+              ...current,
+              state: "indexing",
+              examinedFiles:
+                message.examinedFiles,
+              candidateFiles:
+                message.candidateFiles
+            })
+          );
+          return;
+        }
+
+        if (
+          message.type ===
+          "assetIndexRefreshCompleted"
+        ) {
+          setAssetIndexStatus({
+            state: "ready",
+            examinedFiles:
+              message.examinedFiles,
+            candidateFiles:
+              message.totalEntries,
+            totalEntries:
+              message.totalEntries,
+            addedFiles:
+              message.addedFiles,
+            updatedFiles:
+              message.updatedFiles,
+            unchangedFiles:
+              message.unchangedFiles,
+            removedFiles:
+              message.removedFiles,
+            durationMilliseconds:
+              message.durationMilliseconds,
+            sceneryObjects:
+              message.sceneryObjects,
+            splines:
+              message.splines,
+            models:
+              message.models,
+            textures:
+              message.textures
+          });
+          return;
+        }
+
+        if (
+          message.type ===
+          "assetIndexRefreshFailed"
+        ) {
+          setAssetIndexStatus(
+            (current) => ({
+              ...current,
+              state: "error",
+              detail: message.detail
+            })
+          );
           return;
         }
 
@@ -14758,6 +14898,42 @@ export function App() {
                 : "Selecione sua instalação do OMSI 2."}
             </span>
           </div>
+
+          {rootPath && (
+            <div
+              className={
+                assetIndexStatus.state ===
+                  "ready"
+                  ? "status-message success"
+                  : "status-message"
+              }
+            >
+              <strong>
+                {assetIndexStatus.state ===
+                "indexing"
+                  ? "Indexando assets locais…"
+                  : assetIndexStatus.state ===
+                      "ready"
+                    ? "✓ Índice local pronto"
+                    : assetIndexStatus.state ===
+                        "error"
+                      ? "Índice local indisponível"
+                      : "Preparando índice local"}
+              </strong>
+              <span>
+                {assetIndexStatus.state ===
+                "indexing"
+                  ? `${assetIndexStatus.candidateFiles} asset(s) candidato(s) em ${assetIndexStatus.examinedFiles} arquivo(s) examinados. O editor pode continuar sendo usado.`
+                  : assetIndexStatus.state ===
+                      "ready"
+                    ? `${assetIndexStatus.totalEntries} assets · SCO ${assetIndexStatus.sceneryObjects} · SLI ${assetIndexStatus.splines} · modelos ${assetIndexStatus.models} · texturas ${assetIndexStatus.textures} · novos ${assetIndexStatus.addedFiles} · alterados ${assetIndexStatus.updatedFiles} · removidos ${assetIndexStatus.removedFiles}`
+                    : assetIndexStatus.state ===
+                        "error"
+                      ? "O cache falhou, mas a leitura direta do OMSI continua disponível."
+                      : "O índice persistente será atualizado em segundo plano."}
+              </span>
+            </div>
+          )}
         </aside>
       </div>
     </section>
