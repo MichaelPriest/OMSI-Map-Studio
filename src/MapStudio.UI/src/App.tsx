@@ -2950,6 +2950,8 @@ export function App() {
     | "edit"
     | "view"
     | "map"
+    | "tools"
+    | "help"
     | undefined
   >();
 
@@ -2962,6 +2964,11 @@ export function App() {
     showTileNavigator,
     setShowTileNavigator
   ] = useState(true);
+
+  const [
+    showShortcutPanel,
+    setShowShortcutPanel
+  ] = useState(false);
 
   const [
     fullScreenPanel,
@@ -17700,6 +17707,34 @@ export function App() {
                     ? ` (${mapHealthIssueCount})`
                     : ""}
                 </button>
+                
+                
+              </div>
+            )}
+          </div>
+
+          <div className="editor-menu-root">
+            <button
+              type="button"
+              className={
+                activeTopMenu === "tools"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "tools"
+                      ? undefined
+                      : "tools"
+                )
+              }
+            >
+              Ferramentas
+            </button>
+
+            {activeTopMenu === "tools" && (
+              <div className="editor-menu-popup">
                 <button
                   type="button"
                   disabled={
@@ -17713,6 +17748,10 @@ export function App() {
                     );
                   }}
                 >
+                  <MapStudioIcon
+                    name="dependency"
+                    size={16}
+                  />{" "}
                   Verificar dependências
                   {missingDependencyCount > 0
                     ? ` (${missingDependencyCount})`
@@ -17730,10 +17769,50 @@ export function App() {
                     );
                   }}
                 >
-                  {showConstructionSetPanel
-                    ? "✓ "
-                    : ""}
+                  <MapStudioIcon
+                    name="construction-set"
+                    size={16}
+                  />{" "}
                   Conjuntos de construção
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="editor-menu-root">
+            <button
+              type="button"
+              className={
+                activeTopMenu === "help"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setActiveTopMenu(
+                  (current) =>
+                    current === "help"
+                      ? undefined
+                      : "help"
+                )
+              }
+            >
+              Ajuda
+            </button>
+
+            {activeTopMenu === "help" && (
+              <div className="editor-menu-popup">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowShortcutPanel(
+                      true
+                    );
+                    setActiveTopMenu(
+                      undefined
+                    );
+                  }}
+                >
+                  Atalhos do editor
                 </button>
               </div>
             )}
@@ -21180,18 +21259,59 @@ export function App() {
                     </button>
                   </div>
                 </div>
-                {isFullScreen && (
-                  <div className="fullscreen-shortcuts">
-                    <strong>Atalhos</strong>
-                    <span>Q selecionar</span><span>W mover</span><span>E rotacionar</span>
-                    <span>1 perspectiva</span><span>2 topo</span><span>N snap</span>
-                    <span>F foco</span><span>Home enquadrar</span><span>G grade</span>
-                    <span>Alt+1..4 filtro seleção</span><span>Alt+R/C/O criar rua/cruz./objeto</span>
-                    <span>Alt+T/A/G/Y terreno/água/grama/árvore</span>
-                    <span>O objetos</span><span>L splines</span><span>Ctrl+S salvar</span>
-                    <span>Ctrl+Z/Y desfazer/refazer</span><span>RMB orbitar</span>
-                    <span>MMB deslocar</span><span>roda zoom</span>
+                {showShortcutPanel && (
+                  <div
+                    className="editor-shortcuts-panel floating-tool"
+                    data-floating-tool
+                    data-floating-tool-id="editor-shortcuts"
+                  >
+                    <div
+                      className="editor-shortcuts-heading drag-handle"
+                      data-drag-handle
+                    >
+                      <div>
+                        <MapStudioIcon
+                          name="tools"
+                          size={18}
+                        />
+                        <strong>Atalhos do editor</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowShortcutPanel(
+                            false
+                          )
+                        }
+                        title="Fechar atalhos"
+                        aria-label="Fechar atalhos"
+                      >
+                        <MapStudioIcon
+                          name="discard"
+                          size={15}
+                        />
+                      </button>
+                    </div>
+                    <div className="editor-shortcuts-grid">
+                      <kbd>Q</kbd><span>Selecionar</span>
+                      <kbd>W</kbd><span>Mover</span>
+                      <kbd>E</kbd><span>Rotacionar</span>
+                      <kbd>F</kbd><span>Focar seleção</span>
+                      <kbd>Home</kbd><span>Enquadrar mapa</span>
+                      <kbd>N</kbd><span>Alternar snap</span>
+                      <kbd>G</kbd><span>Alternar grade</span>
+                      <kbd>O</kbd><span>Objetos</span>
+                      <kbd>L</kbd><span>Splines</span>
+                      <kbd>Ctrl+S</kbd><span>Salvar com backup</span>
+                      <kbd>Ctrl+Z</kbd><span>Desfazer</span>
+                      <kbd>Ctrl+Y</kbd><span>Refazer</span>
+                      <kbd>F11</kbd><span>Tela cheia</span>
+                      <kbd>RMB</kbd><span>Orbitar câmera</span>
+                      <kbd>MMB</kbd><span>Deslocar câmera</span>
+                      <kbd>Roda</kbd><span>Zoom</span>
+                    </div>
                   </div>
+                )}
                 )}
               </>
             {showTileNavigator &&
