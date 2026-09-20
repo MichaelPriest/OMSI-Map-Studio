@@ -17,6 +17,7 @@ import {
   insertSpline,
   insertSplineFromLibrary,
   isDesktopBridgeAvailable,
+  loadMapCatalog,
   loadMapFull,
   loadMapRegion,
   loadGroundTextureAsset,
@@ -32,11 +33,13 @@ import {
   saveObjectTransforms,
   saveSplineTransforms,
   sceneryTreeTextureMeshToken,
+  openMapFromCatalog,
   selectMap,
   selectOmsiRoot,
   setFullScreen,
   subscribeToHost,
   updateSplineLinks,
+  type OmsiMapCatalogEntry,
   type SceneryLibraryEntry,
   type SplineLibraryEntry,
   type OmsiMap,
@@ -65,6 +68,21 @@ type EditorTool =
   | "select"
   | "move"
   | "rotate";
+
+type SelectionMode =
+  | "all"
+  | "object"
+  | "spline"
+  | "terrain";
+
+type QuickCreateTool =
+  | "road"
+  | "junction"
+  | "object"
+  | "terrain"
+  | "water"
+  | "grass"
+  | "tree";
 
 type ViewportCameraAction = {
   type:
