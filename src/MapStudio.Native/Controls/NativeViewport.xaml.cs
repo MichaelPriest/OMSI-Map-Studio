@@ -257,6 +257,42 @@ public sealed partial class NativeViewport : UserControl
         return started;
     }
 
+    public async Task<bool>
+        BeginSplinePlacementCopyAsync(
+            string omsiRoot,
+            string splinePath,
+            bool curved,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var started =
+            await _runtime
+                .BeginSplinePlacementAsync(
+                    omsiRoot,
+                    splinePath,
+                    curved,
+                    cancellationToken);
+
+        if (started)
+        {
+            RuntimeText.Text =
+                $"Construindo cópia · {splinePath}";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                curved
+                    ? "Cópia curva desconectada: clique início, fim e ponto de curvatura."
+                    : "Cópia reta desconectada: clique início e fim.");
+        }
+
+        return started;
+    }
+
     public void CancelSplinePlacement()
     {
         _runtime?.CancelSplinePlacement();

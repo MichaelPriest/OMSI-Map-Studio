@@ -355,6 +355,35 @@
                                        Header="Gradiente final (%)"
                                        SpinButtonPlacementMode="Compact"
                                        SmallChange="0.1" />
+
+                            <TextBlock Text="Vínculos da cadeia"
+                                       Margin="0,6,0,0"
+                                       FontWeight="SemiBold" />
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <NumberBox x:Name="InspectorPreviousSplineIdBox"
+                                           Grid.Column="0"
+                                           Header="Anterior ID"
+                                           SpinButtonPlacementMode="Compact"
+                                           SmallChange="1" />
+
+                                <NumberBox x:Name="InspectorNextSplineIdBox"
+                                           Grid.Column="1"
+                                           Header="Próxima ID"
+                                           SpinButtonPlacementMode="Compact"
+                                           SmallChange="1" />
+                            </Grid>
+
+                            <Button x:Name="SaveSplineLinksButton"
+                                    Content="Salvar vínculos"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnSaveSplineLinksClick" />
                         </StackPanel>
 
                         <Button x:Name="ApplyInspectorButton"

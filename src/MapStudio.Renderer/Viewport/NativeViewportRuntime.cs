@@ -1122,7 +1122,10 @@ public sealed class NativeViewportRuntime : IDisposable
             spline.Length,
             spline.Radius,
             spline.GradientStart,
-            spline.GradientEnd);
+            spline.GradientEnd,
+            spline.PreviousSplineId,
+            spline.NextSplineId,
+            spline.IsHeightSpline);
     }
 
     public NativePendingTransformEdit?

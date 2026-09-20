@@ -17,4 +17,7 @@ public sealed record NativeSelectionInfo(
     double? Length,
     double? Radius,
     double? GradientStart,
-    double? GradientEnd);
+    double? GradientEnd,
+    int? PreviousSplineId = null,
+    int? NextSplineId = null,
+    bool? IsHeightSpline = null);

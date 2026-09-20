@@ -313,3 +313,13 @@ O ghost 3D usa a mesma rotação/pitch/bank que será persistida, evitando difer
 
 O atalho Ctrl+D não intercepta digitação quando o foco está em campos editáveis e o fluxo permanece bloqueado para mapas com `worldcoordinates` até a migração específica de georreferenciamento.
 
+### Checkpoint N3.13 — cópia desconectada e editor nativo de vínculos de spline
+
+O Inspector WinUI agora migra mais dois recursos da versão React para splines reais.
+
+**Colocar cópia** / **Ctrl+D** também funciona com uma spline selecionada. A ferramenta usa o mesmo SLI real como template, escolhe automaticamente construção reta ou curva a partir do raio da seleção e cria a nova spline desconectada, com Previous/Next iniciando em `-1`. Splines de altura permanecem bloqueadas até o fluxo específico de `[spline_h]` ser migrado.
+
+O Inspector de spline também exibe **Anterior ID** e **Próxima ID**. **Salvar vínculos** executa `OmsiSplineLinkPlanner` contra os IDs do mapa inteiro, valida reciprocidade e disponibilidade das pontas e aplica todas as alterações necessárias através de `OmsiTileSplineLinkEditor`.
+
+Quando a mudança afeta splines em tiles diferentes, todos os arquivos entram na mesma `SafeFileTransaction` e recebem backup. Depois da gravação, os tiles carregados afetados são relidos e a spline editada volta a ser selecionada no viewport/Explorer com os novos vínculos.
+

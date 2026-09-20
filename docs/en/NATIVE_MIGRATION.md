@@ -313,3 +313,13 @@ The 3D ghost uses the same rotation/pitch/bank that will be persisted, avoiding 
 
 Ctrl+D does not intercept typing while focus is inside an editable field, and the flow remains disabled for `worldcoordinates` maps until the dedicated georeferencing migration is implemented.
 
+### Checkpoint N3.13 — disconnected spline copy and native link editor
+
+The WinUI Inspector now migrates two more real-spline workflows from the React editor.
+
+**Place copy** / **Ctrl+D** also works when a spline is selected. The tool reuses the same real SLI as its template, automatically starts straight or curved construction based on the selected radius, and creates the new spline disconnected with Previous/Next initialized to `-1`. Height splines remain blocked until the dedicated `[spline_h]` flow is migrated.
+
+The spline Inspector now also exposes **Previous ID** and **Next ID**. **Save links** runs `OmsiSplineLinkPlanner` against map-wide IDs, validates reciprocal links and endpoint availability, then applies every required change through `OmsiTileSplineLinkEditor`.
+
+When a change touches splines in different tiles, every affected file participates in the same `SafeFileTransaction` and receives a backup. After writing, affected loaded tiles are read back and the edited spline is reselected in the viewport/Explorer with its new links.
+

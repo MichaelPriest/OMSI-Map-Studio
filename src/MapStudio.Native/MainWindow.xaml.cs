@@ -134,8 +134,11 @@ public sealed partial class MainWindow : Window
                     info is not null;
 
                 DuplicateSelectionButton.IsEnabled =
+                    info is not null;
+
+                SaveSplineLinksButton.IsEnabled =
                     info?.Kind ==
-                    PickingKind.Object;
+                    PickingKind.Spline;
 
                 if (info is null)
                 {
@@ -165,6 +168,12 @@ public sealed partial class MainWindow : Window
 
                     InspectorSplineFields.Visibility =
                         Visibility.Collapsed;
+
+                    InspectorPreviousSplineIdBox.Value =
+                        double.NaN;
+
+                    InspectorNextSplineIdBox.Value =
+                        double.NaN;
 
                     return;
                 }
@@ -231,6 +240,14 @@ public sealed partial class MainWindow : Window
                     InspectorGradientEndBox.Value =
                         info.GradientEnd ??
                         0;
+
+                    InspectorPreviousSplineIdBox.Value =
+                        info.PreviousSplineId ??
+                        -1;
+
+                    InspectorNextSplineIdBox.Value =
+                        info.NextSplineId ??
+                        -1;
                 }
 
                 SynchronizeExplorerSelection(
@@ -1034,20 +1051,179 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private async void OnDuplicateSelectionClick(
+    private async void OnSaveSplineLinksClick(
         object sender,
         RoutedEventArgs e)
-    {
-        await StartObjectCopyPlacementAsync();
-    }
-
-    private async Task StartObjectCopyPlacementAsync()
     {
         var selection =
             _selectionInfo;
 
         if (
             selection is null ||
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de alterar vínculos.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento antes de alterar vínculos.";
+
+            return;
+        }
+
+        var previousValue =
+            InspectorPreviousSplineIdBox.Value;
+
+        var nextValue =
+            InspectorNextSplineIdBox.Value;
+
+        if (
+            !double.IsFinite(previousValue) ||
+            !double.IsFinite(nextValue) ||
+            Math.Truncate(previousValue) !=
+                previousValue ||
+            Math.Truncate(nextValue) !=
+                nextValue ||
+            previousValue <
+                int.MinValue ||
+            previousValue >
+                int.MaxValue ||
+            nextValue <
+                int.MinValue ||
+            nextValue >
+                int.MaxValue)
+        {
+            StatusText.Text =
+                "Anterior ID e Próxima ID precisam ser números inteiros.";
+
+            return;
+        }
+
+        var desiredPrevious =
+            (int)previousValue;
+
+        var desiredNext =
+            (int)nextValue;
+
+        if (
+            desiredPrevious ==
+                selection.PreviousSplineId &&
+            desiredNext ==
+                selection.NextSplineId)
+        {
+            StatusText.Text =
+                "Os vínculos da spline não foram alterados.";
+
+            return;
+        }
+
+        try
+        {
+            SaveSplineLinksButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Atualizando vínculos da spline #{selection.EntityId} com backup...";
+
+            var snapshot =
+                await _session
+                    .UpdateSplineLinksAsync(
+                        selection,
+                        desiredPrevious,
+                        desiredNext);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            RefreshExplorer();
+
+            var refreshedItem =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                PickingKind.Spline &&
+                            item.EntityId ==
+                                selection.EntityId);
+
+            if (refreshedItem is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    refreshedItem,
+                    focus: false);
+            }
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Vínculos da spline #{selection.EntityId} atualizados com segurança.";
+        }
+        catch (Exception exception)
+        {
+            SaveSplineLinksButton.IsEnabled =
+                _selectionInfo?.Kind ==
+                PickingKind.Spline;
+
+            StatusText.Text =
+                $"Falha ao atualizar vínculos: {exception.Message}";
+        }
+    }
+
+    private async void OnDuplicateSelectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await StartSelectionCopyPlacementAsync();
+    }
+
+    private async Task StartSelectionCopyPlacementAsync()
+    {
+        var selection =
+            _selectionInfo;
+
+        if (selection is null)
+        {
+            return;
+        }
+
+        if (
+            selection.Kind ==
+                PickingKind.Spline)
+        {
+            await StartSplineCopyPlacementAsync(
+                selection);
+
+            return;
+        }
+
+        if (
             selection.Kind !=
                 PickingKind.Object)
         {
@@ -1113,6 +1289,84 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Falha ao iniciar cópia: {exception.Message}";
+        }
+    }
+
+    private async Task StartSplineCopyPlacementAsync(
+        NativeSelectionInfo selection)
+    {
+        if (
+            _session.OmsiRootPath is null ||
+            _session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Abra um mapa OMSI antes de criar uma cópia.";
+
+            return;
+        }
+
+        if (
+            selection.IsHeightSpline ==
+                true)
+        {
+            StatusText.Text =
+                "Cópia de spline de altura ainda não está habilitada no host nativo.";
+
+            return;
+        }
+
+        if (
+            _session.CurrentMap.Map
+                .UsesWorldCoordinates)
+        {
+            StatusText.Text =
+                "Cópia de spline em mapa com worldcoordinates ainda não está habilitada no host nativo.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento atual antes de criar a cópia.";
+
+            return;
+        }
+
+        Viewport.RestoreSceneView();
+
+        try
+        {
+            var curved =
+                Math.Abs(
+                    selection.Radius ??
+                    0) >
+                0.001;
+
+            var started =
+                await Viewport
+                    .BeginSplinePlacementCopyAsync(
+                        _session.OmsiRootPath,
+                        selection.AssetPath,
+                        curved);
+
+            if (!started)
+            {
+                StatusText.Text =
+                    $"Não foi possível preparar a cópia de {selection.AssetPath}.";
+
+                return;
+            }
+
+            StatusText.Text =
+                $"Cópia desconectada da spline #{selection.EntityId}: defina a nova geometria no viewport.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao iniciar cópia da spline: {exception.Message}";
         }
     }
 
@@ -1813,16 +2067,14 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (
-            _selectionInfo?.Kind !=
-                PickingKind.Object)
+        if (_selectionInfo is null)
         {
             return;
         }
 
         args.Handled = true;
 
-        await StartObjectCopyPlacementAsync();
+        await StartSelectionCopyPlacementAsync();
     }
 
     private async void OnDeleteAcceleratorInvoked(
