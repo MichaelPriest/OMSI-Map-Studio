@@ -667,6 +667,55 @@ code {
   margin-top: 4px;
 }
 
+.coordinate-map-creator {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 11px;
+  border: 1px solid #214b69;
+  border-radius: 8px;
+  background: #081a29;
+}
+
+.coordinate-map-creator > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.coordinate-map-creator strong {
+  color: #dceaf5;
+  font-size: 11px;
+}
+
+.coordinate-map-creator span,
+.coordinate-map-creator small {
+  color: #7898b1;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.coordinate-map-creator label {
+  display: grid;
+  gap: 3px;
+}
+
+.coordinate-map-creator input {
+  min-width: 0;
+  height: 29px;
+  padding: 0 7px;
+  border: 1px solid #244d6b;
+  border-radius: 5px;
+  background: #061522;
+  color: #d8e8f4;
+  font-size: 9px;
+}
+
+.coordinate-map-row {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px !important;
+}
+
 .placeholder-card {
   display: flex;
   flex-direction: column;
