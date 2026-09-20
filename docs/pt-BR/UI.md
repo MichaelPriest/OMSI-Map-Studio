@@ -596,3 +596,8 @@ O fluxo **Rua** permite escolher uma spline real e marcar início/fim com dois c
 Em **Mapa real por coordenadas**, o usuário informa sua própria chave das APIs Google, latitude/longitude e escolhe roadmap/satellite/hybrid/terrain. A imagem fica sobre o terreno como referência. A grade de elevação pode ser buscada para o tile ativo e aplicada ao `.terrain` com backup.
 
 Na tela **Abrir mapa**, **Criar mapa real** clona o `template\NewMap` instalado e salva a âncora em metadados do Map Studio. Isso ainda não substitui a conversão oficial de `[worldcoordinates]` do OMSI.
+
+
+### Navegador de blocos 3×3
+
+O editor mostra um navegador compacto 3×3 sobre o viewport. O centro representa o tile ativo e os oito botões ao redor correspondem aos tiles vizinhos existentes. Clicar em um bloco troca o tile ativo e move a câmera para o centro daquele tile, preservando aproximadamente o zoom atual. Tiles inexistentes ficam desabilitados. `Ctrl + setas/WASD` continua disponível como alternativa de teclado.
