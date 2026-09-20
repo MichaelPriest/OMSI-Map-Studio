@@ -38,3 +38,5 @@ Esta política também servirá de base para internacionalização da interface.
 - [Interface](UI.md)
 - [Testes](TESTING.md)
 - [Instalação](INSTALLATION.md)
+
+- [Sistema de ícones](ICON_SYSTEM.md)
