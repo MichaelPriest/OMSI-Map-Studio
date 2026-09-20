@@ -863,3 +863,8 @@ Ao selecionar um item pela prateleira, a interface troca para o **Inspetor conte
 ### Controles rápidos de via
 
 O guia contextual de ruas/pontes na barra inferior agora também é interativo. **Snap pontas** liga/desliga o encaixe nas extremidades de splines existentes, **previous/next** alterna a conexão automática da cadeia e, no modo ponte/elevado, os botões `−`/`+` ajustam a elevação em passos de 0,5 m. O campo detalhado de elevação continua disponível no painel completo e ambos usam a mesma atualização real do preview.
+
+
+### Inspector contextual automático
+
+Ao escolher um objeto ou spline na prateleira de construção ou na biblioteca, o **Inspetor** abre automaticamente e passa a acompanhar o asset real em colocação. Em tela cheia ele substitui o drawer anterior, liberando o viewport; no desktop ele abre como painel flutuante. O conteúdo mostra arquivo, grupo, subcategoria, estado da prévia/perfil, destino ou geometria pendente e ações para abrir a prévia completa ou cancelar a colocação.
