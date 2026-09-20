@@ -696,3 +696,10 @@ Normal map opening now starts in **Automatic streaming** instead of **Full map**
 - **Full map** remains explicitly available for diagnostics, comparisons, and cases where the user really wants every tile loaded.
 
 This change is intentional: opening a large map should not require loading the entire scene before editing can begin.
+
+
+### Stale region response protection
+
+Each region request receives a monotonic generation in the host. Opening another map, switching to Full map, or requesting a newer region invalidates the previous generation.
+
+If an older read finishes after a newer region, its result is discarded before `mapRegionLoaded`. This prevents fast camera movement from reapplying tiles/metadata from an earlier position over the current state.
