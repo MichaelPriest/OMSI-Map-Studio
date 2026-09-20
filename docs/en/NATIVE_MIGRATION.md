@@ -188,3 +188,12 @@ N3 starts with a WinUI Explorer fed directly by the renderer snapshot. Real obje
 Search filters the display name, asset path, and tile coordinates. Selecting an Explorer item uses the same scene `PickingId` and updates the red highlight, gizmo, and Inspector. Double-clicking also repositions the 3D camera over the entity insertion point.
 
 Selections made directly in the viewport are synchronized back into the list and scrolled into view, keeping Explorer and viewport as two views over the same native state.
+
+
+### Checkpoint N3.2 — native library backed by the existing SQLite index
+
+The WinUI asset library reuses `OmsiAssetIndex` from `MapStudio.Core`. Its SQLite database is stored in the user-local cache and separated per OMSI installation, avoiding a full installation scan every time the editor starts.
+
+The interface switches between **Scene** and **Library**, can filter all assets or only SCO, SLI, models, and textures, and searches by relative path. The **Refresh** action runs the incremental index refresh and reports real examined-file and candidate counts.
+
+When a library asset is already used in the loaded region, double-clicking finds its first scene usage and focuses the 3D camera. Assets not yet used remain available in the catalog for the following native preview/placement stage.

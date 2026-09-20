@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -29,6 +30,14 @@ public sealed partial class MainWindow : Window
                 NativeExplorerItem>();
 
     private bool _synchronizingExplorer;
+
+    private IReadOnlyList<
+        OmsiAssetIndexEntry>
+        _assetLibraryItems =
+            Array.Empty<
+                OmsiAssetIndexEntry>();
+
+    private bool _libraryMode;
 
     public MainWindow()
     {
@@ -198,7 +207,177 @@ public sealed partial class MainWindow : Window
         object sender,
         TextChangedEventArgs e)
     {
+        if (_libraryMode)
+        {
+            RefreshLibraryFilter();
+        }
+        else
+        {
+            RefreshExplorerFilter();
+        }
+    }
+
+    private void OnSceneExplorerModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _libraryMode =
+            false;
+
+        ExplorerListView.Visibility =
+            Visibility.Visible;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar objetos e splines...";
+
         RefreshExplorerFilter();
+    }
+
+    private async void OnLibraryModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _libraryMode =
+            true;
+
+        ExplorerListView.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar na biblioteca...";
+
+        await LoadAssetLibraryAsync();
+    }
+
+    private async void OnRefreshLibraryClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            RefreshLibraryButton.IsEnabled =
+                false;
+
+            LibraryStatusText.Text =
+                "Indexando instalação OMSI...";
+
+            var progress =
+                new Progress<
+                    OmsiAssetIndexProgress>(
+                    value =>
+                    {
+                        LibraryStatusText.Text =
+                            $"Indexando... {value.ExaminedFiles} arquivos · " +
+                            $"{value.CandidateFiles} assets";
+                    });
+
+            var result =
+                await _session
+                    .RefreshAssetLibraryAsync(
+                        progress);
+
+            LibraryStatusText.Text =
+                $"Índice atualizado: {result.TotalEntries} assets · " +
+                $"+{result.AddedFiles} · ~{result.UpdatedFiles} · " +
+                $"-{result.RemovedFiles}";
+
+            await LoadAssetLibraryAsync();
+        }
+        catch (Exception exception)
+        {
+            LibraryStatusText.Text =
+                $"Falha ao indexar: {exception.Message}";
+        }
+        finally
+        {
+            RefreshLibraryButton.IsEnabled =
+                _session.OmsiRootPath is
+                    not null;
+        }
+    }
+
+    private async void OnLibraryKindSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            _libraryMode &&
+            _session.OmsiRootPath is
+                not null)
+        {
+            await LoadAssetLibraryAsync();
+        }
+    }
+
+    private void OnAssetLibraryDoubleTapped(
+        object sender,
+        DoubleTappedRoutedEventArgs e)
+    {
+        if (
+            AssetLibraryListView.SelectedItem is not
+                OmsiAssetIndexEntry asset)
+        {
+            return;
+        }
+
+        var normalized =
+            asset.RelativePath
+                .Replace(
+                    '\\',
+                    '/');
+
+        var usage =
+            _explorerItems
+                .FirstOrDefault(
+                    item =>
+                        string.Equals(
+                            item.AssetPath
+                                .Replace(
+                                    '\\',
+                                    '/'),
+                            normalized,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+        if (usage is not null)
+        {
+            _libraryMode =
+                false;
+
+            ExplorerListView.Visibility =
+                Visibility.Visible;
+
+            AssetLibraryPanel.Visibility =
+                Visibility.Collapsed;
+
+            ExplorerSearchBox.PlaceholderText =
+                "Buscar objetos e splines...";
+
+            RefreshExplorerFilter();
+
+            Viewport.SelectExplorerItem(
+                usage,
+                focus: true);
+
+            StatusText.Text =
+                $"Uso do asset focado no mapa: {asset.RelativePath}.";
+
+            return;
+        }
+
+        StatusText.Text =
+            $"Asset indexado: {asset.RelativePath} · prévia 3D nativa será o próximo checkpoint.";
     }
 
     private void OnExplorerSelectionChanged(
@@ -285,6 +464,99 @@ public sealed partial class MainWindow : Window
         }
 
         ExplorerListView.ItemsSource =
+            items.ToArray();
+    }
+
+    private async Task LoadAssetLibraryAsync()
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            _assetLibraryItems =
+                Array.Empty<
+                    OmsiAssetIndexEntry>();
+
+            AssetLibraryListView.ItemsSource =
+                _assetLibraryItems;
+
+            return;
+        }
+
+        try
+        {
+            var kind =
+                GetSelectedLibraryKind();
+
+            _assetLibraryItems =
+                await _session
+                    .GetAssetLibraryAsync(
+                        kind);
+
+            var stats =
+                await _session
+                    .GetAssetLibraryStatisticsAsync();
+
+            LibraryStatusText.Text =
+                stats.TotalEntries == 0
+                    ? "Índice vazio. Clique em Atualizar para catalogar a instalação."
+                    : $"{stats.TotalEntries} assets · " +
+                      $"{stats.SceneryObjects} SCO · {stats.Splines} SLI · " +
+                      $"{stats.Models} modelos · {stats.Textures} texturas";
+
+            RefreshLibraryFilter();
+        }
+        catch (Exception exception)
+        {
+            LibraryStatusText.Text =
+                $"Falha ao abrir biblioteca: {exception.Message}";
+        }
+    }
+
+    private OmsiAssetKind?
+        GetSelectedLibraryKind() =>
+        LibraryKindComboBox
+            .SelectedIndex switch
+        {
+            1 =>
+                OmsiAssetKind
+                    .SceneryObject,
+            2 =>
+                OmsiAssetKind
+                    .Spline,
+            3 =>
+                OmsiAssetKind
+                    .Model,
+            4 =>
+                OmsiAssetKind
+                    .Texture,
+            _ =>
+                null
+        };
+
+    private void RefreshLibraryFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            OmsiAssetIndexEntry> items =
+            _assetLibraryItems;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.RelativePath
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+        }
+
+        AssetLibraryListView.ItemsSource =
             items.ToArray();
     }
 
@@ -606,6 +878,11 @@ public sealed partial class MainWindow : Window
 
             OpenMapMenuItem.IsEnabled =
                 true;
+
+            RefreshLibraryButton.IsEnabled =
+                true;
+
+            await LoadAssetLibraryAsync();
 
             StatusText.Text =
                 "Instalação OMSI carregada pelo Core nativo.";

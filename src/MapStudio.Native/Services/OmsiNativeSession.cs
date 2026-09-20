@@ -1,5 +1,6 @@
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Viewport;
 
@@ -42,6 +43,9 @@ public sealed class OmsiNativeSession
             new(
                 StringComparer.OrdinalIgnoreCase);
 
+    private OmsiAssetIndex?
+        _assetIndex;
+
     public string? OmsiRootPath { get; private set; }
 
     public IReadOnlyList<OmsiMapDescriptor> Maps { get; private set; } =
@@ -51,6 +55,75 @@ public sealed class OmsiNativeSession
 
     public int PendingTransformCount =>
         _pendingTransforms.Count;
+
+    public async Task<
+        IReadOnlyList<
+            OmsiAssetIndexEntry>>
+        GetAssetLibraryAsync(
+            OmsiAssetKind? kind = null,
+            int limit = 100_000,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var index =
+            _assetIndex ??
+            throw new InvalidOperationException(
+                "Selecione primeiro a instalação do OMSI 2.");
+
+        return
+            await index
+                .GetEntriesAsync(
+                    kind,
+                    limit,
+                    cancellationToken)
+                .ConfigureAwait(false);
+    }
+
+    public async Task<
+        OmsiAssetIndexRefreshResult>
+        RefreshAssetLibraryAsync(
+            IProgress<
+                OmsiAssetIndexProgress>?
+                progress = null,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Selecione primeiro a instalação do OMSI 2.");
+
+        var index =
+            _assetIndex ??
+            throw new InvalidOperationException(
+                "Índice de assets não inicializado.");
+
+        return
+            await index
+                .RefreshAsync(
+                    root,
+                    progress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+    }
+
+    public async Task<
+        OmsiAssetIndexStatistics>
+        GetAssetLibraryStatisticsAsync(
+            CancellationToken cancellationToken =
+                default)
+    {
+        var index =
+            _assetIndex ??
+            throw new InvalidOperationException(
+                "Selecione primeiro a instalação do OMSI 2.");
+
+        return
+            await index
+                .GetStatisticsAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+    }
 
     public void StageTransformEdit(
         NativePendingTransformEdit edit)
@@ -303,6 +376,19 @@ public sealed class OmsiNativeSession
                     cancellationToken)
                 .ConfigureAwait(false);
 
+        var assetIndexPath =
+            GetAssetIndexPath(
+                normalized);
+
+        _assetIndex =
+            new OmsiAssetIndex(
+                assetIndexPath);
+
+        await _assetIndex
+            .InitializeAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+
         OmsiRootPath = normalized;
         Maps = maps;
         CurrentMap = null;
@@ -409,6 +495,36 @@ public sealed class OmsiNativeSession
         _pendingTransforms.Clear();
 
         return snapshot;
+    }
+
+    private static string GetAssetIndexPath(
+        string omsiRoot)
+    {
+        var hash =
+            Convert.ToHexString(
+                System.Security.Cryptography
+                    .SHA256.HashData(
+                        System.Text.Encoding
+                            .UTF8.GetBytes(
+                                omsiRoot)))
+                .Substring(
+                    0,
+                    16);
+
+        var cacheRoot =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment
+                        .SpecialFolder
+                        .LocalApplicationData),
+                "OMSI Map Studio",
+                "cache",
+                "native");
+
+        return
+            Path.Combine(
+                cacheRoot,
+                $"assets-{hash}.sqlite");
     }
 
     private static string CreatePendingKey(

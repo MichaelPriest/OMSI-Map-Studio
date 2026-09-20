@@ -105,30 +105,78 @@
                                FontSize="18"
                                FontWeight="SemiBold" />
 
+                    <StackPanel Grid.Row="1"
+                                Orientation="Horizontal"
+                                Spacing="6">
+                        <Button Content="Cena"
+                                Click="OnSceneExplorerModeClick" />
+                        <Button Content="Biblioteca"
+                                Click="OnLibraryModeClick" />
+                        <Button x:Name="RefreshLibraryButton"
+                                Content="Atualizar"
+                                IsEnabled="False"
+                                Click="OnRefreshLibraryClick" />
+                    </StackPanel>
+
                     <TextBox x:Name="ExplorerSearchBox"
-                             Grid.Row="1"
-                             PlaceholderText="Buscar objetos e splines..."
+                             Grid.Row="2"
+                             PlaceholderText="Buscar..."
                              TextChanged="OnExplorerSearchTextChanged" />
 
-                    <TextBlock x:Name="RootText"
-                               Grid.Row="2"
-                               Text="Nenhuma instalação OMSI selecionada."
-                               TextWrapping="Wrap"
-                               Foreground="#9FB5C5" />
+                    <StackPanel Grid.Row="3"
+                                Spacing="3">
+                        <TextBlock x:Name="RootText"
+                                   Text="Nenhuma instalação OMSI selecionada."
+                                   TextWrapping="Wrap"
+                                   Foreground="#9FB5C5" />
+                        <TextBlock x:Name="MapText"
+                                   Text="Nenhum mapa aberto."
+                                   TextWrapping="Wrap"
+                                   Foreground="#9FB5C5" />
+                    </StackPanel>
 
-                    <TextBlock x:Name="MapText"
-                               Grid.Row="3"
-                               Text="Nenhum mapa aberto."
-                               TextWrapping="Wrap"
-                               Foreground="#9FB5C5" />
+                    <Grid Grid.Row="4">
+                        <ListView x:Name="ExplorerListView"
+                                  SelectionMode="Single"
+                                  DisplayMemberPath="DisplayText"
+                                  SelectionChanged="OnExplorerSelectionChanged"
+                                  DoubleTapped="OnExplorerDoubleTapped" />
 
-                    <ListView x:Name="ExplorerListView"
-                              Grid.Row="4"
-                              Margin="0,4,0,0"
-                              SelectionMode="Single"
-                              DisplayMemberPath="DisplayText"
-                              SelectionChanged="OnExplorerSelectionChanged"
-                              DoubleTapped="OnExplorerDoubleTapped" />
+                        <Grid x:Name="AssetLibraryPanel"
+                              Visibility="Collapsed"
+                              RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <ComboBox x:Name="LibraryKindComboBox"
+                                      Grid.Row="0"
+                                      SelectedIndex="0"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnLibraryKindSelectionChanged">
+                                <ComboBoxItem Content="Todos" />
+                                <ComboBoxItem Content="Objetos SCO" />
+                                <ComboBoxItem Content="Splines SLI" />
+                                <ComboBoxItem Content="Modelos" />
+                                <ComboBoxItem Content="Texturas" />
+                            </ComboBox>
+
+                            <TextBlock x:Name="LibraryStatusText"
+                                       Grid.Row="1"
+                                       Text="Índice de assets não carregado."
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="#9FB5C5" />
+
+                            <ListView x:Name="AssetLibraryListView"
+                                      Grid.Row="2"
+                                      SelectionMode="Single"
+                                      DisplayMemberPath="RelativePath"
+                                      DoubleTapped="OnAssetLibraryDoubleTapped" />
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Border>
 
