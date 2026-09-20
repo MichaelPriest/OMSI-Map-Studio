@@ -2833,7 +2833,7 @@ export function App() {
   ] = useState(false);
 
   const [mapLoadMode, setMapLoadMode] =
-    useState<MapLoadMode>("full");
+    useState<MapLoadMode>("performance");
 
   const autoObjectTextureLimit =
     mapLoadMode === "full"
@@ -4916,7 +4916,7 @@ export function App() {
             undefined
           );
           setSelectingMap(false);
-          setMapLoadMode("full");
+          setMapLoadMode("performance");
           setEditorTool("select");
           setSelectionMode("all");
           setCameraMode("perspective");
@@ -14559,7 +14559,7 @@ export function App() {
       return {
         title: "Carregando área ativa",
         detail:
-          "Atualizando os tiles do modo streaming 3×3. A edição será liberada quando a área estiver consistente."
+          "Atualizando a área ativa em alta prioridade e o anel externo em modo leve. A edição será liberada quando a região central estiver consistente."
       };
     }
 
@@ -14569,7 +14569,7 @@ export function App() {
         detail:
           mapLoadMode === "full"
             ? "Carregando malhas O3D/.x, perfis SLI e texturas reais do mapa completo."
-            : "Carregando malhas O3D/.x, perfis SLI e texturas reais da área ativa 3×3.",
+            : "Carregando malhas O3D/.x, perfis SLI e texturas reais da área ativa; o anel externo permanece em metadata leve.",
         completed:
           assetWarmupProgress.completed,
         total:
@@ -17603,7 +17603,7 @@ export function App() {
                   "performance"
                     ? "✓ "
                     : ""}
-                  Streaming 3×3
+                  Streaming automático
                 </button>
                 <button
                   type="button"
@@ -17734,7 +17734,7 @@ export function App() {
             <span>
               {mapLoadMode === "full"
                 ? "Mapa completo"
-                : "Streaming 3×3"}
+                : "Streaming automático"}
             </span>
           </div>
         </div>
@@ -24184,7 +24184,7 @@ export function App() {
             Modo:{" "}
             {mapLoadMode === "full"
               ? "Mapa completo"
-              : "Streaming 3×3"}
+              : "Streaming automático"}
             <b>·</b>
             Objetos:{" "}
             {selectedStats?.objects ??
