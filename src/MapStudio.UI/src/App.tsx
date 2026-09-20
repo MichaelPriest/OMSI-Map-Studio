@@ -11574,6 +11574,100 @@ export function App() {
       ]
     );
 
+  const handleRoadElevationOffsetChange =
+    useCallback(
+      (nextValue: number) => {
+        if (!Number.isFinite(nextValue)) {
+          return;
+        }
+
+        const value =
+          Math.max(
+            -20,
+            Math.min(
+              100,
+              Math.round(
+                nextValue * 2
+              ) / 2
+            )
+          );
+
+        setRoadElevationOffset(
+          value
+        );
+
+        if (
+          !easyRoadStart ||
+          !easyRoadEnd
+        ) {
+          return;
+        }
+
+        const arc =
+          deriveRoadArc(
+            easyRoadStart,
+            easyRoadEnd,
+            easyRoadCurveOffset
+          );
+
+        if (!arc) {
+          return;
+        }
+
+        const baseStart =
+          sampleTerrainHeight(
+            activeTiles,
+            easyRoadStart.targetTileX,
+            easyRoadStart.targetTileY,
+            easyRoadStart.x,
+            easyRoadStart.y
+          ) ?? 0;
+
+        const baseEnd =
+          sampleTerrainHeight(
+            activeTiles,
+            easyRoadEnd.targetTileX,
+            easyRoadEnd.targetTileY,
+            easyRoadEnd.x,
+            easyRoadEnd.y
+          ) ??
+          baseStart;
+
+        const startZ =
+          baseStart + value;
+        const endZ =
+          baseEnd + value;
+        const gradient =
+          (
+            (
+              endZ -
+              startZ
+            ) /
+            Math.max(
+              0.001,
+              arc.length
+            )
+          ) *
+          100;
+
+        setPendingSplinePlacement({
+          ...easyRoadStart,
+          z: startZ,
+          rotation: arc.rotation,
+          length: arc.length,
+          radius: arc.radius,
+          gradientStart: gradient,
+          gradientEnd: gradient
+        });
+      },
+      [
+        activeTiles,
+        easyRoadCurveOffset,
+        easyRoadEnd,
+        easyRoadStart
+      ]
+    );
+
   const handleRoadControlPointChange =
     useCallback(
       (
@@ -20336,30 +20430,57 @@ export function App() {
                     <span className="road-guide-primary">
                       1 Início → 2 Fim → 3 Curva
                     </span>
-                    <span
+                    <button
+                      type="button"
                       className={
                         roadEndpointSnapEnabled
                           ? "active"
                           : ""
                       }
+                      onClick={() => {
+                        const enabled =
+                          !roadEndpointSnapEnabled;
+
+                        setRoadEndpointSnapEnabled(
+                          enabled
+                        );
+
+                        if (!enabled) {
+                          setRoadStartSnap(
+                            undefined
+                          );
+                          setRoadEndSnap(
+                            undefined
+                          );
+                        }
+                      }}
+                      title="Ativar/desativar encaixe nas pontas das vias existentes"
                     >
                       Snap pontas{" "}
                       {roadEndpointSnapEnabled
                         ? "ON"
                         : "OFF"}
-                    </span>
-                    <span
+                    </button>
+                    <button
+                      type="button"
                       className={
                         roadAutoConnectEnabled
                           ? "active"
                           : ""
                       }
+                      onClick={() =>
+                        setRoadAutoConnectEnabled(
+                          (current) =>
+                            !current
+                        )
+                      }
+                      title="Alternar atualização automática de previous/next"
                     >
                       previous/next{" "}
                       {roadAutoConnectEnabled
                         ? "AUTO"
                         : "manual"}
-                    </span>
+                    </button>
                     {(roadStartSnap ||
                       roadEndSnap) && (
                       <span className="active">
@@ -20373,13 +20494,39 @@ export function App() {
                     )}
                     {roadPlacementKind ===
                       "bridge" && (
-                      <span className="active">
-                        Elevação{" "}
-                        {formatNumber(
-                          roadElevationOffset
-                        )}{" "}
-                        m
-                      </span>
+                      <div className="road-guide-elevation">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRoadElevationOffsetChange(
+                              roadElevationOffset -
+                                0.5
+                            )
+                          }
+                          title="Baixar ponte em 0,5 m"
+                        >
+                          −
+                        </button>
+                        <span className="active">
+                          Elevação{" "}
+                          {formatNumber(
+                            roadElevationOffset
+                          )}{" "}
+                          m
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRoadElevationOffsetChange(
+                              roadElevationOffset +
+                                0.5
+                            )
+                          }
+                          title="Elevar ponte em 0,5 m"
+                        >
+                          +
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -21489,98 +21636,12 @@ export function App() {
                         value={
                           roadElevationOffset
                         }
-                        onChange={(event) => {
-                          const value =
+                        onChange={(event) =>
+                          handleRoadElevationOffsetChange(
                             event.currentTarget
-                              .valueAsNumber;
-
-                          if (
-                            !Number.isFinite(
-                              value
-                            )
-                          ) {
-                            return;
-                          }
-
-                          setRoadElevationOffset(
-                            value
-                          );
-
-                          if (
-                            easyRoadStart &&
-                            easyRoadEnd
-                          ) {
-                            const arc =
-                              deriveRoadArc(
-                                easyRoadStart,
-                                easyRoadEnd,
-                                easyRoadCurveOffset
-                              );
-
-                            if (!arc) {
-                              return;
-                            }
-
-                            const baseStart =
-                              sampleTerrainHeight(
-                                activeTiles,
-                                easyRoadStart
-                                  .targetTileX,
-                                easyRoadStart
-                                  .targetTileY,
-                                easyRoadStart.x,
-                                easyRoadStart.y
-                              ) ?? 0;
-
-                            const baseEnd =
-                              sampleTerrainHeight(
-                                activeTiles,
-                                easyRoadEnd
-                                  .targetTileX,
-                                easyRoadEnd
-                                  .targetTileY,
-                                easyRoadEnd.x,
-                                easyRoadEnd.y
-                              ) ??
-                              baseStart;
-
-                            const startZ =
-                              baseStart +
-                              value;
-                            const endZ =
-                              baseEnd +
-                              value;
-                            const gradient =
-                              (
-                                (
-                                  endZ -
-                                  startZ
-                                ) /
-                                Math.max(
-                                  0.001,
-                                  arc.length
-                                )
-                              ) *
-                              100;
-
-                            setPendingSplinePlacement(
-                              {
-                                ...easyRoadStart,
-                                z: startZ,
-                                rotation:
-                                  arc.rotation,
-                                length:
-                                  arc.length,
-                                radius:
-                                  arc.radius,
-                                gradientStart:
-                                  gradient,
-                                gradientEnd:
-                                  gradient
-                              }
-                            );
-                          }
-                        }}
+                              .valueAsNumber
+                          )
+                        }
                       />
                     </label>
                     <span>
