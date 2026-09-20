@@ -6143,13 +6143,6 @@ export function Viewport({
     const getPickedMapItem = (
       event: PointerEvent
     ) => {
-      if (
-        placementAssetPath ||
-        splinePlacementTemplate
-      ) {
-        return undefined;
-      }
-
       const rect =
         canvas.getBoundingClientRect();
 
@@ -6219,6 +6212,24 @@ export function Viewport({
           camera
         ) ?? [];
 
+      picks.sort(
+        (left, right) =>
+          (
+            Number.isFinite(
+              left.distance
+            )
+              ? left.distance
+              : Number.POSITIVE_INFINITY
+          ) -
+          (
+            Number.isFinite(
+              right.distance
+            )
+              ? right.distance
+              : Number.POSITIVE_INFINITY
+          )
+      );
+
       for (const pick of picks) {
         let node: Node | null =
           pick.pickedMesh;
@@ -6279,7 +6290,215 @@ export function Viewport({
         }
       }
 
-      return undefined;
+      // Some OMSI assets do not expose a usable rendered mesh:
+      // encrypted/protected O3D, helper-only SCOs, missing geometry,
+      // or very thin spline profiles. Keep them selectable by using
+      // the real OMSI placement/axis as a geometric fallback.
+      const ray =
+        scene.createPickingRay(
+          pointerX,
+          pointerY,
+          Matrix.Identity(),
+          camera,
+          false
+        );
+
+      const direction =
+        ray.direction
+          .normalizeToNew();
+
+      const threshold =
+        Math.max(
+          2.5,
+          Math.min(
+            24,
+            camera.radius *
+              0.006
+          )
+        );
+
+      let fallback:
+        | {
+            kind: "object";
+            item: OmsiPlacedObject;
+            distance: number;
+            depth: number;
+          }
+        | {
+            kind: "spline";
+            item: OmsiPlacedSpline;
+            distance: number;
+            depth: number;
+          }
+        | undefined;
+
+      const considerPoint = (
+        point: Vector3,
+        candidate:
+          | {
+              kind: "object";
+              item: OmsiPlacedObject;
+            }
+          | {
+              kind: "spline";
+              item: OmsiPlacedSpline;
+            }
+      ) => {
+        const offset =
+          point.subtract(
+            ray.origin
+          );
+
+        const depth =
+          Vector3.Dot(
+            offset,
+            direction
+          );
+
+        if (depth < 0) {
+          return;
+        }
+
+        const closest =
+          ray.origin.add(
+            direction.scale(
+              depth
+            )
+          );
+
+        const distance =
+          Vector3.Distance(
+            point,
+            closest
+          );
+
+        if (
+          distance > threshold
+        ) {
+          return;
+        }
+
+        if (
+          !fallback ||
+          distance <
+            fallback.distance -
+              0.001 ||
+          (
+            Math.abs(
+              distance -
+                fallback.distance
+            ) <= 0.001 &&
+            depth <
+              fallback.depth
+          )
+        ) {
+          fallback = {
+            ...candidate,
+            distance,
+            depth
+          } as typeof fallback;
+        }
+      };
+
+      if (
+        showObjects &&
+        (
+          selectionMode ===
+            "all" ||
+          selectionMode ===
+            "object"
+        )
+      ) {
+        for (const item of objects) {
+          considerPoint(
+            getObjectWorldPosition(
+              item,
+              objectGeometryByPath[
+                item.sceneryObjectPath
+              ],
+              tiles
+            ),
+            {
+              kind: "object",
+              item
+            }
+          );
+        }
+      }
+
+      if (
+        showSplines &&
+        (
+          selectionMode ===
+            "all" ||
+          selectionMode ===
+            "spline"
+        )
+      ) {
+        for (const item of splines) {
+          const points =
+            getSplineAxisLine(
+              item
+            );
+
+          if (
+            points.length === 0
+          ) {
+            considerPoint(
+              getSplineFrame(
+                item,
+                0
+              ).center,
+              {
+                kind: "spline",
+                item
+              }
+            );
+            continue;
+          }
+
+          for (const point of points) {
+            considerPoint(
+              point,
+              {
+                kind: "spline",
+                item
+              }
+            );
+          }
+        }
+      }
+
+      if (!fallback) {
+        return undefined;
+      }
+
+      if (
+        fallback.kind ===
+        "object"
+      ) {
+        return {
+          kind: "object" as const,
+          item: fallback.item,
+          diagnostic:
+            buildPickedDiagnostic(
+              null,
+              "object",
+              fallback.item
+            )
+        };
+      }
+
+      return {
+        kind: "spline" as const,
+        item: fallback.item,
+        diagnostic:
+          buildPickedDiagnostic(
+            null,
+            "spline",
+            fallback.item
+          )
+      };
     };
 
     const selectPickedMapItem = (
@@ -7747,7 +7966,7 @@ export function Viewport({
         className="viewport-canvas"
         tabIndex={0}
         aria-label="Viewport 3D do editor"
-        title="Clique seleciona objeto/spline · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
+        title="Clique seleciona qualquer objeto/spline visível ou por posição OMSI · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
       />
       {referenceOverlay && (
         <div className="reference-attribution">
