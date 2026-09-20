@@ -5052,3 +5052,264 @@ span.active {
   top: 118px;
   left: 18px;
 }
+
+
+/* Approved floating panel composition.
+   Explorer/Inspector keep real content but use the hierarchy from the
+   accepted fullscreen concept: named headers, compact tabs and soft glass. */
+.map-explorer.city-drawer {
+  grid-template-rows:
+    40px 34px minmax(0, 1fr) 42px;
+  width: min(350px, calc(100% - 32px));
+}
+
+.object-inspector.city-drawer {
+  width: min(330px, calc(100% - 32px));
+}
+
+.explorer-heading,
+.object-inspector.city-drawer .inspector-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 7px 36px;
+  border-bottom: 1px solid rgb(39 73 96 / 78%);
+  background:
+    linear-gradient(
+      180deg,
+      rgb(15 38 54 / 94%),
+      rgb(9 27 40 / 90%)
+    );
+}
+
+.explorer-heading > div,
+.object-inspector.city-drawer .inspector-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.explorer-heading strong,
+.object-inspector.city-drawer .inspector-heading strong {
+  overflow: hidden;
+  color: #e1eff8;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-heading span,
+.object-inspector.city-drawer .inspector-heading span {
+  overflow: hidden;
+  color: #718fa4;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.explorer-heading > .mapstudio-icon,
+.object-inspector.city-drawer
+.inspector-heading > .mapstudio-icon {
+  color: #78bce9;
+}
+
+.map-explorer.city-drawer .explorer-tabs {
+  padding: 0 30px;
+  background: rgb(6 20 31 / 78%);
+}
+
+.map-explorer.city-drawer .explorer-tabs button {
+  padding: 7px 5px;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  font-size: 8px;
+}
+
+.map-explorer.city-drawer
+.explorer-tabs button.active {
+  border-bottom-color: #4ba8e6;
+  background: rgb(18 62 89 / 52%);
+  color: #e7f6ff;
+}
+
+.city-drawer-close {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  color: #8faec2;
+}
+
+.city-drawer-close:hover {
+  color: #eef9ff;
+}
+
+/* Tile navigator now reads as a small map tool rather than a debug widget. */
+.tile-navigator {
+  width: 220px;
+  gap: 8px;
+  padding: 8px;
+  border-color: rgb(61 105 136 / 76%);
+  border-radius: 11px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(10 30 44 / 96%),
+      rgb(5 19 29 / 95%)
+    );
+  box-shadow:
+    0 16px 44px rgb(0 0 0 / 40%);
+  backdrop-filter: blur(14px);
+}
+
+.tile-navigator-title {
+  min-height: 34px;
+}
+
+.tile-navigator-title-main {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.tile-navigator-title-main > .mapstudio-icon {
+  color: #75bce9;
+}
+
+.tile-navigator-title-main > div {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.tile-navigator-title-main strong {
+  font-size: 9px;
+}
+
+.tile-navigator-title-main span {
+  font-size: 7px;
+}
+
+.tile-navigator-close {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border-color: #2c536b;
+  background: #071824;
+  color: #829fb2;
+}
+
+.tile-navigator-grid {
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid #183a50;
+  border-radius: 8px;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(5 17 27 / 82%),
+      rgb(8 25 37 / 82%)
+    );
+}
+
+.tile-navigator-grid button {
+  height: 48px;
+  border-radius: 6px;
+}
+
+.tile-navigator-grid button.active {
+  border-color: #58b2eb;
+  background:
+    linear-gradient(
+      180deg,
+      #104f78,
+      #0a3551
+    );
+  box-shadow:
+    inset 0 0 0 1px rgb(111 196 250 / 18%),
+    0 0 18px rgb(28 133 204 / 14%);
+}
+
+/* Compact real-data status bar matching the approved visual direction. */
+.editor-statusbar {
+  gap: 8px;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.editor-statusbar > span:first-child {
+  min-width: 120px;
+  max-width: min(34vw, 420px);
+  overflow: hidden;
+  color: #8aa8bc;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-status-segments {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0;
+  overflow: hidden;
+}
+
+.editor-status-segment {
+  display: inline-flex;
+  min-width: 0;
+  height: 100%;
+  align-items: center;
+  gap: 4px;
+  padding: 0 9px;
+  border-left: 1px solid #17364a;
+  color: #7392a8;
+  font-size: 7.5px;
+  white-space: nowrap;
+}
+
+.editor-status-segment.selection {
+  max-width: 190px;
+  color: #9cb9ca;
+}
+
+.editor-status-segment.selection strong {
+  overflow: hidden;
+  color: #c9deea;
+  text-overflow: ellipsis;
+}
+
+.editor-status-segment.state.ready {
+  color: #69d793;
+}
+
+.editor-status-segment.state.error {
+  color: #efb05f;
+}
+
+@media (max-width: 1160px) {
+  .editor-status-segment:nth-child(5),
+  .editor-status-segment:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .editor-statusbar > span:first-child {
+    display: none;
+  }
+
+  .editor-status-segment:nth-child(4) {
+    display: none;
+  }
+}

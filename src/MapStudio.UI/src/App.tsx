@@ -18468,9 +18468,24 @@ export function App() {
                 }}
                 title="Fechar painel"
               >
-                ×
+                <MapStudioIcon
+                  name="discard"
+                  size={14}
+                />
               </button>
             )}
+            <div className="explorer-heading">
+              <MapStudioIcon
+                name="explorer"
+                size={18}
+              />
+              <div>
+                <strong>Explorador de objetos</strong>
+                <span>
+                  {selectedMap.displayName}
+                </span>
+              </div>
+            </div>
             <div className="explorer-tabs">
               <button
                 type="button"
@@ -21320,15 +21335,37 @@ export function App() {
                 data-floating-tool
                 aria-label="Navegação entre blocos do mapa"
               >
-                <div
-                  className="tile-navigator-title drag-handle"
-                  data-drag-handle
-                  title="Arraste para mover esta ferramenta"
-                >
-                  <strong>Blocos</strong>
-                  <span>
-                    Tile {activeTile.x},{activeTile.y}
-                  </span>
+                <div className="tile-navigator-title">
+                  <div
+                    className="tile-navigator-title-main drag-handle"
+                    data-drag-handle
+                    title="Arraste para mover esta ferramenta"
+                  >
+                    <MapStudioIcon
+                      name="construction-set"
+                      size={17}
+                    />
+                    <div>
+                      <strong>Navegador de blocos</strong>
+                      <span>
+                        Tile {activeTile.x},{activeTile.y}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="tile-navigator-close"
+                    onClick={() =>
+                      setShowTileNavigator(false)
+                    }
+                    title="Fechar navegador de blocos"
+                    aria-label="Fechar navegador de blocos"
+                  >
+                    <MapStudioIcon
+                      name="discard"
+                      size={13}
+                    />
+                  </button>
                 </div>
 
                 <div className="tile-navigator-grid">
@@ -24350,22 +24387,31 @@ export function App() {
                 }}
                 title="Fechar painel"
               >
-                ×
+                <MapStudioIcon
+                  name="discard"
+                  size={14}
+                />
               </button>
             )}
             <div className="inspector-heading">
-              <strong>Inspetor</strong>
-              <span>
-                {selectedObject
-                  ? "Objeto selecionado"
-                  : selectedSpline
-                    ? "Spline selecionada"
-                    : splineLibraryPlacementAsset
-                      ? "Spline em construção"
-                      : placementAsset
-                        ? "Asset em colocação"
-                        : "Mapa aberto"}
-              </span>
+              <MapStudioIcon
+                name="inspector"
+                size={18}
+              />
+              <div>
+                <strong>Inspetor</strong>
+                <span>
+                  {selectedObject
+                    ? "Objeto selecionado"
+                    : selectedSpline
+                      ? "Spline selecionada"
+                      : splineLibraryPlacementAsset
+                        ? "Spline em construção"
+                        : placementAsset
+                          ? "Asset em colocação"
+                          : "Mapa aberto"}
+                </span>
+              </div>
             </div>
 
             {selectedSpline ||
@@ -24414,61 +24460,77 @@ export function App() {
                           : "Pronto"}
           </span>
 
-          <span>
-            Modo:{" "}
-            {mapLoadMode === "full"
-              ? "Mapa completo"
-              : "Streaming automático"}
-            <b>·</b>
-            Objetos:{" "}
-            {selectedStats?.objects ??
-              objects.length}
-            <b>·</b>
-            Splines:{" "}
-            {selectedStats?.splines ??
-              splines.length}
-            <b>·</b>
-            Malhas reais:{" "}
-            {mapLoadMode === "full"
-              ? `${renderableMapGeometryCount}/${mapObjectPaths.length}`
-              : `${renderableDiagnosticGeometryCount}/${nearbyObjectPaths.length}`}
-            {failedDiagnosticGeometryCount > 0
-              ? ` (falhas: ${failedDiagnosticGeometryCount})`
-              : ""}
-            <b>·</b>
-            Perfis SLI:{" "}
-            {loadedSplineProfileCount}/
-            {splinePathsForPreload.length}
-            {" "}· superfícies:{" "}
-            {splineProfileDiagnostics.surfaces}
-            <b>·</b>
-            Texturas:{" "}
-            {loadedTextureAssetCount} OK
-            {" · "}
-            {failedTextureAssetCount} falhas
-            {" · "}
-            {pendingTextureAssetCount} pendentes
-            <b>·</b>
-            Auto solicitadas:{" "}
-            {Object.keys(
-              autoPrefetchedTextureKeys
-            ).length}
-            {" · limite atual: "}
-            {autoTextureLimit}
-            <b>·</b>
-            Cache:{" "}
-            {Object.keys(
-              textureAssetsByKey
-            ).length}/
-            {maxTextureCacheEntries}
-            <b>·</b>
-            Prévia:{" "}
-            {previewEditCount}
-            <b>·</b>
-            Tiles:{" "}
-            {activeTiles.length}/
-            {selectedMap.tiles.length}
-          </span>
+          <div className="editor-status-segments">
+            <span
+              className="editor-status-segment selection"
+              title={
+                selectedObject
+                  ? selectedObject.sceneryObjectPath
+                  : selectedSpline
+                    ? selectedSpline.splinePath
+                    : "Nenhum item selecionado"
+              }
+            >
+              <MapStudioIcon
+                name={
+                  selectedObject
+                    ? "sco-object"
+                    : selectedSpline
+                      ? "sli-spline"
+                      : "select"
+                }
+                size={13}
+              />
+              <strong>
+                {selectedObject
+                  ? `Objeto #${selectedObject.objectId}`
+                  : selectedSpline
+                    ? `Spline #${selectedSpline.splineId}`
+                    : "Sem seleção"}
+              </strong>
+            </span>
+            {activeTile && (
+              <span className="editor-status-segment">
+                Tile {activeTile.x},{activeTile.y}
+              </span>
+            )}
+            <span className="editor-status-segment">
+              Snap: {snapEnabled ? "Ativo" : "Off"}
+            </span>
+            <span className="editor-status-segment">
+              {mapLoadMode === "full"
+                ? "Mapa completo"
+                : "Streaming"}
+            </span>
+            <span className="editor-status-segment">
+              Objetos:{" "}
+              {selectedStats?.objects ??
+                objects.length}
+            </span>
+            <span className="editor-status-segment">
+              Splines:{" "}
+              {selectedStats?.splines ??
+                splines.length}
+            </span>
+            <span
+              className={
+                error
+                  ? "editor-status-segment state error"
+                  : "editor-status-segment state ready"
+              }
+              title={
+                `O3D ${mapLoadMode === "full"
+                  ? renderableMapGeometryCount + "/" + mapObjectPaths.length
+                  : renderableDiagnosticGeometryCount + "/" + nearbyObjectPaths.length} · SLI ${loadedSplineProfileCount}/${splinePathsForPreload.length} · Texturas ${loadedTextureAssetCount} OK / ${failedTextureAssetCount} falhas`
+              }
+            >
+              <MapStudioIcon
+                name={error ? "warning" : "success"}
+                size={13}
+              />
+              {error ? "Atenção" : "Pronto"}
+            </span>
+          </div>
         </footer>
       </section>
     );
