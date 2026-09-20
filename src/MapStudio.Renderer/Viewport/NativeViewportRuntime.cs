@@ -136,9 +136,19 @@ public sealed class NativeViewportRuntime : IDisposable
                 pixelX,
                 pixelY);
 
-        return Picking.TryResolve(
-            pickingId,
-            out item);
+        var resolved =
+            Picking.TryResolve(
+                pickingId,
+                out item);
+
+        MapRenderer.SetSelection(
+            resolved
+                ? pickingId
+                : PickingId.None);
+
+        RenderInitialFrame();
+
+        return resolved;
     }
 
     public void RenderInitialFrame()

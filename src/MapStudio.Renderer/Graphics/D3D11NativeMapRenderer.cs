@@ -38,6 +38,25 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _pickingTriangleVertexCount;
 
+    private ID3D11Buffer?
+        _selectionTriangleBuffer;
+
+    private int
+        _selectionTriangleVertexCount;
+
+    private NativeMapVertex[]
+        _objectVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private IReadOnlyDictionary<
+        PickingId,
+        NativeTriangleRange>
+        _objectRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
     private readonly D3D11PickingSurface
         _pickingSurface;
 
@@ -141,6 +160,20 @@ public sealed class D3D11NativeMapRenderer :
         _pickingTriangleBuffer = null;
         _pickingTriangleVertexCount = 0;
 
+        _selectionTriangleBuffer
+            ?.Dispose();
+        _selectionTriangleBuffer = null;
+        _selectionTriangleVertexCount = 0;
+
+        _objectVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        _objectRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
         var geometry =
             new NativeMapGeometryBuilder()
                 .Build(scene);
@@ -178,6 +211,14 @@ public sealed class D3D11NativeMapRenderer :
             _objectTriangleVertexCount =
                 objectGeometry
                     .Vertices.Length;
+
+            _objectVertices =
+                objectGeometry
+                    .Vertices;
+
+            _objectRanges =
+                objectGeometry
+                    .Ranges;
 
             if (
                 objectGeometry
@@ -248,27 +289,49 @@ public sealed class D3D11NativeMapRenderer :
 
                 if (
                     _vertexBuffer is
-                        null ||
-                    _vertexCount == 0)
+                        not null &&
+                    _vertexCount > 0)
                 {
-                    return;
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .LineList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _vertexBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)_vertexCount,
+                        0);
                 }
 
-                context
-                    .IASetPrimitiveTopology(
-                        PrimitiveTopology
-                            .LineList);
+                if (
+                    _selectionTriangleBuffer
+                        is not null &&
+                    _selectionTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
 
-                context
-                    .IASetVertexBuffer(
-                        0,
-                        _vertexBuffer,
-                        NativeMapVertex
-                            .SizeInBytes);
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _selectionTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
 
-                context.Draw(
-                    (uint)_vertexCount,
-                    0);
+                    context.Draw(
+                        (uint)
+                            _selectionTriangleVertexCount,
+                        0);
+                }
             });
 
         RenderPicking(
@@ -334,6 +397,66 @@ public sealed class D3D11NativeMapRenderer :
             x,
             y);
 
+    public void SetSelection(
+        PickingId pickingId)
+    {
+        _selectionTriangleBuffer
+            ?.Dispose();
+        _selectionTriangleBuffer = null;
+        _selectionTriangleVertexCount = 0;
+
+        if (
+            pickingId.IsNone ||
+            !_objectRanges.TryGetValue(
+                pickingId,
+                out var range) ||
+            range.VertexCount <= 0 ||
+            range.StartVertex < 0 ||
+            range.StartVertex +
+                range.VertexCount >
+            _objectVertices.Length)
+        {
+            return;
+        }
+
+        var selected =
+            new NativeMapVertex[
+                range.VertexCount];
+
+        var color =
+            new System.Numerics.Vector4(
+                1.0f,
+                0.10f,
+                0.05f,
+                1.0f);
+
+        for (
+            var index = 0;
+            index < selected.Length;
+            index++)
+        {
+            var source =
+                _objectVertices[
+                    range.StartVertex +
+                    index];
+
+            selected[index] =
+                new NativeMapVertex(
+                    source.Position,
+                    color);
+        }
+
+        _selectionTriangleBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    selected.AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _selectionTriangleVertexCount =
+            selected.Length;
+    }
+
     private void ThrowIfDisposed()
     {
         ObjectDisposedException
@@ -352,6 +475,9 @@ public sealed class D3D11NativeMapRenderer :
         _disposed = true;
 
         _pickingSurface.Dispose();
+
+        _selectionTriangleBuffer
+            ?.Dispose();
 
         _pickingTriangleBuffer
             ?.Dispose();

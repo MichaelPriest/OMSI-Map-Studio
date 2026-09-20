@@ -4,9 +4,16 @@ using MapStudio.Core.Omsi.Scenery;
 
 namespace MapStudio.Renderer.Scene;
 
+public sealed record NativeTriangleRange(
+    int StartVertex,
+    int VertexCount);
+
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
     NativeMapVertex[] PickingVertices,
+    IReadOnlyDictionary<
+        MapStudio.Renderer.Picking.PickingId,
+        NativeTriangleRange> Ranges,
     int LoadedObjectCount,
     int LoadedMeshCount)
 {
@@ -50,12 +57,20 @@ public sealed class NativeObjectTriangleGeometryBuilder
             new List<NativeMapVertex>(
                 64_000);
 
+        var ranges =
+            new Dictionary<
+                MapStudio.Renderer.Picking.PickingId,
+                NativeTriangleRange>();
+
         var loadedObjects = 0;
         var loadedMeshes = 0;
 
         foreach (
             var entity in scene.Objects)
         {
+            var entityStart =
+                vertices.Count;
+
             if (
                 !assets.TryGetValue(
                     entity.Object
@@ -127,12 +142,20 @@ public sealed class NativeObjectTriangleGeometryBuilder
             if (objectContributed)
             {
                 loadedObjects++;
+
+                ranges[
+                    entity.PickingId] =
+                    new NativeTriangleRange(
+                        entityStart,
+                        vertices.Count -
+                            entityStart);
             }
         }
 
         return new NativeObjectTriangleGeometry(
             vertices.ToArray(),
             pickingVertices.ToArray(),
+            ranges,
             loadedObjects,
             loadedMeshes);
     }

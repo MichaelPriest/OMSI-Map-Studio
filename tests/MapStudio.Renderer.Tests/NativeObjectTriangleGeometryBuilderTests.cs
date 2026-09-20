@@ -131,6 +131,21 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
             1,
             result.LoadedObjectCount);
 
+        Assert.Single(
+            result.Ranges);
+
+        var range =
+            Assert.Single(
+                result.Ranges.Values);
+
+        Assert.Equal(
+            0,
+            range.StartVertex);
+
+        Assert.Equal(
+            3,
+            range.VertexCount);
+
         Assert.All(
             result.Vertices,
             vertex =>
