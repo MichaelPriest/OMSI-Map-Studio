@@ -1969,6 +1969,52 @@ code {
   flex-direction: column;
 }
 
+.asset-preview-card {
+  display: grid;
+  gap: 7px;
+  margin: 8px 0;
+  padding: 9px;
+  border: 1px solid #2a5573;
+  border-radius: 7px;
+  background: #081a28;
+}
+
+.asset-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.asset-preview-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.asset-preview-heading strong {
+  color: #e1f0fb;
+  font-size: 10px;
+}
+
+.asset-preview-heading span,
+.asset-preview-details span {
+  overflow: hidden;
+  color: #83a2b9;
+  font-size: 8px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.asset-preview-heading span {
+  white-space: nowrap;
+}
+
+.asset-preview-details {
+  display: grid;
+  gap: 3px;
+}
+
 .scenery-library-list {
   display: flex;
   min-height: 0;
