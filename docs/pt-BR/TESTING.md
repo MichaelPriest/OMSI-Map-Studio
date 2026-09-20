@@ -637,3 +637,12 @@ Validação manual esperada no Windows:
 6. voltar a um tile visitado e confirmar recarga correta;
 7. testar seleção/picking após várias trocas de tile;
 8. confirmar que **Mapa completo** continua funcionando como fallback/diagnóstico.
+
+
+### Streaming automático como padrão
+
+1. abra um mapa pelo catálogo e confirme que ele entra diretamente em **Streaming automático**, sem iniciar a leitura do mapa completo;
+2. confirme que a área central 3×3 recebe terreno, objetos e splines completos;
+3. confirme que o anel externo aparece apenas como metadata/summary e não injeta objetos no viewport;
+4. mova a câmera para outro tile e confirme a troca automática de região;
+5. use **Visualizar → Mapa completo** e confirme que o modo completo ainda pode ser acionado manualmente.
