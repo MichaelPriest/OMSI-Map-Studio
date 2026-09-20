@@ -20,6 +20,8 @@ public sealed partial class MainWindow : Window
 
     private readonly IntPtr _windowHandle;
 
+    private readonly AppWindow _appWindow;
+
     private NativeSelectionInfo?
         _selectionInfo;
 
@@ -55,11 +57,11 @@ public sealed partial class MainWindow : Window
                 .GetWindowIdFromWindow(
                     _windowHandle);
 
-        var appWindow =
+        _appWindow =
             AppWindow.GetFromWindowId(
                 windowId);
 
-        appWindow.Resize(
+        _appWindow.Resize(
             new SizeInt32(
                 1440,
                 900));
@@ -1136,36 +1138,46 @@ public sealed partial class MainWindow : Window
 
     private void OnUndoClick(
         object sender,
-        RoutedEventArgs e)
-    {
-        if (Viewport.Undo())
-        {
-            StatusText.Text =
-                "Transformação desfeita.";
-
-            UndoButton.IsEnabled =
-                Viewport.CanUndo;
-
-            RedoButton.IsEnabled =
-                Viewport.CanRedo;
-        }
-    }
+        RoutedEventArgs e) =>
+        UndoTransform();
 
     private void OnRedoClick(
         object sender,
-        RoutedEventArgs e)
+        RoutedEventArgs e) =>
+        RedoTransform();
+
+    private void UndoTransform()
     {
-        if (Viewport.Redo())
+        if (!Viewport.Undo())
         {
-            StatusText.Text =
-                "Transformação refeita.";
-
-            UndoButton.IsEnabled =
-                Viewport.CanUndo;
-
-            RedoButton.IsEnabled =
-                Viewport.CanRedo;
+            return;
         }
+
+        StatusText.Text =
+            "Transformação desfeita.";
+
+        UndoButton.IsEnabled =
+            Viewport.CanUndo;
+
+        RedoButton.IsEnabled =
+            Viewport.CanRedo;
+    }
+
+    private void RedoTransform()
+    {
+        if (!Viewport.Redo())
+        {
+            return;
+        }
+
+        StatusText.Text =
+            "Transformação refeita.";
+
+        UndoButton.IsEnabled =
+            Viewport.CanUndo;
+
+        RedoButton.IsEnabled =
+            Viewport.CanRedo;
     }
 
     private void OnSnapClick(
@@ -1191,7 +1203,10 @@ public sealed partial class MainWindow : Window
 
     private async void OnSaveChangesClick(
         object sender,
-        RoutedEventArgs e)
+        RoutedEventArgs e) =>
+        await SavePendingChangesAsync();
+
+    private async Task SavePendingChangesAsync()
     {
         try
         {
@@ -1206,8 +1221,7 @@ public sealed partial class MainWindow : Window
             }
 
             var count =
-                _session
-                    .PendingTransformCount;
+                _session.PendingTransformCount;
 
             StatusText.Text =
                 "Salvando alterações com backup...";
@@ -1239,6 +1253,169 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Falha ao salvar alterações: {exception.Message}";
         }
+    }
+
+    private void OnFullscreenClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleFullscreen();
+
+    private void OnFullscreenAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        ToggleFullscreen();
+        args.Handled = true;
+    }
+
+    private void OnMoveAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        Viewport.SetGizmoMode(
+            NativeGizmoMode.Move);
+
+        StatusText.Text =
+            "Ferramenta mover ativa (W).";
+
+        args.Handled = true;
+    }
+
+    private void OnRotateAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        Viewport.SetGizmoMode(
+            NativeGizmoMode.Rotate);
+
+        StatusText.Text =
+            "Ferramenta rotacionar ativa (E).";
+
+        args.Handled = true;
+    }
+
+    private async void OnSaveAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        args.Handled = true;
+
+        await SavePendingChangesAsync();
+    }
+
+    private void OnUndoAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        UndoTransform();
+        args.Handled = true;
+    }
+
+    private void OnRedoAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        RedoTransform();
+        args.Handled = true;
+    }
+
+    private void OnEscapeAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            Viewport.CancelSceneryPlacement();
+            Viewport.CancelSplinePlacement();
+
+            PlaceAssetButton.Content =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry asset &&
+                asset.Kind ==
+                    OmsiAssetKind.Spline
+                    ? "Construir spline"
+                    : "Posicionar no mapa";
+
+            StatusText.Text =
+                "Ferramenta de posicionamento cancelada.";
+
+            args.Handled = true;
+            return;
+        }
+
+        if (IsFullscreen())
+        {
+            ExitFullscreen();
+            args.Handled = true;
+        }
+    }
+
+    private bool IsTextInputFocused()
+    {
+        if (MainRoot.XamlRoot is null)
+        {
+            return false;
+        }
+
+        var focused =
+            FocusManager.GetFocusedElement(
+                MainRoot.XamlRoot);
+
+        return
+            focused is TextBox or
+            RichEditBox or
+            PasswordBox or
+            NumberBox;
+    }
+
+    private bool IsFullscreen() =>
+        _appWindow.Presenter?.Kind ==
+        AppWindowPresenterKind.FullScreen;
+
+    private void ToggleFullscreen()
+    {
+        if (IsFullscreen())
+        {
+            ExitFullscreen();
+            return;
+        }
+
+        _appWindow.SetPresenter(
+            AppWindowPresenterKind.FullScreen);
+
+        StatusText.Text =
+            "Tela cheia ativa · F11 ou Esc para sair.";
+    }
+
+    private void ExitFullscreen()
+    {
+        _appWindow.SetPresenter(
+            AppWindowPresenterKind.Default);
+
+        StatusText.Text =
+            "Tela cheia desativada.";
     }
 
     private void OnMoveGizmoClick(

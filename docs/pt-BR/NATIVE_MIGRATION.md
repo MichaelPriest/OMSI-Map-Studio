@@ -264,3 +264,20 @@ Foi adicionado ao Core um editor dedicado de links de spline. Ele valida ordinal
 Quando os dois segmentos estão no mesmo tile, a inserção e a atualização do link são combinadas no mesmo documento. Quando estão em tiles diferentes, os dois arquivos entram juntos no `SafeFileTransaction`; ambos recebem backup e a operação é tratada como uma única gravação transacional.
 
 Com isso, a ferramenta contínua deixa de produzir apenas segmentos geometricamente encostados: a sequência também fica encadeada pelos IDs do mapa OMSI.
+
+
+### Checkpoint N3.9 — tela cheia e atalhos nativos
+
+O host WinUI passa a oferecer tela cheia real do Windows por `AppWindowPresenterKind.FullScreen`, alternada por **F11**. **Esc** sai da tela cheia e também cancela imediatamente uma ferramenta de placement/construção ativa antes de afetar a janela.
+
+Os atalhos principais agora ficam no próprio host nativo:
+
+- **W** ativa o gizmo Mover;
+- **E** ativa o gizmo Rotacionar;
+- **Ctrl+S** salva transformações pendentes pelo mesmo fluxo seguro com backup;
+- **Ctrl+Z** desfaz a última transformação;
+- **Ctrl+Y** refaz a transformação;
+- **F11** alterna tela cheia;
+- **Esc** cancela placement/construção ou sai da tela cheia.
+
+W/E e Ctrl+Z/Ctrl+Y não interceptam teclas quando o foco está em `TextBox`, `RichEditBox`, `PasswordBox` ou `NumberBox`, preservando digitação e edição dos campos do Inspector. O foco é consultado pelo `FocusManager` usando o `XamlRoot` da janela.

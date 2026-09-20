@@ -5,7 +5,27 @@
     xmlns:controls="using:MapStudio.Native.Controls"
     Title="OMSI Map Studio Native">
 
-    <Grid Background="#08131D">
+    <Grid x:Name="MainRoot"
+          Background="#08131D">
+        <Grid.KeyboardAccelerators>
+            <KeyboardAccelerator Key="F11"
+                                 Invoked="OnFullscreenAcceleratorInvoked" />
+            <KeyboardAccelerator Key="W"
+                                 Invoked="OnMoveAcceleratorInvoked" />
+            <KeyboardAccelerator Key="E"
+                                 Invoked="OnRotateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="S"
+                                 Modifiers="Control"
+                                 Invoked="OnSaveAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Z"
+                                 Modifiers="Control"
+                                 Invoked="OnUndoAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Y"
+                                 Modifiers="Control"
+                                 Invoked="OnRedoAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Escape"
+                                 Invoked="OnEscapeAcceleratorInvoked" />
+        </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -31,7 +51,11 @@
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Editar" />
-                <MenuBarItem Title="Visualizar" />
+                <MenuBarItem Title="Visualizar">
+                    <MenuFlyoutItem
+                        Text="Tela cheia (F11)"
+                        Click="OnFullscreenClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Mapa" />
                 <MenuBarItem Title="Ferramentas" />
                 <MenuBarItem Title="Ajuda" />

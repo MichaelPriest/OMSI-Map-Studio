@@ -264,3 +264,20 @@ Core now has a dedicated spline-link editor. It validates ordinal, path, ID, and
 When both segments live in the same tile, insertion and link update are combined in the same document. When they span different tiles, both files are included in the same `SafeFileTransaction`; each receives a backup and the operation is handled as one transactional write.
 
 This means continuous construction no longer creates only geometrically touching segments: the sequence is also linked through the OMSI map IDs.
+
+
+### Checkpoint N3.9 — native fullscreen and shortcuts
+
+The WinUI host now provides real Windows fullscreen through `AppWindowPresenterKind.FullScreen`, toggled with **F11**. **Esc** exits fullscreen and also immediately cancels an active placement/construction tool before affecting the window state.
+
+Core editor shortcuts now live directly in the native host:
+
+- **W** activates the Move gizmo;
+- **E** activates the Rotate gizmo;
+- **Ctrl+S** saves pending transforms through the same safe backup workflow;
+- **Ctrl+Z** undoes the last transform;
+- **Ctrl+Y** redoes the transform;
+- **F11** toggles fullscreen;
+- **Esc** cancels placement/construction or exits fullscreen.
+
+W/E and Ctrl+Z/Ctrl+Y do not intercept keys while focus is inside a `TextBox`, `RichEditBox`, `PasswordBox`, or `NumberBox`, preserving typing and Inspector field editing. Focus is resolved through `FocusManager` using the window `XamlRoot`.
