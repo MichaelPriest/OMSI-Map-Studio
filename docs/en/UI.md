@@ -727,3 +727,12 @@ For `.sli`, the inspector reports surface count, real profile width, loaded/miss
 The desktop bridge accepts `insertObjectMultiBatch` to insert several different real `.sco` groups in one operation. The host validates each asset, finds its preservation template in the map, reserves one global ID sequence, and groups all objects per tile before writing.
 
 A multi-batch accepts up to 16 asset types and 512 total objects, with at most 256 per type. The entire operation uses one `SafeFileTransaction` and one backup directory, preventing ID races when a construction set mixes assets such as trees and street lights.
+
+
+### Composite construction sets
+
+The movable **Sets** panel stores reusable combinations made from one real `.sli` spline plus up to 16 real `.sco` companion asset types. Each companion can configure **side** (left/right/both), **spacing**, **lateral offset**, and **additional rotation**.
+
+When **Build set** is used, the road builder draws the real base spline. After the host actually saves that spline, companions are distributed along the returned spline geometry — including curves and gradient — and sent through `insertObjectMultiBatch`, up to 512 total objects.
+
+Each companion `.sco` must have a preservation template in the current map. This preserves OMSI-specific extra values instead of inventing object structure. Sets live in UI-local storage and only contain asset references/placement configuration; they never copy assets.

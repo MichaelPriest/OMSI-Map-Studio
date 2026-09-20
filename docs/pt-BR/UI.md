@@ -727,3 +727,12 @@ Para `.sli`, o inspetor mostra quantidade de superfícies, largura real do perfi
 O bridge desktop aceita `insertObjectMultiBatch` para inserir vários grupos de `.sco` diferentes na mesma operação. O host valida cada asset real, encontra o template preservativo correspondente no mapa, reserva uma sequência global de IDs e agrupa todos os objetos por tile antes de gravar.
 
 O multi-lote aceita até 16 tipos de asset e até 512 objetos totais, com no máximo 256 por tipo. Toda a operação usa uma única `SafeFileTransaction` e um único diretório de backup, evitando corridas de ID quando um conjunto de construção mistura, por exemplo, árvores e postes.
+
+
+### Conjuntos de construção compostos
+
+O painel móvel **Conjuntos** permite salvar combinações reutilizáveis formadas por uma spline `.sli` real e até 16 tipos de objetos `.sco` companheiros. Para cada companheiro é possível configurar **lado** (esquerda/direita/ambos), **espaçamento**, **afastamento lateral** e **rotação adicional**.
+
+Ao clicar **Construir conjunto**, o criador de rua usa a spline-base real. Depois que a spline é efetivamente salva pelo host, os objetos são distribuídos ao longo da geometria da spline retornada — inclusive curvas e gradiente — e enviados pelo `insertObjectMultiBatch`, com até 512 objetos no total.
+
+O editor exige que cada `.sco` companheiro possua template preservativo no mapa atual. Isso mantém os valores extras específicos do OMSI e evita inventar estrutura de objeto. Os conjuntos ficam no armazenamento local da interface e apenas guardam referências/cfg de colocação; não copiam assets.

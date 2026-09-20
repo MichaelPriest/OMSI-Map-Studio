@@ -15,6 +15,7 @@ import {
   getSplineTextureAssetKey,
   insertObject,
   insertObjectBatch,
+  insertObjectMultiBatch,
   insertSpline,
   insertSplineFromLibrary,
   applyTerrainElevationGrid,
@@ -155,7 +156,9 @@ const libraryStorageKeys = {
   collections:
     "omsi-map-studio:library:collections",
   thumbnails:
-    "omsi-map-studio:library:thumbnails-v1"
+    "omsi-map-studio:library:thumbnails-v1",
+  constructionSets:
+    "omsi-map-studio:construction-sets-v1"
 } as const;
 
 const readStoredJson = <T,>(
@@ -899,6 +902,28 @@ type ConstructionPresetId =
   | "greenSquare"
   | "parkingGrid";
 
+type ConstructionSetSide =
+  | "left"
+  | "right"
+  | "both";
+
+type ConstructionSetCompanion = {
+  id: string;
+  sceneryObjectPath: string;
+  spacing: number;
+  lateralOffset: number;
+  side: ConstructionSetSide;
+  rotationOffset: number;
+};
+
+type ConstructionSetDefinition = {
+  id: string;
+  name: string;
+  splinePath: string | null;
+  companions:
+    ConstructionSetCompanion[];
+};
+
 type PlacementTransformDefaults = Pick<
   PendingObjectPlacement,
   "z" | "rotation" | "pitch" | "bank"
@@ -1353,6 +1378,140 @@ const findJunctionSuggestions = (
   }
 
   return result;
+};
+
+const buildConstructionSetObjectGroups = (
+  spline: OmsiPlacedSpline,
+  set: ConstructionSetDefinition
+) => {
+  const groups:
+    Array<{
+      sceneryObjectPath: string;
+      placements:
+        PendingObjectPlacement[];
+    }> = [];
+  let remainingTotal = 512;
+
+  for (const companion of
+    set.companions.slice(0, 16)) {
+    if (remainingTotal <= 0) {
+      break;
+    }
+
+    const spacing =
+      Math.max(
+        1,
+        companion.spacing
+      );
+    const count =
+      Math.max(
+        1,
+        Math.min(
+          256,
+          Math.floor(
+            spline.length /
+            spacing
+          ) +
+            1
+        )
+      );
+    const placements:
+      PendingObjectPlacement[] = [];
+
+    for (
+      let index = 0;
+      index < count &&
+      placements.length < 256 &&
+      remainingTotal > 0;
+      index++
+    ) {
+      const progress =
+        count <= 1
+          ? 0
+          : index /
+            (count - 1);
+      const axis =
+        getSplineAxisPoint(
+          spline,
+          progress
+        );
+      const distanceAlong =
+        spline.length *
+        progress;
+      const gradientDelta =
+        spline.gradientEnd -
+        spline.gradientStart;
+      const z =
+        spline.z +
+        (
+          spline.gradientStart *
+            distanceAlong +
+          0.5 *
+            gradientDelta *
+            spline.length *
+            progress *
+            progress
+        ) /
+          100;
+      const headingDegrees =
+        axis.heading *
+          180 /
+          Math.PI +
+        companion.rotationOffset;
+      const leftX =
+        -Math.cos(axis.heading);
+      const leftY =
+        Math.sin(axis.heading);
+
+      const sides =
+        companion.side === "both"
+          ? [-1, 1]
+          : companion.side === "left"
+            ? [1]
+            : [-1];
+
+      for (const sideSign of sides) {
+        if (
+          placements.length >= 256 ||
+          remainingTotal <= 0
+        ) {
+          break;
+        }
+
+        const offset =
+          companion.lateralOffset *
+          sideSign;
+
+        placements.push(
+          placementFromWorldPoint(
+            axis.x +
+              leftX * offset,
+            axis.y +
+              leftY * offset,
+            {
+              z,
+              rotation:
+                headingDegrees,
+              pitch: 0,
+              bank: 0
+            }
+          )
+        );
+        remainingTotal -= 1;
+      }
+    }
+
+    if (placements.length > 0) {
+      groups.push({
+        sceneryObjectPath:
+          companion
+            .sceneryObjectPath,
+        placements
+      });
+    }
+  }
+
+  return groups;
 };
 
 const snapPlacementToNearestRoad = (
@@ -3624,6 +3783,49 @@ export function App() {
   ] = useState("");
 
   const [
+    constructionSets,
+    setConstructionSets
+  ] = useState<
+    ConstructionSetDefinition[]
+  >(() =>
+    readStoredJson(
+      libraryStorageKeys
+        .constructionSets,
+      []
+    )
+  );
+
+  const [
+    activeConstructionSetId,
+    setActiveConstructionSetId
+  ] = useState("");
+
+  const [
+    newConstructionSetName,
+    setNewConstructionSetName
+  ] = useState("");
+
+  const [
+    showConstructionSetPanel,
+    setShowConstructionSetPanel
+  ] = useState(false);
+
+  const [
+    applyConstructionSet,
+    setApplyConstructionSet
+  ] = useState(true);
+
+  const pendingConstructionSetRef =
+    useRef<
+      ConstructionSetDefinition | undefined
+    >(undefined);
+
+  const pendingConstructionSetLabelRef =
+    useRef<string | undefined>(
+      undefined
+    );
+
+  const [
     loadingSplineLibrary,
     setLoadingSplineLibrary
   ] = useState(false);
@@ -3895,6 +4097,14 @@ export function App() {
   }, [assetThumbnailCache]);
 
   useEffect(() => {
+    writeStoredJson(
+      libraryStorageKeys
+        .constructionSets,
+      constructionSets
+    );
+  }, [constructionSets]);
+
+  useEffect(() => {
     setPendingPlacementBatch([]);
     setPlacementLineStart(undefined);
     batchKeepPlacementRef.current =
@@ -3909,6 +4119,56 @@ export function App() {
     constructionRestoreEntryRef.current =
       undefined;
   }, [selectedMap?.directoryName]);
+
+  const activeConstructionSet =
+    useMemo(
+      () =>
+        constructionSets.find(
+          (set) =>
+            set.id ===
+            activeConstructionSetId
+        ),
+      [
+        activeConstructionSetId,
+        constructionSets
+      ]
+    );
+
+  const activeConstructionSetMissingTemplates =
+    useMemo(() => {
+      if (!activeConstructionSet) {
+        return [];
+      }
+
+      const known =
+        new Set(
+          objects.map((item) =>
+            normalizeAssetClassifierText(
+              item.sceneryObjectPath
+            )
+          )
+        );
+
+      return activeConstructionSet
+        .companions
+        .filter(
+          (companion) =>
+            !known.has(
+              normalizeAssetClassifierText(
+                companion
+                  .sceneryObjectPath
+              )
+            )
+        )
+        .map(
+          (companion) =>
+            companion
+              .sceneryObjectPath
+        );
+    }, [
+      activeConstructionSet,
+      objects
+    ]);
 
   const interactionLocked =
     selectingRoot ||
@@ -4785,6 +5045,55 @@ export function App() {
 
         if (
           message.type ===
+          "objectMultiBatchInserted"
+        ) {
+          setConstructionUndoStack(
+            (current) => [
+              ...current,
+              {
+                label:
+                  pendingConstructionSetLabelRef
+                    .current ??
+                  (
+                    "Multi-lote de " +
+                    message.count +
+                    " objeto(s)"
+                  ),
+                backupDirectory:
+                  message.backupDirectory
+              }
+            ].slice(-40)
+          );
+          setConstructionRedoStack([]);
+          setInsertingObject(false);
+
+          setSaveNotice(
+            (pendingConstructionSetLabelRef
+              .current ??
+              "Conjunto") +
+              ": " +
+              message.count +
+              " objeto(s) em " +
+              message.groupCount +
+              " grupo(s). Backup: " +
+              message.backupDirectory
+          );
+
+          pendingConstructionSetLabelRef
+            .current =
+            undefined;
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          return;
+        }
+
+        if (
+          message.type ===
           "objectBatchInserted"
         ) {
           setConstructionUndoStack(
@@ -4911,6 +5220,42 @@ export function App() {
             ].slice(-40)
           );
           setConstructionRedoStack([]);
+
+          const constructionSet =
+            pendingConstructionSetRef
+              .current;
+
+          pendingConstructionSetRef.current =
+            undefined;
+
+          if (
+            constructionSet &&
+            constructionSet.companions
+              .length > 0
+          ) {
+            const groups =
+              buildConstructionSetObjectGroups(
+                message.placedSpline,
+                constructionSet
+              );
+
+            if (groups.length > 0) {
+              pendingConstructionSetLabelRef
+                .current =
+                "Conjunto " +
+                constructionSet.name;
+
+              insertObjectMultiBatch(
+                message.directoryName,
+                groups
+              );
+
+              setSaveNotice(
+                `Spline #${message.placedSpline.splineId} inserida; aplicando conjunto "${constructionSet.name}" com ${groups.length} tipo(s) de objeto.`
+              );
+            }
+          }
+
           setInsertingSpline(false);
           setSplinePlacementTemplate(
             undefined
@@ -5186,6 +5531,10 @@ export function App() {
           setSavingSplineLinks(false);
           setInsertingSpline(false);
           setDeletingSpline(false);
+          pendingConstructionSetRef.current =
+            undefined;
+          pendingConstructionSetLabelRef.current =
+            undefined;
 
           setError(
             errorMessages[message.code] ??
@@ -10462,6 +10811,10 @@ export function App() {
       setRoadEndSnap(undefined);
       setRoadPlacementKind("road");
       setRoadElevationOffset(0);
+      pendingConstructionSetRef.current =
+        undefined;
+      pendingConstructionSetLabelRef.current =
+        undefined;
       setInsertingSpline(false);
     }, []);
 
@@ -10479,6 +10832,29 @@ export function App() {
       setInsertingSpline(true);
       setSaveNotice(undefined);
       setError(undefined);
+
+      const insertionSplinePath =
+        splineLibraryPlacementAsset
+          ?.splinePath ??
+        splinePlacementTemplate
+          .splinePath;
+
+      pendingConstructionSetRef.current =
+        applyConstructionSet &&
+        activeConstructionSet &&
+        activeConstructionSet
+          .splinePath &&
+        normalizeAssetClassifierText(
+          activeConstructionSet
+            .splinePath
+        ) ===
+          normalizeAssetClassifierText(
+            insertionSplinePath
+          ) &&
+        activeConstructionSet
+          .companions.length > 0
+          ? activeConstructionSet
+          : undefined;
 
       if (
         splineLibraryPlacementAsset
@@ -10498,6 +10874,8 @@ export function App() {
         );
       }
     }, [
+      activeConstructionSet,
+      applyConstructionSet,
       insertingSpline,
       pendingSplinePlacement,
       selectedMap,
@@ -10915,6 +11293,213 @@ export function App() {
     splinePreviewEditCount
   ]);
 
+  const handleCreateConstructionSet =
+    useCallback(() => {
+      const name =
+        newConstructionSetName
+          .trim();
+
+      if (!name) {
+        return;
+      }
+
+      const id =
+        "set-" +
+        Date.now().toString(36);
+
+      const next:
+        ConstructionSetDefinition = {
+        id,
+        name,
+        splinePath:
+          splineLibraryPreviewAsset
+            ?.splinePath ??
+          null,
+        companions: []
+      };
+
+      setConstructionSets(
+        (current) => [
+          ...current,
+          next
+        ]
+      );
+      setActiveConstructionSetId(
+        id
+      );
+      setNewConstructionSetName("");
+      setShowConstructionSetPanel(
+        true
+      );
+    }, [
+      newConstructionSetName,
+      splineLibraryPreviewAsset
+    ]);
+
+  const updateActiveConstructionSet =
+    useCallback(
+      (
+        update: (
+          current:
+            ConstructionSetDefinition
+        ) =>
+          ConstructionSetDefinition
+      ) => {
+        if (
+          !activeConstructionSetId
+        ) {
+          return;
+        }
+
+        setConstructionSets(
+          (current) =>
+            current.map((set) =>
+              set.id ===
+              activeConstructionSetId
+                ? update(set)
+                : set
+            )
+        );
+      },
+      [activeConstructionSetId]
+    );
+
+  const handleDeleteConstructionSet =
+    useCallback(() => {
+      if (
+        !activeConstructionSetId
+      ) {
+        return;
+      }
+
+      setConstructionSets(
+        (current) =>
+          current.filter(
+            (set) =>
+              set.id !==
+              activeConstructionSetId
+          )
+      );
+      setActiveConstructionSetId(
+        ""
+      );
+    }, [activeConstructionSetId]);
+
+  const handleUsePreviewSplineInSet =
+    useCallback(() => {
+      if (
+        !splineLibraryPreviewAsset ||
+        !activeConstructionSetId
+      ) {
+        return;
+      }
+
+      updateActiveConstructionSet(
+        (current) => ({
+          ...current,
+          splinePath:
+            splineLibraryPreviewAsset
+              .splinePath
+        })
+      );
+    }, [
+      activeConstructionSetId,
+      splineLibraryPreviewAsset,
+      updateActiveConstructionSet
+    ]);
+
+  const handleAddPreviewObjectToSet =
+    useCallback(() => {
+      if (
+        !sceneryLibraryPreviewAsset ||
+        !activeConstructionSetId
+      ) {
+        return;
+      }
+
+      updateActiveConstructionSet(
+        (current) => {
+          if (
+            current.companions
+              .length >= 16
+          ) {
+            return current;
+          }
+
+          return {
+            ...current,
+            companions: [
+              ...current.companions,
+              {
+                id:
+                  "comp-" +
+                  Date.now()
+                    .toString(36),
+                sceneryObjectPath:
+                  sceneryLibraryPreviewAsset
+                    .sceneryObjectPath,
+                spacing: 20,
+                lateralOffset: 6,
+                side: "both",
+                rotationOffset: 0
+              }
+            ]
+          };
+        }
+      );
+    }, [
+      activeConstructionSetId,
+      sceneryLibraryPreviewAsset,
+      updateActiveConstructionSet
+    ]);
+
+  const handleUpdateConstructionSetCompanion =
+    useCallback(
+      (
+        companionId: string,
+        patch:
+          Partial<
+            ConstructionSetCompanion
+          >
+      ) => {
+        updateActiveConstructionSet(
+          (current) => ({
+            ...current,
+            companions:
+              current.companions.map(
+                (companion) =>
+                  companion.id ===
+                  companionId
+                    ? {
+                        ...companion,
+                        ...patch
+                      }
+                    : companion
+              )
+          })
+        );
+      },
+      [updateActiveConstructionSet]
+    );
+
+  const handleRemoveConstructionSetCompanion =
+    useCallback(
+      (companionId: string) => {
+        updateActiveConstructionSet(
+          (current) => ({
+            ...current,
+            companions:
+              current.companions.filter(
+                (companion) =>
+                  companion.id !==
+                  companionId
+              )
+          })
+        );
+      },
+      [updateActiveConstructionSet]
+    );
+
   const toggleSceneryFavorite =
     useCallback((path: string) => {
       setSceneryFavorites((current) =>
@@ -11041,6 +11626,80 @@ export function App() {
       },
       [activeLibraryCollection]
     );
+
+  const handleBuildActiveConstructionSet =
+    useCallback(() => {
+      if (
+        !activeConstructionSet ||
+        !activeConstructionSet
+          .splinePath
+      ) {
+        setError(
+          "Defina uma spline .sli para o conjunto."
+        );
+        return;
+      }
+
+      if (
+        activeConstructionSetMissingTemplates
+          .length > 0
+      ) {
+        setError(
+          "O conjunto usa objeto(s) sem template preservativo no mapa atual: " +
+            activeConstructionSetMissingTemplates
+              .slice(0, 3)
+              .join(", ")
+        );
+        return;
+      }
+
+      const entry =
+        splineLibrary.find(
+          (candidate) =>
+            normalizeAssetClassifierText(
+              candidate.splinePath
+            ) ===
+            normalizeAssetClassifierText(
+              activeConstructionSet
+                .splinePath!
+            )
+        );
+
+      if (!entry) {
+        setError(
+          "A spline do conjunto não está disponível na biblioteca atual."
+        );
+        return;
+      }
+
+      setActiveConstructionTool(
+        "road"
+      );
+      setRoadPlacementKind(
+        "road"
+      );
+      setRoadElevationOffset(0);
+      setEasyRoadMode(true);
+      setEasyRoadStart(undefined);
+      setEasyRoadEnd(undefined);
+      setEasyRoadCurveOffset(0);
+      setRoadStartSnap(undefined);
+      setRoadEndSnap(undefined);
+      setSelectionMode("spline");
+      setShowSplines(true);
+      handleSelectSplineLibraryAsset(
+        entry,
+        false
+      );
+      setSaveNotice(
+        `Conjunto "${activeConstructionSet.name}" ativo. Desenhe a via; os objetos companheiros serão aplicados depois que a spline for salva.`
+      );
+    }, [
+      activeConstructionSet,
+      activeConstructionSetMissingTemplates,
+      handleSelectSplineLibraryAsset,
+      splineLibrary
+    ]);
 
   const handleAssetThumbnail =
     useCallback(
@@ -15016,6 +15675,30 @@ export function App() {
           <button
             type="button"
             className={
+              showConstructionSetPanel
+                ? "construction-sets-button active"
+                : "construction-sets-button"
+            }
+            onClick={() =>
+              setShowConstructionSetPanel(
+                (current) =>
+                  !current
+              )
+            }
+            title="Criar e aplicar conjuntos de construção"
+          >
+            ▦ Conjuntos
+            {constructionSets.length >
+              0 && (
+              <small>
+                {constructionSets.length}
+              </small>
+            )}
+          </button>
+
+          <button
+            type="button"
+            className={
               missingDependencyCount > 0
                 ? "dependency-audit-button warning"
                 : "dependency-audit-button"
@@ -18969,6 +19652,394 @@ export function App() {
                 >
                   Cancelar
                 </button>
+              </div>
+            )}
+
+            {showConstructionSetPanel && (
+              <div
+                className="construction-set-panel floating-tool"
+                data-floating-tool
+              >
+                <button
+                  type="button"
+                  className="tool-drag-grip drag-handle"
+                  data-drag-handle
+                  title="Mover conjuntos"
+                >
+                  ⋮⋮
+                </button>
+
+                <div className="construction-set-heading">
+                  <div>
+                    <strong>
+                      Conjuntos de construção
+                    </strong>
+                    <span>
+                      Via real + objetos reais
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConstructionSetPanel(
+                        false
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="construction-set-create">
+                  <input
+                    value={
+                      newConstructionSetName
+                    }
+                    onChange={(event) =>
+                      setNewConstructionSetName(
+                        event.currentTarget
+                          .value
+                      )
+                    }
+                    placeholder="Nome do novo conjunto"
+                    onKeyDown={(event) => {
+                      if (
+                        event.key ===
+                        "Enter"
+                      ) {
+                        handleCreateConstructionSet();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={
+                      !newConstructionSetName
+                        .trim()
+                    }
+                    onClick={
+                      handleCreateConstructionSet
+                    }
+                  >
+                    Criar
+                  </button>
+                </div>
+
+                <select
+                  className="construction-set-select"
+                  value={
+                    activeConstructionSetId
+                  }
+                  onChange={(event) =>
+                    setActiveConstructionSetId(
+                      event.currentTarget
+                        .value
+                    )
+                  }
+                >
+                  <option value="">
+                    Selecione um conjunto
+                  </option>
+                  {constructionSets.map(
+                    (set) => (
+                      <option
+                        key={set.id}
+                        value={set.id}
+                      >
+                        {set.name}
+                      </option>
+                    )
+                  )}
+                </select>
+
+                {activeConstructionSet && (
+                  <>
+                    <label className="construction-set-field">
+                      <span>Nome</span>
+                      <input
+                        value={
+                          activeConstructionSet
+                            .name
+                        }
+                        onChange={(event) =>
+                          updateActiveConstructionSet(
+                            (current) => ({
+                              ...current,
+                              name:
+                                event
+                                  .currentTarget
+                                  .value
+                            })
+                          )
+                        }
+                      />
+                    </label>
+
+                    <div className="construction-set-road">
+                      <strong>
+                        Via-base
+                      </strong>
+                      <code>
+                        {activeConstructionSet
+                          .splinePath ??
+                          "Nenhuma .sli definida"}
+                      </code>
+                      <button
+                        type="button"
+                        disabled={
+                          !splineLibraryPreviewAsset
+                        }
+                        onClick={
+                          handleUsePreviewSplineInSet
+                        }
+                      >
+                        Usar spline em prévia
+                      </button>
+                    </div>
+
+                    <div className="construction-set-add-object">
+                      <strong>
+                        Companheiros
+                      </strong>
+                      <button
+                        type="button"
+                        disabled={
+                          !sceneryLibraryPreviewAsset ||
+                          activeConstructionSet
+                            .companions
+                            .length >= 16
+                        }
+                        onClick={
+                          handleAddPreviewObjectToSet
+                        }
+                      >
+                        + Adicionar objeto em prévia
+                      </button>
+                    </div>
+
+                    <div className="construction-set-companions">
+                      {activeConstructionSet
+                        .companions.map(
+                          (
+                            companion,
+                            index
+                          ) => (
+                            <div
+                              className="construction-set-companion"
+                              key={
+                                companion.id
+                              }
+                            >
+                              <div>
+                                <strong>
+                                  #{index + 1}
+                                  {" · "}
+                                  {getObjectName(
+                                    companion
+                                      .sceneryObjectPath
+                                  )}
+                                </strong>
+                                <code>
+                                  {companion
+                                    .sceneryObjectPath}
+                                </code>
+                              </div>
+
+                              <label>
+                                <span>Lado</span>
+                                <select
+                                  value={
+                                    companion.side
+                                  }
+                                  onChange={(event) =>
+                                    handleUpdateConstructionSetCompanion(
+                                      companion.id,
+                                      {
+                                        side:
+                                          event
+                                            .currentTarget
+                                            .value as ConstructionSetSide
+                                      }
+                                    )
+                                  }
+                                >
+                                  <option value="left">
+                                    Esquerda
+                                  </option>
+                                  <option value="right">
+                                    Direita
+                                  </option>
+                                  <option value="both">
+                                    Ambos
+                                  </option>
+                                </select>
+                              </label>
+
+                              <label>
+                                <span>Espaço m</span>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="200"
+                                  step="0.5"
+                                  value={
+                                    companion.spacing
+                                  }
+                                  onChange={(event) =>
+                                    handleUpdateConstructionSetCompanion(
+                                      companion.id,
+                                      {
+                                        spacing:
+                                          Math.max(
+                                            1,
+                                            event
+                                              .currentTarget
+                                              .valueAsNumber ||
+                                              1
+                                          )
+                                      }
+                                    )
+                                  }
+                                />
+                              </label>
+
+                              <label>
+                                <span>Afast. m</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="80"
+                                  step="0.5"
+                                  value={
+                                    companion
+                                      .lateralOffset
+                                  }
+                                  onChange={(event) =>
+                                    handleUpdateConstructionSetCompanion(
+                                      companion.id,
+                                      {
+                                        lateralOffset:
+                                          Math.max(
+                                            0,
+                                            event
+                                              .currentTarget
+                                              .valueAsNumber ||
+                                              0
+                                          )
+                                      }
+                                    )
+                                  }
+                                />
+                              </label>
+
+                              <label>
+                                <span>Rot. °</span>
+                                <input
+                                  type="number"
+                                  step="1"
+                                  value={
+                                    companion
+                                      .rotationOffset
+                                  }
+                                  onChange={(event) =>
+                                    handleUpdateConstructionSetCompanion(
+                                      companion.id,
+                                      {
+                                        rotationOffset:
+                                          event
+                                            .currentTarget
+                                            .valueAsNumber ||
+                                          0
+                                      }
+                                    )
+                                  }
+                                />
+                              </label>
+
+                              <button
+                                type="button"
+                                className="danger-action"
+                                onClick={() =>
+                                  handleRemoveConstructionSetCompanion(
+                                    companion.id
+                                  )
+                                }
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          )
+                        )}
+
+                      {activeConstructionSet
+                        .companions.length ===
+                        0 && (
+                        <span className="construction-set-empty">
+                          Adicione árvores, postes ou outros .sco usando o item atualmente em prévia.
+                        </span>
+                      )}
+                    </div>
+
+                    {activeConstructionSetMissingTemplates
+                      .length > 0 && (
+                      <div className="construction-set-warning">
+                        <strong>
+                          ⚠ Templates ausentes no mapa
+                        </strong>
+                        <span>
+                          {activeConstructionSetMissingTemplates
+                            .slice(0, 3)
+                            .join(" · ")}
+                        </span>
+                      </div>
+                    )}
+
+                    <label className="placement-toggle">
+                      <input
+                        type="checkbox"
+                        checked={
+                          applyConstructionSet
+                        }
+                        onChange={(event) =>
+                          setApplyConstructionSet(
+                            event.currentTarget
+                              .checked
+                          )
+                        }
+                      />
+                      <span>
+                        Aplicar companheiros após salvar a via
+                      </span>
+                    </label>
+
+                    <div className="construction-set-actions">
+                      <button
+                        type="button"
+                        className="primary-button"
+                        disabled={
+                          !activeConstructionSet
+                            .splinePath ||
+                          activeConstructionSetMissingTemplates
+                            .length > 0
+                        }
+                        onClick={
+                          handleBuildActiveConstructionSet
+                        }
+                      >
+                        Construir conjunto
+                      </button>
+                      <button
+                        type="button"
+                        className="danger-action"
+                        onClick={
+                          handleDeleteConstructionSet
+                        }
+                      >
+                        Excluir conjunto
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

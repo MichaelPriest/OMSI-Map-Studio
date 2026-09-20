@@ -3156,3 +3156,207 @@ code {
   font-size: 6.5px;
   text-overflow: ellipsis;
 }
+
+
+.construction-sets-button {
+  display: flex;
+  height: 30px;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 1px solid #28506b;
+  border-radius: 5px;
+  background: #071a27;
+  color: #a9c4d6;
+  font-size: 7px;
+}
+
+.construction-sets-button.active {
+  border-color: #398ac1;
+  background: #0d3048;
+  color: #e0f2ff;
+}
+
+.construction-sets-button small {
+  padding: 1px 4px;
+  border-radius: 7px;
+  background: #123d58;
+  color: #8fc5e7;
+  font-size: 6px;
+}
+
+.construction-set-panel {
+  position: absolute;
+  right: 14px;
+  bottom: 72px;
+  z-index: 20;
+  display: grid;
+  width: min(440px, 48vw);
+  max-height: min(680px, 76vh);
+  gap: 7px;
+  padding: 8px;
+  overflow: auto;
+  border: 1px solid #286488;
+  border-radius: 8px;
+  background: rgb(5 22 34 / 96%);
+  box-shadow: 0 14px 38px rgb(0 0 0 / 42%);
+}
+
+.construction-set-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.construction-set-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.construction-set-heading strong {
+  color: #d9efff;
+  font-size: 9px;
+}
+
+.construction-set-heading span {
+  color: #739bb4;
+  font-size: 6.5px;
+}
+
+.construction-set-create {
+  display: flex;
+  gap: 5px;
+}
+
+.construction-set-create input,
+.construction-set-select,
+.construction-set-field input,
+.construction-set-companion input,
+.construction-set-companion select {
+  min-width: 0;
+  height: 25px;
+  border: 1px solid #1d4761;
+  border-radius: 4px;
+  background: #071824;
+  color: #bfd3e0;
+  font-size: 7px;
+}
+
+.construction-set-create input {
+  flex: 1 1 auto;
+  padding: 0 7px;
+}
+
+.construction-set-select {
+  width: 100%;
+}
+
+.construction-set-field {
+  display: grid;
+  gap: 3px;
+}
+
+.construction-set-field span,
+.construction-set-companion label span {
+  color: #769bb3;
+  font-size: 6.5px;
+}
+
+.construction-set-road,
+.construction-set-add-object {
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #173c55;
+  border-radius: 5px;
+  background: #061520;
+}
+
+.construction-set-road strong,
+.construction-set-add-object strong {
+  color: #cfe6f4;
+  font-size: 7.5px;
+}
+
+.construction-set-road code,
+.construction-set-companion code {
+  overflow: hidden;
+  color: #668ba5;
+  font-family: Consolas, monospace;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.construction-set-companions {
+  display: grid;
+  gap: 5px;
+}
+
+.construction-set-companion {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1.5fr)
+    minmax(70px, 0.7fr)
+    minmax(65px, 0.6fr)
+    minmax(65px, 0.6fr)
+    minmax(58px, 0.5fr)
+    auto;
+  align-items: end;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid #173a51;
+  border-radius: 5px;
+  background: #071925;
+}
+
+.construction-set-companion > div,
+.construction-set-companion label {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.construction-set-companion strong {
+  overflow: hidden;
+  color: #c8dfed;
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.construction-set-empty {
+  color: #789bb1;
+  font-size: 7px;
+}
+
+.construction-set-warning {
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid #91672b;
+  border-radius: 5px;
+  background: #2a1d08;
+}
+
+.construction-set-warning strong {
+  color: #f0c174;
+  font-size: 7px;
+}
+
+.construction-set-warning span {
+  overflow: hidden;
+  color: #c6a574;
+  font-size: 6.5px;
+  text-overflow: ellipsis;
+}
+
+.construction-set-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.construction-set-actions button {
+  flex: 1 1 0;
+}
