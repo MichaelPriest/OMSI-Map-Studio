@@ -656,3 +656,30 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 ## Architecture roadmap
 
 The target architecture, including persistent Asset Index, incremental cache, tile streaming, OMSI editor parity phases, and completion criteria, is consolidated in [ROADMAP.md](ROADMAP.md). When this document and the roadmap cover the same topic, current implementation belongs here while future direction belongs in the roadmap.
+
+
+## Asset Index and incremental streaming — Phase A
+
+The first performance-foundation implementation adds a **SQLite Asset Index v1** to `MapStudio.Core`.
+
+- each OMSI installation gets a separate database identified by a hash of its root path;
+- the database is stored outside the OMSI folder under `LocalApplicationData\OMSI Map Studio\Cache\<id>\assets-v1.sqlite`;
+- `.sco`, `.sli`, `.o3d`, `.x`, and recognized texture formats are indexed;
+- scanning covers `Sceneryobjects`, `Splines`, and `Texture` while skipping reparse points;
+- each entry stores relative path, kind, size, and `LastWriteTimeUtc`;
+- scan generations allow stale entries for removed files to be deleted;
+- unchanged files are marked as seen without rebuilding their entries;
+- object and spline libraries prefer indexed entries when available and keep the previous direct scan as a safe fallback;
+- refresh runs in the background after selecting the OMSI installation;
+- cache failure is non-fatal and does not block maps, libraries, or direct file reads.
+
+The database is **derived data** and is never authoritative OMSI data. An index entry never replaces real path/file validation before a persistent operation.
+
+Regional loading now has its first ring-based model:
+
+- rings 0 and 1: full content for the active 3×3 area;
+- ring 2: lightweight tile summary/metadata only, without decoding terrain grid, RDY, or masks;
+- when the active region moves, the UI removes heavy terrain payloads that are outside the streaming window;
+- visible objects and splines still come only from the fully loaded region so real picking and identity are preserved.
+
+This is an intermediate step. Derived geometry/material caching, a complete priority queue, LOD/instancing, and explicit Babylon/GPU resource eviction still belong to Phase A.
