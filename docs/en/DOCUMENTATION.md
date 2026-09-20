@@ -38,3 +38,5 @@ This policy will also provide the foundation for UI internationalization. User-f
 - [UI](UI.md)
 - [Testing](TESTING.md)
 - [Installation](INSTALLATION.md)
+
+- [Icon system](ICON_SYSTEM.md)
