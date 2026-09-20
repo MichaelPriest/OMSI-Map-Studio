@@ -445,3 +445,18 @@ Quando a máscara `tile_*.map.N.dds` já existe, ela é substituída por `SafeFi
 
 Depois da gravação, o tile é relido pelo Core e o viewport Direct3D reconstrói imediatamente as camadas pintadas. Nenhum caminho fornecido pela UI é aceito diretamente: nome e destino da máscara são derivados do tile real e da camada validada.
 
+### Checkpoint N3.24 — detail texture completa de [groundtex]
+
+O material de terreno nativo agora também usa `DetailTexturePath` e `DetailTextureRepeating` de cada `[groundtex]`.
+
+O vértice Direct3D ganhou um terceiro conjunto de UV exclusivo para o detalhe. Isso permite manter simultaneamente:
+- UV principal da textura do terreno;
+- UV normalizado 0–1 da máscara DDS;
+- UV independente da detail texture.
+
+A textura principal e a detail texture são resolvidas pelo mesmo `OmsiTextureAssetPathResolver`. Base e camadas pintadas podem ter repetições diferentes, exatamente como declarado no `global.cfg`.
+
+Os shaders `PSTerrainBaseDetail` e `PSTerrainLayerDetail` modulam o detalhe sobre a textura principal sem alterar o alpha da máscara. Quando a detail texture estiver ausente ou não puder ser decodificada, o renderer usa o caminho anterior sem detalhe.
+
+O cache GPU também passa a acompanhar os arquivos de detalhe e os libera ao trocar de mapa/cena.
+

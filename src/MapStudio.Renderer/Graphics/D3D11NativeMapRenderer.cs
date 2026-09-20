@@ -29,6 +29,8 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11PixelShader _nightMaterialCutoutPixelShader;
     private readonly ID3D11PixelShader _nightMaterialBlendPixelShader;
     private readonly ID3D11PixelShader _terrainLayerPixelShader;
+    private readonly ID3D11PixelShader _terrainBaseDetailPixelShader;
+    private readonly ID3D11PixelShader _terrainLayerDetailPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
     private readonly ID3D11SamplerState _textureSampler;
@@ -284,6 +286,20 @@ public sealed class D3D11NativeMapRenderer :
                     "PSTerrainLayer",
                     "ps_4_0");
 
+        ReadOnlyMemory<byte>
+            terrainBaseDetailPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSTerrainBaseDetail",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            terrainLayerDetailPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSTerrainLayerDetail",
+                    "ps_4_0");
+
         _vertexShader =
             _deviceHost.Device
                 .CreateVertexShader(
@@ -338,6 +354,18 @@ public sealed class D3D11NativeMapRenderer :
                     terrainLayerPixelShaderBytecode
                         .Span);
 
+        _terrainBaseDetailPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    terrainBaseDetailPixelShaderBytecode
+                        .Span);
+
+        _terrainLayerDetailPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    terrainLayerDetailPixelShaderBytecode
+                        .Span);
+
         InputElementDescription[]
             elements =
             [
@@ -368,6 +396,13 @@ public sealed class D3D11NativeMapRenderer :
                     Format
                         .R32G32_Float,
                     36,
+                    0),
+                new(
+                    "TEXCOORD",
+                    2,
+                    Format
+                        .R32G32_Float,
+                    44,
                     0)
             ];
 
@@ -1160,6 +1195,19 @@ public sealed class D3D11NativeMapRenderer :
                         texturePath,
                         out texture);
 
+            NativeGpuTexture?
+                detailTexture =
+                    null;
+
+            var hasDetailTexture =
+                batch.DetailTexturePath is
+                    { Length: > 0 }
+                    detailPath &&
+                _textureCache
+                    .TryGetValue(
+                        detailPath,
+                        out detailTexture);
+
             if (
                 batch.MaskTexturePath is
                     { Length: > 0 }
@@ -1184,7 +1232,9 @@ public sealed class D3D11NativeMapRenderer :
 
                 context
                     .PSSetShader(
-                        _terrainLayerPixelShader);
+                        hasDetailTexture
+                            ? _terrainLayerDetailPixelShader
+                            : _terrainLayerPixelShader);
 
                 context
                     .PSSetShaderResource(
@@ -1199,6 +1249,20 @@ public sealed class D3D11NativeMapRenderer :
                 context
                     .PSUnsetShaderResource(
                         2);
+
+                if (hasDetailTexture)
+                {
+                    context
+                        .PSSetShaderResource(
+                            3,
+                            detailTexture!.View);
+                }
+                else
+                {
+                    context
+                        .PSUnsetShaderResource(
+                            3);
+                }
             }
             else if (hasTexture)
             {
@@ -1236,7 +1300,21 @@ public sealed class D3D11NativeMapRenderer :
 
                 ID3D11PixelShader shader;
 
-                if (hasSecondary)
+                if (hasDetailTexture)
+                {
+                    shader =
+                        _terrainBaseDetailPixelShader;
+
+                    context
+                        .PSSetShaderResource(
+                            3,
+                            detailTexture!.View);
+
+                    context
+                        .PSUnsetShaderResource(
+                            2);
+                }
+                else if (hasSecondary)
                 {
                     shader =
                         alphaMode switch
@@ -1270,6 +1348,10 @@ public sealed class D3D11NativeMapRenderer :
                     context
                         .PSUnsetShaderResource(
                             2);
+
+                    context
+                        .PSUnsetShaderResource(
+                            3);
                 }
 
                 context
@@ -1298,6 +1380,10 @@ public sealed class D3D11NativeMapRenderer :
                 context
                     .PSUnsetShaderResource(
                         2);
+
+                context
+                    .PSUnsetShaderResource(
+                        3);
 
                 context
                     .PSSetShader(
@@ -1330,6 +1416,10 @@ public sealed class D3D11NativeMapRenderer :
         context
             .PSUnsetShaderResource(
                 2);
+
+        context
+            .PSUnsetShaderResource(
+                3);
 
         context
             .PSSetShader(
@@ -1377,7 +1467,8 @@ public sealed class D3D11NativeMapRenderer :
                         new[]
                         {
                             batch.NightTexturePath,
-                            batch.LightTexturePath
+                            batch.LightTexturePath,
+                            batch.DetailTexturePath
                         })
                 .Where(
                     path =>
@@ -1992,6 +2083,8 @@ public sealed class D3D11NativeMapRenderer :
         _maskSampler.Dispose();
         _textureSampler.Dispose();
         _inputLayout.Dispose();
+        _terrainLayerDetailPixelShader.Dispose();
+        _terrainBaseDetailPixelShader.Dispose();
         _terrainLayerPixelShader.Dispose();
         _nightMaterialBlendPixelShader.Dispose();
         _nightMaterialCutoutPixelShader.Dispose();

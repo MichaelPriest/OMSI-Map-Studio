@@ -74,7 +74,13 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         string? baseTexturePath =
             null;
 
+        string? baseDetailTexturePath =
+            null;
+
         var baseRepeating =
+            1.0;
+
+        var baseDetailRepeating =
             1.0;
 
         if (
@@ -89,6 +95,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
             baseRepeating =
                 ground.MainTextureRepeating;
 
+            baseDetailRepeating =
+                ground.DetailTextureRepeating;
+
             if (
                 OmsiTextureAssetPathResolver
                     .TryResolveGroundTexture(
@@ -99,6 +108,18 @@ public sealed class NativeTerrainTriangleGeometryBuilder
             {
                 baseTexturePath =
                     resolved;
+            }
+
+            if (
+                OmsiTextureAssetPathResolver
+                    .TryResolveGroundTexture(
+                        omsiRoot,
+                        map.DirectoryPath,
+                        ground.DetailTexturePath,
+                        out var detailResolved))
+            {
+                baseDetailTexturePath =
+                    detailResolved;
             }
         }
 
@@ -121,7 +142,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 batches,
                 baseTexturePath,
                 maskTexturePath: null,
+                baseDetailTexturePath,
                 baseRepeating,
+                baseDetailRepeating,
                 heightOffset:
                     0.0f,
                 fallbackToHeightColor:
@@ -173,6 +196,21 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     continue;
                 }
 
+                string? detailTexturePath =
+                    null;
+
+                if (
+                    OmsiTextureAssetPathResolver
+                        .TryResolveGroundTexture(
+                            omsiRoot,
+                            map.DirectoryPath,
+                            ground.DetailTexturePath,
+                            out var resolvedDetail))
+                {
+                    detailTexturePath =
+                        resolvedDetail;
+                }
+
                 var maskPath =
                     Path.Combine(
                         map.DirectoryPath,
@@ -194,7 +232,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     batches,
                     layerTexturePath,
                     maskPath,
+                    detailTexturePath,
                     ground.MainTextureRepeating,
+                    ground.DetailTextureRepeating,
                     heightOffset:
                         Math.Min(
                             overlayOrdinal,
@@ -217,7 +257,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         List<NativeMaterialBatch> batches,
         string? texturePath,
         string? maskTexturePath,
+        string? detailTexturePath,
         double repeating,
+        double detailRepeating,
         float heightOffset,
         bool fallbackToHeightColor)
     {
@@ -391,6 +433,30 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                         localX1,
                         localZ1);
 
+                var detailUv00 =
+                    CreateUv(
+                        localX0,
+                        localZ0,
+                        detailRepeating);
+
+                var detailUv10 =
+                    CreateUv(
+                        localX1,
+                        localZ0,
+                        detailRepeating);
+
+                var detailUv01 =
+                    CreateUv(
+                        localX0,
+                        localZ1,
+                        detailRepeating);
+
+                var detailUv11 =
+                    CreateUv(
+                        localX1,
+                        localZ1,
+                        detailRepeating);
+
                 AppendTriangle(
                     x0,
                     z0,
@@ -398,18 +464,21 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                         heightOffset,
                     uv00,
                     maskUv00,
+                    detailUv00,
                     x1,
                     z1,
                     h11 +
                         heightOffset,
                     uv11,
                     maskUv11,
+                    detailUv11,
                     x1,
                     z0,
                     h10 +
                         heightOffset,
                     uv10,
                     maskUv10,
+                    detailUv10,
                     color,
                     vertices);
 
@@ -426,12 +495,14 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                         heightOffset,
                     uv01,
                     maskUv01,
+                    detailUv01,
                     x1,
                     z1,
                     h11 +
                         heightOffset,
                     uv11,
                     maskUv11,
+                    detailUv11,
                     color,
                     vertices);
             }
@@ -448,7 +519,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 layerStart,
                 layerVertexCount,
                 texturePath,
-                maskTexturePath);
+                maskTexturePath,
+                detailTexturePath);
         }
     }
 
@@ -491,7 +563,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         int startVertex,
         int vertexCount,
         string? texturePath,
-        string? maskTexturePath)
+        string? maskTexturePath,
+        string? detailTexturePath)
     {
         if (
             batches.Count > 0)
@@ -510,6 +583,10 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 string.Equals(
                     previous.MaskTexturePath,
                     maskTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    previous.DetailTexturePath,
+                    detailTexturePath,
                     StringComparison.OrdinalIgnoreCase))
             {
                 batches[^1] =
@@ -529,7 +606,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 startVertex,
                 vertexCount,
                 texturePath,
-                maskTexturePath));
+                maskTexturePath,
+                DetailTexturePath:
+                    detailTexturePath));
     }
 
     private static void AppendTriangle(
@@ -538,16 +617,19 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         float height0,
         Vector2 uv0,
         Vector2 maskUv0,
+        Vector2 detailUv0,
         double x1,
         double z1,
         float height1,
         Vector2 uv1,
         Vector2 maskUv1,
+        Vector2 detailUv1,
         double x2,
         double z2,
         float height2,
         Vector2 uv2,
         Vector2 maskUv2,
+        Vector2 detailUv2,
         Vector4 color,
         List<NativeMapVertex> output)
     {
@@ -559,7 +641,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     (float)z0),
                 color,
                 uv0,
-                maskUv0));
+                maskUv0,
+                detailUv0));
 
         output.Add(
             new NativeMapVertex(
@@ -569,7 +652,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     (float)z1),
                 color,
                 uv1,
-                maskUv1));
+                maskUv1,
+                detailUv1));
 
         output.Add(
             new NativeMapVertex(
@@ -579,7 +663,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     (float)z2),
                 color,
                 uv2,
-                maskUv2));
+                maskUv2,
+                detailUv2));
     }
 
     private static Vector4 GetTerrainColor(

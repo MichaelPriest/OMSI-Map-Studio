@@ -17,7 +17,8 @@ public readonly record struct NativeMaterialBatch(
     string? LightTexturePath = null,
     int? AlphaMode = null,
     bool NoZWrite = false,
-    bool NoZCheck = false);
+    bool NoZCheck = false,
+    string? DetailTexturePath = null);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,

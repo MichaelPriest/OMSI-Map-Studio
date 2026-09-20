@@ -6,6 +6,7 @@ cbuffer ViewportCamera : register(b0)
 Texture2D DiffuseTexture : register(t0);
 Texture2D MaskTexture : register(t1);
 Texture2D SecondaryTexture : register(t2);
+Texture2D DetailTexture : register(t3);
 
 SamplerState DiffuseSampler : register(s0);
 SamplerState MaskSampler : register(s1);
@@ -16,6 +17,7 @@ struct VSInput
     float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
     float2 MaskTexCoord : TEXCOORD1;
+    float2 DetailTexCoord : TEXCOORD2;
 };
 
 struct PSInput
@@ -24,6 +26,7 @@ struct PSInput
     float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
     float2 MaskTexCoord : TEXCOORD1;
+    float2 DetailTexCoord : TEXCOORD2;
 };
 
 PSInput VSMain(VSInput input)
@@ -45,6 +48,9 @@ PSInput VSMain(VSInput input)
 
     output.MaskTexCoord =
         input.MaskTexCoord;
+
+    output.DetailTexCoord =
+        input.DetailTexCoord;
 
     return output;
 }
@@ -174,6 +180,75 @@ float4 PSNightMaterialBlend(
             input.Color.rgb,
         baseColor.a *
             input.Color.a);
+}
+
+float3 ComposeTerrainDetail(
+    float3 baseRgb,
+    float3 detailRgb)
+{
+    float3 detailModulation =
+        lerp(
+            float3(
+                1.0f,
+                1.0f,
+                1.0f),
+            saturate(
+                detailRgb *
+                2.0f),
+            0.35f);
+
+    return saturate(
+        baseRgb *
+        detailModulation);
+}
+
+float4 PSTerrainBaseDetail(
+    PSInput input) : SV_TARGET
+{
+    float4 sampled =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float4 detail =
+        DetailTexture.Sample(
+            DiffuseSampler,
+            input.DetailTexCoord);
+
+    return float4(
+        ComposeTerrainDetail(
+            sampled.rgb,
+            detail.rgb) *
+            input.Color.rgb,
+        1.0f);
+}
+
+float4 PSTerrainLayerDetail(
+    PSInput input) : SV_TARGET
+{
+    float4 sampled =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float4 detail =
+        DetailTexture.Sample(
+            DiffuseSampler,
+            input.DetailTexCoord);
+
+    float mask =
+        MaskTexture.Sample(
+            MaskSampler,
+            input.MaskTexCoord).a;
+
+    return float4(
+        ComposeTerrainDetail(
+            sampled.rgb,
+            detail.rgb) *
+            input.Color.rgb,
+        sampled.a *
+            input.Color.a *
+            mask);
 }
 
 float4 PSTerrainLayer(

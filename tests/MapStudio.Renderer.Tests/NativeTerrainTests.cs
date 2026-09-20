@@ -51,6 +51,12 @@ public sealed class NativeTerrainTests
                 "texture",
                 "grass.bmp");
 
+        var detailPath =
+            Path.Combine(
+                mapDirectory,
+                "texture",
+                "detail.bmp");
+
         try
         {
             Directory.CreateDirectory(
@@ -60,6 +66,10 @@ public sealed class NativeTerrainTests
             File.WriteAllBytes(
                 texturePath,
                 [1, 2, 3]);
+
+            File.WriteAllBytes(
+                detailPath,
+                [4, 5, 6]);
 
             var tile =
                 new NativeSceneTile(
@@ -125,6 +135,11 @@ public sealed class NativeTerrainTests
                     texturePath),
                 batch.TexturePath);
 
+            Assert.Equal(
+                Path.GetFullPath(
+                    detailPath),
+                batch.DetailTexturePath);
+
             Assert.InRange(
                 geometry.Vertices
                     .Max(
@@ -140,6 +155,22 @@ public sealed class NativeTerrainTests
                             vertex.TexCoord.Y),
                 1.999f,
                 2.001f);
+
+            Assert.InRange(
+                geometry.Vertices
+                    .Max(
+                        vertex =>
+                            vertex.DetailTexCoord.X),
+                59.999f,
+                60.001f);
+
+            Assert.InRange(
+                geometry.Vertices
+                    .Max(
+                        vertex =>
+                            vertex.DetailTexCoord.Y),
+                59.999f,
+                60.001f);
         }
         finally
         {
@@ -188,6 +219,11 @@ public sealed class NativeTerrainTests
                 textureDirectory,
                 "mud.bmp");
 
+        var detailTexture =
+            Path.Combine(
+                textureDirectory,
+                "detail.bmp");
+
         const string maskFileName =
             "tile_0_0.map.1.dds";
 
@@ -208,6 +244,10 @@ public sealed class NativeTerrainTests
             File.WriteAllBytes(
                 layerTexture,
                 [2]);
+
+            File.WriteAllBytes(
+                detailTexture,
+                [4]);
 
             File.WriteAllBytes(
                 maskPath,
@@ -317,6 +357,11 @@ public sealed class NativeTerrainTests
                     maskPath),
                 layerBatch.MaskTexturePath);
 
+            Assert.Equal(
+                Path.GetFullPath(
+                    detailTexture),
+                layerBatch.DetailTexturePath);
+
             var overlayVertices =
                 geometry.Vertices
                     .Skip(
@@ -346,6 +391,22 @@ public sealed class NativeTerrainTests
                     .Max(
                         vertex =>
                             vertex.MaskTexCoord.Y),
+                0.999f,
+                1.001f);
+
+            Assert.InRange(
+                overlayVertices
+                    .Max(
+                        vertex =>
+                            vertex.DetailTexCoord.X),
+                0.999f,
+                1.001f);
+
+            Assert.InRange(
+                overlayVertices
+                    .Max(
+                        vertex =>
+                            vertex.DetailTexCoord.Y),
                 0.999f,
                 1.001f);
 

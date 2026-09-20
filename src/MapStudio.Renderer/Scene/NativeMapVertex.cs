@@ -7,7 +7,7 @@ namespace MapStudio.Renderer.Scene;
 public readonly struct NativeMapVertex
 {
     public const uint SizeInBytes =
-        44;
+        52;
 
     public NativeMapVertex(
         Vector3 position,
@@ -15,6 +15,7 @@ public readonly struct NativeMapVertex
         : this(
             position,
             color,
+            Vector2.Zero,
             Vector2.Zero,
             Vector2.Zero)
     {
@@ -28,6 +29,7 @@ public readonly struct NativeMapVertex
             position,
             color,
             texCoord,
+            texCoord,
             texCoord)
     {
     }
@@ -37,12 +39,29 @@ public readonly struct NativeMapVertex
         Vector4 color,
         Vector2 texCoord,
         Vector2 maskTexCoord)
+        : this(
+            position,
+            color,
+            texCoord,
+            maskTexCoord,
+            texCoord)
+    {
+    }
+
+    public NativeMapVertex(
+        Vector3 position,
+        Vector4 color,
+        Vector2 texCoord,
+        Vector2 maskTexCoord,
+        Vector2 detailTexCoord)
     {
         Position = position;
         Color = color;
         TexCoord = texCoord;
         MaskTexCoord =
             maskTexCoord;
+        DetailTexCoord =
+            detailTexCoord;
     }
 
     public Vector3 Position { get; }
@@ -52,4 +71,6 @@ public readonly struct NativeMapVertex
     public Vector2 TexCoord { get; }
 
     public Vector2 MaskTexCoord { get; }
+
+    public Vector2 DetailTexCoord { get; }
 }

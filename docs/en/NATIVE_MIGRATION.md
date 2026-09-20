@@ -445,3 +445,18 @@ When `tile_*.map.N.dds` already exists, it is replaced through `SafeFileTransact
 
 After writing, the tile is read back through Core and the Direct3D viewport immediately rebuilds the painted layers. The UI never supplies an arbitrary output path: mask name and destination are derived from the real tile and validated layer.
 
+### Checkpoint N3.24 — complete [groundtex] detail texture support
+
+The native terrain material now also uses each `[groundtex]` entry's `DetailTexturePath` and `DetailTextureRepeating`.
+
+The Direct3D vertex now carries a third dedicated UV set so it can preserve at the same time:
+- main terrain texture UVs;
+- normalized 0–1 DDS mask UVs;
+- independent detail texture UVs.
+
+Both main and detail textures are resolved through the same `OmsiTextureAssetPathResolver`. Base terrain and painted layers can therefore use different repeat counts exactly as declared by `global.cfg`.
+
+The `PSTerrainBaseDetail` and `PSTerrainLayerDetail` shaders modulate detail over the main material without changing paint-mask alpha. If a detail texture is missing or cannot be decoded, rendering falls back to the previous non-detail path.
+
+The GPU texture cache now also tracks detail texture files and releases them when the map/scene changes.
+
