@@ -307,3 +307,17 @@ New SVGs in this batch: `scale`, `construction-set`, `dependency`, `discard`, `w
 New SVGs in this batch: `home`, `open`, `tools`, `settings`, `collapse`, and `expand`.
 
 Fullscreen also reuses the same icon system in its compact navigation rail so desktop and fullscreen do not drift into separate visual identities.
+
+
+### Fourth migrated batch
+
+The fullscreen quick dock no longer uses letters as the primary representation for **Snap, Grid, Terrain, Objects, Splines, and Spline profiles**.
+
+- `snap`, `grid`, and `profile` were added as original Map Studio SVGs;
+- Terrain reuses `terrain`;
+- Objects reuse `sco-object`;
+- Splines reuse `sli-spline`;
+- N/T/G/O/L/P remain only as secondary keyboard shortcut hints;
+- active states keep the same visual semantics used across the editor.
+
+This brings F11 mode closer to the approved visual reference without creating a second implementation of the editing tools.

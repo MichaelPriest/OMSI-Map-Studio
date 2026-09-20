@@ -307,3 +307,17 @@ Novos SVGs deste lote: `scale`, `construction-set`, `dependency`, `discard`, `wa
 Novos SVGs deste lote: `home`, `open`, `tools`, `settings`, `collapse` e `expand`.
 
 O modo tela cheia também reutiliza este mesmo sistema na navegação compacta, evitando uma identidade visual separada entre desktop e fullscreen.
+
+
+### Quarto lote migrado
+
+O dock rápido de tela cheia deixou de usar letras como representação principal para **Snap, Grade, Terreno, Objetos, Splines e Perfis de spline**.
+
+- `snap`, `grid` e `profile` foram adicionados como SVGs originais do Map Studio;
+- Terreno reutiliza `terrain`;
+- Objetos reutilizam `sco-object`;
+- Splines reutilizam `sli-spline`;
+- as letras N/T/G/O/L/P permanecem somente como dicas secundárias dos atalhos de teclado;
+- estados ativos continuam usando a mesma semântica visual do restante do editor.
+
+Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda implementação de ferramentas.
