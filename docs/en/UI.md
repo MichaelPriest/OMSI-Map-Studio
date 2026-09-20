@@ -859,3 +859,7 @@ The main bottom construction categories now expose a horizontal shelf of real as
 - the **Library** button remains available for search, filters, collections, favorites, and technical diagnostics.
 
 When an item is selected from the shelf, the interface switches to the **contextual Inspector**. During `.sco` placement it shows the real path, group/subcategory, 3D geometry availability, safe template state, target tile/position, and rotation. During `.sli` construction it shows the real profile, `[spline]`/`[spline_h]` type, length/radius/rotation, and snap/`previous`/`next` state. This mode does not simulate data; it only reflects real loaded information or parameters of the active construction operation.
+
+### Quick road controls
+
+The contextual road/bridge guide in the bottom bar is now interactive as well. **Endpoint snap** toggles snapping to existing spline endpoints, **previous/next** toggles automatic chain linking, and bridge/elevated mode exposes `−`/`+` elevation controls in 0.5 m steps. The detailed elevation field remains available in the full panel, and both surfaces use the same real preview update path.
