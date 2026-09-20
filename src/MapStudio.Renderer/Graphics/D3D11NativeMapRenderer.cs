@@ -67,6 +67,12 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _selectionTriangleVertexCount;
 
+    private ID3D11Buffer?
+        _gizmoTriangleBuffer;
+
+    private int
+        _gizmoTriangleVertexCount;
+
     private PickingId _hoverPickingId =
         PickingId.None;
 
@@ -106,6 +112,20 @@ public sealed class D3D11NativeMapRenderer :
         _proxyVertices =
             Array.Empty<
                 NativeMapVertex>();
+
+    private NativeMapVertex[]
+        _scenePickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private NativeMapVertex[]
+        _gizmoPickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private Matrix4x4
+        _selectionPreviewTransform =
+            Matrix4x4.Identity;
 
     private IReadOnlyDictionary<
         PickingId,
@@ -273,6 +293,22 @@ public sealed class D3D11NativeMapRenderer :
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
 
+        _gizmoTriangleBuffer
+            ?.Dispose();
+        _gizmoTriangleBuffer = null;
+        _gizmoTriangleVertexCount = 0;
+
+        _scenePickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        _gizmoPickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        _selectionPreviewTransform =
+            Matrix4x4.Identity;
+
         _hoverPickingId =
             PickingId.None;
 
@@ -401,7 +437,7 @@ public sealed class D3D11NativeMapRenderer :
                     .Ranges;
         }
 
-        var pickingVertices =
+        _scenePickingVertices =
             _proxyVertices
                 .Concat(
                     objectGeometry
@@ -415,19 +451,7 @@ public sealed class D3D11NativeMapRenderer :
                         NativeMapVertex>())
                 .ToArray();
 
-        if (pickingVertices.Length > 0)
-        {
-            _pickingTriangleBuffer =
-                _deviceHost.Device
-                    .CreateBuffer(
-                        pickingVertices
-                            .AsSpan(),
-                        BindFlags
-                            .VertexBuffer);
-
-            _pickingTriangleVertexCount =
-                pickingVertices.Length;
-        }
+        RebuildPickingBuffer();
     }
 
     public void Render(
@@ -595,6 +619,30 @@ public sealed class D3D11NativeMapRenderer :
                             _selectionTriangleVertexCount,
                         0);
                 }
+
+                if (
+                    _gizmoTriangleBuffer
+                        is not null &&
+                    _gizmoTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _gizmoTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)
+                            _gizmoTriangleVertexCount,
+                        0);
+                }
             });
 
         RenderPicking(
@@ -662,6 +710,87 @@ public sealed class D3D11NativeMapRenderer :
         _pickingSurface.Read(
             x,
             y);
+
+    public void SetGizmoGeometry(
+        NativeGizmoGeometry? geometry)
+    {
+        _gizmoTriangleBuffer
+            ?.Dispose();
+
+        _gizmoTriangleBuffer = null;
+        _gizmoTriangleVertexCount = 0;
+
+        _gizmoPickingVertices =
+            geometry
+                ?.PickingVertices ??
+            Array.Empty<
+                NativeMapVertex>();
+
+        if (
+            geometry is not null &&
+            geometry.Vertices.Length > 0)
+        {
+            _gizmoTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry.Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _gizmoTriangleVertexCount =
+                geometry
+                    .Vertices.Length;
+        }
+
+        RebuildPickingBuffer();
+    }
+
+    public void SetSelectionPreviewTransform(
+        Matrix4x4 transform)
+    {
+        if (
+            _selectionPreviewTransform ==
+            transform)
+        {
+            return;
+        }
+
+        _selectionPreviewTransform =
+            transform;
+
+        RebuildSelection();
+    }
+
+    private void RebuildPickingBuffer()
+    {
+        _pickingTriangleBuffer
+            ?.Dispose();
+
+        _pickingTriangleBuffer = null;
+        _pickingTriangleVertexCount = 0;
+
+        var combined =
+            _scenePickingVertices
+                .Concat(
+                    _gizmoPickingVertices)
+                .ToArray();
+
+        if (combined.Length == 0)
+        {
+            return;
+        }
+
+        _pickingTriangleBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    combined.AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _pickingTriangleVertexCount =
+            combined.Length;
+    }
 
     public bool SetHover(
         PickingId pickingId)
@@ -774,6 +903,27 @@ public sealed class D3D11NativeMapRenderer :
                     0.05f,
                     1.0f),
                 0.065f);
+
+        if (
+            _selectionPreviewTransform !=
+            Matrix4x4.Identity)
+        {
+            for (
+                var index = 0;
+                index < vertices.Length;
+                index++)
+            {
+                var vertex =
+                    vertices[index];
+
+                vertices[index] =
+                    new NativeMapVertex(
+                        Vector3.Transform(
+                            vertex.Position,
+                            _selectionPreviewTransform),
+                        vertex.Color);
+            }
+        }
 
         if (vertices.Length == 0)
         {
@@ -927,6 +1077,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _selectionTriangleBuffer
+            ?.Dispose();
+
+        _gizmoTriangleBuffer
             ?.Dispose();
 
         _pickingTriangleBuffer

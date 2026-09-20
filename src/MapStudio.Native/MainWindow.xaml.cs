@@ -1,4 +1,5 @@
 using MapStudio.Native.Services;
+using MapStudio.Renderer.Scene;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Windows.Graphics;
@@ -47,6 +48,28 @@ public sealed partial class MainWindow : Window
             {
                 SelectionText.Text = message;
             };
+    }
+
+    private void OnMoveGizmoClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Viewport.SetGizmoMode(
+            NativeGizmoMode.Move);
+
+        StatusText.Text =
+            "Ferramenta mover ativa.";
+    }
+
+    private void OnRotateGizmoClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Viewport.SetGizmoMode(
+            NativeGizmoMode.Rotate);
+
+        StatusText.Text =
+            "Ferramenta rotacionar ativa.";
     }
 
     private async void OnOpenOmsiClick(

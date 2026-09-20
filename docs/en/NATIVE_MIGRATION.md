@@ -136,3 +136,14 @@ The native viewport now mirrors the OMSI editor interaction behavior: an item un
 Hover and selection use the same `PickingId` as the ID Buffer and prefer real O3D or spline geometry; proxies remain only as a selection fallback. Hover is cleared when the pointer leaves the viewport or camera pan/orbit begins.
 
 Because the viewport now has a real depth buffer, highlight copies receive a very small offset toward the camera. This keeps overlays visible without relying on draw order or disabling scene depth.
+
+
+### Checkpoint N2.1 — native move and rotate gizmos
+
+The editing phase has started in the Direct3D viewport. Selecting an object or spline now creates a real 3D gizmo at the entity insertion point, with dedicated handles in the same ID Buffer used by the rest of the scene.
+
+**Move** exposes X/Y/Z and constrains each drag to the chosen axis. **Rotate** exposes X/Y/Z for SCO/O3D objects; splines use Y rotation only, matching the rotation field available in the OMSI map format.
+
+During drag, the red selected geometry receives a preview transform without rebuilding the entire map for every pointer pixel. On release, the transform is applied to the snapshot entity and converted directly into an `OmsiObjectTransformEdit` or `OmsiSplineTransformEdit`, becoming a real edit pending Core persistence.
+
+Gizmo handles use `PickingKind.Gizmo` and dedicated IDs, so they cannot collide with object or spline IDs even when drawn in front of the same geometry.

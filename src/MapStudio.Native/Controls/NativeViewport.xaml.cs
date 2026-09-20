@@ -16,6 +16,7 @@ public sealed partial class NativeViewport : UserControl
     private bool _leftPressed;
     private bool _isPanning;
     private bool _isOrbiting;
+    private bool _isManipulatingGizmo;
     private double _lastPanX;
     private double _lastPanY;
     private long _lastHoverTick;
@@ -41,6 +42,20 @@ public sealed partial class NativeViewport : UserControl
     public event EventHandler<string>? PointerStatusChanged;
 
     public event EventHandler<string>? SelectionStatusChanged;
+
+    public void SetGizmoMode(
+        NativeGizmoMode mode)
+    {
+        _runtime?.SetGizmoMode(
+            mode);
+
+        PointerStatusChanged?.Invoke(
+            this,
+            mode ==
+                NativeGizmoMode.Move
+                ? "Gizmo: mover"
+                : "Gizmo: rotacionar");
+    }
 
     public async Task SetMapSnapshotAsync(
         NativeMapSnapshot snapshot,
@@ -353,6 +368,27 @@ public sealed partial class NativeViewport : UserControl
                     point.Position.Y *
                     scaleY));
 
+        if (
+            _runtime is not null &&
+            _runtime.TryBeginGizmoDrag(
+                pixelX,
+                pixelY,
+                out var gizmoHandle))
+        {
+            _isManipulatingGizmo =
+                true;
+
+            InputSurface.CapturePointer(
+                e.Pointer);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Gizmo ativo: {gizmoHandle}");
+
+            e.Handled = true;
+            return;
+        }
+
         var message =
             $"Clique nativo: X={point.Position.X:F1} Y={point.Position.Y:F1} · " +
             $"pixel {pixelX},{pixelY}";
@@ -401,6 +437,51 @@ public sealed partial class NativeViewport : UserControl
 
         PointerText.Text =
             $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
+
+        if (
+            _isManipulatingGizmo &&
+            _runtime is not null)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            _runtime.UpdateGizmoDrag(
+                pixelX,
+                pixelY);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                _runtime.GizmoMode ==
+                    NativeGizmoMode.Move
+                    ? "Movendo seleção..."
+                    : "Rotacionando seleção...");
+
+            e.Handled = true;
+            return;
+        }
 
         if (
             (
@@ -553,9 +634,27 @@ public sealed partial class NativeViewport : UserControl
         PointerRoutedEventArgs e)
     {
         if (
+            _isManipulatingGizmo &&
+            _runtime is not null)
+        {
+            var edit =
+                _runtime.EndGizmoDrag();
+
+            if (edit is not null)
+            {
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    edit.IsObject
+                        ? "Transformação de objeto OMSI pendente de salvamento."
+                        : "Transformação de spline OMSI pendente de salvamento.");
+            }
+        }
+
+        if (
             _leftPressed ||
             _isPanning ||
-            _isOrbiting)
+            _isOrbiting ||
+            _isManipulatingGizmo)
         {
             InputSurface.ReleasePointerCapture(
                 e.Pointer);
@@ -564,6 +663,7 @@ public sealed partial class NativeViewport : UserControl
         _leftPressed = false;
         _isPanning = false;
         _isOrbiting = false;
+        _isManipulatingGizmo = false;
     }
 
     private void OnPointerExited(
