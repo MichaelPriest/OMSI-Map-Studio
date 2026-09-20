@@ -8644,6 +8644,131 @@ export function App() {
 
           <span className="toolbar-separator" />
 
+          <div
+            className="selection-tool-group"
+            aria-label="Filtro de seleção"
+          >
+            {([
+              ["all", "Tudo", "Alt+1"],
+              ["object", "Objetos", "Alt+2"],
+              ["spline", "Splines", "Alt+3"],
+              ["terrain", "Terreno", "Alt+4"]
+            ] as const).map(
+              ([
+                mode,
+                label,
+                shortcut
+              ]) => (
+                <button
+                  type="button"
+                  key={mode}
+                  className={
+                    selectionMode === mode
+                      ? "selection-tool active"
+                      : "selection-tool"
+                  }
+                  title={`Selecionar ${label.toLocaleLowerCase("pt-BR")} (${shortcut})`}
+                  onClick={() => {
+                    setSelectionMode(mode);
+                    setEditorTool("select");
+
+                    if (
+                      mode === "terrain"
+                    ) {
+                      setShowTerrain(true);
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              )
+            )}
+          </div>
+
+          <span className="toolbar-separator" />
+
+          <div
+            className="create-tool-group"
+            aria-label="Criar no mapa"
+          >
+            <button
+              type="button"
+              className="create-tool"
+              title="Criar rua com spline real (Alt+R)"
+              onClick={() =>
+                openQuickCreate("road")
+              }
+            >
+              + Rua
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Inserir cruzamento .sco real (Alt+C)"
+              onClick={() =>
+                openQuickCreate(
+                  "junction"
+                )
+              }
+            >
+              + Cruz.
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Inserir objeto .sco real (Alt+O)"
+              onClick={() =>
+                openQuickCreate("object")
+              }
+            >
+              + Objeto
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Selecionar terreno para edição segura (Alt+T)"
+              onClick={() =>
+                openQuickCreate(
+                  "terrain"
+                )
+              }
+            >
+              Terreno
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Inserir água usando assets reais da biblioteca (Alt+A)"
+              onClick={() =>
+                openQuickCreate("water")
+              }
+            >
+              + Água
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Inserir grama usando assets reais da biblioteca (Alt+G)"
+              onClick={() =>
+                openQuickCreate("grass")
+              }
+            >
+              + Grama
+            </button>
+            <button
+              type="button"
+              className="create-tool"
+              title="Inserir árvore usando .sco/[tree] real (Alt+Y)"
+              onClick={() =>
+                openQuickCreate("tree")
+              }
+            >
+              + Árvore
+            </button>
+          </div>
+
+          <span className="toolbar-separator" />
+
           <button
             type="button"
             className="tool"
@@ -8744,7 +8869,7 @@ export function App() {
             Global
           </span>
           <span className="toolbar-chip">
-            Q/W/E · 1/2 · N · F · F11 · Ctrl+Z/Y/S
+            Q/W/E · Alt+1..4 seleção · Alt+R/C/O/T/A/G/Y criar
           </span>
           <span
             className="toolbar-chip"
@@ -9420,6 +9545,8 @@ export function App() {
                   <span>Q selecionar</span><span>W mover</span><span>E rotacionar</span>
                   <span>1 perspectiva</span><span>2 topo</span><span>N snap</span>
                   <span>F foco</span><span>Home enquadrar</span><span>G grade</span>
+                  <span>Alt+1..4 filtro seleção</span><span>Alt+R/C/O criar rua/cruz./objeto</span>
+                  <span>Alt+T/A/G/Y terreno/água/grama/árvore</span>
                   <span>O objetos</span><span>L splines</span><span>Ctrl+S salvar</span>
                   <span>Ctrl+Z/Y desfazer/refazer</span><span>RMB orbitar</span>
                   <span>MMB deslocar</span><span>roda zoom</span>
@@ -9438,6 +9565,9 @@ export function App() {
                 splinesForViewport
               }
               editorTool={editorTool}
+              selectionMode={
+                selectionMode
+              }
               snapEnabled={snapEnabled}
               moveSnap={moveSnap}
               rotationSnap={
