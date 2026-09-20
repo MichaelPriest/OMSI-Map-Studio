@@ -4194,114 +4194,6 @@ export function App() {
       objects
     ]);
 
-  const roadAutoLinkPlan =
-    useMemo(() => {
-      if (!roadAutoConnectEnabled) {
-        return {
-          previousSplineId: -1,
-          nextSplineId: -1,
-          previousStatus:
-            "desativado",
-          nextStatus:
-            "desativado"
-        };
-      }
-
-      let previousSplineId = -1;
-      let nextSplineId = -1;
-      let previousStatus =
-        "sem encaixe";
-      let nextStatus =
-        "sem encaixe";
-
-      if (roadStartSnap) {
-        const target =
-          splinesForViewport.find(
-            (spline) =>
-              spline.splineId ===
-              roadStartSnap.splineId
-          );
-
-        if (
-          roadStartSnap.endpoint !==
-          "end"
-        ) {
-          previousStatus =
-            "ponta incompatível";
-        } else if (
-          !target
-        ) {
-          previousStatus =
-            "spline não carregada";
-        } else if (
-          target.nextSplineId !== -1
-        ) {
-          previousStatus =
-            "ponta já vinculada";
-        } else {
-          previousSplineId =
-            target.splineId;
-          previousStatus =
-            "pronto";
-        }
-      }
-
-      if (roadEndSnap) {
-        const target =
-          splinesForViewport.find(
-            (spline) =>
-              spline.splineId ===
-              roadEndSnap.splineId
-          );
-
-        if (
-          roadEndSnap.endpoint !==
-          "start"
-        ) {
-          nextStatus =
-            "ponta incompatível";
-        } else if (
-          !target
-        ) {
-          nextStatus =
-            "spline não carregada";
-        } else if (
-          target.previousSplineId !==
-          -1
-        ) {
-          nextStatus =
-            "ponta já vinculada";
-        } else {
-          nextSplineId =
-            target.splineId;
-          nextStatus =
-            "pronto";
-        }
-      }
-
-      if (
-        previousSplineId !== -1 &&
-        previousSplineId ===
-          nextSplineId
-      ) {
-        nextSplineId = -1;
-        nextStatus =
-          "mesma spline usada no início";
-      }
-
-      return {
-        previousSplineId,
-        nextSplineId,
-        previousStatus,
-        nextStatus
-      };
-    }, [
-      roadAutoConnectEnabled,
-      roadEndSnap,
-      roadStartSnap,
-      splinesForViewport
-    ]);
-
   const interactionLocked =
     selectingRoot ||
     selectingMap ||
@@ -6676,6 +6568,114 @@ export function App() {
       splines
     ]
   );
+
+  const roadAutoLinkPlan =
+    useMemo(() => {
+      if (!roadAutoConnectEnabled) {
+        return {
+          previousSplineId: -1,
+          nextSplineId: -1,
+          previousStatus:
+            "desativado",
+          nextStatus:
+            "desativado"
+        };
+      }
+
+      let previousSplineId = -1;
+      let nextSplineId = -1;
+      let previousStatus =
+        "sem encaixe";
+      let nextStatus =
+        "sem encaixe";
+
+      if (roadStartSnap) {
+        const target =
+          splinesForViewport.find(
+            (spline) =>
+              spline.splineId ===
+              roadStartSnap.splineId
+          );
+
+        if (
+          roadStartSnap.endpoint !==
+          "end"
+        ) {
+          previousStatus =
+            "ponta incompatível";
+        } else if (
+          !target
+        ) {
+          previousStatus =
+            "spline não carregada";
+        } else if (
+          target.nextSplineId !== -1
+        ) {
+          previousStatus =
+            "ponta já vinculada";
+        } else {
+          previousSplineId =
+            target.splineId;
+          previousStatus =
+            "pronto";
+        }
+      }
+
+      if (roadEndSnap) {
+        const target =
+          splinesForViewport.find(
+            (spline) =>
+              spline.splineId ===
+              roadEndSnap.splineId
+          );
+
+        if (
+          roadEndSnap.endpoint !==
+          "start"
+        ) {
+          nextStatus =
+            "ponta incompatível";
+        } else if (
+          !target
+        ) {
+          nextStatus =
+            "spline não carregada";
+        } else if (
+          target.previousSplineId !==
+          -1
+        ) {
+          nextStatus =
+            "ponta já vinculada";
+        } else {
+          nextSplineId =
+            target.splineId;
+          nextStatus =
+            "pronto";
+        }
+      }
+
+      if (
+        previousSplineId !== -1 &&
+        previousSplineId ===
+          nextSplineId
+      ) {
+        nextSplineId = -1;
+        nextStatus =
+          "mesma spline usada no início";
+      }
+
+      return {
+        previousSplineId,
+        nextSplineId,
+        previousStatus,
+        nextStatus
+      };
+    }, [
+      roadAutoConnectEnabled,
+      roadEndSnap,
+      roadStartSnap,
+      splinesForViewport
+    ]);
 
   const junctionSuggestions =
     useMemo(
