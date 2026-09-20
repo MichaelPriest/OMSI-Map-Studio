@@ -153,4 +153,63 @@ public sealed class NativeViewportNavigationTests
             75,
             navigation.Distance);
     }
+
+    [Fact]
+    public void TopViewUsesNearVerticalCameraWithoutMovingTarget()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var target =
+            navigation.Target;
+
+        var distance =
+            navigation.Distance;
+
+        navigation.SetTopView();
+
+        Assert.Equal(
+            target,
+            navigation.Target);
+
+        Assert.Equal(
+            distance,
+            navigation.Distance);
+
+        Assert.InRange(
+            navigation.Pitch,
+            1.54f,
+            1.56f);
+
+        Assert.True(
+            float.IsFinite(
+                navigation
+                    .CameraPosition
+                    .Y));
+    }
+
+    [Fact]
+    public void PerspectiveViewRestoresDefaultOrientationAfterTopView()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var defaultYaw =
+            navigation.Yaw;
+
+        var defaultPitch =
+            navigation.Pitch;
+
+        navigation.SetTopView();
+        navigation.SetPerspectiveView();
+
+        Assert.Equal(
+            defaultYaw,
+            navigation.Yaw);
+
+        Assert.Equal(
+            defaultPitch,
+            navigation.Pitch);
+    }
+
 }

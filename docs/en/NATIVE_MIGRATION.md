@@ -460,3 +460,13 @@ The `PSTerrainBaseDetail` and `PSTerrainLayerDetail` shaders modulate detail ove
 
 The GPU texture cache now also tracks detail texture files and releases them when the map/scene changes.
 
+### Checkpoint N3.25 — Top/Perspective camera in the native host
+
+The camera mode switch already present in the React editor has been migrated into the WinUI host's **View** menu.
+
+**Top view** preserves the current target and camera distance while moving pitch close to 90°, with a small safety margin that avoids the `CreateLookAt` singularity caused by a direction exactly parallel to the Y axis.
+
+**Perspective** restores the editor's default orientation without changing the focused point or current zoom. This makes it possible to work on the same tile/object while switching between a near-orthographic overhead inspection and 3D navigation.
+
+Both modes reuse the same camera, ID Buffer, and raycasts; there is no parallel viewport or hidden React state.
+

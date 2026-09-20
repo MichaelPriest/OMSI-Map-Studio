@@ -62,6 +62,13 @@
                         Click="OnFullscreenClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
+                        Text="Perspectiva"
+                        Click="OnPerspectiveViewClick" />
+                    <MenuFlyoutItem
+                        Text="Vista superior"
+                        Click="OnTopViewClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
                         Text="Alternar Explorer"
                         Click="OnToggleExplorerClick" />
                     <MenuFlyoutItem

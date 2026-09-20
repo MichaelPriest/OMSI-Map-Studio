@@ -462,6 +462,24 @@ public sealed partial class NativeViewport : UserControl
         return focused;
     }
 
+    public void SetTopView()
+    {
+        _runtime?.SetTopView();
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Câmera: vista superior.");
+    }
+
+    public void SetPerspectiveView()
+    {
+        _runtime?.SetPerspectiveView();
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Câmera: perspectiva.");
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

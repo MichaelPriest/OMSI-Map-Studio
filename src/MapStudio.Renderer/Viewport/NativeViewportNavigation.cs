@@ -16,6 +16,11 @@ public sealed class NativeViewportNavigation
     private const float DefaultPitch =
         0.95f;
 
+    private const float TopViewPitch =
+        MathF.PI /
+        2.0f -
+        0.017453292f;
+
     private Vector3 _homeTarget =
         Vector3.Zero;
 
@@ -216,6 +221,24 @@ public sealed class NativeViewportNavigation
         Distance =
             _homeDistance;
 
+        Yaw =
+            DefaultYaw;
+
+        Pitch =
+            DefaultPitch;
+    }
+
+    public void SetTopView()
+    {
+        Yaw =
+            0.0f;
+
+        Pitch =
+            TopViewPitch;
+    }
+
+    public void SetPerspectiveView()
+    {
         Yaw =
             DefaultYaw;
 

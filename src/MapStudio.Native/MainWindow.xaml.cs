@@ -2154,6 +2154,26 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e) =>
         ToggleFullscreen();
 
+    private void OnPerspectiveViewClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Viewport.SetPerspectiveView();
+
+        StatusText.Text =
+            "Câmera em perspectiva.";
+    }
+
+    private void OnTopViewClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Viewport.SetTopView();
+
+        StatusText.Text =
+            "Câmera em vista superior.";
+    }
+
     private void OnToggleExplorerClick(
         object sender,
         RoutedEventArgs e) =>

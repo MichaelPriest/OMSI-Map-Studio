@@ -1759,6 +1759,30 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public void SetTopView()
+    {
+        ThrowIfDisposed();
+
+        CancelGizmoDrag();
+
+        Navigation.SetTopView();
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+    }
+
+    public void SetPerspectiveView()
+    {
+        ThrowIfDisposed();
+
+        CancelGizmoDrag();
+
+        Navigation.SetPerspectiveView();
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+    }
+
     public bool TryPick(
         uint pixelX,
         uint pixelY,
