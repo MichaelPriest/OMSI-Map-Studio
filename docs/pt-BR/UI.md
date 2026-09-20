@@ -606,3 +606,18 @@ O editor mostra um navegador compacto 3×3 sobre o viewport. O centro representa
 ### Prévia real de itens da biblioteca
 
 Ao escolher um `.sco` ou `.sli`, o editor cria a prévia no centro do tile ativo usando a geometria/perfil real do arquivo. O painel da biblioteca mostra o item ativo, quantidade de meshes ou superfícies/texturas carregadas e um botão **Focar prévia**. Trocar de item substitui somente a prévia e não grava o mapa até a confirmação.
+
+
+### Fluxo de colocação estilo city-builder
+
+A colocação de itens foi aproximada do fluxo de editores city-builder, sem substituir o formato real do OMSI. Ao escolher um objeto `.sco` (incluindo árvores, água, grama e cruzamentos quando representados por assets reais), a geometria real aparece como uma **prévia 3D translúcida** e acompanha o cursor sobre os tiles válidos. O clique fixa a posição da prévia e o arquivo do mapa só é alterado ao confirmar o salvamento seguro.
+
+Splines normais também exibem uma prévia 3D real que acompanha o cursor. No criador de rua, o usuário escolhe uma `.sli`, pressiona no ponto inicial e arrasta até o ponto final. Depois pode ajustar um controle lateral de **curvatura**, que é convertido para os parâmetros reais de arco do OMSI (`rotation`, `length` e `radius`). O nivelamento usa os pontos inicial/final reais do arco, não uma aproximação reta.
+
+A Biblioteca possui uma janela de prévia 3D do item selecionado usando a geometria/perfil e texturas reais carregadas. Ela não cria thumbnails sintéticos.
+
+O painel **Mapa real por coordenadas** não fica mais permanentemente sobre o viewport. Ele é aberto pelo menu superior **Mapa > Mapa real por coordenadas…** ou pela opção correspondente em **Visualizar**.
+
+Os painéis flutuantes do viewport possuem alças de arraste: navegador de blocos, nivelamento de terreno, mapa real, barras de colocação, ferramentas/câmera, camadas e dock de tela cheia podem ser reposicionados durante a edição.
+
+A seleção por clique percorre os pais do mesh atingido, portanto filhos de um objeto continuam resolvendo para o objeto real mesmo quando o metadado de seleção está no nó pai.
