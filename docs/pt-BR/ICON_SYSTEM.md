@@ -344,3 +344,12 @@ Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda im
 - `recent` para itens recentes;
 - `usage` para itens mais usados;
 - navegação da Biblioteca combina estes ícones com `construction-set`, `favorite` e `collection`.
+
+
+### Oitavo lote migrado
+
+- `properties`, `geometry` e `materials` para abas do Inspetor;
+- `duplicate` para cópias preservativas;
+- `delete` para exclusão de objetos/splines;
+- `link` para edição de vínculos previous/next;
+- ações continuam reutilizando `preview`, `save`, `discard`, `terrain`, `sco-object`, `sli-spline` e `profile`.

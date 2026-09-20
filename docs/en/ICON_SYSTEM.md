@@ -344,3 +344,12 @@ This brings F11 mode closer to the approved visual reference without creating a 
 - `recent` for recent items;
 - `usage` for most-used items;
 - Library navigation combines these icons with `construction-set`, `favorite`, and `collection`.
+
+
+### Eighth migrated batch
+
+- `properties`, `geometry`, and `materials` for Inspector tabs;
+- `duplicate` for preservative copies;
+- `delete` for object/spline deletion;
+- `link` for previous/next link editing;
+- actions continue to reuse `preview`, `save`, `discard`, `terrain`, `sco-object`, `sli-spline`, and `profile`.

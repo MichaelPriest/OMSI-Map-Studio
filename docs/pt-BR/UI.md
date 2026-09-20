@@ -936,3 +936,15 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - a prévia 3D real selecionada ganhou maior área visual e hierarquia de informação;
 - detalhes do asset passam a ser organizados em pequenos blocos, sem esconder os dados técnicos;
 - a miniatura e a prévia continuam vindo do conteúdo real carregado do OMSI.
+
+
+### Inspetor visual v2
+
+- cabeçalhos de mapa, objeto, spline e assets em colocação passam a usar ícones semânticos do Map Studio;
+- abas de objeto usam ícones para Geral, Transformar, Geometria e Materiais;
+- abas de spline usam ícones para Geral, Traçado e Perfil;
+- propriedades densas passam a usar cartões/linhas compactas com maior contraste;
+- transformação de objetos usa grade de 3 colunas para X/Y/Z e orientação em telas adequadas;
+- transformação de splines permanece em grade de 2 colunas para acomodar comprimento, raio e gradientes;
+- botões de prévia, copiar, excluir, salvar, nivelar, vínculos e descartar passam a usar ações SVG consistentes;
+- todos os handlers, validações preservativas e fluxos de backup permanecem inalterados.

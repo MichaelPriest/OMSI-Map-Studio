@@ -936,3 +936,15 @@ All behavior remains connected to real editor state; no fake commands are introd
 - the selected real 3D preview gets a larger visual area and clearer information hierarchy;
 - asset details are organized into small blocks without hiding technical data;
 - thumbnail and preview still come from real OMSI content.
+
+
+### Inspector visual v2
+
+- map, object, spline, and placement headers now use semantic Map Studio icons;
+- object tabs use icons for General, Transform, Geometry, and Materials;
+- spline tabs use icons for General, Path, and Profile;
+- dense properties use compact card/row styling with stronger contrast;
+- object transforms use a 3-column X/Y/Z-oriented grid when space allows;
+- spline transforms keep a 2-column grid to fit length, radius, and gradients;
+- preview, copy, delete, save, level, link, and discard actions now use consistent SVG controls;
+- all existing handlers, preservative validation, and backup flows remain unchanged.
