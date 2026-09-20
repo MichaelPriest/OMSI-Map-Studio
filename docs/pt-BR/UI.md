@@ -859,3 +859,7 @@ As categorias principais da barra inferior agora exibem uma prateleira horizonta
 - o botão **Biblioteca** continua disponível para busca, filtros, coleções, favoritos e diagnóstico técnico.
 
 Ao selecionar um item pela prateleira, a interface troca para o **Inspetor contextual**. Durante a colocação de `.sco`, ele mostra caminho, grupo/subcategoria, disponibilidade da geometria 3D, template seguro, tile/posição e rotação. Durante a criação de `.sli`, mostra perfil real, tipo `[spline]`/`[spline_h]`, comprimento/raio/rotação e estado de snap/`previous`/`next`. Esse estado não simula dados: ele acompanha somente informações reais já carregadas ou parâmetros da construção ativa.
+
+### Controles rápidos de via
+
+O guia contextual de ruas/pontes na barra inferior agora também é interativo. **Snap pontas** liga/desliga o encaixe nas extremidades de splines existentes, **previous/next** alterna a conexão automática da cadeia e, no modo ponte/elevado, os botões `−`/`+` ajustam a elevação em passos de 0,5 m. O campo detalhado de elevação continua disponível no painel completo e ambos usam a mesma atualização real do preview.
