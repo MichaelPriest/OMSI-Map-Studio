@@ -781,3 +781,10 @@ The **Health** button gathers available technical diagnostics without turning mi
 Both libraries now include the technical filter **⚠ Problems**. It lists only assets for which Map Studio already has evidence of failure—for example a declared missing O3D, geometry that failed to load, or a requested texture that returned missing/error. An asset that has not been loaded yet is not placed in this filter.
 
 Health cards open the corresponding filtered library or dependency audit directly, making incomplete-map repair faster.
+
+
+### Persistent movable-tool positions
+
+Movable windows and toolbars now remember their last position in UI-local storage. Restoration also works for dynamically mounted panels such as **Map Health**, **Construction Sets**, the junction assistant, placement bars, and full-screen tools.
+
+Restored positions are clamped to the current container dimensions, so changing resolution, window size, or full-screen mode does not leave a tool permanently outside the visible area. Local-storage failures never interfere with map editing.
