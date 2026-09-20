@@ -4803,57 +4803,59 @@ export function Viewport({
                 )
             );
 
-          if (protectedMarkers.length) {
-            const objectMarkers =
-              MeshBuilder.CreateLineSystem(
-                "omsi-protected-object-markers",
-                {
-                  lines:
-                    createObjectMarkerLines(
-                      protectedMarkers,
-                      objectGeometryByPath,
-                      tiles
-                    )
-                },
-                scene
-              );
+          const createPickableObjectMarkers = (
+            items: OmsiPlacedObject[],
+            prefix: string,
+            color: Color3
+          ) => {
+            for (const item of items) {
+              const marker =
+                MeshBuilder.CreateLineSystem(
+                  `${prefix}-${item.objectId}`,
+                  {
+                    lines:
+                      createObjectMarkerLines(
+                        [item],
+                        objectGeometryByPath,
+                        tiles
+                      )
+                  },
+                  scene
+                );
 
-            objectMarkers.color =
-              new Color3(
-                0.48,
-                0.66,
-                0.82
-              );
+              marker.color = color;
+              marker.isPickable = true;
+              marker.metadata = {
+                ...(marker.metadata ?? {}),
+                mapStudioKind: "object",
+                placedObject: item,
+                mapStudioSource:
+                  "fallback-marker",
+                mapStudioOrigin:
+                  item.sceneryObjectPath
+              };
+            }
+          };
 
-            objectMarkers.isPickable =
-              false;
-          }
+          createPickableObjectMarkers(
+            protectedMarkers,
+            "omsi-protected-object-marker",
+            new Color3(
+              0.48,
+              0.66,
+              0.82
+            )
+          );
 
-          if (missingMarkers.length) {
-            const objectMarkers =
-              MeshBuilder.CreateLineSystem(
-                "omsi-missing-object-markers",
-                {
-                  lines:
-                    createObjectMarkerLines(
-                      missingMarkers,
-                      objectGeometryByPath,
-                      tiles
-                    )
-                },
-                scene
-              );
-
-            objectMarkers.color =
-              new Color3(
-                0.95,
-                0.78,
-                0.38
-              );
-
-            objectMarkers.isPickable =
-              false;
-          }
+          createPickableObjectMarkers(
+            missingMarkers,
+            "omsi-missing-object-marker",
+            new Color3(
+              0.95,
+              0.78,
+              0.38
+            )
+          );
         }
       }
     } else {
@@ -6369,11 +6371,7 @@ export function Viewport({
           pointerX,
           pointerY,
           (mesh) => {
-            if (
-              !mesh.isPickable ||
-              selectionMode ===
-                "terrain"
-            ) {
+            if (!mesh.isPickable) {
               return false;
             }
 
@@ -6386,28 +6384,15 @@ export function Viewport({
                   ?.mapStudioKind;
 
               if (
-                selectionMode ===
-                  "object" &&
-                kind === "object"
+                kind === "object" &&
+                showObjects
               ) {
                 return true;
               }
 
               if (
-                selectionMode ===
-                  "spline" &&
-                kind === "spline"
-              ) {
-                return true;
-              }
-
-              if (
-                selectionMode ===
-                  "all" &&
-                (
-                  kind === "object" ||
-                  kind === "spline"
-                )
+                kind === "spline" &&
+                showSplines
               ) {
                 return true;
               }
@@ -6608,15 +6593,7 @@ export function Viewport({
         }
       };
 
-      if (
-        showObjects &&
-        (
-          selectionMode ===
-            "all" ||
-          selectionMode ===
-            "object"
-        )
-      ) {
+      if (showObjects) {
         for (const item of objects) {
           considerPoint(
             getObjectWorldPosition(
@@ -6634,15 +6611,7 @@ export function Viewport({
         }
       }
 
-      if (
-        showSplines &&
-        (
-          selectionMode ===
-            "all" ||
-          selectionMode ===
-            "spline"
-        )
-      ) {
+      if (showSplines) {
         for (const item of splines) {
           const points =
             getSplineAxisLine(
@@ -6712,8 +6681,6 @@ export function Viewport({
     resolveSelectionHover = (
       event: PointerEvent
     ) =>
-      selectionMode !==
-        "terrain" &&
       Boolean(
         getPickedMapItem(event)
       );
@@ -7631,13 +7598,7 @@ export function Viewport({
 
       for (
         const placedObject of
-          showObjects &&
-          (
-            selectionMode ===
-              "all" ||
-            selectionMode ===
-              "object"
-          )
+          showObjects
             ? objects
             : []
       ) {
@@ -7704,13 +7665,7 @@ export function Viewport({
       }
 
       const splinePick =
-        showSplines &&
-        (
-          selectionMode ===
-            "all" ||
-          selectionMode ===
-            "spline"
-        )
+        showSplines
           ? scene.pick(
           pointerX,
           pointerY,

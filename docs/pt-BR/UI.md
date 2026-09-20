@@ -803,3 +803,12 @@ O topo fica reservado para operações de edição, câmera e salvamento. Na tel
 O clique usa três níveis de resolução: mesh real pickável, metadados herdados pelos nós pais e fallback geométrico pela posição/eixo real do OMSI. Isso mantém selecionáveis objetos com O3D incompleto/protegido, árvores/billboards e splines muito finas.
 
 Quando uma ferramenta de colocação está aberta, clicar diretamente em um item real existente prioriza a seleção desse item; clicar no terreno livre continua sendo usado para posicionamento.
+
+
+### Tela cheia robusta e seleção universal
+
+O modo tela cheia agora altera imediatamente o layout React e, no aplicativo desktop, reforça a janela WPF como borderless/maximizada, trazendo-a para frente e restaurando estado/tamanho anteriores ao sair. F11, Esc e o botão da interface usam o mesmo fluxo. A camada do editor também ocupa 100vw × 100vh enquanto o host aplica a transição.
+
+Objetos e splines visíveis passam a ser sempre selecionáveis por clique, independentemente do filtro atual Objeto/Spline/Tudo. O modo Terreno só recebe o clique quando nenhum objeto/spline real foi atingido.
+
+Objetos cujo O3D não possui visual renderizável ou está ausente agora recebem um marcador individual pickable com a identidade do objeto real, permitindo selecionar e reparar também itens incompletos. Os filtros de seleção ficam como filtros visuais/de organização, não como bloqueadores do picking.

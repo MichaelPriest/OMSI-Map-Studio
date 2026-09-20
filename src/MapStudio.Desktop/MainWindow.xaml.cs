@@ -121,6 +121,11 @@ public partial class MainWindow : Window
         WindowState.Normal;
     private ResizeMode _resizeModeBeforeFullScreen =
         ResizeMode.CanResize;
+    private bool _topmostBeforeFullScreen;
+    private double _leftBeforeFullScreen;
+    private double _topBeforeFullScreen;
+    private double _widthBeforeFullScreen;
+    private double _heightBeforeFullScreen;
 
     public MainWindow()
     {
@@ -9494,24 +9499,61 @@ public partial class MainWindow : Window
                 WindowState;
             _resizeModeBeforeFullScreen =
                 ResizeMode;
+            _topmostBeforeFullScreen =
+                Topmost;
+            _leftBeforeFullScreen =
+                Left;
+            _topBeforeFullScreen =
+                Top;
+            _widthBeforeFullScreen =
+                Width;
+            _heightBeforeFullScreen =
+                Height;
 
+            // Reset first so WPF actually reapplies the chrome/state
+            // transition instead of keeping the previous maximized
+            // work-area bounds.
+            WindowState =
+                WindowState.Normal;
             WindowStyle =
                 WindowStyle.None;
             ResizeMode =
                 ResizeMode.NoResize;
+            Topmost = true;
             WindowState =
                 WindowState.Maximized;
+            Activate();
+            Focus();
         }
         else
         {
             WindowState =
                 WindowState.Normal;
+            Topmost =
+                _topmostBeforeFullScreen;
             WindowStyle =
                 _windowStyleBeforeFullScreen;
             ResizeMode =
                 _resizeModeBeforeFullScreen;
+
+            if (
+                _windowStateBeforeFullScreen ==
+                WindowState.Normal)
+            {
+                Left =
+                    _leftBeforeFullScreen;
+                Top =
+                    _topBeforeFullScreen;
+                Width =
+                    _widthBeforeFullScreen;
+                Height =
+                    _heightBeforeFullScreen;
+            }
+
             WindowState =
                 _windowStateBeforeFullScreen;
+            Activate();
+            Focus();
         }
 
         _isFullScreen = enabled;

@@ -2981,6 +2981,61 @@ export function App() {
     }
   }, [isFullScreen]);
 
+  const requestFullScreen =
+    useCallback(
+      (enabled: boolean) => {
+        setIsFullScreen(enabled);
+
+        if (bridgeAvailable) {
+          setFullScreen(enabled);
+          return;
+        }
+
+        const root =
+          document.documentElement;
+
+        if (enabled) {
+          void root
+            .requestFullscreen?.()
+            .catch(() => {
+              setIsFullScreen(true);
+            });
+        } else if (
+          document.fullscreenElement
+        ) {
+          void document
+            .exitFullscreen?.()
+            .catch(() => {
+              setIsFullScreen(false);
+            });
+        }
+      },
+      [bridgeAvailable]
+    );
+
+  useEffect(() => {
+    const handleBrowserFullScreen = () => {
+      if (!bridgeAvailable) {
+        setIsFullScreen(
+          Boolean(
+            document.fullscreenElement
+          )
+        );
+      }
+    };
+
+    document.addEventListener(
+      "fullscreenchange",
+      handleBrowserFullScreen
+    );
+
+    return () =>
+      document.removeEventListener(
+        "fullscreenchange",
+        handleBrowserFullScreen
+      );
+  }, [bridgeAvailable]);
+
   useEffect(() => {
     type FloatingPosition = {
       left: number;
@@ -12054,7 +12109,7 @@ export function App() {
 
       if (event.key === "F11") {
         event.preventDefault();
-        setFullScreen(
+        requestFullScreen(
           !isFullScreen
         );
         return;
@@ -12065,7 +12120,7 @@ export function App() {
         isFullScreen
       ) {
         event.preventDefault();
-        setFullScreen(false);
+        requestFullScreen(false);
         return;
       }
 
@@ -16919,7 +16974,7 @@ export function App() {
                 : "Tela cheia (F11)"
             }
             onClick={() =>
-              setFullScreen(
+              requestFullScreen(
                 !isFullScreen
               )
             }
@@ -19197,7 +19252,7 @@ export function App() {
                     <button type="button" className={showObjects ? "active" : ""} onClick={() => setShowObjects((current) => !current)} title="Objetos (O)">O</button>
                     <button type="button" className={showSplines ? "active" : ""} onClick={() => setShowSplines((current) => !current)} title="Splines (L)">L</button>
                     <button type="button" className={showSplineProfiles ? "active" : ""} onClick={() => setShowSplineProfiles((current) => !current)} title="Perfis reais das splines">P</button>
-                    <button type="button" className="exit" onClick={() => setFullScreen(false)} title="Sair da tela cheia (F11/Esc)">⤡</button>
+                    <button type="button" className="exit" onClick={() => requestFullScreen(false)} title="Sair da tela cheia (F11/Esc)">⤡</button>
                   </div>
                 </div>
                 <div className="fullscreen-shortcuts">

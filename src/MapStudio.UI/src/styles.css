@@ -4007,3 +4007,48 @@ code {
 ) {
   display: none;
 }
+
+
+/* Fullscreen reliability: the editor itself fills the WebView even
+   while the desktop host is transitioning its native window. */
+.studio-shell.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #050d14;
+}
+
+.studio-shell.is-fullscreen .studio-main,
+.studio-shell.is-fullscreen .studio-content,
+.studio-shell.is-fullscreen .map-editor,
+.studio-shell.is-fullscreen .editor-grid,
+.studio-shell.is-fullscreen .editor-viewport {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-viewport canvas {
+  pointer-events: auto !important;
+  touch-action: none;
+  cursor: default;
+}
+
+.citybuilder-selection-filters {
+  opacity: 0.82;
+}
+
+.citybuilder-selection-filters::before {
+  content: "Filtro visual";
+  align-self: center;
+  margin-right: 3px;
+  color: #63859c;
+  font-size: 6px;
+  text-transform: uppercase;
+}

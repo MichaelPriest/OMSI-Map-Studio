@@ -803,3 +803,12 @@ The top area is reserved for edit, camera, and save operations. Full-screen mode
 Click selection now resolves through three levels: the real pickable mesh, inherited parent-node metadata, and a geometric fallback based on the real OMSI placement/axis. This keeps incomplete/protected O3D objects, trees/billboards, and very thin splines selectable.
 
 When a placement tool is open, clicking directly on an existing real map item prioritizes selection of that item; clicking free terrain continues to place the pending asset.
+
+
+### Robust fullscreen and universal selection
+
+Fullscreen now updates the React layout immediately and, in the desktop app, reinforces the WPF window as borderless/maximized, brings it to the foreground, and restores the previous state/size when leaving. F11, Escape, and the UI button all use the same flow. The editor layer also fills 100vw × 100vh while the native host transition is applied.
+
+Visible objects and splines are now always clickable regardless of the current Object/Spline/All filter. Terrain handling receives the click only when no real object/spline was hit.
+
+Objects whose O3D has no renderable visual or is missing now receive an individual pickable marker carrying the real object identity, so incomplete items can also be selected and repaired. Selection filters are now visual/organization filters rather than picking blockers.
