@@ -1,3 +1,11 @@
+export type OmsiMapCatalogEntry = {
+  directoryName: string;
+  displayName: string;
+  directoryPath: string;
+  tileCount: number;
+  usesWorldCoordinates: boolean;
+};
+
 export type SceneryLibraryEntry = {
   sceneryObjectPath: string;
   fileName: string;
@@ -266,6 +274,21 @@ export type HostMessage =
       rootPath: string;
     }
   | {
+      type: "mapCatalogLoadingStarted";
+    }
+  | {
+      type: "mapCatalogLoadingProgress";
+      completed: number;
+      total: number;
+      skipped: number;
+      directoryName: string | null;
+    }
+  | {
+      type: "mapCatalogLoaded";
+      skippedMaps: number;
+      entries: OmsiMapCatalogEntry[];
+    }
+  | {
       type: "mapOpened";
       initialTile: {
         x: number;
@@ -430,6 +453,21 @@ export function selectOmsiRoot() {
 export function selectMap() {
   getWebView()?.postMessage({
     type: "selectMap"
+  });
+}
+
+export function loadMapCatalog() {
+  getWebView()?.postMessage({
+    type: "loadMapCatalog"
+  });
+}
+
+export function openMapFromCatalog(
+  directoryName: string
+) {
+  getWebView()?.postMessage({
+    type: "openMapFromCatalog",
+    directoryName
   });
 }
 
