@@ -107,11 +107,11 @@ The index should progressively cover:
 
 The index never replaces OMSI files. It is derived data and can be rebuilt.
 
-### Phase A implementation — first step
+### Phase A implementation — current state
 
-The first implemented step uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
+The persistent foundation uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
 
-Regional loading has also started moving from a fixed 3×3 concept to rings: the active 3×3 region is loaded fully while the outer 5×5 ring receives summary/metadata only. This is still an intermediate step toward the final streaming model described below.
+Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. Derived caching, a complete priority queue, and GPU resource management/LOD are still required to finish Phase A.
 
 ### 3.2 Derived cache
 
@@ -285,7 +285,7 @@ Current Phase A status:
 - 🟡 **persistent cache:** the index lives under `LocalApplicationData/OMSI Map Studio/Cache/<installation>/assets-v1.sqlite` and can be rebuilt;
 - 🟡 **incremental invalidation:** path, kind, size, and modification time distinguish new, changed, unchanged, and removed files;
 - 🟡 **indexed libraries:** object and spline catalogs can consume the persistent index and retain direct scanning as a safe fallback;
-- 🟡 **tile streaming:** Streaming 3×3 keeps rings 0–1 fully loaded and reads ring 2 as lightweight metadata; heavy terrain outside the active region is evicted from UI state;
+- 🟡 **automatic tile streaming:** it is the default map-opening mode; rings 0–1 stay fully loaded, ring 2 uses lightweight metadata, heavy terrain outside the active region is evicted, and stale region responses are ignored;
 - ⬜ complete priority loading queue;
 - ⬜ complete memory/GPU management;
 - ⬜ safe instancing and LOD;
@@ -599,9 +599,9 @@ After that milestone, modern features remain differentiators rather than parity 
 
 From the current state, the recommended sequence is:
 
-1. stabilize current UI/picking;
-2. implement Asset Index + persistent cache;
-3. implement automatic tile streaming;
+1. stabilize current UI/picking and finish the visual migration to the original SVG icon pack;
+2. expand persistent caching to derived geometry/material/thumbnail data;
+3. complete priority loading, GPU eviction, safe instancing, and LOD;
 4. complete missing physical operations;
 5. implement paths + Traffic Rules;
 6. implement transit: stops/tracks/trips/timetables;
@@ -636,4 +636,4 @@ New ideas that matter for replacing the original editor or extending the modern 
 
 Map Studio will use its own SVG icon pack, inspired by OMSI's technical atmosphere without copying proprietary assets. The full specification is in [ICON_SYSTEM.md](ICON_SYSTEM.md).
 
-Migration will happen by groups: quick toolbar, construction HUD, Explorer/Inspector, menus, library, diagnostics, and future OMSI tools.
+Migration will happen by groups: quick toolbar, construction HUD, Explorer/Inspector, menus, library, diagnostics, and future OMSI tools. The first batch has already migrated the quick dock and primary construction HUD; the remaining groups are still in progress.
