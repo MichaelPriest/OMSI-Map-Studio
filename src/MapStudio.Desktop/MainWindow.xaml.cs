@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Globalization;
+using System.Net.Http;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Media.Imaging;
