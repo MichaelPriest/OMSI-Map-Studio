@@ -2972,9 +2972,190 @@ export function App() {
   }, [isFullScreen]);
 
   useEffect(() => {
+    type FloatingPosition = {
+      left: number;
+      top: number;
+    };
+
+    const storageKey =
+      "omsi-map-studio:floating-tool-positions-v1";
+
+    const readPositions = () => {
+      try {
+        const raw =
+          window.localStorage.getItem(
+            storageKey
+          );
+
+        return raw
+          ? (
+              JSON.parse(raw) as
+                Record<
+                  string,
+                  FloatingPosition
+                >
+            )
+          : {};
+      } catch {
+        return {};
+      }
+    };
+
+    const writePosition = (
+      key: string,
+      position: FloatingPosition
+    ) => {
+      try {
+        const current =
+          readPositions();
+
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            ...current,
+            [key]: position
+          })
+        );
+      } catch {
+        // A falha de personalização visual
+        // nunca deve bloquear o editor.
+      }
+    };
+
+    const getPanelKey = (
+      panel: HTMLElement
+    ) => {
+      const explicit =
+        panel.dataset
+          .floatingToolId;
+
+      if (explicit) {
+        return explicit;
+      }
+
+      return (
+        Array.from(panel.classList)
+          .find(
+            (name) =>
+              name !==
+                "floating-tool" &&
+              name !== "active" &&
+              name !== "warning"
+          ) ??
+        "floating-tool"
+      );
+    };
+
+    const applySavedPosition = (
+      panel: HTMLElement
+    ) => {
+      if (
+        panel.dataset
+          .floatingPositionRestored ===
+        "true"
+      ) {
+        return;
+      }
+
+      panel.dataset
+        .floatingPositionRestored =
+        "true";
+
+      const position =
+        readPositions()[
+          getPanelKey(panel)
+        ];
+
+      if (!position) {
+        return;
+      }
+
+      const parent =
+        panel.offsetParent as
+          | HTMLElement
+          | null;
+
+      const parentRect =
+        parent
+          ?.getBoundingClientRect() ??
+        new DOMRect(
+          0,
+          0,
+          window.innerWidth,
+          window.innerHeight
+        );
+
+      const panelRect =
+        panel.getBoundingClientRect();
+
+      const maximumLeft =
+        Math.max(
+          0,
+          parentRect.width -
+            panelRect.width
+        );
+
+      const maximumTop =
+        Math.max(
+          0,
+          parentRect.height -
+            panelRect.height
+        );
+
+      panel.style.left =
+        `${Math.min(
+          maximumLeft,
+          Math.max(
+            0,
+            position.left
+          )
+        )}px`;
+
+      panel.style.top =
+        `${Math.min(
+          maximumTop,
+          Math.max(
+            0,
+            position.top
+          )
+        )}px`;
+
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+      panel.style.transform = "none";
+    };
+
+    const restorePanels = () => {
+      document
+        .querySelectorAll<HTMLElement>(
+          "[data-floating-tool]"
+        )
+        .forEach(
+          applySavedPosition
+        );
+    };
+
+    restorePanels();
+
+    const observer =
+      new MutationObserver(() => {
+        window.requestAnimationFrame(
+          restorePanels
+        );
+      });
+
+    observer.observe(
+      document.body,
+      {
+        childList: true,
+        subtree: true
+      }
+    );
+
     let drag:
       | {
           panel: HTMLElement;
+          key: string;
           pointerId: number;
           offsetX: number;
           offsetY: number;
@@ -3007,13 +3188,18 @@ export function App() {
         return;
       }
 
+      applySavedPosition(panel);
+
       const rect =
         panel.getBoundingClientRect();
+
       const parent =
         panel.offsetParent as
           HTMLElement | null;
+
       const parentRect =
-        parent?.getBoundingClientRect() ??
+        parent
+          ?.getBoundingClientRect() ??
         new DOMRect(
           0,
           0,
@@ -3024,15 +3210,19 @@ export function App() {
       panel.style.left =
         `${rect.left -
         parentRect.left}px`;
+
       panel.style.top =
         `${rect.top -
         parentRect.top}px`;
+
       panel.style.right = "auto";
       panel.style.bottom = "auto";
       panel.style.transform = "none";
 
       drag = {
         panel,
+        key:
+          getPanelKey(panel),
         pointerId:
           event.pointerId,
         offsetX:
@@ -3047,6 +3237,7 @@ export function App() {
       handle.setPointerCapture?.(
         event.pointerId
       );
+
       event.preventDefault();
     };
 
@@ -3071,6 +3262,7 @@ export function App() {
           drag.parentRect.width -
             panelRect.width
         );
+
       const maximumTop =
         Math.max(
           0,
@@ -3102,6 +3294,7 @@ export function App() {
 
       drag.panel.style.left =
         `${left}px`;
+
       drag.panel.style.top =
         `${top}px`;
     };
@@ -3110,43 +3303,77 @@ export function App() {
       event: PointerEvent
     ) => {
       if (
-        drag?.pointerId ===
-        event.pointerId
+        !drag ||
+        drag.pointerId !==
+          event.pointerId
       ) {
-        drag = undefined;
+        return;
       }
+
+      const left =
+        Number.parseFloat(
+          drag.panel.style.left
+        );
+
+      const top =
+        Number.parseFloat(
+          drag.panel.style.top
+        );
+
+      if (
+        Number.isFinite(left) &&
+        Number.isFinite(top)
+      ) {
+        writePosition(
+          drag.key,
+          {
+            left,
+            top
+          }
+        );
+      }
+
+      drag = undefined;
     };
 
     document.addEventListener(
       "pointerdown",
       handlePointerDown
     );
+
     window.addEventListener(
       "pointermove",
       handlePointerMove
     );
+
     window.addEventListener(
       "pointerup",
       handlePointerUp
     );
+
     window.addEventListener(
       "pointercancel",
       handlePointerUp
     );
 
     return () => {
+      observer.disconnect();
+
       document.removeEventListener(
         "pointerdown",
         handlePointerDown
       );
+
       window.removeEventListener(
         "pointermove",
         handlePointerMove
       );
+
       window.removeEventListener(
         "pointerup",
         handlePointerUp
       );
+
       window.removeEventListener(
         "pointercancel",
         handlePointerUp
