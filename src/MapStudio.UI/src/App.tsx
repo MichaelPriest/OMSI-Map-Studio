@@ -757,6 +757,117 @@ export function App() {
       y: number;
     }>();
 
+  const [
+    terrainEditPoint,
+    setTerrainEditPoint
+  ] = useState<{
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    height: number;
+  }>();
+
+  const [
+    terrainTargetHeight,
+    setTerrainTargetHeight
+  ] = useState(0);
+
+  const [
+    terrainBrushRadius,
+    setTerrainBrushRadius
+  ] = useState(20);
+
+  const [
+    terrainBrushFeather,
+    setTerrainBrushFeather
+  ] = useState(0.25);
+
+  const [
+    savingTerrain,
+    setSavingTerrain
+  ] = useState(false);
+
+  const [
+    googleApiKey,
+    setGoogleApiKey
+  ] = useState("");
+
+  const [
+    googleLatitude,
+    setGoogleLatitude
+  ] = useState("");
+
+  const [
+    googleLongitude,
+    setGoogleLongitude
+  ] = useState("");
+
+  const [
+    googleZoom,
+    setGoogleZoom
+  ] = useState(18);
+
+  const [
+    googleMapType,
+    setGoogleMapType
+  ] = useState<
+    "roadmap" |
+    "satellite" |
+    "hybrid" |
+    "terrain"
+  >("hybrid");
+
+  const [
+    loadingGoogleReference,
+    setLoadingGoogleReference
+  ] = useState(false);
+
+  const [
+    googleReference,
+    setGoogleReference
+  ] = useState<GoogleMapReference>();
+
+  const [
+    referenceVisible,
+    setReferenceVisible
+  ] = useState(true);
+
+  const [
+    referenceOpacity,
+    setReferenceOpacity
+  ] = useState(0.55);
+
+  const [
+    georefAnchor,
+    setGeorefAnchor
+  ] = useState<{
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+  }>({
+    tileX: 0,
+    tileY: 0,
+    x: 150,
+    y: 150
+  });
+
+  const [
+    easyRoadMode,
+    setEasyRoadMode
+  ] = useState(false);
+
+  const [
+    easyRoadStart,
+    setEasyRoadStart
+  ] = useState<{
+    targetTileX: number;
+    targetTileY: number;
+    x: number;
+    y: number;
+  }>();
+
   const [objects, setObjects] =
     useState<OmsiPlacedObject[]>([]);
 
