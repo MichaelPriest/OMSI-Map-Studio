@@ -44,6 +44,12 @@ public sealed class D3D11NativeMapRenderer :
         _objectTriangleVertexCount;
 
     private ID3D11Buffer?
+        _splineTriangleBuffer;
+
+    private int
+        _splineTriangleVertexCount;
+
+    private ID3D11Buffer?
         _pickingTriangleBuffer;
 
     private int
@@ -64,6 +70,19 @@ public sealed class D3D11NativeMapRenderer :
         PickingId,
         NativeTriangleRange>
         _objectRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
+    private NativeMapVertex[]
+        _splineVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private IReadOnlyDictionary<
+        PickingId,
+        NativeTriangleRange>
+        _splineRanges =
             new Dictionary<
                 PickingId,
                 NativeTriangleRange>();
@@ -171,6 +190,9 @@ public sealed class D3D11NativeMapRenderer :
     public int TerrainTriangleVertexCount =>
         _terrainTriangleVertexCount;
 
+    public int SplineTriangleVertexCount =>
+        _splineTriangleVertexCount;
+
     public void SetViewProjection(
         Matrix4x4 viewProjection)
     {
@@ -185,7 +207,9 @@ public sealed class D3D11NativeMapRenderer :
         NativePickingProxyGeometry?
             proxyGeometry = null,
         NativeTerrainTriangleGeometry?
-            terrainGeometry = null)
+            terrainGeometry = null,
+        NativeSplineTriangleGeometry?
+            splineGeometry = null)
     {
         ThrowIfDisposed();
 
@@ -203,6 +227,11 @@ public sealed class D3D11NativeMapRenderer :
         _objectTriangleBuffer = null;
         _objectTriangleVertexCount = 0;
 
+        _splineTriangleBuffer
+            ?.Dispose();
+        _splineTriangleBuffer = null;
+        _splineTriangleVertexCount = 0;
+
         _pickingTriangleBuffer
             ?.Dispose();
         _pickingTriangleBuffer = null;
@@ -218,6 +247,15 @@ public sealed class D3D11NativeMapRenderer :
                 NativeMapVertex>();
 
         _objectRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
+        _splineVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        _splineRanges =
             new Dictionary<
                 PickingId,
                 NativeTriangleRange>();
@@ -297,62 +335,61 @@ public sealed class D3D11NativeMapRenderer :
             _objectRanges =
                 objectGeometry
                     .Ranges;
-
-            var combinedPicking =
-                new NativeMapVertex[
-                    _proxyVertices.Length +
-                    objectGeometry
-                        .PickingVertices
-                        .Length];
-
-            _proxyVertices
-                .AsSpan()
-                .CopyTo(
-                    combinedPicking
-                        .AsSpan());
-
-            objectGeometry
-                .PickingVertices
-                .AsSpan()
-                .CopyTo(
-                    combinedPicking
-                        .AsSpan(
-                            _proxyVertices
-                                .Length));
-
-            if (
-                combinedPicking.Length >
-                0)
-            {
-                _pickingTriangleBuffer =
-                    _deviceHost.Device
-                        .CreateBuffer(
-                            combinedPicking
-                                .AsSpan(),
-                            BindFlags
-                                .VertexBuffer);
-
-                _pickingTriangleVertexCount =
-                    combinedPicking
-                        .Length;
-            }
         }
 
         if (
-            _pickingTriangleBuffer is
-                null &&
-            _proxyVertices.Length > 0)
+            splineGeometry is not null &&
+            splineGeometry
+                .Vertices.Length > 0)
+        {
+            _splineTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        splineGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _splineTriangleVertexCount =
+                splineGeometry
+                    .Vertices.Length;
+
+            _splineVertices =
+                splineGeometry
+                    .Vertices;
+
+            _splineRanges =
+                splineGeometry
+                    .Ranges;
+        }
+
+        var pickingVertices =
+            _proxyVertices
+                .Concat(
+                    objectGeometry
+                        ?.PickingVertices ??
+                    Array.Empty<
+                        NativeMapVertex>())
+                .Concat(
+                    splineGeometry
+                        ?.PickingVertices ??
+                    Array.Empty<
+                        NativeMapVertex>())
+                .ToArray();
+
+        if (pickingVertices.Length > 0)
         {
             _pickingTriangleBuffer =
                 _deviceHost.Device
                     .CreateBuffer(
-                        _proxyVertices
+                        pickingVertices
                             .AsSpan(),
                         BindFlags
                             .VertexBuffer);
 
             _pickingTriangleVertexCount =
-                _proxyVertices.Length;
+                pickingVertices.Length;
         }
     }
 
@@ -401,6 +438,30 @@ public sealed class D3D11NativeMapRenderer :
                     context.Draw(
                         (uint)
                             _terrainTriangleVertexCount,
+                        0);
+                }
+
+                if (
+                    _splineTriangleBuffer
+                        is not null &&
+                    _splineTriangleVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _splineTriangleBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context.Draw(
+                        (uint)
+                            _splineTriangleVertexCount,
                         0);
                 }
 
@@ -571,6 +632,19 @@ public sealed class D3D11NativeMapRenderer :
                 _objectVertices;
         }
         else if (
+            _splineRanges.TryGetValue(
+                pickingId,
+                out range) &&
+            range.VertexCount > 0 &&
+            range.StartVertex >= 0 &&
+            range.StartVertex +
+                range.VertexCount <=
+            _splineVertices.Length)
+        {
+            sourceVertices =
+                _splineVertices;
+        }
+        else if (
             _proxyRanges.TryGetValue(
                 pickingId,
                 out range) &&
@@ -673,6 +747,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _objectTriangleBuffer
+            ?.Dispose();
+
+        _splineTriangleBuffer
             ?.Dispose();
 
         _terrainTriangleBuffer

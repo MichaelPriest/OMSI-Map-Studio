@@ -157,7 +157,6 @@ public sealed class NativeMapGeometryBuilder
             var item in scene.Splines)
         {
             AddSpline(
-                scene,
                 item,
                 AddLine);
         }
@@ -211,7 +210,6 @@ public sealed class NativeMapGeometryBuilder
     }
 
     private static void AddSpline(
-        NativeSceneSnapshot scene,
         NativeSplineEntity entity,
         Action<
             double,
@@ -244,7 +242,6 @@ public sealed class NativeMapGeometryBuilder
 
         var previous =
             GetSplinePoint(
-                scene,
                 entity,
                 0);
 
@@ -255,7 +252,6 @@ public sealed class NativeMapGeometryBuilder
         {
             var current =
                 GetSplinePoint(
-                    scene,
                     entity,
                     length *
                     index /
@@ -275,74 +271,19 @@ public sealed class NativeMapGeometryBuilder
     }
 
     private static Vector3 GetSplinePoint(
-        NativeSceneSnapshot scene,
         NativeSplineEntity entity,
         double distance)
     {
-        var spline =
-            entity.Spline;
+        var frame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    distance);
 
-        var yaw =
-            spline.Rotation *
-            Math.PI /
-            180.0;
+        return
+            frame.Center +
+            Vector3.UnitY *
+            0.30f;
 
-        var hasCurve =
-            Math.Abs(
-                spline.Radius) >
-            0.001;
-
-        var angle =
-            hasCurve
-                ? distance /
-                  spline.Radius
-                : 0.0;
-
-        var localX =
-            hasCurve
-                ? spline.Radius *
-                  (
-                      1.0 -
-                      Math.Cos(
-                          angle)
-                  )
-                : 0.0;
-
-        var localZ =
-            hasCurve
-                ? spline.Radius *
-                  Math.Sin(
-                      angle)
-                : distance;
-
-        var cosYaw =
-            Math.Cos(yaw);
-
-        var sinYaw =
-            Math.Sin(yaw);
-
-        var worldX =
-            entity.WorldX +
-            localX * cosYaw +
-            localZ * sinYaw;
-
-        var worldZ =
-            entity.WorldZ -
-            localX * sinYaw +
-            localZ * cosYaw;
-
-        var worldY =
-            entity.WorldY +
-            NativeTerrainSampler
-                .GetHeightAtWorldPoint(
-                    scene,
-                    worldX,
-                    worldZ) +
-            0.30;
-
-        return new Vector3(
-            (float)worldX,
-            (float)worldY,
-            (float)worldZ);
     }
 }

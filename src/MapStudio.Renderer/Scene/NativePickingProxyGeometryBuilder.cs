@@ -60,7 +60,6 @@ public sealed class NativePickingProxyGeometryBuilder
                 vertices.Count;
 
             AppendSplineProxy(
-                scene,
                 entity,
                 vertices);
 
@@ -143,7 +142,6 @@ public sealed class NativePickingProxyGeometryBuilder
     }
 
     private static void AppendSplineProxy(
-        NativeSceneSnapshot scene,
         NativeSplineEntity entity,
         List<NativeMapVertex> output)
     {
@@ -173,7 +171,6 @@ public sealed class NativePickingProxyGeometryBuilder
 
         var previous =
             GetSplinePoint(
-                scene,
                 entity,
                 0);
 
@@ -184,7 +181,6 @@ public sealed class NativePickingProxyGeometryBuilder
         {
             var current =
                 GetSplinePoint(
-                    scene,
                     entity,
                     length *
                     index /
@@ -201,76 +197,21 @@ public sealed class NativePickingProxyGeometryBuilder
     }
 
     private static Vector3 GetSplinePoint(
-        NativeSceneSnapshot scene,
         NativeSplineEntity entity,
         double distance)
     {
-        var spline =
-            entity.Spline;
+        var frame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    distance);
 
-        var yaw =
-            spline.Rotation *
-            Math.PI /
-            180.0;
-
-        var hasCurve =
-            Math.Abs(
-                spline.Radius) >
-            0.001;
-
-        var angle =
-            hasCurve
-                ? distance /
-                  spline.Radius
-                : 0.0;
-
-        var localX =
-            hasCurve
-                ? spline.Radius *
-                  (
-                      1.0 -
-                      Math.Cos(
-                          angle)
-                  )
-                : 0.0;
-
-        var localZ =
-            hasCurve
-                ? spline.Radius *
-                  Math.Sin(
-                      angle)
-                : distance;
-
-        var cosYaw =
-            Math.Cos(yaw);
-
-        var sinYaw =
-            Math.Sin(yaw);
-
-        var worldX =
-            entity.WorldX +
-            localX * cosYaw +
-            localZ * sinYaw;
-
-        var worldZ =
-            entity.WorldZ -
-            localX * sinYaw +
-            localZ * cosYaw;
-
-        var worldY =
-            entity.WorldY +
-            NativeTerrainSampler
-                .GetHeightAtWorldPoint(
-                    scene,
-                    worldX,
-                    worldZ) +
-            0.45;
-
-        return new Vector3(
-            (float)worldX,
-            (float)worldY,
-            (float)worldZ);
+        return
+            frame.Center +
+            Vector3.UnitY *
+            0.45f;
     }
+
 
     private static void AppendThickSegment(
         Vector3 start,

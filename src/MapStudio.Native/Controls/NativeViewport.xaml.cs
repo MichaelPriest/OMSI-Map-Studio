@@ -77,12 +77,15 @@ public sealed partial class NativeViewport : UserControl
             $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
             $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
             $"{_runtime.MapRenderer.TerrainTriangleVertexCount / 3} triângulos terreno · " +
+            $"{_runtime.MapRenderer.SplineTriangleVertexCount / 3} triângulos spline · " +
             $"{_runtime.MapRenderer.ObjectTriangleVertexCount / 3} triângulos O3D";
 
         SelectionStatusChanged?.Invoke(
             this,
             $"Assets nativos: {_runtime.LoadedSceneryAssetCount} SCO · " +
             $"{_runtime.LoadedObjectMeshCount} meshes · " +
+            $"{_runtime.LoadedSplineAssetCount} SLI · " +
+            $"{_runtime.LoadedSplineSurfaceCount} superfícies spline · " +
             $"{scene.SelectableCount} IDs de seleção.");
     }
 

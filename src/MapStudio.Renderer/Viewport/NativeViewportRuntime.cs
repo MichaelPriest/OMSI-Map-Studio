@@ -105,6 +105,20 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene,
                     assets);
 
+        var splineAssets =
+            await new NativeSplineAssetLoader()
+                .LoadAsync(
+                    omsiRoot,
+                    Scene,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var splineGeometry =
+            new NativeSplineTriangleGeometryBuilder()
+                .Build(
+                    Scene,
+                    splineAssets);
+
         var proxyGeometry =
             new NativePickingProxyGeometryBuilder()
                 .Build(
@@ -120,7 +134,8 @@ public sealed class NativeViewportRuntime : IDisposable
             Scene,
             objectGeometry,
             proxyGeometry,
-            terrainGeometry);
+            terrainGeometry,
+            splineGeometry);
 
         LoadedSceneryAssetCount =
             assets.Values.Count(
@@ -130,6 +145,15 @@ public sealed class NativeViewportRuntime : IDisposable
         LoadedObjectMeshCount =
             objectGeometry
                 .LoadedMeshCount;
+
+        LoadedSplineAssetCount =
+            splineAssets.Values.Count(
+                asset =>
+                    asset.IsLoaded);
+
+        LoadedSplineSurfaceCount =
+            splineGeometry
+                .RenderedSurfaceCount;
 
         return Scene;
     }
@@ -141,6 +165,18 @@ public sealed class NativeViewportRuntime : IDisposable
     }
 
     public int LoadedObjectMeshCount
+    {
+        get;
+        private set;
+    }
+
+    public int LoadedSplineAssetCount
+    {
+        get;
+        private set;
+    }
+
+    public int LoadedSplineSurfaceCount
     {
         get;
         private set;

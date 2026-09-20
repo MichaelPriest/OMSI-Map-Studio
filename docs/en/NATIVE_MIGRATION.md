@@ -116,3 +116,14 @@ The camera frames the loaded OMSI region, uses the mouse wheel for dolly/zoom, t
 Terrain uses the OMSI elevation as the real Y axis. O3D objects keep SCO/O3D transforms and bilinear terrain placement before reaching the GPU. Splines and selection proxies are world-space as well.
 
 The visible frame and ID Buffer use the exact same camera matrix and their independent depth buffers, so picking remains aligned in 3D perspective.
+
+
+### Checkpoint N1.5 — real SLI profile splines
+
+The native renderer now reads every `.sli` through `MapStudio.Core` and extrudes the real surfaces defined by `[profile]` / `[profilepnt]` along each spline's length and curvature.
+
+The mesh uses the real profile width and height together with instance radius, rotation, and start/end gradients. Longitudinal elevation integrates the percentage gradient along the spline instead of flattening it onto terrain.
+
+The height rule was also corrected: OMSI splines use their own absolute elevation, while terrain interpolation remains specific to relative scenery objects. The ID Buffer receives the same real spline mesh, keeping the proxy only as an auxiliary click area.
+
+At this checkpoint the profile geometry is real; SLI texture application remains a following material refinement.

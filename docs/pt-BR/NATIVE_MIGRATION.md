@@ -116,3 +116,14 @@ A câmera enquadra a região OMSI carregada, usa roda do mouse para dolly/zoom, 
 O terreno usa a altura OMSI como eixo Y real. Objetos O3D mantêm a transformação SCO/O3D e a interpolação bilinear do terreno antes de chegar à GPU. Splines e proxies de seleção também passaram para espaço mundial.
 
 O frame visível e o ID Buffer usam exatamente a mesma matriz de câmera e seus depth buffers independentes, portanto o picking continua alinhado na perspectiva 3D.
+
+
+### Checkpoint N1.5 — splines por perfil SLI real
+
+O renderer nativo agora lê cada arquivo `.sli` pelo `MapStudio.Core` e extruda as superfícies reais definidas por `[profile]` / `[profilepnt]` ao longo do comprimento e da curvatura da spline.
+
+A malha usa a largura e a altura do perfil real, raio, rotação e gradientes inicial/final da instância. A elevação longitudinal integra o gradiente percentual ao longo do comprimento em vez de achatar a spline no terreno.
+
+Também foi corrigida a regra de altura: splines OMSI usam a cota absoluta da própria instância; a interpolação do terreno continua reservada aos objetos relativos. O ID Buffer recebe a mesma malha real da spline, mantendo o proxy apenas como área auxiliar de clique.
+
+Neste checkpoint a geometria do perfil é real, mas a aplicação das texturas SLI ainda fica para o próximo refinamento de materiais.
