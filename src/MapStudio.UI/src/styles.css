@@ -4534,3 +4534,50 @@ span.active {
 .placement-inspector-actions .wide {
   width: 100%;
 }
+
+
+/* Interactive controls inside the compact road guide. */
+.citybuilder-road-guide > button,
+.road-guide-elevation > button,
+.road-guide-elevation > span {
+  flex: 0 0 auto;
+  min-height: 22px;
+  padding: 3px 6px;
+  border: 1px solid #284d66;
+  border-radius: 999px;
+  background: #071b29;
+  color: #7798af;
+  font-size: 6.5px;
+  white-space: nowrap;
+}
+
+.citybuilder-road-guide > button:hover,
+.road-guide-elevation > button:hover {
+  border-color: #3b7fa8;
+  background: #0b2b40;
+  color: #d6edf9;
+}
+
+.citybuilder-road-guide > button.active,
+.road-guide-elevation > span.active {
+  border-color: #2e8059;
+  background: #09281d;
+  color: #a6dfbd;
+}
+
+.road-guide-elevation {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
+.road-guide-elevation > button {
+  display: grid;
+  width: 22px;
+  min-width: 22px;
+  padding: 0;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+}
