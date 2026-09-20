@@ -18,7 +18,7 @@
 
 ## First test version
 
-The current prerelease is **v0.1.0-alpha.4**. Writing is still experimental, but it now covers existing-object transforms and preservation-safe object insertion when a safe template of the same `.sco` is available, always with automatic backups.
+The current prerelease is **v0.1.0-alpha.4-test.1**. Writing is still experimental, but it now covers existing-object transforms and preservation-safe object insertion when a safe template of the same `.sco` is available, always with automatic backups.
 
 It can select a real OMSI 2 installation, manually open a map, work in Full map or 3×3 mode, display real O3D objects and splines, edit X/Y/Z/rotation/pitch/bank, undo/redo previews, insert objects from the Library, and use **Place copy** on the selected object. See [Alpha Testing](docs/en/TESTING.md) for limitations and the validation checklist.
 
