@@ -65,3 +65,13 @@ Documentação de arquitetura:
 ### Biblioteca de Splines
 
 A Alpha.3 também varre `OMSI 2/Splines` sob demanda e permite pré-visualizar arquivos `.sli` instalados. A biblioteca oferece criação **Normal** e **Altura**. A persistência só é liberada quando o mapa contém um template real neutro do mesmo tipo: cinco extras explícitos zerados para `[spline]` e seis para `[spline_h]`. Header e extras são copiados desse template.
+
+
+## Roadmap do projeto
+
+A direção técnica e funcional oficial está documentada em:
+
+- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
+- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
+
+O roadmap define a stack mantida, Asset Index/cache, streaming por tiles, paridade com o editor OMSI, Traffic Rules, paths, tracks/trips, timetables, sinais, ferrovia, geodados e critérios para considerar o Map Studio um substituto funcional do editor original.
