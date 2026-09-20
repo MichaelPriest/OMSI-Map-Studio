@@ -5313,3 +5313,16 @@ span.active {
     display: none;
   }
 }
+
+
+/* Shared drag affordance for all movable editor surfaces. */
+.tool-drag-grip > .mapstudio-icon,
+.city-drawer-drag-grip > .mapstudio-icon {
+  color: #7597ad;
+  pointer-events: none;
+}
+
+.tool-drag-grip:hover > .mapstudio-icon,
+.city-drawer-drag-grip:hover > .mapstudio-icon {
+  color: #c6dfed;
+}

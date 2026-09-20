@@ -18444,7 +18444,7 @@ export function App() {
               title="Arraste para mover o painel"
               aria-label="Mover painel"
             >
-              ⋮⋮
+              <MapStudioIcon name="drag" size={14} />
             </button>
             {(
               isFullScreen
@@ -21137,7 +21137,7 @@ export function App() {
                     title="Arraste para mover as ferramentas"
                     aria-label="Mover barra de ferramentas"
                   >
-                    ⋮⋮
+                    <MapStudioIcon name="drag" size={14} />
                   </button>
                   <div className="fullscreen-tool-group fullscreen-primary">
                     <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)"><MapStudioIcon name="select" size={18} /> <span>Q</span></button>
@@ -23165,7 +23165,7 @@ export function App() {
                   data-drag-handle
                   title="Mover saúde do mapa"
                 >
-                  ⋮⋮
+                  <MapStudioIcon name="drag" size={14} />
                 </button>
 
                 <div className="map-health-heading">
@@ -23351,7 +23351,7 @@ export function App() {
                   data-drag-handle
                   title="Mover conjuntos"
                 >
-                  ⋮⋮
+                  <MapStudioIcon name="drag" size={14} />
                 </button>
 
                 <div className="construction-set-heading">
@@ -23740,7 +23740,7 @@ export function App() {
                   data-drag-handle
                   title="Mover assistente"
                 >
-                  ⋮⋮
+                  <MapStudioIcon name="drag" size={14} />
                 </button>
                 <div className="junction-assistant-heading">
                   <strong>
@@ -23832,11 +23832,12 @@ export function App() {
                   data-drag-handle
                   title="Mover aviso"
                 >
-                  ⋮⋮
+                  <MapStudioIcon name="drag" size={14} />
                 </button>
                 <div>
                   <strong>
-                    ⚠ {missingDependencyCount}
+                    <MapStudioIcon name="warning" size={14} />{" "}
+                    {missingDependencyCount}
                     {" "}dependência(s) ausente(s)
                   </strong>
                   <span>
@@ -24033,7 +24034,7 @@ export function App() {
                 title="Arraste para mover esta barra"
                 aria-label="Mover ferramentas do viewport"
               >
-                ⋮⋮
+                <MapStudioIcon name="drag" size={14} />
               </button>
               <button
                 type="button"
@@ -24177,7 +24178,7 @@ export function App() {
                 title="Arraste para mover este painel"
                 aria-label="Mover painel de camadas"
               >
-                ⋮⋮
+                <MapStudioIcon name="drag" size={14} />
               </button>
               <label>
                 <input
@@ -24363,7 +24364,7 @@ export function App() {
               title="Arraste para mover o painel"
               aria-label="Mover painel"
             >
-              ⋮⋮
+              <MapStudioIcon name="drag" size={14} />
             </button>
             {(
               isFullScreen

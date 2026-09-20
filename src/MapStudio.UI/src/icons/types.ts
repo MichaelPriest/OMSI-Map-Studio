@@ -39,4 +39,5 @@ export type MapStudioIconName =
   | "expand"
   | "snap"
   | "grid"
-  | "profile";
+  | "profile"
+  | "drag";
