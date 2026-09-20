@@ -6121,6 +6121,212 @@ export function App() {
       ]
     );
 
+  const openQuickCreate =
+    useCallback(
+      (tool: QuickCreateTool) => {
+        if (!selectedMap) {
+          setError(
+            "Abra um mapa antes de usar as ferramentas de criação."
+          );
+          setView("map");
+          return;
+        }
+
+        setView("editor");
+        setEditorTool("select");
+        setError(undefined);
+
+        if (isFullScreen) {
+          setFullScreenPanel(
+            "explorer"
+          );
+        }
+
+        if (tool === "road") {
+          setSelectionMode("spline");
+          setShowSplines(true);
+          setSplineLibrarySearch("");
+          handleExplorerPanelTab(
+            "splineLibrary"
+          );
+          setSaveNotice(
+            "Criar rua: escolha uma spline .sli real da instalação e use Colocar."
+          );
+          return;
+        }
+
+        if (tool === "terrain") {
+          setSelectionMode("terrain");
+          setShowTerrain(true);
+          setExplorerPanelTab("map");
+          setSaveNotice(
+            "Modo terreno: clique em um tile para selecioná-lo. A edição de alturas será habilitada somente com gravação preservativa validada."
+          );
+          return;
+        }
+
+        setSelectionMode("object");
+        setShowObjects(true);
+        setLibrarySearch("");
+        handleExplorerPanelTab("library");
+
+        const label =
+          tool === "junction"
+            ? "cruzamento"
+            : tool === "water"
+              ? "água"
+              : tool === "grass"
+                ? "grama"
+                : tool === "tree"
+                  ? "árvore"
+                  : "objeto";
+
+        setSaveNotice(
+          `Criar ${label}: escolha um .sco real da Biblioteca e use Colocar.`
+        );
+      },
+      [
+        handleExplorerPanelTab,
+        isFullScreen,
+        selectedMap
+      ]
+    );
+
+  useEffect(() => {
+    const handleConstructionShortcut = (
+      event: KeyboardEvent
+    ) => {
+      if (
+        !event.altKey ||
+        event.ctrlKey ||
+        event.metaKey
+      ) {
+        return;
+      }
+
+      const target =
+        event.target as
+          | HTMLElement
+          | null;
+
+      if (
+        target?.isContentEditable ||
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT"
+      ) {
+        return;
+      }
+
+      const key =
+        event.key.toLowerCase();
+
+      const selectionShortcut:
+        Record<string, SelectionMode> = {
+          "1": "all",
+          "2": "object",
+          "3": "spline",
+          "4": "terrain"
+        };
+
+      if (
+        Object.hasOwn(
+          selectionShortcut,
+          key
+        )
+      ) {
+        event.preventDefault();
+        setSelectionMode(
+          selectionShortcut[key]
+        );
+        setEditorTool("select");
+        return;
+      }
+
+      const createShortcut:
+        Record<string, QuickCreateTool> = {
+          r: "road",
+          c: "junction",
+          o: "object",
+          t: "terrain",
+          a: "water",
+          g: "grass",
+          y: "tree"
+        };
+
+      if (
+        Object.hasOwn(
+          createShortcut,
+          key
+        )
+      ) {
+        event.preventDefault();
+        openQuickCreate(
+          createShortcut[key]
+        );
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleConstructionShortcut
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        handleConstructionShortcut
+      );
+  }, [openQuickCreate]);
+
+  const normalizedMapSearch =
+    mapSearch
+      .trim()
+      .toLocaleLowerCase("pt-BR");
+
+  const filteredAvailableMaps =
+    availableMaps.filter(
+      (entry) =>
+        !normalizedMapSearch ||
+        (
+          entry.displayName +
+          " " +
+          entry.directoryName +
+          " " +
+          entry.directoryPath
+        )
+          .toLocaleLowerCase(
+            "pt-BR"
+          )
+          .includes(
+            normalizedMapSearch
+          )
+    );
+
+  const handleRefreshMapCatalog = () => {
+    if (
+      !rootPath ||
+      !bridgeAvailable
+    ) {
+      return;
+    }
+
+    setLoadingMapCatalog(true);
+    setMapCatalogProgress(undefined);
+    setError(undefined);
+    loadMapCatalog();
+  };
+
+  const handleOpenCatalogMap = (
+    entry: OmsiMapCatalogEntry
+  ) => {
+    setSelectingMap(true);
+    setError(undefined);
+    openMapFromCatalog(
+      entry.directoryName
+    );
+  };
+
   const handleOpenOmsi = () => {
     if (!bridgeAvailable) {
       setError(
