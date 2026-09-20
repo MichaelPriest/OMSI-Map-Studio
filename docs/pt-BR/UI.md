@@ -621,3 +621,5 @@ O painel **Mapa real por coordenadas** não fica mais permanentemente sobre o vi
 Os painéis flutuantes do viewport possuem alças de arraste: navegador de blocos, nivelamento de terreno, mapa real, barras de colocação, ferramentas/câmera, camadas e dock de tela cheia podem ser reposicionados durante a edição.
 
 A seleção por clique percorre os pais do mesh atingido, portanto filhos de um objeto continuam resolvendo para o objeto real mesmo quando o metadado de seleção está no nó pai.
+
+No criador de rua, depois que início e fim existem, o viewport mostra uma **esfera azul de controle** ligada ao meio do traçado. Arrastar essa esfera lateralmente altera a curvatura em tempo real, no estilo de um editor city-builder; o slider da barra continua disponível para ajuste fino. O controle visual continua gerando somente os parâmetros reais suportados pela spline do OMSI.
