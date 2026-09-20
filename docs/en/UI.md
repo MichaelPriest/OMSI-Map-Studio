@@ -868,3 +868,10 @@ The contextual road/bridge guide in the bottom bar is now interactive as well. *
 ### Automatic contextual Inspector
 
 When an object or spline is selected from the construction shelf or library, the **Inspector** now opens automatically and follows the real asset being placed. In fullscreen it replaces the previous drawer to keep the viewport clear; on desktop it opens as a floating panel. It shows the file, group, subcategory, preview/profile state, pending destination or geometry, and actions to open the full preview or cancel placement.
+
+
+### Unified quick toolbar
+
+Desktop and fullscreen now share the same **movable floating quick toolbar** for selection, move/rotate, fit/focus, snapping, undo/redo, saving and layer visibility. Its position is persisted together with the other floating tools.
+
+The old horizontal toolbar has been removed from the active layout to reduce duplicated controls. Its functions remain available through the quick toolbar, bottom construction HUD and top menus. **Full map** and **Performance 3×3** modes are now available under **View**, while the active mode remains visible in the menu status.
