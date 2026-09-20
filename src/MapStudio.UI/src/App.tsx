@@ -98,8 +98,11 @@ type ViewportCameraAction = {
     | "fit"
     | "focus"
     | "perspective"
-    | "top";
+    | "top"
+    | "tile";
   token: number;
+  tileX?: number;
+  tileY?: number;
 };
 
 type PreviewTransformHistoryEntry = {
@@ -6771,6 +6774,67 @@ export function App() {
       selectedMap
     ]);
 
+  const focusTile =
+    useCallback(
+      (
+        tileX: number,
+        tileY: number
+      ) => {
+        if (
+          !selectedMap?.tiles.some(
+            (tile) =>
+              tile.x === tileX &&
+              tile.y === tileY
+          )
+        ) {
+          return;
+        }
+
+        setActiveTile({
+          x: tileX,
+          y: tileY
+        });
+
+        setTerrainEditPoint(
+          undefined
+        );
+        setGoogleElevationGrid(
+          undefined
+        );
+        setSelectedObject(
+          undefined
+        );
+        setSelectedSpline(
+          undefined
+        );
+
+        if (
+          mapLoadMode ===
+          "performance"
+        ) {
+          setLoadedRegionKey(
+            undefined
+          );
+          setObjects([]);
+          setSplines([]);
+        }
+
+        setCameraAction(
+          (current) => ({
+            type: "tile",
+            token:
+              (current?.token ?? 0) + 1,
+            tileX,
+            tileY
+          })
+        );
+      },
+      [
+        mapLoadMode,
+        selectedMap
+      ]
+    );
+
   const requestCameraAction =
     useCallback(
       (
@@ -10908,6 +10972,103 @@ export function App() {
                 </div>
               </>
             )}
+            {activeTile && (
+              <div
+                className="tile-navigator"
+                aria-label="Navegação entre blocos do mapa"
+              >
+                <div className="tile-navigator-title">
+                  <strong>Blocos</strong>
+                  <span>
+                    Tile {activeTile.x},{activeTile.y}
+                  </span>
+                </div>
+
+                <div className="tile-navigator-grid">
+                  {[
+                    [-1, -1],
+                    [0, -1],
+                    [1, -1],
+                    [-1, 0],
+                    [0, 0],
+                    [1, 0],
+                    [-1, 1],
+                    [0, 1],
+                    [1, 1]
+                  ].map(
+                    ([offsetX, offsetY]) => {
+                      const tileX =
+                        activeTile.x +
+                        offsetX;
+                      const tileY =
+                        activeTile.y +
+                        offsetY;
+
+                      const exists =
+                        selectedMap.tiles.some(
+                          (tile) =>
+                            tile.x === tileX &&
+                            tile.y === tileY
+                        );
+
+                      const current =
+                        offsetX === 0 &&
+                        offsetY === 0;
+
+                      return (
+                        <button
+                          type="button"
+                          key={`${offsetX}:${offsetY}`}
+                          className={
+                            current
+                              ? "active"
+                              : ""
+                          }
+                          disabled={!exists}
+                          onClick={() =>
+                            focusTile(
+                              tileX,
+                              tileY
+                            )
+                          }
+                          title={
+                            exists
+                              ? `Ir para tile ${tileX},${tileY}`
+                              : `Tile ${tileX},${tileY} não existe neste mapa`
+                          }
+                        >
+                          <span>
+                            {current
+                              ? "●"
+                              : offsetX === 0 &&
+                                  offsetY === -1
+                                ? "↑"
+                                : offsetX === 0 &&
+                                    offsetY === 1
+                                  ? "↓"
+                                  : offsetX === -1 &&
+                                      offsetY === 0
+                                    ? "←"
+                                    : offsetX === 1 &&
+                                        offsetY === 0
+                                      ? "→"
+                                      : "·"}
+                          </span>
+                          <small>
+                            {tileX},{tileY}
+                          </small>
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+
+                <small>
+                  Ctrl + setas/WASD também move 1 bloco
+                </small>
+              </div>
+            )}
+
             <Viewport
               tiles={activeTiles}
               cameraStateKey={
