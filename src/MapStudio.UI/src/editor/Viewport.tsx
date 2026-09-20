@@ -4825,6 +4825,8 @@ export function Viewport({
 
               marker.color = color;
               marker.isPickable = true;
+              marker.intersectionThreshold =
+                6;
               marker.metadata = {
                 ...(marker.metadata ?? {}),
                 mapStudioKind: "object",
@@ -6355,6 +6357,13 @@ export function Viewport({
     ) => {
       const rect =
         canvas.getBoundingClientRect();
+
+      if (
+        rect.width <= 0 ||
+        rect.height <= 0
+      ) {
+        return undefined;
+      }
 
       const pointerX =
         (event.clientX - rect.left) *
@@ -8004,8 +8013,42 @@ export function Viewport({
       }
     });
 
-    const resize = () => engine.resize();
-    window.addEventListener("resize", resize);
+    let resizeFrame:
+      | number
+      | undefined;
+
+    const resize = () => {
+      if (resizeFrame !== undefined) {
+        cancelAnimationFrame(
+          resizeFrame
+        );
+      }
+
+      resizeFrame =
+        requestAnimationFrame(() => {
+          resizeFrame = undefined;
+          engine.resize();
+        });
+    };
+
+    // WebView2/WPF fullscreen and movable city-builder panels can
+    // change the viewport without dispatching a browser window.resize.
+    // Observe the real container so Babylon render dimensions and
+    // click coordinates stay synchronized with the visible canvas.
+    const resizeObserver =
+      typeof ResizeObserver !==
+      "undefined"
+        ? new ResizeObserver(resize)
+        : undefined;
+
+    resizeObserver?.observe(
+      canvas.parentElement ?? canvas
+    );
+    window.addEventListener(
+      "resize",
+      resize
+    );
+    resize();
 
     return () => {
       cameraStateRef.current = {
@@ -8063,7 +8106,17 @@ export function Viewport({
         "drop",
         handleAssetDrop
       );
-      window.removeEventListener("resize", resize);
+      window.removeEventListener(
+        "resize",
+        resize
+      );
+      resizeObserver?.disconnect();
+
+      if (resizeFrame !== undefined) {
+        cancelAnimationFrame(
+          resizeFrame
+        );
+      }
 
       if (lodObserver) {
         scene.onBeforeRenderObservable.remove(
