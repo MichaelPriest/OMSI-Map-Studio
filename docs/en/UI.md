@@ -788,3 +788,18 @@ Health cards open the corresponding filtered library or dependency audit directl
 Movable windows and toolbars now remember their last position in UI-local storage. Restoration also works for dynamically mounted panels such as **Map Health**, **Construction Sets**, the junction assistant, placement bars, and full-screen tools.
 
 Restored positions are clamped to the current container dimensions, so changing resolution, window size, or full-screen mode does not leave a tool permanently outside the visible area. Local-storage failures never interfere with map editing.
+
+
+### City-builder UX v2 — desktop and full screen
+
+The viewport is now the main editor workspace. **Explorer/Library** and **Inspector** work as collapsible overlay drawers instead of permanent columns. Selecting an object or spline opens Inspector automatically; choosing a construction tool opens the appropriate library.
+
+Construction lives in a shared **bottom-center dock** for desktop and full-screen modes, with road, junction, bridge, building, vegetation, transport, street-furniture, infrastructure, and terrain categories. A contextual strip shows the current item/mode, selection filters, and Snap.
+
+The top area is reserved for edit, camera, and save operations. Full-screen mode uses a compact top toolbar and removes the permanent shortcut strip to keep the scene clear.
+
+### Robust map selection
+
+Click selection now resolves through three levels: the real pickable mesh, inherited parent-node metadata, and a geometric fallback based on the real OMSI placement/axis. This keeps incomplete/protected O3D objects, trees/billboards, and very thin splines selectable.
+
+When a placement tool is open, clicking directly on an existing real map item prioritizes selection of that item; clicking free terrain continues to place the pending asset.
