@@ -1,4 +1,5 @@
 using System.Numerics;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Graphics;
 using MapStudio.Renderer.Picking;
@@ -57,6 +58,7 @@ public sealed class NativeViewportRuntime : IDisposable
     private float _dragRotationDegrees;
     private uint _lastDragPixelX;
     private uint _lastDragPixelY;
+    private bool _assetPreviewActive;
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -116,6 +118,171 @@ public sealed class NativeViewportRuntime : IDisposable
         NativeGizmoHandle.None;
 
     public bool IsDisposed => _disposed;
+
+    public bool IsAssetPreviewActive =>
+        _assetPreviewActive;
+
+    public async Task<NativeAssetPreviewResult>
+        PreviewAssetAsync(
+            string omsiRoot,
+            OmsiAssetKind kind,
+            string relativePath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ThrowIfDisposed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            omsiRoot);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            relativePath);
+
+        CancelGizmoDrag();
+
+        var builder =
+            new NativeAssetPreviewGeometryBuilder();
+
+        NativeAssetPreviewGeometry preview;
+
+        if (
+            kind ==
+            OmsiAssetKind.SceneryObject)
+        {
+            var asset =
+                await new NativeSceneryAssetLoader()
+                    .LoadAssetAsync(
+                        omsiRoot,
+                        relativePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            preview =
+                builder.BuildScenery(
+                    asset);
+        }
+        else if (
+            kind ==
+            OmsiAssetKind.Spline)
+        {
+            var asset =
+                await new NativeSplineAssetLoader()
+                    .LoadAssetAsync(
+                        omsiRoot,
+                        relativePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            preview =
+                builder.BuildSpline(
+                    asset);
+        }
+        else
+        {
+            preview =
+                NativeAssetPreviewGeometry
+                    .Error(
+                        "previewUnsupportedAssetKind");
+        }
+
+        if (!preview.IsRenderable)
+        {
+            return new NativeAssetPreviewResult(
+                kind,
+                relativePath,
+                false,
+                0,
+                preview.SourceMeshCount,
+                preview.ErrorCode);
+        }
+
+        _assetPreviewActive =
+            true;
+
+        MapRenderer.SetHover(
+            PickingId.None);
+
+        MapRenderer.SetSelection(
+            PickingId.None);
+
+        MapRenderer.SetGizmoGeometry(
+            null);
+
+        var emptyScene =
+            new NativeSceneSnapshot(
+                Array.Empty<
+                    NativeSceneTile>(),
+                Array.Empty<
+                    NativeObjectEntity>(),
+                Array.Empty<
+                    NativeSplineEntity>(),
+                Array.Empty<
+                    NativeTerrainEntity>());
+
+        var objectGeometry =
+            new NativeObjectTriangleGeometry(
+                preview.Vertices,
+                Array.Empty<
+                    NativeMapVertex>(),
+                new Dictionary<
+                    PickingId,
+                    NativeTriangleRange>(),
+                kind ==
+                    OmsiAssetKind.SceneryObject
+                    ? 1
+                    : 0,
+                preview.SourceMeshCount);
+
+        MapRenderer.Upload(
+            emptyScene,
+            objectGeometry);
+
+        Navigation.FitToBounds(
+            preview.Minimum,
+            preview.Maximum);
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+
+        return new NativeAssetPreviewResult(
+            kind,
+            relativePath,
+            true,
+            preview.TriangleCount,
+            preview.SourceMeshCount,
+            null);
+    }
+
+    public void RestoreSceneView()
+    {
+        ThrowIfDisposed();
+
+        if (!_assetPreviewActive)
+        {
+            return;
+        }
+
+        _assetPreviewActive =
+            false;
+
+        if (Scene is null)
+        {
+            RenderInitialFrame();
+            return;
+        }
+
+        Navigation.FitToScene(
+            Scene);
+
+        UploadSceneGeometry();
+
+        MapRenderer.SetSelection(
+            _selectedPickingId);
+
+        UpdateCameraTransform();
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+    }
 
     public NativeSelectionInfo?
         GetSelectionInfo()
@@ -518,6 +685,9 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
+        _assetPreviewActive =
+            false;
+
         Scene =
             new NativeSceneBuilder()
                 .Build(
@@ -703,6 +873,14 @@ public sealed class NativeViewportRuntime : IDisposable
 
         item = null;
 
+        if (_assetPreviewActive)
+        {
+            pickingId =
+                PickingId.None;
+
+            return false;
+        }
+
         pickingId =
             MapRenderer.Pick(
                 pixelX,
@@ -752,6 +930,7 @@ public sealed class NativeViewportRuntime : IDisposable
             NativeGizmoHandle.None;
 
         if (
+            _assetPreviewActive ||
             Surface is null ||
             Scene is null ||
             _selectedPickingId.IsNone)
@@ -1076,7 +1255,9 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
-        if (IsManipulating)
+        if (
+            _assetPreviewActive ||
+            IsManipulating)
         {
             return false;
         }
@@ -1132,7 +1313,9 @@ public sealed class NativeViewportRuntime : IDisposable
             return;
         }
 
-        if (Scene is null)
+        if (
+            Scene is null &&
+            !_assetPreviewActive)
         {
             Surface.ClearAndPresent(
                 InitialClearColor);
@@ -1829,6 +2012,14 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private void UpdateGizmoGeometry()
     {
+        if (_assetPreviewActive)
+        {
+            MapRenderer.SetGizmoGeometry(
+                null);
+
+            return;
+        }
+
         if (
             _selectedPickingId.IsNone ||
             !TryGetSelectionAnchor(

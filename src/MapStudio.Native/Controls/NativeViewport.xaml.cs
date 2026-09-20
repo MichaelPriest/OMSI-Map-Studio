@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
+using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Renderer.Scene;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Viewport;
@@ -187,6 +188,43 @@ public sealed partial class NativeViewport : UserControl
             "Transformação refeita.");
 
         return true;
+    }
+
+    public async Task<NativeAssetPreviewResult?>
+        PreviewAssetAsync(
+            string omsiRoot,
+            OmsiAssetIndexEntry asset,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (_runtime is null)
+        {
+            return null;
+        }
+
+        var result =
+            await _runtime
+                .PreviewAssetAsync(
+                    omsiRoot,
+                    asset.Kind,
+                    asset.RelativePath,
+                    cancellationToken);
+
+        if (result.IsRenderable)
+        {
+            RuntimeText.Text =
+                $"Prévia 3D · {asset.RelativePath} · " +
+                $"{result.TriangleCount} triângulos";
+        }
+
+        return result;
+    }
+
+    public void RestoreSceneView()
+    {
+        _runtime?.RestoreSceneView();
+
+        PublishSelectionInfo();
     }
 
     public void SetGizmoMode(

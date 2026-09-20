@@ -67,6 +67,17 @@ public sealed class NativeSceneryAssetLoader
         return result;
     }
 
+    public Task<NativeSceneryAsset>
+        LoadAssetAsync(
+            string omsiRoot,
+            string sceneryObjectPath,
+            CancellationToken cancellationToken =
+                default) =>
+            LoadOneAsync(
+                omsiRoot,
+                sceneryObjectPath,
+                cancellationToken);
+
     private async Task<NativeSceneryAsset>
         LoadOneAsync(
             string omsiRoot,

@@ -197,3 +197,14 @@ The WinUI asset library reuses `OmsiAssetIndex` from `MapStudio.Core`. Its SQLit
 The interface switches between **Scene** and **Library**, can filter all assets or only SCO, SLI, models, and textures, and searches by relative path. The **Refresh** action runs the incremental index refresh and reports real examined-file and candidate counts.
 
 When a library asset is already used in the loaded region, double-clicking finds its first scene usage and focuses the 3D camera. Assets not yet used remain available in the catalog for the following native preview/placement stage.
+
+
+### Checkpoint N3.3 — native 3D library preview
+
+The indexed library now has real visual preview support for **SCO/O3D objects** and **SLI splines**. Selecting a compatible asset loads the actual OMSI installation file directly, without creating a fake map entity and without replacing the currently open map snapshot.
+
+For SCO assets, the preview uses the real O3D/X meshes, SCO-declared transforms, LOD selection, and diffuse material colors. For SLI assets, the renderer extrudes the real `[profile]/[profilepnt]` profile into a navigable 3D sample.
+
+The viewport temporarily enters preview mode and frames the asset bounds. Orbit, pan, and zoom keep using the same Direct3D camera. Returning to **Scene** restores the map buffers from the in-memory snapshot and already loaded assets, without reopening the whole map.
+
+Standalone models and textures remain available in the index, but this checkpoint intentionally limits visual preview to SCO/O3D and SLI; those categories will expand together with materials/textures and placement.

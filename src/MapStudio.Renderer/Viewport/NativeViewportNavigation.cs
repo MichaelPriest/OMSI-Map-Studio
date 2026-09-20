@@ -161,6 +161,53 @@ public sealed class NativeViewportNavigation
         Reset();
     }
 
+    public void FitToBounds(
+        Vector3 minimum,
+        Vector3 maximum)
+    {
+        var center =
+            (minimum + maximum) *
+            0.5f;
+
+        var extent =
+            Vector3.Max(
+                maximum - minimum,
+                Vector3.Zero);
+
+        var span =
+            MathF.Max(
+                1.0f,
+                MathF.Max(
+                    extent.X,
+                    MathF.Max(
+                        extent.Y,
+                        extent.Z)));
+
+        _homeTarget =
+            center;
+
+        _homeDistance =
+            Math.Clamp(
+                span *
+                1.85f,
+                4.0f,
+                4_000.0f);
+
+        _minimumDistance =
+            MathF.Max(
+                0.75f,
+                span *
+                0.04f);
+
+        _maximumDistance =
+            MathF.Max(
+                4_000.0f,
+                _homeDistance *
+                16.0f);
+
+        Reset();
+    }
+
     public void Reset()
     {
         Target =

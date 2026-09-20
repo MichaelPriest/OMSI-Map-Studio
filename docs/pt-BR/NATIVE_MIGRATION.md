@@ -197,3 +197,14 @@ A biblioteca de assets do host WinUI reutiliza o `OmsiAssetIndex` do `MapStudio.
 A interface alterna entre **Cena** e **Biblioteca**, permite filtrar todos os assets ou somente SCO, SLI, modelos e texturas, além de pesquisar pelo caminho relativo. O botão **Atualizar** executa o refresh incremental do índice e mostra progresso real de arquivos examinados e candidatos encontrados.
 
 Quando um asset da biblioteca já está usado na região carregada, um duplo clique localiza o primeiro uso no Explorer e foca a câmera 3D. Assets ainda não usados permanecem disponíveis no catálogo para a próxima etapa de preview/placement nativo.
+
+
+### Checkpoint N3.3 — prévia 3D nativa da biblioteca
+
+A biblioteca indexada agora possui prévia visual real para objetos **SCO/O3D** e **splines SLI**. Selecionar um asset compatível carrega diretamente o arquivo da instalação OMSI, sem criar uma entidade falsa no mapa e sem substituir o snapshot atualmente aberto.
+
+Para SCO, a prévia usa os meshes O3D/X reais, transformações declaradas no SCO, LOD e cores difusas dos materiais. Para SLI, o renderer extruda o perfil `[profile]/[profilepnt]` real em uma amostra 3D navegável.
+
+O viewport entra temporariamente em modo de prévia e ajusta a câmera aos limites do asset. Órbita, pan e zoom continuam usando a mesma câmera Direct3D. Ao voltar para **Cena**, os buffers do mapa são restaurados a partir do snapshot e dos assets já carregados, sem nova leitura completa do mapa.
+
+Modelos avulsos e texturas continuam listados pelo índice, mas a prévia deste checkpoint é deliberadamente limitada a SCO/O3D e SLI; essas categorias serão expandidas junto com materiais/texturas e placement.

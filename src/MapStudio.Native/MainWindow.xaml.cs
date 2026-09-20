@@ -39,6 +39,9 @@ public sealed partial class MainWindow : Window
 
     private bool _libraryMode;
 
+    private CancellationTokenSource?
+        _assetPreviewCancellation;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -221,6 +224,17 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        _assetPreviewCancellation
+            ?.Dispose();
+
+        _assetPreviewCancellation =
+            null;
+
+        Viewport.RestoreSceneView();
+
         _libraryMode =
             false;
 
@@ -320,6 +334,64 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnAssetLibrarySelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            !_libraryMode ||
+            _session.OmsiRootPath is null ||
+            AssetLibraryListView.SelectedItem is not
+                OmsiAssetIndexEntry asset)
+        {
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        _assetPreviewCancellation
+            ?.Dispose();
+
+        _assetPreviewCancellation =
+            new CancellationTokenSource();
+
+        try
+        {
+            var result =
+                await Viewport
+                    .PreviewAssetAsync(
+                        _session.OmsiRootPath,
+                        asset,
+                        _assetPreviewCancellation
+                            .Token);
+
+            if (
+                result is null)
+            {
+                return;
+            }
+
+            StatusText.Text =
+                result.IsRenderable
+                    ? $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos."
+                    : asset.Kind is
+                        OmsiAssetKind.Model or
+                        OmsiAssetKind.Texture
+                        ? $"Prévia 3D desta categoria ainda não está habilitada: {asset.RelativePath}."
+                        : $"Não foi possível gerar a prévia: {asset.RelativePath} · {result.ErrorCode}.";
+        }
+        catch (
+            OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha na prévia do asset: {exception.Message}";
+        }
+    }
+
     private void OnAssetLibraryDoubleTapped(
         object sender,
         DoubleTappedRoutedEventArgs e)
@@ -352,6 +424,11 @@ public sealed partial class MainWindow : Window
 
         if (usage is not null)
         {
+            _assetPreviewCancellation
+                ?.Cancel();
+
+            Viewport.RestoreSceneView();
+
             _libraryMode =
                 false;
 
@@ -377,7 +454,11 @@ public sealed partial class MainWindow : Window
         }
 
         StatusText.Text =
-            $"Asset indexado: {asset.RelativePath} · prévia 3D nativa será o próximo checkpoint.";
+            asset.Kind is
+                OmsiAssetKind.SceneryObject or
+                OmsiAssetKind.Spline
+                ? $"Prévia 3D ativa para {asset.RelativePath}. Use o mouse no viewport para inspecionar."
+                : $"Asset indexado: {asset.RelativePath}.";
     }
 
     private void OnExplorerSelectionChanged(

@@ -58,6 +58,17 @@ public sealed class NativeSplineAssetLoader
         return result;
     }
 
+    public Task<NativeSplineAsset>
+        LoadAssetAsync(
+            string omsiRoot,
+            string declaredPath,
+            CancellationToken cancellationToken =
+                default) =>
+            LoadOneAsync(
+                omsiRoot,
+                declaredPath,
+                cancellationToken);
+
     private async Task<NativeSplineAsset>
         LoadOneAsync(
             string omsiRoot,

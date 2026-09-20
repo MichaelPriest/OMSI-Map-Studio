@@ -348,21 +348,19 @@ public sealed class D3D11NativeMapRenderer :
             new NativeMapGeometryBuilder()
                 .Build(scene);
 
-        if (geometry.Vertices.Length == 0)
+        if (geometry.Vertices.Length > 0)
         {
-            return;
+            _vertexBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry.Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _vertexCount =
+                geometry.Vertices.Length;
         }
-
-        _vertexBuffer =
-            _deviceHost.Device
-                .CreateBuffer(
-                    geometry.Vertices
-                        .AsSpan(),
-                    BindFlags
-                        .VertexBuffer);
-
-        _vertexCount =
-            geometry.Vertices.Length;
 
         if (
             terrainGeometry is not null &&
