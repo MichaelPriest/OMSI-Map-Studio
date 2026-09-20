@@ -4122,6 +4122,17 @@ export function Viewport({
           terrainMainTextureRepeating,
           terrainOverlays
         );
+
+        if (
+          referenceOverlay &&
+          !usesWorldCoordinates
+        ) {
+          createReferenceOverlay(
+            scene,
+            tiles,
+            referenceOverlay
+          );
+        }
       }
 
       const existingLines = showGrid
