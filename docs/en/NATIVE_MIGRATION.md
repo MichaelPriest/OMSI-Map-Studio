@@ -235,3 +235,12 @@ Points come from the perspective camera raycast against the real terrain height.
 Insertion uses `OmsiTileSplineInserter`. The new ID is calculated globally across objects and splines from all map tiles. When a compatible spline exists, its header and extra values are reused; otherwise Core looks for a neutral normal-spline template. Writing goes through `SafeFileTransaction`, creates a backup, and reloads the modified tile before refreshing the scene.
 
 This checkpoint establishes the foundation for a city-editor-style road tool. Next refinements are segment continuity, editable post-placement handles, snapping to existing endpoints, and sequential construction without leaving the tool.
+
+
+### Checkpoint N3.6 — snapping to spline endpoints
+
+The construction tool snap now recognizes the actual endpoints of already loaded splines. While creating a new road/spline, the pointer position still comes from terrain intersection and the 0.25 m grid, but it also searches existing spline starts and ends within a camera-distance-aware tolerance.
+
+When an endpoint is found, the new point uses that endpoint's exact X/Z position and Y height. This prevents small gaps and vertical mismatches when starting or ending a segment near an existing road.
+
+The final endpoint is calculated from the spline's real parametric geometry through NativeSplinePathMath, so curved and graded segments are supported as well.

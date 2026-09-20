@@ -2788,6 +2788,32 @@ public sealed class NativeViewportRuntime : IDisposable
                             point.Z);
         }
 
+        point.Y = height;
+
+        if (
+            _splinePlacementActive &&
+            SnapEnabled)
+        {
+            var endpointSnapDistance =
+                Math.Clamp(
+                    Navigation.Distance *
+                    0.003f,
+                    0.5f,
+                    3.0f);
+
+            if (
+                NativeSplineEndpointSnapper
+                    .TrySnap(
+                        Scene,
+                        point,
+                        endpointSnapDistance,
+                        out var snapped))
+            {
+                point =
+                    snapped;
+            }
+        }
+
         var tileX =
             (int)Math.Floor(
                 point.X /
@@ -2807,7 +2833,6 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
-        point.Y = height;
         return true;
     }
 

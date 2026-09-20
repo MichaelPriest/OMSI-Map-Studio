@@ -235,3 +235,12 @@ Os pontos são obtidos pelo raycast da câmera perspectiva contra a altura real 
 A inserção usa `OmsiTileSplineInserter`. O ID novo é calculado globalmente considerando objetos e splines de todos os tiles. Quando existe uma spline compatível, header e valores extras são reutilizados; caso contrário o Core procura um template neutro de spline normal. A gravação passa por `SafeFileTransaction`, cria backup e relê o tile modificado antes de atualizar a cena.
 
 Este checkpoint estabelece a base da ferramenta de ruas estilo editor de cidades. Os próximos refinamentos serão continuidade entre segmentos, handles editáveis após a criação, encaixe em extremidades existentes e construção sequencial sem sair do modo.
+
+
+### Checkpoint N3.6 — snap em extremidades de splines
+
+O snap da ferramenta de construção passou a reconhecer as extremidades reais das splines já carregadas. Durante a criação de uma nova rua/spline, o ponto sob o cursor continua sendo obtido pelo terreno e pela grade de 0,25 m, mas também procura o início e o fim das splines existentes dentro de uma tolerância dependente da distância da câmera.
+
+Quando uma extremidade é encontrada, a posição usa exatamente o X/Z e a altura Y do endpoint existente. Isso evita pequenas frestas e diferenças verticais ao começar ou terminar um segmento próximo de uma rua já existente.
+
+O cálculo usa a geometria paramétrica real da spline por NativeSplinePathMath para obter o endpoint final, portanto também funciona em segmentos curvos e com gradiente.
