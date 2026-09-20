@@ -264,3 +264,19 @@ Criar o primeiro lote visual com:
 - streaming.
 
 Depois validar o conjunto dentro da toolbar e da barra de construção antes de desenhar todos os demais.
+
+
+## Estado da implementação
+
+Primeiro lote implementado na interface:
+
+- componente compartilhado `MapStudioIcon`;
+- SVGs próprios com `currentColor`, fundo transparente e traço técnico consistente;
+- barra rápida desktop/tela cheia migrada para select, move, rotate, fit view, focus, Explorer, Inspector, undo, redo, save e fullscreen;
+- HUD de construção migrado para ruas, cruzamentos, pontes, prédios, vegetação, transporte, mobiliário, infraestrutura e terreno;
+- atalhos de teclado continuam visíveis onde ajudam a operação;
+- símbolos Unicode antigos deixam de ser usados nos botões já migrados.
+
+O pacote também já inclui os ícones de diagnóstico `map-health`, `asset-index` e `streaming`, preparados para a próxima migração visual.
+
+Os SVGs são originais do Map Studio e não reutilizam arquivos gráficos do OMSI 2.

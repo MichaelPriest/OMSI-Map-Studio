@@ -65,6 +65,7 @@ import {
 } from "./bridge/desktopBridge";
 import { AssetPreview3D } from "./editor/AssetPreview3D";
 import { Viewport } from "./editor/Viewport";
+import { MapStudioIcon } from "./icons";
 
 type AppView =
   | "home"
@@ -20066,7 +20067,7 @@ export function App() {
                   }}
                   title="Selecionar no mapa (Q)"
                 >
-                  <span>↖</span>
+                  <MapStudioIcon name="select" size={24} />
                   <small>Selecionar</small>
                 </button>
 
@@ -20099,7 +20100,7 @@ export function App() {
                   }}
                   title="Explorador e bibliotecas"
                 >
-                  <span>☰</span>
+                  <MapStudioIcon name="explorer" size={24} />
                   <small>Explorar</small>
                 </button>
 
@@ -20132,22 +20133,22 @@ export function App() {
                   }}
                   title="Inspetor da seleção"
                 >
-                  <span>ⓘ</span>
+                  <MapStudioIcon name="inspector" size={24} />
                   <small>Inspetor</small>
                 </button>
               </div>
 
               <div className="citybuilder-main-tools">
                 {([
-                  ["road", "═", "Ruas"],
-                  ["junction", "✣", "Cruzamentos"],
-                  ["bridge", "⌁", "Pontes"],
-                  ["building", "⌂", "Prédios"],
-                  ["tree", "♣", "Vegetação"],
-                  ["transit", "▤", "Transporte"],
-                  ["street", "⚑", "Mobiliário"],
-                  ["utilities", "⚙", "Infra"],
-                  ["terrain", "▱", "Terreno"]
+                  ["road", "road", "Ruas"],
+                  ["junction", "intersection", "Cruzamentos"],
+                  ["bridge", "bridge", "Pontes"],
+                  ["building", "building", "Prédios"],
+                  ["tree", "tree", "Vegetação"],
+                  ["transit", "transit", "Transporte"],
+                  ["street", "street-furniture", "Mobiliário"],
+                  ["utilities", "utility", "Infra"],
+                  ["terrain", "terrain", "Terreno"]
                 ] as const).map(
                   ([tool, icon, label]) => (
                     <button
@@ -20166,7 +20167,7 @@ export function App() {
                       }
                       title={label}
                     >
-                      <span>{icon}</span>
+                      <MapStudioIcon name={icon} size={24} />
                       <small>{label}</small>
                     </button>
                   )
@@ -20701,7 +20702,7 @@ export function App() {
                     }
                     title="Abrir biblioteca completa com busca, grupos, filtros e prévia 3D"
                   >
-                    ☰ Biblioteca
+                    <MapStudioIcon name="explorer" size={18} /> Biblioteca
                   </button>
                 </div>
               )}
@@ -20936,11 +20937,11 @@ export function App() {
                     ⋮⋮
                   </button>
                   <div className="fullscreen-tool-group fullscreen-primary">
-                    <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)">↖ <span>Q</span></button>
-                    <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)">✥ <span>W</span></button>
-                    <button type="button" className={editorTool === "rotate" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("rotate")} title="Rotacionar (E)">⟳ <span>E</span></button>
-                    <button type="button" onClick={() => requestCameraAction("fit")} title="Enquadrar mapa (Home)">⛶</button>
-                    <button type="button" disabled={!selectedObject && !selectedSpline} onClick={() => requestCameraAction("focus")} title="Focar seleção (F)">◎ <span>F</span></button>
+                    <button type="button" className={editorTool === "select" ? "active" : ""} onClick={() => setEditorTool("select")} title="Selecionar (Q)"><MapStudioIcon name="select" size={18} /> <span>Q</span></button>
+                    <button type="button" className={editorTool === "move" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("move")} title="Mover (W)"><MapStudioIcon name="move" size={18} /> <span>W</span></button>
+                    <button type="button" className={editorTool === "rotate" ? "active" : ""} disabled={!selectedObject && !selectedSpline} onClick={() => setEditorTool("rotate")} title="Rotacionar (E)"><MapStudioIcon name="rotate" size={18} /> <span>E</span></button>
+                    <button type="button" onClick={() => requestCameraAction("fit")} title="Enquadrar mapa (Home)" aria-label="Enquadrar mapa"><MapStudioIcon name="fit-view" size={18} /></button>
+                    <button type="button" disabled={!selectedObject && !selectedSpline} onClick={() => requestCameraAction("focus")} title="Focar seleção (F)"><MapStudioIcon name="focus" size={18} /> <span>F</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group fullscreen-panels">
@@ -20962,7 +20963,7 @@ export function App() {
                       }}
                       title="Abrir Explorador"
                     >
-                      ☰ <span>Explorar</span>
+                      <MapStudioIcon name="explorer" size={18} /> <span>Explorar</span>
                     </button>
                     <button
                       type="button"
@@ -20982,7 +20983,7 @@ export function App() {
                       }}
                       title="Criar/colocar objeto real"
                     >
-                      ＋ <span>Objeto</span>
+                      <MapStudioIcon name="sco-object" size={18} /> <span>Objeto</span>
                     </button>
                     <button
                       type="button"
@@ -21002,7 +21003,7 @@ export function App() {
                       }}
                       title="Criar/colocar spline real"
                     >
-                      ⌇＋ <span>Spline</span>
+                      <MapStudioIcon name="sli-spline" size={18} /> <span>Spline</span>
                     </button>
                     <button
                       type="button"
@@ -21024,15 +21025,15 @@ export function App() {
                       }}
                       title="Abrir Inspetor"
                     >
-                      ⓘ <span>Inspetor</span>
+                      <MapStudioIcon name="inspector" size={18} /> <span>Inspetor</span>
                     </button>
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group fullscreen-history">
                     <button type="button" className={snapEnabled ? "active" : ""} onClick={() => setSnapEnabled((current) => !current)} title="Snap (N)">N</button>
-                    <button type="button" disabled={undoPreviewStack.length === 0} onClick={handleUndoPreview} title="Desfazer (Ctrl+Z)">↶</button>
-                    <button type="button" disabled={redoPreviewStack.length === 0} onClick={handleRedoPreview} title="Refazer (Ctrl+Y)">↷</button>
-                    <button type="button" className="save" disabled={(previewEditCount === 0 && splinePreviewEditCount === 0) || busy} onClick={splinePreviewEditCount > 0 ? handleSaveSplinePreview : handleSavePreviewEdits} title="Salvar com backup (Ctrl+S)">✓ <span>Salvar</span></button>
+                    <button type="button" disabled={undoPreviewStack.length === 0} onClick={handleUndoPreview} title="Desfazer (Ctrl+Z)" aria-label="Desfazer"><MapStudioIcon name="undo" size={18} /></button>
+                    <button type="button" disabled={redoPreviewStack.length === 0} onClick={handleRedoPreview} title="Refazer (Ctrl+Y)" aria-label="Refazer"><MapStudioIcon name="redo" size={18} /></button>
+                    <button type="button" className="save" disabled={(previewEditCount === 0 && splinePreviewEditCount === 0) || busy} onClick={splinePreviewEditCount > 0 ? handleSaveSplinePreview : handleSavePreviewEdits} title="Salvar com backup (Ctrl+S)"><MapStudioIcon name="save" size={18} /> <span>Salvar</span></button>
                   </div>
                   <div className="fullscreen-tool-divider" />
                   <div className="fullscreen-tool-group compact fullscreen-layers">
@@ -21059,9 +21060,14 @@ export function App() {
                           : "Entrar em tela cheia (F11)"
                       }
                     >
-                      {isFullScreen
-                        ? "⤡"
-                        : "⤢"}
+                      <MapStudioIcon
+                        name={
+                          isFullScreen
+                            ? "exit-fullscreen"
+                            : "fullscreen"
+                        }
+                        size={18}
+                      />
                     </button>
                   </div>
                 </div>

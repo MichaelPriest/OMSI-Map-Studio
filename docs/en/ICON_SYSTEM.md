@@ -264,3 +264,19 @@ Create the first visual batch:
 - streaming.
 
 Validate that set inside the toolbar and construction bar before drawing the remaining icons.
+
+
+## Implementation status
+
+First UI batch implemented:
+
+- shared `MapStudioIcon` component;
+- original SVGs using `currentColor`, transparent backgrounds, and a consistent technical stroke;
+- desktop/fullscreen quick dock migrated to select, move, rotate, fit view, focus, Explorer, Inspector, undo, redo, save, and fullscreen;
+- construction HUD migrated to roads, intersections, bridges, buildings, vegetation, transit, street furniture, utilities, and terrain;
+- keyboard hints remain visible where they improve operation;
+- legacy Unicode symbols are removed from buttons already migrated.
+
+The package also includes `map-health`, `asset-index`, and `streaming` diagnostic icons, ready for the next visual migration.
+
+All SVG drawings are original Map Studio assets and do not reuse OMSI 2 graphical files.
