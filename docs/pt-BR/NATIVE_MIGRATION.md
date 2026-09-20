@@ -381,3 +381,17 @@ O mapeamento é reiniciado em cada tile e cobre 0–300 m com a repetição defi
 
 Este checkpoint cobre a camada base. Camadas adicionais pintadas por `tile_*.map.N.dds`, detalhe secundário e edição de pintura permanecem para o próximo passo.
 
+### Checkpoint N3.19 — camadas pintadas do terreno com máscaras DDS
+
+O renderer nativo agora aplica também as camadas de terreno pintadas pelo OMSI através dos arquivos `tile_*.map.N.dds`.
+
+Cada máscara válida usa seu `LayerIndex` para selecionar o `[groundtex]` correspondente do `global.cfg`. A textura principal da camada mantém sua própria repetição, enquanto a máscara usa UV normalizado de 0–1 sobre os 300 m do tile.
+
+O vértice nativo passou a carregar dois conjuntos de UV: um para a textura repetida e outro exclusivo para a máscara. O shader `PSTerrainLayer` combina a textura da camada com o alpha da máscara e usa alpha blend sobre a textura base.
+
+As máscaras A8 DDS do OMSI são lidas diretamente pelo renderer e convertidas para uma textura GPU RGBA, evitando depender do suporte variável do WIC para esse formato. Máscara ou textura inválida faz apenas aquela camada ser ignorada.
+
+Para impedir z-fighting entre a base e as sobreposições sem alterar os dados do mapa, cada camada recebe apenas um deslocamento visual mínimo de milímetros no renderer. Nenhuma altura persistida do `.terrain` é modificada.
+
+Ainda falta aplicar a textura de detalhe secundária de `[groundtex]` e migrar a pintura/edição das máscaras.
+

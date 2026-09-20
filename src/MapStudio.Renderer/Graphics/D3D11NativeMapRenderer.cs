@@ -23,9 +23,12 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11VertexShader _vertexShader;
     private readonly ID3D11PixelShader _pixelShader;
     private readonly ID3D11PixelShader _texturedPixelShader;
+    private readonly ID3D11PixelShader _terrainLayerPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
     private readonly ID3D11SamplerState _textureSampler;
+    private readonly ID3D11SamplerState _maskSampler;
+    private readonly ID3D11BlendState _alphaBlendState;
     private readonly NativeGpuTextureLoader _textureLoader;
 
     private readonly Dictionary<
@@ -224,6 +227,13 @@ public sealed class D3D11NativeMapRenderer :
                     "PSTextured",
                     "ps_4_0");
 
+        ReadOnlyMemory<byte>
+            terrainLayerPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSTerrainLayer",
+                    "ps_4_0");
+
         _vertexShader =
             _deviceHost.Device
                 .CreateVertexShader(
@@ -240,6 +250,12 @@ public sealed class D3D11NativeMapRenderer :
             _deviceHost.Device
                 .CreatePixelShader(
                     texturedPixelShaderBytecode
+                        .Span);
+
+        _terrainLayerPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    terrainLayerPixelShaderBytecode
                         .Span);
 
         InputElementDescription[]
@@ -265,6 +281,13 @@ public sealed class D3D11NativeMapRenderer :
                     Format
                         .R32G32_Float,
                     28,
+                    0),
+                new(
+                    "TEXCOORD",
+                    1,
+                    Format
+                        .R32G32_Float,
+                    36,
                     0)
             ];
 
@@ -285,6 +308,18 @@ public sealed class D3D11NativeMapRenderer :
                 .CreateSamplerState(
                     SamplerDescription
                         .LinearWrap);
+
+        _maskSampler =
+            _deviceHost.Device
+                .CreateSamplerState(
+                    SamplerDescription
+                        .LinearClamp);
+
+        _alphaBlendState =
+            _deviceHost.Device
+                .CreateBlendState(
+                    BlendDescription
+                        .NonPremultiplied);
 
         _textureLoader =
             new NativeGpuTextureLoader(
@@ -786,6 +821,10 @@ public sealed class D3D11NativeMapRenderer :
         if (batches.Count == 0)
         {
             context
+                .OMSetBlendState(
+                    null);
+
+            context
                 .PSSetShader(
                     _pixelShader);
 
@@ -801,6 +840,11 @@ public sealed class D3D11NativeMapRenderer :
                 0,
                 _textureSampler);
 
+        context
+            .PSSetSampler(
+                1,
+                _maskSampler);
+
         foreach (var batch in batches)
         {
             if (
@@ -810,15 +854,61 @@ public sealed class D3D11NativeMapRenderer :
                 continue;
             }
 
-            if (
+            var hasTexture =
                 batch.TexturePath is
                     { Length: > 0 }
                     texturePath &&
                 _textureCache
                     .TryGetValue(
                         texturePath,
-                        out var texture))
+                        out var texture);
+
+            if (
+                batch.MaskTexturePath is
+                    { Length: > 0 }
+                    maskPath)
             {
+                var hasMask =
+                    _textureCache
+                        .TryGetValue(
+                            maskPath,
+                            out var maskTexture);
+
+                if (
+                    !hasTexture ||
+                    !hasMask)
+                {
+                    continue;
+                }
+
+                context
+                    .OMSetBlendState(
+                        _alphaBlendState);
+
+                context
+                    .PSSetShader(
+                        _terrainLayerPixelShader);
+
+                context
+                    .PSSetShaderResource(
+                        0,
+                        texture!.View);
+
+                context
+                    .PSSetShaderResource(
+                        1,
+                        maskTexture!.View);
+            }
+            else if (hasTexture)
+            {
+                context
+                    .OMSetBlendState(
+                        null);
+
+                context
+                    .PSUnsetShaderResource(
+                        1);
+
                 context
                     .PSSetShader(
                         _texturedPixelShader);
@@ -826,13 +916,21 @@ public sealed class D3D11NativeMapRenderer :
                 context
                     .PSSetShaderResource(
                         0,
-                        texture.View);
+                        texture!.View);
             }
             else
             {
                 context
+                    .OMSetBlendState(
+                        null);
+
+                context
                     .PSUnsetShaderResource(
                         0);
+
+                context
+                    .PSUnsetShaderResource(
+                        1);
 
                 context
                     .PSSetShader(
@@ -847,8 +945,16 @@ public sealed class D3D11NativeMapRenderer :
         }
 
         context
+            .OMSetBlendState(
+                null);
+
+        context
             .PSUnsetShaderResource(
                 0);
+
+        context
+            .PSUnsetShaderResource(
+                1);
 
         context
             .PSSetShader(
@@ -859,7 +965,7 @@ public sealed class D3D11NativeMapRenderer :
         IReadOnlyList<
             NativeMaterialBatch> batches)
     {
-        var requested =
+        var diffusePaths =
             batches
                 .Where(
                     batch =>
@@ -871,10 +977,39 @@ public sealed class D3D11NativeMapRenderer :
                 .Distinct(
                     StringComparer
                         .OrdinalIgnoreCase)
-                .Take(256)
+                .ToArray();
+
+        var maskPaths =
+            batches
+                .Where(
+                    batch =>
+                        !string.IsNullOrWhiteSpace(
+                            batch.MaskTexturePath))
+                .Select(
+                    batch =>
+                        batch.MaskTexturePath!)
+                .Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase)
                 .ToHashSet(
                     StringComparer
                         .OrdinalIgnoreCase);
+
+        var requested =
+            diffusePaths
+                .Concat(
+                    maskPaths)
+                .Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .Take(512)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        maskPaths
+            .IntersectWith(
+                requested);
 
         var stale =
             _textureCache.Keys
@@ -912,8 +1047,14 @@ public sealed class D3D11NativeMapRenderer :
             }
 
             var texture =
-                _textureLoader
-                    .TryLoad(path);
+                maskPaths.Contains(
+                    path)
+                    ? _textureLoader
+                        .TryLoadAlphaMask(
+                            path)
+                    : _textureLoader
+                        .TryLoad(
+                            path);
 
             if (texture is null)
             {
@@ -1444,8 +1585,11 @@ public sealed class D3D11NativeMapRenderer :
         _textureCache.Clear();
         _failedTexturePaths.Clear();
 
+        _alphaBlendState.Dispose();
+        _maskSampler.Dispose();
         _textureSampler.Dispose();
         _inputLayout.Dispose();
+        _terrainLayerPixelShader.Dispose();
         _texturedPixelShader.Dispose();
         _pixelShader.Dispose();
         _vertexShader.Dispose();

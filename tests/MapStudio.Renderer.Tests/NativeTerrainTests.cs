@@ -153,6 +153,222 @@ public sealed class NativeTerrainTests
     }
 
     [Fact]
+    public void TerrainBuilderAddsMaskedGroundLayerWithIndependentMaskUv()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-NativeTerrainMask",
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var mapDirectory =
+            Path.Combine(
+                root,
+                "maps",
+                "TestMap");
+
+        var textureDirectory =
+            Path.Combine(
+                mapDirectory,
+                "texture");
+
+        var mapTextureDirectory =
+            Path.Combine(
+                textureDirectory,
+                "map");
+
+        var baseTexture =
+            Path.Combine(
+                textureDirectory,
+                "base.bmp");
+
+        var layerTexture =
+            Path.Combine(
+                textureDirectory,
+                "mud.bmp");
+
+        const string maskFileName =
+            "tile_0_0.map.1.dds";
+
+        var maskPath =
+            Path.Combine(
+                mapTextureDirectory,
+                maskFileName);
+
+        try
+        {
+            Directory.CreateDirectory(
+                mapTextureDirectory);
+
+            File.WriteAllBytes(
+                baseTexture,
+                [1]);
+
+            File.WriteAllBytes(
+                layerTexture,
+                [2]);
+
+            File.WriteAllBytes(
+                maskPath,
+                [3]);
+
+            var reference =
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map");
+
+            var tile =
+                new NativeSceneTile(
+                    reference,
+                    new OmsiTileContent(
+                        new OmsiTileSummary(
+                            true,
+                            0,
+                            0,
+                            0),
+                        [],
+                        [],
+                        new OmsiTerrainGrid(
+                            1,
+                            [0, 0, 0, 0]),
+                        TerrainTextureMasks:
+                        [
+                            new OmsiTerrainTextureMask(
+                                1,
+                                maskFileName,
+                                1,
+                                true,
+                                2,
+                                2,
+                                false,
+                                0,
+                                0,
+                                0,
+                                null)
+                        ]));
+
+            var scene =
+                new NativeSceneSnapshot(
+                    [tile],
+                    [],
+                    [],
+                    [
+                        new NativeTerrainEntity(
+                            reference,
+                            tile.Content.Terrain!)
+                    ]);
+
+            var map =
+                new OmsiMapDescriptor(
+                    "TestMap",
+                    "Test Map",
+                    mapDirectory,
+                    Path.Combine(
+                        mapDirectory,
+                        "global.cfg"),
+                    false,
+                    [reference],
+                    [
+                        new OmsiGroundTexture(
+                            @"texture\base.bmp",
+                            @"texture\detail.bmp",
+                            0,
+                            1,
+                            60),
+                        new OmsiGroundTexture(
+                            @"texture\mud.bmp",
+                            @"texture\detail.bmp",
+                            8,
+                            4,
+                            1)
+                    ]);
+
+            var geometry =
+                new NativeTerrainTriangleGeometryBuilder()
+                    .Build(
+                        scene,
+                        map,
+                        root);
+
+            Assert.Equal(
+                4,
+                geometry.TriangleCount);
+
+            Assert.Equal(
+                2,
+                geometry.MaterialBatches.Count);
+
+            Assert.Equal(
+                1,
+                geometry.MaskedLayerCount);
+
+            var layerBatch =
+                geometry.MaterialBatches[1];
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    layerTexture),
+                layerBatch.TexturePath);
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    maskPath),
+                layerBatch.MaskTexturePath);
+
+            var overlayVertices =
+                geometry.Vertices
+                    .Skip(
+                        layerBatch.StartVertex)
+                    .Take(
+                        layerBatch.VertexCount)
+                    .ToArray();
+
+            Assert.InRange(
+                overlayVertices
+                    .Max(
+                        vertex =>
+                            vertex.TexCoord.X),
+                3.999f,
+                4.001f);
+
+            Assert.InRange(
+                overlayVertices
+                    .Max(
+                        vertex =>
+                            vertex.MaskTexCoord.X),
+                0.999f,
+                1.001f);
+
+            Assert.InRange(
+                overlayVertices
+                    .Max(
+                        vertex =>
+                            vertex.MaskTexCoord.Y),
+                0.999f,
+                1.001f);
+
+            Assert.All(
+                overlayVertices,
+                vertex =>
+                    Assert.InRange(
+                        vertex.Position.Y,
+                        0.0019f,
+                        0.0021f));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void TerrainBuilderCreatesTwoTrianglesPerCell()
     {
         var tile =

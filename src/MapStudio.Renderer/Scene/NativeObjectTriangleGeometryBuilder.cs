@@ -11,7 +11,8 @@ public readonly record struct NativeTriangleRange(
 public readonly record struct NativeMaterialBatch(
     int StartVertex,
     int VertexCount,
-    string? TexturePath);
+    string? TexturePath,
+    string? MaskTexturePath = null);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,

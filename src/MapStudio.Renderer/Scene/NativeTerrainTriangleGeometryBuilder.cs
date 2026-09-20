@@ -17,6 +17,12 @@ public sealed record NativeTerrainTriangleGeometry(
             batch =>
                 !string.IsNullOrWhiteSpace(
                     batch.TexturePath));
+
+    public int MaskedLayerCount =>
+        MaterialBatches.Count(
+            batch =>
+                !string.IsNullOrWhiteSpace(
+                    batch.MaskTexturePath));
 }
 
 public sealed class NativeTerrainTriangleGeometryBuilder
@@ -29,8 +35,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         NativeSceneSnapshot scene) =>
         BuildCore(
             scene,
-            baseTexturePath: null,
-            mainRepeating: 1.0);
+            map: null,
+            omsiRoot: null);
 
     public NativeTerrainTriangleGeometry Build(
         NativeSceneSnapshot scene,
@@ -43,20 +49,44 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(
             omsiRoot);
 
+        return BuildCore(
+            scene,
+            map,
+            omsiRoot);
+    }
+
+    private static NativeTerrainTriangleGeometry BuildCore(
+        NativeSceneSnapshot scene,
+        OmsiMapDescriptor? map,
+        string? omsiRoot)
+    {
+        ArgumentNullException.ThrowIfNull(
+            scene);
+
+        var vertices =
+            new List<NativeMapVertex>(
+                32_768);
+
+        var batches =
+            new List<
+                NativeMaterialBatch>();
+
         string? baseTexturePath =
             null;
 
-        var mainRepeating =
+        var baseRepeating =
             1.0;
 
         if (
+            map is not null &&
+            omsiRoot is not null &&
             map.GroundTextures.Count >
                 0)
         {
             var ground =
                 map.GroundTextures[0];
 
-            mainRepeating =
+            baseRepeating =
                 ground.MainTextureRepeating;
 
             if (
@@ -72,28 +102,6 @@ public sealed class NativeTerrainTriangleGeometryBuilder
             }
         }
 
-        return BuildCore(
-            scene,
-            baseTexturePath,
-            mainRepeating);
-    }
-
-    private static NativeTerrainTriangleGeometry BuildCore(
-        NativeSceneSnapshot scene,
-        string? baseTexturePath,
-        double mainRepeating)
-    {
-        ArgumentNullException.ThrowIfNull(
-            scene);
-
-        var vertices =
-            new List<NativeMapVertex>(
-                32_768);
-
-        var batches =
-            new List<
-                NativeMaterialBatch>();
-
         foreach (var tile in scene.Tiles)
         {
             var terrain =
@@ -106,207 +114,342 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 continue;
             }
 
-            var cellCount =
-                terrain.CellCount;
-
-            var sampleCount =
-                cellCount + 1;
+            AppendTileLayer(
+                tile,
+                terrain,
+                vertices,
+                batches,
+                baseTexturePath,
+                maskTexturePath: null,
+                baseRepeating,
+                heightOffset:
+                    0.0f,
+                fallbackToHeightColor:
+                    baseTexturePath is null);
 
             if (
-                terrain.Heights.Count !=
-                sampleCount *
-                sampleCount)
+                map is null ||
+                omsiRoot is null ||
+                map.GroundTextures.Count <=
+                    1 ||
+                tile.Content
+                    .TerrainTextureMasks is
+                    not { Count: > 0 }
+                    masks)
             {
                 continue;
             }
 
-            var tileStart =
-                vertices.Count;
+            var overlayOrdinal =
+                0;
 
-            var spacing =
-                300.0 /
-                cellCount;
-
-            var originX =
-                tile.Reference.X *
-                300.0;
-
-            var originZ =
-                tile.Reference.Y *
-                300.0;
-
-            for (
-                var row = 0;
-                row < cellCount;
-                row++)
+            foreach (
+                var mask in masks
+                    .OrderBy(
+                        item =>
+                            item.LayerIndex))
             {
-                for (
-                    var column = 0;
-                    column < cellCount;
-                    column++)
+                if (
+                    !mask.IsValid ||
+                    mask.LayerIndex <= 0 ||
+                    mask.LayerIndex >=
+                        map.GroundTextures.Count)
                 {
-                    var topLeft =
-                        row *
-                        sampleCount +
-                        column;
-
-                    var topRight =
-                        topLeft + 1;
-
-                    var bottomLeft =
-                        topLeft +
-                        sampleCount;
-
-                    var bottomRight =
-                        bottomLeft + 1;
-
-                    var h00 =
-                        terrain.Heights[
-                            topLeft];
-
-                    var h10 =
-                        terrain.Heights[
-                            topRight];
-
-                    var h01 =
-                        terrain.Heights[
-                            bottomLeft];
-
-                    var h11 =
-                        terrain.Heights[
-                            bottomRight];
-
-                    if (
-                        !float.IsFinite(h00) ||
-                        !float.IsFinite(h10) ||
-                        !float.IsFinite(h01) ||
-                        !float.IsFinite(h11))
-                    {
-                        continue;
-                    }
-
-                    var localX0 =
-                        column *
-                        spacing;
-
-                    var localX1 =
-                        localX0 +
-                        spacing;
-
-                    var localZ0 =
-                        row *
-                        spacing;
-
-                    var localZ1 =
-                        localZ0 +
-                        spacing;
-
-                    var x0 =
-                        originX +
-                        localX0;
-
-                    var x1 =
-                        originX +
-                        localX1;
-
-                    var z0 =
-                        originZ +
-                        localZ0;
-
-                    var z1 =
-                        originZ +
-                        localZ1;
-
-                    var averageHeight =
-                        (
-                            h00 +
-                            h10 +
-                            h01 +
-                            h11
-                        ) /
-                        4.0f;
-
-                    var color =
-                        baseTexturePath is null
-                            ? GetTerrainColor(
-                                averageHeight)
-                            : TexturedColor;
-
-                    var uv00 =
-                        CreateUv(
-                            localX0,
-                            localZ0,
-                            mainRepeating);
-
-                    var uv10 =
-                        CreateUv(
-                            localX1,
-                            localZ0,
-                            mainRepeating);
-
-                    var uv01 =
-                        CreateUv(
-                            localX0,
-                            localZ1,
-                            mainRepeating);
-
-                    var uv11 =
-                        CreateUv(
-                            localX1,
-                            localZ1,
-                            mainRepeating);
-
-                    AppendTriangle(
-                        x0,
-                        z0,
-                        h00,
-                        uv00,
-                        x1,
-                        z1,
-                        h11,
-                        uv11,
-                        x1,
-                        z0,
-                        h10,
-                        uv10,
-                        color,
-                        vertices);
-
-                    AppendTriangle(
-                        x0,
-                        z0,
-                        h00,
-                        uv00,
-                        x0,
-                        z1,
-                        h01,
-                        uv01,
-                        x1,
-                        z1,
-                        h11,
-                        uv11,
-                        color,
-                        vertices);
+                    continue;
                 }
-            }
 
-            var tileVertexCount =
-                vertices.Count -
-                tileStart;
+                var ground =
+                    map.GroundTextures[
+                        mask.LayerIndex];
 
-            if (tileVertexCount > 0)
-            {
-                AppendBatch(
+                if (
+                    !OmsiTextureAssetPathResolver
+                        .TryResolveGroundTexture(
+                            omsiRoot,
+                            map.DirectoryPath,
+                            ground.MainTexturePath,
+                            out var layerTexturePath))
+                {
+                    continue;
+                }
+
+                var maskPath =
+                    Path.Combine(
+                        map.DirectoryPath,
+                        "texture",
+                        "map",
+                        mask.FileName);
+
+                if (!File.Exists(maskPath))
+                {
+                    continue;
+                }
+
+                overlayOrdinal++;
+
+                AppendTileLayer(
+                    tile,
+                    terrain,
+                    vertices,
                     batches,
-                    tileStart,
-                    tileVertexCount,
-                    baseTexturePath);
+                    layerTexturePath,
+                    maskPath,
+                    ground.MainTextureRepeating,
+                    heightOffset:
+                        Math.Min(
+                            overlayOrdinal,
+                            16) *
+                        0.002f,
+                    fallbackToHeightColor:
+                        false);
             }
         }
 
         return new NativeTerrainTriangleGeometry(
             vertices.ToArray(),
             batches.ToArray());
+    }
+
+    private static void AppendTileLayer(
+        NativeSceneTile tile,
+        OmsiTerrainGrid terrain,
+        List<NativeMapVertex> vertices,
+        List<NativeMaterialBatch> batches,
+        string? texturePath,
+        string? maskTexturePath,
+        double repeating,
+        float heightOffset,
+        bool fallbackToHeightColor)
+    {
+        var cellCount =
+            terrain.CellCount;
+
+        var sampleCount =
+            cellCount + 1;
+
+        if (
+            terrain.Heights.Count !=
+                sampleCount *
+                sampleCount)
+        {
+            return;
+        }
+
+        var layerStart =
+            vertices.Count;
+
+        var spacing =
+            300.0 /
+            cellCount;
+
+        var originX =
+            tile.Reference.X *
+            300.0;
+
+        var originZ =
+            tile.Reference.Y *
+            300.0;
+
+        for (
+            var row = 0;
+            row < cellCount;
+            row++)
+        {
+            for (
+                var column = 0;
+                column < cellCount;
+                column++)
+            {
+                var topLeft =
+                    row *
+                    sampleCount +
+                    column;
+
+                var topRight =
+                    topLeft + 1;
+
+                var bottomLeft =
+                    topLeft +
+                    sampleCount;
+
+                var bottomRight =
+                    bottomLeft + 1;
+
+                var h00 =
+                    terrain.Heights[
+                        topLeft];
+
+                var h10 =
+                    terrain.Heights[
+                        topRight];
+
+                var h01 =
+                    terrain.Heights[
+                        bottomLeft];
+
+                var h11 =
+                    terrain.Heights[
+                        bottomRight];
+
+                if (
+                    !float.IsFinite(h00) ||
+                    !float.IsFinite(h10) ||
+                    !float.IsFinite(h01) ||
+                    !float.IsFinite(h11))
+                {
+                    continue;
+                }
+
+                var localX0 =
+                    column *
+                    spacing;
+
+                var localX1 =
+                    localX0 +
+                    spacing;
+
+                var localZ0 =
+                    row *
+                    spacing;
+
+                var localZ1 =
+                    localZ0 +
+                    spacing;
+
+                var x0 =
+                    originX +
+                    localX0;
+
+                var x1 =
+                    originX +
+                    localX1;
+
+                var z0 =
+                    originZ +
+                    localZ0;
+
+                var z1 =
+                    originZ +
+                    localZ1;
+
+                var averageHeight =
+                    (
+                        h00 +
+                        h10 +
+                        h01 +
+                        h11
+                    ) /
+                    4.0f;
+
+                var color =
+                    fallbackToHeightColor
+                        ? GetTerrainColor(
+                            averageHeight)
+                        : TexturedColor;
+
+                var uv00 =
+                    CreateUv(
+                        localX0,
+                        localZ0,
+                        repeating);
+
+                var uv10 =
+                    CreateUv(
+                        localX1,
+                        localZ0,
+                        repeating);
+
+                var uv01 =
+                    CreateUv(
+                        localX0,
+                        localZ1,
+                        repeating);
+
+                var uv11 =
+                    CreateUv(
+                        localX1,
+                        localZ1,
+                        repeating);
+
+                var maskUv00 =
+                    CreateMaskUv(
+                        localX0,
+                        localZ0);
+
+                var maskUv10 =
+                    CreateMaskUv(
+                        localX1,
+                        localZ0);
+
+                var maskUv01 =
+                    CreateMaskUv(
+                        localX0,
+                        localZ1);
+
+                var maskUv11 =
+                    CreateMaskUv(
+                        localX1,
+                        localZ1);
+
+                AppendTriangle(
+                    x0,
+                    z0,
+                    h00 +
+                        heightOffset,
+                    uv00,
+                    maskUv00,
+                    x1,
+                    z1,
+                    h11 +
+                        heightOffset,
+                    uv11,
+                    maskUv11,
+                    x1,
+                    z0,
+                    h10 +
+                        heightOffset,
+                    uv10,
+                    maskUv10,
+                    color,
+                    vertices);
+
+                AppendTriangle(
+                    x0,
+                    z0,
+                    h00 +
+                        heightOffset,
+                    uv00,
+                    maskUv00,
+                    x0,
+                    z1,
+                    h01 +
+                        heightOffset,
+                    uv01,
+                    maskUv01,
+                    x1,
+                    z1,
+                    h11 +
+                        heightOffset,
+                    uv11,
+                    maskUv11,
+                    color,
+                    vertices);
+            }
+        }
+
+        var layerVertexCount =
+            vertices.Count -
+            layerStart;
+
+        if (layerVertexCount > 0)
+        {
+            AppendBatch(
+                batches,
+                layerStart,
+                layerVertexCount,
+                texturePath,
+                maskTexturePath);
+        }
     }
 
     private static Vector2 CreateUv(
@@ -332,11 +475,23 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 safeRepeating));
     }
 
+    private static Vector2 CreateMaskUv(
+        double localX,
+        double localZ) =>
+        new(
+            (float)(
+                localX /
+                300.0),
+            (float)(
+                localZ /
+                300.0));
+
     private static void AppendBatch(
         List<NativeMaterialBatch> batches,
         int startVertex,
         int vertexCount,
-        string? texturePath)
+        string? texturePath,
+        string? maskTexturePath)
     {
         if (
             batches.Count > 0)
@@ -351,6 +506,10 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 string.Equals(
                     previous.TexturePath,
                     texturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    previous.MaskTexturePath,
+                    maskTexturePath,
                     StringComparison.OrdinalIgnoreCase))
             {
                 batches[^1] =
@@ -369,7 +528,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
             new NativeMaterialBatch(
                 startVertex,
                 vertexCount,
-                texturePath));
+                texturePath,
+                maskTexturePath));
     }
 
     private static void AppendTriangle(
@@ -377,14 +537,17 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         double z0,
         float height0,
         Vector2 uv0,
+        Vector2 maskUv0,
         double x1,
         double z1,
         float height1,
         Vector2 uv1,
+        Vector2 maskUv1,
         double x2,
         double z2,
         float height2,
         Vector2 uv2,
+        Vector2 maskUv2,
         Vector4 color,
         List<NativeMapVertex> output)
     {
@@ -395,7 +558,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     height0,
                     (float)z0),
                 color,
-                uv0));
+                uv0,
+                maskUv0));
 
         output.Add(
             new NativeMapVertex(
@@ -404,7 +568,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     height1,
                     (float)z1),
                 color,
-                uv1));
+                uv1,
+                maskUv1));
 
         output.Add(
             new NativeMapVertex(
@@ -413,7 +578,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     height2,
                     (float)z2),
                 color,
-                uv2));
+                uv2,
+                maskUv2));
     }
 
     private static Vector4 GetTerrainColor(

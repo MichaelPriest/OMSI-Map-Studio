@@ -4,13 +4,17 @@ cbuffer ViewportCamera : register(b0)
 };
 
 Texture2D DiffuseTexture : register(t0);
+Texture2D MaskTexture : register(t1);
+
 SamplerState DiffuseSampler : register(s0);
+SamplerState MaskSampler : register(s1);
 
 struct VSInput
 {
     float3 Position : POSITION;
     float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
+    float2 MaskTexCoord : TEXCOORD1;
 };
 
 struct PSInput
@@ -18,6 +22,7 @@ struct PSInput
     float4 Position : SV_POSITION;
     float4 Color : COLOR;
     float2 TexCoord : TEXCOORD0;
+    float2 MaskTexCoord : TEXCOORD1;
 };
 
 PSInput VSMain(VSInput input)
@@ -36,6 +41,9 @@ PSInput VSMain(VSInput input)
 
     output.TexCoord =
         input.TexCoord;
+
+    output.MaskTexCoord =
+        input.MaskTexCoord;
 
     return output;
 }
@@ -59,4 +67,25 @@ float4 PSTextured(
 
     return sampled *
         input.Color;
+}
+
+float4 PSTerrainLayer(
+    PSInput input) : SV_TARGET
+{
+    float4 sampled =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float mask =
+        MaskTexture.Sample(
+            MaskSampler,
+            input.MaskTexCoord).a;
+
+    return float4(
+        sampled.rgb *
+            input.Color.rgb,
+        sampled.a *
+            input.Color.a *
+            mask);
 }

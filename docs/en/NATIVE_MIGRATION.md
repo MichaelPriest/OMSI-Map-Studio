@@ -381,3 +381,17 @@ Mapping restarts on each tile and spans the 0–300 m tile area using the map-de
 
 This checkpoint covers the base layer. Additional `tile_*.map.N.dds` paint masks, secondary detail texture, and paint editing remain for the next step.
 
+### Checkpoint N3.19 — painted terrain layers with DDS masks
+
+The native renderer now also applies terrain layers painted by OMSI through `tile_*.map.N.dds` files.
+
+Each valid mask uses its `LayerIndex` to select the matching `[groundtex]` entry from `global.cfg`. The layer's main texture keeps its own repeat value while the mask uses normalized 0–1 UV coordinates across the 300 m tile.
+
+Native vertices now carry two UV sets: one for the repeated material texture and one dedicated to the tile mask. The `PSTerrainLayer` shader combines the layer texture with mask alpha and alpha-blends it over the base terrain.
+
+OMSI A8 DDS masks are read directly by the renderer and expanded into an RGBA GPU texture, avoiding dependence on variable WIC support for that format. An invalid mask or texture simply skips that layer.
+
+To avoid z-fighting between base and overlays without changing map data, each overlay receives only a renderer-side millimeter-scale height offset. No persisted `.terrain` elevation is changed.
+
+Secondary `[groundtex]` detail textures and mask painting/editing are still pending.
+
