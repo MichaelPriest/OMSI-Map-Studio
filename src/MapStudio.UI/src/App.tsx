@@ -9323,6 +9323,18 @@ export function App() {
             <div className="spline-edit-actions">
               <button
                 type="button"
+                className="secondary-action"
+                onClick={
+                  handleLevelSelectedSplineToTerrain
+                }
+                disabled={savingSpline}
+                title="Ajustar Z e gradientes pela altura real do terreno carregado"
+              >
+                Nivelar rua ao terreno
+              </button>
+
+              <button
+                type="button"
                 className="primary-button"
                 onClick={
                   handleSaveSplinePreview
@@ -10610,6 +10622,12 @@ export function App() {
                 handleSplinePlacementPoint
               }
               activeTile={activeTile}
+              onTerrainPoint={
+                handleTerrainPoint
+              }
+              referenceOverlay={
+                referenceOverlay
+              }
               onActiveTileChange={
                 (tile) => {
                   if (
@@ -10673,6 +10691,273 @@ export function App() {
                 handlePreviewSplineTransform
               }
             />
+
+            {selectionMode === "terrain" && (
+              <div className="terrain-edit-panel">
+                <div className="panel-title-row">
+                  <strong>Nivelamento manual</strong>
+                  <span>
+                    {terrainEditPoint
+                      ? `Tile ${terrainEditPoint.tileX},${terrainEditPoint.tileY} · X ${formatNumber(terrainEditPoint.x)} · Y ${formatNumber(terrainEditPoint.y)} · atual ${formatNumber(terrainEditPoint.height)} m`
+                      : "Clique diretamente no terreno para marcar o centro do pincel."}
+                  </span>
+                </div>
+
+                <label>
+                  <span>Altura alvo (m)</span>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={terrainTargetHeight}
+                    onChange={(event) => {
+                      const value =
+                        event.currentTarget
+                          .valueAsNumber;
+                      if (Number.isFinite(value)) {
+                        setTerrainTargetHeight(value);
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  <span>Raio (m)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="600"
+                    step="1"
+                    value={terrainBrushRadius}
+                    onChange={(event) => {
+                      const value =
+                        event.currentTarget
+                          .valueAsNumber;
+                      if (
+                        Number.isFinite(value) &&
+                        value > 0
+                      ) {
+                        setTerrainBrushRadius(value);
+                      }
+                    }}
+                  />
+                </label>
+
+                <label>
+                  <span>Suavização</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={terrainBrushFeather}
+                    onChange={(event) => {
+                      const value =
+                        event.currentTarget
+                          .valueAsNumber;
+                      if (
+                        Number.isFinite(value) &&
+                        value >= 0 &&
+                        value <= 1
+                      ) {
+                        setTerrainBrushFeather(value);
+                      }
+                    }}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={
+                    !terrainEditPoint ||
+                    savingTerrain
+                  }
+                  onClick={handleLevelTerrain}
+                >
+                  {savingTerrain
+                    ? "Nivelando..."
+                    : "Aplicar nivelamento"}
+                </button>
+              </div>
+            )}
+
+            <div className="real-map-panel">
+              <div className="panel-title-row">
+                <strong>Mapa real por coordenadas</strong>
+                <span>
+                  Google Maps + elevação como referência visual sobre o terreno.
+                </span>
+              </div>
+
+              <label>
+                <span>Google API key</span>
+                <input
+                  type="password"
+                  value={googleApiKey}
+                  placeholder="Static Maps + Elevation"
+                  onChange={(event) =>
+                    setGoogleApiKey(
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                <span>Latitude</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={googleLatitude}
+                  placeholder="-23.5505"
+                  onChange={(event) =>
+                    setGoogleLatitude(
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                <span>Longitude</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={googleLongitude}
+                  placeholder="-46.6333"
+                  onChange={(event) =>
+                    setGoogleLongitude(
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                <span>Zoom</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="22"
+                  value={googleZoom}
+                  onChange={(event) => {
+                    const value =
+                      event.currentTarget
+                        .valueAsNumber;
+                    if (
+                      Number.isInteger(value) &&
+                      value >= 0 &&
+                      value <= 22
+                    ) {
+                      setGoogleZoom(value);
+                    }
+                  }}
+                />
+              </label>
+
+              <label>
+                <span>Imagem</span>
+                <select
+                  value={googleMapType}
+                  onChange={(event) =>
+                    setGoogleMapType(
+                      event.target.value as
+                        | "roadmap"
+                        | "satellite"
+                        | "hybrid"
+                        | "terrain"
+                    )
+                  }
+                >
+                  <option value="hybrid">Híbrido</option>
+                  <option value="satellite">Satélite</option>
+                  <option value="roadmap">Ruas</option>
+                  <option value="terrain">Terreno</option>
+                </select>
+              </label>
+
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={
+                  loadingGoogleReference
+                }
+                onClick={
+                  handleLoadGoogleReference
+                }
+              >
+                {loadingGoogleReference
+                  ? "Carregando..."
+                  : "Carregar referência"}
+              </button>
+
+              {googleReference && (
+                <>
+                  <label className="reference-toggle">
+                    <input
+                      type="checkbox"
+                      checked={referenceVisible}
+                      onChange={(event) =>
+                        setReferenceVisible(
+                          event.target.checked
+                        )
+                      }
+                    />
+                    <span>Mostrar sobre o terreno</span>
+                  </label>
+
+                  <label>
+                    <span>Opacidade</span>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.05"
+                      value={referenceOpacity}
+                      onChange={(event) =>
+                        setReferenceOpacity(
+                          Number(
+                            event.target.value
+                          )
+                        )
+                      }
+                    />
+                  </label>
+
+                  <div className="reference-meta">
+                    <span>
+                      Escala: {formatNumber(
+                        googleReference
+                          .metersPerPixel
+                      )} m/px
+                    </span>
+                    <span>
+                      Elevação central:{" "}
+                      {googleReference
+                        .centerElevation !== null
+                        ? `${formatNumber(
+                            googleReference
+                              .centerElevation
+                          )} m`
+                        : "indisponível"}
+                    </span>
+                    <span>
+                      Âncora: tile {georefAnchor.tileX},{georefAnchor.tileY} · {formatNumber(georefAnchor.x)},{formatNumber(georefAnchor.y)}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={
+                      handleSaveMapGeoreference
+                    }
+                  >
+                    Salvar coordenadas do mapa
+                  </button>
+                </>
+              )}
+            </div>
 
             {splinePlacementTemplate && (
               <div className="placement-bar">
@@ -10784,11 +11069,44 @@ export function App() {
                   </>
                 )}
 
+                {pendingSplinePlacement &&
+                  pendingSplinePlacement.length > 0 && (
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    disabled={insertingSpline}
+                    onClick={
+                      handleLevelPendingRoadToTerrain
+                    }
+                    title="Usar as alturas reais do terreno no início e fim da rua"
+                  >
+                    Nivelar ao terreno
+                  </button>
+                )}
+
+                {easyRoadMode && (
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    disabled={insertingSpline}
+                    onClick={() => {
+                      setEasyRoadStart(undefined);
+                      setPendingSplinePlacement(undefined);
+                      setSaveNotice(
+                        "Clique no início da rua e depois no ponto final."
+                      );
+                    }}
+                  >
+                    Reiniciar 2 cliques
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="primary-button"
                   disabled={
                     !pendingSplinePlacement ||
+                    pendingSplinePlacement.length <= 0 ||
                     insertingSpline
                   }
                   onClick={
