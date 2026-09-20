@@ -2,8 +2,10 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Globalization;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using MapStudio.Core.IO;
@@ -25,6 +27,60 @@ public partial class MainWindow : Window
     private const int MaxTileStreamRadius = 2;
     private const long MaxTextureAssetBytes =
         16L * 1024L * 1024L;
+
+    private const uint MonitorDefaultToNearest =
+        0x00000002;
+    private const uint SwpFrameChanged =
+        0x0020;
+    private const uint SwpShowWindow =
+        0x0040;
+
+    private static readonly IntPtr HwndTopmost =
+        new(-1);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(
+        IntPtr hwnd,
+        uint flags);
+
+    [DllImport(
+        "user32.dll",
+        SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(
+        IntPtr monitor,
+        ref MonitorInfo info);
+
+    [DllImport(
+        "user32.dll",
+        SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(
+        IntPtr hwnd,
+        IntPtr insertAfter,
+        int x,
+        int y,
+        int width,
+        int height,
+        uint flags);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect WorkArea;
+        public uint Flags;
+    }
 
     private readonly OmsiMapCatalog _mapCatalog = new();
     private readonly OmsiTileReader _tileReader = new();
@@ -9477,6 +9533,64 @@ public partial class MainWindow : Window
         return !string.IsNullOrWhiteSpace(value);
     }
 
+    private bool ApplyFullScreenMonitorBounds()
+    {
+        var handle =
+            new WindowInteropHelper(this)
+                .Handle;
+
+        if (handle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var monitor =
+            MonitorFromWindow(
+                handle,
+                MonitorDefaultToNearest);
+
+        if (monitor == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var info =
+            new MonitorInfo
+            {
+                Size =
+                    Marshal.SizeOf<MonitorInfo>()
+            };
+
+        if (!GetMonitorInfo(
+                monitor,
+                ref info))
+        {
+            return false;
+        }
+
+        var width =
+            info.Monitor.Right -
+            info.Monitor.Left;
+        var height =
+            info.Monitor.Bottom -
+            info.Monitor.Top;
+
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        return SetWindowPos(
+            handle,
+            HwndTopmost,
+            info.Monitor.Left,
+            info.Monitor.Top,
+            width,
+            height,
+            SwpFrameChanged |
+            SwpShowWindow);
+    }
+
     private void SetFullScreen(
         bool enabled)
     {
@@ -9510,9 +9624,10 @@ public partial class MainWindow : Window
             _heightBeforeFullScreen =
                 Height;
 
-            // Reset first so WPF actually reapplies the chrome/state
-            // transition instead of keeping the previous maximized
-            // work-area bounds.
+            // A WPF maximized borderless window can still use work-area
+            // semantics. True fullscreen must cover the current monitor
+            // bounds, so keep the WPF state Normal and size the HWND to
+            // rcMonitor (not rcWork) with SetWindowPos.
             WindowState =
                 WindowState.Normal;
             WindowStyle =
@@ -9520,8 +9635,15 @@ public partial class MainWindow : Window
             ResizeMode =
                 ResizeMode.NoResize;
             Topmost = true;
-            WindowState =
-                WindowState.Maximized;
+
+            if (!ApplyFullScreenMonitorBounds())
+            {
+                // Safe fallback when Win32 monitor information is not
+                // available. The React layer still fills the WebView.
+                WindowState =
+                    WindowState.Maximized;
+            }
+
             Activate();
             Focus();
         }
@@ -9557,6 +9679,26 @@ public partial class MainWindow : Window
         }
 
         _isFullScreen = enabled;
+
+        if (enabled)
+        {
+            // Re-apply after WPF has processed the chrome transition.
+            // This also handles mixed-DPI/multi-monitor setups where the
+            // first layout pass can briefly restore work-area bounds.
+            Dispatcher.BeginInvoke(
+                System.Windows.Threading
+                    .DispatcherPriority.Loaded,
+                new Action(() =>
+                {
+                    if (!_isFullScreen)
+                    {
+                        return;
+                    }
+
+                    ApplyFullScreenMonitorBounds();
+                    EditorWebView.UpdateLayout();
+                }));
+        }
 
         PostMessage(new
         {
