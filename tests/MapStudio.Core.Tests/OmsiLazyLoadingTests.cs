@@ -232,4 +232,56 @@ public sealed class OmsiLazyLoadingTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public async Task TileSummaryLight_ReadsCountsWithoutLoadingTerrainPayload()
+    {
+        var path = Path.Combine(
+            Path.GetTempPath(),
+            $"mapstudio-summary-{Guid.NewGuid():N}.map");
+
+        var terrainPath =
+            path + ".terrain";
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                path,
+                "[terrain]\r\n" +
+                "[object]\r\n0\r\nSceneryobjects\\Building.sco\r\n" +
+                "42\r\n10\r\n20\r\n1\r\n90\r\n0\r\n0\r\n" +
+                "[spline]\r\n0\r\nSplines\\Street.sli\r\n",
+                new UTF8Encoding(false));
+
+            await File.WriteAllBytesAsync(
+                terrainPath,
+                new byte[37]);
+
+            var summary =
+                await new OmsiTileReader()
+                    .ReadSummaryLightAsync(
+                        path);
+
+            Assert.True(summary.Exists);
+            Assert.Equal(
+                1,
+                summary.ObjectCount);
+            Assert.Equal(
+                1,
+                summary.SplineCount);
+            Assert.True(
+                summary.TerrainMarkerPresent);
+            Assert.True(
+                summary.TerrainFileExists);
+            Assert.Equal(
+                37,
+                summary.TerrainFileSize);
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(terrainPath);
+        }
+    }
+
 }
