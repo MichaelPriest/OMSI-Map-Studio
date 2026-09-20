@@ -5367,7 +5367,9 @@ export function Viewport({
       | undefined;
 
     let fallbackHoverMarker:
-      | Mesh
+      | ReturnType<
+          typeof MeshBuilder.CreateLineSystem
+        >
       | undefined;
 
     const clearSelectionHover = () => {
