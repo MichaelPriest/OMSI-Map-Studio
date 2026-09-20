@@ -756,3 +756,10 @@ Endpoint snapping can now also create OMSI links for the new spline. Automatic l
 An incompatible or already-busy endpoint remains position-snapped only and is marked as blocked in the panel. Saving reuses the existing OmsiSplineLinkPlanner, which updates reciprocal links and rejects conflicts.
 
 When a Construction Set is active too, operations are serialized: the spline is inserted first, links are updated second, and only then is the companion-object multi-batch written. This avoids concurrent transactions against the same tiles.
+
+
+### Preservation-safe dependency replacement
+
+The desktop host accepts replaceMapAssetPath to replace a missing path with another real installed asset. For objects, only the path line inside [object] is changed. For splines, only the path field of [spline]/[spline_h] is changed according to the map-version layout.
+
+IDs, links, position, rotation, length, radius, gradients, and extra values remain untouched. The operation scans map tiles, writes only files that actually changed, and uses one SafeFileTransaction with backup.

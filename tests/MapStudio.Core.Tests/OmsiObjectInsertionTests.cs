@@ -257,6 +257,73 @@ public sealed class OmsiObjectInsertionTests
     }
 
     [Fact]
+    public void AssetPathRewriter_ReplacesOnlyRequestedCategories()
+    {
+        const string source =
+            "[version]\r\n14\r\n" +
+            "[object]\r\n0\r\n" +
+            "Sceneryobjects\\Missing\\Tree.sco\r\n" +
+            "10\r\n1\r\n2\r\n0\r\n0\r\n0\r\n0\r\n" +
+            "[spline]\r\n0\r\n" +
+            "Splines\\Missing\\Road.sli\r\n" +
+            "11\r\n-1\r\n-1\r\n0\r\n0\r\n0\r\n0\r\n20\r\n0\r\n0\r\n0\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(source);
+
+        var objects =
+            OmsiTileAssetPathRewriter.Replace(
+                document,
+                @"Sceneryobjects\Missing\Tree.sco",
+                @"Sceneryobjects\Pack\Tree.sco",
+                replaceObjects: true,
+                replaceSplines: false);
+
+        var objectText =
+            Encoding.UTF8.GetString(
+                objects.Bytes);
+
+        Assert.Equal(
+            1,
+            objects.ObjectReplacements);
+        Assert.Equal(
+            0,
+            objects.SplineReplacements);
+        Assert.Contains(
+            @"Sceneryobjects\Pack\Tree.sco",
+            objectText);
+        Assert.Contains(
+            @"Splines\Missing\Road.sli",
+            objectText);
+
+        var splineDocument =
+            OmsiConfigParser.Parse(
+                objectText);
+
+        var splines =
+            OmsiTileAssetPathRewriter.Replace(
+                splineDocument,
+                @"Splines\Missing\Road.sli",
+                @"Splines\Pack\Road.sli",
+                replaceObjects: false,
+                replaceSplines: true);
+
+        var finalText =
+            Encoding.UTF8.GetString(
+                splines.Bytes);
+
+        Assert.Equal(
+            1,
+            splines.SplineReplacements);
+        Assert.Contains(
+            @"Splines\Pack\Road.sli",
+            finalText);
+        Assert.Contains(
+            "10\r\n1\r\n2\r\n0\r\n0\r\n0\r\n0\r\n",
+            finalText);
+    }
+
+    [Fact]
     public void Analyzer_DoesNotInventTemplateForNewAsset()
     {
         var tile = new OmsiTileContent(

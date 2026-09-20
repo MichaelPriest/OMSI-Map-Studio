@@ -574,6 +574,37 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "replaceMapAssetPath":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var replaceDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "kind",
+                            out var replaceKind) &&
+                        TryReadString(
+                            message.RootElement,
+                            "oldPath",
+                            out var replaceOldPath) &&
+                        TryReadString(
+                            message.RootElement,
+                            "newPath",
+                            out var replaceNewPath))
+                    {
+                        await ReplaceMapAssetPathAsync(
+                            replaceDirectoryName,
+                            replaceKind,
+                            replaceOldPath,
+                            replaceNewPath);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "loadMapFull":
                     if (TryReadString(
                             message.RootElement,
@@ -5254,6 +5285,261 @@ public partial class MainWindow : Window
                 type = "hostError",
                 code = "saveError",
                 detail = exception.Message
+            });
+        }
+    }
+
+    private async Task ReplaceMapAssetPathAsync(
+        string? directoryName,
+        string? kind,
+        string? oldPath,
+        string? newPath)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(kind) ||
+            string.IsNullOrWhiteSpace(
+                oldPath) ||
+            string.IsNullOrWhiteSpace(
+                newPath) ||
+            string.Equals(
+                oldPath,
+                newPath,
+                StringComparison
+                    .OrdinalIgnoreCase) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        var replaceObjects =
+            string.Equals(
+                kind,
+                "object",
+                StringComparison
+                    .OrdinalIgnoreCase);
+        var replaceSplines =
+            string.Equals(
+                kind,
+                "spline",
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+        if (
+            !replaceObjects &&
+            !replaceSplines)
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        if (replaceObjects)
+        {
+            if (
+                !_knownSceneryObjectPaths
+                    .ContainsKey(newPath))
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "unknownSceneryObject",
+                    detail = newPath
+                });
+                return;
+            }
+
+            if (
+                _omsiRootPath is null ||
+                !OmsiSceneryObjectPathResolver
+                    .TryResolve(
+                        _omsiRootPath,
+                        newPath,
+                        out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "invalidSceneryObjectPath",
+                    detail = newPath
+                });
+                return;
+            }
+        }
+        else
+        {
+            if (
+                !_knownSplinePaths
+                    .ContainsKey(newPath))
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "unknownSpline",
+                    detail = newPath
+                });
+                return;
+            }
+
+            if (
+                _omsiRootPath is null ||
+                !OmsiSplinePathResolver
+                    .TryResolve(
+                        _omsiRootPath,
+                        newPath,
+                        out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "invalidSplinePath",
+                    detail = newPath
+                });
+                return;
+            }
+        }
+
+        try
+        {
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo
+                            .InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var writes =
+                new List<PendingFileWrite>();
+            var replacements = 0;
+
+            foreach (var tile in map.Tiles)
+            {
+                if (
+                    !OmsiMapPathResolver
+                        .TryResolveTilePath(
+                            map.DirectoryPath,
+                            tile.RelativeMapPath,
+                            out var tilePath) ||
+                    !File.Exists(tilePath))
+                {
+                    continue;
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            tilePath);
+
+                var result =
+                    OmsiTileAssetPathRewriter
+                        .Replace(
+                            document,
+                            oldPath,
+                            newPath,
+                            replaceObjects,
+                            replaceSplines);
+
+                var changed =
+                    replaceObjects
+                        ? result
+                            .ObjectReplacements
+                        : result
+                            .SplineReplacements;
+
+                if (changed <= 0)
+                {
+                    continue;
+                }
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        tilePath);
+
+                if (
+                    Path.IsPathRooted(
+                        relativePath) ||
+                    relativePath.Equals(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    relativePath.StartsWith(
+                        ".." +
+                        Path.DirectorySeparatorChar,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        tilePath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        result.Bytes));
+
+                replacements += changed;
+            }
+
+            if (writes.Count > 0)
+            {
+                await SafeFileTransaction
+                    .WriteAllAsync(writes);
+
+                _tileContentCache.Clear();
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "assetPathReplaced",
+                map.DirectoryName,
+                kind =
+                    replaceObjects
+                        ? "object"
+                        : "spline",
+                oldPath,
+                newPath,
+                replacements,
+                filesSaved =
+                    writes.Count,
+                backupDirectory =
+                    writes.Count > 0
+                        ? backupRoot
+                        : string.Empty
+            });
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    InvalidDataException or
+                    IOException or
+                    UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "assetPathReplaceError",
+                detail =
+                    exception.Message
             });
         }
     }

@@ -422,6 +422,16 @@ export type HostMessage =
       backupDirectory: string;
     }
   | {
+      type: "assetPathReplaced";
+      directoryName: string;
+      kind: "object" | "spline";
+      oldPath: string;
+      newPath: string;
+      replacements: number;
+      filesSaved: number;
+      backupDirectory: string;
+    }
+  | {
       type: "mapFullLoadingStarted";
       directoryName: string;
       totalTiles: number;
@@ -899,6 +909,21 @@ export function saveSplineTransforms(
           placedSpline.gradientEnd
       })
     )
+  });
+}
+
+export function replaceMapAssetPath(
+  directoryName: string,
+  kind: "object" | "spline",
+  oldPath: string,
+  newPath: string
+) {
+  getWebView()?.postMessage({
+    type: "replaceMapAssetPath",
+    directoryName,
+    kind,
+    oldPath,
+    newPath
   });
 }
 

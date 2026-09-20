@@ -756,3 +756,10 @@ O snap de ponta pode agora criar também os vínculos OMSI da nova spline. A con
 Ponta incompatível ou já ocupada continua apenas encaixada visualmente e é marcada no painel como bloqueada. O salvamento usa o OmsiSplineLinkPlanner existente, que atualiza reciprocidade e recusa conflito.
 
 Quando um Conjunto de Construção também está ativo, as operações são serializadas: primeiro a spline é inserida, depois os vínculos são atualizados e só então o multi-lote de objetos companheiros é gravado. Isso evita transações concorrentes sobre os mesmos tiles.
+
+
+### Substituição preservativa de dependência
+
+O host desktop aceita a operação replaceMapAssetPath para trocar um caminho ausente por outro asset real instalado. Para objetos, apenas a linha de caminho dentro de [object] é alterada. Para splines, apenas o campo de caminho de [spline]/[spline_h] é alterado segundo o layout da versão do mapa.
+
+IDs, vínculos, posição, rotação, comprimento, raio, gradientes e valores extras permanecem intactos. A operação percorre os tiles do mapa, grava somente os arquivos realmente alterados e usa uma única SafeFileTransaction com backup.
