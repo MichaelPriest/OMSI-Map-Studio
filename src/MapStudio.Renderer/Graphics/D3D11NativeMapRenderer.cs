@@ -1222,13 +1222,17 @@ public sealed class D3D11NativeMapRenderer :
                             batch.LightTexturePath
                         : null;
 
+                NativeGpuTexture?
+                    secondaryTexture =
+                        null;
+
                 var hasSecondary =
                     secondaryPath is
                         { Length: > 0 } &&
                     _textureCache
                         .TryGetValue(
                             secondaryPath,
-                            out var secondaryTexture);
+                            out secondaryTexture);
 
                 ID3D11PixelShader shader;
 
