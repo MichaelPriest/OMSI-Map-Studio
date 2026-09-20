@@ -253,6 +253,55 @@ public sealed class OmsiTileReader
             tilePath,
             cancellationToken)).Summary;
 
+    public async Task<OmsiTileSummary>
+        ReadSummaryLightAsync(
+            string tilePath,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            tilePath);
+
+        if (!File.Exists(tilePath))
+        {
+            return OmsiTileSummary.Missing;
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var summary =
+            ReadContent(
+                document)
+            .Summary;
+
+        var terrainPath =
+            tilePath +
+            ".terrain";
+
+        var terrainFileExists =
+            File.Exists(
+                terrainPath);
+
+        var terrainFileSize =
+            terrainFileExists
+                ? new FileInfo(
+                    terrainPath)
+                    .Length
+                : 0;
+
+        return summary with
+        {
+            TerrainFileExists =
+                terrainFileExists,
+            TerrainFileSize =
+                terrainFileSize
+        };
+    }
+
     public async Task<IReadOnlyList<OmsiPlacedObject>>
         ReadObjectsAsync(
             string tilePath,
