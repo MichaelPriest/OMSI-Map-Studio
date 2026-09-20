@@ -512,6 +512,66 @@ const deriveRoadArc = (
   };
 };
 
+const getSplineEndWorldPoint = (
+  spline: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    rotation: number;
+    length: number;
+    radius: number;
+  }
+) => {
+  const yaw =
+    spline.rotation *
+    Math.PI /
+    180;
+
+  const hasCurve =
+    Math.abs(spline.radius) >
+    0.001;
+
+  const angle =
+    hasCurve
+      ? spline.length /
+        spline.radius
+      : 0;
+
+  const localX =
+    hasCurve
+      ? spline.radius *
+        (
+          1 -
+          Math.cos(angle)
+        )
+      : 0;
+
+  const localY =
+    hasCurve
+      ? spline.radius *
+        Math.sin(angle)
+      : spline.length;
+
+  const cosYaw =
+    Math.cos(yaw);
+  const sinYaw =
+    Math.sin(yaw);
+
+  return {
+    x:
+      spline.tileX * 300 +
+      spline.x +
+      localX * cosYaw +
+      localY * sinYaw,
+    y:
+      spline.tileY * 300 +
+      spline.y -
+      localX * sinYaw +
+      localY * cosYaw
+  };
+};
+
 const formatFileSize = (
   bytes: number
 ) => {
@@ -5935,24 +5995,16 @@ export function App() {
         return;
       }
 
-      const yaw =
-        selectedSpline.rotation *
-        Math.PI /
-        180;
+      const endPoint =
+        getSplineEndWorldPoint(
+          selectedSpline
+        );
 
       const endWorldX =
-        selectedSpline.tileX *
-          300 +
-        selectedSpline.x +
-        Math.sin(yaw) *
-          selectedSpline.length;
+        endPoint.x;
 
       const endWorldY =
-        selectedSpline.tileY *
-          300 +
-        selectedSpline.y +
-        Math.cos(yaw) *
-          selectedSpline.length;
+        endPoint.y;
 
       const endTileX =
         Math.floor(
@@ -6034,29 +6086,34 @@ export function App() {
         return;
       }
 
-      const yaw =
-        pendingSplinePlacement
-          .rotation *
-        Math.PI /
-        180;
+      const endPoint =
+        getSplineEndWorldPoint({
+          tileX:
+            pendingSplinePlacement
+              .targetTileX,
+          tileY:
+            pendingSplinePlacement
+              .targetTileY,
+          x:
+            pendingSplinePlacement.x,
+          y:
+            pendingSplinePlacement.y,
+          rotation:
+            pendingSplinePlacement
+              .rotation,
+          length:
+            pendingSplinePlacement
+              .length,
+          radius:
+            pendingSplinePlacement
+              .radius
+        });
 
       const endWorldX =
-        pendingSplinePlacement
-          .targetTileX *
-          300 +
-        pendingSplinePlacement.x +
-        Math.sin(yaw) *
-          pendingSplinePlacement
-            .length;
+        endPoint.x;
 
       const endWorldY =
-        pendingSplinePlacement
-          .targetTileY *
-          300 +
-        pendingSplinePlacement.y +
-        Math.cos(yaw) *
-          pendingSplinePlacement
-            .length;
+        endPoint.y;
 
       const endTileX =
         Math.floor(
@@ -6739,6 +6796,108 @@ export function App() {
       ]
     );
 
+  const updateEasyRoadPreview =
+    useCallback(
+      (
+        start: RoadPoint,
+        end: RoadPoint,
+        curveOffset: number
+      ) => {
+        if (!splinePlacementTemplate) {
+          return false;
+        }
+
+        const arc =
+          deriveRoadArc(
+            start,
+            end,
+            curveOffset
+          );
+
+        if (
+          !arc ||
+          arc.chordLength < 0.25
+        ) {
+          return false;
+        }
+
+        const startHeight =
+          sampleTerrainHeight(
+            activeTiles,
+            start.targetTileX,
+            start.targetTileY,
+            start.x,
+            start.y
+          ) ??
+          splinePlacementTemplate.z;
+
+        const endHeight =
+          sampleTerrainHeight(
+            activeTiles,
+            end.targetTileX,
+            end.targetTileY,
+            end.x,
+            end.y
+          ) ??
+          startHeight;
+
+        const gradient =
+          (
+            (
+              endHeight -
+              startHeight
+            ) /
+            Math.max(
+              0.001,
+              arc.length
+            )
+          ) *
+          100;
+
+        setPendingSplinePlacement({
+          ...start,
+          z: startHeight,
+          rotation: arc.rotation,
+          length: arc.length,
+          radius: arc.radius,
+          gradientStart: gradient,
+          gradientEnd: gradient
+        });
+
+        setError(undefined);
+        return true;
+      },
+      [
+        activeTiles,
+        splinePlacementTemplate
+      ]
+    );
+
+  const handleEasyRoadCurveChange =
+    useCallback(
+      (curveOffset: number) => {
+        setEasyRoadCurveOffset(
+          curveOffset
+        );
+
+        if (
+          easyRoadStart &&
+          easyRoadEnd
+        ) {
+          updateEasyRoadPreview(
+            easyRoadStart,
+            easyRoadEnd,
+            curveOffset
+          );
+        }
+      },
+      [
+        easyRoadEnd,
+        easyRoadStart,
+        updateEasyRoadPreview
+      ]
+    );
+
   const handleSplinePlacementPoint =
     useCallback(
       (
@@ -6770,6 +6929,8 @@ export function App() {
               splinePlacementTemplate.z;
 
             setEasyRoadStart(point);
+            setEasyRoadEnd(undefined);
+            setEasyRoadCurveOffset(0);
 
             setPendingSplinePlacement({
               ...point,
@@ -6782,106 +6943,26 @@ export function App() {
             });
 
             setSaveNotice(
-              "Início da rua marcado. Clique agora no ponto final."
+              "Início marcado. Continue segurando e arraste até o fim da rua; depois ajuste a curva pelo controle."
             );
             return;
           }
 
-          const startWorldX =
-            easyRoadStart
-              .targetTileX *
-              300 +
-            easyRoadStart.x;
+          setEasyRoadEnd(point);
 
-          const startWorldY =
-            easyRoadStart
-              .targetTileY *
-              300 +
-            easyRoadStart.y;
-
-          const endWorldX =
-            point.targetTileX *
-              300 +
-            point.x;
-
-          const endWorldY =
-            point.targetTileY *
-              300 +
-            point.y;
-
-          const deltaX =
-            endWorldX -
-            startWorldX;
-
-          const deltaY =
-            endWorldY -
-            startWorldY;
-
-          const length =
-            Math.hypot(
-              deltaX,
-              deltaY
+          const updated =
+            updateEasyRoadPreview(
+              easyRoadStart,
+              point,
+              easyRoadCurveOffset
             );
 
-          if (length < 0.25) {
+          if (!updated) {
             setError(
               "O ponto final precisa estar afastado do início da rua."
             );
-            return;
           }
 
-          const startHeight =
-            sampleTerrainHeight(
-              activeTiles,
-              easyRoadStart
-                .targetTileX,
-              easyRoadStart
-                .targetTileY,
-              easyRoadStart.x,
-              easyRoadStart.y
-            ) ??
-            splinePlacementTemplate.z;
-
-          const endHeight =
-            sampleTerrainHeight(
-              activeTiles,
-              point.targetTileX,
-              point.targetTileY,
-              point.x,
-              point.y
-            ) ??
-            startHeight;
-
-          const gradient =
-            (
-              (endHeight -
-                startHeight) /
-              length
-            ) *
-            100;
-
-          setPendingSplinePlacement({
-            ...easyRoadStart,
-            z: startHeight,
-            rotation:
-              Math.atan2(
-                deltaX,
-                deltaY
-              ) *
-              180 /
-              Math.PI,
-            length,
-            radius: 0,
-            gradientStart:
-              gradient,
-            gradientEnd:
-              gradient
-          });
-
-          setSaveNotice(
-            `Rua pronta para revisar: ${formatNumber(length)} m · desnível ${formatNumber(endHeight - startHeight)} m. Ajuste os campos se quiser e confirme.`
-          );
-          setError(undefined);
           return;
         }
 
@@ -6908,10 +6989,12 @@ export function App() {
       },
       [
         activeTiles,
+        easyRoadCurveOffset,
         easyRoadMode,
         easyRoadStart,
         splineLibraryPlacementIsHeight,
-        splinePlacementTemplate
+        splinePlacementTemplate,
+        updateEasyRoadPreview
       ]
     );
 
@@ -6931,6 +7014,8 @@ export function App() {
       );
       setEasyRoadMode(false);
       setEasyRoadStart(undefined);
+      setEasyRoadEnd(undefined);
+      setEasyRoadCurveOffset(0);
       setInsertingSpline(false);
     }, []);
 
