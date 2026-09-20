@@ -11430,6 +11430,16 @@ export function App() {
         setSaveNotice(undefined);
         setError(undefined);
 
+        if (isFullScreen) {
+          setFullScreenPanel(
+            "inspector"
+          );
+        } else {
+          setDesktopInspectorOpen(
+            true
+          );
+        }
+
         if (
           !Object.hasOwn(
             splineProfilesByPath,
@@ -11448,6 +11458,7 @@ export function App() {
       [
         activeTile,
         easyRoadMode,
+        isFullScreen,
         placementAsset,
         previewEditCount,
         selectedMap,
@@ -12992,6 +13003,16 @@ export function App() {
         setShowObjects(true);
         setError(undefined);
 
+        if (isFullScreen) {
+          setFullScreenPanel(
+            "inspector"
+          );
+        } else {
+          setDesktopInspectorOpen(
+            true
+          );
+        }
+
         if (
           !Object.hasOwn(
             geometryByPath,
@@ -13018,6 +13039,7 @@ export function App() {
         activeConstructionTool,
         activeTile,
         geometryByPath,
+        isFullScreen,
         junctionPlacementTarget,
         registerSceneryLibraryUse,
         sceneryMetadataByPath,
