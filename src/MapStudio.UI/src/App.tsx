@@ -6764,8 +6764,9 @@ export function App() {
         </span>
         <h1>Abrir mapa</h1>
         <p>
-          Escolha manualmente a pasta do mapa que
-          deseja visualizar.
+          O Map Studio lista os mapas instalados no
+          OMSI. Escolha o mapa pelo nome, sem precisar
+          navegar manualmente pelas pastas.
         </p>
       </div>
 
@@ -6773,7 +6774,7 @@ export function App() {
         <article className="setup-card centered">
           <h2>Selecione o OMSI primeiro</h2>
           <p>
-            Antes de abrir um mapa, precisamos
+            Antes de listar os mapas, precisamos
             conhecer a pasta raiz da instalação.
           </p>
           <button
@@ -6785,45 +6786,138 @@ export function App() {
           </button>
         </article>
       ) : (
-        <div className="setup-grid">
-          <article className="setup-card">
-            <div className="folder-illustration">
-              ▱
-            </div>
-            <h2>Selecionar pasta do mapa</h2>
-            <p>
-              O seletor será aberto diretamente em
-              <code> {rootPath}\\maps</code>.
-            </p>
+        <div className="map-catalog-shell">
+          <article className="setup-card map-catalog-card">
+            <div className="map-catalog-header">
+              <div>
+                <span className="card-kicker">
+                  MAPAS INSTALADOS
+                </span>
+                <h2>Escolha o mapa</h2>
+                <p>
+                  Fonte real: <code>{rootPath}\maps</code>
+                </p>
+              </div>
 
-            <div className="path-field">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={
+                  handleRefreshMapCatalog
+                }
+                disabled={
+                  loadingMapCatalog ||
+                  selectingMap
+                }
+              >
+                {loadingMapCatalog
+                  ? "Atualizando..."
+                  : "Atualizar lista"}
+              </button>
+            </div>
+
+            <div className="map-catalog-search">
+              <input
+                type="search"
+                value={mapSearch}
+                onChange={(event) =>
+                  setMapSearch(
+                    event.target.value
+                  )
+                }
+                placeholder="Buscar pelo nome ou pasta do mapa..."
+              />
               <span>
-                {selectedMap?.directoryPath ??
-                  "Nenhum mapa selecionado"}
+                {loadingMapCatalog
+                  ? mapCatalogProgress?.total
+                    ? `${mapCatalogProgress.completed}/${mapCatalogProgress.total} analisados`
+                    : "Procurando mapas..."
+                  : `${filteredAvailableMaps.length} de ${availableMaps.length} mapa(s)`}
               </span>
             </div>
 
-            <button
-              type="button"
-              className="primary-button wide"
-              onClick={handleOpenMap}
-              disabled={busy}
-            >
-              {selectingMap
-                ? "Selecionando..."
-                : selectedMap
-                  ? "Abrir outro mapa"
-                  : "Abrir mapa"}
-            </button>
+            <div className="map-catalog-list">
+              {filteredAvailableMaps.map(
+                (entry) => (
+                  <button
+                    type="button"
+                    key={
+                      entry.directoryName
+                    }
+                    className={
+                      selectedMap
+                        ?.directoryName ===
+                      entry.directoryName
+                        ? "map-catalog-entry active"
+                        : "map-catalog-entry"
+                    }
+                    onClick={() =>
+                      handleOpenCatalogMap(
+                        entry
+                      )
+                    }
+                    disabled={
+                      selectingMap
+                    }
+                  >
+                    <span className="map-catalog-symbol">
+                      M
+                    </span>
+                    <span className="map-catalog-copy">
+                      <strong>
+                        {entry.displayName}
+                      </strong>
+                      <small>
+                        {entry.directoryName}
+                        {" · "}
+                        {entry.tileCount} tiles
+                        {entry.usesWorldCoordinates
+                          ? " · worldcoordinates"
+                          : ""}
+                      </small>
+                      <small
+                        title={
+                          entry.directoryPath
+                        }
+                      >
+                        {entry.directoryPath}
+                      </small>
+                    </span>
+                    <span className="map-catalog-open">
+                      Abrir →
+                    </span>
+                  </button>
+                )
+              )}
+
+              {!loadingMapCatalog &&
+                filteredAvailableMaps.length ===
+                  0 && (
+                  <div className="map-catalog-empty">
+                    <strong>
+                      Nenhum mapa encontrado
+                    </strong>
+                    <span>
+                      Verifique se existem pastas com
+                      global.cfg dentro de OMSI 2\maps.
+                    </span>
+                  </div>
+                )}
+            </div>
+
+            {mapCatalogProgress &&
+              mapCatalogProgress.skipped >
+                0 && (
+                <div className="catalog-warning">
+                  {mapCatalogProgress.skipped} mapa(s)
+                  não puderam ser lidos e foram
+                  ignorados com segurança.
+                </div>
+              )}
           </article>
 
-          <aside className="info-card">
-            <h3>Orientações</h3>
-            <p>
-              Escolha uma pasta de mapa dentro de
-              <code> maps</code>. A pasta precisa
-              conter <code>global.cfg</code>.
-            </p>
+          <aside className="info-card map-catalog-info">
+            <h3>Mapa atual</h3>
 
             {selectedMap ? (
               <div className="selected-map-card">
@@ -6838,22 +6932,40 @@ export function App() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setView("editor")}
+                  onClick={() =>
+                    setView("editor")
+                  }
                 >
-                  Abrir no editor →
+                  Voltar ao editor →
                 </button>
               </div>
             ) : (
               <div className="status-message">
                 <strong>
-                  Nenhum mapa aberto
+                  Escolha um mapa da lista
                 </strong>
                 <span>
-                  A instalação não será varrida
-                  automaticamente.
+                  O mapa só é aberto depois do seu
+                  clique.
                 </span>
               </div>
             )}
+
+            <div className="manual-map-fallback">
+              <span>
+                Se um mapa não aparecer na lista:
+              </span>
+              <button
+                type="button"
+                onClick={handleOpenMap}
+                disabled={
+                  selectingMap ||
+                  loadingMapCatalog
+                }
+              >
+                Abrir pasta manualmente
+              </button>
+            </div>
           </aside>
         </div>
       )}
