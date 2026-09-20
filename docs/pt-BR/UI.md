@@ -788,3 +788,18 @@ Os cartões do painel Saúde abrem diretamente a biblioteca filtrada ou a audito
 As janelas e barras marcadas como ferramentas móveis agora guardam sua última posição no armazenamento local da interface. A restauração também funciona para painéis que são montados dinamicamente, como **Saúde do mapa**, **Conjuntos**, assistente de cruzamentos, barras de colocação e ferramentas em tela cheia.
 
 Ao restaurar, a posição é limitada às dimensões atuais do contêiner. Assim, mudar resolução, tamanho da janela ou modo de tela cheia não deixa uma ferramenta permanentemente fora da área visível. Falhas de armazenamento local não interferem na edição do mapa.
+
+
+### UX city-builder v2 — desktop e tela cheia
+
+O viewport passa a ser a área principal do editor. **Explorador/Biblioteca** e **Inspetor** funcionam como drawers sobrepostos e recolhíveis, em vez de colunas permanentes. Selecionar um objeto ou spline abre o Inspetor automaticamente; escolher uma ferramenta de construção abre a biblioteca apropriada.
+
+A construção fica em uma **dock inferior central** compartilhada entre desktop e tela cheia, com categorias de ruas, cruzamentos, pontes, prédios, vegetação, transporte, mobiliário, infraestrutura e terreno. Uma faixa contextual exibe o item/modo atual, filtros de seleção e Snap.
+
+O topo fica reservado para operações de edição, câmera e salvamento. Na tela cheia a barra superior é compactada e a faixa permanente de atalhos é removida para deixar a cena mais limpa.
+
+### Seleção robusta no mapa
+
+O clique usa três níveis de resolução: mesh real pickável, metadados herdados pelos nós pais e fallback geométrico pela posição/eixo real do OMSI. Isso mantém selecionáveis objetos com O3D incompleto/protegido, árvores/billboards e splines muito finas.
+
+Quando uma ferramenta de colocação está aberta, clicar diretamente em um item real existente prioriza a seleção desse item; clicar no terreno livre continua sendo usado para posicionamento.
