@@ -292,6 +292,8 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
+        item = null;
+
         pickingId =
             MapRenderer.Pick(
                 pixelX,

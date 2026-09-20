@@ -43,6 +43,10 @@ public sealed partial class NativeViewport : UserControl
 
     public event EventHandler<string>? SelectionStatusChanged;
 
+    public event Action<
+        NativePendingTransformEdit>?
+        TransformEditPending;
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {
@@ -642,6 +646,10 @@ public sealed partial class NativeViewport : UserControl
 
             if (edit is not null)
             {
+                TransformEditPending
+                    ?.Invoke(
+                        edit);
+
                 SelectionStatusChanged?.Invoke(
                     this,
                     edit.IsObject

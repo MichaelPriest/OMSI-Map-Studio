@@ -43,6 +43,11 @@
                 Spacing="8"
                 Margin="8,4">
                 <Button
+                    x:Name="SaveChangesButton"
+                    Content="Salvar alterações"
+                    IsEnabled="False"
+                    Click="OnSaveChangesClick" />
+                <Button
                     Content="Mover"
                     ToolTipService.ToolTip="Gizmo mover (W)"
                     Click="OnMoveGizmoClick" />

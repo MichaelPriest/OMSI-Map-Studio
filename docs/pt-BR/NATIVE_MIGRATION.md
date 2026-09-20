@@ -147,3 +147,12 @@ O modo **Mover** expõe X/Y/Z e mantém cada drag restrito ao eixo escolhido. O 
 Durante o drag, a geometria vermelha selecionada recebe uma transformação de preview sem reconstruir o mapa inteiro a cada pixel. Ao soltar, a transformação é aplicada à entidade do snapshot e convertida diretamente em `OmsiObjectTransformEdit` ou `OmsiSplineTransformEdit`, ficando como edição real pendente de persistência pelo Core.
 
 Os handles do gizmo usam `PickingKind.Gizmo` e IDs dedicados, portanto não colidem com IDs de objetos ou splines mesmo quando estão desenhados na frente da mesma geometria.
+
+
+### Checkpoint N2.2 — persistência transacional das transformações
+
+As transformações produzidas pelos gizmos agora podem ser acumuladas no host nativo e salvas no mapa OMSI real. O host deduplica edições sucessivas da mesma entidade e agrupa alterações por tile antes de gravar.
+
+A persistência reutiliza `OmsiTileObjectEditor` e `OmsiTileSplineEditor`; nenhum formato paralelo é criado. Cada tile alterado é processado pelo `SafeFileTransaction`, que cria backup em `.mapstudio-backups`, escreve em arquivo temporário e usa substituição atômica com restauração em caso de falha.
+
+Depois de uma gravação bem-sucedida, os tiles afetados são relidos pelo `MapStudio.Core` e o estado pendente é limpo. A interface WinUI expõe **Salvar alterações** apenas quando há transformações pendentes.

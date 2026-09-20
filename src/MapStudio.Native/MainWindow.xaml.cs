@@ -48,6 +48,66 @@ public sealed partial class MainWindow : Window
             {
                 SelectionText.Text = message;
             };
+
+        Viewport.TransformEditPending +=
+            edit =>
+            {
+                _session.StageTransformEdit(
+                    edit);
+
+                SaveChangesButton.IsEnabled =
+                    _session.PendingTransformCount >
+                    0;
+
+                StatusText.Text =
+                    $"{_session.PendingTransformCount} alteração(ões) pendente(s).";
+            };
+    }
+
+    private async void OnSaveChangesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            if (
+                _session.PendingTransformCount ==
+                0)
+            {
+                SaveChangesButton.IsEnabled =
+                    false;
+
+                return;
+            }
+
+            var count =
+                _session
+                    .PendingTransformCount;
+
+            StatusText.Text =
+                "Salvando alterações com backup...";
+
+            await _session
+                .SavePendingTransformsAsync();
+
+            SaveChangesButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"{count} alteração(ões) salva(s) com backup seguro.";
+
+            SelectionText.Text =
+                "Alterações persistidas no mapa OMSI.";
+        }
+        catch (Exception exception)
+        {
+            SaveChangesButton.IsEnabled =
+                _session.PendingTransformCount >
+                0;
+
+            StatusText.Text =
+                $"Falha ao salvar alterações: {exception.Message}";
+        }
     }
 
     private void OnMoveGizmoClick(
@@ -164,6 +224,9 @@ public sealed partial class MainWindow : Window
                     snapshot,
                     _session
                         .OmsiRootPath!);
+
+            SaveChangesButton.IsEnabled =
+                false;
 
             StatusText.Text =
                 $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core.";

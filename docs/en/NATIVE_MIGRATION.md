@@ -147,3 +147,12 @@ The editing phase has started in the Direct3D viewport. Selecting an object or s
 During drag, the red selected geometry receives a preview transform without rebuilding the entire map for every pointer pixel. On release, the transform is applied to the snapshot entity and converted directly into an `OmsiObjectTransformEdit` or `OmsiSplineTransformEdit`, becoming a real edit pending Core persistence.
 
 Gizmo handles use `PickingKind.Gizmo` and dedicated IDs, so they cannot collide with object or spline IDs even when drawn in front of the same geometry.
+
+
+### Checkpoint N2.2 — transactional transform persistence
+
+Transforms produced by the gizmos can now be accumulated by the native host and saved into the real OMSI map. The host deduplicates successive edits to the same entity and groups changes by tile before writing.
+
+Persistence reuses `OmsiTileObjectEditor` and `OmsiTileSplineEditor`; no parallel format is introduced. Every modified tile is processed through `SafeFileTransaction`, which creates a backup under `.mapstudio-backups`, stages a temporary file, and performs atomic replacement with rollback on failure.
+
+After a successful write, affected tiles are read again through `MapStudio.Core` and pending state is cleared. The WinUI interface exposes **Save changes** only while transforms are pending.
