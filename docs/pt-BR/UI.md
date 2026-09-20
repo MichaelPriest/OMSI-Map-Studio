@@ -676,3 +676,10 @@ Presets incluídos: **Arborização de avenida**, **Postes de iluminação**, **
 A barra principal ganhou um grupo **Construção** dedicado para abrir diretamente **Ruas**, **Cruzamentos**, **Pontes**, **Prédios**, **Vegetação**, **Transporte**, **Mobiliário**, **Infraestrutura** e **Terreno**. Cada botão apenas direciona a biblioteca real correspondente; nenhum catálogo paralelo de assets é criado.
 
 O modo **Ponte/Elevado** abre o grupo real de splines de pontes/túneis e reutiliza o criador de rua por pontos e alça de curva. Uma elevação configurável é somada às alturas reais do terreno no início e no fim da spline, preservando a conversão para rotação, comprimento, raio e gradiente OMSI.
+
+
+### Auditoria de dependências e duplicação rápida
+
+**Verificar dependências** carrega os catálogos reais de `Sceneryobjects` e `Splines` e compara seus caminhos com tudo que o mapa aberto referencia. Arquivos `.sco` e `.sli` ausentes aparecem em um painel flutuante no viewport, separados de falhas de textura ou O3D.
+
+`Ctrl+D` inicia a colocação de uma cópia do objeto selecionado usando exatamente o mesmo `.sco`, Z, rotação, pitch e bank como base; o próximo clique define a nova posição e continua usando o fluxo seguro de inserção.

@@ -2905,3 +2905,65 @@ code {
   color: #7da0b7;
   font-size: 7px;
 }
+
+
+.dependency-audit-button {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #28506b;
+  border-radius: 5px;
+  background: #071a27;
+  color: #9bb8ca;
+  font-size: 7px;
+}
+
+.dependency-audit-button.warning {
+  border-color: #9a6d28;
+  background: #2a1d08;
+  color: #f2c573;
+}
+
+.dependency-warning-panel {
+  position: absolute;
+  right: 12px;
+  top: 58px;
+  z-index: 18;
+  display: grid;
+  max-width: min(430px, 46vw);
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid #9a6826;
+  border-radius: 7px;
+  background: rgb(35 24 8 / 94%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 35%);
+}
+
+.dependency-warning-panel > div {
+  display: grid;
+  gap: 2px;
+}
+
+.dependency-warning-panel strong {
+  color: #ffd28a;
+  font-size: 8px;
+}
+
+.dependency-warning-panel span,
+.dependency-warning-panel small {
+  color: #c6ab7e;
+  font-size: 7px;
+}
+
+.dependency-warning-list {
+  max-height: 130px;
+  overflow: auto;
+}
+
+.dependency-warning-list code {
+  overflow: hidden;
+  color: #e0bf88;
+  font-family: Consolas, monospace;
+  font-size: 6.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

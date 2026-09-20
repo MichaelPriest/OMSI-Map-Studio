@@ -2923,6 +2923,11 @@ export function App() {
   ] = useState(false);
 
   const [
+    sceneryLibraryReady,
+    setSceneryLibraryReady
+  ] = useState(false);
+
+  const [
     textureAssetsByKey,
     setTextureAssetsByKey
   ] = useState<
@@ -3099,6 +3104,11 @@ export function App() {
   const [
     loadingSplineLibrary,
     setLoadingSplineLibrary
+  ] = useState(false);
+
+  const [
+    splineLibraryReady,
+    setSplineLibraryReady
   ] = useState(false);
 
   const [
@@ -3466,9 +3476,11 @@ export function App() {
           setSceneryLibrary([]);
           setLibrarySearch("");
           setLoadingSceneryLibrary(false);
+          setSceneryLibraryReady(false);
           setSplineLibrary([]);
           setSplineLibrarySearch("");
           setLoadingSplineLibrary(false);
+          setSplineLibraryReady(false);
           setSplineLibraryPlacementAsset(
             undefined
           );
@@ -3659,6 +3671,9 @@ export function App() {
           setLoadingSceneryLibrary(
             false
           );
+          setSceneryLibraryReady(
+            true
+          );
           return;
         }
 
@@ -3671,6 +3686,9 @@ export function App() {
           );
           setLoadingSplineLibrary(
             false
+          );
+          setSplineLibraryReady(
+            true
           );
           return;
         }
@@ -6255,6 +6273,84 @@ export function App() {
     mapLoadMode,
     objects
   ]);
+
+  const missingSceneryDependencies =
+    useMemo(() => {
+      if (!sceneryLibraryReady) {
+        return [];
+      }
+
+      const installed =
+        new Set(
+          sceneryLibrary.map(
+            (entry) =>
+              normalizeAssetClassifierText(
+                entry.sceneryObjectPath
+              )
+          )
+        );
+
+      return Array.from(
+        new Set(
+          objects.map(
+            (item) =>
+              item.sceneryObjectPath
+          )
+        )
+      ).filter(
+        (path) =>
+          !installed.has(
+            normalizeAssetClassifierText(
+              path
+            )
+          )
+      );
+    }, [
+      objects,
+      sceneryLibrary,
+      sceneryLibraryReady
+    ]);
+
+  const missingSplineDependencies =
+    useMemo(() => {
+      if (!splineLibraryReady) {
+        return [];
+      }
+
+      const installed =
+        new Set(
+          splineLibrary.map(
+            (entry) =>
+              normalizeAssetClassifierText(
+                entry.splinePath
+              )
+          )
+        );
+
+      return Array.from(
+        new Set(
+          splines.map(
+            (item) =>
+              item.splinePath
+          )
+        )
+      ).filter(
+        (path) =>
+          !installed.has(
+            normalizeAssetClassifierText(
+              path
+            )
+          )
+      );
+    }, [
+      splineLibrary,
+      splineLibraryReady,
+      splines
+    ]);
+
+  const missingDependencyCount =
+    missingSceneryDependencies.length +
+    missingSplineDependencies.length;
 
   const loadedMapGeometryCount =
     useMemo(
@@ -10108,6 +10204,48 @@ export function App() {
       selectedObject
     ]);
 
+  useEffect(() => {
+    const handleDuplicateShortcut = (
+      event: KeyboardEvent
+    ) => {
+      const target =
+        event.target as
+          | HTMLElement
+          | null;
+
+      if (
+        !(event.ctrlKey ||
+          event.metaKey) ||
+        event.key.toLowerCase() !==
+          "d" ||
+        target?.isContentEditable ||
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        !selectedObject
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      handlePlaceSelectedObjectCopy();
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleDuplicateShortcut
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        handleDuplicateShortcut
+      );
+  }, [
+    handlePlaceSelectedObjectCopy,
+    selectedObject
+  ]);
+
   const handleLibraryAssetDrop =
     useCallback(
       (payload: {
@@ -10670,6 +10808,46 @@ export function App() {
         splineLibrary.length
       ]
     );
+
+  const handleAuditDependencies =
+    useCallback(() => {
+      if (!bridgeAvailable) {
+        setError(
+          "A verificação de dependências exige o aplicativo desktop."
+        );
+        return;
+      }
+
+      if (
+        !sceneryLibraryReady &&
+        !loadingSceneryLibrary
+      ) {
+        setLoadingSceneryLibrary(
+          true
+        );
+        loadSceneryLibrary();
+      }
+
+      if (
+        !splineLibraryReady &&
+        !loadingSplineLibrary
+      ) {
+        setLoadingSplineLibrary(
+          true
+        );
+        loadSplineLibrary();
+      }
+
+      setSaveNotice(
+        "Verificando .sco e .sli usados pelo mapa contra a instalação atual do OMSI."
+      );
+    }, [
+      bridgeAvailable,
+      loadingSceneryLibrary,
+      loadingSplineLibrary,
+      sceneryLibraryReady,
+      splineLibraryReady
+    ]);
 
   const openQuickCreate =
     useCallback(
@@ -13608,6 +13786,34 @@ export function App() {
               )
             )}
           </div>
+
+          <button
+            type="button"
+            className={
+              missingDependencyCount > 0
+                ? "dependency-audit-button warning"
+                : "dependency-audit-button"
+            }
+            onClick={
+              handleAuditDependencies
+            }
+            disabled={
+              loadingSceneryLibrary ||
+              loadingSplineLibrary
+            }
+            title="Comparar assets usados no mapa com a instalação atual"
+          >
+            {loadingSceneryLibrary ||
+            loadingSplineLibrary
+              ? "Verificando..."
+              : sceneryLibraryReady &&
+                  splineLibraryReady
+                ? missingDependencyCount > 0
+                  ? "⚠ Faltam " +
+                    missingDependencyCount
+                  : "✓ Dependências"
+                : "Verificar dependências"}
+          </button>
 
           <span className="toolbar-separator" />
 
@@ -17239,6 +17445,66 @@ export function App() {
                 >
                   Cancelar
                 </button>
+              </div>
+            )}
+
+            {sceneryLibraryReady &&
+              splineLibraryReady &&
+              missingDependencyCount > 0 && (
+              <div
+                className="dependency-warning-panel floating-tool"
+                data-floating-tool
+              >
+                <button
+                  type="button"
+                  className="tool-drag-grip drag-handle"
+                  data-drag-handle
+                  title="Mover aviso"
+                >
+                  ⋮⋮
+                </button>
+                <div>
+                  <strong>
+                    ⚠ {missingDependencyCount}
+                    {" "}dependência(s) ausente(s)
+                  </strong>
+                  <span>
+                    O mapa referencia arquivos que não existem no catálogo atual do OMSI.
+                  </span>
+                </div>
+                <div className="dependency-warning-list">
+                  {missingSceneryDependencies
+                    .slice(0, 5)
+                    .map((path) => (
+                      <code key={"sco:" + path}>
+                        SCO · {path}
+                      </code>
+                    ))}
+                  {missingSplineDependencies
+                    .slice(
+                      0,
+                      Math.max(
+                        0,
+                        8 -
+                          Math.min(
+                            5,
+                            missingSceneryDependencies.length
+                          )
+                      )
+                    )
+                    .map((path) => (
+                      <code key={"sli:" + path}>
+                        SLI · {path}
+                      </code>
+                    ))}
+                  {missingDependencyCount >
+                    8 && (
+                    <small>
+                      + {missingDependencyCount - 8}
+                      {" "}outro(s)
+                    </small>
+                  )}
+                </div>
               </div>
             )}
 

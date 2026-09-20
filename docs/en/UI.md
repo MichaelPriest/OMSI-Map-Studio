@@ -676,3 +676,10 @@ Built-in presets include **Avenue trees**, **Street lights**, **Aligned houses**
 The main toolbar now has a dedicated **Construction** group that opens **Roads**, **Junctions**, **Bridges**, **Buildings**, **Vegetation**, **Transit**, **Street furniture**, **Infrastructure**, and **Terrain** directly. Each button only routes into the corresponding real asset library; no parallel fake asset catalog is created.
 
 **Bridge/Elevated** mode opens the real bridge/tunnel spline group and reuses the point/drag road builder and curve handle. A configurable elevation is added to the real terrain height at both spline endpoints while preserving conversion into OMSI rotation, length, radius, and gradient fields.
+
+
+### Dependency audit and quick duplication
+
+**Check dependencies** loads the real `Sceneryobjects` and `Splines` catalogs and compares their paths against every reference in the open map. Missing `.sco` and `.sli` files appear in a floating viewport panel, separately from texture or O3D failures.
+
+`Ctrl+D` starts placing a copy of the selected object using the exact same `.sco`, Z, rotation, pitch, and bank as the initial transform; the next click defines the new position and still uses the safe insertion pipeline.
