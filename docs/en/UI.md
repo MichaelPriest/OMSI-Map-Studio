@@ -840,3 +840,8 @@ The editor top menu has been simplified to expose only actions already supported
 - **Map** groups real-map coordinates, Map Health, dependency auditing, and Construction Sets.
 
 The old disabled placeholders were removed from the active surface. The top bar now also shows a compact pending-edit count and the current map loading mode. The same pattern remains available in desktop and fullscreen, while the bottom bar stays the primary category-based construction surface.
+
+
+### Movable panels
+
+Explorer and Inspector now use the same persistent floating-tool system as the other editor tools. Each drawer has its own drag handle; its position is clamped to the usable editor area and restored from local UI storage. The panel keeps a stable size while being dragged in both desktop and fullscreen modes.
