@@ -1041,13 +1041,16 @@ public partial class MainWindow : Window
                 await OmsiMapCatalog.OpenMapAsync(
                     selectedDirectory);
 
-            _knownMaps =
-                new Dictionary<string, OmsiMapDescriptor>(
-                    _knownMaps,
-                    StringComparer.OrdinalIgnoreCase)
-                {
-                    [map.DirectoryName] = map
-                };
+            var knownMaps =
+                _knownMaps.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value,
+                    StringComparer.OrdinalIgnoreCase);
+
+            knownMaps[map.DirectoryName] =
+                map;
+
+            _knownMaps = knownMaps;
 
             OpenKnownMap(map);
         }
