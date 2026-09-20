@@ -4055,6 +4055,86 @@ export function Viewport({
                     1.5
                 )
               );
+      } else if (
+        pendingPlacement
+      ) {
+        camera.setTarget(
+          new Vector3(
+            pendingPlacement.tileX *
+              300 +
+              pendingPlacement.x,
+            pendingPlacement.z,
+            pendingPlacement.tileY *
+              300 +
+              pendingPlacement.y
+          )
+        );
+        camera.radius = 45;
+      } else if (
+        pendingSplinePlacement
+      ) {
+        const previewSpline:
+          OmsiPlacedSpline = {
+            tileX:
+              pendingSplinePlacement
+                .targetTileX,
+            tileY:
+              pendingSplinePlacement
+                .targetTileY,
+            headerValue: "",
+            splinePath:
+              splinePlacementTemplate
+                ?.splinePath ?? "",
+            splineId: -1,
+            sourceSectionOrdinal: -1,
+            previousSplineId: -1,
+            nextSplineId: -1,
+            x:
+              pendingSplinePlacement.x,
+            y:
+              pendingSplinePlacement.y,
+            z:
+              pendingSplinePlacement.z,
+            rotation:
+              pendingSplinePlacement
+                .rotation,
+            length:
+              pendingSplinePlacement
+                .length,
+            radius:
+              pendingSplinePlacement
+                .radius,
+            gradientStart:
+              pendingSplinePlacement
+                .gradientStart,
+            gradientEnd:
+              pendingSplinePlacement
+                .gradientEnd,
+            isHeightSpline:
+              splinePlacementTemplate
+                ?.isHeightSpline ??
+              false
+          };
+
+        camera.setTarget(
+          getSplineFrame(
+            previewSpline,
+            previewSpline.length / 2
+          ).center
+        );
+
+        camera.radius =
+          Math.max(
+            40,
+            Math.min(
+              180,
+              Math.max(
+                20,
+                previewSpline.length
+              ) *
+                1.5
+            )
+          );
       }
     } else if (
       cameraAction?.type === "tile" &&
