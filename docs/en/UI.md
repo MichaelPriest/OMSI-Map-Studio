@@ -875,3 +875,8 @@ When an object or spline is selected from the construction shelf or library, the
 Desktop and fullscreen now share the same **movable floating quick toolbar** for selection, move/rotate, fit/focus, snapping, undo/redo, saving and layer visibility. Its position is persisted together with the other floating tools.
 
 The old horizontal toolbar has been removed from the active layout to reduce duplicated controls. Its functions remain available through the quick toolbar, bottom construction HUD and top menus. **Full map** and **Performance 3×3** modes are now available under **View**, while the active mode remains visible in the menu status.
+
+
+### Selection filters in real viewport picking
+
+The **All / Objects / Splines / Terrain** filters are now enforced directly by viewport picking, including real meshes, child hierarchies and geometric fallback. In **Objects** mode splines cannot steal the click; in **Splines** mode objects cannot steal it; and in **Terrain** mode pointerdown no longer selects scenery before terrain picking is processed.
