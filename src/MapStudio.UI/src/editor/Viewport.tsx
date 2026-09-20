@@ -8235,7 +8235,7 @@ export function Viewport({
 
     if (
       !scene ||
-      scene.isDisposed()
+      scene.isDisposed
     ) {
       return;
     }
