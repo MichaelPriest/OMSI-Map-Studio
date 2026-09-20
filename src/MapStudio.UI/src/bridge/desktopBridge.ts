@@ -182,6 +182,7 @@ export type OmsiSceneryObjectMetadata = {
   collisionMeshes: OmsiSceneryMeshReference[];
   usesAbsoluteHeight: boolean;
   tree: OmsiSceneryTreeDefinition | null;
+  renderType: string | null;
 };
 
 export type OmsiO3dMaterial = {
@@ -266,6 +267,7 @@ export type OmsiSceneryObjectGeometry = {
     geometry: OmsiO3dGeometry;
   }>;
   usesAbsoluteHeight: boolean;
+  renderType: string | null;
 };
 
 export type HostMessage =
