@@ -329,3 +329,11 @@ This brings F11 mode closer to the approved visual reference without creating a 
 - Explorer/Inspector, Map Health, and Construction Sets close actions reuse `discard`;
 - Map Health states reuse `success` and `warning`;
 - missing-template warning reuses `warning`.
+
+
+### Sixth migrated batch
+
+- `favorite` for Library favorites;
+- `collection` for asset collections;
+- `preview` for opening the real asset preview;
+- placement actions continue to reuse `sco-object`, `sli-spline`, and `profile`.

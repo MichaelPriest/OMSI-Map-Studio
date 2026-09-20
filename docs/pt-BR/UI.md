@@ -918,3 +918,13 @@ Todo o comportamento continua ligado ao estado real do editor; não há comandos
 - barra inferior troca o diagnóstico contínuo por segmentos compactos com seleção, tile ativo, snap, modo de carregamento, contagem de objetos/splines e estado;
 - diagnósticos detalhados de O3D/SLI/texturas continuam disponíveis no tooltip do estado e nos painéis próprios;
 - nenhuma informação fictícia foi adicionada: os segmentos usam apenas estado real do editor.
+
+
+### Cartões visuais da Biblioteca
+
+- objetos `.sco` e splines `.sli` passam a usar cartões mais visuais, com miniatura maior;
+- a miniatura continua vindo exclusivamente do cache real produzido por `AssetPreview3D`;
+- quando ainda não há thumbnail real, o cartão usa somente o ícone semântico da categoria, sem imagem fictícia;
+- ações Favoritar, Coleção, Prévia, Colocar, Normal e Altura passam a usar o pacote SVG compartilhado;
+- o cartão selecionado recebe destaque visual sem alterar a seleção ou o fluxo de persistência;
+- drag-and-drop para o mapa continua usando os mesmos MIME internos e dados reais.

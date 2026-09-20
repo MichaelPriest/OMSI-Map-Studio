@@ -329,3 +329,11 @@ Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda im
 - fechar Explorer/Inspector, Saúde do mapa e Conjuntos reutiliza `discard`;
 - estados da Saúde do mapa reutilizam `success` e `warning`;
 - aviso de templates ausentes reutiliza `warning`.
+
+
+### Sexto lote migrado
+
+- `favorite` para favoritos da biblioteca;
+- `collection` para coleções de assets;
+- `preview` para abrir a prévia real do asset;
+- ações de colocação continuam reutilizando `sco-object`, `sli-spline` e `profile`.

@@ -918,3 +918,13 @@ All behavior remains connected to real editor state; no fake commands are introd
 - the bottom bar replaces the continuous diagnostic string with compact segments for selection, active tile, snap, load mode, object/spline counts, and state;
 - detailed O3D/SLI/texture diagnostics remain available through the state tooltip and dedicated panels;
 - no fake information was introduced: every segment uses real editor state only.
+
+
+### Visual Library cards
+
+- `.sco` objects and `.sli` splines now use more visual cards with larger thumbnails;
+- thumbnails still come exclusively from the real `AssetPreview3D` cache;
+- when a real thumbnail is not available yet, the card uses only the semantic category icon, with no fake image;
+- Favorite, Collection, Preview, Place, Normal, and Height actions now use the shared SVG pack;
+- the selected card gets a stronger visual state without changing selection or persistence behavior;
+- drag-and-drop to the map keeps the same internal MIME payloads and real data.
