@@ -736,3 +736,10 @@ The movable **Sets** panel stores reusable combinations made from one real `.sli
 When **Build set** is used, the road builder draws the real base spline. After the host actually saves that spline, companions are distributed along the returned spline geometry — including curves and gradient — and sent through `insertObjectMultiBatch`, up to 512 total objects.
 
 Each companion `.sco` must have a preservation template in the current map. This preserves OMSI-specific extra values instead of inventing object structure. Sets live in UI-local storage and only contain asset references/placement configuration; they never copy assets.
+
+
+### Start/end handles in the road builder
+
+In addition to the blue curvature handle, road/bridge drawing now shows a **green** start handle and a **red** end handle. Both can be dragged directly in the viewport; preview length, rotation, radius, and gradient are recalculated while the point moves.
+
+Endpoint handles reuse existing spline-end snapping. When a handle enters the configured snap range it can lock exactly onto a real road endpoint. The existing spline remains untouched; only the new unsaved road is adjusted.

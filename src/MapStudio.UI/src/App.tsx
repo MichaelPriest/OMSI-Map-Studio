@@ -10655,6 +10655,69 @@ export function App() {
       ]
     );
 
+  const handleRoadControlPointChange =
+    useCallback(
+      (
+        control: "start" | "end",
+        point: RoadPoint
+      ) => {
+        if (
+          !easyRoadStart ||
+          !easyRoadEnd
+        ) {
+          return;
+        }
+
+        const snap =
+          roadEndpointSnapEnabled
+            ? findRoadEndpointSnap(
+                point,
+                splinesForViewport,
+                roadEndpointSnapDistance
+              )
+            : undefined;
+        const resolved =
+          snap?.point ??
+          point;
+
+        const nextStart =
+          control === "start"
+            ? resolved
+            : easyRoadStart;
+        const nextEnd =
+          control === "end"
+            ? resolved
+            : easyRoadEnd;
+
+        if (control === "start") {
+          setEasyRoadStart(
+            resolved
+          );
+          setRoadStartSnap(snap);
+        } else {
+          setEasyRoadEnd(
+            resolved
+          );
+          setRoadEndSnap(snap);
+        }
+
+        updateEasyRoadPreview(
+          nextStart,
+          nextEnd,
+          easyRoadCurveOffset
+        );
+      },
+      [
+        easyRoadCurveOffset,
+        easyRoadEnd,
+        easyRoadStart,
+        roadEndpointSnapDistance,
+        roadEndpointSnapEnabled,
+        splinesForViewport,
+        updateEasyRoadPreview
+      ]
+    );
+
   const handleSplinePlacementPoint =
     useCallback(
       (
@@ -18043,6 +18106,9 @@ export function App() {
               onRoadCurveOffsetChange={
                 handleEasyRoadCurveChange
               }
+              onRoadControlPointChange={
+                handleRoadControlPointChange
+              }
               activeTile={activeTile}
               onTerrainPoint={
                 handleTerrainPoint
@@ -18856,7 +18922,7 @@ export function App() {
                     <div>
                       <strong>Curva</strong>
                       <span>
-                        Arraste a esfera azul no cenário ou use o controle abaixo para curvar a rua mantendo início e fim.
+                        Arraste a esfera azul para curvar. As esferas verde e vermelha movem início e fim do traçado.
                       </span>
                     </div>
                     <input

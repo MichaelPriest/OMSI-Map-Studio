@@ -174,6 +174,15 @@ type ViewportProps = {
   onRoadCurveOffsetChange?: (
     offset: number
   ) => void;
+  onRoadControlPointChange?: (
+    control: "start" | "end",
+    point: {
+      targetTileX: number;
+      targetTileY: number;
+      x: number;
+      y: number;
+    }
+  ) => void;
   objects: OmsiPlacedObject[];
   splines: OmsiPlacedSpline[];
   activeTile?: {
@@ -3903,6 +3912,7 @@ export function Viewport({
   roadDragMode,
   roadCurveControl,
   onRoadCurveOffsetChange,
+  onRoadControlPointChange,
   objects,
   splines,
   activeTile,
@@ -3970,6 +3980,19 @@ export function Viewport({
     );
 
   const roadCurveLastEmitRef =
+    useRef(0);
+
+  const roadEndpointDragPointerRef =
+    useRef<number | undefined>(
+      undefined
+    );
+
+  const roadEndpointDragControlRef =
+    useRef<
+      "start" | "end" | undefined
+    >(undefined);
+
+  const roadEndpointLastEmitRef =
     useRef(0);
 
   const lastMapItemClickRef =
@@ -5094,6 +5117,114 @@ export function Viewport({
     }
 
     if (
+      roadCurveControl &&
+      onRoadControlPointChange &&
+      !usesWorldCoordinates
+    ) {
+      const endpointDefinitions:
+        Array<{
+          control: "start" | "end";
+          point:
+            typeof roadCurveControl.start;
+          color: Color3;
+          emissive: Color3;
+        }> = [
+          {
+            control: "start",
+            point:
+              roadCurveControl.start,
+            color:
+              new Color3(
+                0.2,
+                0.9,
+                0.45
+              ),
+            emissive:
+              new Color3(
+                0.08,
+                0.38,
+                0.18
+              )
+          },
+          {
+            control: "end",
+            point:
+              roadCurveControl.end,
+            color:
+              new Color3(
+                0.95,
+                0.38,
+                0.3
+              ),
+            emissive:
+              new Color3(
+                0.4,
+                0.12,
+                0.08
+              )
+          }
+        ];
+
+      for (const definition of
+        endpointDefinitions) {
+        const worldX =
+          definition.point
+            .targetTileX *
+            300 +
+          definition.point.x;
+        const worldZ =
+          definition.point
+            .targetTileY *
+            300 +
+          definition.point.y;
+        const worldY =
+          getTerrainHeightAtWorldPoint(
+            tiles,
+            worldX,
+            worldZ
+          ) + 0.95;
+
+        const handle =
+          MeshBuilder.CreateSphere(
+            `road-${definition.control}-control-handle`,
+            {
+              diameter: 2.15,
+              segments: 12
+            },
+            scene
+          );
+
+        handle.position.set(
+          worldX,
+          worldY,
+          worldZ
+        );
+
+        const material =
+          new StandardMaterial(
+            `road-${definition.control}-control-material`,
+            scene
+          );
+
+        material.diffuseColor =
+          definition.color;
+        material.emissiveColor =
+          definition.emissive;
+        material.specularColor =
+          Color3.Black();
+
+        handle.material = material;
+        handle.isPickable = true;
+        handle.metadata = {
+          mapStudioKind:
+            "roadEndpointControl",
+          control:
+            definition.control
+        };
+      }
+    }
+
+    if (
       showSplines &&
       !usesWorldCoordinates &&
       selectedSpline &&
@@ -5585,6 +5716,53 @@ export function Viewport({
     const handlePointerMove = (
       event: PointerEvent
     ) => {
+      if (
+        roadEndpointDragPointerRef
+          .current ===
+          event.pointerId
+      ) {
+        const now =
+          performance.now();
+
+        if (
+          now -
+            roadEndpointLastEmitRef
+              .current >=
+          40
+        ) {
+          const point =
+            getPlacementPointFromPointer(
+              event
+            );
+          const control =
+            roadEndpointDragControlRef
+              .current;
+
+          if (
+            point &&
+            control
+          ) {
+            roadEndpointLastEmitRef
+              .current =
+              now;
+            onRoadControlPointChange?.(
+              control,
+              {
+                targetTileX:
+                  point.tileX,
+                targetTileY:
+                  point.tileY,
+                x: point.x,
+                y: point.y
+              }
+            );
+          }
+        }
+
+        event.preventDefault();
+        return;
+      }
+
       if (
         roadCurveDragPointerRef.current ===
           event.pointerId
@@ -6466,6 +6644,63 @@ export function Viewport({
       );
     };
 
+    const pickRoadEndpointControl = (
+      event: PointerEvent
+    ):
+      | "start"
+      | "end"
+      | undefined => {
+      if (
+        !roadCurveControl ||
+        !onRoadControlPointChange
+      ) {
+        return undefined;
+      }
+
+      const rect =
+        canvas.getBoundingClientRect();
+
+      const pick =
+        scene.pick(
+          (
+            event.clientX -
+            rect.left
+          ) *
+            (
+              engine.getRenderWidth() /
+              rect.width
+            ),
+          (
+            event.clientY -
+            rect.top
+          ) *
+            (
+              engine.getRenderHeight() /
+              rect.height
+            ),
+          (mesh) =>
+            mesh.metadata
+              ?.mapStudioKind ===
+            "roadEndpointControl",
+          false,
+          camera
+        );
+
+      if (!pick?.hit) {
+        return undefined;
+      }
+
+      const control =
+        pick.pickedMesh
+          ?.metadata
+          ?.control;
+
+      return control === "start" ||
+        control === "end"
+        ? control
+        : undefined;
+    };
+
     const pickRoadCurveControl = (
       event: PointerEvent
     ) => {
@@ -6524,6 +6759,30 @@ export function Viewport({
         y: event.clientY
       };
 
+      const endpointControl =
+        pickRoadEndpointControl(
+          event
+        );
+
+      if (endpointControl) {
+        roadEndpointDragPointerRef
+          .current =
+          event.pointerId;
+        roadEndpointDragControlRef
+          .current =
+          endpointControl;
+        roadEndpointLastEmitRef
+          .current =
+          performance.now();
+        pointerDownHandledSelection =
+          false;
+        canvas.setPointerCapture(
+          event.pointerId
+        );
+        event.preventDefault();
+        return;
+      }
+
       if (
         pickRoadCurveControl(
           event
@@ -6568,6 +6827,58 @@ export function Viewport({
     };
 
     const handlePointerUp = (event: PointerEvent) => {
+      if (
+        roadEndpointDragPointerRef
+          .current ===
+          event.pointerId
+      ) {
+        const point =
+          getPlacementPointFromPointer(
+            event
+          );
+        const control =
+          roadEndpointDragControlRef
+            .current;
+
+        if (
+          point &&
+          control
+        ) {
+          onRoadControlPointChange?.(
+            control,
+            {
+              targetTileX:
+                point.tileX,
+              targetTileY:
+                point.tileY,
+              x: point.x,
+              y: point.y
+            }
+          );
+        }
+
+        if (
+          canvas.hasPointerCapture(
+            event.pointerId
+          )
+        ) {
+          canvas.releasePointerCapture(
+            event.pointerId
+          );
+        }
+
+        roadEndpointDragPointerRef
+          .current =
+          undefined;
+        roadEndpointDragControlRef
+          .current =
+          undefined;
+        pointerStart = undefined;
+        pointerDownHandledSelection =
+          false;
+        return;
+      }
+
       if (
         roadCurveDragPointerRef.current ===
           event.pointerId
@@ -7158,6 +7469,19 @@ export function Viewport({
       event: PointerEvent
     ) => {
       if (
+        roadEndpointDragPointerRef
+          .current ===
+          event.pointerId
+      ) {
+        roadEndpointDragPointerRef
+          .current =
+          undefined;
+        roadEndpointDragControlRef
+          .current =
+          undefined;
+      }
+
+      if (
         roadCurveDragPointerRef.current ===
         event.pointerId
       ) {
@@ -7395,6 +7719,7 @@ export function Viewport({
     roadDragMode,
     roadCurveControl,
     onRoadCurveOffsetChange,
+    onRoadControlPointChange,
     objects,
     splines,
     activeTile,

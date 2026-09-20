@@ -736,3 +736,10 @@ O painel móvel **Conjuntos** permite salvar combinações reutilizáveis formad
 Ao clicar **Construir conjunto**, o criador de rua usa a spline-base real. Depois que a spline é efetivamente salva pelo host, os objetos são distribuídos ao longo da geometria da spline retornada — inclusive curvas e gradiente — e enviados pelo `insertObjectMultiBatch`, com até 512 objetos no total.
 
 O editor exige que cada `.sco` companheiro possua template preservativo no mapa atual. Isso mantém os valores extras específicos do OMSI e evita inventar estrutura de objeto. Os conjuntos ficam no armazenamento local da interface e apenas guardam referências/cfg de colocação; não copiam assets.
+
+
+### Alças de início e fim no criador de vias
+
+Além da alça azul de curvatura, o traçado de rua/ponte agora mostra uma alça **verde** no início e uma **vermelha** no fim. As duas podem ser arrastadas diretamente no viewport; o comprimento, rotação, raio e gradiente do preview são recalculados enquanto o ponto se move.
+
+As alças de extremidade reutilizam o snap de pontas de splines existentes. Quando uma alça entra no alcance configurado, ela pode encaixar exatamente numa ponta real de via. A spline existente continua intacta; somente o novo traçado é ajustado antes do salvamento.
