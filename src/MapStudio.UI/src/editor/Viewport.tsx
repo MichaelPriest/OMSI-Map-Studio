@@ -4575,6 +4575,38 @@ export function Viewport({
       )
     });
 
+    const syncActiveTileToTarget = () => {
+      if (
+        usesWorldCoordinates ||
+        !onActiveTileChange ||
+        tiles.length === 0
+      ) {
+        return;
+      }
+
+      const tileX =
+        Math.floor(
+          camera.target.x / 300
+        );
+      const tileY =
+        Math.floor(
+          camera.target.z / 300
+        );
+
+      if (
+        tiles.some(
+          (tile) =>
+            tile.x === tileX &&
+            tile.y === tileY
+        )
+      ) {
+        onActiveTileChange({
+          x: tileX,
+          y: tileY
+        });
+      }
+    };
+
     const panCamera = (
       horizontalPixels: number,
       verticalPixels: number,
@@ -4707,6 +4739,7 @@ export function Viewport({
       }
 
       navigationPointer = undefined;
+      syncActiveTileToTarget();
     };
 
     const handleWheel = (
@@ -4728,14 +4761,20 @@ export function Viewport({
     const handleViewportKeyDown = (
       event: KeyboardEvent
     ) => {
+      const tileJump =
+        !usesWorldCoordinates &&
+        event.ctrlKey;
+
       const step =
-        Math.max(
-          usesWorldCoordinates
-            ? 0.25
-            : 5,
-          camera.radius * 0.025
-        ) *
-        (event.shiftKey ? 3 : 1);
+        tileJump
+          ? 300
+          : Math.max(
+              usesWorldCoordinates
+                ? 0.25
+                : 5,
+              camera.radius * 0.025
+            ) *
+            (event.shiftKey ? 3 : 1);
 
       const { right, forward } =
         getHorizontalCameraAxes();
@@ -4799,6 +4838,7 @@ export function Viewport({
         camera.setTarget(
           camera.target.add(offset)
         );
+        syncActiveTileToTarget();
       }
     };
 
@@ -4942,7 +4982,6 @@ export function Viewport({
       event: PointerEvent
     ) => {
       if (
-        usesWorldCoordinates ||
         placementAssetPath ||
         splinePlacementTemplate
       ) {
@@ -4962,8 +5001,8 @@ export function Viewport({
         (engine.getRenderHeight() /
           rect.height);
 
-      const pick =
-        scene.pick(
+      const picks =
+        scene.multiPick(
           pointerX,
           pointerY,
           (mesh) => {
@@ -4993,71 +5032,72 @@ export function Viewport({
               return kind === "spline";
             }
 
-            return true;
+            return (
+              kind === "object" ||
+              kind === "spline"
+            );
           },
-          false,
           camera
-        );
+        ) ?? [];
 
-      let node =
-        pick?.hit
-          ? pick.pickedMesh
-          : null;
+      for (const pick of picks) {
+        let node =
+          pick.pickedMesh;
 
-      while (node) {
-        const metadata =
-          node.metadata;
+        while (node) {
+          const metadata =
+            node.metadata;
 
-        if (
-          metadata?.mapStudioKind ===
-            "object" &&
-          metadata.placedObject
-        ) {
-          const item =
-            metadata.placedObject as
-              OmsiPlacedObject;
+          if (
+            metadata?.mapStudioKind ===
+              "object" &&
+            metadata.placedObject
+          ) {
+            const item =
+              metadata.placedObject as
+                OmsiPlacedObject;
 
-          return {
-            kind: "object" as const,
-            item,
-            diagnostic:
-              buildPickedDiagnostic(
-                pick?.pickedMesh instanceof
-                  Mesh
-                  ? pick.pickedMesh
-                  : null,
-                "object",
-                item
-              )
-          };
+            return {
+              kind: "object" as const,
+              item,
+              diagnostic:
+                buildPickedDiagnostic(
+                  pick.pickedMesh instanceof
+                    Mesh
+                    ? pick.pickedMesh
+                    : null,
+                  "object",
+                  item
+                )
+            };
+          }
+
+          if (
+            metadata?.mapStudioKind ===
+              "spline" &&
+            metadata.placedSpline
+          ) {
+            const item =
+              metadata.placedSpline as
+                OmsiPlacedSpline;
+
+            return {
+              kind: "spline" as const,
+              item,
+              diagnostic:
+                buildPickedDiagnostic(
+                  pick.pickedMesh instanceof
+                    Mesh
+                    ? pick.pickedMesh
+                    : null,
+                  "spline",
+                  item
+                )
+            };
+          }
+
+          node = node.parent;
         }
-
-        if (
-          metadata?.mapStudioKind ===
-            "spline" &&
-          metadata.placedSpline
-        ) {
-          const item =
-            metadata.placedSpline as
-              OmsiPlacedSpline;
-
-          return {
-            kind: "spline" as const,
-            item,
-            diagnostic:
-              buildPickedDiagnostic(
-                pick?.pickedMesh instanceof
-                  Mesh
-                  ? pick.pickedMesh
-                  : null,
-                "spline",
-                item
-              )
-          };
-        }
-
-        node = node.parent as
-          typeof node;
       }
 
       return undefined;
@@ -5177,12 +5217,6 @@ export function Viewport({
 
       pointerDownHandledSelection =
         false;
-
-      if (usesWorldCoordinates) {
-        onSelectObject(undefined);
-        onSelectSpline(undefined);
-        return;
-      }
 
       const rect = canvas.getBoundingClientRect();
       const pointerX =
@@ -5713,7 +5747,7 @@ export function Viewport({
         className="viewport-canvas"
         tabIndex={0}
         aria-label="Viewport 3D do editor"
-        title="Clique seleciona objeto/spline · segundo clique rápido no mesmo item centraliza · botão direito orbita · botão do meio ou Shift+botão direito desloca · WASD/setas movem · roda aproxima/afasta"
+        title="Clique seleciona objeto/spline · segundo clique rápido centraliza · botão direito orbita · botão do meio desloca · WASD/setas movem · Ctrl+setas salta 1 bloco/tile · roda aproxima/afasta"
       />
       {viewportDiagnostic ? (
         <div
