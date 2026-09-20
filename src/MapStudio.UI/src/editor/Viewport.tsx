@@ -6416,9 +6416,30 @@ export function Viewport({
       };
     };
 
+    const objectSelectionEnabled =
+      showObjects &&
+      (
+        selectionMode === "all" ||
+        selectionMode === "object"
+      );
+
+    const splineSelectionEnabled =
+      showSplines &&
+      (
+        selectionMode === "all" ||
+        selectionMode === "spline"
+      );
+
     const getPickedMapItem = (
       event: PointerEvent
     ) => {
+      if (
+        !objectSelectionEnabled &&
+        !splineSelectionEnabled
+      ) {
+        return undefined;
+      }
+
       const rect =
         canvas.getBoundingClientRect();
 
@@ -6458,14 +6479,14 @@ export function Viewport({
 
               if (
                 kind === "object" &&
-                showObjects
+                objectSelectionEnabled
               ) {
                 return true;
               }
 
               if (
                 kind === "spline" &&
-                showSplines
+                splineSelectionEnabled
               ) {
                 return true;
               }
@@ -6505,6 +6526,7 @@ export function Viewport({
             node.metadata;
 
           if (
+            objectSelectionEnabled &&
             metadata?.mapStudioKind ===
               "object" &&
             metadata.placedObject
@@ -6534,6 +6556,7 @@ export function Viewport({
           }
 
           if (
+            splineSelectionEnabled &&
             metadata?.mapStudioKind ===
               "spline" &&
             metadata.placedSpline
@@ -6676,7 +6699,7 @@ export function Viewport({
         }
       };
 
-      if (showObjects) {
+      if (objectSelectionEnabled) {
         for (const item of objects) {
           considerPoint(
             getObjectWorldPosition(
@@ -6694,7 +6717,7 @@ export function Viewport({
         }
       }
 
-      if (showSplines) {
+      if (splineSelectionEnabled) {
         for (const item of splines) {
           const points =
             getSplineAxisLine(
@@ -7709,7 +7732,7 @@ export function Viewport({
 
       for (
         const placedObject of
-          showObjects
+          objectSelectionEnabled
             ? objects
             : []
       ) {
@@ -7776,7 +7799,7 @@ export function Viewport({
       }
 
       const splinePick =
-        showSplines
+        splineSelectionEnabled
           ? scene.pick(
           pointerX,
           pointerY,
