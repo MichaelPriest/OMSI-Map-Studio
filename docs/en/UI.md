@@ -821,3 +821,10 @@ The interface preserves OMSI Map Editor semantics: `.sco` objects, `.sli` spline
 The visual flow adopts modern city-builder interaction patterns: primary construction tools concentrated at the bottom, searchable asset libraries, a contextual inspector, and visible road/snap guides. These are interaction references only; no proprietary third-party assets are reused.
 
 Desktop fullscreen now uses the physical bounds of the current monitor instead of relying only on `WindowState.Maximized`. The compact menu and status bar remain accessible. The Babylon viewport uses a `ResizeObserver` on its real container so render dimensions and picking coordinates remain synchronized during fullscreen, resizing, and movable-panel layout changes.
+
+
+### Selection feedback and road guide
+
+The viewport now uses a light outline on the real item under the cursor and a distinct outline on the active selection. The effect does not replace real materials/textures and does not make ghosts, gizmos, terrain, or overlays selectable as real map objects. This follows the OMSI editor principle of clearly showing which item will receive the click without applying an aggressive solid-blue tint.
+
+When the easy road/bridge builder is active, the bottom bar shows a compact contextual guide with the start → end → curve sequence, endpoint snap state, automatic `previous/next` linking, snapped endpoint confirmation, and bridge elevation.
