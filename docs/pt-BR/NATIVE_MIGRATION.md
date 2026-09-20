@@ -369,3 +369,15 @@ As superfícies são agrupadas em lotes de material/textura e usam o mesmo cache
 
 Com isso, ruas, calçadas, meios-fios e outras superfícies SLI deixam de depender apenas da cor cinza genérica no viewport nativo.
 
+### Checkpoint N3.18 — textura base real do terreno
+
+O renderer nativo passa a usar o primeiro `[groundtex]` real do `global.cfg` como textura base do terreno.
+
+`NativeTerrainTriangleGeometryBuilder` recebe o descritor real do mapa e a raiz do OMSI, resolve `MainTexturePath` por `OmsiTextureAssetPathResolver.TryResolveGroundTexture` e gera UV por tile usando a repetição declarada em `MainTextureRepeating`.
+
+A textura é enviada pelo mesmo cache WIC/Direct3D 11 já usado por O3D e SLI. Quando o arquivo não existe ou não pode ser resolvido, o terreno mantém o fallback de cor por altura em vez de falhar.
+
+O mapeamento é reiniciado em cada tile e cobre 0–300 m com a repetição definida pelo mapa, preservando a escala esperada do OMSI.
+
+Este checkpoint cobre a camada base. Camadas adicionais pintadas por `tile_*.map.N.dds`, detalhe secundário e edição de pintura permanecem para o próximo passo.
+

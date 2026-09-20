@@ -54,6 +54,12 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _terrainTriangleVertexCount;
 
+    private IReadOnlyList<
+        NativeMaterialBatch>
+        _terrainMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
     private ID3D11Buffer?
         _objectTriangleBuffer;
 
@@ -340,6 +346,10 @@ public sealed class D3D11NativeMapRenderer :
         _terrainTriangleBuffer = null;
         _terrainTriangleVertexCount = 0;
 
+        _terrainMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
         _objectTriangleBuffer
             ?.Dispose();
         _objectTriangleBuffer = null;
@@ -462,6 +472,10 @@ public sealed class D3D11NativeMapRenderer :
             _terrainTriangleVertexCount =
                 terrainGeometry
                     .Vertices.Length;
+
+            _terrainMaterialBatches =
+                terrainGeometry
+                    .MaterialBatches;
         }
 
         if (
@@ -527,9 +541,11 @@ public sealed class D3D11NativeMapRenderer :
         }
 
         UpdateTextureCache(
-            _objectMaterialBatches
+            _terrainMaterialBatches
                 .Concat(
                     _splineMaterialBatches)
+                .Concat(
+                    _objectMaterialBatches)
                 .ToArray());
 
         _scenePickingVertices =
@@ -573,29 +589,8 @@ public sealed class D3D11NativeMapRenderer :
                     .PSSetShader(
                         _pixelShader);
 
-                if (
-                    _terrainTriangleBuffer
-                        is not null &&
-                    _terrainTriangleVertexCount >
-                        0)
-                {
-                    context
-                        .IASetPrimitiveTopology(
-                            PrimitiveTopology
-                                .TriangleList);
-
-                    context
-                        .IASetVertexBuffer(
-                            0,
-                            _terrainTriangleBuffer,
-                            NativeMapVertex
-                                .SizeInBytes);
-
-                    context.Draw(
-                        (uint)
-                            _terrainTriangleVertexCount,
-                        0);
-                }
+                DrawTerrainGeometry(
+                    context);
 
                 DrawSplineGeometry(
                     context);
@@ -730,6 +725,16 @@ public sealed class D3D11NativeMapRenderer :
         RenderPicking(
             surface.Width,
             surface.Height);
+    }
+
+    private void DrawTerrainGeometry(
+        ID3D11DeviceContext context)
+    {
+        DrawMaterialGeometry(
+            context,
+            _terrainTriangleBuffer,
+            _terrainTriangleVertexCount,
+            _terrainMaterialBatches);
     }
 
     private void DrawSplineGeometry(

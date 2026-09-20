@@ -369,3 +369,15 @@ Surfaces are grouped into material/texture batches and use the same WIC/Direct3D
 
 This allows roads, sidewalks, curbs, and other SLI surfaces to stop relying on the generic gray color in the native viewport.
 
+### Checkpoint N3.18 — real base terrain texture
+
+The native renderer now uses the first real `[groundtex]` entry from `global.cfg` as the terrain base texture.
+
+`NativeTerrainTriangleGeometryBuilder` receives the real map descriptor and OMSI root, resolves `MainTexturePath` through `OmsiTextureAssetPathResolver.TryResolveGroundTexture`, and generates per-tile UVs using the declared `MainTextureRepeating` value.
+
+The texture is sent through the same WIC/Direct3D 11 cache already used by O3D and SLI rendering. If the file is missing or cannot be resolved, terrain keeps the height-color fallback instead of failing.
+
+Mapping restarts on each tile and spans the 0–300 m tile area using the map-defined repeat value, preserving the OMSI scale.
+
+This checkpoint covers the base layer. Additional `tile_*.map.N.dds` paint masks, secondary detail texture, and paint editing remain for the next step.
+

@@ -507,6 +507,7 @@ public sealed partial class NativeViewport : UserControl
                                     tile.Reference,
                                     tile.Content))
                         .ToArray(),
+                    snapshot.Map,
                     omsiRoot,
                     cancellationToken);
 

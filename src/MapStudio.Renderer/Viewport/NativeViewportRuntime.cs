@@ -83,6 +83,9 @@ public sealed class NativeViewportRuntime : IDisposable
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
 
+    private OmsiMapDescriptor? _mapDescriptor;
+    private string? _omsiRoot;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -1506,6 +1509,7 @@ public sealed class NativeViewportRuntime : IDisposable
         LoadSceneAsync(
             IReadOnlyList<NativeSceneTile>
                 tiles,
+            OmsiMapDescriptor map,
             string omsiRoot,
             CancellationToken cancellationToken =
                 default)
@@ -1549,6 +1553,12 @@ public sealed class NativeViewportRuntime : IDisposable
         _splinePlacementShape = null;
         _splinePlacementStage =
             NativeSplinePlacementStage.AwaitingStart;
+
+        _mapDescriptor =
+            map;
+
+        _omsiRoot =
+            omsiRoot;
 
         Scene =
             new NativeSceneBuilder()
@@ -2224,7 +2234,13 @@ public sealed class NativeViewportRuntime : IDisposable
         var terrainGeometry =
             new NativeTerrainTriangleGeometryBuilder()
                 .Build(
-                    Scene);
+                    Scene,
+                    _mapDescriptor ??
+                        throw new InvalidOperationException(
+                            "Map descriptor is not loaded."),
+                    _omsiRoot ??
+                        throw new InvalidOperationException(
+                            "OMSI root is not loaded."));
 
         MapRenderer.Upload(
             Scene,
