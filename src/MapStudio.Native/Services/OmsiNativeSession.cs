@@ -399,6 +399,196 @@ public sealed class OmsiNativeSession
     }
 
     public async Task<NativeMapSnapshot>
+        InsertSplineAsync(
+            NativeSplinePlacementRequest request,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplineInsertion");
+        }
+
+        var loadedByPath =
+            snapshot.Tiles.ToDictionary(
+                tile => tile.Reference.RelativeMapPath,
+                tile => tile.Content,
+                StringComparer.OrdinalIgnoreCase);
+
+        var contents =
+            new List<OmsiTileContent>(
+                snapshot.Map.Tiles.Count);
+
+        foreach (var tile in snapshot.Map.Tiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (
+                loadedByPath.TryGetValue(
+                    tile.RelativeMapPath,
+                    out var loaded))
+            {
+                contents.Add(loaded);
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var path))
+            {
+                continue;
+            }
+
+            contents.Add(
+                await _tileReader
+                    .ReadContentAsync(
+                        path,
+                        cancellationToken)
+                    .ConfigureAwait(false));
+        }
+
+        var maxUsedId =
+            contents
+                .SelectMany(
+                    content =>
+                        content.Objects
+                            .Select(item => item.ObjectId)
+                            .Concat(
+                                content.Splines
+                                    .Select(item => item.SplineId)))
+                .DefaultIfEmpty(0)
+                .Max();
+
+        if (maxUsedId >= int.MaxValue)
+        {
+            throw new InvalidDataException(
+                "splineIdExhausted");
+        }
+
+        var template =
+            contents
+                .SelectMany(content => content.Splines)
+                .FirstOrDefault(
+                    item =>
+                        !item.IsHeightSpline &&
+                        string.Equals(
+                            item.SplinePath,
+                            request.SplinePath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? OmsiSplinePlacementTemplateAnalyzer
+                .FindNeutralNormalTemplate(
+                    contents);
+
+        var headerValue =
+            template?.HeaderValue ??
+            "0";
+
+        var extraValues =
+            template?.ExtraValues ??
+            Array.Empty<string>();
+
+        if (
+            !OmsiMapPathResolver.TryResolveTilePath(
+                snapshot.Map.DirectoryPath,
+                request.Tile.RelativeMapPath,
+                out var targetPath))
+        {
+            throw new InvalidDataException(
+                "splinePlacementTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    targetPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var insertion =
+            OmsiTileSplineInserter.Append(
+                document,
+                new OmsiNewPlacedSpline(
+                    headerValue,
+                    request.SplinePath,
+                    checked(maxUsedId + 1),
+                    -1,
+                    -1,
+                    request.X,
+                    request.Z,
+                    request.Y,
+                    request.Rotation,
+                    request.Length,
+                    request.Radius,
+                    request.GradientStart,
+                    request.GradientEnd,
+                    false,
+                    extraValues));
+
+        var backupDirectory =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups");
+
+        var backupPath =
+            Path.Combine(
+                backupDirectory,
+                Path.GetFileName(targetPath) +
+                "." +
+                DateTime.UtcNow.ToString(
+                    "yyyyMMdd-HHmmssfff") +
+                "." +
+                Guid.NewGuid().ToString("N") +
+                ".bak");
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        targetPath,
+                        backupPath,
+                        insertion.Bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshedContent =
+            await _tileReader
+                .ReadContentAsync(
+                    targetPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                tile.Reference.X ==
+                                    request.Tile.X &&
+                                tile.Reference.Y ==
+                                    request.Tile.Y
+                                    ? new NativeLoadedTile(
+                                        tile.Reference,
+                                        refreshedContent)
+                                    : tile)
+                        .ToArray()
+            };
+
+        return CurrentMap;
+    }
+
+    public async Task<NativeMapSnapshot>
         SavePendingTransformsAsync(
             CancellationToken cancellationToken =
                 default)

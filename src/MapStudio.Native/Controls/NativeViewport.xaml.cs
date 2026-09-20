@@ -56,6 +56,10 @@ public sealed partial class NativeViewport : UserControl
         NativeSceneryPlacementRequest>?
         SceneryPlacementRequested;
 
+    public event Action<
+        NativeSplinePlacementRequest>?
+        SplinePlacementRequested;
+
     public IReadOnlyList<
         NativeExplorerItem>
         GetExplorerItems() =>
@@ -198,6 +202,55 @@ public sealed partial class NativeViewport : UserControl
         _runtime
             ?.IsSceneryPlacementActive ??
         false;
+
+    public bool IsSplinePlacementActive =>
+        _runtime
+            ?.IsSplinePlacementActive ??
+        false;
+
+    public async Task<bool>
+        BeginSplinePlacementAsync(
+            string omsiRoot,
+            OmsiAssetIndexEntry asset,
+            bool curved,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (
+            _runtime is null ||
+            asset.Kind !=
+                OmsiAssetKind.Spline)
+        {
+            return false;
+        }
+
+        var started =
+            await _runtime
+                .BeginSplinePlacementAsync(
+                    omsiRoot,
+                    asset.RelativePath,
+                    curved,
+                    cancellationToken);
+
+        if (started)
+        {
+            RuntimeText.Text =
+                $"Construindo spline · {asset.RelativePath}";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                curved
+                    ? "Curva: clique início, fim e ponto de curvatura."
+                    : "Reta: clique início e fim.");
+        }
+
+        return started;
+    }
+
+    public void CancelSplinePlacement()
+    {
+        _runtime?.CancelSplinePlacement();
+    }
 
     public async Task<bool>
         BeginSceneryPlacementAsync(
@@ -605,6 +658,34 @@ public sealed partial class NativeViewport : UserControl
 
         if (
             _runtime is not null &&
+            _runtime.IsSplinePlacementActive)
+        {
+            if (
+                _runtime.TryAdvanceSplinePlacement(
+                    pixelX,
+                    pixelY,
+                    out var splinePlacement,
+                    out var splineStatus))
+            {
+                if (
+                    splinePlacement is not null)
+                {
+                    SplinePlacementRequested
+                        ?.Invoke(
+                            splinePlacement);
+                }
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    splineStatus);
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
             _runtime.IsSceneryPlacementActive)
         {
             _runtime.UpdateSceneryPlacement(
@@ -804,6 +885,60 @@ public sealed partial class NativeViewport : UserControl
                 _isOrbiting
                     ? $"Órbita · zoom {_runtime.Navigation.Zoom:F2}×"
                     : $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime.IsSplinePlacementActive)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                _runtime.UpdateSplinePlacement(
+                    pixelX,
+                    pixelY))
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    _runtime.SplinePlacementStage switch
+                    {
+                        NativeSplinePlacementStage.AwaitingStart =>
+                            "Spline: clique no ponto inicial.",
+                        NativeSplinePlacementStage.AwaitingEnd =>
+                            "Spline: clique no ponto final.",
+                        NativeSplinePlacementStage.AwaitingCurve =>
+                            "Spline: ajuste a curva e clique para confirmar.",
+                        _ =>
+                            "Construindo spline..."
+                    });
+            }
 
             e.Handled = true;
             return;

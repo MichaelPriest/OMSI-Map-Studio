@@ -103,6 +103,13 @@ public sealed partial class MainWindow : Window
                     request);
             };
 
+        Viewport.SplinePlacementRequested +=
+            async request =>
+            {
+                await HandleSplinePlacementAsync(
+                    request);
+            };
+
         Viewport.SelectionChanged +=
             info =>
             {
@@ -241,10 +248,14 @@ public sealed partial class MainWindow : Window
             null;
 
         Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
         Viewport.RestoreSceneView();
 
         PlaceAssetButton.Content =
             "Posicionar no mapa";
+
+        SplineCurveCheckBox.Visibility =
+            Visibility.Collapsed;
 
         _libraryMode =
             false;
@@ -349,13 +360,30 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
+        var selected =
+            AssetLibraryListView.SelectedItem as
+                OmsiAssetIndexEntry;
+
+        var placeable =
+            selected?.Kind is
+                OmsiAssetKind.SceneryObject or
+                OmsiAssetKind.Spline;
+
         PlaceAssetButton.IsEnabled =
             _session.CurrentMap is not null &&
-            AssetLibraryListView.SelectedItem is
-                OmsiAssetIndexEntry selected &&
-            selected.Kind ==
-                OmsiAssetKind
-                    .SceneryObject;
+            placeable;
+
+        PlaceAssetButton.Content =
+            selected?.Kind ==
+                OmsiAssetKind.Spline
+                ? "Construir spline"
+                : "Posicionar no mapa";
+
+        SplineCurveCheckBox.Visibility =
+            selected?.Kind ==
+                OmsiAssetKind.Spline
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         if (
             !_libraryMode ||
@@ -415,12 +443,20 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        if (Viewport.IsSceneryPlacementActive)
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
         {
             Viewport.CancelSceneryPlacement();
+            Viewport.CancelSplinePlacement();
 
             PlaceAssetButton.Content =
-                "Posicionar no mapa";
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry selectedAsset &&
+                selectedAsset.Kind ==
+                    OmsiAssetKind.Spline
+                    ? "Construir spline"
+                    : "Posicionar no mapa";
 
             StatusText.Text =
                 "Posicionamento cancelado.";
@@ -433,8 +469,11 @@ public sealed partial class MainWindow : Window
             _session.CurrentMap is null ||
             AssetLibraryListView.SelectedItem is not
                 OmsiAssetIndexEntry asset ||
-            asset.Kind !=
-                OmsiAssetKind.SceneryObject)
+            asset.Kind is not
+                (
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Spline
+                ))
         {
             return;
         }
@@ -447,15 +486,23 @@ public sealed partial class MainWindow : Window
         try
         {
             var started =
-                await Viewport
-                    .BeginSceneryPlacementAsync(
-                        _session.OmsiRootPath,
-                        asset);
+                asset.Kind ==
+                    OmsiAssetKind.Spline
+                    ? await Viewport
+                        .BeginSplinePlacementAsync(
+                            _session.OmsiRootPath,
+                            asset,
+                            SplineCurveCheckBox.IsChecked ==
+                                true)
+                    : await Viewport
+                        .BeginSceneryPlacementAsync(
+                            _session.OmsiRootPath,
+                            asset);
 
             if (!started)
             {
                 StatusText.Text =
-                    $"Não foi possível preparar o objeto para posicionamento: {asset.RelativePath}.";
+                    $"Não foi possível preparar o asset: {asset.RelativePath}.";
 
                 return;
             }
@@ -464,12 +511,95 @@ public sealed partial class MainWindow : Window
                 "Cancelar posicionamento";
 
             StatusText.Text =
-                "Mova o ghost sobre o terreno e clique para inserir.";
+                asset.Kind ==
+                    OmsiAssetKind.Spline
+                    ? SplineCurveCheckBox.IsChecked ==
+                        true
+                        ? "Spline curva: clique início, fim e ponto de curvatura."
+                        : "Spline reta: clique início e fim."
+                    : "Mova o ghost sobre o terreno e clique para inserir.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
                 $"Falha ao iniciar posicionamento: {exception.Message}";
+        }
+    }
+
+    private async Task HandleSplinePlacementAsync(
+        NativeSplinePlacementRequest request)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            PlaceAssetButton.Content =
+                "Construir spline";
+
+            PlaceAssetButton.IsEnabled =
+                false;
+
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                StatusText.Text =
+                    "Salvando transformações antes da spline...";
+
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                request.IsCurved
+                    ? "Inserindo spline curva com backup..."
+                    : "Inserindo spline reta com backup...";
+
+            var snapshot =
+                await _session
+                    .InsertSplineAsync(
+                        request);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            RefreshExplorer();
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
+                false;
+
+            PlaceAssetButton.IsEnabled =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry asset &&
+                asset.Kind is
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Spline;
+
+            StatusText.Text =
+                $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}.";
+        }
+        catch (Exception exception)
+        {
+            PlaceAssetButton.IsEnabled =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry asset &&
+                asset.Kind is
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Spline;
+
+            StatusText.Text =
+                $"Falha ao inserir spline: {exception.Message}";
         }
     }
 

@@ -65,6 +65,18 @@ public sealed class NativeViewportRuntime : IDisposable
     private NativeAssetPreviewGeometry?
         _placementGeometry;
     private Vector3? _placementWorldPoint;
+
+    private bool _splinePlacementActive;
+    private bool _splinePlacementCurved;
+    private string? _placementSplinePath;
+    private NativeSplineAsset? _placementSplineAsset;
+    private Vector3? _splineStartWorld;
+    private Vector3? _splineEndWorld;
+    private Vector3? _splinePointerWorld;
+    private NativeSplinePlacementShape? _splinePlacementShape;
+    private NativeSplinePlacementStage _splinePlacementStage =
+        NativeSplinePlacementStage.AwaitingStart;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -131,6 +143,298 @@ public sealed class NativeViewportRuntime : IDisposable
     public bool IsSceneryPlacementActive =>
         _sceneryPlacementActive;
 
+    public bool IsSplinePlacementActive =>
+        _splinePlacementActive;
+
+    public bool SplinePlacementCurved =>
+        _splinePlacementCurved;
+
+    public NativeSplinePlacementStage SplinePlacementStage =>
+        _splinePlacementStage;
+
+    public async Task<bool>
+        BeginSplinePlacementAsync(
+            string omsiRoot,
+            string splinePath,
+            bool curved,
+            CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(splinePath);
+
+        if (_assetPreviewActive)
+        {
+            RestoreSceneView();
+        }
+
+        if (Scene is null)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+        CancelSceneryPlacement();
+        CancelSplinePlacement();
+
+        var asset =
+            await new NativeSplineAssetLoader()
+                .LoadAssetAsync(
+                    omsiRoot,
+                    splinePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (!asset.IsLoaded)
+        {
+            return false;
+        }
+
+        _splinePlacementActive = true;
+        _splinePlacementCurved = curved;
+        _placementSplinePath = splinePath;
+        _placementSplineAsset = asset;
+        _splineStartWorld = null;
+        _splineEndWorld = null;
+        _splinePointerWorld = null;
+        _splinePlacementShape = null;
+        _splinePlacementStage =
+            NativeSplinePlacementStage.AwaitingStart;
+
+        MapRenderer.SetHover(PickingId.None);
+        MapRenderer.SetSelection(PickingId.None);
+        MapRenderer.SetGizmoGeometry(null);
+        MapRenderer.SetPlacementPreview(
+            null,
+            Matrix4x4.Identity);
+
+        return true;
+    }
+
+    public bool UpdateSplinePlacement(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !_splinePlacementActive ||
+            Scene is null ||
+            _placementSplineAsset is null)
+        {
+            return false;
+        }
+
+        if (
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var point))
+        {
+            return false;
+        }
+
+        _splinePointerWorld = point;
+
+        NativeSplinePlacementShape? shape = null;
+
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage.AwaitingEnd &&
+            _splineStartWorld is { } start)
+        {
+            NativeSplinePlacementMath.TryCreateStraight(
+                start,
+                point,
+                out shape);
+        }
+        else if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage.AwaitingCurve &&
+            _splineStartWorld is { } curveStart &&
+            _splineEndWorld is { } curveEnd)
+        {
+            NativeSplinePlacementMath.TryCreateArc(
+                curveStart,
+                curveEnd,
+                point,
+                out shape);
+        }
+
+        _splinePlacementShape = shape;
+
+        if (shape is null)
+        {
+            MapRenderer.SetPlacementPreview(
+                null,
+                Matrix4x4.Identity);
+
+            RenderInitialFrame();
+            return true;
+        }
+
+        var geometry =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    _placementSplineAsset,
+                    shape);
+
+        MapRenderer.SetPlacementPreview(
+            geometry.IsRenderable
+                ? geometry
+                : null,
+            Matrix4x4.Identity);
+
+        RenderInitialFrame();
+        return true;
+    }
+
+    public bool TryAdvanceSplinePlacement(
+        uint pixelX,
+        uint pixelY,
+        out NativeSplinePlacementRequest? request,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        request = null;
+        status = string.Empty;
+
+        if (
+            !_splinePlacementActive ||
+            Scene is null ||
+            string.IsNullOrWhiteSpace(
+                _placementSplinePath))
+        {
+            return false;
+        }
+
+        if (
+            !UpdateSplinePlacement(
+                pixelX,
+                pixelY) ||
+            _splinePointerWorld is not { } point)
+        {
+            return false;
+        }
+
+        if (
+            _splinePlacementStage ==
+            NativeSplinePlacementStage.AwaitingStart)
+        {
+            _splineStartWorld = point;
+            _splinePlacementStage =
+                NativeSplinePlacementStage.AwaitingEnd;
+
+            status =
+                _splinePlacementCurved
+                    ? "Início definido. Clique no ponto final; depois ajuste a curva."
+                    : "Início definido. Clique no ponto final para criar a spline.";
+
+            MapRenderer.SetPlacementPreview(
+                null,
+                Matrix4x4.Identity);
+
+            return true;
+        }
+
+        if (
+            _splinePlacementStage ==
+            NativeSplinePlacementStage.AwaitingEnd)
+        {
+            if (
+                _splineStartWorld is not { } start ||
+                !NativeSplinePlacementMath.TryCreateStraight(
+                    start,
+                    point,
+                    out var straight) ||
+                straight is null)
+            {
+                status = "Ponto final inválido.";
+                return false;
+            }
+
+            if (_splinePlacementCurved)
+            {
+                _splineEndWorld = point;
+                _splinePlacementStage =
+                    NativeSplinePlacementStage.AwaitingCurve;
+                _splinePlacementShape = straight;
+
+                status =
+                    "Final definido. Mova o cursor para curvar e clique para confirmar.";
+
+                return true;
+            }
+
+            request =
+                CreateSplinePlacementRequest(
+                    straight);
+
+            CancelSplinePlacement();
+            status =
+                "Spline reta pronta para inserção.";
+
+            return request is not null;
+        }
+
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage.AwaitingCurve &&
+            _splineStartWorld is { } curveStart &&
+            _splineEndWorld is { } curveEnd &&
+            NativeSplinePlacementMath.TryCreateArc(
+                curveStart,
+                curveEnd,
+                point,
+                out var curvedShape) &&
+            curvedShape is not null)
+        {
+            request =
+                CreateSplinePlacementRequest(
+                    curvedShape);
+
+            CancelSplinePlacement();
+
+            status =
+                curvedShape.IsCurved
+                    ? "Spline curva pronta para inserção."
+                    : "Controle colinear: spline reta pronta para inserção.";
+
+            return request is not null;
+        }
+
+        status = "Curva inválida.";
+        return false;
+    }
+
+    public void CancelSplinePlacement()
+    {
+        if (!_splinePlacementActive)
+        {
+            return;
+        }
+
+        _splinePlacementActive = false;
+        _splinePlacementCurved = false;
+        _placementSplinePath = null;
+        _placementSplineAsset = null;
+        _splineStartWorld = null;
+        _splineEndWorld = null;
+        _splinePointerWorld = null;
+        _splinePlacementShape = null;
+        _splinePlacementStage =
+            NativeSplinePlacementStage.AwaitingStart;
+
+        MapRenderer.SetPlacementPreview(
+            null,
+            Matrix4x4.Identity);
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+    }
+
     public async Task<bool>
         BeginSceneryPlacementAsync(
             string omsiRoot,
@@ -157,6 +461,7 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         CancelGizmoDrag();
+        CancelSplinePlacement();
 
         var asset =
             await new NativeSceneryAssetLoader()
@@ -447,6 +752,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         CancelGizmoDrag();
         CancelSceneryPlacement();
+        CancelSplinePlacement();
 
         var builder =
             new NativeAssetPreviewGeometryBuilder();
@@ -1008,6 +1314,17 @@ public sealed class NativeViewportRuntime : IDisposable
         _placementWorldPoint =
             null;
 
+        _splinePlacementActive = false;
+        _splinePlacementCurved = false;
+        _placementSplinePath = null;
+        _placementSplineAsset = null;
+        _splineStartWorld = null;
+        _splineEndWorld = null;
+        _splinePointerWorld = null;
+        _splinePlacementShape = null;
+        _splinePlacementStage =
+            NativeSplinePlacementStage.AwaitingStart;
+
         Scene =
             new NativeSceneBuilder()
                 .Build(
@@ -1195,7 +1512,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _assetPreviewActive ||
-            _sceneryPlacementActive)
+            _sceneryPlacementActive ||
+            _splinePlacementActive)
         {
             pickingId =
                 PickingId.None;
@@ -1254,6 +1572,7 @@ public sealed class NativeViewportRuntime : IDisposable
         if (
             _assetPreviewActive ||
             _sceneryPlacementActive ||
+            _splinePlacementActive ||
             Surface is null ||
             Scene is null ||
             _selectedPickingId.IsNone)
@@ -1581,6 +1900,7 @@ public sealed class NativeViewportRuntime : IDisposable
         if (
             _assetPreviewActive ||
             _sceneryPlacementActive ||
+            _splinePlacementActive ||
             IsManipulating)
         {
             return false;
@@ -2390,6 +2710,159 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetGizmoGeometry(
             geometry);
+    }
+
+    private bool TryGetTerrainPlacementPoint(
+        uint pixelX,
+        uint pixelY,
+        out Vector3 point)
+    {
+        point = default;
+
+        if (
+            Scene is null ||
+            Surface is null ||
+            !Navigation.TryGetWorldRay(
+                pixelX,
+                pixelY,
+                Surface.Width,
+                Surface.Height,
+                out var origin,
+                out var direction) ||
+            Math.Abs(direction.Y) < 0.00001f)
+        {
+            return false;
+        }
+
+        var height =
+            Navigation.Target.Y;
+
+        for (
+            var iteration = 0;
+            iteration < 4;
+            iteration++)
+        {
+            var distance =
+                (height - origin.Y) /
+                direction.Y;
+
+            if (distance <= 0)
+            {
+                return false;
+            }
+
+            point =
+                origin +
+                direction *
+                distance;
+
+            height =
+                (float)
+                    NativeTerrainSampler
+                        .GetHeightAtWorldPoint(
+                            Scene,
+                            point.X,
+                            point.Z);
+        }
+
+        if (SnapEnabled)
+        {
+            point.X =
+                MathF.Round(
+                    point.X /
+                    MoveSnapMeters) *
+                MoveSnapMeters;
+
+            point.Z =
+                MathF.Round(
+                    point.Z /
+                    MoveSnapMeters) *
+                MoveSnapMeters;
+
+            height =
+                (float)
+                    NativeTerrainSampler
+                        .GetHeightAtWorldPoint(
+                            Scene,
+                            point.X,
+                            point.Z);
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                point.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                point.Z /
+                300.0f);
+
+        if (
+            !Scene.Tiles.Any(
+                tile =>
+                    tile.Reference.X == tileX &&
+                    tile.Reference.Y == tileY))
+        {
+            return false;
+        }
+
+        point.Y = height;
+        return true;
+    }
+
+    private NativeSplinePlacementRequest?
+        CreateSplinePlacementRequest(
+            NativeSplinePlacementShape shape)
+    {
+        if (
+            Scene is null ||
+            string.IsNullOrWhiteSpace(
+                _placementSplinePath))
+        {
+            return null;
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                shape.Start.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                shape.Start.Z /
+                300.0f);
+
+        var tile =
+            Scene.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X == tileX &&
+                        item.Reference.Y == tileY);
+
+        if (tile is null)
+        {
+            return null;
+        }
+
+        return new NativeSplinePlacementRequest(
+            tile.Reference,
+            _placementSplinePath,
+            shape.Start.X -
+                tileX *
+                300.0,
+            shape.Start.Z -
+                tileY *
+                300.0,
+            shape.Start.Y,
+            shape.Rotation,
+            shape.Length,
+            shape.Radius,
+            shape.GradientStart,
+            shape.GradientEnd,
+            shape.IsCurved,
+            shape.Start,
+            shape.End);
     }
 
     private void UpdateCameraTransform()

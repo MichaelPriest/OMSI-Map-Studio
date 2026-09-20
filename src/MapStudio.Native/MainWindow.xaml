@@ -164,12 +164,17 @@
                                 <ComboBoxItem Content="Texturas" />
                             </ComboBox>
 
-                            <Button x:Name="PlaceAssetButton"
-                                    Grid.Row="1"
-                                    Content="Posicionar no mapa"
-                                    IsEnabled="False"
-                                    HorizontalAlignment="Stretch"
-                                    Click="OnPlaceAssetClick" />
+                            <StackPanel Grid.Row="1"
+                                        Spacing="6">
+                                <Button x:Name="PlaceAssetButton"
+                                        Content="Posicionar no mapa"
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        Click="OnPlaceAssetClick" />
+                                <CheckBox x:Name="SplineCurveCheckBox"
+                                          Content="Curva (3 cliques)"
+                                          Visibility="Collapsed" />
+                            </StackPanel>
 
                             <TextBlock x:Name="LibraryStatusText"
                                        Grid.Row="2"

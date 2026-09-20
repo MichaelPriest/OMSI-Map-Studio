@@ -219,3 +219,19 @@ O cursor é convertido em um raio da câmera perspectiva para o mundo. A interse
 Ao clicar, o host converte a posição mundial para as coordenadas locais do tile OMSI e usa `OmsiTileObjectInserter` para inserir uma seção `[object]` real. O próximo ID é calculado considerando objetos e splines de todos os tiles do mapa, evitando colisão com IDs já usados. Quando há um objeto do mesmo asset no mapa, header e valores extras são preservados como template; árvores sem template usam os dados reais de textura/altura/aspecto declarados no SCO.
 
 A inserção é persistida imediatamente por `SafeFileTransaction`, com backup em `.mapstudio-backups`, e o tile alterado é relido pelo Core antes de atualizar o viewport. Splines continuam fora deste checkpoint porque o placement correto exige a ferramenta de construção por pontos/curvas em vez de tratá-las como um objeto comum.
+
+
+### Checkpoint N3.5 — construção nativa de splines por pontos e curvas
+
+A biblioteca SLI agora inicia uma ferramenta de construção diretamente no viewport Direct3D. O asset selecionado usa o perfil real do arquivo `.sli` para desenhar um ghost 3D antes da gravação.
+
+Há dois fluxos:
+
+- **Reta:** primeiro clique define o início e o segundo clique define o fim.
+- **Curva:** primeiro clique define o início, o segundo fixa o fim e o terceiro ponto controla a curvatura. O editor resolve o círculo que passa pelos três pontos e converte o resultado para os campos reais do OMSI: rotação inicial, comprimento de arco e raio com sinal.
+
+Os pontos são obtidos pelo raycast da câmera perspectiva contra a altura real do terreno. O snap de 0,25 m também é aplicado à construção. A diferença de altitude entre início e fim é convertida em gradiente percentual inicial/final, permitindo que a spline acompanhe a elevação entre os pontos em vez de ser achatada.
+
+A inserção usa `OmsiTileSplineInserter`. O ID novo é calculado globalmente considerando objetos e splines de todos os tiles. Quando existe uma spline compatível, header e valores extras são reutilizados; caso contrário o Core procura um template neutro de spline normal. A gravação passa por `SafeFileTransaction`, cria backup e relê o tile modificado antes de atualizar a cena.
+
+Este checkpoint estabelece a base da ferramenta de ruas estilo editor de cidades. Os próximos refinamentos serão continuidade entre segmentos, handles editáveis após a criação, encaixe em extremidades existentes e construção sequencial sem sair do modo.

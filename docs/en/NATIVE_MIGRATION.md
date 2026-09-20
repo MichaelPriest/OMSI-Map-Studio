@@ -219,3 +219,19 @@ The pointer is converted into a perspective-camera world ray. Intersection is re
 On click, the host converts the world position into OMSI tile-local coordinates and uses `OmsiTileObjectInserter` to append a real `[object]` section. The next ID is computed across objects and splines from every map tile to avoid collisions. When the same asset already exists in the map, its header and extra values are preserved as a template; tree assets without a template use the real texture/height/aspect metadata declared by the SCO.
 
 Insertion is persisted immediately through `SafeFileTransaction`, with a backup under `.mapstudio-backups`, and the changed tile is read back through Core before the viewport is refreshed. Splines remain outside this checkpoint because correct spline placement needs a point/curve construction tool rather than treating them as ordinary objects.
+
+
+### Checkpoint N3.5 — native spline construction with points and curves
+
+The SLI library can now start a construction tool directly in the Direct3D viewport. The selected asset uses the real `.sli` profile to render a 3D ghost before anything is written.
+
+Two workflows are available:
+
+- **Straight:** the first click defines the start and the second click defines the end.
+- **Curve:** the first click defines the start, the second locks the end, and a third point controls curvature. The editor solves the circle through all three points and converts it into the actual OMSI fields: initial rotation, arc length, and signed radius.
+
+Points come from the perspective camera raycast against the real terrain height. The 0.25 m snap is also applied during construction. Height difference between start and end is converted into start/end percentage gradient, allowing the spline to follow elevation instead of being flattened.
+
+Insertion uses `OmsiTileSplineInserter`. The new ID is calculated globally across objects and splines from all map tiles. When a compatible spline exists, its header and extra values are reused; otherwise Core looks for a neutral normal-spline template. Writing goes through `SafeFileTransaction`, creates a backup, and reloads the modified tile before refreshing the scene.
+
+This checkpoint establishes the foundation for a city-editor-style road tool. Next refinements are segment continuity, editable post-placement handles, snapping to existing endpoints, and sequential construction without leaving the tool.
