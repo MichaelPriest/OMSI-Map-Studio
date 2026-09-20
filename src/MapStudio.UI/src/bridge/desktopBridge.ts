@@ -348,6 +348,13 @@ export type HostMessage =
       entries: SplineLibraryEntry[];
     }
   | {
+      type: "backupRestored";
+      directoryName: string;
+      sourceBackupDirectory: string;
+      rollbackBackupDirectory: string;
+      filesRestored: number;
+    }
+  | {
       type: "objectInserted";
       directoryName: string;
       backupDirectory: string;
@@ -600,6 +607,17 @@ export function loadSceneryLibrary() {
 export function loadSplineLibrary() {
   getWebView()?.postMessage({
     type: "loadSplineLibrary"
+  });
+}
+
+export function restoreMapStudioBackup(
+  directoryName: string,
+  backupDirectory: string
+) {
+  getWebView()?.postMessage({
+    type: "restoreMapStudioBackup",
+    directoryName,
+    backupDirectory
   });
 }
 

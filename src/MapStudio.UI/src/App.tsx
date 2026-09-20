@@ -36,6 +36,7 @@ import {
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
+  restoreMapStudioBackup,
   saveMapGeoreference,
   saveObjectTransforms,
   saveSplineTransforms,
@@ -844,6 +845,11 @@ const getSplineLibrarySubcategory = (
   }
 
   return "Geral";
+};
+
+type ConstructionHistoryEntry = {
+  label: string;
+  backupDirectory: string;
 };
 
 type ViewportCameraAction = {
@@ -3662,6 +3668,35 @@ export function App() {
   const [saveNotice, setSaveNotice] =
     useState<string>();
 
+  const [
+    constructionUndoStack,
+    setConstructionUndoStack
+  ] = useState<
+    ConstructionHistoryEntry[]
+  >([]);
+
+  const [
+    constructionRedoStack,
+    setConstructionRedoStack
+  ] = useState<
+    ConstructionHistoryEntry[]
+  >([]);
+
+  const [
+    restoringConstruction,
+    setRestoringConstruction
+  ] = useState(false);
+
+  const constructionRestoreModeRef =
+    useRef<
+      "undo" | "redo" | undefined
+    >(undefined);
+
+  const constructionRestoreEntryRef =
+    useRef<
+      ConstructionHistoryEntry | undefined
+    >(undefined);
+
   useEffect(() => {
     writeStoredJson(
       libraryStorageKeys.sceneryFavorites,
@@ -3724,6 +3759,13 @@ export function App() {
     batchKeepPlacementRef.current =
       false;
     batchPlacementAssetRef.current =
+      undefined;
+    setConstructionUndoStack([]);
+    setConstructionRedoStack([]);
+    setRestoringConstruction(false);
+    constructionRestoreModeRef.current =
+      undefined;
+    constructionRestoreEntryRef.current =
       undefined;
   }, [selectedMap?.directoryName]);
 
@@ -4514,8 +4556,110 @@ export function App() {
 
         if (
           message.type ===
+          "backupRestored"
+        ) {
+          const mode =
+            constructionRestoreModeRef
+              .current;
+          const entry =
+            constructionRestoreEntryRef
+              .current;
+
+          setRestoringConstruction(
+            false
+          );
+
+          if (entry && mode === "undo") {
+            setConstructionUndoStack(
+              (current) =>
+                current.slice(
+                  0,
+                  Math.max(
+                    0,
+                    current.length - 1
+                  )
+                )
+            );
+            setConstructionRedoStack(
+              (current) => [
+                ...current,
+                {
+                  label:
+                    entry.label,
+                  backupDirectory:
+                    message
+                      .rollbackBackupDirectory
+                }
+              ].slice(-40)
+            );
+          } else if (
+            entry &&
+            mode === "redo"
+          ) {
+            setConstructionRedoStack(
+              (current) =>
+                current.slice(
+                  0,
+                  Math.max(
+                    0,
+                    current.length - 1
+                  )
+                )
+            );
+            setConstructionUndoStack(
+              (current) => [
+                ...current,
+                {
+                  label:
+                    entry.label,
+                  backupDirectory:
+                    message
+                      .rollbackBackupDirectory
+                }
+              ].slice(-40)
+            );
+          }
+
+          constructionRestoreModeRef.current =
+            undefined;
+          constructionRestoreEntryRef.current =
+            undefined;
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
+          setSaveNotice(
+            "Backup restaurado em " +
+              message.filesRestored +
+              " arquivo(s)."
+          );
+
+          return;
+        }
+
+        if (
+          message.type ===
           "objectBatchInserted"
         ) {
+          setConstructionUndoStack(
+            (current) => [
+              ...current,
+              {
+                label:
+                  "Lote de " +
+                  message.count +
+                  " objeto(s)",
+                backupDirectory:
+                  message.backupDirectory
+              }
+            ].slice(-40)
+          );
+          setConstructionRedoStack([]);
           setInsertingObject(false);
           setPendingPlacementBatch([]);
           setPlacementLineStart(undefined);
@@ -4556,6 +4700,20 @@ export function App() {
           message.type ===
           "objectInserted"
         ) {
+          setConstructionUndoStack(
+            (current) => [
+              ...current,
+              {
+                label:
+                  "Objeto #" +
+                  message.placedObject
+                    .objectId,
+                backupDirectory:
+                  message.backupDirectory
+              }
+            ].slice(-40)
+          );
+          setConstructionRedoStack([]);
           setInsertingObject(false);
           setPlacementAsset(undefined);
           setPendingPlacement(undefined);
@@ -4598,6 +4756,20 @@ export function App() {
           message.type ===
           "splineInserted"
         ) {
+          setConstructionUndoStack(
+            (current) => [
+              ...current,
+              {
+                label:
+                  "Spline #" +
+                  message.placedSpline
+                    .splineId,
+                backupDirectory:
+                  message.backupDirectory
+              }
+            ].slice(-40)
+          );
+          setConstructionRedoStack([]);
           setInsertingSpline(false);
           setSplinePlacementTemplate(
             undefined
@@ -11256,6 +11428,82 @@ export function App() {
       ]
     );
 
+  const handleUndoConstruction =
+    useCallback(() => {
+      if (
+        restoringConstruction ||
+        !selectedMap ||
+        constructionUndoStack.length ===
+          0
+      ) {
+        return;
+      }
+
+      const entry =
+        constructionUndoStack[
+          constructionUndoStack.length -
+            1
+        ];
+
+      constructionRestoreModeRef.current =
+        "undo";
+      constructionRestoreEntryRef.current =
+        entry;
+      setRestoringConstruction(true);
+      setError(undefined);
+      setSaveNotice(
+        "Restaurando: " +
+          entry.label
+      );
+
+      restoreMapStudioBackup(
+        selectedMap.directoryName,
+        entry.backupDirectory
+      );
+    }, [
+      constructionUndoStack,
+      restoringConstruction,
+      selectedMap
+    ]);
+
+  const handleRedoConstruction =
+    useCallback(() => {
+      if (
+        restoringConstruction ||
+        !selectedMap ||
+        constructionRedoStack.length ===
+          0
+      ) {
+        return;
+      }
+
+      const entry =
+        constructionRedoStack[
+          constructionRedoStack.length -
+            1
+        ];
+
+      constructionRestoreModeRef.current =
+        "redo";
+      constructionRestoreEntryRef.current =
+        entry;
+      setRestoringConstruction(true);
+      setError(undefined);
+      setSaveNotice(
+        "Refazendo: " +
+          entry.label
+      );
+
+      restoreMapStudioBackup(
+        selectedMap.directoryName,
+        entry.backupDirectory
+      );
+    }, [
+      constructionRedoStack,
+      restoringConstruction,
+      selectedMap
+    ]);
+
   const handleAuditDependencies =
     useCallback(() => {
       if (!bridgeAvailable) {
@@ -14269,6 +14517,59 @@ export function App() {
                   : "✓ Dependências"
                 : "Verificar dependências"}
           </button>
+
+          <div className="construction-history-controls">
+            <button
+              type="button"
+              disabled={
+                restoringConstruction ||
+                constructionUndoStack.length ===
+                  0
+              }
+              onClick={
+                handleUndoConstruction
+              }
+              title={
+                constructionUndoStack.length >
+                  0
+                  ? "Desfazer: " +
+                    constructionUndoStack[
+                      constructionUndoStack.length -
+                        1
+                    ].label
+                  : "Nenhuma construção para desfazer"
+              }
+            >
+              ↶ Construção
+            </button>
+            <button
+              type="button"
+              disabled={
+                restoringConstruction ||
+                constructionRedoStack.length ===
+                  0
+              }
+              onClick={
+                handleRedoConstruction
+              }
+              title={
+                constructionRedoStack.length >
+                  0
+                  ? "Refazer: " +
+                    constructionRedoStack[
+                      constructionRedoStack.length -
+                        1
+                    ].label
+                  : "Nenhuma construção para refazer"
+              }
+            >
+              ↷
+            </button>
+            <span>
+              {constructionUndoStack.length}
+              {" "}ação(ões)
+            </span>
+          </div>
 
           <span className="toolbar-separator" />
 

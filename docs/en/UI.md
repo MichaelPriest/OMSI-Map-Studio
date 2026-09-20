@@ -690,3 +690,10 @@ The main toolbar now has a dedicated **Construction** group that opens **Roads**
 When **Construction > Junctions** is opened, the editor analyzes up to 400 loaded normal splines. Curved splines are sampled along their real arc; the system looks for useful-angle intersections, ignores simple endpoint-to-endpoint chain connections, and deduplicates nearby points.
 
 The **Junction assistant** lists up to 64 suggestions and lets the user pick a point. A suggestion only supplies an initial position/rotation; the user still selects a real junction `.sco` from the library. The assistant never invents junction geometry or replaces OMSI dependencies.
+
+
+### Transactional construction history
+
+Single object insertions, batches, and newly inserted splines are added to a construction history. **↶ Construction** restores the backup directory produced by the operation itself.
+
+Restoration runs in the desktop host with strict validation that only directories inside the open map's `.mapstudio-backups` tree can be used. Before restoring, the current file state is saved into another transactional backup; that backup powers **Redo**. Session history keeps the latest 40 actions and resets when switching maps.

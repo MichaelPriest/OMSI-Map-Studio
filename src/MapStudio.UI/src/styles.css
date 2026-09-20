@@ -3034,3 +3034,25 @@ code {
   color: #789db7;
   font-size: 6.5px;
 }
+
+
+.construction-history-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.construction-history-controls button {
+  height: 30px;
+  padding: 0 7px;
+  border: 1px solid #28506b;
+  border-radius: 5px;
+  background: #071a27;
+  color: #a8c2d4;
+  font-size: 7px;
+}
+
+.construction-history-controls span {
+  color: #688da5;
+  font-size: 6.5px;
+}

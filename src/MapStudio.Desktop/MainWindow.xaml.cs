@@ -295,6 +295,27 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "restoreMapStudioBackup":
+                    if (
+                        TryReadString(
+                            message.RootElement,
+                            "directoryName",
+                            out var restoreDirectoryName) &&
+                        TryReadString(
+                            message.RootElement,
+                            "backupDirectory",
+                            out var restoreBackupDirectory))
+                    {
+                        await RestoreMapStudioBackupAsync(
+                            restoreDirectoryName,
+                            restoreBackupDirectory);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "insertObjectBatch":
                     if (
                         TryReadObjectBatchInsertionRequest(
@@ -2403,6 +2424,186 @@ public partial class MainWindow : Window
                 type = "hostError",
                 code = "splineInsertError",
                 detail = exception.Message
+            });
+        }
+    }
+
+    private async Task RestoreMapStudioBackupAsync(
+        string? directoryName,
+        string? backupDirectory)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                backupDirectory) ||
+            !_knownMaps.TryGetValue(
+                directoryName,
+                out var map))
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        try
+        {
+            var backupsRoot =
+                Path.GetFullPath(
+                    Path.Combine(
+                        map.DirectoryPath,
+                        ".mapstudio-backups"));
+
+            var sourceRoot =
+                Path.GetFullPath(
+                    backupDirectory);
+
+            var relativeSource =
+                Path.GetRelativePath(
+                    backupsRoot,
+                    sourceRoot);
+
+            if (
+                Path.IsPathRooted(
+                    relativeSource) ||
+                relativeSource.Equals(
+                    "..",
+                    StringComparison.Ordinal) ||
+                relativeSource.StartsWith(
+                    ".." +
+                    Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal) ||
+                !Directory.Exists(
+                    sourceRoot))
+            {
+                throw new InvalidDataException(
+                    "invalidBackupPath");
+            }
+
+            var sourceFiles =
+                Directory
+                    .EnumerateFiles(
+                        sourceRoot,
+                        "*",
+                        SearchOption
+                            .AllDirectories)
+                    .ToArray();
+
+            if (sourceFiles.Length == 0)
+            {
+                throw new InvalidDataException(
+                    "emptyBackup");
+            }
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo
+                            .InvariantCulture);
+
+            var rollbackRoot =
+                Path.Combine(
+                    backupsRoot,
+                    timestamp +
+                    "-restore");
+
+            var writes =
+                new List<PendingFileWrite>(
+                    sourceFiles.Length);
+
+            foreach (var sourceFile in
+                sourceFiles)
+            {
+                var relativePath =
+                    Path.GetRelativePath(
+                        sourceRoot,
+                        sourceFile);
+
+                if (
+                    Path.IsPathRooted(
+                        relativePath) ||
+                    relativePath.Equals(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    relativePath.StartsWith(
+                        ".." +
+                        Path.DirectorySeparatorChar,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException(
+                        "invalidBackupEntry");
+                }
+
+                var target =
+                    Path.GetFullPath(
+                        Path.Combine(
+                            map.DirectoryPath,
+                            relativePath));
+
+                var relativeTarget =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        target);
+
+                if (
+                    Path.IsPathRooted(
+                        relativeTarget) ||
+                    relativeTarget.Equals(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    relativeTarget.StartsWith(
+                        ".." +
+                        Path.DirectorySeparatorChar,
+                        StringComparison.Ordinal) ||
+                    !File.Exists(target))
+                {
+                    throw new InvalidDataException(
+                        "invalidBackupTarget");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        target,
+                        Path.Combine(
+                            rollbackRoot,
+                            relativePath),
+                        await File
+                            .ReadAllBytesAsync(
+                                sourceFile)));
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(writes);
+
+            _tileContentCache.Clear();
+
+            PostMessage(new
+            {
+                type = "backupRestored",
+                map.DirectoryName,
+                sourceBackupDirectory =
+                    sourceRoot,
+                rollbackBackupDirectory =
+                    rollbackRoot,
+                filesRestored =
+                    writes.Count
+            });
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    InvalidDataException or
+                    IOException or
+                    UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "backupRestoreError",
+                detail =
+                    exception.Message
             });
         }
     }

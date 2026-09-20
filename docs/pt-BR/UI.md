@@ -690,3 +690,10 @@ O modo **Ponte/Elevado** abre o grupo real de splines de pontes/túneis e reutil
 Ao abrir **Construção > Cruzamentos**, o editor analisa até 400 splines normais carregadas. Splines curvas são amostradas ao longo do arco real; o sistema procura encontros com ângulo útil, ignora simples conexões ponta-a-ponta e agrupa pontos muito próximos.
 
 O painel **Assistente de cruzamentos** lista até 64 sugestões e permite escolher o ponto. A sugestão só define posição/rotação inicial; o usuário ainda escolhe um `.sco` real de cruzamento na biblioteca. Portanto o assistente não inventa geometria nem substitui dependências OMSI.
+
+
+### Histórico transacional de construção
+
+Inserções individuais de objetos, lotes e novas splines entram em um histórico de construção. **↶ Construção** restaura o diretório de backup produzido pela própria operação.
+
+A restauração é feita pelo host desktop com validação rígida para aceitar somente diretórios dentro de `.mapstudio-backups` do mapa aberto. Antes de restaurar, o estado atual dos arquivos é salvo em outro backup transacional; esse backup alimenta **Refazer**. O histórico de sessão é limitado às 40 ações mais recentes e é zerado ao trocar de mapa.
