@@ -4556,6 +4556,9 @@ export function Viewport({
     let placementPreview:
       OmsiPlacedObject | undefined;
 
+    let placementPreviewRoot:
+      TransformNode | undefined;
+
     if (
       placementAssetPath &&
       pendingPlacement &&
@@ -4589,15 +4592,23 @@ export function Viewport({
           placementGeometry
         )
       ) {
-        createSelectedGeometry(
-          scene,
-          placementPreview,
-          placementGeometry,
-          textureAssetsByKey,
-          nightPreviewEnabled,
-          objectLodInstances,
-          tiles
-        );
+        placementPreviewRoot =
+          createSelectedGeometry(
+            scene,
+            placementPreview,
+            placementGeometry,
+            textureAssetsByKey,
+            nightPreviewEnabled,
+            objectLodInstances,
+            tiles
+          );
+
+        for (const mesh of
+          placementPreviewRoot
+            .getChildMeshes()) {
+          mesh.visibility = 0.72;
+          mesh.isPickable = false;
+        }
       }
 
       const placementMarker =
@@ -5200,6 +5211,20 @@ export function Viewport({
       }
 
       if (
+        !navigationPointer &&
+        updateObjectHoverPreview(
+          event
+        )
+      ) {
+        canvas.style.cursor =
+          "copy";
+      } else if (
+        !navigationPointer
+      ) {
+        canvas.style.cursor = "";
+      }
+
+      if (
         !navigationPointer ||
         navigationPointer.pointerId !==
           event.pointerId
@@ -5705,15 +5730,11 @@ export function Viewport({
       return true;
     };
 
-    const emitSplineRoadPoint = (
+    const getPlacementPointFromPointer = (
       event: PointerEvent
     ) => {
-      if (
-        !splinePlacementTemplate ||
-        !onSplinePlacementPoint ||
-        usesWorldCoordinates
-      ) {
-        return false;
+      if (usesWorldCoordinates) {
+        return undefined;
       }
 
       const rect =
@@ -5750,7 +5771,7 @@ export function Viewport({
         Math.abs(direction.y) <=
         0.000001
       ) {
-        return false;
+        return undefined;
       }
 
       const distanceToGround =
@@ -5758,7 +5779,7 @@ export function Viewport({
         direction.y;
 
       if (distanceToGround <= 0) {
-        return false;
+        return undefined;
       }
 
       const groundPoint =
@@ -5790,7 +5811,7 @@ export function Viewport({
         );
 
       if (!tileExists) {
-        return false;
+        return undefined;
       }
 
       const rawX =
@@ -5800,27 +5821,90 @@ export function Viewport({
         groundPoint.z -
         tileY * 300;
 
-      const x =
-        snapEnabled &&
-        moveSnap > 0
-          ? Math.round(
-              rawX / moveSnap
-            ) * moveSnap
-          : rawX;
+      return {
+        tileX,
+        tileY,
+        x:
+          snapEnabled &&
+          moveSnap > 0
+            ? Math.round(
+                rawX / moveSnap
+              ) * moveSnap
+            : rawX,
+        y:
+          snapEnabled &&
+          moveSnap > 0
+            ? Math.round(
+                rawY / moveSnap
+              ) * moveSnap
+            : rawY
+      };
+    };
 
-      const y =
-        snapEnabled &&
-        moveSnap > 0
-          ? Math.round(
-              rawY / moveSnap
-            ) * moveSnap
-          : rawY;
+    const updateObjectHoverPreview = (
+      event: PointerEvent
+    ) => {
+      if (
+        !placementAssetPath ||
+        !placementGeometry ||
+        !pendingPlacement ||
+        !placementPreviewRoot ||
+        roadDragPointerRef.current !==
+          undefined
+      ) {
+        return false;
+      }
+
+      const point =
+        getPlacementPointFromPointer(
+          event
+        );
+
+      if (!point) {
+        return false;
+      }
+
+      configureObjectRoot(
+        placementPreviewRoot,
+        {
+          ...placementPreview!,
+          tileX: point.tileX,
+          tileY: point.tileY,
+          x: point.x,
+          y: point.y
+        },
+        placementGeometry,
+        tiles
+      );
+
+      return true;
+    };
+
+    const emitSplineRoadPoint = (
+      event: PointerEvent
+    ) => {
+      if (
+        !splinePlacementTemplate ||
+        !onSplinePlacementPoint ||
+        usesWorldCoordinates
+      ) {
+        return false;
+      }
+
+      const point =
+        getPlacementPointFromPointer(
+          event
+        );
+
+      if (!point) {
+        return false;
+      }
 
       onSplinePlacementPoint({
-        targetTileX: tileX,
-        targetTileY: tileY,
-        x,
-        y
+        targetTileX: point.tileX,
+        targetTileY: point.tileY,
+        x: point.x,
+        y: point.y
       });
 
       return true;
@@ -6484,6 +6568,7 @@ export function Viewport({
         );
       }
 
+      canvas.style.cursor = "";
       gizmoManager?.dispose();
       scene.dispose();
       engine.dispose();
