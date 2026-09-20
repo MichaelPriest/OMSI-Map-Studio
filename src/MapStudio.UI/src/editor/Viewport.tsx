@@ -11,6 +11,7 @@ import "@babylonjs/core/Materials/Textures/Loaders/ddsTextureLoader";
 import "@babylonjs/core/Materials/Textures/Loaders/tgaTextureLoader";
 import { Color3, Matrix, Quaternion, Vector3 } from "@babylonjs/core/Maths/math";
 import { Mesh } from "@babylonjs/core/Meshes/mesh";
+import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder";
 import { VertexData } from "@babylonjs/core/Meshes/mesh.vertexData";
 import { TransformNode } from "@babylonjs/core/Meshes/transformNode";
@@ -7934,7 +7935,7 @@ export function Viewport({
 
     const hiddenBaseMeshes:
       Array<{
-        mesh: Mesh;
+        mesh: AbstractMesh;
         visibility: number;
       }> = [];
 
