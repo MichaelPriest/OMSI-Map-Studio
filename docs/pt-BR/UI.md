@@ -828,3 +828,15 @@ O fullscreen desktop usa agora os limites físicos do monitor atual em vez de de
 O viewport agora usa outline leve no item real sob o cursor e um outline distinto na seleção ativa. O efeito não substitui material/textura e não torna ghosts, gizmos, terreno ou overlays selecionáveis como objetos reais. Esse feedback segue a ideia do editor OMSI de deixar evidente qual item receberá o clique, sem aplicar o preenchimento azul intenso típico de alguns city-builders.
 
 Quando o criador fácil de rua/ponte está ativo, a barra inferior mostra um guia contextual compacto com a sequência início → fim → curva, estado de snap de pontas, conexão automática `previous/next`, confirmação dos endpoints encaixados e elevação no modo ponte.
+
+
+## Menu superior funcional e fluxo de edição
+
+O menu superior do editor foi simplificado para usar somente ações reais já suportadas pelo OMSI Map Studio:
+
+- **Arquivo** salva transformações pendentes de objetos ou splines, descarta prévias e abre outro mapa;
+- **Editar** expõe desfazer/refazer de transformações, histórico de construção e as ferramentas Selecionar/Mover/Rotacionar;
+- **Visualizar** controla Explorador, Inspetor, navegador de blocos, enquadramento, foco e tela cheia;
+- **Mapa** reúne mapa real por coordenadas, Saúde do mapa, auditoria de dependências e Conjuntos de construção.
+
+Os antigos placeholders desabilitados foram removidos da superfície ativa. O topo também mostra de forma compacta a quantidade de alterações pendentes e o modo de carregamento atual. O mesmo padrão permanece disponível no modo desktop e em tela cheia, enquanto a barra inferior continua sendo o ponto principal para construção por categoria.
