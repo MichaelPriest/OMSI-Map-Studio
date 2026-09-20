@@ -646,3 +646,12 @@ Validação manual esperada no Windows:
 3. confirme que o anel externo aparece apenas como metadata/summary e não injeta objetos no viewport;
 4. mova a câmera para outro tile e confirme a troca automática de região;
 5. use **Visualizar → Mapa completo** e confirme que o modo completo ainda pode ser acionado manualmente.
+
+
+### Movimento rápido entre regiões
+
+1. use **Streaming automático**;
+2. mova rapidamente por vários tiles sem esperar cada carregamento terminar;
+3. confirme que a região final corresponde ao tile ativo atual;
+4. confirme que objetos, splines e terreno de uma resposta anterior não reaparecem depois;
+5. alterne para **Mapa completo** durante uma leitura regional e confirme que uma resposta regional antiga não substitui o estado completo.
