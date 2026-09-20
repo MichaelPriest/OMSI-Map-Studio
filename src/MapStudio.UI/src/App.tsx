@@ -15456,7 +15456,168 @@ export function App() {
 
   const renderObjectInspector = () => {
     if (!selectedObject) {
-      return renderMapInspector();
+      if (!placementAsset) {
+        return renderMapInspector();
+      }
+
+      const placementGroup =
+        getSceneryLibraryGroup(
+          placementAsset,
+          sceneryMetadataByPath[
+            placementAsset.sceneryObjectPath
+          ],
+          geometryByPath[
+            placementAsset.sceneryObjectPath
+          ]
+        );
+      const placementGroupInfo =
+        sceneryLibraryGroups.find(
+          (group) =>
+            group.id ===
+            placementGroup
+        );
+      const placementThumbnail =
+        assetThumbnailCache[
+          "sco:" +
+            placementAsset.sceneryObjectPath
+        ];
+
+      return (
+        <>
+          <div className="inspector-hero placement-inspector-hero">
+            {placementThumbnail ? (
+              <img
+                className="inspector-placement-thumbnail"
+                src={placementThumbnail}
+                alt=""
+                draggable={false}
+              />
+            ) : (
+              <div className="object-symbol">
+                {placementGroupInfo?.icon ??
+                  "O"}
+              </div>
+            )}
+            <div>
+              <strong>
+                {placementAsset.fileName}
+              </strong>
+              <span>
+                Asset real em colocação
+              </span>
+            </div>
+          </div>
+
+          <div className="placement-inspector-status">
+            <strong>
+              Clique no mapa para posicionar
+            </strong>
+            <span>
+              {activeConstructionTool
+                ? "Categoria ativa · " +
+                  (placementGroupInfo?.label ??
+                    "Objetos")
+                : "Objeto da biblioteca"}
+            </span>
+          </div>
+
+          <dl className="property-list dense">
+            <div>
+              <dt>Arquivo</dt>
+              <dd>
+                {placementAsset.sceneryObjectPath}
+              </dd>
+            </div>
+            <div>
+              <dt>Grupo</dt>
+              <dd>
+                {placementGroupInfo?.label ??
+                  "Outros"}
+                {" · "}
+                {getSceneryLibrarySubcategory(
+                  placementAsset,
+                  placementGroup
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Prévia 3D</dt>
+              <dd>
+                {geometryByPath[
+                  placementAsset.sceneryObjectPath
+                ]
+                  ? "Carregada"
+                  : "Carregando sob demanda"}
+              </dd>
+            </div>
+            <div>
+              <dt>Template seguro</dt>
+              <dd>
+                {placementHasKnownTemplate
+                  ? "Disponível no mapa"
+                  : mapLoadMode ===
+                      "full"
+                    ? "Ainda não encontrado no mapa"
+                    : "Será validado pelo host ao salvar"}
+              </dd>
+            </div>
+            <div>
+              <dt>Destino</dt>
+              <dd>
+                {pendingPlacement
+                  ? `Tile ${pendingPlacement.tileX},${pendingPlacement.tileY} · X ${formatNumber(pendingPlacement.x)} · Y ${formatNumber(pendingPlacement.y)} · Z ${formatNumber(pendingPlacement.z)}`
+                  : "Clique no viewport"}
+              </dd>
+            </div>
+            <div>
+              <dt>Rotação</dt>
+              <dd>
+                {pendingPlacement
+                  ? formatNumber(
+                      pendingPlacement.rotation
+                    ) + "°"
+                  : formatNumber(
+                      placementTransformDefaults.rotation
+                    ) + "°"}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="placement-inspector-actions">
+            <button
+              type="button"
+              className="wide"
+              onClick={() => {
+                handlePreviewSceneryLibraryAsset(
+                  placementAsset
+                );
+                handleExplorerPanelTab(
+                  "library"
+                );
+              }}
+            >
+              Abrir prévia 3D e biblioteca
+            </button>
+            <button
+              type="button"
+              className="secondary-action wide"
+              onClick={
+                handleCancelPlacement
+              }
+            >
+              Cancelar colocação
+            </button>
+          </div>
+
+          <div className="transform-help">
+            A colocação continua usando o .sco
+            real e as regras preservativas do
+            host. O Inspector apenas acompanha
+            o asset ativo; ele não cria dados
+            artificiais.
+          </div>
+        </>
+      );
     }
 
     return (
@@ -15987,7 +16148,173 @@ export function App() {
 
   const renderSplineInspector = () => {
     if (!selectedSpline) {
-      return renderMapInspector();
+      if (!splineLibraryPlacementAsset) {
+        return renderMapInspector();
+      }
+
+      const placementGroup =
+        getSplineLibraryGroup(
+          splineLibraryPlacementAsset
+        );
+      const placementGroupInfo =
+        splineLibraryGroups.find(
+          (group) =>
+            group.id ===
+            placementGroup
+        );
+      const placementThumbnail =
+        assetThumbnailCache[
+          "sli:" +
+            splineLibraryPlacementAsset
+              .splinePath
+        ];
+      const placementProfile =
+        splineProfilesByPath[
+          splineLibraryPlacementAsset
+            .splinePath
+        ];
+
+      return (
+        <>
+          <div className="inspector-hero placement-inspector-hero">
+            {placementThumbnail ? (
+              <img
+                className="inspector-placement-thumbnail"
+                src={placementThumbnail}
+                alt=""
+                draggable={false}
+              />
+            ) : (
+              <div className="object-symbol">
+                {placementGroupInfo?.icon ??
+                  "S"}
+              </div>
+            )}
+            <div>
+              <strong>
+                {
+                  splineLibraryPlacementAsset
+                    .fileName
+                }
+              </strong>
+              <span>
+                Spline real em construção
+              </span>
+            </div>
+          </div>
+
+          <div className="placement-inspector-status">
+            <strong>
+              {easyRoadMode
+                ? easyRoadStart
+                  ? "Defina o fim / ajuste a curva"
+                  : "Defina o ponto inicial"
+                : "Clique no mapa para posicionar"}
+            </strong>
+            <span>
+              {placementGroupInfo?.label ??
+                "Splines"}
+              {roadPlacementKind ===
+                "bridge"
+                ? ` · elevação ${formatNumber(roadElevationOffset)} m`
+                : ""}
+            </span>
+          </div>
+
+          <dl className="property-list dense">
+            <div>
+              <dt>Arquivo</dt>
+              <dd>
+                {
+                  splineLibraryPlacementAsset
+                    .splinePath
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Grupo</dt>
+              <dd>
+                {placementGroupInfo?.label ??
+                  "Outras"}
+                {" · "}
+                {getSplineLibrarySubcategory(
+                  splineLibraryPlacementAsset,
+                  placementGroup
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Perfil real</dt>
+              <dd>
+                {placementProfile
+                  ? `${placementProfile.surfaces.length} superfície(s) · ${placementProfile.textures.length} textura(s)`
+                  : "Carregando .sli sob demanda"}
+              </dd>
+            </div>
+            <div>
+              <dt>Tipo</dt>
+              <dd>
+                {splineLibraryPlacementIsHeight
+                  ? "[spline_h] altura"
+                  : "[spline] normal"}
+              </dd>
+            </div>
+            <div>
+              <dt>Geometria</dt>
+              <dd>
+                {pendingSplinePlacement
+                  ? `${formatNumber(pendingSplinePlacement.length)} m · raio ${formatNumber(pendingSplinePlacement.radius)} m · ${formatNumber(pendingSplinePlacement.rotation)}°`
+                  : easyRoadMode
+                    ? "Definida pelos pontos início/fim"
+                    : "Aguardando posição"}
+              </dd>
+            </div>
+            <div>
+              <dt>Conexão</dt>
+              <dd>
+                {roadEndpointSnapEnabled
+                  ? roadAutoConnectEnabled
+                    ? "Snap de pontas + previous/next automático"
+                    : "Snap de pontas · vínculos manuais"
+                  : "Snap de pontas desligado"}
+              </dd>
+            </div>
+          </dl>
+
+          <div className="placement-inspector-actions">
+            <button
+              type="button"
+              className="wide"
+              onClick={() => {
+                handlePreviewSplineLibraryAsset(
+                  splineLibraryPlacementAsset
+                );
+                handleExplorerPanelTab(
+                  "splineLibrary"
+                );
+              }}
+            >
+              Abrir prévia 3D e biblioteca
+            </button>
+            <button
+              type="button"
+              className="secondary-action wide"
+              onClick={
+                handleCancelSplinePlacement
+              }
+            >
+              Cancelar construção
+            </button>
+          </div>
+
+          <div className="transform-help">
+            O traçado usa o perfil .sli real,
+            snapping e vínculos preservativos.
+            O Inspector acompanha os parâmetros
+            da construção ativa sem simular dados.
+          </div>
+        </>
+      );
     }
 
     const profile =
@@ -23287,11 +23614,16 @@ export function App() {
                   ? "Objeto selecionado"
                   : selectedSpline
                     ? "Spline selecionada"
-                    : "Mapa aberto"}
+                    : splineLibraryPlacementAsset
+                      ? "Spline em construção"
+                      : placementAsset
+                        ? "Asset em colocação"
+                        : "Mapa aberto"}
               </span>
             </div>
 
-            {selectedSpline
+            {selectedSpline ||
+            splineLibraryPlacementAsset
               ? renderSplineInspector()
               : renderObjectInspector()}
           </aside>
