@@ -29,3 +29,12 @@ Termos técnicos, nomes de formatos de arquivo, classes, comandos e caminhos de 
 Esta política também servirá de base para internacionalização da interface. Textos visíveis ao usuário não devem ficar espalhados diretamente pelo código quando começarmos a implementar o sistema de localização da UI.
 
 - [Instalação Windows (.exe)](INSTALLATION.md)
+
+
+## Documentos oficiais
+
+- [Roadmap técnico e funcional](ROADMAP.md)
+- [Arquitetura](ARCHITECTURE.md)
+- [Interface](UI.md)
+- [Testes](TESTING.md)
+- [Instalação](INSTALLATION.md)
