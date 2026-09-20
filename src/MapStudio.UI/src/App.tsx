@@ -17,6 +17,8 @@ import {
   insertSpline,
   insertSplineFromLibrary,
   isDesktopBridgeAvailable,
+  levelTerrain,
+  loadGoogleMapReference,
   loadMapCatalog,
   loadMapFull,
   loadMapRegion,
@@ -30,6 +32,7 @@ import {
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
+  saveMapGeoreference,
   saveObjectTransforms,
   saveSplineTransforms,
   sceneryTreeTextureMeshToken,
@@ -39,6 +42,7 @@ import {
   setFullScreen,
   subscribeToHost,
   updateSplineLinks,
+  type GoogleMapReference,
   type OmsiMapCatalogEntry,
   type SceneryLibraryEntry,
   type SplineLibraryEntry,
@@ -48,7 +52,8 @@ import {
   type OmsiSplineDefinition,
   type OmsiSceneryObjectGeometry,
   type OmsiSceneryObjectMetadata,
-  type OmsiTextureAsset
+  type OmsiTextureAsset,
+  type OmsiTile
 } from "./bridge/desktopBridge";
 import { Viewport } from "./editor/Viewport";
 
@@ -231,6 +236,20 @@ const errorMessages: Record<string, string> = {
     "O arquivo do tile não pôde ser resolvido com segurança.",
   mapOpenError:
     "Não foi possível abrir esse mapa.",
+  invalidTerrainBrush:
+    "Os parâmetros da ferramenta de nivelamento de terreno são inválidos.",
+  terrainFileMissing:
+    "Este tile não possui um arquivo .terrain editável.",
+  terrainEditError:
+    "Não foi possível nivelar o terreno com segurança. O arquivo original foi preservado.",
+  invalidGoogleReferenceRequest:
+    "Revise a chave, coordenadas, zoom e tipo de mapa da referência do Google.",
+  googleMapsReferenceError:
+    "Não foi possível carregar a referência do Google Maps/Elevation. Verifique a chave, APIs habilitadas, billing e conexão.",
+  invalidMapGeoreference:
+    "Os dados de coordenadas da referência do mapa são inválidos.",
+  mapGeoreferenceSaveError:
+    "Não foi possível salvar os metadados de georreferenciamento do Map Studio.",
   unexpectedHostError:
     "O host desktop encontrou um erro inesperado."
 };
@@ -245,6 +264,108 @@ const formatNumber = (value: number) =>
 
 const getObjectName = (path: string) =>
   path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+
+const sampleTerrainHeight = (
+  tiles: OmsiTile[],
+  tileX: number,
+  tileY: number,
+  localX: number,
+  localY: number
+) => {
+  const tile =
+    tiles.find(
+      (candidate) =>
+        candidate.x === tileX &&
+        candidate.y === tileY
+    );
+
+  const terrain = tile?.terrain;
+
+  if (
+    !terrain ||
+    terrain.cellCount <= 0
+  ) {
+    return undefined;
+  }
+
+  const cellCount =
+    terrain.cellCount;
+  const sampleCount =
+    cellCount + 1;
+
+  if (
+    terrain.heights.length !==
+    sampleCount * sampleCount
+  ) {
+    return undefined;
+  }
+
+  const gridX =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (localX / 300) *
+          cellCount
+      )
+    );
+
+  const gridY =
+    Math.min(
+      cellCount,
+      Math.max(
+        0,
+        (localY / 300) *
+          cellCount
+      )
+    );
+
+  const x0 = Math.floor(gridX);
+  const y0 = Math.floor(gridY);
+  const x1 =
+    Math.min(
+      cellCount,
+      x0 + 1
+    );
+  const y1 =
+    Math.min(
+      cellCount,
+      y0 + 1
+    );
+
+  const fx = gridX - x0;
+  const fy = gridY - y0;
+
+  const h00 =
+    terrain.heights[
+      y0 * sampleCount + x0
+    ];
+  const h10 =
+    terrain.heights[
+      y0 * sampleCount + x1
+    ];
+  const h01 =
+    terrain.heights[
+      y1 * sampleCount + x0
+    ];
+  const h11 =
+    terrain.heights[
+      y1 * sampleCount + x1
+    ];
+
+  const top =
+    h00 +
+    (h10 - h00) * fx;
+
+  const bottom =
+    h01 +
+    (h11 - h01) * fx;
+
+  return (
+    top +
+    (bottom - top) * fy
+  );
+};
 
 const formatFileSize = (
   bytes: number
