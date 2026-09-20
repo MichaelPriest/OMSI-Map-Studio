@@ -7125,10 +7125,22 @@ export function App() {
             entry.sceneryObjectPath
           );
         }
+
+        if (
+          !Object.hasOwn(
+            sceneryMetadataByPath,
+            entry.sceneryObjectPath
+          )
+        ) {
+          loadSceneryObjectMetadata(
+            entry.sceneryObjectPath
+          );
+        }
       },
       [
         activeTile,
         geometryByPath,
+        sceneryMetadataByPath,
         selectedMap,
         splinePlacementTemplate,
         splinePreviewEditCount
@@ -10766,6 +10778,62 @@ export function App() {
                   </span>
                 </div>
 
+                {placementAsset && (
+                  <div className="asset-preview-card">
+                    <div className="asset-preview-heading">
+                      <div>
+                        <strong>Prévia no cenário</strong>
+                        <span>
+                          {placementAsset.fileName}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary-action"
+                        onClick={() =>
+                          requestCameraAction(
+                            "focus"
+                          )
+                        }
+                      >
+                        Focar prévia
+                      </button>
+                    </div>
+
+                    <div className="asset-preview-details">
+                      <span>
+                        {geometryByPath[
+                          placementAsset
+                            .sceneryObjectPath
+                        ]
+                          ? geometryByPath[
+                              placementAsset
+                                .sceneryObjectPath
+                            ].meshes.length +
+                            " mesh(es) reais" +
+                            (geometryByPath[
+                              placementAsset
+                                .sceneryObjectPath
+                            ].tree
+                              ? " · árvore billboard"
+                              : "")
+                          : "Carregando geometria real..."}
+                      </span>
+                      <span>
+                        {sceneryMetadataByPath[
+                          placementAsset
+                            .sceneryObjectPath
+                        ]?.friendlyName ??
+                          placementAsset
+                            .sceneryObjectPath}
+                      </span>
+                      <span>
+                        Selecione outro item para trocar a prévia sem gravar nada no mapa.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="scenery-library-list">
                   {filteredSceneryLibrary.map(
                     (entry) => (
@@ -10839,6 +10907,71 @@ export function App() {
                       : `${splineLibraryResultCount} spline(s)${splineLibraryResultCount > 300 ? " · mostrando 300" : ""}`}
                   </span>
                 </div>
+
+                {splineLibraryPlacementAsset &&
+                  splinePlacementTemplate && (
+                  <div className="asset-preview-card">
+                    <div className="asset-preview-heading">
+                      <div>
+                        <strong>Prévia da rua/spline</strong>
+                        <span>
+                          {splineLibraryPlacementAsset.fileName}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="secondary-action"
+                        onClick={() =>
+                          requestCameraAction(
+                            "focus"
+                          )
+                        }
+                      >
+                        Focar prévia
+                      </button>
+                    </div>
+
+                    <div className="asset-preview-details">
+                      <span>
+                        {splineProfilesByPath[
+                          splineLibraryPlacementAsset
+                            .splinePath
+                        ]
+                          ? splineProfilesByPath[
+                              splineLibraryPlacementAsset
+                                .splinePath
+                            ].surfaces.length +
+                            " superfície(s) · " +
+                            splineProfilesByPath[
+                              splineLibraryPlacementAsset
+                                .splinePath
+                            ].textures.length +
+                            " textura(s)"
+                          : "Carregando perfil .sli real..."}
+                      </span>
+                      <span>
+                        {pendingSplinePlacement
+                          ? "Prévia: " +
+                            formatNumber(
+                              pendingSplinePlacement.length
+                            ) +
+                            " m · " +
+                            formatNumber(
+                              pendingSplinePlacement.rotation
+                            ) +
+                            "°"
+                          : "Clique no cenário para posicionar."}
+                      </span>
+                      <span>
+                        {easyRoadMode
+                          ? easyRoadStart
+                            ? "Início marcado; clique no ponto final."
+                            : "Rua fácil ativa: clique no início e no fim."
+                          : "A prévia ainda não altera o arquivo do mapa."}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="scenery-library-list">
                   {filteredSplineLibrary.map(
