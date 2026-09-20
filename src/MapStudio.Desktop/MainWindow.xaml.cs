@@ -295,6 +295,21 @@ public partial class MainWindow : Window
                     }
                     break;
 
+                case "insertObjectBatch":
+                    if (
+                        TryReadObjectBatchInsertionRequest(
+                            message.RootElement,
+                            out var objectBatchInsertionRequest))
+                    {
+                        await InsertObjectBatchAsync(
+                            objectBatchInsertionRequest);
+                    }
+                    else
+                    {
+                        PostInvalidMessage();
+                    }
+                    break;
+
                 case "insertObject":
                     if (
                         TryReadString(
@@ -2387,6 +2402,341 @@ public partial class MainWindow : Window
             {
                 type = "hostError",
                 code = "splineInsertError",
+                detail = exception.Message
+            });
+        }
+    }
+
+    private async Task InsertObjectBatchAsync(
+        ObjectBatchInsertionRequest request)
+    {
+        if (
+            !_knownMaps.TryGetValue(
+                request.DirectoryName,
+                out var map))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownMap"
+            });
+            return;
+        }
+
+        if (
+            request.Placements.Count == 0 ||
+            request.Placements.Count > 256)
+        {
+            PostInvalidMessage();
+            return;
+        }
+
+        if (
+            !_knownSceneryObjectPaths
+                .ContainsKey(
+                    request.SceneryObjectPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "unknownSceneryObject"
+            });
+            return;
+        }
+
+        if (
+            _omsiRootPath is null ||
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    _omsiRootPath,
+                    request.SceneryObjectPath,
+                    out var sceneryFullPath) ||
+            !File.Exists(
+                sceneryFullPath))
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "invalidSceneryObjectPath"
+            });
+            return;
+        }
+
+        if (map.UsesWorldCoordinates)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "objectInsertionWorldCoordinatesUnsupported"
+            });
+            return;
+        }
+
+        try
+        {
+            var snapshot =
+                await ReadMapInsertionSnapshotAsync(
+                    map);
+
+            var contentAnalysis =
+                OmsiObjectInsertionAnalyzer
+                    .Analyze(
+                        snapshot.Contents,
+                        request
+                            .SceneryObjectPath);
+
+            var analysis =
+                new OmsiObjectInsertionAnalysis(
+                    Math.Max(
+                        contentAnalysis.MaxUsedId,
+                        snapshot.MaxUsedId),
+                    contentAnalysis
+                        .MatchingObjectTemplate);
+
+            var template =
+                analysis
+                    .MatchingObjectTemplate;
+
+            if (template is null)
+            {
+                PostMessage(new
+                {
+                    type = "hostError",
+                    code =
+                        "objectInsertTemplateUnavailable",
+                    detail =
+                        request
+                            .SceneryObjectPath
+                });
+                return;
+            }
+
+            if (
+                analysis.MaxUsedId >
+                int.MaxValue -
+                    request.Placements.Count)
+            {
+                throw new InvalidDataException(
+                    "objectIdExhausted");
+            }
+
+            var indexed =
+                request.Placements
+                    .Select(
+                        (placement, index) =>
+                            new
+                            {
+                                Placement =
+                                    placement,
+                                ObjectId =
+                                    analysis.MaxUsedId +
+                                    index +
+                                    1
+                            })
+                    .ToArray();
+
+            var timestamp =
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture);
+
+            var backupRoot =
+                Path.Combine(
+                    map.DirectoryPath,
+                    ".mapstudio-backups",
+                    timestamp);
+
+            var writes =
+                new List<PendingFileWrite>();
+            var editedTilePaths =
+                new List<string>();
+            var placedObjects =
+                new List<object>();
+
+            foreach (var group in
+                indexed.GroupBy(item =>
+                    (
+                        item.Placement.TileX,
+                        item.Placement.TileY
+                    )))
+            {
+                var targetTile =
+                    map.Tiles.FirstOrDefault(
+                        tile =>
+                            tile.X ==
+                                group.Key.TileX &&
+                            tile.Y ==
+                                group.Key.TileY);
+
+                if (targetTile is null)
+                {
+                    throw new InvalidDataException(
+                        "unknownTile");
+                }
+
+                if (
+                    !OmsiMapPathResolver
+                        .TryResolveTilePath(
+                            map.DirectoryPath,
+                            targetTile.RelativeMapPath,
+                            out var targetTilePath) ||
+                    !File.Exists(
+                        targetTilePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                var document =
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            targetTilePath);
+
+                var groupItems =
+                    group.ToArray();
+
+                var result =
+                    OmsiTileObjectInserter
+                        .AppendMany(
+                            document,
+                            groupItems
+                                .Select(item =>
+                                    new OmsiNewPlacedObject(
+                                        template.HeaderValue,
+                                        request
+                                            .SceneryObjectPath,
+                                        item.ObjectId,
+                                        item.Placement.X,
+                                        item.Placement.Y,
+                                        item.Placement.Z,
+                                        item.Placement.Rotation,
+                                        item.Placement.Pitch,
+                                        item.Placement.Bank,
+                                        template.ExtraValues))
+                                .ToArray());
+
+                var relativePath =
+                    Path.GetRelativePath(
+                        map.DirectoryPath,
+                        targetTilePath);
+
+                if (
+                    relativePath.StartsWith(
+                        "..",
+                        StringComparison.Ordinal) ||
+                    Path.IsPathRooted(
+                        relativePath))
+                {
+                    throw new InvalidDataException(
+                        "invalidTilePath");
+                }
+
+                writes.Add(
+                    new PendingFileWrite(
+                        targetTilePath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        result.Bytes));
+                editedTilePaths.Add(
+                    targetTilePath);
+
+                for (
+                    var index = 0;
+                    index < groupItems.Length;
+                    index++)
+                {
+                    var item =
+                        groupItems[index];
+                    var placement =
+                        item.Placement;
+
+                    placedObjects.Add(new
+                    {
+                        tileX =
+                            placement.TileX,
+                        tileY =
+                            placement.TileY,
+                        headerValue =
+                            template.HeaderValue,
+                        sceneryObjectPath =
+                            request
+                                .SceneryObjectPath,
+                        objectId =
+                            item.ObjectId,
+                        sourceSectionOrdinal =
+                            result
+                                .SourceSectionOrdinals[
+                                    index],
+                        x = placement.X,
+                        y = placement.Y,
+                        z = placement.Z,
+                        rotation =
+                            placement.Rotation,
+                        pitch =
+                            placement.Pitch,
+                        bank =
+                            placement.Bank
+                    });
+                }
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(writes);
+
+            foreach (var tilePath in
+                editedTilePaths.Distinct(
+                    StringComparer
+                        .OrdinalIgnoreCase))
+            {
+                _tileContentCache
+                    .TryRemove(
+                        tilePath,
+                        out _);
+            }
+
+            PostMessage(new
+            {
+                type =
+                    "objectBatchInserted",
+                map.DirectoryName,
+                backupDirectory =
+                    backupRoot,
+                count =
+                    placedObjects.Count,
+                placedObjects
+            });
+        }
+        catch (InvalidDataException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    exception.Message ==
+                        "objectIdExhausted"
+                        ? "objectIdExhausted"
+                        : "objectBatchInsertError",
+                detail = exception.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code = "accessDenied"
+            });
+        }
+        catch (IOException exception)
+        {
+            PostMessage(new
+            {
+                type = "hostError",
+                code =
+                    "objectBatchInsertError",
                 detail = exception.Message
             });
         }
@@ -7192,6 +7542,104 @@ public partial class MainWindow : Window
         return results;
     }
 
+    private static bool TryReadObjectBatchInsertionRequest(
+        JsonElement element,
+        out ObjectBatchInsertionRequest request)
+    {
+        request = default!;
+
+        if (
+            !TryReadString(
+                element,
+                "directoryName",
+                out var directoryName) ||
+            !TryReadString(
+                element,
+                "sceneryObjectPath",
+                out var sceneryObjectPath) ||
+            !element.TryGetProperty(
+                "placements",
+                out var placementsElement) ||
+            placementsElement.ValueKind !=
+                JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        var placements =
+            new List<ObjectPlacementRequest>();
+
+        foreach (var placement in
+            placementsElement.EnumerateArray())
+        {
+            if (
+                !TryReadInt32(
+                    placement,
+                    "tileX",
+                    out var tileX) ||
+                !TryReadInt32(
+                    placement,
+                    "tileY",
+                    out var tileY) ||
+                !TryReadDouble(
+                    placement,
+                    "x",
+                    out var x) ||
+                !TryReadDouble(
+                    placement,
+                    "y",
+                    out var y) ||
+                !TryReadDouble(
+                    placement,
+                    "z",
+                    out var z) ||
+                !TryReadDouble(
+                    placement,
+                    "rotation",
+                    out var rotation) ||
+                !TryReadDouble(
+                    placement,
+                    "pitch",
+                    out var pitch) ||
+                !TryReadDouble(
+                    placement,
+                    "bank",
+                    out var bank))
+            {
+                return false;
+            }
+
+            placements.Add(
+                new ObjectPlacementRequest(
+                    tileX,
+                    tileY,
+                    x,
+                    y,
+                    z,
+                    rotation,
+                    pitch,
+                    bank));
+
+            if (placements.Count > 256)
+            {
+                return false;
+            }
+        }
+
+        if (placements.Count == 0)
+        {
+            return false;
+        }
+
+        request =
+            new ObjectBatchInsertionRequest(
+                directoryName!,
+                sceneryObjectPath!,
+                placements);
+
+        return true;
+    }
+
     private static bool TryReadObjectTransformRequests(
         JsonElement element,
         out IReadOnlyList<ObjectTransformRequest> requests)
@@ -7844,6 +8292,21 @@ public partial class MainWindow : Window
         double Radius,
         double GradientStart,
         double GradientEnd);
+
+    private sealed record ObjectPlacementRequest(
+        int TileX,
+        int TileY,
+        double X,
+        double Y,
+        double Z,
+        double Rotation,
+        double Pitch,
+        double Bank);
+
+    private sealed record ObjectBatchInsertionRequest(
+        string DirectoryName,
+        string SceneryObjectPath,
+        IReadOnlyList<ObjectPlacementRequest> Placements);
 
     private sealed record ObjectTransformRequest(
         int TileX,

@@ -143,6 +143,61 @@ public sealed class OmsiObjectInsertionTests
     }
 
     [Fact]
+    public void Inserter_AppendsBatchWithStableOrdinals()
+    {
+        const string source =
+            "[object]\r\n0\r\n" +
+            "Sceneryobjects\\Pack\\Existing.sco\r\n" +
+            "10\r\n0\r\n0\r\n0\r\n0\r\n0\r\n0\r\n";
+
+        var document =
+            OmsiConfigParser.Parse(source);
+
+        var result =
+            OmsiTileObjectInserter.AppendMany(
+                document,
+                [
+                    new OmsiNewPlacedObject(
+                        "0",
+                        @"Sceneryobjects\Pack\Tree.sco",
+                        11,
+                        1,
+                        2,
+                        3,
+                        0,
+                        0,
+                        0,
+                        ["4", "Tree.tga"]),
+                    new OmsiNewPlacedObject(
+                        "0",
+                        @"Sceneryobjects\Pack\Tree.sco",
+                        12,
+                        4,
+                        5,
+                        6,
+                        90,
+                        0,
+                        0,
+                        ["4", "Tree.tga"])
+                ]);
+
+        Assert.Equal(
+            new[] { 1, 2 },
+            result.SourceSectionOrdinals);
+
+        var text =
+            Encoding.UTF8.GetString(
+                result.Bytes);
+
+        Assert.Contains(
+            "11\r\n1\r\n2\r\n3\r\n",
+            text);
+        Assert.Contains(
+            "12\r\n4\r\n5\r\n6\r\n90\r\n",
+            text);
+    }
+
+    [Fact]
     public void Analyzer_DoesNotInventTemplateForNewAsset()
     {
         var tile = new OmsiTileContent(

@@ -9,8 +9,98 @@ public static class OmsiTileObjectInserter
         OmsiConfigDocument document,
         OmsiNewPlacedObject placedObject)
     {
+        var batch =
+            AppendMany(
+                document,
+                [placedObject]);
+
+        return new OmsiTileObjectInsertResult(
+            batch.Bytes,
+            batch.SourceSectionOrdinals[0]);
+    }
+
+    public static OmsiTileObjectBatchInsertResult AppendMany(
+        OmsiConfigDocument document,
+        IReadOnlyList<OmsiNewPlacedObject> placedObjects)
+    {
         ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(placedObject);
+        ArgumentNullException.ThrowIfNull(placedObjects);
+
+        if (placedObjects.Count == 0)
+        {
+            throw new InvalidDataException(
+                "invalidNewObjectBatch");
+        }
+
+        foreach (var placedObject in placedObjects)
+        {
+            Validate(placedObject);
+        }
+
+        var lines =
+            document.Lines.ToList();
+
+        var sourceSectionOrdinal =
+            document
+                .FindSections("object")
+                .Count();
+
+        var ordinals =
+            new List<int>(
+                placedObjects.Count);
+
+        foreach (var placedObject in placedObjects)
+        {
+            if (
+                lines.Count > 0 &&
+                lines[^1].Length != 0)
+            {
+                lines.Add(string.Empty);
+            }
+
+            ordinals.Add(
+                sourceSectionOrdinal++);
+
+            lines.Add("[object]");
+            lines.Add(
+                placedObject.HeaderValue);
+            lines.Add(
+                placedObject
+                    .SceneryObjectPath);
+            lines.Add(
+                placedObject.ObjectId
+                    .ToString(
+                        CultureInfo.InvariantCulture));
+            lines.Add(Format(placedObject.X));
+            lines.Add(Format(placedObject.Y));
+            lines.Add(Format(placedObject.Z));
+            lines.Add(
+                Format(
+                    placedObject.Rotation));
+            lines.Add(
+                Format(
+                    placedObject.Pitch));
+            lines.Add(
+                Format(
+                    placedObject.Bank));
+
+            foreach (var extra in
+                placedObject.ExtraValues)
+            {
+                lines.Add(extra);
+            }
+        }
+
+        return new OmsiTileObjectBatchInsertResult(
+            Encode(document, lines),
+            ordinals);
+    }
+
+    private static void Validate(
+        OmsiNewPlacedObject placedObject)
+    {
+        ArgumentNullException.ThrowIfNull(
+            placedObject);
 
         if (string.IsNullOrWhiteSpace(
                 placedObject.HeaderValue) ||
@@ -22,54 +112,6 @@ public static class OmsiTileObjectInserter
             throw new InvalidDataException(
                 "invalidNewObject");
         }
-
-        var lines =
-            document.Lines.ToList();
-
-        if (
-            lines.Count > 0 &&
-            lines[^1].Length != 0)
-        {
-            lines.Add(string.Empty);
-        }
-
-        var sourceSectionOrdinal =
-            document
-                .FindSections("object")
-                .Count();
-
-        lines.Add("[object]");
-        lines.Add(
-            placedObject.HeaderValue);
-        lines.Add(
-            placedObject
-                .SceneryObjectPath);
-        lines.Add(
-            placedObject.ObjectId
-                .ToString(
-                    CultureInfo.InvariantCulture));
-        lines.Add(Format(placedObject.X));
-        lines.Add(Format(placedObject.Y));
-        lines.Add(Format(placedObject.Z));
-        lines.Add(
-            Format(
-                placedObject.Rotation));
-        lines.Add(
-            Format(
-                placedObject.Pitch));
-        lines.Add(
-            Format(
-                placedObject.Bank));
-
-        foreach (var extra in
-            placedObject.ExtraValues)
-        {
-            lines.Add(extra);
-        }
-
-        return new OmsiTileObjectInsertResult(
-            Encode(document, lines),
-            sourceSectionOrdinal);
     }
 
     private static bool IsFinite(
