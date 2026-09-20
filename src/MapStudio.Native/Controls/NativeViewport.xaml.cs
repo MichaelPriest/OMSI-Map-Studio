@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using MapStudio.Native.Interop;
 using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -9,6 +11,7 @@ public sealed partial class NativeViewport : UserControl
 {
     private NativeViewportRuntime? _runtime;
     private bool _leftPressed;
+    private bool _swapChainBound;
 
     public NativeViewport()
     {
@@ -16,6 +19,11 @@ public sealed partial class NativeViewport : UserControl
 
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+        SizeChanged += OnSizeChanged;
+
+        SwapChainSurface
+            .CompositionScaleChanged +=
+            OnCompositionScaleChanged;
     }
 
     public event EventHandler<string>? PointerStatusChanged;
@@ -31,8 +39,13 @@ public sealed partial class NativeViewport : UserControl
             _runtime ??=
                 new NativeViewportRuntime();
 
+            EnsureNativeSurface();
+            BindSwapChain();
+            _runtime.RenderInitialFrame();
+
             RuntimeText.Text =
-                $"Direct3D 11 pronto · feature level {_runtime.Device.FeatureLevel}";
+                $"Direct3D 11 ativo · feature level {_runtime.Device.FeatureLevel} · " +
+                $"{_runtime.Surface?.Width}×{_runtime.Surface?.Height}";
         }
         catch (Exception exception)
         {
@@ -41,12 +54,156 @@ public sealed partial class NativeViewport : UserControl
         }
     }
 
+    private void EnsureNativeSurface()
+    {
+        if (_runtime is null)
+        {
+            return;
+        }
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var width =
+            (uint)Math.Max(
+                1,
+                Math.Round(
+                    SwapChainSurface
+                        .ActualWidth *
+                    scaleX));
+
+        var height =
+            (uint)Math.Max(
+                1,
+                Math.Round(
+                    SwapChainSurface
+                        .ActualHeight *
+                    scaleY));
+
+        _runtime.EnsureSurface(
+            width,
+            height);
+    }
+
+    private void BindSwapChain()
+    {
+        if (
+            _runtime is null ||
+            _runtime.SwapChainPointer ==
+                IntPtr.Zero)
+        {
+            return;
+        }
+
+        var nativePanel =
+            WinRT.CastExtensions.As<
+                WinUISwapChainPanelInterop
+                    .ISwapChainPanelNative>(
+                SwapChainSurface);
+
+        var result =
+            nativePanel.SetSwapChain(
+                _runtime
+                    .SwapChainPointer);
+
+        Marshal.ThrowExceptionForHR(
+            result);
+
+        _swapChainBound = true;
+    }
+
+    private void UnbindSwapChain()
+    {
+        if (!_swapChainBound)
+        {
+            return;
+        }
+
+        var nativePanel =
+            WinRT.CastExtensions.As<
+                WinUISwapChainPanelInterop
+                    .ISwapChainPanelNative>(
+                SwapChainSurface);
+
+        var result =
+            nativePanel.SetSwapChain(
+                IntPtr.Zero);
+
+        Marshal.ThrowExceptionForHR(
+            result);
+
+        _swapChainBound = false;
+    }
+
+    private void ResizeAndRender()
+    {
+        if (
+            _runtime is null ||
+            !IsLoaded)
+        {
+            return;
+        }
+
+        EnsureNativeSurface();
+        _runtime.RenderInitialFrame();
+
+        RuntimeText.Text =
+            $"Direct3D 11 ativo · feature level {_runtime.Device.FeatureLevel} · " +
+            $"{_runtime.Surface?.Width}×{_runtime.Surface?.Height}";
+    }
+
+    private void OnSizeChanged(
+        object sender,
+        SizeChangedEventArgs e)
+    {
+        try
+        {
+            ResizeAndRender();
+        }
+        catch (Exception exception)
+        {
+            RuntimeText.Text =
+                $"Falha ao redimensionar viewport: {exception.Message}";
+        }
+    }
+
+    private void OnCompositionScaleChanged(
+        SwapChainPanel sender,
+        object args)
+    {
+        try
+        {
+            ResizeAndRender();
+        }
+        catch (Exception exception)
+        {
+            RuntimeText.Text =
+                $"Falha ao aplicar escala de DPI: {exception.Message}";
+        }
+    }
+
     private void OnUnloaded(
         object sender,
         RoutedEventArgs e)
     {
-        _runtime?.Dispose();
-        _runtime = null;
+        try
+        {
+            UnbindSwapChain();
+        }
+        finally
+        {
+            _runtime?.Dispose();
+            _runtime = null;
+        }
     }
 
     private void OnPointerPressed(
@@ -78,7 +235,7 @@ public sealed partial class NativeViewport : UserControl
 
         SelectionStatusChanged?.Invoke(
             this,
-            "ID buffer: aguardando ligação da cena OMSI");
+            "ID buffer: cena OMSI será ligada na próxima etapa");
 
         e.Handled = true;
     }

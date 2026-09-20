@@ -70,3 +70,10 @@ The native version replaces the WebView2 host only after sufficient functional p
 Native selection will not depend on object material, transparency or texture. Every OMSI entity receives a `PickingId`. A dedicated pass writes that ID into an integer render target. The pixel under the pointer directly identifies the selected entity.
 
 This removes the fallback chain that became necessary in the WebView2/Babylon viewport.
+
+
+### Checkpoint N0.1 — Direct3D presentation
+
+The foundation now creates an `IDXGISwapChain1` for composition, associates it with the `SwapChainPanel` through `ISwapChainPanelNative`, creates the backbuffer/RTV and presents a real first Direct3D 11 frame.
+
+Backbuffer sizing uses WinUI `CompositionScaleX/Y`, so the renderer works in physical pixels and reacts to DPI/window-size changes without CSS/WebView2.

@@ -70,3 +70,10 @@ A versão nativa só substitui o host WebView2 quando atingir paridade funcional
 A seleção nativa não dependerá de material, transparência ou textura do objeto. Cada entidade OMSI recebe um `PickingId`. Em uma passagem própria, o renderer grava esse ID num render target inteiro. O pixel sob o cursor identifica diretamente a entidade selecionada.
 
 Isso elimina a cadeia de fallbacks que se tornou necessária no viewport WebView2/Babylon.
+
+
+### Checkpoint N0.1 — apresentação Direct3D
+
+A fundação agora cria uma `IDXGISwapChain1` para composição, associa a swap chain ao `SwapChainPanel` por `ISwapChainPanelNative`, cria o backbuffer/RTV e apresenta um primeiro frame Direct3D 11 real.
+
+O tamanho do backbuffer usa `CompositionScaleX/Y` do WinUI, portanto o renderer trabalha em pixels físicos e reage a mudanças de DPI e redimensionamento sem passar por CSS/WebView2.
