@@ -772,3 +772,12 @@ The missing-dependency panel now lets the user explicitly select a broken `.sco`
 Before confirmation, the panel shows the missing path, selected replacement, and how many references to that path are currently loaded. The host operation always scans every map tile, including tiles that are not currently in the viewport.
 
 Replacement changes only the asset path and creates a transactional backup. When files change, that backup is added to the **↶ Construction** history so the operation can be undone. Replacement is never automatic.
+
+
+### Map health and problem filters
+
+The **Health** button gathers available technical diagnostics without turning missing information into false errors. The panel separately counts missing dependencies, loaded `.sco` objects with O3D/texture issues, loaded `.sli` splines with profile/texture issues, requested textures that failed, and map geometry with no renderable visual.
+
+Both libraries now include the technical filter **⚠ Problems**. It lists only assets for which Map Studio already has evidence of failure—for example a declared missing O3D, geometry that failed to load, or a requested texture that returned missing/error. An asset that has not been loaded yet is not placed in this filter.
+
+Health cards open the corresponding filtered library or dependency audit directly, making incomplete-map repair faster.

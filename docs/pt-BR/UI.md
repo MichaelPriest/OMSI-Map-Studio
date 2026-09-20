@@ -772,3 +772,12 @@ O painel de dependências ausentes agora permite selecionar explicitamente um ca
 Antes de confirmar, o painel mostra o caminho ausente, o substituto escolhido e quantas referências desse caminho estão atualmente carregadas. A operação no host sempre varre todos os tiles do mapa, inclusive os que não estão no viewport.
 
 A substituição altera somente o caminho do asset e cria backup transacional. Quando há alterações, o backup é registrado no histórico **↶ Construção**, permitindo desfazer. Nenhuma substituição é feita automaticamente.
+
+
+### Saúde do mapa e filtro de problemas
+
+O botão **Saúde** reúne o diagnóstico técnico disponível sem transformar ausência de dados em falso erro. O painel conta separadamente dependências ausentes, objetos `.sco` carregados com O3D/textura problemáticos, splines `.sli` carregadas com perfil/textura problemáticos, texturas solicitadas com falha e geometria sem visual renderizável.
+
+As bibliotecas ganharam o filtro técnico **⚠ Com problemas**. Ele lista apenas assets para os quais o Map Studio já possui evidência de falha — por exemplo O3D declarado ausente, geometria que falhou ao carregar ou textura solicitada que retornou ausente/erro. Um asset que ainda não foi carregado não entra nesse filtro.
+
+Os cartões do painel Saúde abrem diretamente a biblioteca filtrada ou a auditoria de dependências, acelerando a correção de mapas incompletos.

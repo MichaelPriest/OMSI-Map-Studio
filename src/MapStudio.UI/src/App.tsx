@@ -134,12 +134,14 @@ type SceneryTechnicalFilter =
   | "all"
   | "used"
   | "tree"
-  | "loaded";
+  | "loaded"
+  | "problems";
 
 type SplineTechnicalFilter =
   | "all"
   | "used"
-  | "loaded";
+  | "loaded"
+  | "problems";
 
 const libraryStorageKeys = {
   sceneryFavorites:
@@ -3838,6 +3840,11 @@ export function App() {
   const [
     showConstructionSetPanel,
     setShowConstructionSetPanel
+  ] = useState(false);
+
+  const [
+    showMapHealthPanel,
+    setShowMapHealthPanel
   ] = useState(false);
 
   const [
@@ -7727,6 +7734,198 @@ export function App() {
     missingSceneryDependencies.length +
     missingSplineDependencies.length;
 
+  const sceneryProblemPaths =
+    useMemo(() => {
+      const result =
+        new Set<string>();
+
+      for (const [
+        path,
+        geometry
+      ] of Object.entries(
+        geometryByPath
+      )) {
+        const metadata =
+          sceneryMetadataByPath[path];
+
+        if (
+          metadata?.meshes.some(
+            (mesh) =>
+              !mesh.fileExists ||
+              Boolean(
+                mesh.structure
+                  ?.errorCode
+              )
+          )
+        ) {
+          result.add(path);
+        }
+
+        if (
+          geometry.meshes.some(
+            (mesh) =>
+              !mesh.geometry
+                .isLoaded ||
+              Boolean(
+                mesh.geometry
+                  .errorCode
+              )
+          )
+        ) {
+          result.add(path);
+        }
+
+        if (geometry.tree) {
+          const key =
+            getSceneryTextureAssetKey(
+              path,
+              sceneryTreeTextureMeshToken,
+              geometry.tree
+                .textureName
+            );
+          const asset =
+            textureAssetsByKey[key];
+
+          if (
+            asset &&
+            (
+              !asset.exists ||
+              Boolean(asset.errorCode)
+            )
+          ) {
+            result.add(path);
+          }
+        }
+
+        for (const mesh of
+          geometry.meshes) {
+          for (const [
+            materialIndex,
+            material
+          ] of mesh.geometry
+            .materials.entries()) {
+            const materialOverride =
+              findSceneryMaterialOverride(
+                mesh,
+                materialIndex
+              );
+
+            const textureNames = [
+              material.textureName,
+              materialOverride
+                ?.bumpMapTextureName,
+              materialOverride
+                ?.nightMapTextureName,
+              materialOverride
+                ?.environmentMapTextureName,
+              getStaticTransparencyMapName(
+                materialOverride
+                  ?.transMapSource
+              )
+            ].filter(
+              (
+                value
+              ): value is string =>
+                Boolean(value)
+            );
+
+            for (const textureName of
+              textureNames) {
+              const key =
+                getSceneryTextureAssetKey(
+                  path,
+                  mesh.declaredPath,
+                  textureName
+                );
+              const asset =
+                textureAssetsByKey[key];
+
+              if (
+                asset &&
+                (
+                  !asset.exists ||
+                  Boolean(
+                    asset.errorCode
+                  )
+                )
+              ) {
+                result.add(path);
+                break;
+              }
+            }
+
+            if (result.has(path)) {
+              break;
+            }
+          }
+
+          if (result.has(path)) {
+            break;
+          }
+        }
+      }
+
+      return result;
+    }, [
+      geometryByPath,
+      sceneryMetadataByPath,
+      textureAssetsByKey
+    ]);
+
+  const splineProblemPaths =
+    useMemo(() => {
+      const result =
+        new Set<string>();
+
+      for (const [
+        path,
+        profile
+      ] of Object.entries(
+        splineProfilesByPath
+      )) {
+        if (!profile.exists) {
+          result.add(path);
+          continue;
+        }
+
+        for (const textureName of
+          new Set(
+            profile.textures.filter(
+              Boolean
+            )
+          )) {
+          const key =
+            getSplineTextureAssetKey(
+              path,
+              textureName
+            );
+          const asset =
+            textureAssetsByKey[key];
+
+          if (
+            asset &&
+            (
+              !asset.exists ||
+              Boolean(asset.errorCode)
+            )
+          ) {
+            result.add(path);
+            break;
+          }
+        }
+      }
+
+      return result;
+    }, [
+      splineProfilesByPath,
+      textureAssetsByKey
+    ]);
+
+  const mapHealthIssueCount =
+    missingDependencyCount +
+    sceneryProblemPaths.size +
+    splineProblemPaths.size;
+
   const loadedMapGeometryCount =
     useMemo(
       () =>
@@ -8383,6 +8582,16 @@ export function App() {
               return false;
             }
 
+            if (
+              sceneryTechnicalFilter ===
+                "problems" &&
+              !sceneryProblemPaths.has(
+                path
+              )
+            ) {
+              return false;
+            }
+
             return true;
           });
 
@@ -8420,6 +8629,7 @@ export function App() {
       sceneryFavorites,
       sceneryLibrarySearchEntries,
       sceneryLibraryView,
+      sceneryProblemPaths,
       sceneryRecent,
       sceneryTechnicalFilter,
       sceneryUsage,
@@ -8672,6 +8882,16 @@ export function App() {
               return false;
             }
 
+            if (
+              splineTechnicalFilter ===
+                "problems" &&
+              !splineProblemPaths.has(
+                path
+              )
+            ) {
+              return false;
+            }
+
             return true;
           });
 
@@ -8708,6 +8928,7 @@ export function App() {
       splineFavorites,
       splineLibrarySearchEntries,
       splineLibraryView,
+      splineProblemPaths,
       splineProfilesByPath,
       splineRecent,
       splineTechnicalFilter,
@@ -16250,6 +16471,29 @@ export function App() {
                 : "Verificar dependências"}
           </button>
 
+          <button
+            type="button"
+            className={
+              showMapHealthPanel
+                ? "map-health-button active"
+                : mapHealthIssueCount > 0
+                  ? "map-health-button warning"
+                  : "map-health-button"
+            }
+            onClick={() =>
+              setShowMapHealthPanel(
+                (current) =>
+                  !current
+              )
+            }
+            title="Resumo técnico do mapa e assets carregados"
+          >
+            {mapHealthIssueCount > 0
+              ? "⚠ Saúde " +
+                mapHealthIssueCount
+              : "✓ Saúde"}
+          </button>
+
           <div className="construction-history-controls">
             <button
               type="button"
@@ -16982,6 +17226,9 @@ export function App() {
                       <option value="loaded">
                         Geometria carregada
                       </option>
+                      <option value="problems">
+                        ⚠ Com problemas
+                      </option>
                     </select>
 
                     <select
@@ -17662,6 +17909,9 @@ export function App() {
                       </option>
                       <option value="loaded">
                         Perfil carregado
+                      </option>
+                      <option value="problems">
+                        ⚠ Com problemas
                       </option>
                     </select>
 
@@ -20233,6 +20483,192 @@ export function App() {
                 >
                   Cancelar
                 </button>
+              </div>
+            )}
+
+            {showMapHealthPanel && (
+              <div
+                className="map-health-panel floating-tool"
+                data-floating-tool
+              >
+                <button
+                  type="button"
+                  className="tool-drag-grip drag-handle"
+                  data-drag-handle
+                  title="Mover saúde do mapa"
+                >
+                  ⋮⋮
+                </button>
+
+                <div className="map-health-heading">
+                  <div>
+                    <strong>
+                      Saúde do mapa
+                    </strong>
+                    <span>
+                      Diagnóstico confirmado dos dados carregados
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowMapHealthPanel(
+                        false
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="map-health-score">
+                  <strong>
+                    {mapHealthIssueCount === 0
+                      ? "✓ Sem problemas confirmados"
+                      : "⚠ " +
+                        mapHealthIssueCount +
+                        " grupo(s) de problema"}
+                  </strong>
+                  <span>
+                    Assets ainda não carregados não são classificados como defeituosos.
+                  </span>
+                </div>
+
+                <div className="map-health-grid">
+                  <button
+                    type="button"
+                    className={
+                      missingDependencyCount >
+                      0
+                        ? "warning"
+                        : ""
+                    }
+                    onClick={() => {
+                      handleAuditDependencies();
+                      setShowMapHealthPanel(
+                        false
+                      );
+                    }}
+                  >
+                    <strong>
+                      {missingDependencyCount}
+                    </strong>
+                    <span>
+                      dependência(s) ausente(s)
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      sceneryProblemPaths.size >
+                      0
+                        ? "warning"
+                        : ""
+                    }
+                    onClick={() => {
+                      setSceneryLibraryView(
+                        "groups"
+                      );
+                      setSceneryLibraryGroup(
+                        "all"
+                      );
+                      setScenerySubcategory(
+                        "all"
+                      );
+                      setSceneryTechnicalFilter(
+                        "problems"
+                      );
+                      handleExplorerPanelTab(
+                        "library"
+                      );
+                      setShowMapHealthPanel(
+                        false
+                      );
+                      if (isFullScreen) {
+                        setFullScreenPanel(
+                          "explorer"
+                        );
+                      }
+                    }}
+                  >
+                    <strong>
+                      {sceneryProblemPaths.size}
+                    </strong>
+                    <span>
+                      .sco com problema confirmado
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={
+                      splineProblemPaths.size >
+                      0
+                        ? "warning"
+                        : ""
+                    }
+                    onClick={() => {
+                      setSplineLibraryView(
+                        "groups"
+                      );
+                      setSplineLibraryGroup(
+                        "all"
+                      );
+                      setSplineSubcategory(
+                        "all"
+                      );
+                      setSplineTechnicalFilter(
+                        "problems"
+                      );
+                      handleExplorerPanelTab(
+                        "splineLibrary"
+                      );
+                      setShowMapHealthPanel(
+                        false
+                      );
+                      if (isFullScreen) {
+                        setFullScreenPanel(
+                          "explorer"
+                        );
+                      }
+                    }}
+                  >
+                    <strong>
+                      {splineProblemPaths.size}
+                    </strong>
+                    <span>
+                      .sli com problema confirmado
+                    </span>
+                  </button>
+
+                  <div>
+                    <strong>
+                      {failedTextureAssetCount}
+                    </strong>
+                    <span>
+                      textura(s) solicitada(s) com falha
+                    </span>
+                  </div>
+
+                  <div>
+                    <strong>
+                      {pendingTextureAssetCount}
+                    </strong>
+                    <span>
+                      textura(s) ainda carregando
+                    </span>
+                  </div>
+
+                  <div>
+                    <strong>
+                      {failedMapGeometryCount}
+                    </strong>
+                    <span>
+                      geometria(s) de mapa sem visual renderizável
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
 

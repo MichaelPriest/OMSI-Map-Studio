@@ -3463,3 +3463,116 @@ code {
 .dependency-replacement-actions button {
   flex: 1 1 0;
 }
+
+
+.map-health-button {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid #28506b;
+  border-radius: 5px;
+  background: #071a27;
+  color: #9bb8ca;
+  font-size: 7px;
+}
+
+.map-health-button.active {
+  border-color: #3d8ec3;
+  background: #0d3048;
+  color: #e1f2ff;
+}
+
+.map-health-button.warning {
+  border-color: #9a6d28;
+  background: #2a1d08;
+  color: #f2c573;
+}
+
+.map-health-panel {
+  position: absolute;
+  right: 14px;
+  top: 58px;
+  z-index: 21;
+  display: grid;
+  width: min(390px, 44vw);
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #286488;
+  border-radius: 8px;
+  background: rgb(5 22 34 / 96%);
+  box-shadow: 0 14px 38px rgb(0 0 0 / 42%);
+}
+
+.map-health-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-health-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.map-health-heading strong {
+  color: #d9efff;
+  font-size: 9px;
+}
+
+.map-health-heading span,
+.map-health-score span {
+  color: #789db5;
+  font-size: 6.5px;
+}
+
+.map-health-score {
+  display: grid;
+  gap: 3px;
+  padding: 6px;
+  border: 1px solid #1d455e;
+  border-radius: 5px;
+  background: #071824;
+}
+
+.map-health-score strong {
+  color: #cde7f5;
+  font-size: 7.5px;
+}
+
+.map-health-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(
+      2,
+      minmax(0, 1fr)
+    );
+  gap: 5px;
+}
+
+.map-health-grid > button,
+.map-health-grid > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 7px;
+  border: 1px solid #183e57;
+  border-radius: 5px;
+  background: #061722;
+  text-align: left;
+}
+
+.map-health-grid > button.warning {
+  border-color: #8f6629;
+  background: #281c08;
+}
+
+.map-health-grid strong {
+  color: #d6ebf7;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.map-health-grid span {
+  color: #789bb1;
+  font-size: 6.5px;
+}
