@@ -4,7 +4,7 @@ using MapStudio.Core.Omsi.Scenery;
 
 namespace MapStudio.Renderer.Scene;
 
-public sealed record NativeTriangleRange(
+public readonly record struct NativeTriangleRange(
     int StartVertex,
     int VertexCount);
 
