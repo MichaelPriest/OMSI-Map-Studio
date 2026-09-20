@@ -812,3 +812,12 @@ O modo tela cheia agora altera imediatamente o layout React e, no aplicativo des
 Objetos e splines visíveis passam a ser sempre selecionáveis por clique, independentemente do filtro atual Objeto/Spline/Tudo. O modo Terreno só recebe o clique quando nenhum objeto/spline real foi atingido.
 
 Objetos cujo O3D não possui visual renderizável ou está ausente agora recebem um marcador individual pickable com a identidade do objeto real, permitindo selecionar e reparar também itens incompletos. Os filtros de seleção ficam como filtros visuais/de organização, não como bloqueadores do picking.
+
+
+### Referências funcionais do editor OMSI e fluxo city-builder
+
+A interface preserva a semântica do editor de mapas do OMSI: objetos `.sco`, splines `.sli`, terreno e ferramentas de tráfego continuam sendo entidades/modos distintos, e a edição de spline respeita comprimento, raio, gradientes e vínculos reais do mapa. A modernização não substitui esses dados por abstrações fictícias.
+
+O fluxo visual adota padrões de editores city-builder modernos: construção principal concentrada na parte inferior, biblioteca pesquisável, inspetor contextual e guias visuais de via/snap. Esses padrões servem apenas como referência de interação; nenhum asset proprietário de terceiros é reutilizado.
+
+O fullscreen desktop usa agora os limites físicos do monitor atual em vez de depender apenas de `WindowState.Maximized`. O menu compacto e a barra de status permanecem acessíveis. O viewport Babylon usa `ResizeObserver` no contêiner real para manter renderização e coordenadas de picking sincronizadas durante fullscreen, redimensionamento e movimentação de painéis.
