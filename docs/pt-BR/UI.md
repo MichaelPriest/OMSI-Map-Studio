@@ -697,3 +697,10 @@ O painel **Assistente de cruzamentos** lista até 64 sugestões e permite escolh
 Inserções individuais de objetos, lotes e novas splines entram em um histórico de construção. **↶ Construção** restaura o diretório de backup produzido pela própria operação.
 
 A restauração é feita pelo host desktop com validação rígida para aceitar somente diretórios dentro de `.mapstudio-backups` do mapa aberto. Antes de restaurar, o estado atual dos arquivos é salvo em outro backup transacional; esse backup alimenta **Refazer**. O histórico de sessão é limitado às 40 ações mais recentes e é zerado ao trocar de mapa.
+
+
+### Escala contextual da prévia 3D
+
+A prévia de `.sco` calcula as dimensões reais da geometria O3D depois de aplicar escala, rotação e translação declaradas por mesh e mostra **L × A × P** em metros. Objetos `[tree]` usam a altura/aspecto máximos reais quando não possuem malha O3D.
+
+Para `.sli`, a prévia mostra a largura total e a variação vertical do perfil real a partir dos pontos das superfícies. Isso substitui a necessidade de inserir bonecos ou ônibus de escala fictícios.

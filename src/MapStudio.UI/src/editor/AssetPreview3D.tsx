@@ -1,3 +1,8 @@
+import {
+  Matrix,
+  Quaternion,
+  Vector3
+} from "@babylonjs/core/Maths/math.vector";
 import type {
   OmsiPlacedSpline,
   OmsiSceneryObjectGeometry,
@@ -36,6 +41,183 @@ const noopSplineTransform = () => {};
 const noopPlacementPoint = () => {};
 const noopSplinePlacementPoint = () => {};
 
+const degreesToRadians =
+  Math.PI / 180;
+
+const formatDimension = (
+  value: number
+) =>
+  value >= 10
+    ? value.toFixed(1)
+    : value.toFixed(2);
+
+const getObjectDimensionLabel = (
+  geometry: OmsiSceneryObjectGeometry
+) => {
+  let minimum =
+    new Vector3(
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY,
+      Number.POSITIVE_INFINITY
+    );
+  let maximum =
+    new Vector3(
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      Number.NEGATIVE_INFINITY
+    );
+  let hasPoint = false;
+
+  for (const mesh of geometry.meshes) {
+    if (
+      !mesh.geometry.isLoaded ||
+      mesh.geometry.positions.length <
+        3
+    ) {
+      continue;
+    }
+
+    const transform =
+      mesh.transform;
+    const matrix =
+      Matrix.Compose(
+        new Vector3(
+          transform.scaleX,
+          transform.scaleY,
+          transform.scaleZ
+        ),
+        Quaternion
+          .RotationYawPitchRoll(
+            transform.rotationY *
+              degreesToRadians,
+            transform.rotationX *
+              degreesToRadians,
+            transform.rotationZ *
+              degreesToRadians
+          ),
+        new Vector3(
+          transform.positionX,
+          transform.positionY,
+          transform.positionZ
+        )
+      );
+
+    const positions =
+      mesh.geometry.positions;
+
+    for (
+      let index = 0;
+      index + 2 <
+        positions.length;
+      index += 3
+    ) {
+      const point =
+        Vector3.TransformCoordinates(
+          new Vector3(
+            positions[index],
+            positions[index + 1],
+            positions[index + 2]
+          ),
+          matrix
+        );
+
+      minimum =
+        Vector3.Minimize(
+          minimum,
+          point
+        );
+      maximum =
+        Vector3.Maximize(
+          maximum,
+          point
+        );
+      hasPoint = true;
+    }
+  }
+
+  if (hasPoint) {
+    const size =
+      maximum.subtract(
+        minimum
+      );
+
+    return (
+      formatDimension(
+        Math.abs(size.x)
+      ) +
+      " × " +
+      formatDimension(
+        Math.abs(size.y)
+      ) +
+      " × " +
+      formatDimension(
+        Math.abs(size.z)
+      ) +
+      " m · L×A×P"
+    );
+  }
+
+  if (geometry.tree) {
+    const height =
+      geometry.tree.maximumHeight;
+    const width =
+      height *
+      geometry.tree.maximumAspect;
+
+    return (
+      formatDimension(width) +
+      " × " +
+      formatDimension(height) +
+      " m · L×A [tree]"
+    );
+  }
+
+  return "Escala indisponível";
+};
+
+const getSplineDimensionLabel = (
+  profile: OmsiSplineDefinition
+) => {
+  const points =
+    profile.surfaces.flatMap(
+      (surface) => [
+        surface.from,
+        surface.to
+      ]
+    );
+
+  if (points.length === 0) {
+    return "Perfil sem pontos";
+  }
+
+  const xs =
+    points.map(
+      (point) => point.x
+    );
+  const zs =
+    points.map(
+      (point) => point.z
+    );
+  const width =
+    Math.max(...xs) -
+    Math.min(...xs);
+  const height =
+    Math.max(...zs) -
+    Math.min(...zs);
+
+  return (
+    "Largura " +
+    formatDimension(
+      Math.abs(width)
+    ) +
+    " m · perfil ΔZ " +
+    formatDimension(
+      Math.abs(height)
+    ) +
+    " m"
+  );
+};
+
 export function AssetPreview3D(
   props: AssetPreview3DProps
 ) {
@@ -60,6 +242,15 @@ export function AssetPreview3D(
             props.profile
         }
       : {};
+
+  const dimensionLabel =
+    objectMode
+      ? getObjectDimensionLabel(
+          props.geometry
+        )
+      : getSplineDimensionLabel(
+          props.profile
+        );
 
   const previewSplineTemplate =
     splineMode
@@ -211,6 +402,11 @@ export function AssetPreview3D(
           noopSplineTransform
         }
       />
+      <div className="asset-preview-scale">
+        <span>
+          {dimensionLabel}
+        </span>
+      </div>
       <div className="asset-preview-3d-badge">
         3D real
       </div>

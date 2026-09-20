@@ -697,3 +697,10 @@ The **Junction assistant** lists up to 64 suggestions and lets the user pick a p
 Single object insertions, batches, and newly inserted splines are added to a construction history. **↶ Construction** restores the backup directory produced by the operation itself.
 
 Restoration runs in the desktop host with strict validation that only directories inside the open map's `.mapstudio-backups` tree can be used. Before restoring, the current file state is saved into another transactional backup; that backup powers **Redo**. Session history keeps the latest 40 actions and resets when switching maps.
+
+
+### Contextual 3D preview scale
+
+The `.sco` preview computes real O3D geometry dimensions after applying each mesh's declared scale, rotation, and translation, then displays **W × H × D** in meters. `[tree]` objects use their real maximum height/aspect when no O3D mesh exists.
+
+For `.sli`, the preview displays the real profile's total width and vertical range from its surface points. This avoids introducing fake human or bus scale models.
