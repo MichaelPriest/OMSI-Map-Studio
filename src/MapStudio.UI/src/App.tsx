@@ -19012,7 +19012,7 @@ export function App() {
                                     true
                                   );
                                 }
-                              }
+                              }}
                               disabled={
                                 insertingObject
                               }
@@ -20121,7 +20121,7 @@ export function App() {
                                       true
                                     );
                                   }
-                                }
+                                }}
                                 onDoubleClick={() => {
                                   handlePreviewSplineLibraryAsset(
                                     entry
@@ -20289,11 +20289,24 @@ export function App() {
                                   ? "citybuilder-asset-card active"
                                   : "citybuilder-asset-card"
                               }
-                              onClick={() =>
+                              onClick={() => {
                                 handleSelectPlacementAsset(
                                   entry
-                                )
-                              }
+                                );
+
+                                if (isFullScreen) {
+                                  setFullScreenPanel(
+                                    "inspector"
+                                  );
+                                } else {
+                                  setDesktopExplorerOpen(
+                                    false
+                                  );
+                                  setDesktopInspectorOpen(
+                                    true
+                                  );
+                                }
+                              }}
                               onDoubleClick={() => {
                                 handlePreviewSceneryLibraryAsset(
                                   entry
