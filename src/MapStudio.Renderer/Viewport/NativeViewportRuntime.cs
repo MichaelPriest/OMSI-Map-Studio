@@ -95,9 +95,15 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene,
                     assets);
 
+        var proxyGeometry =
+            new NativePickingProxyGeometryBuilder()
+                .Build(
+                    Scene);
+
         MapRenderer.Upload(
             Scene,
-            objectGeometry);
+            objectGeometry,
+            proxyGeometry);
 
         LoadedSceneryAssetCount =
             assets.Values.Count(

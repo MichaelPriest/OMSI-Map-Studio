@@ -57,6 +57,19 @@ public sealed class D3D11NativeMapRenderer :
                 PickingId,
                 NativeTriangleRange>();
 
+    private NativeMapVertex[]
+        _proxyVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private IReadOnlyDictionary<
+        PickingId,
+        NativeTriangleRange>
+        _proxyRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
     private readonly D3D11PickingSurface
         _pickingSurface;
 
@@ -142,7 +155,9 @@ public sealed class D3D11NativeMapRenderer :
     public void Upload(
         NativeSceneSnapshot scene,
         NativeObjectTriangleGeometry?
-            objectGeometry = null)
+            objectGeometry = null,
+        NativePickingProxyGeometry?
+            proxyGeometry = null)
     {
         ThrowIfDisposed();
 
@@ -170,6 +185,17 @@ public sealed class D3D11NativeMapRenderer :
                 NativeMapVertex>();
 
         _objectRanges =
+            new Dictionary<
+                PickingId,
+                NativeTriangleRange>();
+
+        _proxyVertices =
+            proxyGeometry?.Vertices ??
+            Array.Empty<
+                NativeMapVertex>();
+
+        _proxyRanges =
+            proxyGeometry?.Ranges ??
             new Dictionary<
                 PickingId,
                 NativeTriangleRange>();
@@ -220,25 +246,61 @@ public sealed class D3D11NativeMapRenderer :
                 objectGeometry
                     .Ranges;
 
+            var combinedPicking =
+                new NativeMapVertex[
+                    _proxyVertices.Length +
+                    objectGeometry
+                        .PickingVertices
+                        .Length];
+
+            _proxyVertices
+                .AsSpan()
+                .CopyTo(
+                    combinedPicking
+                        .AsSpan());
+
+            objectGeometry
+                .PickingVertices
+                .AsSpan()
+                .CopyTo(
+                    combinedPicking
+                        .AsSpan(
+                            _proxyVertices
+                                .Length));
+
             if (
-                objectGeometry
-                    .PickingVertices
-                    .Length > 0)
+                combinedPicking.Length >
+                0)
             {
                 _pickingTriangleBuffer =
                     _deviceHost.Device
                         .CreateBuffer(
-                            objectGeometry
-                                .PickingVertices
+                            combinedPicking
                                 .AsSpan(),
                             BindFlags
                                 .VertexBuffer);
 
                 _pickingTriangleVertexCount =
-                    objectGeometry
-                        .PickingVertices
+                    combinedPicking
                         .Length;
             }
+        }
+
+        if (
+            _pickingTriangleBuffer is
+                null &&
+            _proxyVertices.Length > 0)
+        {
+            _pickingTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        _proxyVertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _pickingTriangleVertexCount =
+                _proxyVertices.Length;
         }
     }
 
@@ -405,16 +467,41 @@ public sealed class D3D11NativeMapRenderer :
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
 
+        if (pickingId.IsNone)
+        {
+            return;
+        }
+
+        NativeMapVertex[] sourceVertices;
+        NativeTriangleRange range;
+
         if (
-            pickingId.IsNone ||
-            !_objectRanges.TryGetValue(
+            _objectRanges.TryGetValue(
                 pickingId,
-                out var range) ||
-            range.VertexCount <= 0 ||
-            range.StartVertex < 0 ||
+                out range) &&
+            range.VertexCount > 0 &&
+            range.StartVertex >= 0 &&
             range.StartVertex +
-                range.VertexCount >
+                range.VertexCount <=
             _objectVertices.Length)
+        {
+            sourceVertices =
+                _objectVertices;
+        }
+        else if (
+            _proxyRanges.TryGetValue(
+                pickingId,
+                out range) &&
+            range.VertexCount > 0 &&
+            range.StartVertex >= 0 &&
+            range.StartVertex +
+                range.VertexCount <=
+            _proxyVertices.Length)
+        {
+            sourceVertices =
+                _proxyVertices;
+        }
+        else
         {
             return;
         }
@@ -436,7 +523,7 @@ public sealed class D3D11NativeMapRenderer :
             index++)
         {
             var source =
-                _objectVertices[
+                sourceVertices[
                     range.StartVertex +
                     index];
 
