@@ -65,3 +65,13 @@ Architecture documentation:
 ### Spline Library
 
 Alpha.3 also scans `OMSI 2/Splines` on demand and can preview installed `.sli` files. The library offers **Normal** and **Height** creation. Persistence is enabled only when the map contains a real neutral template of the same type: five explicit zero extras for `[spline]` and six for `[spline_h]`. Header and extras are copied from that template.
+
+
+## Project roadmap
+
+The official technical and functional direction is documented in:
+
+- [Technical and functional roadmap — English](docs/en/ROADMAP.md)
+- [Roadmap técnico e funcional — Português](docs/pt-BR/ROADMAP.md)
+
+The roadmap defines the retained stack, Asset Index/cache, tile streaming, original-editor parity, Traffic Rules, paths, tracks/trips, timetables, signals, rail, geodata, and the criteria for considering Map Studio a functional replacement for the original editor.
