@@ -3985,3 +3985,25 @@ code {
 .reference-attribution {
   bottom: 112px;
 }
+
+
+/* Remove legacy menu placeholders from the active editor surface. */
+.editor-menubar > button:disabled {
+  display: none;
+}
+
+.editor-menubar {
+  min-height: 26px;
+  gap: 2px;
+}
+
+.editor-menubar .editor-menu-root > button {
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+.editor-toolbar > .toolbar-separator:has(
+  + .toolbar-chip
+) {
+  display: none;
+}
