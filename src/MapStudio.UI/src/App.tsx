@@ -14878,7 +14878,10 @@ export function App() {
       <div className="setup-grid">
         <article className="setup-card">
           <div className="folder-illustration">
-            ▰
+            <MapStudioIcon
+              name="open"
+              size={40}
+            />
           </div>
           <h2>Selecionar pasta do OMSI 2</h2>
           <p>
@@ -18463,7 +18466,7 @@ export function App() {
                   }}
                   title="Selecionar apenas objetos"
                 >
-                  <span>▣</span>
+                  <span><MapStudioIcon name="sco-object" size={16} /></span>
                   {mapLoadMode === "full"
                     ? "Objetos"
                     : "Objetos (área)"}
@@ -18474,7 +18477,7 @@ export function App() {
                 </button>
   
                 <div className="tree-node">
-                  <span>◈</span>
+                  <span><MapStudioIcon name="inspector" size={16} /></span>
                   {mapLoadMode === "full"
                     ? "Malhas reais"
                     : "Malhas reais (área)"}
@@ -18498,7 +18501,7 @@ export function App() {
                   }}
                   title="Selecionar apenas splines"
                 >
-                  <span>⌇</span>
+                  <span><MapStudioIcon name="sli-spline" size={16} /></span>
                   {mapLoadMode === "full"
                     ? "Splines"
                     : "Splines (área)"}
@@ -18522,7 +18525,7 @@ export function App() {
                   }}
                   title="Selecionar terreno/tile"
                 >
-                  <span>▧</span>
+                  <span><MapStudioIcon name="terrain" size={16} /></span>
                   Terreno
                   <strong>
                     {activeTiles.filter(
@@ -18535,19 +18538,19 @@ export function App() {
                 </button>
   
                 <div className="tree-node disabled">
-                  <span>◩</span>
+                  <span><MapStudioIcon name="asset-index" size={16} /></span>
                   Texturas
                   <small>em desenvolvimento</small>
                 </div>
   
                 <div className="tree-node disabled">
-                  <span>◎</span>
+                  <span><MapStudioIcon name="transit" size={16} /></span>
                   Rotas
                   <small>em desenvolvimento</small>
                 </div>
   
                 <div className="tree-node">
-                  <span>□</span>
+                  <span><MapStudioIcon name="construction-set" size={16} /></span>
                   Tiles totais
                   <strong>
                     {selectedMap.tiles.length}
@@ -19988,7 +19991,7 @@ export function App() {
                                 className="library-entry-icon"
                                 aria-hidden="true"
                               >
-                                <MapStudioIcon name={groupInfo?.icon ?? "sco-object"} size={24} />
+                                <MapStudioIcon name={groupInfo?.icon ?? "sli-spline"} size={24} />
                               </span>
                             )}
                             <span className="library-entry-copy">
