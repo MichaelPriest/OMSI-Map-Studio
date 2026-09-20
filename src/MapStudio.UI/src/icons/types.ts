@@ -40,4 +40,7 @@ export type MapStudioIconName =
   | "snap"
   | "grid"
   | "profile"
-  | "drag";
+  | "drag"
+  | "favorite"
+  | "collection"
+  | "preview";

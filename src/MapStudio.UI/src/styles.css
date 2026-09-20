@@ -5359,3 +5359,200 @@ span.active {
 .construction-set-heading > button:hover {
   color: #f1f9fd;
 }
+
+
+/* Visual asset cards aligned with the approved editor concept.
+   Thumbnails always come from the real AssetPreview3D cache; no placeholder
+   imagery is introduced. */
+.city-library-grid {
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(158px, 1fr)
+    );
+  gap: 8px;
+  padding: 8px;
+}
+
+.city-library-grid .scenery-library-entry {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 5px;
+  padding: 5px;
+  overflow: hidden;
+  border: 1px solid #21465e;
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      180deg,
+      #081b29,
+      #06131d
+    );
+}
+
+.city-library-grid .scenery-library-entry:hover {
+  border-color: #397ba5;
+  background:
+    linear-gradient(
+      180deg,
+      #0b2536,
+      #071925
+    );
+}
+
+.library-entry-preview-button {
+  display: grid;
+  min-height: 142px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 86px auto;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 6px;
+  background: transparent !important;
+}
+
+.library-entry-preview-button:hover {
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.library-entry-thumbnail,
+.library-entry-icon {
+  width: 100%;
+  height: 86px;
+  border: 1px solid #294f68;
+  border-radius: 6px;
+  background:
+    radial-gradient(
+      circle at 50% 40%,
+      #12364d,
+      #05121c 72%
+    );
+  object-fit: cover;
+}
+
+.library-entry-icon {
+  display: grid;
+  place-items: center;
+}
+
+.library-entry-icon > .mapstudio-icon {
+  width: 34px !important;
+  height: 34px !important;
+  color: #7cc3ef;
+}
+
+.library-entry-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 0 2px 2px;
+}
+
+.library-entry-copy strong {
+  font-size: 8.5px;
+}
+
+.library-entry-copy > span:not(.library-entry-badges) {
+  color: #81a9c1;
+  font-size: 6.7px;
+}
+
+.library-entry-copy small {
+  color: #58758a;
+  font-size: 5.8px;
+}
+
+.library-entry-badges {
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.city-library-grid .library-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.city-library-grid .library-entry-actions button {
+  display: inline-flex;
+  min-width: 0;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 5px;
+  overflow: hidden;
+  border-color: #254b63;
+  background: #081b29;
+  color: #8eaec2;
+  font-size: 6.5px;
+}
+
+.city-library-grid .library-entry-actions button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-library-grid
+.library-entry-actions button.active {
+  border-color: #3b8ec5;
+  background: #0d3550;
+  color: #e0f3ff;
+}
+
+.city-library-grid
+.library-entry-actions button:last-child {
+  border-color: #2e6f50;
+  background: #0b2a1d;
+  color: #b8e8cc;
+}
+
+.city-library-grid
+.scenery-library-entry.active {
+  border-color: #55afe6;
+  background:
+    linear-gradient(
+      180deg,
+      #0d3046,
+      #071d2b
+    );
+  box-shadow:
+    inset 0 0 0 1px rgb(92 183 239 / 16%),
+    0 10px 28px rgb(0 0 0 / 28%);
+}
+
+.city-library-grid
+.scenery-library-entry.active
+.library-entry-thumbnail,
+.city-library-grid
+.scenery-library-entry.active
+.library-entry-icon {
+  border-color: #55afe6;
+  box-shadow:
+    0 0 0 1px rgb(85 175 230 / 14%);
+}
+
+@media (max-width: 780px) {
+  .city-library-grid {
+    grid-template-columns:
+      repeat(
+        auto-fill,
+        minmax(138px, 1fr)
+      );
+  }
+
+  .library-entry-preview-button {
+    min-height: 126px;
+    grid-template-rows: 72px auto;
+  }
+
+  .library-entry-thumbnail,
+  .library-entry-icon {
+    height: 72px;
+  }
+}

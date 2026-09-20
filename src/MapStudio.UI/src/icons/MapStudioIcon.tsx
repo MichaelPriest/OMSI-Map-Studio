@@ -1,3 +1,6 @@
+import previewIcon from "./icons/preview.svg?raw";
+import collectionIcon from "./icons/collection.svg?raw";
+import favoriteIcon from "./icons/favorite.svg?raw";
 import dragIcon from "./icons/drag.svg?raw";
 import profileIcon from "./icons/profile.svg?raw";
 import gridIcon from "./icons/grid.svg?raw";
@@ -44,6 +47,9 @@ import type { CSSProperties } from "react";
 import type { MapStudioIconName } from "./types";
 
 const iconMarkupByName: Record<MapStudioIconName, string> = {
+  "preview": previewIcon,
+  "collection": collectionIcon,
+  "favorite": favoriteIcon,
   "drag": dragIcon,
   "profile": profileIcon,
   "grid": gridIcon,

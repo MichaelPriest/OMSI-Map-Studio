@@ -19456,11 +19456,17 @@ export function App() {
                               }
                               title="Favoritar"
                             >
-                              {sceneryFavorites.includes(
-                                entry.sceneryObjectPath
-                              )
-                                ? "★"
-                                : "☆"}
+                              <MapStudioIcon
+                                name="favorite"
+                                size={14}
+                              />
+                              <span>
+                                {sceneryFavorites.includes(
+                                  entry.sceneryObjectPath
+                                )
+                                  ? "Favorito"
+                                  : "Favoritar"}
+                              </span>
                             </button>
                             <button
                               type="button"
@@ -19479,9 +19485,15 @@ export function App() {
                               }
                               title="Adicionar/remover da coleção ativa"
                             >
-                              {inCollection
-                                ? "✓ Coleção"
-                                : "+ Coleção"}
+                              <MapStudioIcon
+                                name="collection"
+                                size={14}
+                              />
+                              <span>
+                                {inCollection
+                                  ? "Na coleção"
+                                  : "Coleção"}
+                              </span>
                             </button>
                             <button
                               type="button"
@@ -19491,7 +19503,11 @@ export function App() {
                                 )
                               }
                             >
-                              Prévia
+                              <MapStudioIcon
+                                name="preview"
+                                size={14}
+                              />
+                              <span>Prévia</span>
                             </button>
                             <button
                               type="button"
@@ -19518,7 +19534,11 @@ export function App() {
                               }
                               title="Selecionar para colocação no mapa"
                             >
-                              Colocar
+                              <MapStudioIcon
+                                name="sco-object"
+                                size={14}
+                              />
+                              <span>Colocar</span>
                             </button>
                           </div>
                         </div>
@@ -20142,11 +20162,17 @@ export function App() {
                               }
                               title="Favoritar"
                             >
-                              {splineFavorites.includes(
-                                entry.splinePath
-                              )
-                                ? "★"
-                                : "☆"}
+                              <MapStudioIcon
+                                name="favorite"
+                                size={14}
+                              />
+                              <span>
+                                {splineFavorites.includes(
+                                  entry.splinePath
+                                )
+                                  ? "Favorito"
+                                  : "Favoritar"}
+                              </span>
                             </button>
                             <button
                               type="button"
@@ -20165,9 +20191,15 @@ export function App() {
                               }
                               title="Adicionar/remover da coleção ativa"
                             >
-                              {inCollection
-                                ? "✓ Coleção"
-                                : "+ Coleção"}
+                              <MapStudioIcon
+                                name="collection"
+                                size={14}
+                              />
+                              <span>
+                                {inCollection
+                                  ? "Na coleção"
+                                  : "Coleção"}
+                              </span>
                             </button>
                             <button
                               type="button"
@@ -20177,7 +20209,11 @@ export function App() {
                                 )
                               }
                             >
-                              Prévia
+                              <MapStudioIcon
+                                name="preview"
+                                size={14}
+                              />
+                              <span>Prévia</span>
                             </button>
                             <button
                               type="button"
@@ -20192,7 +20228,11 @@ export function App() {
                               }
                               title="Criar uma nova [spline] normal usando este .sli"
                             >
-                              Normal
+                              <MapStudioIcon
+                                name="sli-spline"
+                                size={14}
+                              />
+                              <span>Normal</span>
                             </button>
 
                             <button
@@ -20208,7 +20248,11 @@ export function App() {
                               }
                               title="Criar uma nova [spline_h] usando este .sli"
                             >
-                              Altura
+                              <MapStudioIcon
+                                name="profile"
+                                size={14}
+                              />
+                              <span>Altura</span>
                             </button>
                           </div>
                         </div>
