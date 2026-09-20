@@ -270,6 +270,18 @@ export type OmsiSceneryObjectGeometry = {
   renderType: string | null;
 };
 
+export type GoogleElevationGrid = {
+  tileX: number;
+  tileY: number;
+  rows: number;
+  columns: number;
+  elevations: number[];
+  minimumElevation: number;
+  maximumElevation: number;
+  anchorLatitude: number;
+  anchorLongitude: number;
+};
+
 export type GoogleMapReference = {
   latitude: number;
   longitude: number;
@@ -457,6 +469,18 @@ export type HostMessage =
       mimeType: string;
       base64Data: string;
       attribution: string;
+    }
+  | {
+      type: "googleElevationGridLoaded";
+      grid: GoogleElevationGrid;
+    }
+  | {
+      type: "terrainElevationGridApplied";
+      directoryName: string;
+      tileX: number;
+      tileY: number;
+      changedSamples: number;
+      backupDirectory: string;
     }
   | {
       type: "mapGeoreferenceSaved";
@@ -923,6 +947,45 @@ export function saveMapGeoreference(
 ) {
   getWebView()?.postMessage({
     type: "saveMapGeoreference",
+    directoryName,
+    ...request
+  });
+}
+
+export function loadGoogleElevationGrid(
+  apiKey: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    anchorTileX: number;
+    anchorTileY: number;
+    anchorX: number;
+    anchorY: number;
+    tileX: number;
+    tileY: number;
+    sampleCount: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "loadGoogleElevationGrid",
+    apiKey,
+    ...request
+  });
+}
+
+export function applyTerrainElevationGrid(
+  directoryName: string,
+  request: {
+    tileX: number;
+    tileY: number;
+    rows: number;
+    columns: number;
+    elevations: number[];
+    verticalOffset: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "applyTerrainElevationGrid",
     directoryName,
     ...request
   });
