@@ -3377,3 +3377,89 @@ code {
   background: #271d0b;
   color: #d6b074;
 }
+
+
+.dependency-warning-list > button {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+}
+
+.dependency-warning-list > button:hover,
+.dependency-warning-list > button.active {
+  border-color: #9b6e2d;
+  background: #34240c;
+}
+
+.dependency-warning-list > button code {
+  min-width: 0;
+  overflow: hidden;
+  color: #e0bf88;
+  font-family: Consolas, monospace;
+  font-size: 6.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependency-warning-list > button span {
+  color: #e8bd72;
+  font-size: 6px;
+  font-weight: 700;
+}
+
+.dependency-replacement-editor {
+  display: grid;
+  gap: 6px;
+  padding-top: 7px;
+  border-top: 1px solid #76501f;
+}
+
+.dependency-replacement-editor > strong {
+  color: #ffd28a;
+  font-size: 8px;
+}
+
+.dependency-replacement-editor > div:not(.dependency-replacement-actions) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.dependency-replacement-editor span {
+  color: #b99b6c;
+  font-size: 6.5px;
+}
+
+.dependency-replacement-editor code {
+  overflow: hidden;
+  color: #ead0a6;
+  font-family: Consolas, monospace;
+  font-size: 6.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dependency-replacement-impact {
+  padding: 5px;
+  border: 1px solid #66461f;
+  border-radius: 4px;
+  background: #211708;
+}
+
+.dependency-replacement-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.dependency-replacement-actions button {
+  flex: 1 1 0;
+}

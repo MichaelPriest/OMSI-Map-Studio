@@ -763,3 +763,12 @@ When a Construction Set is active too, operations are serialized: the spline is 
 The desktop host accepts replaceMapAssetPath to replace a missing path with another real installed asset. For objects, only the path line inside [object] is changed. For splines, only the path field of [spline]/[spline_h] is changed according to the map-version layout.
 
 IDs, links, position, rotation, length, radius, gradients, and extra values remain untouched. The operation scans map tiles, writes only files that actually changed, and uses one SafeFileTransaction with backup.
+
+
+### Repairing missing dependencies from the library
+
+The missing-dependency panel now lets the user explicitly select a broken `.sco` or `.sli` path. Selecting it opens the matching library; the asset currently loaded in **Preview** becomes the replacement candidate.
+
+Before confirmation, the panel shows the missing path, selected replacement, and how many references to that path are currently loaded. The host operation always scans every map tile, including tiles that are not currently in the viewport.
+
+Replacement changes only the asset path and creates a transactional backup. When files change, that backup is added to the **↶ Construction** history so the operation can be undone. Replacement is never automatic.

@@ -763,3 +763,12 @@ Quando um Conjunto de Construção também está ativo, as operações são seri
 O host desktop aceita a operação replaceMapAssetPath para trocar um caminho ausente por outro asset real instalado. Para objetos, apenas a linha de caminho dentro de [object] é alterada. Para splines, apenas o campo de caminho de [spline]/[spline_h] é alterado segundo o layout da versão do mapa.
 
 IDs, vínculos, posição, rotação, comprimento, raio, gradientes e valores extras permanecem intactos. A operação percorre os tiles do mapa, grava somente os arquivos realmente alterados e usa uma única SafeFileTransaction com backup.
+
+
+### Reparar dependências ausentes pela biblioteca
+
+O painel de dependências ausentes agora permite selecionar explicitamente um caminho quebrado `.sco` ou `.sli`. Ao selecionar, o editor abre a biblioteca correspondente; o item atualmente em **Prévia** passa a ser o candidato de substituição.
+
+Antes de confirmar, o painel mostra o caminho ausente, o substituto escolhido e quantas referências desse caminho estão atualmente carregadas. A operação no host sempre varre todos os tiles do mapa, inclusive os que não estão no viewport.
+
+A substituição altera somente o caminho do asset e cria backup transacional. Quando há alterações, o backup é registrado no histórico **↶ Construção**, permitindo desfazer. Nenhuma substituição é feita automaticamente.

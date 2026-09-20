@@ -37,6 +37,7 @@ import {
   loadSplineProfile,
   loadSceneryObjectGeometry,
   loadSceneryObjectMetadata,
+  replaceMapAssetPath,
   restoreMapStudioBackup,
   saveMapGeoreference,
   saveObjectTransforms,
@@ -853,6 +854,11 @@ const getSplineLibrarySubcategory = (
 type ConstructionHistoryEntry = {
   label: string;
   backupDirectory: string;
+};
+
+type DependencyReplacementTarget = {
+  kind: "object" | "spline";
+  path: string;
 };
 
 type ViewportCameraAction = {
@@ -4054,6 +4060,18 @@ export function App() {
     setRestoringConstruction
   ] = useState(false);
 
+  const [
+    dependencyReplacementTarget,
+    setDependencyReplacementTarget
+  ] = useState<
+    DependencyReplacementTarget | undefined
+  >();
+
+  const [
+    replacingDependency,
+    setReplacingDependency
+  ] = useState(false);
+
   const constructionRestoreModeRef =
     useRef<
       "undo" | "redo" | undefined
@@ -4138,6 +4156,10 @@ export function App() {
     setConstructionUndoStack([]);
     setConstructionRedoStack([]);
     setRestoringConstruction(false);
+    setDependencyReplacementTarget(
+      undefined
+    );
+    setReplacingDependency(false);
     constructionRestoreModeRef.current =
       undefined;
     constructionRestoreEntryRef.current =
@@ -4981,6 +5003,65 @@ export function App() {
 
         if (
           message.type ===
+          "assetPathReplaced"
+        ) {
+          setReplacingDependency(
+            false
+          );
+
+          if (
+            message.replacements > 0 &&
+            message.backupDirectory
+          ) {
+            setConstructionUndoStack(
+              (current) => [
+                ...current,
+                {
+                  label:
+                    "Substituição " +
+                    (
+                      message.kind ===
+                        "object"
+                        ? "SCO"
+                        : "SLI"
+                    ) +
+                    ": " +
+                    getObjectName(
+                      message.oldPath
+                    ),
+                  backupDirectory:
+                    message
+                      .backupDirectory
+                }
+              ].slice(-40)
+            );
+            setConstructionRedoStack([]);
+          }
+
+          setDependencyReplacementTarget(
+            undefined
+          );
+          setLoadedFullMapFor(
+            undefined
+          );
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          setSelectedObject(undefined);
+          setSelectedSpline(undefined);
+          setPreviewObjectTransforms({});
+          setPreviewSplineTransforms({});
+
+          setSaveNotice(
+            message.replacements > 0
+              ? `${message.replacements} referência(s) ${message.kind === "object" ? ".sco" : ".sli"} substituída(s) em ${message.filesSaved} arquivo(s). Backup: ${message.backupDirectory}`
+              : "Nenhuma referência correspondente foi encontrada nos tiles do mapa."
+          );
+          return;
+        }
+
+        if (
+          message.type ===
           "backupRestored"
         ) {
           const mode =
@@ -5656,6 +5737,7 @@ export function App() {
           setSavingSplineLinks(false);
           setInsertingSpline(false);
           setDeletingSpline(false);
+          setReplacingDependency(false);
           pendingConstructionSetRef.current =
             undefined;
           pendingConstructionSetLabelRef.current =
@@ -13012,6 +13094,118 @@ export function App() {
       constructionRedoStack,
       restoringConstruction,
       selectedMap
+    ]);
+
+  const handleSelectMissingDependency =
+    useCallback(
+      (
+        kind: "object" | "spline",
+        path: string
+      ) => {
+        setDependencyReplacementTarget({
+          kind,
+          path
+        });
+        setError(undefined);
+
+        if (kind === "object") {
+          setSceneryLibraryGroup("all");
+          setScenerySubcategory("all");
+          setLibrarySearch("");
+          handleExplorerPanelTab(
+            "library"
+          );
+        } else {
+          setSplineLibraryGroup("all");
+          setSplineSubcategory("all");
+          setSplineLibrarySearch("");
+          handleExplorerPanelTab(
+            "splineLibrary"
+          );
+        }
+
+        if (isFullScreen) {
+          setFullScreenPanel(
+            "explorer"
+          );
+        }
+
+        setSaveNotice(
+          "Escolha um " +
+            (
+              kind === "object"
+                ? ".sco"
+                : ".sli"
+            ) +
+            " real na biblioteca e carregue sua prévia para usar como substituto."
+        );
+      },
+      [
+        handleExplorerPanelTab,
+        isFullScreen
+      ]
+    );
+
+  const handleReplaceMissingDependency =
+    useCallback(() => {
+      if (
+        !selectedMap ||
+        !dependencyReplacementTarget ||
+        replacingDependency
+      ) {
+        return;
+      }
+
+      const replacementPath =
+        dependencyReplacementTarget
+          .kind === "object"
+          ? sceneryLibraryPreviewAsset
+              ?.sceneryObjectPath
+          : splineLibraryPreviewAsset
+              ?.splinePath;
+
+      if (!replacementPath) {
+        setError(
+          "Selecione e carregue a prévia de um asset real da biblioteca antes de substituir."
+        );
+        return;
+      }
+
+      if (
+        normalizeAssetClassifierText(
+          replacementPath
+        ) ===
+        normalizeAssetClassifierText(
+          dependencyReplacementTarget
+            .path
+        )
+      ) {
+        setError(
+          "O substituto precisa ser diferente da dependência ausente."
+        );
+        return;
+      }
+
+      setReplacingDependency(true);
+      setError(undefined);
+      setSaveNotice(
+        "Substituindo referências com backup transacional..."
+      );
+
+      replaceMapAssetPath(
+        selectedMap.directoryName,
+        dependencyReplacementTarget
+          .kind,
+        dependencyReplacementTarget
+          .path,
+        replacementPath
+      );
+    }, [
+      dependencyReplacementTarget,
+      replacingDependency,
+      sceneryLibraryPreviewAsset,
+      selectedMap,
+      splineLibraryPreviewAsset
     ]);
 
   const handleAuditDependencies =
@@ -20549,9 +20743,32 @@ export function App() {
                   {missingSceneryDependencies
                     .slice(0, 5)
                     .map((path) => (
-                      <code key={"sco:" + path}>
-                        SCO · {path}
-                      </code>
+                      <button
+                        type="button"
+                        key={"sco:" + path}
+                        className={
+                          dependencyReplacementTarget
+                            ?.kind === "object" &&
+                          dependencyReplacementTarget
+                            ?.path === path
+                            ? "active"
+                            : ""
+                        }
+                        onClick={() =>
+                          handleSelectMissingDependency(
+                            "object",
+                            path
+                          )
+                        }
+                        title="Selecionar para substituir por um .sco real"
+                      >
+                        <code>
+                          SCO · {path}
+                        </code>
+                        <span>
+                          reparar
+                        </span>
+                      </button>
                     ))}
                   {missingSplineDependencies
                     .slice(
@@ -20566,9 +20783,32 @@ export function App() {
                       )
                     )
                     .map((path) => (
-                      <code key={"sli:" + path}>
-                        SLI · {path}
-                      </code>
+                      <button
+                        type="button"
+                        key={"sli:" + path}
+                        className={
+                          dependencyReplacementTarget
+                            ?.kind === "spline" &&
+                          dependencyReplacementTarget
+                            ?.path === path
+                            ? "active"
+                            : ""
+                        }
+                        onClick={() =>
+                          handleSelectMissingDependency(
+                            "spline",
+                            path
+                          )
+                        }
+                        title="Selecionar para substituir por uma .sli real"
+                      >
+                        <code>
+                          SLI · {path}
+                        </code>
+                        <span>
+                          reparar
+                        </span>
+                      </button>
                     ))}
                   {missingDependencyCount >
                     8 && (
@@ -20578,6 +20818,103 @@ export function App() {
                     </small>
                   )}
                 </div>
+
+                {dependencyReplacementTarget && (
+                  <div className="dependency-replacement-editor">
+                    <strong>
+                      Reparar dependência
+                    </strong>
+
+                    <div>
+                      <span>Ausente</span>
+                      <code>
+                        {dependencyReplacementTarget.path}
+                      </code>
+                    </div>
+
+                    <div>
+                      <span>
+                        Substituto em prévia
+                      </span>
+                      <code>
+                        {dependencyReplacementTarget.kind ===
+                        "object"
+                          ? sceneryLibraryPreviewAsset
+                              ?.sceneryObjectPath ??
+                            "Escolha um .sco na biblioteca"
+                          : splineLibraryPreviewAsset
+                              ?.splinePath ??
+                            "Escolha uma .sli na biblioteca"}
+                      </code>
+                    </div>
+
+                    <div className="dependency-replacement-impact">
+                      <span>
+                        Referências carregadas:{" "}
+                        {dependencyReplacementTarget.kind ===
+                        "object"
+                          ? objects.filter(
+                              (item) =>
+                                normalizeAssetClassifierText(
+                                  item.sceneryObjectPath
+                                ) ===
+                                normalizeAssetClassifierText(
+                                  dependencyReplacementTarget.path
+                                )
+                            ).length
+                          : splines.filter(
+                              (item) =>
+                                normalizeAssetClassifierText(
+                                  item.splinePath
+                                ) ===
+                                normalizeAssetClassifierText(
+                                  dependencyReplacementTarget.path
+                                )
+                            ).length}
+                      </span>
+                      <span>
+                        O host verificará todos os tiles, inclusive os não carregados no viewport.
+                      </span>
+                    </div>
+
+                    <div className="dependency-replacement-actions">
+                      <button
+                        type="button"
+                        className="primary-button"
+                        disabled={
+                          replacingDependency ||
+                          (
+                            dependencyReplacementTarget.kind ===
+                            "object"
+                              ? !sceneryLibraryPreviewAsset
+                              : !splineLibraryPreviewAsset
+                          )
+                        }
+                        onClick={
+                          handleReplaceMissingDependency
+                        }
+                      >
+                        {replacingDependency
+                          ? "Substituindo..."
+                          : "Substituir referências"}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-action"
+                        disabled={
+                          replacingDependency
+                        }
+                        onClick={() =>
+                          setDependencyReplacementTarget(
+                            undefined
+                          )
+                        }
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
