@@ -107,11 +107,11 @@ O índice deve cobrir progressivamente:
 
 O índice não substitui os arquivos OMSI. Ele é derivado deles e pode ser reconstruído.
 
-### Implementação Fase A — primeira etapa
+### Implementação Fase A — estado atual
 
-A primeira etapa já implementada usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
+A base persistente usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
 
-O streaming regional também começou a migrar do antigo conceito fixo de 3×3 para anéis: tiles da área 3×3 são carregados integralmente e o anel externo 5×5 recebe somente summary/metadata. Essa etapa ainda não é o streaming final descrito abaixo.
+O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. Ainda faltam cache derivado, fila completa por prioridade e gerenciamento/LOD de recursos GPU para concluir a Fase A.
 
 ### 3.2 Cache derivado
 
@@ -285,7 +285,7 @@ Estado atual da Fase A:
 - 🟡 **cache persistente:** o índice fica em `LocalApplicationData/OMSI Map Studio/Cache/<instalação>/assets-v1.sqlite` e pode ser reconstruído;
 - 🟡 **invalidação incremental:** path, tipo, tamanho e data de modificação distinguem arquivos novos, alterados, iguais e removidos;
 - 🟡 **bibliotecas indexadas:** os catálogos de objetos e splines podem usar o índice persistente e mantêm a varredura direta como fallback seguro;
-- 🟡 **streaming por tiles:** o modo Streaming 3×3 mantém anéis 0–1 completos e lê o anel 2 como metadata leve; terreno pesado fora da região ativa é descartado da UI;
+- 🟡 **streaming automático por tiles:** é o modo padrão ao abrir mapas; mantém anéis 0–1 completos, lê o anel 2 como metadata leve, descarta terreno pesado fora da região ativa e ignora respostas regionais obsoletas;
 - ⬜ fila de carregamento por prioridade completa;
 - ⬜ gerenciamento de memória/GPU completo;
 - ⬜ instancing e LOD onde seguro;
@@ -599,9 +599,9 @@ Depois desse marco, recursos modernos continuam sendo diferenciais e não requis
 
 A sequência recomendada a partir do estado atual é:
 
-1. estabilizar a UI/picking atual;
-2. implementar Asset Index + cache persistente;
-3. implementar streaming automático por tiles;
+1. estabilizar a UI/picking atual e concluir a migração visual para o pacote SVG próprio;
+2. ampliar o cache persistente para geometria/material/thumbnail derivados;
+3. completar fila de carregamento por prioridade, descarte de GPU, instancing e LOD seguro;
 4. completar operações físicas que faltam;
 5. implementar paths + Traffic Rules;
 6. implementar transporte: stops/tracks/trips/timetables;
@@ -636,4 +636,4 @@ Novas ideias relevantes para substituir o editor original ou ampliar o editor mo
 
 O Map Studio usará um pacote SVG próprio, inspirado na atmosfera técnica do OMSI sem copiar assets proprietários. A especificação completa está em [ICON_SYSTEM.md](ICON_SYSTEM.md).
 
-A migração acontecerá por grupos: barra rápida, HUD de construção, Explorer/Inspector, menus, biblioteca, diagnósticos e futuras ferramentas OMSI.
+A migração acontecerá por grupos: barra rápida, HUD de construção, Explorer/Inspector, menus, biblioteca, diagnósticos e futuras ferramentas OMSI. O primeiro lote já migrou a barra rápida e o HUD principal de construção; os demais grupos continuam em progresso.
