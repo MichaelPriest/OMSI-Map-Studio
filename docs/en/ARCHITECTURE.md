@@ -651,3 +651,8 @@ This distinction is required for repeated-material objects, crossings, signs, fo
 - vertical offset is explicit: zero applies real elevations in metres; locally shifted maps can set an offset before writing;
 - **Create real map** clones only the user's installed `OMSI 2\template\NewMap` into `maps\<new folder>`, updates name/friendlyname while preserving encoding, creates `.mapstudio/georeference.json`, and opens the new map;
 - this coordinate-based creation does **not yet inject or convert OMSI's official `[worldcoordinates]` format automatically**. The current anchor is Map Studio metadata; official conversion will only be enabled after all OMSI-required fields/files are validated.
+
+
+## Architecture roadmap
+
+The target architecture, including persistent Asset Index, incremental cache, tile streaming, OMSI editor parity phases, and completion criteria, is consolidated in [ROADMAP.md](ROADMAP.md). When this document and the roadmap cover the same topic, current implementation belongs here while future direction belongs in the roadmap.
