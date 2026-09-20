@@ -998,3 +998,8 @@ Perspectiva, topo, enquadrar, focar e centralizar em tile agora operam diretamen
 ### Troca atômica de cena
 
 Quando uma alteração estrutural ainda exige reconstruir a `Scene`, o viewport mantém a cena anterior renderizando enquanto a nova é montada. Só depois de a nova cena estar pronta o loop de renderização é trocado e a cena antiga é descartada. Isso elimina o intervalo propositalmente vazio entre `cleanup` e recriação que podia aparecer como um piscar preto durante streaming de assets.
+
+
+### Gizmos independentes da cena estrutural
+
+**Mover** e **Rotacionar** agora são uma camada de edição própria. Selecionar outro objeto/spline enquanto uma dessas ferramentas está ativa não reconstrói o mapa inteiro: o item-base é ocultado temporariamente, uma cópia editável real recebe o gizmo e, ao sair/trocar de seleção, a visualização-base é restaurada. O Snap continua usando os valores reais configurados. O fallback de seleção duplicado no `pointerup` também foi removido; toda seleção passa pelo mesmo resolvedor de malha + proximidade em tela.

@@ -998,3 +998,8 @@ Perspective, top, fit, focus and tile-centering commands now operate directly on
 ### Atomic scene swap
 
 When a structural change still requires rebuilding the Babylon `Scene`, the viewport keeps the previous scene active while the replacement is assembled. The render loop is switched only after the new scene is ready, and the old scene is disposed afterwards. This removes the intentionally blank interval between React cleanup and scene recreation that could appear as a black flash while assets stream in.
+
+
+### Gizmos independent from the structural scene
+
+**Move** and **Rotate** now run in their own editing layer. Selecting another object/spline while either tool is active no longer rebuilds the whole map: the base item is temporarily hidden, a real editable copy receives the gizmo, and the base visualization is restored when editing or selection changes. Snap still uses the configured real values. The duplicate pointer-up selection fallback was also removed; all selection now goes through the same mesh + screen-proximity resolver.

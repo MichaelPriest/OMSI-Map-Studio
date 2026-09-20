@@ -4050,26 +4050,6 @@ export function Viewport({
     setSceneRevision
   ] = useState(0);
 
-  const sceneEditObject =
-    editorTool === "select"
-      ? undefined
-      : selectedObject;
-
-  const sceneEditGeometry =
-    sceneEditObject
-      ? selectedGeometry
-      : undefined;
-
-  const sceneEditSpline =
-    editorTool === "select"
-      ? undefined
-      : selectedSpline;
-
-  const sceneEditSplineProfile =
-    sceneEditSpline
-      ? selectedSplineProfile
-      : undefined;
-
   const sceneProfileActiveTile =
     showAllSplineProfiles
       ? undefined
@@ -4454,7 +4434,7 @@ export function Viewport({
             scene,
             splines,
             sceneProfileActiveTile,
-            sceneEditSpline,
+            undefined,
             splineProfilesByPath,
             textureAssetsByKey,
             showAllSplineProfiles
@@ -4466,16 +4446,6 @@ export function Viewport({
             placedSpline,
             splineIndex
           ) => {
-            if (
-              editorTool !== "select" &&
-              isSameSpline(
-                placedSpline,
-                sceneEditSpline
-              )
-            ) {
-              return;
-            }
-
             const points =
               getSplineAxisLine(
                 placedSpline
@@ -5172,213 +5142,6 @@ export function Viewport({
             definition.control
         };
       }
-    }
-
-    let editRoot:
-      TransformNode | undefined;
-
-    let editingSpline = false;
-
-    if (
-      !placementAssetPath &&
-      !usesWorldCoordinates &&
-      sceneEditObject
-    ) {
-      if (
-        sceneEditGeometry &&
-        hasRenderableObjectVisual(
-          sceneEditObject,
-          sceneEditGeometry,
-          textureAssetsByKey
-        )
-      ) {
-        editRoot =
-          createSelectedGeometry(
-            scene,
-            sceneEditObject,
-            sceneEditGeometry,
-            textureAssetsByKey,
-            nightPreviewEnabled,
-            objectLodInstances,
-            tiles
-          );
-      } else {
-        editRoot =
-          new TransformNode(
-            "preview-edit-anchor",
-            scene
-          );
-
-        configureObjectRoot(
-          editRoot,
-          sceneEditObject,
-          sceneEditGeometry ??
-            objectGeometryByPath[
-              sceneEditObject
-                .sceneryObjectPath
-            ],
-          tiles
-        );
-      }
-    } else if (
-      !placementAssetPath &&
-      !usesWorldCoordinates &&
-      showSplines &&
-      sceneEditSpline
-    ) {
-      editRoot =
-        createSplineEditRoot(
-          scene,
-          sceneEditSpline,
-          sceneEditSplineProfile,
-          textureAssetsByKey
-        );
-
-      editingSpline = true;
-    }
-
-    let gizmoManager:
-      GizmoManager | undefined;
-
-    if (editRoot) {
-      gizmoManager =
-        new GizmoManager(scene);
-
-      // Keep transform handles easier to acquire over dense OMSI scenery.
-      // GizmoManager scaleRatio is visual only and does not alter transform math.
-      gizmoManager.scaleRatio =
-        editorTool === "move"
-          ? 1.14
-          : 1.08;
-
-      gizmoManager
-        .usePointerToAttachGizmos =
-        false;
-
-      gizmoManager
-        .positionGizmoEnabled =
-        editorTool === "move";
-
-      gizmoManager
-        .rotationGizmoEnabled =
-        editorTool === "rotate";
-
-      if (
-        gizmoManager.gizmos
-          .positionGizmo
-      ) {
-        gizmoManager.gizmos
-          .positionGizmo
-          .snapDistance =
-          snapEnabled
-            ? moveSnap
-            : 0;
-      }
-
-      if (
-        gizmoManager.gizmos
-          .rotationGizmo
-      ) {
-        const rotationGizmo =
-          gizmoManager.gizmos
-            .rotationGizmo;
-
-        rotationGizmo
-          .snapDistance =
-          snapEnabled
-            ? rotationSnap *
-              degreesToRadians
-            : 0;
-
-        if (editingSpline) {
-          rotationGizmo
-            .xGizmo
-            .isEnabled = false;
-          rotationGizmo
-            .zGizmo
-            .isEnabled = false;
-        }
-      }
-
-      gizmoManager.attachToNode(
-        editRoot
-      );
-
-      const commitPreview = () => {
-        if (!editRoot) {
-          return;
-        }
-
-        const euler =
-          editRoot
-            .rotationQuaternion
-            ?.toEulerAngles() ??
-          editRoot.rotation;
-
-        if (sceneEditObject) {
-          callbacksRef.current.onPreviewObjectTransform({
-            ...sceneEditObject,
-            x:
-              editRoot.position.x -
-              sceneEditObject.tileX *
-                300,
-            y:
-              editRoot.position.z -
-              sceneEditObject.tileY *
-                300,
-            z:
-              editRoot.position.y -
-              getObjectTerrainOffset(
-                sceneEditObject,
-                sceneEditGeometry ??
-                  objectGeometryByPath[
-                    sceneEditObject
-                      .sceneryObjectPath
-                  ],
-                tiles
-              ),
-            rotation:
-              euler.y /
-              degreesToRadians,
-            bank:
-              euler.z /
-              degreesToRadians,
-            pitch:
-              euler.x /
-              degreesToRadians
-          });
-
-          return;
-        }
-
-        if (sceneEditSpline) {
-          callbacksRef.current.onPreviewSplineTransform({
-            ...sceneEditSpline,
-            x:
-              editRoot.position.x -
-              sceneEditSpline.tileX *
-                300,
-            y:
-              editRoot.position.z -
-              sceneEditSpline.tileY *
-                300,
-            z: editRoot.position.y,
-            rotation:
-              euler.y /
-              degreesToRadians
-          });
-        }
-      };
-
-      gizmoManager.gizmos
-        .positionGizmo
-        ?.onDragEndObservable
-        .add(commitPreview);
-
-      gizmoManager.gizmos
-        .rotationGizmo
-        ?.onDragEndObservable
-        .add(commitPreview);
     }
 
     let pointerStart:
@@ -7411,123 +7174,6 @@ export function Viewport({
         }
       }
 
-      // Selection is handled on pointerdown so React can rebuild the
-      // selected-item scene before pointerup. Keep the geometric
-      // proximity fallback below for objects without pickable meshes.
-      const threshold = Math.max(2.5, Math.min(20, camera.radius * 0.004));
-
-      let selected: OmsiPlacedObject | undefined;
-      let bestDistance = threshold;
-      let bestDepth = Number.POSITIVE_INFINITY;
-
-      for (
-        const placedObject of
-          objectSelectionEnabled
-            ? objects
-            : []
-      ) {
-        const position =
-          getObjectWorldPosition(
-            placedObject,
-            objectGeometryByPath[
-              placedObject
-                .sceneryObjectPath
-            ],
-            tiles
-          );
-        const offset = position.subtract(ray.origin);
-        const depth = Vector3.Dot(offset, direction);
-
-        if (depth < 0) {
-          continue;
-        }
-
-        const closestPoint = ray.origin.add(direction.scale(depth));
-        const distance = Vector3.Distance(position, closestPoint);
-
-        if (
-          distance < bestDistance ||
-          (Math.abs(distance - bestDistance) < 0.001 && depth < bestDepth)
-        ) {
-          selected = placedObject;
-          bestDistance = distance;
-          bestDepth = depth;
-        }
-      }
-
-      if (selected) {
-        const position =
-          getObjectWorldPosition(
-            selected,
-            objectGeometryByPath[
-              selected.sceneryObjectPath
-            ],
-            tiles
-          );
-
-        setViewportDiagnostic({
-          item:
-            `Objeto #${selected.objectId}`,
-          mesh:
-            "fallback geométrico",
-          material:
-            "não determinado",
-          texture:
-            "não determinada",
-          uv:
-            "não determinado",
-          position:
-            `X ${position.x.toFixed(3)} · Y ${position.y.toFixed(3)} · Z ${position.z.toFixed(3)}`,
-          renderLift: "0.000",
-          origin:
-            selected.sceneryObjectPath
-        });
-
-        callbacksRef.current.onSelectSpline(undefined);
-        callbacksRef.current.onSelectObject(selected);
-        return;
-      }
-
-      const splinePick =
-        splineSelectionEnabled
-          ? scene.pick(
-          pointerX,
-          pointerY,
-          (mesh) =>
-            mesh.metadata
-              ?.mapStudioKind ===
-            "spline",
-          false,
-          camera
-        )
-          : undefined;
-
-      if (
-        splinePick?.hit &&
-        splinePick.pickedMesh
-          ?.metadata &&
-        typeof splinePick
-          .pickedMesh
-          .metadata
-          .splineIndex === "number"
-      ) {
-        const splineIndex =
-          splinePick.pickedMesh
-            .metadata
-            .splineIndex as number;
-
-        const placedSpline =
-          splines[splineIndex];
-
-        if (placedSpline) {
-          callbacksRef.current.onSelectObject(undefined);
-          callbacksRef.current.onSelectSpline(
-            placedSpline
-          );
-          return;
-        }
-      }
-
       setViewportDiagnostic(
         undefined
       );
@@ -7984,7 +7630,6 @@ export function Viewport({
       }
 
       canvas.style.cursor = "";
-      gizmoManager?.dispose();
 
       // Do not tear down the rendered scene here. React runs this
       // cleanup before the replacement effect. The next effect builds
@@ -7994,11 +7639,9 @@ export function Viewport({
   }, [
     tiles,
     cameraStateKey,
-    editorTool,
     selectionMode,
     snapEnabled,
     moveSnap,
-    rotationSnap,
     showGrid,
     showTerrain,
     terrainMainTextureAsset,
@@ -8025,13 +7668,9 @@ export function Viewport({
     sceneProfileActiveTile,
     referenceOverlay,
     usesWorldCoordinates,
-    sceneEditObject,
-    sceneEditGeometry,
     objectGeometryByPath,
     textureAssetsByKey,
     splineProfilesByPath,
-    sceneEditSpline,
-    sceneEditSplineProfile,
   ]);
 
   useEffect(() => {
@@ -8272,6 +7911,347 @@ export function Viewport({
     selectedObject,
     selectedSpline,
     objectGeometryByPath,
+    tiles
+  ]);
+
+  useEffect(() => {
+    const scene =
+      sceneRef.current;
+
+    if (
+      !scene ||
+      scene.isDisposed ||
+      editorTool === "select" ||
+      usesWorldCoordinates ||
+      placementAssetPath
+    ) {
+      return;
+    }
+
+    let editRoot:
+      TransformNode | undefined;
+    let editingSpline = false;
+
+    const hiddenBaseMeshes:
+      Array<{
+        mesh: Mesh;
+        visibility: number;
+      }> = [];
+
+    const hideBaseObject = (
+      placedObject: OmsiPlacedObject
+    ) => {
+      for (const mesh of
+        scene.meshes) {
+        const metadata =
+          mesh.metadata;
+
+        if (
+          metadata?.mapStudioKind ===
+            "object" &&
+          metadata.placedObject &&
+          isSameObject(
+            metadata.placedObject as
+              OmsiPlacedObject,
+            placedObject
+          )
+        ) {
+          hiddenBaseMeshes.push({
+            mesh,
+            visibility:
+              mesh.visibility
+          });
+          mesh.visibility = 0;
+        }
+      }
+    };
+
+    const hideBaseSpline = (
+      placedSpline: OmsiPlacedSpline
+    ) => {
+      for (const mesh of
+        scene.meshes) {
+        const metadata =
+          mesh.metadata;
+
+        if (
+          metadata?.mapStudioKind ===
+            "spline" &&
+          metadata.placedSpline &&
+          isSameSpline(
+            metadata.placedSpline as
+              OmsiPlacedSpline,
+            placedSpline
+          )
+        ) {
+          hiddenBaseMeshes.push({
+            mesh,
+            visibility:
+              mesh.visibility
+          });
+          mesh.visibility = 0;
+        }
+      }
+    };
+
+    const editLodInstances:
+      ObjectLodInstance[] = [];
+
+    if (selectedObject) {
+      hideBaseObject(
+        selectedObject
+      );
+
+      if (
+        selectedGeometry &&
+        hasRenderableObjectVisual(
+          selectedObject,
+          selectedGeometry,
+          textureAssetsByKey
+        )
+      ) {
+        editRoot =
+          createSelectedGeometry(
+            scene,
+            selectedObject,
+            selectedGeometry,
+            textureAssetsByKey,
+            nightPreviewEnabled,
+            editLodInstances,
+            tiles
+          );
+      } else {
+        editRoot =
+          new TransformNode(
+            "preview-edit-anchor",
+            scene
+          );
+
+        configureObjectRoot(
+          editRoot,
+          selectedObject,
+          selectedGeometry ??
+            objectGeometryByPath[
+              selectedObject
+                .sceneryObjectPath
+            ],
+          tiles
+        );
+      }
+    } else if (
+      showSplines &&
+      selectedSpline
+    ) {
+      hideBaseSpline(
+        selectedSpline
+      );
+
+      editRoot =
+        createSplineEditRoot(
+          scene,
+          selectedSpline,
+          selectedSplineProfile,
+          textureAssetsByKey
+        );
+
+      editingSpline = true;
+    }
+
+    if (!editRoot) {
+      for (const entry of
+        hiddenBaseMeshes) {
+        if (!entry.mesh.isDisposed()) {
+          entry.mesh.visibility =
+            entry.visibility;
+        }
+      }
+      return;
+    }
+
+    const camera =
+      cameraRef.current;
+
+    if (camera) {
+      for (const instance of
+        editLodInstances) {
+        updateObjectLod(
+          instance,
+          camera
+        );
+      }
+    }
+
+    const gizmoManager =
+      new GizmoManager(scene);
+
+    gizmoManager.scaleRatio =
+      editorTool === "move"
+        ? 1.14
+        : 1.08;
+
+    gizmoManager
+      .usePointerToAttachGizmos =
+      false;
+
+    gizmoManager
+      .positionGizmoEnabled =
+      editorTool === "move";
+
+    gizmoManager
+      .rotationGizmoEnabled =
+      editorTool === "rotate";
+
+    if (
+      gizmoManager.gizmos
+        .positionGizmo
+    ) {
+      gizmoManager.gizmos
+        .positionGizmo
+        .snapDistance =
+        snapEnabled
+          ? moveSnap
+          : 0;
+    }
+
+    if (
+      gizmoManager.gizmos
+        .rotationGizmo
+    ) {
+      const rotationGizmo =
+        gizmoManager.gizmos
+          .rotationGizmo;
+
+      rotationGizmo.snapDistance =
+        snapEnabled
+          ? rotationSnap *
+            degreesToRadians
+          : 0;
+
+      if (editingSpline) {
+        rotationGizmo
+          .xGizmo
+          .isEnabled = false;
+        rotationGizmo
+          .zGizmo
+          .isEnabled = false;
+      }
+    }
+
+    gizmoManager.attachToNode(
+      editRoot
+    );
+
+    const commitPreview = () => {
+      const euler =
+        editRoot
+          ?.rotationQuaternion
+          ?.toEulerAngles() ??
+        editRoot?.rotation;
+
+      if (
+        !editRoot ||
+        !euler
+      ) {
+        return;
+      }
+
+      if (selectedObject) {
+        callbacksRef.current.onPreviewObjectTransform({
+          ...selectedObject,
+          x:
+            editRoot.position.x -
+            selectedObject.tileX *
+              300,
+          y:
+            editRoot.position.z -
+            selectedObject.tileY *
+              300,
+          z:
+            editRoot.position.y -
+            getObjectTerrainOffset(
+              selectedObject,
+              selectedGeometry ??
+                objectGeometryByPath[
+                  selectedObject
+                    .sceneryObjectPath
+                ],
+              tiles
+            ),
+          rotation:
+            euler.y /
+            degreesToRadians,
+          bank:
+            euler.z /
+            degreesToRadians,
+          pitch:
+            euler.x /
+            degreesToRadians
+        });
+
+        return;
+      }
+
+      if (selectedSpline) {
+        callbacksRef.current.onPreviewSplineTransform({
+          ...selectedSpline,
+          x:
+            editRoot.position.x -
+            selectedSpline.tileX *
+              300,
+          y:
+            editRoot.position.z -
+            selectedSpline.tileY *
+              300,
+          z:
+            editRoot.position.y,
+          rotation:
+            euler.y /
+            degreesToRadians
+        });
+      }
+    };
+
+    gizmoManager.gizmos
+      .positionGizmo
+      ?.onDragEndObservable
+      .add(commitPreview);
+
+    gizmoManager.gizmos
+      .rotationGizmo
+      ?.onDragEndObservable
+      .add(commitPreview);
+
+    return () => {
+      gizmoManager.dispose();
+
+      if (!editRoot?.isDisposed()) {
+        editRoot?.dispose();
+      }
+
+      for (const entry of
+        hiddenBaseMeshes) {
+        if (!entry.mesh.isDisposed()) {
+          entry.mesh.visibility =
+            entry.visibility;
+        }
+      }
+    };
+  }, [
+    sceneRevision,
+    editorTool,
+    snapEnabled,
+    moveSnap,
+    rotationSnap,
+    showSplines,
+    usesWorldCoordinates,
+    placementAssetPath,
+    selectedObject,
+    selectedGeometry,
+    selectedSpline,
+    selectedSplineProfile,
+    objectGeometryByPath,
+    textureAssetsByKey,
+    nightPreviewEnabled,
     tiles
   ]);
 
