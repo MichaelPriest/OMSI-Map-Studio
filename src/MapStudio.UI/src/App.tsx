@@ -1956,6 +1956,8 @@ export function App() {
           setPendingSplinePlacement(
             undefined
           );
+          setEasyRoadMode(false);
+          setEasyRoadStart(undefined);
           setSelectedSpline(undefined);
           setEditorTool("select");
 
@@ -2064,6 +2066,85 @@ export function App() {
           return;
         }
 
+        if (
+          message.type ===
+          "terrainLeveled"
+        ) {
+          setSavingTerrain(false);
+          setTerrainEditPoint(undefined);
+
+          setSaveNotice(
+            message.changedSamples > 0
+              ? `Terreno nivelado: ${message.changedSamples} amostra(s) alterada(s). Backup: ${message.backupDirectory}`
+              : "O terreno já estava na altura solicitada."
+          );
+
+          setLoadedFullMapFor(undefined);
+          setLoadedRegionKey(undefined);
+          setObjects([]);
+          setSplines([]);
+          return;
+        }
+
+        if (
+          message.type ===
+          "googleMapReferenceLoaded"
+        ) {
+          setLoadingGoogleReference(false);
+          setGoogleReference({
+            latitude:
+              message.latitude,
+            longitude:
+              message.longitude,
+            zoom:
+              message.zoom,
+            mapType:
+              message.mapType,
+            width:
+              message.width,
+            height:
+              message.height,
+            metersPerPixel:
+              message.metersPerPixel,
+            centerElevation:
+              message.centerElevation,
+            mimeType:
+              message.mimeType,
+            base64Data:
+              message.base64Data,
+            attribution:
+              message.attribution
+          });
+          setReferenceVisible(true);
+
+          if (
+            message.centerElevation !==
+              null
+          ) {
+            setTerrainTargetHeight(
+              message.centerElevation
+            );
+          }
+
+          setSaveNotice(
+            message.centerElevation !==
+              null
+              ? `Referência Google carregada · elevação central ${formatNumber(message.centerElevation)} m.`
+              : "Referência Google carregada."
+          );
+          return;
+        }
+
+        if (
+          message.type ===
+          "mapGeoreferenceSaved"
+        ) {
+          setSaveNotice(
+            `Georreferenciamento salvo em ${message.path}`
+          );
+          return;
+        }
+
         if (message.type === "hostError") {
           setSelectingRoot(false);
           setSelectingMap(false);
@@ -2084,6 +2165,8 @@ export function App() {
           setLoadingSceneryLibrary(false);
           setLoadingSplineLibrary(false);
           setLoadingMapCatalog(false);
+          setLoadingGoogleReference(false);
+          setSavingTerrain(false);
           setSaving(false);
           setInsertingObject(false);
           setDeletingObject(false);
