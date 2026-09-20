@@ -12134,13 +12134,28 @@ export function App() {
                       <button
                         type="button"
                         className="secondary-action"
+                        disabled={
+                          insertingSpline ||
+                          (
+                            splineLibraryPlacementAsset
+                              ?.splinePath ===
+                            splineLibraryPreviewAsset
+                              .splinePath
+                          )
+                        }
                         onClick={() =>
-                          requestCameraAction(
-                            "focus"
+                          handleSelectSplineLibraryAsset(
+                            splineLibraryPreviewAsset,
+                            false
                           )
                         }
                       >
-                        Focar prévia
+                        {splineLibraryPlacementAsset
+                          ?.splinePath ===
+                        splineLibraryPreviewAsset
+                          .splinePath
+                          ? "Em criação"
+                          : "Criar normal"}
                       </button>
                     </div>
 
@@ -12190,16 +12205,31 @@ export function App() {
                           textureAssetsByKey
                         }
                         length={
-                          pendingSplinePlacement
-                            ?.length
+                          splineLibraryPlacementAsset
+                            ?.splinePath ===
+                          splineLibraryPreviewAsset
+                            .splinePath
+                            ? pendingSplinePlacement
+                                ?.length
+                            : 20
                         }
                         radius={
-                          pendingSplinePlacement
-                            ?.radius
+                          splineLibraryPlacementAsset
+                            ?.splinePath ===
+                          splineLibraryPreviewAsset
+                            .splinePath
+                            ? pendingSplinePlacement
+                                ?.radius
+                            : 0
                         }
                         rotation={
-                          pendingSplinePlacement
-                            ?.rotation
+                          splineLibraryPlacementAsset
+                            ?.splinePath ===
+                          splineLibraryPreviewAsset
+                            .splinePath
+                            ? pendingSplinePlacement
+                                ?.rotation
+                            : 0
                         }
                       />
                     )}
@@ -12219,7 +12249,7 @@ export function App() {
                       </span>
                       <span>
                         {splineProfilesByPath[
-                          splineLibraryPlacementAsset
+                          splineLibraryPreviewAsset
                             .splinePath
                         ]
                           ? splineProfilesByPath[
@@ -12235,8 +12265,12 @@ export function App() {
                           : "Carregando perfil .sli real..."}
                       </span>
                       <span>
-                        {pendingSplinePlacement
-                          ? "Prévia: " +
+                        {splineLibraryPlacementAsset
+                          ?.splinePath ===
+                          splineLibraryPreviewAsset
+                            .splinePath &&
+                        pendingSplinePlacement
+                          ? "Em criação: " +
                             formatNumber(
                               pendingSplinePlacement.length
                             ) +
@@ -12245,7 +12279,7 @@ export function App() {
                               pendingSplinePlacement.rotation
                             ) +
                             "°"
-                          : "Clique no cenário para posicionar."}
+                          : "Prévia independente · 20 m · reta"}
                       </span>
                       <span>
                         {easyRoadMode
