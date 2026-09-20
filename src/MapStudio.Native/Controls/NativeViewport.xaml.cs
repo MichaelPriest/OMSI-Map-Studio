@@ -30,6 +30,20 @@ public sealed partial class NativeViewport : UserControl
 
     public event EventHandler<string>? SelectionStatusChanged;
 
+    public void SetMapSummary(
+        string displayName,
+        int loadedTiles,
+        int objects,
+        int splines)
+    {
+        RuntimeText.Text =
+            $"{displayName} · {loadedTiles} tiles · {objects} objetos · {splines} splines · Direct3D 11";
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            "Cena OMSI carregada no Core; upload para GPU é o próximo checkpoint.");
+    }
+
     private void OnLoaded(
         object sender,
         RoutedEventArgs e)

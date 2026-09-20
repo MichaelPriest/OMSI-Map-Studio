@@ -12,14 +12,46 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
 
-        <MenuBar Grid.Row="0">
-            <MenuBarItem Title="Arquivo" />
-            <MenuBarItem Title="Editar" />
-            <MenuBarItem Title="Visualizar" />
-            <MenuBarItem Title="Mapa" />
-            <MenuBarItem Title="Ferramentas" />
-            <MenuBarItem Title="Ajuda" />
-        </MenuBar>
+        <Grid Grid.Row="0"
+              Background="#071621">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <MenuBar>
+                <MenuBarItem Title="Arquivo">
+                    <MenuFlyoutItem
+                        Text="Abrir OMSI..."
+                        Click="OnOpenOmsiClick" />
+                    <MenuFlyoutItem
+                        x:Name="OpenMapMenuItem"
+                        Text="Abrir mapa..."
+                        IsEnabled="False"
+                        Click="OnOpenMapClick" />
+                </MenuBarItem>
+                <MenuBarItem Title="Editar" />
+                <MenuBarItem Title="Visualizar" />
+                <MenuBarItem Title="Mapa" />
+                <MenuBarItem Title="Ferramentas" />
+                <MenuBarItem Title="Ajuda" />
+            </MenuBar>
+
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="8"
+                Margin="8,4">
+                <Button
+                    Content="Abrir OMSI"
+                    Click="OnOpenOmsiClick" />
+                <Button
+                    x:Name="OpenMapButton"
+                    Content="Abrir mapa"
+                    IsEnabled="False"
+                    Click="OnOpenMapClick" />
+            </StackPanel>
+        </Grid>
 
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
@@ -37,9 +69,16 @@
                                FontSize="18"
                                FontWeight="SemiBold" />
                     <TextBox PlaceholderText="Buscar objetos e splines..." />
-                    <TextBlock Text="A migração preserva o Core real do OMSI. Este painel será ligado ao catálogo/indexador já existente."
-                               TextWrapping="Wrap"
-                               Foreground="#9FB5C5" />
+                    <TextBlock
+                        x:Name="RootText"
+                        Text="Nenhuma instalação OMSI selecionada."
+                        TextWrapping="Wrap"
+                        Foreground="#9FB5C5" />
+                    <TextBlock
+                        x:Name="MapText"
+                        Text="Nenhum mapa aberto."
+                        TextWrapping="Wrap"
+                        Foreground="#9FB5C5" />
                 </StackPanel>
             </Border>
 
