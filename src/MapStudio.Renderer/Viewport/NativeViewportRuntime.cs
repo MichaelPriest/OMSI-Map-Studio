@@ -1,5 +1,6 @@
 using MapStudio.Renderer.Graphics;
 using MapStudio.Renderer.Picking;
+using MapStudio.Renderer.Scene;
 using Vortice.Mathematics;
 
 namespace MapStudio.Renderer.Viewport;
@@ -27,6 +28,8 @@ public sealed class NativeViewportRuntime : IDisposable
     public PickingRegistry<object> Picking { get; } =
         new();
 
+    public NativeSceneSnapshot? Scene { get; private set; }
+
     public bool IsDisposed => _disposed;
 
     public IntPtr SwapChainPointer =>
@@ -53,6 +56,20 @@ public sealed class NativeViewportRuntime : IDisposable
         Surface.Resize(
             width,
             height);
+    }
+
+    public NativeSceneSnapshot LoadScene(
+        IReadOnlyList<NativeSceneTile> tiles)
+    {
+        ThrowIfDisposed();
+
+        Scene =
+            new NativeSceneBuilder()
+                .Build(
+                    tiles,
+                    Picking);
+
+        return Scene;
     }
 
     public void RenderInitialFrame()
@@ -83,6 +100,7 @@ public sealed class NativeViewportRuntime : IDisposable
         Surface?.Dispose();
         Surface = null;
 
+        Scene = null;
         Picking.Clear();
         Device.Dispose();
     }

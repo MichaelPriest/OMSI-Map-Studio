@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
 using MapStudio.Native.Interop;
+using MapStudio.Native.Services;
+using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -30,18 +32,38 @@ public sealed partial class NativeViewport : UserControl
 
     public event EventHandler<string>? SelectionStatusChanged;
 
-    public void SetMapSummary(
-        string displayName,
-        int loadedTiles,
-        int objects,
-        int splines)
+    public void SetMapSnapshot(
+        NativeMapSnapshot snapshot)
     {
+        ArgumentNullException.ThrowIfNull(
+            snapshot);
+
+        if (_runtime is null)
+        {
+            SelectionStatusChanged?.Invoke(
+                this,
+                "Viewport Direct3D ainda não inicializado.");
+            return;
+        }
+
+        var scene =
+            _runtime.LoadScene(
+                snapshot.Tiles
+                    .Select(
+                        tile =>
+                            new NativeSceneTile(
+                                tile.Reference,
+                                tile.Content))
+                    .ToArray());
+
         RuntimeText.Text =
-            $"{displayName} · {loadedTiles} tiles · {objects} objetos · {splines} splines · Direct3D 11";
+            $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
+            $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
+            $"{scene.SelectableCount} IDs de seleção";
 
         SelectionStatusChanged?.Invoke(
             this,
-            "Cena OMSI carregada no Core; upload para GPU é o próximo checkpoint.");
+            $"Registry nativo pronto: {scene.SelectableCount} entidades selecionáveis.");
     }
 
     private void OnLoaded(
