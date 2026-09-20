@@ -2862,7 +2862,9 @@ export function App() {
   const batchKeepPlacementRef =
     useRef(false);
   const batchPlacementAssetRef =
-    useRef<SceneryLibraryEntry>();
+    useRef<
+      SceneryLibraryEntry | undefined
+    >(undefined);
 
   const [
     placementTransformDefaults,
@@ -8566,10 +8568,20 @@ export function App() {
           return;
         }
 
-        registerSplineLibraryUse(
+        setSplineRecent((current) => [
           entry.splinePath,
-          true
-        );
+          ...current.filter(
+            (item) =>
+              item !== entry.splinePath
+          )
+        ].slice(0, 24));
+        setSplineUsage((current) => ({
+          ...current,
+          [entry.splinePath]:
+            (current[
+              entry.splinePath
+            ] ?? 0) + 1
+        }));
         setSplineLibraryPreviewAsset(
           entry
         );
@@ -8658,7 +8670,6 @@ export function App() {
         activeTile,
         easyRoadMode,
         placementAsset,
-        registerSplineLibraryUse,
         previewEditCount,
         selectedMap,
         splinePreviewEditCount,
