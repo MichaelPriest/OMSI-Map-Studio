@@ -51,6 +51,8 @@ export type OmsiTile = {
   y: number;
   relativeMapPath: string;
   detailsLoaded: boolean;
+  streamDetail?: "full" | "summary";
+  streamRing?: number;
   fileExists: boolean;
   objectCount: number;
   splineCount: number;
