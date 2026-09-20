@@ -3863,6 +3863,9 @@ export function Viewport({
       undefined
     );
 
+  const roadDragLastEmitRef =
+    useRef(0);
+
   const lastMapItemClickRef =
     useRef<
       | {
@@ -5247,7 +5250,19 @@ export function Viewport({
         roadDragPointerRef.current ===
           event.pointerId
       ) {
-        emitSplineRoadPoint(event);
+        const now =
+          performance.now();
+
+        if (
+          now -
+            roadDragLastEmitRef.current >=
+          40
+        ) {
+          roadDragLastEmitRef.current =
+            now;
+          emitSplineRoadPoint(event);
+        }
+
         event.preventDefault();
         return;
       }
@@ -6014,6 +6029,8 @@ export function Viewport({
       ) {
         roadDragPointerRef.current =
           event.pointerId;
+        roadDragLastEmitRef.current =
+          performance.now();
         pointerDownHandledSelection =
           false;
         canvas.setPointerCapture(
