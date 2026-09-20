@@ -788,6 +788,194 @@ function createTileSurface(
   }
 }
 
+function createReferenceOverlay(
+  scene: Scene,
+  tiles: OmsiTile[],
+  overlay: NonNullable<
+    ViewportProps["referenceOverlay"]
+  >
+) {
+  if (
+    !overlay.base64Data ||
+    overlay.width <= 0 ||
+    overlay.height <= 0 ||
+    overlay.metersPerPixel <= 0
+  ) {
+    return;
+  }
+
+  const widthMeters =
+    overlay.width *
+    overlay.metersPerPixel;
+
+  const heightMeters =
+    overlay.height *
+    overlay.metersPerPixel;
+
+  const segments = 24;
+  const sampleCount =
+    segments + 1;
+
+  const positions: number[] = [];
+  const indices: number[] = [];
+  const uvs: number[] = [];
+
+  for (
+    let row = 0;
+    row < sampleCount;
+    row += 1
+  ) {
+    const v =
+      row / segments;
+
+    for (
+      let column = 0;
+      column < sampleCount;
+      column += 1
+    ) {
+      const u =
+        column / segments;
+
+      const worldX =
+        overlay.anchorWorldX +
+        (u - 0.5) *
+          widthMeters;
+
+      const worldZ =
+        overlay.anchorWorldZ +
+        (v - 0.5) *
+          heightMeters;
+
+      const height =
+        getTerrainHeightAtWorldPoint(
+          tiles,
+          worldX,
+          worldZ
+        );
+
+      positions.push(
+        worldX,
+        height + 0.08,
+        worldZ
+      );
+
+      uvs.push(
+        u,
+        1 - v
+      );
+    }
+  }
+
+  for (
+    let row = 0;
+    row < segments;
+    row += 1
+  ) {
+    for (
+      let column = 0;
+      column < segments;
+      column += 1
+    ) {
+      const topLeft =
+        row *
+        sampleCount +
+        column;
+
+      const topRight =
+        topLeft + 1;
+
+      const bottomLeft =
+        topLeft +
+        sampleCount;
+
+      const bottomRight =
+        bottomLeft + 1;
+
+      indices.push(
+        topLeft,
+        bottomRight,
+        topRight,
+        topLeft,
+        bottomLeft,
+        bottomRight
+      );
+    }
+  }
+
+  const mesh =
+    new Mesh(
+      "mapstudio-reference-overlay",
+      scene
+    );
+
+  const data =
+    new VertexData();
+
+  data.positions = positions;
+  data.indices = indices;
+  data.uvs = uvs;
+
+  VertexData.ComputeNormals(
+    positions,
+    indices,
+    (data.normals = [])
+  );
+
+  data.applyToMesh(
+    mesh,
+    false
+  );
+
+  const texture =
+    new Texture(
+      `data:${overlay.mimeType};base64,${overlay.base64Data}`,
+      scene,
+      false,
+      false,
+      Texture.BILINEAR_SAMPLINGMODE
+    );
+
+  texture.hasAlpha = true;
+  texture.wrapU =
+    Texture.CLAMP_ADDRESSMODE;
+  texture.wrapV =
+    Texture.CLAMP_ADDRESSMODE;
+
+  const material =
+    new StandardMaterial(
+      "mapstudio-reference-overlay-material",
+      scene
+    );
+
+  material.diffuseColor =
+    Color3.White();
+  material.diffuseTexture =
+    texture;
+  material.emissiveColor =
+    Color3.White();
+  material.emissiveTexture =
+    texture;
+  material.specularColor =
+    Color3.Black();
+  material.alpha =
+    Math.min(
+      1,
+      Math.max(
+        0.05,
+        overlay.opacity
+      )
+    );
+  material.backFaceCulling = false;
+  material.disableLighting = true;
+  material.transparencyMode =
+    Material.MATERIAL_ALPHABLEND;
+  material.disableDepthWrite = true;
+  material.zOffset = -3;
+
+  mesh.material = material;
+  mesh.isPickable = false;
+}
+
 function createActiveTileOutline(
   activeTile: {
     x: number;
