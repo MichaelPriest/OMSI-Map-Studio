@@ -621,3 +621,16 @@ Essa distinção é necessária para objetos com materiais repetidos, cruzamento
 - o segundo clique rápido no mesmo objeto/spline continua centralizando a câmera;
 - o viewport exibe diagnóstico real da seleção com objeto/spline, mesh/material, textura declarada e caminho físico resolvido, faixa UV, posição mundial final, `render lift` e origem SCO/SLI/O3D;
 - o caminho físico resolvido da textura é enviado pelo host somente para diagnóstico local do editor, sem criar dados fake/mock.
+
+
+## Catálogo de mapas, seleção e construção — pós-test.34
+
+- após selecionar a raiz do OMSI, o host usa `OmsiMapCatalog.DiscoverWithProgressAsync` para enumerar somente mapas reais com `global.cfg`;
+- a interface lista nome, pasta, quantidade de tiles e uso de `[worldcoordinates]`, permitindo busca e abertura explícita pelo usuário; o seletor manual de pasta permanece apenas como fallback;
+- a barra lateral principal pode ser recolhida sem ocultar o acesso às áreas do aplicativo;
+- o viewport possui filtros de seleção para tudo, objetos, splines e terreno;
+- atalhos de construção abrem as bibliotecas reais existentes: rua usa `.sli`; cruzamento, objeto, água, grama e árvore usam `.sco` / `[tree]`; nenhuma entrada fake é criada;
+- o modo Terreno seleciona o tile real e mantém transparente que edição persistente de alturas só será liberada quando a gravação preservativa correspondente estiver validada;
+- `[rendertype]` dos SCOs passa a ser preservado no Core e entregue ao viewport;
+- objetos declarados como `surface`, `on_surface` ou `presurface` usam a textura diffuse real também no caminho não iluminado do preview, sem alterar coordenadas nem aumentar offsets;
+- ruas SLI usam a própria textura OMSI nos canais diffuse/emissive do material não iluminado para evitar o preto causado pela combinação anterior de `disableLighting` com emissive ausente.
