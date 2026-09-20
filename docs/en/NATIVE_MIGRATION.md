@@ -358,3 +358,14 @@ Direct3D 11 loads textures that Windows Imaging Component can decode, creates `I
 Missing or undecodable textures do not break the map: the batch falls back to the O3D diffuse color. The cache keeps only textures requested by the current scene and caps the first pass at 256 distinct paths to avoid unbounded memory use on large maps.
 
 This checkpoint covers base diffuse textures for O3D objects. Advanced SCO overrides (`[matl]`, night maps, bump/environment/light maps), spline textures, and terrain paint remain for later checkpoints.
+
+### Checkpoint N3.17 — real SLI spline textures
+
+The native renderer now preserves the texture parameters declared by `[profilepnt]` and applies the real textures used by SLI surfaces.
+
+Each `NativeSplineAsset` resolves texture files through `OmsiTextureAssetPathResolver.TryResolveSplineTexture`. During tessellation, horizontal UV comes from `TextureX` and longitudinal UV follows `distance × TextureScale`, matching the OMSI spline format's longitudinal tiling semantics.
+
+Surfaces are grouped into material/texture batches and use the same WIC/Direct3D 11 cache introduced for O3D objects. If a texture is missing or cannot be decoded, the spline keeps rendering through the untextured fallback instead of disappearing or aborting map loading.
+
+This allows roads, sidewalks, curbs, and other SLI surfaces to stop relying on the generic gray color in the native viewport.
+

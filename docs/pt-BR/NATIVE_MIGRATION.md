@@ -358,3 +358,14 @@ O Direct3D 11 carrega as texturas decodificáveis pelo Windows Imaging Component
 Texturas ausentes ou não decodificáveis não derrubam o mapa: o lote continua usando a cor difusa O3D como fallback. O cache mantém somente texturas solicitadas pela cena atual e limita o primeiro lote a 256 caminhos distintos para evitar consumo descontrolado ao abrir mapas grandes.
 
 Este checkpoint cobre a textura difusa base dos objetos O3D. Overrides avançados SCO (`[matl]`, night map, bump/environment/light map), texturas das splines e pintura do terreno continuam em checkpoints seguintes.
+
+### Checkpoint N3.17 — texturas reais das splines SLI
+
+O renderer nativo agora preserva os parâmetros de textura declarados em `[profilepnt]` e aplica as texturas reais das superfícies SLI.
+
+Cada `NativeSplineAsset` resolve os arquivos de textura através de `OmsiTextureAssetPathResolver.TryResolveSplineTexture`. Durante a tesselação, o UV horizontal vem de `TextureX` e o UV longitudinal segue `distância × TextureScale`, compatível com a semântica usada pelo formato OMSI para repetição ao longo da spline.
+
+As superfícies são agrupadas em lotes de material/textura e usam o mesmo cache WIC/Direct3D 11 introduzido para objetos O3D. Quando uma textura não existe ou não pode ser decodificada, a spline continua renderizando com fallback sem textura em vez de desaparecer ou abortar o mapa.
+
+Com isso, ruas, calçadas, meios-fios e outras superfícies SLI deixam de depender apenas da cor cinza genérica no viewport nativo.
+

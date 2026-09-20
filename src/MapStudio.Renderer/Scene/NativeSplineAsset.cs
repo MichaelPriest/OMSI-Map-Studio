@@ -6,6 +6,8 @@ public sealed record NativeSplineAsset(
     string DeclaredPath,
     string? FullPath,
     OmsiSplineDefinition Definition,
+    IReadOnlyList<string?>
+        TexturePaths,
     string? ErrorCode)
 {
     public bool IsLoaded =>

@@ -9,11 +9,19 @@ public sealed record NativeSplineTriangleGeometry(
     IReadOnlyDictionary<
         PickingId,
         NativeTriangleRange> Ranges,
+    IReadOnlyList<
+        NativeMaterialBatch> MaterialBatches,
     int LoadedSplineCount,
     int RenderedSurfaceCount)
 {
     public int TriangleCount =>
         Vertices.Length / 3;
+
+    public int TexturedBatchCount =>
+        MaterialBatches.Count(
+            batch =>
+                !string.IsNullOrWhiteSpace(
+                    batch.TexturePath));
 }
 
 public sealed class NativeSplineTriangleGeometryBuilder
@@ -21,9 +29,9 @@ public sealed class NativeSplineTriangleGeometryBuilder
     private static readonly Vector4
         SurfaceColor =
             new(
-                0.36f,
-                0.39f,
-                0.41f,
+                1.0f,
+                1.0f,
+                1.0f,
                 1.0f);
 
     public NativeSplineTriangleGeometry Build(
@@ -50,6 +58,10 @@ public sealed class NativeSplineTriangleGeometryBuilder
             new Dictionary<
                 PickingId,
                 NativeTriangleRange>();
+
+        var materialBatches =
+            new List<
+                NativeMaterialBatch>();
 
         var loadedSplines = 0;
         var renderedSurfaces = 0;
@@ -97,8 +109,8 @@ public sealed class NativeSplineTriangleGeometryBuilder
                     asset.Definition
                         .Surfaces)
             {
-                var contributed =
-                    false;
+                var surfaceStart =
+                    vertices.Count;
 
                 for (
                     var segment = 0;
@@ -151,23 +163,79 @@ public sealed class NativeSplineTriangleGeometryBuilder
                                 frame1,
                                 surface.To);
 
+                    var leftUv0 =
+                        new Vector2(
+                            (float)
+                                surface.From
+                                    .TextureX,
+                            (float)(
+                                distance0 *
+                                surface.From
+                                    .TextureScale));
+
+                    var leftUv1 =
+                        new Vector2(
+                            (float)
+                                surface.From
+                                    .TextureX,
+                            (float)(
+                                distance1 *
+                                surface.From
+                                    .TextureScale));
+
+                    var rightUv0 =
+                        new Vector2(
+                            (float)
+                                surface.To
+                                    .TextureX,
+                            (float)(
+                                distance0 *
+                                surface.To
+                                    .TextureScale));
+
+                    var rightUv1 =
+                        new Vector2(
+                            (float)
+                                surface.To
+                                    .TextureX,
+                            (float)(
+                                distance1 *
+                                surface.To
+                                    .TextureScale));
+
                     AppendQuad(
                         left0,
                         left1,
                         right1,
                         right0,
+                        leftUv0,
+                        leftUv1,
+                        rightUv1,
+                        rightUv0,
                         SurfaceColor,
                         pickingColor,
                         vertices,
                         pickingVertices);
-
-                    contributed = true;
                 }
 
-                if (contributed)
+                var surfaceVertexCount =
+                    vertices.Count -
+                    surfaceStart;
+
+                if (surfaceVertexCount <= 0)
                 {
-                    renderedSurfaces++;
+                    continue;
                 }
+
+                renderedSurfaces++;
+
+                materialBatches.Add(
+                    new NativeMaterialBatch(
+                        surfaceStart,
+                        surfaceVertexCount,
+                        ResolveTexturePath(
+                            asset,
+                            surface.TextureIndex)));
             }
 
             if (vertices.Count > start)
@@ -187,8 +255,27 @@ public sealed class NativeSplineTriangleGeometryBuilder
             vertices.ToArray(),
             pickingVertices.ToArray(),
             ranges,
+            materialBatches.ToArray(),
             loadedSplines,
             renderedSurfaces);
+    }
+
+    private static string?
+        ResolveTexturePath(
+            NativeSplineAsset asset,
+            int textureIndex)
+    {
+        if (
+            textureIndex < 0 ||
+            textureIndex >=
+                asset.TexturePaths
+                    .Count)
+        {
+            return null;
+        }
+
+        return asset.TexturePaths[
+            textureIndex];
     }
 
     private static void AppendQuad(
@@ -196,6 +283,10 @@ public sealed class NativeSplineTriangleGeometryBuilder
         Vector3 left1,
         Vector3 right1,
         Vector3 right0,
+        Vector2 leftUv0,
+        Vector2 leftUv1,
+        Vector2 rightUv1,
+        Vector2 rightUv0,
         Vector4 color,
         Vector4 pickingColor,
         List<NativeMapVertex> output,
@@ -206,6 +297,9 @@ public sealed class NativeSplineTriangleGeometryBuilder
             left0,
             left1,
             right1,
+            leftUv0,
+            leftUv1,
+            rightUv1,
             color,
             pickingColor,
             output,
@@ -215,6 +309,9 @@ public sealed class NativeSplineTriangleGeometryBuilder
             left0,
             right1,
             right0,
+            leftUv0,
+            rightUv1,
+            rightUv0,
             color,
             pickingColor,
             output,
@@ -225,6 +322,9 @@ public sealed class NativeSplineTriangleGeometryBuilder
         Vector3 a,
         Vector3 b,
         Vector3 c,
+        Vector2 uvA,
+        Vector2 uvB,
+        Vector2 uvC,
         Vector4 color,
         Vector4 pickingColor,
         List<NativeMapVertex> output,
@@ -234,17 +334,20 @@ public sealed class NativeSplineTriangleGeometryBuilder
         output.Add(
             new NativeMapVertex(
                 a,
-                color));
+                color,
+                uvA));
 
         output.Add(
             new NativeMapVertex(
                 b,
-                color));
+                color,
+                uvB));
 
         output.Add(
             new NativeMapVertex(
                 c,
-                color));
+                color,
+                uvC));
 
         pickingOutput.Add(
             new NativeMapVertex(

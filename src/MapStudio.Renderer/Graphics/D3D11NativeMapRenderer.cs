@@ -141,6 +141,12 @@ public sealed class D3D11NativeMapRenderer :
                 PickingId,
                 NativeTriangleRange>();
 
+    private IReadOnlyList<
+        NativeMaterialBatch>
+        _splineMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
     private NativeMapVertex[]
         _proxyVertices =
             Array.Empty<
@@ -406,6 +412,10 @@ public sealed class D3D11NativeMapRenderer :
                 PickingId,
                 NativeTriangleRange>();
 
+        _splineMaterialBatches =
+            Array.Empty<
+                NativeMaterialBatch>();
+
         _proxyVertices =
             proxyGeometry?.Vertices ??
             Array.Empty<
@@ -485,9 +495,6 @@ public sealed class D3D11NativeMapRenderer :
                     .MaterialBatches;
         }
 
-        UpdateTextureCache(
-            _objectMaterialBatches);
-
         if (
             splineGeometry is not null &&
             splineGeometry
@@ -513,7 +520,17 @@ public sealed class D3D11NativeMapRenderer :
             _splineRanges =
                 splineGeometry
                     .Ranges;
+
+            _splineMaterialBatches =
+                splineGeometry
+                    .MaterialBatches;
         }
+
+        UpdateTextureCache(
+            _objectMaterialBatches
+                .Concat(
+                    _splineMaterialBatches)
+                .ToArray());
 
         _scenePickingVertices =
             _proxyVertices
@@ -580,29 +597,8 @@ public sealed class D3D11NativeMapRenderer :
                         0);
                 }
 
-                if (
-                    _splineTriangleBuffer
-                        is not null &&
-                    _splineTriangleVertexCount >
-                        0)
-                {
-                    context
-                        .IASetPrimitiveTopology(
-                            PrimitiveTopology
-                                .TriangleList);
-
-                    context
-                        .IASetVertexBuffer(
-                            0,
-                            _splineTriangleBuffer,
-                            NativeMapVertex
-                                .SizeInBytes);
-
-                    context.Draw(
-                        (uint)
-                            _splineTriangleVertexCount,
-                        0);
-                }
+                DrawSplineGeometry(
+                    context);
 
                 DrawObjectGeometry(
                     context);
@@ -736,14 +732,36 @@ public sealed class D3D11NativeMapRenderer :
             surface.Height);
     }
 
+    private void DrawSplineGeometry(
+        ID3D11DeviceContext context)
+    {
+        DrawMaterialGeometry(
+            context,
+            _splineTriangleBuffer,
+            _splineTriangleVertexCount,
+            _splineMaterialBatches);
+    }
+
     private void DrawObjectGeometry(
         ID3D11DeviceContext context)
     {
+        DrawMaterialGeometry(
+            context,
+            _objectTriangleBuffer,
+            _objectTriangleVertexCount,
+            _objectMaterialBatches);
+    }
+
+    private void DrawMaterialGeometry(
+        ID3D11DeviceContext context,
+        ID3D11Buffer? vertexBuffer,
+        int vertexCount,
+        IReadOnlyList<
+            NativeMaterialBatch> batches)
+    {
         if (
-            _objectTriangleBuffer is
-                null ||
-            _objectTriangleVertexCount <=
-                0)
+            vertexBuffer is null ||
+            vertexCount <= 0)
         {
             return;
         }
@@ -756,22 +774,18 @@ public sealed class D3D11NativeMapRenderer :
         context
             .IASetVertexBuffer(
                 0,
-                _objectTriangleBuffer,
+                vertexBuffer,
                 NativeMapVertex
                     .SizeInBytes);
 
-        if (
-            _objectMaterialBatches
-                .Count ==
-            0)
+        if (batches.Count == 0)
         {
             context
                 .PSSetShader(
                     _pixelShader);
 
             context.Draw(
-                (uint)
-                    _objectTriangleVertexCount,
+                (uint)vertexCount,
                 0);
 
             return;
@@ -782,9 +796,7 @@ public sealed class D3D11NativeMapRenderer :
                 0,
                 _textureSampler);
 
-        foreach (
-            var batch in
-                _objectMaterialBatches)
+        foreach (var batch in batches)
         {
             if (
                 batch.VertexCount <=

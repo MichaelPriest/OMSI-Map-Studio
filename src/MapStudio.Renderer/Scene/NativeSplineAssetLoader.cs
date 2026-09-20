@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Renderer.Scene;
 
@@ -86,6 +87,7 @@ public sealed class NativeSplineAssetLoader
                 declaredPath,
                 null,
                 OmsiSplineDefinition.Missing,
+                Array.Empty<string?>(),
                 "splinePathInvalid");
         }
 
@@ -102,13 +104,29 @@ public sealed class NativeSplineAssetLoader
                 declaredPath,
                 fullPath,
                 definition,
+                Array.Empty<string?>(),
                 "splineMissing");
         }
+
+        var texturePaths =
+            definition.Textures
+                .Select(
+                    textureName =>
+                        OmsiTextureAssetPathResolver
+                            .TryResolveSplineTexture(
+                                omsiRoot,
+                                fullPath,
+                                textureName,
+                                out var texturePath)
+                            ? texturePath
+                            : null)
+                .ToArray();
 
         return new NativeSplineAsset(
             declaredPath,
             fullPath,
             definition,
+            texturePaths,
             definition.Surfaces.Count == 0
                 ? "noRenderableProfile"
                 : null);

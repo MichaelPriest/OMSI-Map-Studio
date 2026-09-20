@@ -85,6 +85,7 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
                         placedSpline.SplinePath,
                         @"C:\OMSI 2\Splines\Test\road.sli",
                         definition,
+                        [@"C:\OMSI 2\Splines\Test\Texture\road.dds"],
                         null)
             };
 
@@ -105,6 +106,26 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
         Assert.Equal(
             1,
             geometry.RenderedSurfaceCount);
+
+        var batch =
+            Assert.Single(
+                geometry.MaterialBatches);
+
+        Assert.Equal(
+            @"C:\OMSI 2\Splines\Test\Texture\road.dds",
+            batch.TexturePath);
+
+        Assert.Equal(
+            new System.Numerics.Vector2(
+                0,
+                0),
+            geometry.Vertices[0].TexCoord);
+
+        Assert.InRange(
+            geometry.Vertices[^1]
+                .TexCoord.Y,
+            2.399f,
+            2.401f);
 
         Assert.True(
             geometry.Ranges.ContainsKey(

@@ -96,6 +96,7 @@ public sealed class
                 @"Splines\Test\road.sli",
                 @"C:\OMSI\Splines\Test\road.sli",
                 definition,
+                [@"C:\OMSI\Splines\Test\Texture\road.dds"],
                 null);
 
         var preview =
