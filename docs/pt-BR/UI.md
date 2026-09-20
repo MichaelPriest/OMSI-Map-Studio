@@ -840,3 +840,8 @@ O menu superior do editor foi simplificado para usar somente ações reais já s
 - **Mapa** reúne mapa real por coordenadas, Saúde do mapa, auditoria de dependências e Conjuntos de construção.
 
 Os antigos placeholders desabilitados foram removidos da superfície ativa. O topo também mostra de forma compacta a quantidade de alterações pendentes e o modo de carregamento atual. O mesmo padrão permanece disponível no modo desktop e em tela cheia, enquanto a barra inferior continua sendo o ponto principal para construção por categoria.
+
+
+### Painéis móveis
+
+Explorador e Inspetor agora usam o mesmo sistema persistente das ferramentas flutuantes. Cada drawer possui uma alça própria para arrastar; a posição é limitada à área útil do editor e reaproveitada na sessão seguinte pelo armazenamento local da interface. O tamanho do painel permanece estável durante o arraste tanto no desktop quanto na tela cheia.
