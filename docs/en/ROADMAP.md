@@ -602,3 +602,22 @@ From the current state, the recommended sequence is:
 10. consolidate Map Health/validation until operational parity is reached.
 
 This order may move when a technical dependency requires it, but none of the feature families listed above should be forgotten.
+
+
+---
+
+## 13. Roadmap maintenance rule
+
+This file is not just an idea list.
+
+When implementing a feature family described here:
+
+- update its state from ⬜ to 🟡 or ✅;
+- record limitations that remain;
+- add newly discovered dependencies;
+- move work between phases only for a technical reason;
+- never remove a gap merely because it is difficult;
+- keep pt-BR and en synchronized;
+- when an architectural decision changes, record the new decision and why.
+
+New ideas that matter for replacing the original editor or extending the modern editor must be added to this roadmap before they can be considered “remembered by the project”.
