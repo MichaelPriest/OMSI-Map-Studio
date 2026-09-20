@@ -1022,3 +1022,18 @@ O picking passa a usar as coordenadas de ponteiro mantidas pelo próprio Babylon
 ### Legibilidade do Explorer
 
 O Explorer desktop foi ampliado e recebeu uma escala tipográfica maior para nomes, metadados, busca, biblioteca, categorias e prévia 3D. A alteração prioriza leitura em monitores com escala do Windows acima de 100% sem reduzir o viewport a uma coluna estreita.
+
+
+### Explorer e bibliotecas autoajustáveis
+
+O painel lateral não usa mais uma única largura fixa para todos os conteúdos. A largura passa a se adaptar automaticamente ao contexto:
+
+- **Explorador do mapa** permanece mais compacto para preservar área do viewport;
+- **Biblioteca de objetos** recebe mais largura para cards, preview 3D, filtros e metadados;
+- **Biblioteca de splines** usa uma largura intermediária;
+- em janelas menores, o painel reduz automaticamente sem sair da área visível;
+- a grade da biblioteca muda entre uma, duas ou três colunas de acordo com a largura real disponível;
+- filtros e metadados também quebram para uma coluna quando necessário;
+- a altura é limitada pela área real do editor para evitar conteúdo cortado em resoluções menores.
+
+A adaptação usa o tamanho do próprio painel, não apenas a resolução global da janela, de modo que o conteúdo continue organizado mesmo em fullscreen ou quando o painel flutuante é reposicionado.

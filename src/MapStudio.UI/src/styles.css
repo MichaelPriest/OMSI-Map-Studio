@@ -6471,3 +6471,134 @@ span.active {
   content: "Seleção";
   font-size: 8px;
 }
+
+
+/* Adaptive Explorer/Library sizing.
+   The map tree stays compact, while content-heavy libraries receive more
+   horizontal space automatically. Width remains bounded so the viewport
+   never disappears behind the drawer. */
+.map-explorer.city-drawer {
+  --explorer-auto-width:
+    clamp(360px, 28vw, 500px);
+  width:
+    min(
+      var(--explorer-auto-width),
+      calc(100% - 32px)
+    );
+  max-width:
+    calc(100% - 32px);
+  container-type: inline-size;
+}
+
+.map-explorer.explorer-mode-library {
+  --explorer-auto-width:
+    clamp(440px, 38vw, 700px);
+}
+
+.map-explorer.explorer-mode-splineLibrary {
+  --explorer-auto-width:
+    clamp(420px, 34vw, 620px);
+}
+
+.fullscreen-editor
+.map-explorer.city-drawer {
+  width:
+    min(
+      var(--explorer-auto-width),
+      calc(100% - 32px)
+    );
+}
+
+/* Library grids reflow from one to multiple columns according to the
+   actual drawer width rather than fixed desktop assumptions. */
+.map-explorer .city-library-grid {
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(
+        min(220px, 100%),
+        1fr
+      )
+    );
+}
+
+@container (max-width: 470px) {
+  .map-explorer .city-library-grid {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .map-explorer .library-filter-row {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+
+  .map-explorer .asset-inspector-grid {
+    grid-template-columns:
+      minmax(0, 1fr);
+  }
+}
+
+@container (min-width: 560px) {
+  .map-explorer .city-library-grid {
+    grid-template-columns:
+      repeat(
+        2,
+        minmax(0, 1fr)
+      );
+  }
+
+  .map-explorer .asset-preview-3d {
+    height: 230px;
+  }
+}
+
+@container (min-width: 680px) {
+  .map-explorer .city-library-grid {
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+  }
+}
+
+/* Height also follows the real editor viewport instead of a rigid panel
+   size. This prevents clipped libraries on smaller Windows displays. */
+.map-editor
+.city-drawer[data-floating-tool] {
+  height:
+    min(
+      calc(100% - 124px),
+      860px
+    );
+  min-height: 360px;
+}
+
+.map-editor.fullscreen-editor
+.city-drawer[data-floating-tool] {
+  height:
+    min(
+      calc(100% - 178px),
+      920px
+    );
+  min-height: 360px;
+}
+
+@media (max-width: 1280px) {
+  .map-explorer.city-drawer,
+  .map-explorer.explorer-mode-library,
+  .map-explorer.explorer-mode-splineLibrary {
+    --explorer-auto-width:
+      clamp(350px, 42vw, 520px);
+  }
+}
+
+@media (max-width: 900px) {
+  .map-explorer.city-drawer,
+  .map-explorer.explorer-mode-library,
+  .map-explorer.explorer-mode-splineLibrary {
+    --explorer-auto-width:
+      calc(100vw - 28px);
+  }
+}

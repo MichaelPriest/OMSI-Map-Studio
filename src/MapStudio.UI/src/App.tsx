@@ -18496,6 +18496,7 @@ export function App() {
             data-floating-tool-id="explorer-drawer"
             className={[
               "map-explorer city-drawer city-drawer-left",
+              `explorer-mode-${explorerPanelTab}`,
               isFullScreen
                 ? "fullscreen-drawer fullscreen-left"
                 : "desktop-drawer",
@@ -18554,7 +18555,13 @@ export function App() {
                 size={18}
               />
               <div>
-                <strong>Explorador de objetos</strong>
+                <strong>
+                  {explorerPanelTab === "map"
+                    ? "Explorador do mapa"
+                    : explorerPanelTab === "library"
+                      ? "Biblioteca de objetos"
+                      : "Biblioteca de splines"}
+                </strong>
                 <span>
                   {selectedMap.displayName}
                 </span>

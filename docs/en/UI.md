@@ -1022,3 +1022,18 @@ Picking now uses pointer coordinates maintained by Babylon on the canvas. This a
 ### Explorer readability
 
 The desktop Explorer is wider and uses a larger typography scale for names, metadata, search, Library categories and the 3D preview. The change prioritizes readability on Windows displays using scaling above 100% without reducing the viewport to a narrow column.
+
+
+### Auto-adaptive Explorer and libraries
+
+The side drawer no longer uses one fixed width for every kind of content. Its size now adapts automatically to context:
+
+- **Map Explorer** remains more compact to preserve viewport space;
+- **Object Library** receives more width for cards, 3D preview, filters and metadata;
+- **Spline Library** uses an intermediate width;
+- on smaller windows the drawer automatically shrinks without leaving the visible editor area;
+- the Library grid switches between one, two or three columns according to the drawer's actual available width;
+- filters and metadata collapse to a single column when needed;
+- height is bounded by the real editor area to avoid clipped content on smaller displays.
+
+Adaptation is based on the drawer's own size, not only the global window resolution, so content remains organized in fullscreen and after moving the floating panel.
