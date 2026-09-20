@@ -270,6 +270,24 @@ export type OmsiSceneryObjectGeometry = {
   renderType: string | null;
 };
 
+export type GoogleMapReference = {
+  latitude: number;
+  longitude: number;
+  zoom: number;
+  mapType:
+    | "roadmap"
+    | "satellite"
+    | "hybrid"
+    | "terrain";
+  width: number;
+  height: number;
+  metersPerPixel: number;
+  centerElevation: number | null;
+  mimeType: string;
+  base64Data: string;
+  attribution: string;
+};
+
 export type HostMessage =
   | {
       type: "omsiRootSelected";
@@ -413,6 +431,45 @@ export type HostMessage =
   | {
       type: "fullScreenChanged";
       enabled: boolean;
+    }
+  | {
+      type: "terrainLeveled";
+      directoryName: string;
+      tileX: number;
+      tileY: number;
+      changedSamples: number;
+      backupDirectory: string;
+    }
+  | {
+      type: "googleMapReferenceLoaded";
+      latitude: number;
+      longitude: number;
+      zoom: number;
+      mapType:
+        | "roadmap"
+        | "satellite"
+        | "hybrid"
+        | "terrain";
+      width: number;
+      height: number;
+      metersPerPixel: number;
+      centerElevation: number | null;
+      mimeType: string;
+      base64Data: string;
+      attribution: string;
+    }
+  | {
+      type: "mapGeoreferenceSaved";
+      directoryName: string;
+      path: string;
+      latitude: number;
+      longitude: number;
+      anchorTileX: number;
+      anchorTileY: number;
+      anchorX: number;
+      anchorY: number;
+      zoom: number;
+      mapType: string;
     }
   | {
       type: "hostError";
@@ -804,6 +861,71 @@ export function getSplineTextureAssetKey(
     splinePath,
     textureName
   ].join("|");
+}
+
+export function levelTerrain(
+  directoryName: string,
+  request: {
+    tileX: number;
+    tileY: number;
+    x: number;
+    y: number;
+    targetHeight: number;
+    radius: number;
+    feather: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "levelTerrain",
+    directoryName,
+    ...request
+  });
+}
+
+export function loadGoogleMapReference(
+  apiKey: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+    mapType:
+      | "roadmap"
+      | "satellite"
+      | "hybrid"
+      | "terrain";
+    width: number;
+    height: number;
+  }
+) {
+  getWebView()?.postMessage({
+    type: "loadGoogleMapReference",
+    apiKey,
+    ...request
+  });
+}
+
+export function saveMapGeoreference(
+  directoryName: string,
+  request: {
+    latitude: number;
+    longitude: number;
+    anchorTileX: number;
+    anchorTileY: number;
+    anchorX: number;
+    anchorY: number;
+    zoom: number;
+    mapType:
+      | "roadmap"
+      | "satellite"
+      | "hybrid"
+      | "terrain";
+  }
+) {
+  getWebView()?.postMessage({
+    type: "saveMapGeoreference",
+    directoryName,
+    ...request
+  });
 }
 
 export function loadTerrainTextureMaskAsset(
