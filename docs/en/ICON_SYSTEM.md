@@ -321,3 +321,11 @@ The fullscreen quick dock no longer uses letters as the primary representation f
 - active states keep the same visual semantics used across the editor.
 
 This brings F11 mode closer to the approved visual reference without creating a second implementation of the editing tools.
+
+
+### Fifth migrated batch
+
+- new `drag` icon for all movable panel/tool handles;
+- Explorer/Inspector, Map Health, and Construction Sets close actions reuse `discard`;
+- Map Health states reuse `success` and `warning`;
+- missing-template warning reuses `warning`.

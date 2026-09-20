@@ -321,3 +321,11 @@ O dock rápido de tela cheia deixou de usar letras como representação principa
 - estados ativos continuam usando a mesma semântica visual do restante do editor.
 
 Isso aproxima o modo F11 da referência visual aprovada sem criar uma segunda implementação de ferramentas.
+
+
+### Quinto lote migrado
+
+- novo ícone `drag` para todas as alças de painéis/ferramentas móveis;
+- fechar Explorer/Inspector, Saúde do mapa e Conjuntos reutiliza `discard`;
+- estados da Saúde do mapa reutilizam `success` e `warning`;
+- aviso de templates ausentes reutiliza `warning`.

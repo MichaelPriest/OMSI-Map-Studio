@@ -908,3 +908,13 @@ The editor top bar now follows the approved visual reference without adding deco
 - **Map** stays focused on map actions such as real-map-by-coordinates and map health.
 
 All behavior remains connected to real editor state; no fake commands are introduced.
+
+
+### Floating panel and status-bar refinement
+
+- Explorer now has its own header with the map name while keeping Explorer/Library/Splines tabs;
+- Inspector gets an icon header plus contextual selection state;
+- the tile navigator receives a visual header, close action, and a more legible grid;
+- the bottom bar replaces the continuous diagnostic string with compact segments for selection, active tile, snap, load mode, object/spline counts, and state;
+- detailed O3D/SLI/texture diagnostics remain available through the state tooltip and dedicated panels;
+- no fake information was introduced: every segment uses real editor state only.

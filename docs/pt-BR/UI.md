@@ -908,3 +908,13 @@ A barra superior do editor passa a seguir a referência visual aprovada sem cria
 - **Mapa** permanece focado em ações do mapa, como mapa real por coordenadas e saúde do mapa.
 
 Todo o comportamento continua ligado ao estado real do editor; não há comandos fictícios.
+
+
+### Refinamento dos painéis flutuantes e barra de status
+
+- Explorer passa a ter cabeçalho próprio com nome do mapa e mantém as abas Explorador/Biblioteca/Splines;
+- Inspector ganha cabeçalho com ícone e estado contextual da seleção;
+- navegador de blocos recebe cabeçalho visual, botão de fechar e grade com maior legibilidade;
+- barra inferior troca o diagnóstico contínuo por segmentos compactos com seleção, tile ativo, snap, modo de carregamento, contagem de objetos/splines e estado;
+- diagnósticos detalhados de O3D/SLI/texturas continuam disponíveis no tooltip do estado e nos painéis próprios;
+- nenhuma informação fictícia foi adicionada: os segmentos usam apenas estado real do editor.
