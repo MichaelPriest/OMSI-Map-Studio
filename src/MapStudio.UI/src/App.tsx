@@ -5769,6 +5769,137 @@ export function App() {
           return;
         }
 
+        if (
+          easyRoadMode &&
+          !splineLibraryPlacementIsHeight
+        ) {
+          if (!easyRoadStart) {
+            const startHeight =
+              sampleTerrainHeight(
+                activeTiles,
+                point.targetTileX,
+                point.targetTileY,
+                point.x,
+                point.y
+              ) ??
+              splinePlacementTemplate.z;
+
+            setEasyRoadStart(point);
+
+            setPendingSplinePlacement({
+              ...point,
+              z: startHeight,
+              rotation: 0,
+              length: 0,
+              radius: 0,
+              gradientStart: 0,
+              gradientEnd: 0
+            });
+
+            setSaveNotice(
+              "Início da rua marcado. Clique agora no ponto final."
+            );
+            return;
+          }
+
+          const startWorldX =
+            easyRoadStart
+              .targetTileX *
+              300 +
+            easyRoadStart.x;
+
+          const startWorldY =
+            easyRoadStart
+              .targetTileY *
+              300 +
+            easyRoadStart.y;
+
+          const endWorldX =
+            point.targetTileX *
+              300 +
+            point.x;
+
+          const endWorldY =
+            point.targetTileY *
+              300 +
+            point.y;
+
+          const deltaX =
+            endWorldX -
+            startWorldX;
+
+          const deltaY =
+            endWorldY -
+            startWorldY;
+
+          const length =
+            Math.hypot(
+              deltaX,
+              deltaY
+            );
+
+          if (length < 0.25) {
+            setError(
+              "O ponto final precisa estar afastado do início da rua."
+            );
+            return;
+          }
+
+          const startHeight =
+            sampleTerrainHeight(
+              activeTiles,
+              easyRoadStart
+                .targetTileX,
+              easyRoadStart
+                .targetTileY,
+              easyRoadStart.x,
+              easyRoadStart.y
+            ) ??
+            splinePlacementTemplate.z;
+
+          const endHeight =
+            sampleTerrainHeight(
+              activeTiles,
+              point.targetTileX,
+              point.targetTileY,
+              point.x,
+              point.y
+            ) ??
+            startHeight;
+
+          const gradient =
+            (
+              (endHeight -
+                startHeight) /
+              length
+            ) *
+            100;
+
+          setPendingSplinePlacement({
+            ...easyRoadStart,
+            z: startHeight,
+            rotation:
+              Math.atan2(
+                deltaX,
+                deltaY
+              ) *
+              180 /
+              Math.PI,
+            length,
+            radius: 0,
+            gradientStart:
+              gradient,
+            gradientEnd:
+              gradient
+          });
+
+          setSaveNotice(
+            `Rua pronta para revisar: ${formatNumber(length)} m · desnível ${formatNumber(endHeight - startHeight)} m. Ajuste os campos se quiser e confirme.`
+          );
+          setError(undefined);
+          return;
+        }
+
         setPendingSplinePlacement({
           ...point,
           z:
@@ -5790,7 +5921,13 @@ export function App() {
               .gradientEnd
         });
       },
-      [splinePlacementTemplate]
+      [
+        activeTiles,
+        easyRoadMode,
+        easyRoadStart,
+        splineLibraryPlacementIsHeight,
+        splinePlacementTemplate
+      ]
     );
 
   const handleCancelSplinePlacement =
@@ -5807,6 +5944,8 @@ export function App() {
       setPendingSplinePlacement(
         undefined
       );
+      setEasyRoadMode(false);
+      setEasyRoadStart(undefined);
       setInsertingSpline(false);
     }, []);
 
