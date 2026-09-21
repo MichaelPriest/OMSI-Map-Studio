@@ -30,7 +30,7 @@ public sealed class MapStudioBuildingAssetGeneratorTests
             geometry.IsLoaded);
 
         Assert.Equal(
-            2,
+            4,
             geometry.Materials.Count);
 
         Assert.True(
@@ -52,6 +52,55 @@ public sealed class MapStudioBuildingAssetGeneratorTests
         Assert.True(
             stream.Length >
             0);
+    }
+
+    [Fact]
+    public void GeometryBuilderAddsFacadeOpeningPanels()
+    {
+        var generator =
+            new MapStudioBuildingAssetGenerator();
+
+        var plain =
+            generator.BuildGeometry(
+                new MapStudioBuildingSpec(
+                    "Plain",
+                    12,
+                    9,
+                    6,
+                    2,
+                    MapStudioBuildingRoofType
+                        .Flat));
+
+        var detailed =
+            generator.BuildGeometry(
+                new MapStudioBuildingSpec(
+                    "Detailed",
+                    12,
+                    9,
+                    6,
+                    2,
+                    MapStudioBuildingRoofType
+                        .Flat,
+                    WindowsPerFloor:
+                        3,
+                    DoorCount:
+                        1,
+                    WindowWidthMeters:
+                        1.2,
+                    WindowHeightMeters:
+                        1.1));
+
+        Assert.True(
+            detailed.Indices.Length >
+            plain.Indices.Length);
+
+        Assert.Contains(
+            (ushort)2,
+            detailed.TriangleMaterialIndices);
+
+        Assert.Contains(
+            (ushort)3,
+            detailed.TriangleMaterialIndices);
     }
 
     [Fact]
