@@ -3002,7 +3002,7 @@ public sealed class OmsiNativeSession
                     request.SplinePath,
                     newSplineId,
                     request.PreviousSplineId,
-                    -1,
+                    request.NextSplineId,
                     request.X,
                     request.Z,
                     request.Y,
@@ -3027,62 +3027,103 @@ public sealed class OmsiNativeSession
                 request.Tile.RelativeMapPath
             };
 
-        if (request.PreviousSplineId > 0)
+        if (
+            request.PreviousSplineId >= 0 &&
+            request.NextSplineId >= 0 &&
+            request.PreviousSplineId ==
+                request.NextSplineId)
         {
-            OmsiTileReference? previousTile =
-                null;
+            throw new InvalidDataException(
+                "sameSplineUsedAtBothEnds");
+        }
 
-            OmsiPlacedSpline? previousSpline =
-                null;
+        var linkEditsByPath =
+            new Dictionary<
+                string,
+                (
+                    OmsiTileReference Tile,
+                    List<OmsiSplineLinkEdit> Edits
+                )>(
+                    StringComparer.OrdinalIgnoreCase);
 
-            foreach (var entry in mapContents)
+        void AddLinkEdit(
+            OmsiTileReference tile,
+            string tilePath,
+            OmsiSplineLinkEdit edit)
+        {
+            if (
+                !linkEditsByPath.TryGetValue(
+                    tilePath,
+                    out var entry))
             {
-                var match =
-                    entry.Content.Splines
-                        .FirstOrDefault(
-                            item =>
-                                item.SplineId ==
-                                request.PreviousSplineId);
+                entry =
+                    (
+                        tile,
+                        new List<
+                            OmsiSplineLinkEdit>()
+                    );
 
-                if (match is null)
-                {
-                    continue;
-                }
-
-                previousTile =
-                    entry.Reference;
-
-                previousSpline =
-                    match;
-
-                break;
+                linkEditsByPath[
+                    tilePath] =
+                    entry;
             }
 
-            if (
-                previousTile is null ||
-                previousSpline is null)
+            entry.Edits.Add(
+                edit);
+
+            affectedPaths.Add(
+                tile.RelativeMapPath);
+        }
+
+        if (request.PreviousSplineId >= 0)
+        {
+            var previousEntry =
+                mapContents
+                    .FirstOrDefault(
+                        entry =>
+                            entry.Content.Splines
+                                .Any(
+                                    item =>
+                                        item.SplineId ==
+                                        request.PreviousSplineId));
+
+            var previousSpline =
+                previousEntry.Content
+                    ?.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.SplineId ==
+                            request.PreviousSplineId);
+
+            if (previousSpline is null)
             {
                 throw new InvalidDataException(
                     "previousSplineNotFound");
             }
 
-            if (previousSpline.NextSplineId > 0)
+            if (
+                previousSpline.NextSplineId !=
+                -1)
             {
                 throw new InvalidDataException(
                     "previousSplineAlreadyLinked");
             }
 
             if (
-                !OmsiMapPathResolver.TryResolveTilePath(
-                    snapshot.Map.DirectoryPath,
-                    previousTile.RelativeMapPath,
-                    out var previousPath))
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        previousEntry.Reference
+                            .RelativeMapPath,
+                        out var previousPath))
             {
                 throw new InvalidDataException(
                     "previousSplineTilePathInvalid");
             }
 
-            var linkEdit =
+            AddLinkEdit(
+                previousEntry.Reference,
+                previousPath,
                 new OmsiSplineLinkEdit(
                     previousSpline.SourceSectionOrdinal,
                     previousSpline.SplinePath,
@@ -3091,52 +3132,114 @@ public sealed class OmsiNativeSession
                     previousSpline.NextSplineId,
                     previousSpline.IsHeightSpline,
                     previousSpline.PreviousSplineId,
-                    newSplineId);
+                    newSplineId));
+        }
+
+        if (request.NextSplineId >= 0)
+        {
+            var nextEntry =
+                mapContents
+                    .FirstOrDefault(
+                        entry =>
+                            entry.Content.Splines
+                                .Any(
+                                    item =>
+                                        item.SplineId ==
+                                        request.NextSplineId));
+
+            var nextSpline =
+                nextEntry.Content
+                    ?.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.SplineId ==
+                            request.NextSplineId);
+
+            if (nextSpline is null)
+            {
+                throw new InvalidDataException(
+                    "nextSplineNotFound");
+            }
 
             if (
-                string.Equals(
-                    previousPath,
-                    targetPath,
-                    StringComparison.OrdinalIgnoreCase))
+                nextSpline.PreviousSplineId !=
+                -1)
             {
-                var combinedDocument =
-                    OmsiConfigParser.ParseBytes(
-                        targetBytes);
-
-                targetBytes =
-                    OmsiTileSplineLinkEditor
-                        .ApplyLinks(
-                            combinedDocument,
-                            [linkEdit])
-                        .Bytes;
+                throw new InvalidDataException(
+                    "nextSplineAlreadyLinked");
             }
-            else
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        nextEntry.Reference
+                            .RelativeMapPath,
+                        out var nextPath))
             {
-                var previousDocument =
-                    await OmsiConfigParser
-                        .ParseFileAsync(
-                            previousPath,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-
-                var previousBytes =
-                    OmsiTileSplineLinkEditor
-                        .ApplyLinks(
-                            previousDocument,
-                            [linkEdit])
-                        .Bytes;
-
-                writes.Add(
-                    new PendingFileWrite(
-                        previousPath,
-                        CreateNativeBackupPath(
-                            snapshot.Map.DirectoryPath,
-                            previousPath),
-                        previousBytes));
-
-                affectedPaths.Add(
-                    previousTile.RelativeMapPath);
+                throw new InvalidDataException(
+                    "nextSplineTilePathInvalid");
             }
+
+            AddLinkEdit(
+                nextEntry.Reference,
+                nextPath,
+                new OmsiSplineLinkEdit(
+                    nextSpline.SourceSectionOrdinal,
+                    nextSpline.SplinePath,
+                    nextSpline.SplineId,
+                    nextSpline.PreviousSplineId,
+                    nextSpline.NextSplineId,
+                    nextSpline.IsHeightSpline,
+                    newSplineId,
+                    nextSpline.NextSplineId));
+        }
+
+        if (
+            linkEditsByPath.TryGetValue(
+                targetPath,
+                out var targetLinkEdits))
+        {
+            var combinedDocument =
+                OmsiConfigParser.ParseBytes(
+                    targetBytes);
+
+            targetBytes =
+                OmsiTileSplineLinkEditor
+                    .ApplyLinks(
+                        combinedDocument,
+                        targetLinkEdits.Edits)
+                    .Bytes;
+
+            linkEditsByPath.Remove(
+                targetPath);
+        }
+
+        foreach (
+            var pair in
+                linkEditsByPath)
+        {
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        pair.Key,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var bytes =
+                OmsiTileSplineLinkEditor
+                    .ApplyLinks(
+                        document,
+                        pair.Value.Edits)
+                    .Bytes;
+
+            writes.Add(
+                new PendingFileWrite(
+                    pair.Key,
+                    CreateNativeBackupPath(
+                        snapshot.Map.DirectoryPath,
+                        pair.Key),
+                    bytes));
         }
 
         writes.Add(
