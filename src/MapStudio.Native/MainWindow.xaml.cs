@@ -86,6 +86,9 @@ public sealed partial class MainWindow : Window
     private string?
         _referenceOverlayMapDirectory;
 
+    private string?
+        _terrainLayerVisibilityMapDirectory;
+
     private readonly IntPtr _windowHandle;
 
     private readonly AppWindow _appWindow;
@@ -8955,6 +8958,133 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e) =>
         ApplySceneVisibility();
 
+    private void OnTerrainPaintVisibilityClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var visible =
+            ShowTerrainPaintMenuItem
+                .IsChecked;
+
+        if (
+            Viewport
+                .SetTerrainPaintVisible(
+                    visible))
+        {
+            StatusText.Text =
+                visible
+                    ? "Pintura do terreno visível."
+                    : "Pintura do terreno oculta; base, lightmap e referência permanecem visíveis.";
+        }
+    }
+
+    private void SetTerrainLayerVisibility(
+        int layerIndex,
+        ToggleMenuFlyoutItem item)
+    {
+        if (
+            Viewport
+                .SetTerrainLayerVisible(
+                    layerIndex,
+                    item.IsChecked))
+        {
+            StatusText.Text =
+                $"Groundtex {layerIndex} {(item.IsChecked ? "visível" : "oculto")}.";
+        }
+    }
+
+    private void RefreshTerrainLayerVisibilityMenu(
+        NativeMapSnapshot snapshot)
+    {
+        if (
+            string.Equals(
+                _terrainLayerVisibilityMapDirectory,
+                snapshot.Map.DirectoryPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _terrainLayerVisibilityMapDirectory =
+            snapshot.Map.DirectoryPath;
+
+        Viewport
+            .ResetTerrainLayerVisibility();
+
+        ShowTerrainPaintMenuItem.IsChecked =
+            true;
+
+        TerrainLayersMenuItem.Items.Clear();
+
+        var groundTextures =
+            snapshot.Map.GroundTextures;
+
+        var hasPaintLayers =
+            groundTextures.Count >
+            1;
+
+        ShowTerrainPaintMenuItem.IsEnabled =
+            hasPaintLayers;
+
+        TerrainLayersMenuItem.IsEnabled =
+            hasPaintLayers;
+
+        if (!hasPaintLayers)
+        {
+            TerrainLayersMenuItem.Items.Add(
+                new MenuFlyoutItem
+                {
+                    Text =
+                        "Sem camadas pintadas",
+                    IsEnabled =
+                        false
+                });
+
+            return;
+        }
+
+        for (
+            var index = 1;
+            index < groundTextures.Count;
+            index++)
+        {
+            var layerIndex =
+                index;
+
+            var texturePath =
+                groundTextures[index]
+                    .MainTexturePath;
+
+            var textureName =
+                string.IsNullOrWhiteSpace(
+                    texturePath)
+                    ? $"groundtex {index}"
+                    : Path.GetFileName(
+                        texturePath
+                            .Replace(
+                                '\\',
+                                Path.DirectorySeparatorChar));
+
+            var item =
+                new ToggleMenuFlyoutItem
+                {
+                    Text =
+                        $"{index}: {textureName}",
+                    IsChecked =
+                        true
+                };
+
+            item.Click +=
+                (_, _) =>
+                    SetTerrainLayerVisibility(
+                        layerIndex,
+                        item);
+
+            TerrainLayersMenuItem.Items.Add(
+                item);
+        }
+    }
+
     private void OnGridVisibilityClick(
         object sender,
         RoutedEventArgs e)
@@ -10173,6 +10303,9 @@ public sealed partial class MainWindow : Window
             .SetMapSnapshotAsync(
                 snapshot,
                 _session.OmsiRootPath);
+
+        RefreshTerrainLayerVisibilityMenu(
+            snapshot);
 
         ClearInspectorSelectionState();
 

@@ -142,6 +142,20 @@
                         IsChecked="True"
                         Click="OnSceneVisibilityClick" />
                     <ToggleMenuFlyoutItem
+                        x:Name="ShowTerrainPaintMenuItem"
+                        Text="Pintura do terreno"
+                        IsChecked="True"
+                        IsEnabled="False"
+                        Click="OnTerrainPaintVisibilityClick" />
+                    <MenuFlyoutSubItem
+                        x:Name="TerrainLayersMenuItem"
+                        Text="Camadas pintadas"
+                        IsEnabled="False">
+                        <MenuFlyoutItem
+                            Text="Abra um mapa..."
+                            IsEnabled="False" />
+                    </MenuFlyoutSubItem>
+                    <ToggleMenuFlyoutItem
                         x:Name="ShowObjectsMenuItem"
                         Text="Objetos"
                         IsChecked="True"

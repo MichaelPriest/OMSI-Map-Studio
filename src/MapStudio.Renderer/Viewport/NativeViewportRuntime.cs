@@ -2671,6 +2671,60 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool SetTerrainPaintVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !MapRenderer
+                .SetTerrainPaintVisible(
+                    visible))
+        {
+            return false;
+        }
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool SetTerrainLayerVisible(
+        int layerIndex,
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !MapRenderer
+                .SetTerrainLayerVisible(
+                    layerIndex,
+                    visible))
+        {
+            return false;
+        }
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool ResetTerrainLayerVisibility()
+    {
+        ThrowIfDisposed();
+
+        if (
+            !MapRenderer
+                .ResetTerrainLayerVisibility())
+        {
+            return false;
+        }
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public bool SetSelectionFilter(
         NativeSelectionFilter filter)
     {

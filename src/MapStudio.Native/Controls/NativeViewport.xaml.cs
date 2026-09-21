@@ -684,6 +684,27 @@ public sealed partial class NativeViewport : UserControl
         return changed;
     }
 
+    public bool SetTerrainPaintVisible(
+        bool visible) =>
+        _runtime
+            ?.SetTerrainPaintVisible(
+                visible) ??
+        false;
+
+    public bool SetTerrainLayerVisible(
+        int layerIndex,
+        bool visible) =>
+        _runtime
+            ?.SetTerrainLayerVisible(
+                layerIndex,
+                visible) ??
+        false;
+
+    public bool ResetTerrainLayerVisibility() =>
+        _runtime
+            ?.ResetTerrainLayerVisibility() ??
+        false;
+
     public bool SetSelectionFilter(
         NativeSelectionFilter filter)
     {
