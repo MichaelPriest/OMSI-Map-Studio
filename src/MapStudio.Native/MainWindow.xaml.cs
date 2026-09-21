@@ -5897,6 +5897,537 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnCreateCoordinateMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            StatusText.Text =
+                "Selecione primeiro a instalação do OMSI para criar um mapa.";
+
+            return;
+        }
+
+        var directoryBox =
+            new TextBox
+            {
+                Header =
+                    "Nome da pasta",
+                PlaceholderText =
+                    "MeuMapaReal"
+            };
+
+        var displayBox =
+            new TextBox
+            {
+                Header =
+                    "Nome exibido",
+                PlaceholderText =
+                    "Meu mapa real"
+            };
+
+        var latitudeBox =
+            new NumberBox
+            {
+                Header =
+                    "Latitude",
+                Minimum =
+                    -90,
+                Maximum =
+                    90,
+                Value =
+                    -23.55052,
+                SmallChange =
+                    0.00001,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var longitudeBox =
+            new NumberBox
+            {
+                Header =
+                    "Longitude",
+                Minimum =
+                    -180,
+                Maximum =
+                    180,
+                Value =
+                    -46.633308,
+                SmallChange =
+                    0.00001,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    430
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Cria um novo mapa usando o template NewMap do OMSI e grava uma âncora geográfica para referências/elevacão.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        panel.Children.Add(
+            directoryBox);
+
+        panel.Children.Add(
+            displayBox);
+
+        panel.Children.Add(
+            latitudeBox);
+
+        panel.Children.Add(
+            longitudeBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Mapa real por coordenadas",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar mapa",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var result =
+            await dialog
+                .ShowAsync();
+
+        if (
+            result !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryBox.Text) ||
+            string.IsNullOrWhiteSpace(
+                displayBox.Text) ||
+            !double.IsFinite(
+                latitudeBox.Value) ||
+            !double.IsFinite(
+                longitudeBox.Value))
+        {
+            StatusText.Text =
+                "Dados inválidos para criação do mapa real.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Criando mapa a partir do template OMSI...";
+
+            var created =
+                await _session
+                    .CreateCoordinateMapAsync(
+                        directoryBox.Text,
+                        displayBox.Text,
+                        latitudeBox.Value,
+                        longitudeBox.Value);
+
+            _fullMapMode =
+                true;
+
+            await ApplyMapSnapshotAsync(
+                created.Snapshot,
+                focusActiveTile: false);
+
+            RootText.Text =
+                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+
+            StatusText.Text =
+                $"Mapa {created.Snapshot.Map.DisplayName} criado em {created.DirectoryPath} · âncora {created.Latitude:F6}, {created.Longitude:F6}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar mapa por coordenadas: {exception.Message}";
+        }
+    }
+
+    private async void OnEditMapGeoreferenceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Abra um mapa antes de editar a georreferência.";
+
+            return;
+        }
+
+        NativeMapGeoreference? current =
+            null;
+
+        try
+        {
+            current =
+                await _session
+                    .LoadMapGeoreferenceAsync();
+        }
+        catch
+        {
+        }
+
+        var active =
+            snapshot.ActiveTile ??
+            OmsiTileRegionSelector
+                .FindInitialTile(
+                    snapshot.Map.Tiles);
+
+        var latitudeBox =
+            new NumberBox
+            {
+                Header =
+                    "Latitude da âncora",
+                Minimum =
+                    -90,
+                Maximum =
+                    90,
+                Value =
+                    current?.Latitude ??
+                    0,
+                SmallChange =
+                    0.00001
+            };
+
+        var longitudeBox =
+            new NumberBox
+            {
+                Header =
+                    "Longitude da âncora",
+                Minimum =
+                    -180,
+                Maximum =
+                    180,
+                Value =
+                    current?.Longitude ??
+                    0,
+                SmallChange =
+                    0.00001
+            };
+
+        var tileXBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile X",
+                Value =
+                    current?.AnchorTileX ??
+                    active?.X ??
+                    0
+            };
+
+        var tileYBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile Y",
+                Value =
+                    current?.AnchorTileY ??
+                    active?.Y ??
+                    0
+            };
+
+        var localXBox =
+            new NumberBox
+            {
+                Header =
+                    "X local da âncora",
+                Minimum =
+                    0,
+                Maximum =
+                    300,
+                Value =
+                    current?.AnchorX ??
+                    150
+            };
+
+        var localYBox =
+            new NumberBox
+            {
+                Header =
+                    "Y local da âncora",
+                Minimum =
+                    0,
+                Maximum =
+                    300,
+                Value =
+                    current?.AnchorY ??
+                    150
+            };
+
+        var zoomBox =
+            new NumberBox
+            {
+                Header =
+                    "Zoom",
+                Minimum =
+                    0,
+                Maximum =
+                    22,
+                Value =
+                    current?.Zoom ??
+                    18,
+                SmallChange =
+                    1
+            };
+
+        var mapType =
+            new ComboBox
+            {
+                Header =
+                    "Tipo de mapa",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch,
+                SelectedIndex =
+                    (current?.MapType
+                        ?.ToLowerInvariant()) switch
+                    {
+                        "roadmap" => 0,
+                        "satellite" => 1,
+                        "terrain" => 3,
+                        _ => 2
+                    }
+            };
+
+        mapType.Items.Add(
+            "roadmap");
+
+        mapType.Items.Add(
+            "satellite");
+
+        mapType.Items.Add(
+            "hybrid");
+
+        mapType.Items.Add(
+            "terrain");
+
+        var coordinatesGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        coordinatesGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        coordinatesGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            latitudeBox,
+            0);
+
+        Grid.SetColumn(
+            longitudeBox,
+            1);
+
+        coordinatesGrid.Children.Add(
+            latitudeBox);
+
+        coordinatesGrid.Children.Add(
+            longitudeBox);
+
+        var tileGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        tileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        tileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            tileXBox,
+            0);
+
+        Grid.SetColumn(
+            tileYBox,
+            1);
+
+        tileGrid.Children.Add(
+            tileXBox);
+
+        tileGrid.Children.Add(
+            tileYBox);
+
+        var localGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        localGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        localGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            localXBox,
+            0);
+
+        Grid.SetColumn(
+            localYBox,
+            1);
+
+        localGrid.Children.Add(
+            localXBox);
+
+        localGrid.Children.Add(
+            localYBox);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    7,
+                MinWidth =
+                    460
+            };
+
+        panel.Children.Add(
+            coordinatesGrid);
+
+        panel.Children.Add(
+            tileGrid);
+
+        panel.Children.Add(
+            localGrid);
+
+        panel.Children.Add(
+            zoomBox);
+
+        panel.Children.Add(
+            mapType);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Georreferência do mapa",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var result =
+            await dialog
+                .ShowAsync();
+
+        if (
+            result !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        var values =
+            new[]
+            {
+                latitudeBox.Value,
+                longitudeBox.Value,
+                tileXBox.Value,
+                tileYBox.Value,
+                localXBox.Value,
+                localYBox.Value,
+                zoomBox.Value
+            };
+
+        if (
+            values.Any(
+                value =>
+                    !double.IsFinite(
+                        value)))
+        {
+            StatusText.Text =
+                "Georreferência inválida.";
+
+            return;
+        }
+
+        try
+        {
+            var path =
+                await _session
+                    .SaveMapGeoreferenceAsync(
+                        new NativeMapGeoreference(
+                            latitudeBox.Value,
+                            longitudeBox.Value,
+                            checked(
+                                (int)Math.Round(
+                                    tileXBox.Value)),
+                            checked(
+                                (int)Math.Round(
+                                    tileYBox.Value)),
+                            localXBox.Value,
+                            localYBox.Value,
+                            checked(
+                                (int)Math.Round(
+                                    zoomBox.Value)),
+                            mapType.SelectedItem
+                                ?.ToString() ??
+                            "hybrid",
+                            "Google Maps"));
+
+            StatusText.Text =
+                $"Georreferência salva em {path}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar georreferência: {exception.Message}";
+        }
+    }
+
     private async void OnOpenMapClick(
         object sender,
         RoutedEventArgs e)

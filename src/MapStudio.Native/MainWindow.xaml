@@ -167,6 +167,13 @@
                         x:Name="PerformanceMapModeMenuItem"
                         Text="Modo desempenho 3×3"
                         Click="OnPerformanceMapModeClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
+                        Text="Criar mapa real por coordenadas..."
+                        Click="OnCreateCoordinateMapClick" />
+                    <MenuFlyoutItem
+                        Text="Georreferência do mapa..."
+                        Click="OnEditMapGeoreferenceClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Ferramentas">
                     <MenuFlyoutItem
