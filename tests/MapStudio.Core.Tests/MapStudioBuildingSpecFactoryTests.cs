@@ -99,6 +99,41 @@ public sealed class MapStudioBuildingSpecFactoryTests
             3);
     }
 
+    [Theory]
+    [InlineData(
+        MapStudioBuildingRoofType.Hip)]
+    [InlineData(
+        MapStudioBuildingRoofType.Shed)]
+    public void FactoryPreservesSupportedSlopedRoofTypes(
+        MapStudioBuildingRoofType roofType)
+    {
+        var spec =
+            MapStudioBuildingSpecFactory
+                .FromAnalysis(
+                    "Roof",
+                    new MapStudioBuildingReferenceAnalysis(
+                        12,
+                        8,
+                        9,
+                        2,
+                        roofType,
+                        2,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        0.8));
+
+        Assert.Equal(
+            roofType,
+            spec.RoofType);
+
+        Assert.Equal(
+            2,
+            spec.RoofHeightMeters);
+    }
+
     [Fact]
     public void FactoryBuildsSafeFallbacksFromPartialAnalysis()
     {
