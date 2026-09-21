@@ -1581,6 +1581,15 @@ public sealed partial class MainWindow : Window
                 asset.Kind ==
                     OmsiAssetKind.Spline)
             {
+                var placeHeightSpline =
+                    SplineHeightCheckBox
+                        .IsChecked ==
+                    true;
+
+                Viewport
+                    .SetSplinePlacementHeightMode(
+                        placeHeightSpline);
+
                 Viewport
                     .SetSplineEndpointSnapOptions(
                         SplineEndpointSnapCheckBox
@@ -1607,6 +1616,7 @@ public sealed partial class MainWindow : Window
 
                 Viewport
                     .SetSplineEasyRoadOptions(
+                        !placeHeightSpline &&
                         SplineEasyRoadCheckBox
                             .IsChecked ==
                         true,
@@ -1674,7 +1684,13 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 asset.Kind ==
                     OmsiAssetKind.Spline
-                    ? SplineEasyRoadCheckBox.IsChecked ==
+                    ? SplineHeightCheckBox.IsChecked ==
+                        true
+                        ? SplineCurveCheckBox.IsChecked ==
+                            true
+                            ? "[spline_h] curva: clique início, fim e ponto de curvatura."
+                            : "[spline_h] altura: clique início e fim."
+                        : SplineEasyRoadCheckBox.IsChecked ==
                         true
                         ? "Estrada fácil: clique no início e no fim. Ajuste o offset lateral para curvar." +
                           (
@@ -1781,6 +1797,7 @@ public sealed partial class MainWindow : Window
                     OmsiAssetIndexEntry;
 
             var canContinue =
+                !request.IsHeightSpline &&
                 request.NextSplineId <
                     0 &&
                 SplineContinuousCheckBox.IsChecked ==
@@ -3664,18 +3681,7 @@ public sealed partial class MainWindow : Window
 
             return;
         }
-
-        if (
-            selection.IsHeightSpline ==
-                true)
-        {
-            StatusText.Text =
-                "Cópia de spline de altura ainda não está habilitada no host nativo.";
-
-            return;
-        }
-
-        if (
+if (
             _session.CurrentMap.Map
                 .UsesWorldCoordinates)
         {
@@ -3705,6 +3711,12 @@ public sealed partial class MainWindow : Window
                     0) >
                 0.001;
 
+            
+            Viewport
+                .SetSplinePlacementHeightMode(
+                    selection.IsHeightSpline ==
+                    true);
+
             var started =
                 await Viewport
                     .BeginSplinePlacementCopyAsync(
@@ -3721,7 +3733,10 @@ public sealed partial class MainWindow : Window
             }
 
             StatusText.Text =
-                $"Cópia desconectada da spline #{selection.EntityId}: defina a nova geometria no viewport.";
+                selection.IsHeightSpline ==
+                    true
+                    ? $"Cópia [spline_h] desconectada da spline #{selection.EntityId}: defina a nova geometria no viewport."
+                    : $"Cópia desconectada da spline #{selection.EntityId}: defina a nova geometria no viewport.";
         }
         catch (Exception exception)
         {
@@ -4280,6 +4295,61 @@ public sealed partial class MainWindow : Window
             null,
             "Objetos: biblioteca SCO pronta para posicionar e editar.");
     }
+    private void OnSplineHeightToggle(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var isHeight =
+            SplineHeightCheckBox
+                .IsChecked ==
+            true;
+
+        if (isHeight)
+        {
+            SplineEasyRoadCheckBox.IsChecked =
+                false;
+
+            SplineContinuousCheckBox.IsChecked =
+                false;
+        }
+
+        SplineEasyRoadCheckBox.IsEnabled =
+            !isHeight;
+
+        SplineContinuousCheckBox.IsEnabled =
+            !isHeight;
+
+        SplineEndpointSnapCheckBox.IsEnabled =
+            !isHeight;
+
+        SplineEndpointSnapDistanceBox.IsEnabled =
+            !isHeight;
+
+        SplineAutoConnectCheckBox.IsEnabled =
+            !isHeight;
+
+        Viewport
+            .SetSplinePlacementHeightMode(
+                isHeight);
+
+        Viewport
+            .SetSplineEasyRoadOptions(
+                !isHeight &&
+                SplineEasyRoadCheckBox
+                    .IsChecked ==
+                true,
+                double.IsFinite(
+                    SplineCurveOffsetBox
+                        .Value)
+                    ? SplineCurveOffsetBox
+                        .Value
+                    : 0.0);
+
+        StatusText.Text =
+            isHeight
+                ? "[spline_h] ativo: grava spline de altura; Estrada fácil, continuidade e auto-link de vias normais ficam desativados."
+                : "[spline] normal ativo.";
+    }
 
     private void OnSplineEasyRoadToggle(
         object sender,
@@ -4346,7 +4416,25 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             0;
 
-        SplineEasyRoadCheckBox.IsChecked =
+       
+        SplineHeightCheckBox.IsChecked =
+            false;
+
+        SplineEasyRoadCheckBox.IsEnabled =
+            true;
+
+        SplineContinuousCheckBox.IsEnabled =
+            true;
+
+        SplineEndpointSnapCheckBox.IsEnabled =
+            true;
+
+        SplineEndpointSnapDistanceBox.IsEnabled =
+            true;
+
+        SplineAutoConnectCheckBox.IsEnabled =
+            true;
+ SplineEasyRoadCheckBox.IsChecked =
             true;
 
         SplineCurveOffsetBox.Value =
@@ -4371,7 +4459,25 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             5;
 
-        SplineEasyRoadCheckBox.IsChecked =
+       
+        SplineHeightCheckBox.IsChecked =
+            false;
+
+        SplineEasyRoadCheckBox.IsEnabled =
+            true;
+
+        SplineContinuousCheckBox.IsEnabled =
+            true;
+
+        SplineEndpointSnapCheckBox.IsEnabled =
+            true;
+
+        SplineEndpointSnapDistanceBox.IsEnabled =
+            true;
+
+        SplineAutoConnectCheckBox.IsEnabled =
+            true;
+ SplineEasyRoadCheckBox.IsChecked =
             true;
 
         SplineCurveOffsetBox.Value =

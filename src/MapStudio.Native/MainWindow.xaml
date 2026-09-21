@@ -631,6 +631,9 @@
                                     <CheckBox x:Name="SplineEasyRoadCheckBox"
                                               Content="Estrada fácil (2 cliques)"
                                               Click="OnSplineEasyRoadToggle" />
+                                    <CheckBox x:Name="SplineHeightCheckBox"
+                                              Content="Criar como [spline_h] (altura)"
+                                              Click="OnSplineHeightToggle" />
                                     <NumberBox x:Name="SplineCurveOffsetBox"
                                                Header="Curva lateral / offset (m)"
                                                Minimum="-500"
