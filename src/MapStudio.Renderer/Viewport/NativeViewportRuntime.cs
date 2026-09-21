@@ -241,6 +241,8 @@ public sealed class NativeViewportRuntime : IDisposable
             return new NativeProceduralRoadPlacementBuildResult(
                 Array.Empty<
                     NativeSplinePlacementRequest>(),
+                Array.Empty<
+                    NativeProceduralRoadPlacementLink>(),
                 graph.Segments.Count);
         }
 
