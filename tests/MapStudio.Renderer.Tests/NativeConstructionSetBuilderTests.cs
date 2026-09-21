@@ -37,7 +37,7 @@ public sealed class NativeConstructionSetBuilderTests
 
         var entity =
             new NativeSplineEntity(
-                new PickingId(1),
+                new PickingId(PickingKind.Spline, 1),
                 tile,
                 placed,
                 10,
@@ -119,7 +119,7 @@ public sealed class NativeConstructionSetBuilderTests
 
         var entity =
             new NativeSplineEntity(
-                new PickingId(1),
+                new PickingId(PickingKind.Spline, 1),
                 tile,
                 placed,
                 0,
