@@ -250,16 +250,15 @@ public sealed class MapStudioRoadGraphBuilderTests
 
         var join =
             Assert.Single(
-                graph.Nodes
-                    .Where(
-                        node =>
-                            Math.Abs(
-                                node.Position.X -
-                                10) <
-                            0.001 &&
-                            Math.Abs(
-                                node.Position.Z) <
-                            0.001));
+                graph.Nodes,
+                node =>
+                    Math.Abs(
+                        node.Position.X -
+                        10) <
+                    0.001 &&
+                    Math.Abs(
+                        node.Position.Z) <
+                    0.001);
 
         Assert.Equal(
             2,
