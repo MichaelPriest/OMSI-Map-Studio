@@ -153,6 +153,177 @@ public sealed class OmsiNativeSession
             edit;
     }
 
+    public async Task<NativeGoogleMapReference>
+        LoadGoogleMapReferenceAsync(
+            string apiKey,
+            int width = 640,
+            int height = 640,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey) ||
+            width is < 128 or > 640 ||
+            height is < 128 or > 640)
+        {
+            throw new InvalidDataException(
+                "invalidGoogleReferenceRequest");
+        }
+
+        var georeference =
+            await LoadMapGeoreferenceAsync(
+                    cancellationToken)
+                .ConfigureAwait(false)
+            ?? throw new InvalidDataException(
+                "mapGeoreferenceRequired");
+
+        ValidateGeoreference(
+            georeference);
+
+        var invariant =
+            CultureInfo.InvariantCulture;
+
+        var center =
+            string.Create(
+                invariant,
+                $"{georeference.Latitude:G17},{georeference.Longitude:G17}");
+
+        var mapType =
+            georeference.MapType
+                .Trim()
+                .ToLowerInvariant();
+
+        var uri =
+            "https://maps.googleapis.com/maps/api/staticmap" +
+            "?center=" +
+            Uri.EscapeDataString(
+                center) +
+            "&zoom=" +
+            georeference.Zoom.ToString(
+                invariant) +
+            "&size=" +
+            width.ToString(
+                invariant) +
+            "x" +
+            height.ToString(
+                invariant) +
+            "&scale=1&format=png&maptype=" +
+            Uri.EscapeDataString(
+                mapType) +
+            "&key=" +
+            Uri.EscapeDataString(
+                apiKey.Trim());
+
+        using var response =
+            await GoogleMapsHttpClient
+                .GetAsync(
+                    uri,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                $"googleMapsReferenceHttp:{(int)response.StatusCode}");
+        }
+
+        var bytes =
+            await response.Content
+                .ReadAsByteArrayAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (
+            bytes.Length == 0 ||
+            bytes.LongLength >
+                16L *
+                1024L *
+                1024L)
+        {
+            throw new InvalidDataException(
+                "googleMapsReferenceInvalidPayload");
+        }
+
+        var cacheRoot =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder
+                        .LocalApplicationData),
+                "OMSI Map Studio",
+                "reference-cache");
+
+        Directory.CreateDirectory(
+            cacheRoot);
+
+        foreach (
+            var stale in
+                Directory
+                    .EnumerateFiles(
+                        cacheRoot,
+                        "google-reference-*.png")
+                    .OrderByDescending(
+                        File.GetLastWriteTimeUtc)
+                    .Skip(8)
+                    .ToArray())
+        {
+            try
+            {
+                File.Delete(stale);
+            }
+            catch
+            {
+            }
+        }
+
+        var path =
+            Path.Combine(
+                cacheRoot,
+                "google-reference-" +
+                Guid.NewGuid()
+                    .ToString("N") +
+                ".png");
+
+        await File.WriteAllBytesAsync(
+                path,
+                bytes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var metersPerPixel =
+            156543.03392804097 *
+            Math.Cos(
+                georeference.Latitude *
+                Math.PI /
+                180.0) /
+            Math.Pow(
+                2,
+                georeference.Zoom);
+
+        var anchorWorldX =
+            georeference.AnchorTileX *
+                300.0 +
+            georeference.AnchorX;
+
+        var anchorWorldZ =
+            georeference.AnchorTileY *
+                300.0 +
+            georeference.AnchorY;
+
+        return new NativeGoogleMapReference(
+            path,
+            width,
+            height,
+            metersPerPixel,
+            anchorWorldX,
+            anchorWorldZ,
+            georeference.Latitude,
+            georeference.Longitude,
+            georeference.Zoom,
+            mapType,
+            "Google Maps");
+    }
+
     public async Task<NativeGoogleElevationGrid>
         LoadGoogleElevationGridAsync(
             string apiKey,
