@@ -7,7 +7,7 @@ namespace MapStudio.Renderer.Scene;
 public readonly struct NativeMapVertex
 {
     public const uint SizeInBytes =
-        52;
+        80;
 
     public NativeMapVertex(
         Vector3 position,
@@ -17,7 +17,11 @@ public readonly struct NativeMapVertex
             color,
             Vector2.Zero,
             Vector2.Zero,
-            Vector2.Zero)
+            Vector2.Zero,
+            Vector3.UnitY,
+            new Vector4(
+                Vector3.UnitX,
+                1.0f))
     {
     }
 
@@ -30,7 +34,11 @@ public readonly struct NativeMapVertex
             color,
             texCoord,
             texCoord,
-            texCoord)
+            texCoord,
+            Vector3.UnitY,
+            new Vector4(
+                Vector3.UnitX,
+                1.0f))
     {
     }
 
@@ -44,7 +52,11 @@ public readonly struct NativeMapVertex
             color,
             texCoord,
             maskTexCoord,
-            texCoord)
+            texCoord,
+            Vector3.UnitY,
+            new Vector4(
+                Vector3.UnitX,
+                1.0f))
     {
     }
 
@@ -54,6 +66,27 @@ public readonly struct NativeMapVertex
         Vector2 texCoord,
         Vector2 maskTexCoord,
         Vector2 detailTexCoord)
+        : this(
+            position,
+            color,
+            texCoord,
+            maskTexCoord,
+            detailTexCoord,
+            Vector3.UnitY,
+            new Vector4(
+                Vector3.UnitX,
+                1.0f))
+    {
+    }
+
+    public NativeMapVertex(
+        Vector3 position,
+        Vector4 color,
+        Vector2 texCoord,
+        Vector2 maskTexCoord,
+        Vector2 detailTexCoord,
+        Vector3 normal,
+        Vector4 tangent)
     {
         Position = position;
         Color = color;
@@ -62,6 +95,10 @@ public readonly struct NativeMapVertex
             maskTexCoord;
         DetailTexCoord =
             detailTexCoord;
+        Normal =
+            normal;
+        Tangent =
+            tangent;
     }
 
     public Vector3 Position { get; }
@@ -73,4 +110,8 @@ public readonly struct NativeMapVertex
     public Vector2 MaskTexCoord { get; }
 
     public Vector2 DetailTexCoord { get; }
+
+    public Vector3 Normal { get; }
+
+    public Vector4 Tangent { get; }
 }

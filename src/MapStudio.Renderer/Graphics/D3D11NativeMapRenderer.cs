@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using Vortice.D3DCompiler;
@@ -12,6 +13,18 @@ namespace MapStudio.Renderer.Graphics;
 public sealed class D3D11NativeMapRenderer :
     IDisposable
 {
+    [StructLayout(
+        LayoutKind.Sequential)]
+    private struct ViewportShaderConstants
+    {
+        public Matrix4x4
+            ViewProjection;
+
+        public Vector4
+            CameraPosition;
+    }
+
+
     private static readonly Color4 ClearColor =
         new(
             0.025f,
@@ -37,6 +50,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11PixelShader _terrainLayerDetailPixelShader;
     private readonly ID3D11InputLayout _inputLayout;
     private readonly ID3D11Buffer _viewProjectionBuffer;
+    private readonly ID3D11Buffer _materialPreviewBuffer;
     private readonly ID3D11SamplerState _textureSampler;
     private readonly ID3D11SamplerState _maskSampler;
     private readonly ID3D11SamplerState _skySampler;
@@ -490,6 +504,20 @@ public sealed class D3D11NativeMapRenderer :
                     Format
                         .R32G32_Float,
                     44,
+                    0),
+                new(
+                    "NORMAL",
+                    0,
+                    Format
+                        .R32G32B32_Float,
+                    52,
+                    0),
+                new(
+                    "TANGENT",
+                    0,
+                    Format
+                        .R32G32B32A32_Float,
+                    64,
                     0)
             ];
 
@@ -503,7 +531,12 @@ public sealed class D3D11NativeMapRenderer :
         _viewProjectionBuffer =
             _deviceHost.Device
                 .CreateConstantBuffer<
-                    Matrix4x4>();
+                    ViewportShaderConstants>();
+
+        _materialPreviewBuffer =
+            _deviceHost.Device
+                .CreateConstantBuffer<
+                    Vector4>();
 
         _textureSampler =
             _deviceHost.Device
@@ -1532,6 +1565,66 @@ public sealed class D3D11NativeMapRenderer :
                         detailPath,
                         out detailTexture);
 
+            NativeGpuTexture?
+                bumpTexture =
+                    null;
+
+            var hasBumpTexture =
+                batch.BumpTexturePath is
+                    { Length: > 0 }
+                    bumpPath &&
+                _textureCache
+                    .TryGetValue(
+                        bumpPath,
+                        out bumpTexture);
+
+            NativeGpuTexture?
+                environmentTexture =
+                    null;
+
+            var hasEnvironmentTexture =
+                batch.EnvironmentTexturePath is
+                    { Length: > 0 }
+                    environmentPath &&
+                _textureCache
+                    .TryGetValue(
+                        environmentPath,
+                        out environmentTexture);
+
+            ApplyMaterialPreview(
+                context,
+                batch,
+                hasBumpTexture,
+                hasEnvironmentTexture);
+
+            if (hasBumpTexture)
+            {
+                context
+                    .PSSetShaderResource(
+                        4,
+                        bumpTexture!.View);
+            }
+            else
+            {
+                context
+                    .PSUnsetShaderResource(
+                        4);
+            }
+
+            if (hasEnvironmentTexture)
+            {
+                context
+                    .PSSetShaderResource(
+                        5,
+                        environmentTexture!.View);
+            }
+            else
+            {
+                context
+                    .PSUnsetShaderResource(
+                        5);
+            }
+
             if (
                 batch.MaskTexturePath is
                     { Length: > 0 }
@@ -1741,6 +1834,14 @@ public sealed class D3D11NativeMapRenderer :
                         3);
 
                 context
+                    .PSUnsetShaderResource(
+                        4);
+
+                context
+                    .PSUnsetShaderResource(
+                        5);
+
+                context
                     .PSSetShader(
                         _pixelShader);
             }
@@ -1779,6 +1880,14 @@ public sealed class D3D11NativeMapRenderer :
         context
             .PSUnsetShaderResource(
                 3);
+
+        context
+            .PSUnsetShaderResource(
+                4);
+
+        context
+            .PSUnsetShaderResource(
+                5);
 
         context
             .PSSetShader(
@@ -1828,7 +1937,9 @@ public sealed class D3D11NativeMapRenderer :
                             batch.NightTexturePath,
                             batch.LightTexturePath,
                             batch.DetailTexturePath,
-                            batch.TransMapTexturePath
+                            batch.TransMapTexturePath,
+                            batch.BumpTexturePath,
+                            batch.EnvironmentTexturePath
                         })
                 .Where(
                     path =>
@@ -2461,11 +2572,21 @@ public sealed class D3D11NativeMapRenderer :
         ID3D11DeviceContext context,
         Matrix4x4 viewProjection)
     {
-        Span<Matrix4x4> data =
-            stackalloc Matrix4x4[1];
+        Span<ViewportShaderConstants>
+            data =
+                stackalloc
+                    ViewportShaderConstants[1];
 
         data[0] =
-            viewProjection;
+            new ViewportShaderConstants
+            {
+                ViewProjection =
+                    viewProjection,
+                CameraPosition =
+                    new Vector4(
+                        _cameraPosition,
+                        1.0f)
+            };
 
         _viewProjectionBuffer
             .SetData(
@@ -2477,6 +2598,55 @@ public sealed class D3D11NativeMapRenderer :
             .VSSetConstantBuffer(
                 0,
                 _viewProjectionBuffer);
+
+        context
+            .PSSetConstantBuffer(
+                0,
+                _viewProjectionBuffer);
+    }
+
+    private void ApplyMaterialPreview(
+        ID3D11DeviceContext context,
+        NativeMaterialBatch batch,
+        bool hasBumpTexture,
+        bool hasEnvironmentTexture)
+    {
+        Span<Vector4> data =
+            stackalloc Vector4[1];
+
+        data[0] =
+            new Vector4(
+                hasBumpTexture
+                    ? (float)Math.Clamp(
+                        batch.BumpStrength ??
+                            1.0,
+                        0.0,
+                        4.0)
+                    : 0.0f,
+                hasEnvironmentTexture
+                    ? (float)Math.Clamp(
+                        batch.EnvironmentStrength ??
+                            1.0,
+                        0.0,
+                        1.0)
+                    : 0.0f,
+                hasBumpTexture
+                    ? 1.0f
+                    : 0.0f,
+                hasEnvironmentTexture
+                    ? 1.0f
+                    : 0.0f);
+
+        _materialPreviewBuffer
+            .SetData(
+                context,
+                data,
+                MapMode.WriteDiscard);
+
+        context
+            .PSSetConstantBuffer(
+                1,
+                _materialPreviewBuffer);
     }
 
     private void ThrowIfDisposed()
@@ -2525,6 +2695,7 @@ public sealed class D3D11NativeMapRenderer :
         _splineGuideBuffer?.Dispose();
         _objectGuideBuffer?.Dispose();
         _vertexBuffer?.Dispose();
+        _materialPreviewBuffer.Dispose();
         _viewProjectionBuffer.Dispose();
         foreach (
             var texture in

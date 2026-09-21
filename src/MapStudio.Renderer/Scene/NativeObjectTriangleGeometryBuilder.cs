@@ -283,6 +283,23 @@ public sealed class NativeObjectTriangleGeometryBuilder
             geometry.Uvs.Length >=
             vertexCount * 2;
 
+        var hasNormals =
+            geometry.Normals.Length >=
+            vertexCount * 3;
+
+        var normalTransform =
+            Matrix4x4.Identity;
+
+        if (
+            Matrix4x4.Invert(
+                worldTransform,
+                out var inverseWorld))
+        {
+            normalTransform =
+                Matrix4x4.Transpose(
+                    inverseWorld);
+        }
+
         var triangleCount =
             geometry.Indices.Length /
             3;
@@ -414,6 +431,60 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 worldTransform
                     .GetDeterminant() < 0;
 
+            var world0 =
+                TransformPosition(
+                    geometry,
+                    index0,
+                    worldTransform);
+
+            var world1 =
+                TransformPosition(
+                    geometry,
+                    index1,
+                    worldTransform);
+
+            var world2 =
+                TransformPosition(
+                    geometry,
+                    index2,
+                    worldTransform);
+
+            var uv0 =
+                GetVertexUv(
+                    geometry,
+                    index0,
+                    hasUvs);
+
+            var uv1 =
+                GetVertexUv(
+                    geometry,
+                    index1,
+                    hasUvs);
+
+            var uv2 =
+                GetVertexUv(
+                    geometry,
+                    index2,
+                    hasUvs);
+
+            var faceNormal =
+                NormalizeOrDefault(
+                    Vector3.Cross(
+                        world1 - world0,
+                        world2 - world0),
+                    Vector3.UnitY);
+
+            var tangent =
+                BuildTriangleTangent(
+                    world0,
+                    world1,
+                    world2,
+                    uv0,
+                    uv1,
+                    uv2,
+                    faceNormal,
+                    hasUvs);
+
             var triangleStart =
                 output.Count;
 
@@ -430,42 +501,40 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         _ => index2
                     };
 
-                var positionOffset =
-                    sourceIndex * 3;
-
-                var local =
-                    new Vector3(
-                        geometry.Positions[
-                            positionOffset],
-                        geometry.Positions[
-                            positionOffset +
-                            1],
-                        geometry.Positions[
-                            positionOffset +
-                            2]);
-
                 var world =
-                    Vector3.Transform(
-                        local,
-                        worldTransform);
+                    corner switch
+                    {
+                        0 => world0,
+                        1 => world1,
+                        _ => world2
+                    };
 
                 var uv =
-                    hasUvs
-                        ? new Vector2(
-                            geometry.Uvs[
-                                sourceIndex *
-                                2],
-                            geometry.Uvs[
-                                sourceIndex *
-                                2 +
-                                1])
-                        : Vector2.Zero;
+                    corner switch
+                    {
+                        0 => uv0,
+                        1 => uv1,
+                        _ => uv2
+                    };
+
+                var normal =
+                    hasNormals
+                        ? TransformNormal(
+                            geometry,
+                            sourceIndex,
+                            normalTransform,
+                            faceNormal)
+                        : faceNormal;
 
                 output.Add(
                     new NativeMapVertex(
                         world,
                         color,
-                        uv));
+                        uv,
+                        uv,
+                        uv,
+                        normal,
+                        tangent));
 
                 pickingOutput.Add(
                     new NativeMapVertex(
@@ -490,6 +559,191 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 environmentTexturePath,
                 environmentStrength);
         }
+    }
+
+    private static Vector3
+        TransformPosition(
+            OmsiO3dGeometry geometry,
+            int vertexIndex,
+            Matrix4x4 transform)
+    {
+        var offset =
+            vertexIndex * 3;
+
+        return Vector3.Transform(
+            new Vector3(
+                geometry.Positions[
+                    offset],
+                geometry.Positions[
+                    offset + 1],
+                geometry.Positions[
+                    offset + 2]),
+            transform);
+    }
+
+    private static Vector2 GetVertexUv(
+        OmsiO3dGeometry geometry,
+        int vertexIndex,
+        bool hasUvs) =>
+        hasUvs
+            ? new Vector2(
+                geometry.Uvs[
+                    vertexIndex * 2],
+                geometry.Uvs[
+                    vertexIndex * 2 + 1])
+            : Vector2.Zero;
+
+    private static Vector3
+        TransformNormal(
+            OmsiO3dGeometry geometry,
+            int vertexIndex,
+            Matrix4x4 normalTransform,
+            Vector3 fallback)
+    {
+        var offset =
+            vertexIndex * 3;
+
+        var normal =
+            Vector3.TransformNormal(
+                new Vector3(
+                    geometry.Normals[
+                        offset],
+                    geometry.Normals[
+                        offset + 1],
+                    geometry.Normals[
+                        offset + 2]),
+                normalTransform);
+
+        return NormalizeOrDefault(
+            normal,
+            fallback);
+    }
+
+    private static Vector4
+        BuildTriangleTangent(
+            Vector3 position0,
+            Vector3 position1,
+            Vector3 position2,
+            Vector2 uv0,
+            Vector2 uv1,
+            Vector2 uv2,
+            Vector3 normal,
+            bool hasUvs)
+    {
+        if (hasUvs)
+        {
+            var edge1 =
+                position1 -
+                position0;
+
+            var edge2 =
+                position2 -
+                position0;
+
+            var delta1 =
+                uv1 -
+                uv0;
+
+            var delta2 =
+                uv2 -
+                uv0;
+
+            var determinant =
+                delta1.X *
+                    delta2.Y -
+                delta1.Y *
+                    delta2.X;
+
+            if (
+                Math.Abs(
+                    determinant) >
+                0.000001f)
+            {
+                var reciprocal =
+                    1.0f /
+                    determinant;
+
+                var tangent =
+                    NormalizeOrDefault(
+                        (
+                            edge1 *
+                                delta2.Y -
+                            edge2 *
+                                delta1.Y
+                        ) *
+                        reciprocal,
+                        BuildFallbackTangent(
+                            normal));
+
+                var bitangent =
+                    NormalizeOrDefault(
+                        (
+                            edge2 *
+                                delta1.X -
+                            edge1 *
+                                delta2.X
+                        ) *
+                        reciprocal,
+                        Vector3.Cross(
+                            normal,
+                            tangent));
+
+                var handedness =
+                    Vector3.Dot(
+                        Vector3.Cross(
+                            normal,
+                            tangent),
+                        bitangent) <
+                    0
+                        ? -1.0f
+                        : 1.0f;
+
+                return new Vector4(
+                    tangent,
+                    handedness);
+            }
+        }
+
+        return new Vector4(
+            BuildFallbackTangent(
+                normal),
+            1.0f);
+    }
+
+    private static Vector3
+        BuildFallbackTangent(
+            Vector3 normal)
+    {
+        var axis =
+            Math.Abs(normal.Y) <
+                0.95f
+                ? Vector3.UnitY
+                : Vector3.UnitX;
+
+        return NormalizeOrDefault(
+            Vector3.Cross(
+                axis,
+                normal),
+            Vector3.UnitX);
+    }
+
+    private static Vector3
+        NormalizeOrDefault(
+            Vector3 value,
+            Vector3 fallback)
+    {
+        if (
+            value.LengthSquared() <=
+                0.0000001f ||
+            !float.IsFinite(value.X) ||
+            !float.IsFinite(value.Y) ||
+            !float.IsFinite(value.Z))
+        {
+            return fallback;
+        }
+
+        return Vector3.Normalize(
+            value);
     }
 
     private static void AppendMaterialBatch(

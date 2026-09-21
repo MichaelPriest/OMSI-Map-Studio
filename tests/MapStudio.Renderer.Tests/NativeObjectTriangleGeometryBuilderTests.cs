@@ -109,7 +109,12 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                         [@"C:\OMSI\Sceneryobjects\Test\Texture\house_light.dds"],
                         [1],
                         [true],
-                        [true])
+                        [true],
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house_trans.dds"],
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house_bump.dds"],
+                        [0.05],
+                        [@"C:\OMSI\Sceneryobjects\Test\Texture\house_env.dds"],
+                        [0.4])
                 ],
                 null,
                 false,
@@ -168,6 +173,26 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
             materialBatch.NoZCheck);
 
         Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house_trans.dds",
+            materialBatch.TransMapTexturePath);
+
+        Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house_bump.dds",
+            materialBatch.BumpTexturePath);
+
+        Assert.Equal(
+            0.05,
+            materialBatch.BumpStrength);
+
+        Assert.Equal(
+            @"C:\OMSI\Sceneryobjects\Test\Texture\house_env.dds",
+            materialBatch.EnvironmentTexturePath);
+
+        Assert.Equal(
+            0.4,
+            materialBatch.EnvironmentStrength);
+
+        Assert.Equal(
             new System.Numerics.Vector2(
                 0,
                 0),
@@ -178,6 +203,29 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                 1,
                 0),
             result.Vertices[1].TexCoord);
+
+        Assert.All(
+            result.Vertices,
+            vertex =>
+            {
+                Assert.Equal(
+                    new System.Numerics.Vector3(
+                        0,
+                        1,
+                        0),
+                    vertex.Normal);
+
+                Assert.InRange(
+                    vertex.Tangent.X,
+                    0.999f,
+                    1.001f);
+
+                Assert.InRange(
+                    Math.Abs(
+                        vertex.Tangent.W),
+                    0.999f,
+                    1.001f);
+            });
 
         Assert.Single(
             result.Ranges);
