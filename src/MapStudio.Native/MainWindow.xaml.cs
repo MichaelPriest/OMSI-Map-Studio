@@ -13656,9 +13656,9 @@ public sealed partial class MainWindow : Window
                     InfoBarSeverity
                         .Informational,
                 Title =
-                    "Preview lógico",
+                    "Preview antes de gravar",
                 Message =
-                    "Nesta etapa nada é gravado no mapa. O próximo passo conecta estes segmentos ao Road Kit/adapter OMSI e adiciona preview 3D antes da gravação em lote."
+                    "As linhas exibidas serão convertidas em splines reais do Road Kit. Nesta etapa os segmentos são independentes; auto-link e objetos automáticos de cruzamento entram na próxima evolução."
             });
 
         var dialog =
@@ -13670,12 +13670,126 @@ public sealed partial class MainWindow : Window
                     "Grafo procedural de vias",
                 Content =
                     content,
+                PrimaryButtonText =
+                    "Gerar vias",
                 CloseButtonText =
-                    "Fechar"
+                    "Fechar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Close
             };
 
-        await dialog
-            .ShowAsync();
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var root =
+            _session.OmsiRootPath;
+
+        if (
+            root is null ||
+            _session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Gerador de vias: OMSI/mapa não está disponível.";
+
+            return;
+        }
+
+        var placement =
+            Viewport
+                .BuildProceduralRoadPlacementRequests(
+                    graph);
+
+        if (
+            placement.SkippedSegments >
+                0 ||
+            placement.Requests.Count !=
+                graph.Segments.Count)
+        {
+            StatusText.Text =
+                $"Geração cancelada: {placement.SkippedSegments} segmento(s) ficaram fora do terreno carregado. Use Mapa completo e revise o traçado.";
+
+            return;
+        }
+
+        try
+        {
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                StatusText.Text =
+                    "Salvando transformações antes de gerar as vias...";
+
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                "Preparando Road Kit original...";
+
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            StatusText.Text =
+                $"Gerando {placement.Requests.Count} spline(s) em uma única transação...";
+
+            var insertion =
+                await _session
+                    .InsertSplineBatchAsync(
+                        placement.Requests);
+
+            RegisterConstructionHistory(
+                "Gerar vias procedurais");
+
+            await ApplyMapSnapshotAsync(
+                insertion.Snapshot,
+                focusActiveTile:
+                    false);
+
+            Viewport
+                .ClearProceduralRoadPreview();
+
+            _proceduralRoadTraceMode =
+                false;
+
+            _activeRoadProfile =
+                null;
+
+            _activeRoadTracePoints
+                .Clear();
+
+            _proceduralRoadTraces
+                .Clear();
+
+            FinishProceduralRoadTraceMenuItem
+                .IsEnabled =
+                false;
+
+            AnalyzeProceduralRoadGraphMenuItem
+                .IsEnabled =
+                false;
+
+            ClearProceduralRoadGraphMenuItem
+                .IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"{insertion.SplineIds.Count} spline(s) procedurais gravadas. Backup: {insertion.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao gerar vias procedurais: {exception.Message}";
+        }
     }
 
     private void OnClearProceduralRoadGraphClick(
