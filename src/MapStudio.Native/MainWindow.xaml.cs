@@ -16966,48 +16966,48 @@ public sealed partial class MainWindow : Window
                                     .OrdinalIgnoreCase))
                     : -1;
 
-            var treePreferredIndex =
-                Array.FindIndex(
-                    vegetationAssets,
-                    asset =>
-                        asset.RelativePath
-                            .Contains(
-                                "tree",
-                                StringComparison
-                                    .OrdinalIgnoreCase) ||
-                        asset.RelativePath
-                            .Contains(
-                                "baum",
-                                StringComparison
-                                    .OrdinalIgnoreCase) ||
-                        asset.RelativePath
-                            .Contains(
-                                "arvore",
+            var assetSuggester =
+                new MapStudioVegetationAssetSuggester();
+
+            var treeSuggestion =
+                assetSuggester
+                    .Suggest(
+                        vegetationAssets,
+                        candidates,
+                        MapStudioOsmVegetationKind
+                            .Tree);
+
+            var shrubSuggestion =
+                assetSuggester
+                    .Suggest(
+                        vegetationAssets,
+                        candidates,
+                        MapStudioOsmVegetationKind
+                            .Shrub);
+
+            var treeSuggestedIndex =
+                treeSuggestion is null
+                    ? -1
+                    : Array.FindIndex(
+                        vegetationAssets,
+                        asset =>
+                            string.Equals(
+                                asset.RelativePath,
+                                treeSuggestion
+                                    .RelativePath,
                                 StringComparison
                                     .OrdinalIgnoreCase));
 
-            var shrubPreferredIndex =
-                Array.FindIndex(
-                    vegetationAssets,
-                    asset =>
-                        asset.RelativePath
-                            .Contains(
-                                "shrub",
-                                StringComparison
-                                    .OrdinalIgnoreCase) ||
-                        asset.RelativePath
-                            .Contains(
-                                "bush",
-                                StringComparison
-                                    .OrdinalIgnoreCase) ||
-                        asset.RelativePath
-                            .Contains(
-                                "hedge",
-                                StringComparison
-                                    .OrdinalIgnoreCase) ||
-                        asset.RelativePath
-                            .Contains(
-                                "arbusto",
+            var shrubSuggestedIndex =
+                shrubSuggestion is null
+                    ? -1
+                    : Array.FindIndex(
+                        vegetationAssets,
+                        asset =>
+                            string.Equals(
+                                asset.RelativePath,
+                                shrubSuggestion
+                                    .RelativePath,
                                 StringComparison
                                     .OrdinalIgnoreCase));
 
@@ -17020,9 +17020,9 @@ public sealed partial class MainWindow : Window
                         MapStudioOsmVegetationKind
                             .Tree)
                     ? currentIndex
-                    : treePreferredIndex >=
+                    : treeSuggestedIndex >=
                         0
-                        ? treePreferredIndex
+                        ? treeSuggestedIndex
                         : 0;
 
             shrubAssetCombo.SelectedIndex =
@@ -17034,9 +17034,9 @@ public sealed partial class MainWindow : Window
                         MapStudioOsmVegetationKind
                             .Shrub)
                     ? currentIndex
-                    : shrubPreferredIndex >=
+                    : shrubSuggestedIndex >=
                         0
-                        ? shrubPreferredIndex
+                        ? shrubSuggestedIndex
                         : 0;
 
             var randomRotationCheckBox =
@@ -17144,6 +17144,17 @@ public sealed partial class MainWindow : Window
 
             panel.Children.Add(
                 shrubAssetCombo);
+
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text =
+                        "As seleções iniciais usam apenas os SCOs reais indexados e tentam combinar species/genus/leaf_type do OSM com o nome/caminho do asset. Você pode trocar os dois assets antes de inserir.",
+                    TextWrapping =
+                        TextWrapping.Wrap,
+                    Opacity =
+                        0.78
+                });
 
             panel.Children.Add(
                 countBox);
