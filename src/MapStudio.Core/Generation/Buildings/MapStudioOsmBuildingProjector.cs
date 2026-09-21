@@ -138,13 +138,14 @@ public sealed class MapStudioOsmBuildingProjector
         return normalized switch
         {
             "gabled" or
-            "gable" or
-            "pyramidal" =>
+            "gable" =>
                 MapStudioBuildingRoofType.Gable,
 
             "hipped" or
             "hip" or
-            "half-hipped" =>
+            "half-hipped" or
+            "pyramidal" or
+            "pyramid" =>
                 MapStudioBuildingRoofType.Hip,
 
             "skillion" or
