@@ -682,3 +682,37 @@ Imported data is classified into Road Kit profiles, enters preview first, and is
 No key/token is persisted in this JSON. Credentials must later be resolved by the adapter, Credential Manager, or the commercial backend.
 
 Building Studio shows the configured active profile, but does not claim automatic analysis is available until a real adapter is connected.
+
+
+## Native tile management
+
+The WinUI host can now create real OMSI tiles without using the legacy editor.
+
+### Create tile
+
+**Map → Create tile...**:
+
+- uses the official `template/NewMap` files from the selected OMSI installation;
+- copies the template tile `.map`, `.terrain`, lightmap, and associated auxiliary files;
+- skips `.prt`, which is a temporary editor-generated file;
+- appends a new `[map]` section to the end of `global.cfg`, preserving existing order and indices;
+- rejects duplicate coordinates or paths;
+- backs up `global.cfg`;
+- removes newly created files and restores the global file if any step fails;
+- focuses the new tile after reloading the map.
+
+### Delete tile
+
+The initial deletion flow is intentionally conservative.
+
+**Map → Delete active tile...** only writes when all conditions are satisfied:
+
+- the map contains more than one tile;
+- the tile contains no objects or splines;
+- it is the final valid `[map]` entry;
+- no `[entrypoints]` section references that tile index;
+- the `[map]` section list is canonical and can be preserved without reindexing.
+
+All matching `tile_X_Y.map*` files are copied into `.mapstudio-backups` before deletion. If any step fails, both `global.cfg` and tile files are restored.
+
+Arbitrary removal of intermediate tiles remains blocked until a validated reindexer exists for index-based references in `global.cfg` and operational map data.
