@@ -17264,6 +17264,136 @@ public sealed partial class MainWindow : Window
         return false;
     }
 
+    private async void OnInspectAttachmentsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (snapshot is null)
+        {
+            StatusText.Text =
+                "Abra um mapa antes de inspecionar attachments.";
+
+            return;
+        }
+
+        var items =
+            snapshot.Tiles
+                .SelectMany(
+                    tile =>
+                        (
+                            tile.Content
+                                .Attachments ??
+                            Array.Empty<
+                                OmsiPlacedAttachment>()
+                        )
+                        .Select(
+                            attachment =>
+                            {
+                                var detail =
+                                    attachment.Kind switch
+                                    {
+                                        OmsiAttachmentKind
+                                            .ObjectAttachment =>
+                                            $"parent #{attachment.AttachedToObjectId?.ToString() ?? "?"} · attach point {attachment.AttachPointIndex?.ToString() ?? "?"}",
+
+                                        _ =>
+                                            $"X {attachment.X?.ToString("F2", CultureInfo.InvariantCulture) ?? "?"} · Z {attachment.Z?.ToString("F2", CultureInfo.InvariantCulture) ?? "?"} · Y {attachment.Y?.ToString("F2", CultureInfo.InvariantCulture) ?? "?"} · intervalo {attachment.Interval?.ToString("F2", CultureInfo.InvariantCulture) ?? "?"} · distância {attachment.Distance?.ToString("F2", CultureInfo.InvariantCulture) ?? "?"}"
+                                    };
+
+                                var parent =
+                                    string.IsNullOrWhiteSpace(
+                                        attachment
+                                            .VariableParentValue)
+                                        ? string.Empty
+                                        : $" · varparent {attachment.VariableParentValue}";
+
+                                return
+                                    $"Tile {tile.Reference.X},{tile.Reference.Y} · {attachment.Kind} · #{attachment.AttachmentId}\n" +
+                                    $"{attachment.AssetPath}\n" +
+                                    detail +
+                                    parent;
+                            }))
+                .ToArray();
+
+        var list =
+            new ListView
+            {
+                Height =
+                    420,
+                SelectionMode =
+                    ListViewSelectionMode
+                        .None,
+                ItemsSource =
+                    items.Length >
+                        0
+                        ? items
+                        : new[]
+                        {
+                            "Nenhum attachment reconhecido na região carregada."
+                        }
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    650
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{items.Length} attachment(s) reconhecido(s) em {snapshot.Tiles.Count} tile(s) carregado(s).",
+                FontSize =
+                    16,
+                FontWeight =
+                    Microsoft.UI.Text
+                        .FontWeights
+                        .SemiBold
+            });
+
+        panel.Children.Add(
+            list);
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Leitura preservativa",
+                Message =
+                    "attachObj, splineAttachement/Attachment, repetidores e varparent são reconhecidos. A edição permanece somente leitura até o writer/round-trip dessas variantes ser validado. Em modo desempenho, a lista cobre apenas os tiles atualmente carregados."
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Attachments do mapa",
+                Content =
+                    panel,
+                CloseButtonText =
+                    "Fechar"
+            };
+
+        await dialog
+            .ShowAsync();
+    }
+
     private async void OnRestoreBackupClick(
         object sender,
         RoutedEventArgs e)
