@@ -249,7 +249,7 @@ Legend:
 | Object-specific labels/options | ⬜ |
 | Spline Mirror | ✅ |
 | Cant start/end | ✅ |
-| Complete to… | ⬜ |
+| Complete to… | ✅ — connects compatible end→start pairs with straight/arc solver, maximum radius, transactional links and backup |
 | Spline export | ⬜ |
 | Editable paths | 🟡 |
 | Traffic Rules | ✅ |
@@ -717,6 +717,7 @@ Current state of the new differentiators:
 - ✅ original Road Kit;
 - ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
 - ✅ advanced Cant/Mirror exposed in the native Inspector with preservation-safe persistence and backup;
+- ✅ native Complete to with a conservative tangent solver, radius limit, and transactional Previous/Next linkage;
 - ✅ procedural road graph;
 - ✅ manual tracing;
 - ✅ georeferenced GeoJSON;

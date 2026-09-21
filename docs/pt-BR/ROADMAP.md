@@ -249,7 +249,7 @@ Legenda:
 | Labels/opções específicas do objeto | ⬜ |
 | Mirror de spline | ⬜ |
 | Cant start/end | ✅ |
-| Complete to… | ⬜ |
+| Complete to… | ✅ — conecta fim→início compatíveis com solver reto/arco, raio máximo, vínculos transacionais e backup |
 | Spline export | ⬜ |
 | Paths editáveis | 🟡 |
 | Traffic Rules | ✅ |
@@ -717,6 +717,7 @@ Estado atual dos diferenciais novos:
 - ✅ Road Kit próprio;
 - ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
 - ✅ Cant/Mirror avançado exposto no Inspector nativo com persistência preservativa e backup;
+- ✅ Complete to nativo com solver tangencial conservador, limite de raio e conexão Previous/Next transacional;
 - ✅ grafo procedural de vias;
 - ✅ traçado manual;
 - ✅ GeoJSON georreferenciado;

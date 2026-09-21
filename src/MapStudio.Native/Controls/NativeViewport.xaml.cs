@@ -74,6 +74,27 @@ public sealed partial class NativeViewport : UserControl
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
+    public bool TryBuildSplineCompleteToRequest(
+        int sourceSplineId,
+        int targetSplineId,
+        double maximumRadius,
+        out NativeSplinePlacementRequest? request,
+        out string status)
+    {
+        request = null;
+        status =
+            "Complete to indisponível.";
+
+        return _runtime is not null &&
+            _runtime
+                .TryBuildSplineCompleteToRequest(
+                    sourceSplineId,
+                    targetSplineId,
+                    maximumRadius,
+                    out request,
+                    out status);
+    }
+
     public NativeProceduralJunctionPlan
         BuildProceduralJunctionPlan(
             MapStudioRoadGraph graph) =>

@@ -1593,6 +1593,12 @@
                                     HorizontalAlignment="Stretch"
                                     IsEnabled="False"
                                     Click="OnEditSplineAdvancedClick" />
+
+                            <Button x:Name="CompleteToSplineButton"
+                                    Content="Complete to..."
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnCompleteToSplineClick" />
                         </StackPanel>
 
                         <Button x:Name="ApplyInspectorButton"

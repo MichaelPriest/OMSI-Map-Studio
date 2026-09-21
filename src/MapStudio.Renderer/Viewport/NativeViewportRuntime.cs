@@ -229,6 +229,33 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public bool TryBuildSplineCompleteToRequest(
+        int sourceSplineId,
+        int targetSplineId,
+        double maximumRadius,
+        out NativeSplinePlacementRequest? request,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        if (Scene is null)
+        {
+            request = null;
+            status =
+                "Complete to: nenhum mapa está carregado no viewport.";
+            return false;
+        }
+
+        return NativeSplineCompleteToSolver
+            .TryCreateRequest(
+                Scene,
+                sourceSplineId,
+                targetSplineId,
+                maximumRadius,
+                out request,
+                out status);
+    }
+
     public NativeProceduralJunctionPlan
         BuildProceduralJunctionPlan(
             MapStudioRoadGraph graph)

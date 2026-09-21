@@ -554,6 +554,12 @@ public sealed partial class MainWindow : Window
                     info?.Kind ==
                     PickingKind.Spline;
 
+                CompleteToSplineButton.IsEnabled =
+                    info?.Kind ==
+                        PickingKind.Spline &&
+                    info.NextSplineId ==
+                        -1;
+
                 LevelSplineToTerrainButton.IsEnabled =
                     info is
                     {
@@ -4531,6 +4537,266 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao atualizar vínculos: {exception.Message}";
+        }
+    }
+
+    private async void OnCompleteToSplineClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        var snapshot =
+            _session.CurrentMap;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline ||
+            snapshot is null)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de usar Complete to.";
+
+            return;
+        }
+
+        if (
+            selection.NextSplineId >=
+                0)
+        {
+            StatusText.Text =
+                "Complete to: o fim da spline selecionada já possui vínculo Next.";
+
+            return;
+        }
+
+        var candidates =
+            snapshot.Tiles
+                .SelectMany(
+                    tile =>
+                        tile.Content.Splines)
+                .Where(
+                    spline =>
+                        spline.SplineId !=
+                            selection.EntityId &&
+                        spline.PreviousSplineId <
+                            0 &&
+                        !spline.IsHeightSpline &&
+                        string.Equals(
+                            spline.SplinePath,
+                            selection.AssetPath,
+                            StringComparison.OrdinalIgnoreCase))
+                .OrderBy(
+                    spline =>
+                        spline.SplineId)
+                .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            StatusText.Text =
+                "Complete to: não há outra spline carregada com início livre e a mesma SLI.";
+
+            return;
+        }
+
+        var targetComboBox =
+            new ComboBox
+            {
+                Header =
+                    "Destino (início livre)",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch,
+                MinWidth =
+                    320
+            };
+
+        foreach (
+            var candidate in
+                candidates)
+        {
+            targetComboBox.Items.Add(
+                new ComboBoxItem
+                {
+                    Content =
+                        $"#{candidate.SplineId} · {candidate.SplinePath}",
+                    Tag =
+                        candidate.SplineId
+                });
+        }
+
+        targetComboBox.SelectedIndex =
+            0;
+
+        var maximumRadiusBox =
+            new NumberBox
+            {
+                Header =
+                    "Raio máximo (m)",
+                Value =
+                    200,
+                Minimum =
+                    1,
+                Maximum =
+                    2_000_000,
+                SmallChange =
+                    10,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "Liga o fim da spline selecionada ao início da spline destino. Para preservar os paths, esta versão exige a mesma SLI nos dois lados. O solver aceita reta ou uma única curva circular tangente; se não houver solução segura dentro do raio máximo, nada é gravado.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10
+            };
+
+        panel.Children.Add(
+            targetComboBox);
+        panel.Children.Add(
+            maximumRadiusBox);
+        panel.Children.Add(
+            note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Complete to · spline #{selection.EntityId}",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Calcular e conectar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            targetComboBox.SelectedItem is not
+                ComboBoxItem targetItem ||
+            targetItem.Tag is not
+                int targetSplineId ||
+            !double.IsFinite(
+                maximumRadiusBox.Value))
+        {
+            StatusText.Text =
+                "Complete to: destino ou raio máximo inválido.";
+            return;
+        }
+
+        if (
+            !Viewport
+                .TryBuildSplineCompleteToRequest(
+                    selection.EntityId,
+                    targetSplineId,
+                    maximumRadiusBox.Value,
+                    out var request,
+                    out var solveStatus) ||
+            request is null)
+        {
+            StatusText.Text =
+                solveStatus;
+            return;
+        }
+
+        try
+        {
+            CompleteToSplineButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                solveStatus +
+                " Gravando com backup...";
+
+            var insertion =
+                await _session
+                    .InsertSplineAsync(
+                        request);
+
+            RegisterConstructionHistory(
+                "Complete to");
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    insertion.Snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            var inserted =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                PickingKind.Spline &&
+                            item.EntityId ==
+                                insertion.SplineId);
+
+            if (inserted is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    inserted,
+                    focus:
+                        true);
+            }
+
+            StatusText.Text =
+                $"Complete to concluído: #{selection.EntityId} → #{insertion.SplineId} → #{targetSplineId} · comprimento {request.Length:F2} m · raio {request.Radius:F2} m.";
+        }
+        catch (Exception exception)
+        {
+            CompleteToSplineButton.IsEnabled =
+                _selectionInfo is
+                {
+                    Kind:
+                        PickingKind.Spline,
+                    NextSplineId:
+                        -1
+                };
+
+            StatusText.Text =
+                $"Complete to falhou: {exception.Message}";
         }
     }
 
