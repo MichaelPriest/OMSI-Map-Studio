@@ -685,3 +685,21 @@ Babylon/WebView2 will only be replaced if an isolated prototype, with React no l
 - hundreds of selectable objects without noticeable degradation.
 
 If those criteria fail in the minimal runtime, replacement should target **only the renderer/viewport**, preserving MapStudio.Core, formats, cache, persistence and the rest of the product.
+
+
+## New native differentiators — procedural generation and AI
+
+Beyond parity with the legacy editor, the roadmap now officially includes:
+
+- **automatic road generation** from user-drawn traces over the terrain;
+- **georeferenced reference-assisted generation**, converting a vector graph into real OMSI splines;
+- **automatic junctions/intersections** derived from the same graph with snapping and connectivity validation;
+- an original **Map Studio Road Kit**, with no mandatory dependency on third-party content;
+- **Building Studio** for houses, buildings, and other volumes, generating editable SCO/O3D assets;
+- optional use of photos as facade reference/texture;
+- **adapter-based connectable AI**, with no mandatory provider;
+- AI analysis used only as structured, reviewable suggestions;
+- future multi-photo support for footprint, scale, facade, roof, material, vegetation, and street-furniture estimation;
+- mandatory preview before automatic generation is persisted into a real map.
+
+Implementation should keep one geometric engine: manual tracing, vector data, and AI must feed the same generation pipeline instead of creating parallel formats.

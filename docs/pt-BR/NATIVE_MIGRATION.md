@@ -572,3 +572,35 @@ O passe de terreno agora usa um `ID3D11RasterizerState` dedicado com `Rasterizer
 
 Nenhum dado do `.terrain`, UV, textura ou máscara é alterado; a correção é exclusivamente de rasterização e mantém paridade com o comportamento já validado no viewport React.
 
+
+
+## Building Studio, Road Kit e IA agnóstica de provedor
+
+A arquitetura nativa agora também serve como base para criação de conteúdo original do próprio Map Studio.
+
+### Road Kit próprio
+
+O Core pode gerar um pacote de splines originais sob `Splines/MapStudio_RoadKit`, com perfis e paths OMSI reais. O pacote inicial cobre mão única, rua de duas faixas, rua com calçada, avenida de quatro faixas, avenida dividida com canteiro e via de pedestres. As texturas também são geradas pelo próprio Map Studio. Atualizações preservam a versão anterior em backup.
+
+### Building Studio
+
+O Core possui writer O3D editável e gerador procedural de edificações. O fluxo inicial gera `.sco` + `.o3d` reais a partir de dimensões, número de andares, tipo/altura de telhado e uma imagem opcional de fachada. O WinUI expõe esse fluxo em **Ferramentas → Building Studio** e reindexa o asset criado na biblioteca.
+
+A geração é determinística e local. A IA não escreve O3D diretamente.
+
+### IA agnóstica de provedor
+
+`MapStudio.Core.AI` define contratos neutros para análise de imagens de edificações, vias e cenas. Nenhum fornecedor é autoridade do domínio e nenhum SDK específico é exigido pelo Core.
+
+Regras:
+
+- o usuário poderá conectar o provedor que preferir;
+- provedores de nuvem, locais/offline e endpoints personalizados usam o mesmo contrato;
+- adaptadores podem ser adicionados sem alterar Building Studio, Road Kit ou formatos OMSI;
+- a IA devolve sugestões estruturadas, por exemplo dimensões, andares, telhado, materiais e polylines de vias;
+- valores recebidos são normalizados/validados antes de chegar aos geradores;
+- o usuário revisa e pode editar os parâmetros antes de gerar;
+- sem provedor conectado, todos os geradores continuam funcionando manualmente;
+- não existem respostas simuladas em produção;
+- chaves/tokens não devem ser gravados no mapa, no `.sco`, no `.o3d` ou em assets gerados;
+- o resultado final deve continuar sendo dado OMSI real, inspecionável e independente do serviço de IA usado.
