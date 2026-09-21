@@ -303,17 +303,42 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 0);
         }
 
-        var shapedRoof =
+        var convexHipRoof =
+            footprint.Count >=
+                3 &&
+            building.RoofHeightMeters >
+                0.01 &&
+            building.RoofType ==
+                MapStudioBuildingRoofType.Hip &&
+            IsConvexPolygon(
+                footprint);
+
+        var quadrilateralRoof =
             footprint.Count ==
                 4 &&
             building.RoofHeightMeters >
                 0.01 &&
             building.RoofType is
                 MapStudioBuildingRoofType.Gable or
-                MapStudioBuildingRoofType.Hip or
                 MapStudioBuildingRoofType.Shed;
 
-        if (shapedRoof)
+        var shapedRoof =
+            convexHipRoof ||
+            quadrilateralRoof;
+
+        if (convexHipRoof)
+        {
+            AddConvexHipRoof(
+                (float)building.RoofHeightMeters,
+                footprint,
+                height,
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials);
+        }
+        else if (quadrilateralRoof)
         {
             AddQuadrilateralRoof(
                 building.RoofType,
@@ -437,6 +462,61 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     8,
                     null)
             ]);
+    }
+
+    private static void AddConvexHipRoof(
+        float roofHeight,
+        IReadOnlyList<Vector3> points,
+        float wallHeight,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> materials)
+    {
+        var center =
+            new Vector3(
+                points.Average(
+                    point =>
+                        point.X),
+                wallHeight +
+                    roofHeight,
+                points.Average(
+                    point =>
+                        point.Z));
+
+        for (
+            var index = 0;
+            index <
+                points.Count;
+            index++)
+        {
+            var next =
+                (
+                    index +
+                    1
+                ) %
+                points.Count;
+
+            AddAutoNormalTriangle(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                new Vector3(
+                    points[index].X,
+                    wallHeight,
+                    points[index].Z),
+                new Vector3(
+                    points[next].X,
+                    wallHeight,
+                    points[next].Z),
+                center,
+                1,
+                preferUp:
+                    true);
+        }
     }
 
     private static void AddQuadrilateralRoof(
@@ -878,6 +958,89 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
         }
 
         return result;
+    }
+
+    private static bool IsConvexPolygon(
+        IReadOnlyList<Vector3> points)
+    {
+        if (
+            points.Count <
+                3)
+        {
+            return false;
+        }
+
+        var ccw =
+            SignedArea(
+                points) >
+            0;
+
+        const float epsilon =
+            0.000001f;
+
+        for (
+            var index = 0;
+            index <
+                points.Count;
+            index++)
+        {
+            var a =
+                points[index];
+
+            var b =
+                points[
+                    (
+                        index +
+                        1
+                    ) %
+                    points.Count];
+
+            var d =
+                points[
+                    (
+                        index +
+                        2
+                    ) %
+                    points.Count];
+
+            var cross =
+                (
+                    b.X -
+                    a.X
+                ) *
+                (
+                    d.Z -
+                    b.Z
+                ) -
+                (
+                    b.Z -
+                    a.Z
+                ) *
+                (
+                    d.X -
+                    b.X
+                );
+
+            if (
+                Math.Abs(
+                    cross) <=
+                epsilon)
+            {
+                continue;
+            }
+
+            if (
+                ccw
+                    ? cross <
+                        -epsilon
+                    : cross >
+                        epsilon)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool IsSimplePolygon(
