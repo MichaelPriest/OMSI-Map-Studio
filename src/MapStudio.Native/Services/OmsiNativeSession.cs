@@ -791,6 +791,394 @@ public sealed class OmsiNativeSession
             backupRoot);
     }
 
+    public async Task<NativeTileCreateResult>
+        CreateTileFromTemplateAsync(
+            int tileX,
+            int tileY,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Instalação OMSI não selecionada.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTileCreation");
+        }
+
+        if (
+            snapshot.Map.Tiles.Any(
+                tile =>
+                    tile.X == tileX &&
+                    tile.Y == tileY))
+        {
+            throw new InvalidDataException(
+                "mapTileCoordinateAlreadyExists");
+        }
+
+        var templateRoot =
+            Path.Combine(
+                root,
+                "template");
+
+        var templateDirectory =
+            Path.Combine(
+                templateRoot,
+                "NewMap");
+
+        if (
+            !Directory.Exists(
+                templateDirectory) &&
+            Directory.Exists(
+                templateRoot))
+        {
+            templateDirectory =
+                Directory
+                    .EnumerateDirectories(
+                        templateRoot)
+                    .FirstOrDefault(
+                        candidate =>
+                        {
+                            var name =
+                                Path.GetFileName(
+                                    candidate);
+
+                            return
+                                string.Equals(
+                                    name,
+                                    "NewMap",
+                                    StringComparison
+                                        .OrdinalIgnoreCase) ||
+                                string.Equals(
+                                    name,
+                                    "New Map",
+                                    StringComparison
+                                        .OrdinalIgnoreCase);
+                        })
+                ?? templateDirectory;
+        }
+
+        if (!Directory.Exists(
+                templateDirectory))
+        {
+            throw new DirectoryNotFoundException(
+                templateDirectory);
+        }
+
+        var templateMap =
+            await OmsiMapCatalog
+                .OpenMapAsync(
+                    templateDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var templateTile =
+            OmsiTileRegionSelector
+                .FindInitialTile(
+                    templateMap.Tiles)
+            ?? throw new InvalidDataException(
+                "newMapTemplateHasNoTile");
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    templateDirectory,
+                    templateTile
+                        .RelativeMapPath,
+                    out var sourceMapPath) ||
+            !File.Exists(
+                sourceMapPath) ||
+            !File.Exists(
+                sourceMapPath +
+                ".terrain"))
+        {
+            throw new InvalidDataException(
+                "newMapTemplateTileInvalid");
+        }
+
+        var sourceFileName =
+            Path.GetFileName(
+                sourceMapPath);
+
+        var sourceDirectory =
+            Path.GetDirectoryName(
+                sourceMapPath)
+            ?? templateDirectory;
+
+        var targetRelativeMapPath =
+            $"tile_{tileX}_{tileY}.map";
+
+        var targetMapPath =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                targetRelativeMapPath);
+
+        var templateFiles =
+            Directory
+                .EnumerateFiles(
+                    sourceDirectory,
+                    sourceFileName +
+                    "*",
+                    SearchOption
+                        .TopDirectoryOnly)
+                .Where(
+                    source =>
+                        !source.EndsWith(
+                            ".prt",
+                            StringComparison
+                                .OrdinalIgnoreCase))
+                .OrderBy(
+                    source =>
+                        source,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .ToArray();
+
+        if (
+            !templateFiles.Any(
+                source =>
+                    string.Equals(
+                        source,
+                        sourceMapPath,
+                        StringComparison
+                            .OrdinalIgnoreCase)))
+        {
+            throw new InvalidDataException(
+                "newMapTemplateTileInvalid");
+        }
+
+        var destinationFiles =
+            templateFiles
+                .Select(
+                    source =>
+                    {
+                        var sourceName =
+                            Path.GetFileName(
+                                source);
+
+                        var suffix =
+                            sourceName[
+                                sourceFileName
+                                    .Length..];
+
+                        return
+                            (
+                                Source:
+                                    source,
+                                Destination:
+                                    targetMapPath +
+                                    suffix
+                            );
+                    })
+                .ToArray();
+
+        if (
+            destinationFiles.Any(
+                item =>
+                    File.Exists(
+                        item.Destination) ||
+                    Directory.Exists(
+                        item.Destination)))
+        {
+            throw new IOException(
+                "mapTileFileAlreadyExists");
+        }
+
+        var globalDocument =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    snapshot.Map
+                        .GlobalConfigPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var globalBytes =
+            OmsiGlobalTileCatalogEditor
+                .AppendTile(
+                    globalDocument,
+                    new OmsiTileReference(
+                        tileX,
+                        tileY,
+                        targetRelativeMapPath));
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo
+                        .InvariantCulture);
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                ".mapstudio-backups",
+                timestamp +
+                $"-create-tile-{tileX}-{tileY}-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var backupGlobal =
+            Path.Combine(
+                backupRoot,
+                "global.cfg");
+
+        var createdFiles =
+            new List<string>(
+                destinationFiles.Length);
+
+        var globalChanged =
+            false;
+
+        try
+        {
+            foreach (
+                var item in
+                    destinationFiles)
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                File.Copy(
+                    item.Source,
+                    item.Destination,
+                    overwrite:
+                        false);
+
+                createdFiles.Add(
+                    item.Destination);
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            snapshot.Map
+                                .GlobalConfigPath,
+                            backupGlobal,
+                            globalBytes)
+                    ],
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            globalChanged =
+                true;
+
+            var updatedMap =
+                await OmsiMapCatalog
+                    .OpenMapAsync(
+                        snapshot.Map
+                            .DirectoryPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var createdTile =
+                updatedMap.Tiles
+                    .FirstOrDefault(
+                        tile =>
+                            tile.X == tileX &&
+                            tile.Y == tileY)
+                ?? throw new InvalidDataException(
+                    "createdMapTileNotFound");
+
+            var wasFullMap =
+                snapshot.Tiles.Count >=
+                snapshot.Map.Tiles.Count;
+
+            var selectedTiles =
+                wasFullMap
+                    ? updatedMap.Tiles
+                    : OmsiTileRegionSelector
+                        .Select(
+                            updatedMap.Tiles,
+                            tileX,
+                            tileY,
+                            radius:
+                                1);
+
+            var loaded =
+                await LoadSnapshotAsync(
+                        updatedMap,
+                        createdTile,
+                        selectedTiles,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            CurrentMap =
+                loaded;
+
+            _pendingTransforms
+                .Clear();
+
+            LastBackupDirectory =
+                backupRoot;
+
+            Maps =
+                await new OmsiMapCatalog()
+                    .DiscoverAsync(
+                        root,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            return new NativeTileCreateResult(
+                loaded,
+                createdTile,
+                backupRoot,
+                createdFiles
+                    .ToArray());
+        }
+        catch
+        {
+            if (
+                globalChanged &&
+                File.Exists(
+                    backupGlobal))
+            {
+                try
+                {
+                    File.Copy(
+                        backupGlobal,
+                        snapshot.Map
+                            .GlobalConfigPath,
+                        overwrite:
+                            true);
+                }
+                catch
+                {
+                }
+            }
+
+            foreach (
+                var path in
+                    createdFiles
+                        .AsEnumerable()
+                        .Reverse())
+            {
+                try
+                {
+                    if (File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            throw;
+        }
+    }
+
     public async Task<NativeCoordinateMapCreateResult>
         CreateCoordinateMapAsync(
             string directoryName,
