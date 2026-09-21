@@ -412,6 +412,48 @@
                                       SelectionChanged="OnAssetLibrarySelectionChanged"
                                       DoubleTapped="OnAssetLibraryDoubleTapped" />
                         </Grid>
+
+                        <Grid x:Name="TransportPanel"
+                              Visibility="Collapsed"
+                              RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <ComboBox x:Name="TransportKindComboBox"
+                                      Grid.Row="0"
+                                      SelectedIndex="0"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnTransportKindSelectionChanged">
+                                <ComboBoxItem Content="Tracks (.ttr)" />
+                                <ComboBoxItem Content="Trips (.ttp)" />
+                                <ComboBoxItem Content="Stops (Busstops.cfg)" />
+                                <ComboBoxItem Content="StationLinks (StnLinks.cfg)" />
+                            </ComboBox>
+
+                            <TextBlock x:Name="TransportStatusText"
+                                       Grid.Row="1"
+                                       Text="Nenhum TTData carregado."
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="#9FB5C5" />
+
+                            <ListView x:Name="TransportListView"
+                                      Grid.Row="2"
+                                      SelectionMode="Single"
+                                      DisplayMemberPath="DisplayText"
+                                      SelectionChanged="OnTransportSelectionChanged" />
+
+                            <TextBlock x:Name="TransportDetailText"
+                                       Grid.Row="3"
+                                       Text="Selecione um item para ver detalhes."
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="#B7CEDC" />
+                        </Grid>
                     </Grid>
                 </Grid>
             </Border>

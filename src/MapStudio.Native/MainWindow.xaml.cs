@@ -1,5 +1,6 @@
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -16,6 +17,12 @@ namespace MapStudio.Native;
 
 public sealed partial class MainWindow : Window
 {
+    private sealed record TransportExplorerItem(
+        string Kind,
+        string Key,
+        string DisplayText,
+        string Detail);
+
     private readonly OmsiNativeSession _session =
         new();
 
@@ -44,6 +51,16 @@ public sealed partial class MainWindow : Window
                 OmsiAssetIndexEntry>();
 
     private bool _libraryMode;
+    private bool _transportMode;
+
+    private OmsiTimetableCatalog?
+        _timetableCatalog;
+
+    private IReadOnlyList<
+        TransportExplorerItem>
+        _transportItems =
+            Array.Empty<
+                TransportExplorerItem>();
 
     private CancellationTokenSource?
         _assetPreviewCancellation;
@@ -305,7 +322,11 @@ public sealed partial class MainWindow : Window
         object sender,
         TextChangedEventArgs e)
     {
-        if (_libraryMode)
+        if (_transportMode)
+        {
+            RefreshTransportFilter();
+        }
+        else if (_libraryMode)
         {
             RefreshLibraryFilter();
         }
@@ -344,10 +365,16 @@ public sealed partial class MainWindow : Window
         _libraryMode =
             false;
 
+        _transportMode =
+            false;
+
         ExplorerListView.Visibility =
             Visibility.Visible;
 
         AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
             Visibility.Collapsed;
 
         ExplorerSearchBox.PlaceholderText =
@@ -363,11 +390,17 @@ public sealed partial class MainWindow : Window
         _libraryMode =
             true;
 
+        _transportMode =
+            false;
+
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
         AssetLibraryPanel.Visibility =
             Visibility.Visible;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar na biblioteca...";
@@ -2161,10 +2194,190 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        await ActivateLibraryToolAsync(
-            1,
-            null,
-            "Transporte: acesso rápido ao cenário de operação; editor de paradas/tracks/trips ainda será migrado.");
+        if (_session.CurrentMap is
+            not { } snapshot)
+        {
+            StatusText.Text =
+                "Transporte: abra um mapa OMSI primeiro.";
+
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.RestoreSceneView();
+
+        _libraryMode =
+            false;
+
+        _transportMode =
+            true;
+
+        ExplorerListView.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar Tracks, Trips, Stops e StationLinks...";
+
+        TransportStatusText.Text =
+            "Lendo TTData...";
+
+        try
+        {
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        snapshot.Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            TransportStatusText.Text =
+                $"{_timetableCatalog.Tracks.Count} Tracks · " +
+                $"{_timetableCatalog.Trips.Count} Trips · " +
+                $"{_timetableCatalog.BusStops.Count} Stops · " +
+                $"{_timetableCatalog.StationLinks.Count} StationLinks · " +
+                $"{_timetableCatalog.BrokenTripTrackReferenceCount} Trip→Track quebrado(s) · " +
+                $"{_timetableCatalog.BrokenStationLinkStopReferenceCount} StnLink→Stop quebrado(s).";
+
+            StatusText.Text =
+                "Transporte: TTData real carregado no editor nativo.";
+        }
+        catch (Exception exception)
+        {
+            TransportStatusText.Text =
+                $"Falha ao ler TTData: {exception.Message}";
+        }
+    }
+
+    private void RefreshTransportItems()
+    {
+        if (_timetableCatalog is null)
+        {
+            _transportItems =
+                Array.Empty<
+                    TransportExplorerItem>();
+
+            TransportListView.ItemsSource =
+                _transportItems;
+
+            return;
+        }
+
+        _transportItems =
+            TransportKindComboBox
+                .SelectedIndex switch
+            {
+                1 =>
+                    _timetableCatalog.Trips
+                        .Select(
+                            trip =>
+                                new TransportExplorerItem(
+                                    "Trip",
+                                    trip.Name,
+                                    $"{trip.Name} · linha {trip.Line} → {trip.Destination}",
+                                    $"Track: {trip.TrackName}\n" +
+                                    $"Estações: {trip.Stations.Count}\n" +
+                                    $"Train reverse: {(trip.TrainReverse ? "sim" : "não")}\n" +
+                                    $"Arquivo: {trip.RelativePath}"))
+                        .ToArray(),
+                2 =>
+                    _timetableCatalog.BusStops
+                        .Select(
+                            stop =>
+                                new TransportExplorerItem(
+                                    "Stop",
+                                    stop.Id.ToString(),
+                                    $"{stop.Id} · {stop.Name}",
+                                    $"Tile index: {stop.TileIndex}\n" +
+                                    $"Subnome: {stop.SubName}"))
+                        .ToArray(),
+                3 =>
+                    _timetableCatalog.StationLinks
+                        .Select(
+                            link =>
+                                new TransportExplorerItem(
+                                    "StationLink",
+                                    $"{link.StartBusStopId}>{link.EndBusStopId}",
+                                    $"{link.StartBusStopId} → {link.EndBusStopId} · {link.Comment}",
+                                    $"Entradas: {link.Entries.Count}\n" +
+                                    $"Comprimento/ref: {link.Line1}"))
+                        .ToArray(),
+                _ =>
+                    _timetableCatalog.Tracks
+                        .Select(
+                            track =>
+                                new TransportExplorerItem(
+                                    "Track",
+                                    track.Name,
+                                    $"{track.Name} · {track.Entries.Count} segmentos",
+                                    $"Arquivo: {track.RelativePath}\n" +
+                                    $"Comentário: {track.Comment1} {track.Comment2}"))
+                        .ToArray()
+            };
+
+        RefreshTransportFilter();
+    }
+
+    private void RefreshTransportFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            TransportExplorerItem> items =
+                _transportItems;
+
+        if (!string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.DisplayText.Contains(
+                            query,
+                            StringComparison.OrdinalIgnoreCase) ||
+                        item.Detail.Contains(
+                            query,
+                            StringComparison.OrdinalIgnoreCase) ||
+                        item.Key.Contains(
+                            query,
+                            StringComparison.OrdinalIgnoreCase));
+        }
+
+        TransportListView.ItemsSource =
+            items.ToArray();
+    }
+
+    private void OnTransportKindSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_transportMode)
+        {
+            RefreshTransportItems();
+        }
+    }
+
+    private void OnTransportSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        TransportDetailText.Text =
+            TransportListView.SelectedItem is
+                TransportExplorerItem item
+                ? item.Detail
+                : "Selecione um item para ver detalhes.";
     }
 
     private void OnToolValidationClick(
@@ -2188,6 +2401,12 @@ public sealed partial class MainWindow : Window
     {
         _libraryMode =
             true;
+
+        _transportMode =
+            false;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
 
         ExplorerListView.Visibility =
             Visibility.Collapsed;
