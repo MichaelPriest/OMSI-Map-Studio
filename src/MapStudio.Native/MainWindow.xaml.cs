@@ -15774,6 +15774,12 @@ public sealed partial class MainWindow : Window
         roofCombo.Items.Add(
             "Duas águas");
 
+        roofCombo.Items.Add(
+            "Quatro águas");
+
+        roofCombo.Items.Add(
+            "Uma água");
+
         var roofHeightBox =
             new NumberBox
             {
@@ -15798,8 +15804,8 @@ public sealed partial class MainWindow : Window
             (_, _) =>
             {
                 roofHeightBox.IsEnabled =
-                    roofCombo.SelectedIndex ==
-                    1;
+                    roofCombo.SelectedIndex >
+                    0;
             };
 
         var facadePathBox =
@@ -16036,11 +16042,17 @@ public sealed partial class MainWindow : Window
                         spec.DoorHeightMeters;
 
                     roofCombo.SelectedIndex =
-                        spec.RoofType ==
-                            MapStudioBuildingRoofType
-                                .Gable
-                            ? 1
-                            : 0;
+                        spec.RoofType switch
+                        {
+                            MapStudioBuildingRoofType.Gable =>
+                                1,
+                            MapStudioBuildingRoofType.Hip =>
+                                2,
+                            MapStudioBuildingRoofType.Shed =>
+                                3,
+                            _ =>
+                                0
+                        };
 
                     roofHeightBox.Value =
                         Math.Max(
@@ -16262,12 +16274,17 @@ public sealed partial class MainWindow : Window
                 "Building Studio: gerando SCO/O3D...";
 
             var roofType =
-                roofCombo.SelectedIndex ==
-                    1
-                    ? MapStudioBuildingRoofType
-                        .Gable
-                    : MapStudioBuildingRoofType
-                        .Flat;
+                roofCombo.SelectedIndex switch
+                {
+                    1 =>
+                        MapStudioBuildingRoofType.Gable,
+                    2 =>
+                        MapStudioBuildingRoofType.Hip,
+                    3 =>
+                        MapStudioBuildingRoofType.Shed,
+                    _ =>
+                        MapStudioBuildingRoofType.Flat
+                };
 
             var spec =
                 new MapStudioBuildingSpec(
