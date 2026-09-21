@@ -432,6 +432,7 @@
                                 <ComboBoxItem Content="Trips (.ttp)" />
                                 <ComboBoxItem Content="Stops (Busstops.cfg)" />
                                 <ComboBoxItem Content="StationLinks (StnLinks.cfg)" />
+                                <ComboBoxItem Content="Lines/Tours (.ttl)" />
                             </ComboBox>
 
                             <TextBlock x:Name="TransportStatusText"

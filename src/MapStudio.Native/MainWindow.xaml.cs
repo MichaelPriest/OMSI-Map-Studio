@@ -2511,8 +2511,10 @@ public sealed partial class MainWindow : Window
                 $"{_timetableCatalog.Trips.Count} Trips · " +
                 $"{_timetableCatalog.BusStops.Count} Stops · " +
                 $"{_timetableCatalog.StationLinks.Count} StationLinks · " +
+                $"{_timetableCatalog.Lines.Count} Lines · " +
                 $"{_timetableCatalog.BrokenTripTrackReferenceCount} Trip→Track quebrado(s) · " +
-                $"{_timetableCatalog.BrokenStationLinkStopReferenceCount} StnLink→Stop quebrado(s).";
+                $"{_timetableCatalog.BrokenStationLinkStopReferenceCount} StnLink→Stop quebrado(s) · " +
+                $"{_timetableCatalog.BrokenLineTripReferenceCount} Line→Trip quebrado(s).";
 
             StatusText.Text =
                 "Transporte: TTData real carregado no editor nativo.";
@@ -2576,6 +2578,19 @@ public sealed partial class MainWindow : Window
                                     $"{link.StartBusStopId} → {link.EndBusStopId} · {link.Comment}",
                                     $"Entradas: {link.Entries.Count}\n" +
                                     $"Comprimento/ref: {link.Line1}"))
+                        .ToArray(),
+                4 =>
+                    _timetableCatalog.Lines
+                        .Select(
+                            line =>
+                                new TransportExplorerItem(
+                                    "Line",
+                                    line.Name,
+                                    $"{line.Name} · {line.Tours.Count} tour(s)",
+                                    $"Arquivo: {line.RelativePath}\n" +
+                                    $"Prioridade: {line.Priority}\n" +
+                                    $"Jogador permitido: {(line.UserAllowed ? "sim" : "não")}\n" +
+                                    $"Trips agendados: {line.Tours.Sum(tour => tour.Trips.Count)}"))
                         .ToArray(),
                 _ =>
                     _timetableCatalog.Tracks
