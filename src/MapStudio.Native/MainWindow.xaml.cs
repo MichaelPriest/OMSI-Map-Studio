@@ -1849,26 +1849,6 @@ public sealed partial class MainWindow : Window
             _explorerItems;
 
         if (
-            view == 0 &&
-            LibrarySubcategoryComboBox
-                .SelectedItem is
-                string subcategory &&
-            !string.Equals(
-                subcategory,
-                "Todas",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            items =
-                items.Where(
-                    item =>
-                        string.Equals(
-                            OmsiAssetLibraryClassifier
-                                .GetSubcategory(item),
-                            subcategory,
-                            StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (
             !string.IsNullOrWhiteSpace(
                 query))
         {
@@ -2213,6 +2193,26 @@ public sealed partial class MainWindow : Window
                             .Classify(
                                 item) ==
                         option.Group);
+        }
+
+        if (
+            view == 0 &&
+            LibrarySubcategoryComboBox
+                .SelectedItem is
+                string subcategory &&
+            !string.Equals(
+                subcategory,
+                "Todas",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            items =
+                items.Where(
+                    item =>
+                        string.Equals(
+                            OmsiAssetLibraryClassifier
+                                .GetSubcategory(item),
+                            subcategory,
+                            StringComparison.OrdinalIgnoreCase));
         }
 
         if (
