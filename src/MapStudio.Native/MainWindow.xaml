@@ -628,8 +628,23 @@
                                 <StackPanel x:Name="SplinePlacementOptionsPanel"
                                             Visibility="Collapsed"
                                             Spacing="5">
+                                    <CheckBox x:Name="SplineEasyRoadCheckBox"
+                                              Content="Estrada fácil (2 cliques)"
+                                              Click="OnSplineEasyRoadToggle" />
+                                    <NumberBox x:Name="SplineCurveOffsetBox"
+                                               Header="Curva lateral / offset (m)"
+                                               Minimum="-500"
+                                               Maximum="500"
+                                               Value="0"
+                                               SmallChange="0.5"
+                                               SpinButtonPlacementMode="Compact"
+                                               ValueChanged="OnSplineCurveOffsetChanged" />
+                                    <TextBlock Text="Estrada fácil usa início + fim; offset 0 = reta. Valores positivos/negativos curvam para lados opostos."
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="#7895AD" />
                                     <CheckBox x:Name="SplineCurveCheckBox"
-                                              Content="Curva (3 cliques)" />
+                                              Content="Curva manual (3 cliques)" />
                                     <CheckBox x:Name="SplineContinuousCheckBox"
                                               Content="Continuar segmentos"
                                               IsChecked="True" />

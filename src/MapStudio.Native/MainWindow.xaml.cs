@@ -1604,6 +1604,18 @@ public sealed partial class MainWindow : Window
                             ? SplineElevationOffsetBox
                                 .Value
                             : 0.0);
+
+                Viewport
+                    .SetSplineEasyRoadOptions(
+                        SplineEasyRoadCheckBox
+                            .IsChecked ==
+                        true,
+                        double.IsFinite(
+                            SplineCurveOffsetBox
+                                .Value)
+                            ? SplineCurveOffsetBox
+                                .Value
+                            : 0.0);
             }
 
             var started =
@@ -1662,10 +1674,9 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 asset.Kind ==
                     OmsiAssetKind.Spline
-                    ? SplineCurveCheckBox.IsChecked ==
+                    ? SplineEasyRoadCheckBox.IsChecked ==
                         true
-                        ? "Spline curva: clique início, fim e ponto de curvatura."
-                        : "Spline reta: clique início e fim." +
+                        ? "Estrada fácil: clique no início e no fim. Ajuste o offset lateral para curvar." +
                           (
                               Math.Abs(
                                   SplineElevationOffsetBox.Value) >
@@ -1673,6 +1684,17 @@ public sealed partial class MainWindow : Window
                                   ? $" · elevação {SplineElevationOffsetBox.Value:+0.0;-0.0;0.0} m"
                                   : string.Empty
                           )
+                        : SplineCurveCheckBox.IsChecked ==
+                            true
+                            ? "Spline curva manual: clique início, fim e ponto de curvatura."
+                            : "Spline reta: clique início e fim." +
+                              (
+                                  Math.Abs(
+                                      SplineElevationOffsetBox.Value) >
+                                      0.001
+                                      ? $" · elevação {SplineElevationOffsetBox.Value:+0.0;-0.0;0.0} m"
+                                      : string.Empty
+                              )
                     : ObjectPlacementModeComboBox.SelectedIndex switch
                     {
                         2 or 6 =>
@@ -4259,6 +4281,61 @@ public sealed partial class MainWindow : Window
             "Objetos: biblioteca SCO pronta para posicionar e editar.");
     }
 
+    private void OnSplineEasyRoadToggle(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            SplineEasyRoadCheckBox
+                .IsChecked ==
+            true)
+        {
+            SplineCurveCheckBox.IsChecked =
+                false;
+        }
+
+        Viewport
+            .SetSplineEasyRoadOptions(
+                SplineEasyRoadCheckBox
+                    .IsChecked ==
+                true,
+                double.IsFinite(
+                    SplineCurveOffsetBox
+                        .Value)
+                    ? SplineCurveOffsetBox
+                        .Value
+                    : 0.0);
+
+        StatusText.Text =
+            SplineEasyRoadCheckBox
+                .IsChecked ==
+            true
+                ? "Estrada fácil ativa: dois cliques criam a via; ajuste o offset lateral para curvar."
+                : "Estrada fácil desativada: use reta ou curva manual de 3 cliques.";
+    }
+
+    private void OnSplineCurveOffsetChanged(
+        NumberBox sender,
+        NumberBoxValueChangedEventArgs e)
+    {
+        if (
+            Viewport is null ||
+            SplineEasyRoadCheckBox is null)
+        {
+            return;
+        }
+
+        Viewport
+            .SetSplineEasyRoadOptions(
+                SplineEasyRoadCheckBox
+                    .IsChecked ==
+                true,
+                double.IsFinite(
+                    e.NewValue)
+                    ? e.NewValue
+                    : 0.0);
+    }
+
     private async void OnToolSplinesClick(
         object sender,
         RoutedEventArgs e)
@@ -4269,13 +4346,22 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             0;
 
+        SplineEasyRoadCheckBox.IsChecked =
+            true;
+
+        SplineCurveOffsetBox.Value =
+            0;
+
+        SplineCurveCheckBox.IsChecked =
+            false;
+
         SetSelectionModeFromShortcut(
             2);
 
         await ActivateLibraryToolAsync(
             2,
             null,
-            "Ruas/Splines: escolha uma SLI e use o construtor reto ou curvo.");
+            "Ruas/Splines: Estrada fácil ativa. Escolha uma SLI, marque início/fim e ajuste o offset de curva.");
     }
 
     private async void OnToolBridgesClick(
@@ -4285,13 +4371,22 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             5;
 
+        SplineEasyRoadCheckBox.IsChecked =
+            true;
+
+        SplineCurveOffsetBox.Value =
+            0;
+
+        SplineCurveCheckBox.IsChecked =
+            false;
+
         SetSelectionModeFromShortcut(
             2);
 
         await ActivateLibraryGroupToolAsync(
             2,
             OmsiAssetLibraryGroup.Bridges,
-            "Pontes: splines de ponte, viaduto, túnel e elevado filtradas na biblioteca.");
+            "Pontes: Estrada fácil ativa com +5 m. Escolha a SLI e ajuste elevação/curva conforme necessário.");
     }
 
     private async void OnToolBuildingsClick(

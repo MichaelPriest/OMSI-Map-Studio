@@ -253,6 +253,14 @@ public sealed partial class NativeViewport : UserControl
             ?.SetSplinePlacementElevationOffset(
                 offset);
 
+    public void SetSplineEasyRoadOptions(
+        bool enabled,
+        double curveOffset) =>
+        _runtime
+            ?.SetSplineEasyRoadOptions(
+                enabled,
+                curveOffset);
+
     public void SetSplineEndpointSnapOptions(
         bool enabled,
         double distance,
