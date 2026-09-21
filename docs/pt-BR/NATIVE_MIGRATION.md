@@ -741,7 +741,7 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
 - geração procedural de vias com suavização, grafo único, auto-link de continuidade em grau 2, junctions próprios e rollback;
-- importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios, multipolygons externos seguros e pontos de vegetação `natural=tree`/`natural=shrub`;
+- importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios, multipolygons externos seguros e vegetação por pontos, linhas, áreas e multipolygons externos seguros;
 - análise de vias da referência Google por IA conectável;
 - Building Studio com O3D/SCO próprios, telhados plano/duas águas/hip/shed e aberturas de fachada;
 - configuração e teste de provedores de IA compatíveis com o contrato neutro do Core;
@@ -764,7 +764,7 @@ O importer reconhece ways com `highway`, resolve seus nodes e preserva quando di
 
 As coordenadas WGS84 são projetadas pela mesma âncora de `.mapstudio/georeference.json` usada pelo GeoJSON. Depois disso, OSM, GeoJSON, traçado manual e IA alimentam exatamente o mesmo `MapStudioRoadGraph`, preview D3D11, Road Kit, planner de junctions e persistência transacional.
 
-**Ferramentas → Importar edifícios OSM...** importa footprints `building=*` por way e também relations `type=multipolygon` quando os anéis externos podem ser montados de forma segura. Relações com anéis internos/courtyards continuam recusadas nesta etapa para evitar preencher áreas vazadas incorretamente.
+**Ferramentas → Importar edifícios OSM...** importa footprints `building=*` por way e também relations `type=multipolygon` quando os anéis externos podem ser montados de forma segura. Relações com anéis internos/courtyards continuam recusadas nesta etapa para evitar preencher áreas vazadas incorretamente. O gerador preserva altura/andares e `roof:shape`/`roof:height`: Gable e Shed são gerados em footprints quadriláteros; Hip — incluindo `pyramidal`/pyramid — também é gerado em qualquer footprint convexo simples com 3 ou mais lados. Footprints côncavos mantêm topo plano quando a forma solicitada não puder ser produzida com segurança.
 
 **Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, ways `natural=tree_row` e `barrier=hedge`, além de ways fechados `natural=wood`, `landuse=forest` e `natural=scrub`. `species`, `genus`, `leaf_type` e `name` são preservados quando presentes.
 
