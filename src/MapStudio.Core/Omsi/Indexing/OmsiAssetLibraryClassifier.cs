@@ -525,19 +525,19 @@ public static class OmsiAssetLibraryClassifier
             OmsiAssetLibraryGroup.StreetFurniture =>
                 ContainsAny(
                     text,
-                    "lamp",
-                    "light",
-                    "pole",
-                    "poste")
-                    ? "Iluminação"
+                    "sign",
+                    "schild",
+                    "traffic",
+                    "semaforo",
+                    "placa")
+                    ? "Sinalização"
                     : ContainsAny(
                         text,
-                        "sign",
-                        "schild",
-                        "traffic",
-                        "semaforo",
-                        "placa")
-                        ? "Sinalização"
+                        "lamp",
+                        "light",
+                        "pole",
+                        "poste")
+                        ? "Iluminação"
                         : ContainsAny(
                             text,
                             "fence",
