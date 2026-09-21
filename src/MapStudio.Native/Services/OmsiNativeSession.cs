@@ -3303,6 +3303,198 @@ public sealed class OmsiNativeSession
             newSplineId);
     }
 
+    public async Task<NativeTrafficLightProgramUpdateResult>
+        UpdateTrafficLightProgramAsync(
+            NativeTrafficLightProgramInfo info,
+            string programName,
+            double? cycleDuration,
+            IReadOnlyList<
+                OmsiTrafficLightPhase>
+                phases,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            info);
+
+        ArgumentNullException.ThrowIfNull(
+            phases);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Instalação OMSI não selecionada.");
+
+        if (
+            _pendingTransforms.Count >
+            0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTrafficLightEdit");
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                programName) ||
+            cycleDuration is
+                < 0 ||
+            phases.Count ==
+                0 ||
+            phases.Count >
+                4096 ||
+            phases.Any(
+                phase =>
+                    phase.Duration <
+                        0 ||
+                    !double.IsFinite(
+                        phase.Duration)))
+        {
+            throw new InvalidDataException(
+                "invalidTrafficLightProgram");
+        }
+
+        if (
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    root,
+                    info.AssetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            throw new FileNotFoundException(
+                "trafficLightSceneryObjectMissing",
+                info.AssetPath);
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    document);
+
+        if (
+            info.ControllerIndex <
+                0 ||
+            info.ControllerIndex >=
+                metadata
+                    .TrafficLightControllers
+                    .Count)
+        {
+            throw new InvalidDataException(
+                "trafficLightControllerIndexInvalid");
+        }
+
+        var controllers =
+            metadata
+                .TrafficLightControllers
+                .Select(
+                    controller =>
+                        controller with
+                        {
+                            Programs =
+                                controller
+                                    .Programs
+                                    .ToArray()
+                        })
+                .ToArray();
+
+        var controller =
+            controllers[
+                info.ControllerIndex];
+
+        if (
+            info.ProgramIndex <
+                0 ||
+            info.ProgramIndex >=
+                controller
+                    .Programs
+                    .Count)
+        {
+            throw new InvalidDataException(
+                "trafficLightProgramIndexInvalid");
+        }
+
+        var programs =
+            controller
+                .Programs
+                .ToArray();
+
+        programs[
+            info.ProgramIndex] =
+            new OmsiTrafficLightProgram(
+                programName.Trim(),
+                phases.ToArray());
+
+        controllers[
+            info.ControllerIndex] =
+            controller with
+            {
+                CycleDuration =
+                    cycleDuration,
+                Programs =
+                    programs
+            };
+
+        var bytes =
+            new OmsiSceneryTrafficLightPatcher()
+                .Patch(
+                    document,
+                    controllers);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map
+                    .DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiSceneryObjectReader()
+                .ReadMetadataAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var updatedController =
+            reloaded
+                .TrafficLightControllers[
+                    info.ControllerIndex];
+
+        var updatedProgram =
+            updatedController
+                .Programs[
+                    info.ProgramIndex];
+
+        return new NativeTrafficLightProgramUpdateResult(
+            updatedProgram,
+            updatedController
+                .CycleDuration,
+            target,
+            backupPath);
+    }
+
     public async Task<NativeTimetableLineUpdateResult>
         UpdateTimetableLineAsync(
             OmsiTimetableLine line,
