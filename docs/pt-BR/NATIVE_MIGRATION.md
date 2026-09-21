@@ -766,11 +766,11 @@ As coordenadas WGS84 são projetadas pela mesma âncora de `.mapstudio/georefere
 
 **Ferramentas → Importar edifícios OSM...** importa footprints `building=*` por way e também relations `type=multipolygon` quando os anéis externos podem ser montados de forma segura. Relações com anéis internos/courtyards continuam recusadas nesta etapa para evitar preencher áreas vazadas incorretamente.
 
-**Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, além de ways `natural=tree_row` e `barrier=hedge`. `species`, `genus`, `leaf_type` e `name` são preservados quando presentes.
+**Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, ways `natural=tree_row` e `barrier=hedge`, além de ways fechados `natural=wood`, `landuse=forest` e `natural=scrub`. `species`, `genus`, `leaf_type` e `name` são preservados quando presentes.
 
-Tree rows e hedges são projetados pela mesma âncora geográfica e amostrados em pontos regulares de 4 m nesta etapa. O diálogo permite escolher **dois SCOs reais** já indexados na categoria Vegetação: um para árvores/tree rows e outro para arbustos/hedges. O viewport mostra a prévia sobre o terreno carregado; a confirmação alinha cada item à altura real do terreno e grava os grupos em uma única transação multi-batch com backup. O limite operacional permanece 256 pontos selecionados por execução e a rotação variada continua opcional e determinística por ID/amostra.
+Tree rows e hedges são projetados pela mesma âncora geográfica e amostrados em pontos regulares de 4 m. Áreas de floresta/bosque recebem dispersão determinística de aproximadamente 14 m e áreas de scrub de 7 m, sempre mantendo os pontos dentro do polígono OSM. O diálogo permite escolher **dois SCOs reais** já indexados na categoria Vegetação: um para árvores/tree rows/floresta e outro para arbustos/hedges/scrub. O viewport mostra a prévia sobre o terreno carregado; a confirmação alinha cada item à altura real do terreno e grava os grupos em uma única transação multi-batch com backup. O limite operacional permanece 256 pontos selecionados por execução e a rotação variada continua opcional e determinística por ID/amostra.
 
-Áreas de floresta/bosque e geração automática de espécies a partir de `species` ainda não são convertidas. Pontos sem terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
+Multipolygons de floresta com relações OSM e mapeamento automático de espécies para assets específicos ainda não são convertidos. Pontos sem terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
 
 ### Attachments OMSI
 
