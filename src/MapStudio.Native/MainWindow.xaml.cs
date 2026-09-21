@@ -487,6 +487,12 @@ public sealed partial class MainWindow : Window
                 ApplyTerrainLevelButton.IsEnabled =
                     true;
 
+                RaiseTerrainButton.IsEnabled =
+                    true;
+
+                LowerTerrainButton.IsEnabled =
+                    true;
+
                 ApplyTerrainPaintButton.IsEnabled =
                     _session.CurrentMap?
                         .Map
@@ -3894,6 +3900,12 @@ public sealed partial class MainWindow : Window
         ApplyTerrainLevelButton.IsEnabled =
             false;
 
+        RaiseTerrainButton.IsEnabled =
+            false;
+
+        LowerTerrainButton.IsEnabled =
+            false;
+
         ApplyTerrainPaintButton.IsEnabled =
             false;
 
@@ -3904,6 +3916,160 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Ferramenta de terreno ativa: clique no ponto que deseja nivelar.";
+    }
+
+    private async void OnRaiseTerrainClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyTerrainOffsetAsync(
+            1);
+
+    private async void OnLowerTerrainClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyTerrainOffsetAsync(
+            -1);
+
+    private async Task ApplyTerrainOffsetAsync(
+        double direction)
+    {
+        var point =
+            _terrainEditPoint;
+
+        if (point is null)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de editar o terreno.";
+
+            return;
+        }
+
+        var magnitude =
+            TerrainBrushDeltaBox.Value;
+
+        var radius =
+            TerrainBrushRadiusBox.Value;
+
+        var feather =
+            TerrainBrushFeatherBox.Value;
+
+        if (
+            !double.IsFinite(
+                magnitude) ||
+            magnitude <= 0 ||
+            !double.IsFinite(
+                radius) ||
+            !double.IsFinite(
+                feather) ||
+            radius <= 0 ||
+            feather < 0 ||
+            feather > 1)
+        {
+            StatusText.Text =
+                "Valores do pincel incremental são inválidos.";
+
+            return;
+        }
+
+        var delta =
+            magnitude *
+            (
+                direction >= 0
+                    ? 1
+                    : -1
+            );
+
+        try
+        {
+            ApplyTerrainLevelButton.IsEnabled =
+                false;
+
+            RaiseTerrainButton.IsEnabled =
+                false;
+
+            LowerTerrainButton.IsEnabled =
+                false;
+
+            ApplyTerrainPaintButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                delta > 0
+                    ? $"Elevando terreno do tile {point.Tile.X},{point.Tile.Y} em {delta:F2} m..."
+                    : $"Abaixando terreno do tile {point.Tile.X},{point.Tile.Y} em {Math.Abs(delta):F2} m...";
+
+            var snapshot =
+                await _session
+                    .OffsetTerrainAsync(
+                        point,
+                        delta,
+                        radius,
+                        feather);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            _terrainEditPoint =
+                null;
+
+            RaiseTerrainButton.IsEnabled =
+                false;
+
+            LowerTerrainButton.IsEnabled =
+                false;
+
+            TerrainPointText.Text =
+                delta > 0
+                    ? "Terreno elevado. Escolha outro ponto para continuar."
+                    : "Terreno abaixado. Escolha outro ponto para continuar.";
+
+            StatusText.Text =
+                $"{(delta > 0 ? "Terreno elevado" : "Terreno abaixado")} · incremento {Math.Abs(delta):F2} m · raio {radius:F1} m · feather {feather:F2}.";
+        }
+        catch (Exception exception)
+        {
+            var hasPoint =
+                _terrainEditPoint is not
+                    null;
+
+            ApplyTerrainLevelButton.IsEnabled =
+                hasPoint;
+
+            RaiseTerrainButton.IsEnabled =
+                hasPoint;
+
+            LowerTerrainButton.IsEnabled =
+                hasPoint;
+
+            ApplyTerrainPaintButton.IsEnabled =
+                hasPoint &&
+                _session.CurrentMap?
+                    .Map
+                    .GroundTextures
+                    .Count >
+                1;
+
+            StatusText.Text =
+                $"Falha ao alterar terreno: {exception.Message}";
+        }
     }
 
     private async void OnApplyTerrainLevelClick(
@@ -3956,6 +4122,12 @@ public sealed partial class MainWindow : Window
             ApplyTerrainLevelButton.IsEnabled =
                 false;
 
+            RaiseTerrainButton.IsEnabled =
+                false;
+
+            LowerTerrainButton.IsEnabled =
+                false;
+
             StatusText.Text =
                 $"Nivelando terreno do tile {point.Tile.X},{point.Tile.Y} com backup...";
 
@@ -3984,6 +4156,12 @@ public sealed partial class MainWindow : Window
             _terrainEditPoint =
                 null;
 
+            RaiseTerrainButton.IsEnabled =
+                false;
+
+            LowerTerrainButton.IsEnabled =
+                false;
+
             ApplyTerrainPaintButton.IsEnabled =
                 false;
 
@@ -3996,6 +4174,12 @@ public sealed partial class MainWindow : Window
         catch (Exception exception)
         {
             ApplyTerrainLevelButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            RaiseTerrainButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            LowerTerrainButton.IsEnabled =
                 _terrainEditPoint is not null;
 
             StatusText.Text =
@@ -4134,6 +4318,12 @@ public sealed partial class MainWindow : Window
         catch (Exception exception)
         {
             ApplyTerrainLevelButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            RaiseTerrainButton.IsEnabled =
+                _terrainEditPoint is not null;
+
+            LowerTerrainButton.IsEnabled =
                 _terrainEditPoint is not null;
 
             ApplyTerrainPaintButton.IsEnabled =
