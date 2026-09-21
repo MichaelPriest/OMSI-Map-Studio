@@ -5,32 +5,31 @@
     xmlns:controls="using:MapStudio.Native.Controls"
     Title="OMSI Map Studio Native">
 
-    <Window.Resources>
-        <Style x:Key="MapToolButtonStyle"
-               TargetType="Button">
-            <Setter Property="Width"
-                    Value="76" />
-            <Setter Property="Height"
-                    Value="64" />
-            <Setter Property="Padding"
-                    Value="5" />
-            <Setter Property="Background"
-                    Value="#132A39" />
-            <Setter Property="BorderBrush"
-                    Value="#315064" />
-            <Setter Property="BorderThickness"
-                    Value="1" />
-            <Setter Property="CornerRadius"
-                    Value="9" />
-            <Setter Property="HorizontalContentAlignment"
-                    Value="Center" />
-            <Setter Property="VerticalContentAlignment"
-                    Value="Center" />
-        </Style>
-    </Window.Resources>
-
     <Grid x:Name="MainRoot"
           Background="#08131D">
+        <Grid.Resources>
+            <Style x:Key="MapToolButtonStyle"
+                   TargetType="Button">
+                <Setter Property="Width"
+                        Value="76" />
+                <Setter Property="Height"
+                        Value="64" />
+                <Setter Property="Padding"
+                        Value="5" />
+                <Setter Property="Background"
+                        Value="#132A39" />
+                <Setter Property="BorderBrush"
+                        Value="#315064" />
+                <Setter Property="BorderThickness"
+                        Value="1" />
+                <Setter Property="CornerRadius"
+                        Value="9" />
+                <Setter Property="HorizontalContentAlignment"
+                        Value="Center" />
+                <Setter Property="VerticalContentAlignment"
+                        Value="Center" />
+            </Style>
+        </Grid.Resources>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="F11"
                                  Invoked="OnFullscreenAcceleratorInvoked" />
