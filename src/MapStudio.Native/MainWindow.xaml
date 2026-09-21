@@ -108,8 +108,11 @@
                         Click="OnOpenOmsiClick" />
                     <MenuFlyoutItem
                         x:Name="OpenMapMenuItem"
-                        Text="Abrir mapa..."
+                        Text="Abrir mapa do catálogo..."
                         IsEnabled="False"
+                        Click="OnOpenMapCatalogClick" />
+                    <MenuFlyoutItem
+                        Text="Abrir pasta de mapa..."
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Editar">
@@ -286,9 +289,9 @@
                     Click="OnOpenOmsiClick" />
                 <Button
                     x:Name="OpenMapButton"
-                    Content="Abrir mapa"
+                    Content="Mapas"
                     IsEnabled="False"
-                    Click="OnOpenMapClick" />
+                    Click="OnOpenMapCatalogClick" />
             </StackPanel>
         </Grid>
 

@@ -57,6 +57,10 @@ public sealed partial class MainWindow : Window
         OmsiAssetLibraryGroup Group,
         string Label);
 
+    private sealed record MapCatalogViewItem(
+        OmsiMapDescriptor Map,
+        string DisplayText);
+
     private readonly OmsiNativeSession _session =
         new();
 
@@ -11397,6 +11401,195 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnOpenMapCatalogClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            StatusText.Text =
+                "Selecione primeiro a instalação do OMSI.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de abrir outro mapa.";
+
+            return;
+        }
+
+        var maps =
+            _session.Maps
+                .OrderBy(
+                    map =>
+                        map.DisplayName,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .ThenBy(
+                    map =>
+                        map.DirectoryName,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .Select(
+                    map =>
+                        new MapCatalogViewItem(
+                            map,
+                            $"{map.DisplayName} · {map.DirectoryName} · {map.Tiles.Count} tile(s)"))
+                .ToArray();
+
+        if (maps.Length == 0)
+        {
+            StatusText.Text =
+                "Nenhum mapa OMSI foi encontrado no catálogo.";
+
+            return;
+        }
+
+        var searchBox =
+            new TextBox
+            {
+                Header =
+                    "Buscar mapa",
+                PlaceholderText =
+                    "Nome, pasta ou caminho..."
+            };
+
+        var list =
+            new ListView
+            {
+                Height =
+                    360,
+                SelectionMode =
+                    ListViewSelectionMode
+                        .Single,
+                DisplayMemberPath =
+                    nameof(
+                        MapCatalogViewItem
+                            .DisplayText),
+                ItemsSource =
+                    maps
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    620
+            };
+
+        panel.Children.Add(
+            searchBox);
+
+        panel.Children.Add(
+            list);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Mapas instalados",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Abrir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary,
+                IsPrimaryButtonEnabled =
+                    false
+            };
+
+        list.SelectionChanged +=
+            (_, _) =>
+            {
+                dialog.IsPrimaryButtonEnabled =
+                    list.SelectedItem is
+                    MapCatalogViewItem;
+            };
+
+        searchBox.TextChanged +=
+            (_, _) =>
+            {
+                var query =
+                    searchBox.Text
+                        .Trim();
+
+                list.ItemsSource =
+                    string.IsNullOrWhiteSpace(
+                        query)
+                        ? maps
+                        : maps
+                            .Where(
+                                item =>
+                                    item.Map.DisplayName
+                                        .Contains(
+                                            query,
+                                            StringComparison
+                                                .OrdinalIgnoreCase) ||
+                                    item.Map.DirectoryName
+                                        .Contains(
+                                            query,
+                                            StringComparison
+                                                .OrdinalIgnoreCase) ||
+                                    item.Map.DirectoryPath
+                                        .Contains(
+                                            query,
+                                            StringComparison
+                                                .OrdinalIgnoreCase))
+                            .ToArray();
+
+                list.SelectedItem =
+                    null;
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary ||
+            list.SelectedItem is not
+                MapCatalogViewItem selected)
+        {
+            return;
+        }
+
+        await OpenMapDirectoryAsync(
+            selected.Map.DirectoryPath);
+    }
+
+    private async Task OpenMapDirectoryAsync(
+        string mapDirectory)
+    {
+        _fullMapMode =
+            true;
+
+        StatusText.Text =
+            "Carregando mapa completo...";
+
+        var snapshot =
+            await _session
+                .OpenMapAsync(
+                    mapDirectory,
+                    loadFullMap: true);
+
+        await ApplyMapSnapshotAsync(
+            snapshot,
+            focusActiveTile: false);
+
+        StatusText.Text =
+            $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core · " +
+            $"{snapshot.Tiles.Count} tiles.";
+    }
+
     private async void OnOpenMapClick(
         object sender,
         RoutedEventArgs e)
@@ -11413,6 +11606,16 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                StatusText.Text =
+                    "Salve as transformações pendentes antes de abrir outro mapa.";
+
+                return;
+            }
+
             var mapDirectory =
                 await PickFolderAsync();
 
@@ -11423,25 +11626,8 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            _fullMapMode =
-                true;
-
-            StatusText.Text =
-                "Carregando mapa completo...";
-
-            var snapshot =
-                await _session
-                    .OpenMapAsync(
-                        mapDirectory,
-                        loadFullMap: true);
-
-            await ApplyMapSnapshotAsync(
-                snapshot,
-                focusActiveTile: false);
-
-            StatusText.Text =
-                $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core · " +
-                $"{snapshot.Tiles.Count} tiles.";
+            await OpenMapDirectoryAsync(
+                mapDirectory);
         }
         catch (Exception exception)
         {
