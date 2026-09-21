@@ -635,6 +635,13 @@
                                     <CheckBox x:Name="SplineAutoConnectCheckBox"
                                               Content="Conectar Previous/Next automaticamente"
                                               IsChecked="True" />
+                                    <NumberBox x:Name="SplineElevationOffsetBox"
+                                               Header="Elevação adicional (m)"
+                                               Minimum="-100"
+                                               Maximum="300"
+                                               Value="0"
+                                               SmallChange="0.5"
+                                               SpinButtonPlacementMode="Compact" />
                                 </StackPanel>
                             </StackPanel>
 

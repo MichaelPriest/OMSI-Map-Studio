@@ -247,6 +247,12 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public void SetSplinePlacementElevationOffset(
+        double offset) =>
+        _runtime
+            ?.SetSplinePlacementElevationOffset(
+                offset);
+
     public void SetSplineEndpointSnapOptions(
         bool enabled,
         double distance,
@@ -323,6 +329,9 @@ public sealed partial class NativeViewport : UserControl
             enabled: false,
             distance: 5.0,
             autoConnect: false);
+
+        _runtime.SetSplinePlacementElevationOffset(
+            0.0);
 
         var started =
             await _runtime

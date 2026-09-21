@@ -93,6 +93,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private bool _splineAutoConnectEnabled =
         true;
+
+    private double _splineElevationOffset;
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
 
@@ -390,6 +392,20 @@ public sealed class NativeViewportRuntime : IDisposable
             autoConnect;
     }
 
+    public void SetSplinePlacementElevationOffset(
+        double offset)
+    {
+        ThrowIfDisposed();
+
+        _splineElevationOffset =
+            Math.Clamp(
+                double.IsFinite(offset)
+                    ? offset
+                    : 0.0,
+                -100.0,
+                300.0);
+    }
+
     public bool SeedSplinePlacementStart(
         Vector3 start,
         int previousSplineId =
@@ -540,6 +556,10 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             return false;
         }
+
+        point.Y +=
+            (float)
+                _splineElevationOffset;
 
         _splinePointerWorld = point;
 

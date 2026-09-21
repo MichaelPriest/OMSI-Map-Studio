@@ -1563,6 +1563,15 @@ public sealed partial class MainWindow : Window
                         SplineAutoConnectCheckBox
                             .IsChecked ==
                         true);
+
+                Viewport
+                    .SetSplinePlacementElevationOffset(
+                        double.IsFinite(
+                            SplineElevationOffsetBox
+                                .Value)
+                            ? SplineElevationOffsetBox
+                                .Value
+                            : 0.0);
             }
 
             var started =
@@ -1624,7 +1633,14 @@ public sealed partial class MainWindow : Window
                     ? SplineCurveCheckBox.IsChecked ==
                         true
                         ? "Spline curva: clique início, fim e ponto de curvatura."
-                        : "Spline reta: clique início e fim."
+                        : "Spline reta: clique início e fim." +
+                          (
+                              Math.Abs(
+                                  SplineElevationOffsetBox.Value) >
+                                  0.001
+                                  ? $" · elevação {SplineElevationOffsetBox.Value:+0.0;-0.0;0.0} m"
+                                  : string.Empty
+                          )
                     : ObjectPlacementModeComboBox.SelectedIndex switch
                     {
                         2 or 6 =>
@@ -3985,6 +4001,9 @@ public sealed partial class MainWindow : Window
         _junctionPlacementTarget =
             null;
 
+        SplineElevationOffsetBox.Value =
+            0;
+
         SetSelectionModeFromShortcut(
             2);
 
@@ -3998,6 +4017,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SplineElevationOffsetBox.Value =
+            5;
+
         SetSelectionModeFromShortcut(
             2);
 
