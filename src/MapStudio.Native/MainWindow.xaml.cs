@@ -15648,6 +15648,114 @@ public sealed partial class MainWindow : Window
                         .Compact
             };
 
+        var windowsPerFloorBox =
+            new NumberBox
+            {
+                Header =
+                    "Janelas por andar",
+                Minimum =
+                    0,
+                Maximum =
+                    64,
+                Value =
+                    0,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var doorCountBox =
+            new NumberBox
+            {
+                Header =
+                    "Portas na fachada",
+                Minimum =
+                    0,
+                Maximum =
+                    16,
+                Value =
+                    0,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var windowWidthBox =
+            new NumberBox
+            {
+                Header =
+                    "Largura janela (m)",
+                Minimum =
+                    0.30,
+                Maximum =
+                    10,
+                Value =
+                    1.2,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var windowHeightBox =
+            new NumberBox
+            {
+                Header =
+                    "Altura janela (m)",
+                Minimum =
+                    0.30,
+                Maximum =
+                    10,
+                Value =
+                    1.2,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var doorWidthBox =
+            new NumberBox
+            {
+                Header =
+                    "Largura porta (m)",
+                Minimum =
+                    0.50,
+                Maximum =
+                    10,
+                Value =
+                    1.0,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var doorHeightBox =
+            new NumberBox
+            {
+                Header =
+                    "Altura porta (m)",
+                Minimum =
+                    1.20,
+                Maximum =
+                    10,
+                Value =
+                    2.1,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
         var roofCombo =
             new ComboBox
             {
@@ -15909,6 +16017,24 @@ public sealed partial class MainWindow : Window
                     floorsBox.Value =
                         spec.FloorCount;
 
+                    windowsPerFloorBox.Value =
+                        spec.WindowsPerFloor;
+
+                    doorCountBox.Value =
+                        spec.DoorCount;
+
+                    windowWidthBox.Value =
+                        spec.WindowWidthMeters;
+
+                    windowHeightBox.Value =
+                        spec.WindowHeightMeters;
+
+                    doorWidthBox.Value =
+                        spec.DoorWidthMeters;
+
+                    doorHeightBox.Value =
+                        spec.DoorHeightMeters;
+
                     roofCombo.SelectedIndex =
                         spec.RoofType ==
                             MapStudioBuildingRoofType
@@ -16002,6 +16128,96 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(
             floorsBox);
 
+        var openingCountGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8
+            };
+
+        openingCountGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        openingCountGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            windowsPerFloorBox,
+            0);
+
+        Grid.SetColumn(
+            doorCountBox,
+            1);
+
+        openingCountGrid.Children.Add(
+            windowsPerFloorBox);
+
+        openingCountGrid.Children.Add(
+            doorCountBox);
+
+        panel.Children.Add(
+            openingCountGrid);
+
+        var windowSizeGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8
+            };
+
+        windowSizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        windowSizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            windowWidthBox,
+            0);
+
+        Grid.SetColumn(
+            windowHeightBox,
+            1);
+
+        windowSizeGrid.Children.Add(
+            windowWidthBox);
+
+        windowSizeGrid.Children.Add(
+            windowHeightBox);
+
+        panel.Children.Add(
+            windowSizeGrid);
+
+        var doorSizeGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8
+            };
+
+        doorSizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        doorSizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            doorWidthBox,
+            0);
+
+        Grid.SetColumn(
+            doorHeightBox,
+            1);
+
+        doorSizeGrid.Children.Add(
+            doorWidthBox);
+
+        doorSizeGrid.Children.Add(
+            doorHeightBox);
+
+        panel.Children.Add(
+            doorSizeGrid);
+
         panel.Children.Add(
             roofCombo);
 
@@ -16066,7 +16282,15 @@ public sealed partial class MainWindow : Window
                     string.IsNullOrWhiteSpace(
                         facadePathBox.Text)
                         ? null
-                        : facadePathBox.Text);
+                        : facadePathBox.Text,
+                    (int)Math.Round(
+                        windowsPerFloorBox.Value),
+                    (int)Math.Round(
+                        doorCountBox.Value),
+                    windowWidthBox.Value,
+                    windowHeightBox.Value,
+                    doorWidthBox.Value,
+                    doorHeightBox.Value);
 
             var result =
                 await new MapStudioBuildingAssetGenerator()
