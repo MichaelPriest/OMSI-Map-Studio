@@ -819,6 +819,552 @@ public sealed class OmsiNativeSession
             backupRoot);
     }
 
+    public async Task<NativeWaterUpdateResult>
+        SetTileWaterAsync(
+            int tileX,
+            int tileY,
+            OmsiWaterGrid water,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            water);
+
+        var waterBytes =
+            OmsiWaterWriter
+                .Write(
+                    water);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeWaterEdit");
+        }
+
+        var tile =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.X ==
+                            tileX &&
+                        candidate.Y ==
+                            tileY)
+            ?? throw new InvalidDataException(
+                "unknownTile");
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map
+                        .DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var tilePath) ||
+            !File.Exists(
+                tilePath))
+        {
+            throw new InvalidDataException(
+                "waterTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var tileBytes =
+            OmsiTileWaterMarkerEditor
+                .EnsurePresent(
+                    document);
+
+        var waterPath =
+            tilePath +
+            ".water";
+
+        var waterExisted =
+            File.Exists(
+                waterPath);
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture);
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                ".mapstudio-backups",
+                timestamp +
+                $"-water-{tileX}-{tileY}-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var tileRelative =
+            Path.GetRelativePath(
+                snapshot.Map
+                    .DirectoryPath,
+                tilePath);
+
+        var waterRelative =
+            Path.GetRelativePath(
+                snapshot.Map
+                    .DirectoryPath,
+                waterPath);
+
+        if (
+            !IsSafeRelativePath(
+                tileRelative) ||
+            !IsSafeRelativePath(
+                waterRelative))
+        {
+            throw new InvalidDataException(
+                "invalidWaterPath");
+        }
+
+        var backupTile =
+            Path.Combine(
+                backupRoot,
+                tileRelative);
+
+        var backupWater =
+            Path.Combine(
+                backupRoot,
+                waterRelative);
+
+        string? temporaryWaterPath =
+            null;
+
+        try
+        {
+            if (waterExisted)
+            {
+                await SafeFileTransaction
+                    .WriteAllAsync(
+                        [
+                            new PendingFileWrite(
+                                tilePath,
+                                backupTile,
+                                tileBytes),
+                            new PendingFileWrite(
+                                waterPath,
+                                backupWater,
+                                waterBytes)
+                        ],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                var tileDirectory =
+                    Path.GetDirectoryName(
+                        tilePath) ??
+                    snapshot.Map
+                        .DirectoryPath;
+
+                temporaryWaterPath =
+                    Path.Combine(
+                        tileDirectory,
+                        $".{Path.GetFileName(waterPath)}.mapstudio-{Guid.NewGuid():N}.tmp");
+
+                await File
+                    .WriteAllBytesAsync(
+                        temporaryWaterPath,
+                        waterBytes,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                await SafeFileTransaction
+                    .WriteAllAsync(
+                        [
+                            new PendingFileWrite(
+                                tilePath,
+                                backupTile,
+                                tileBytes)
+                        ],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                File.Move(
+                    temporaryWaterPath,
+                    waterPath,
+                    overwrite:
+                        false);
+
+                temporaryWaterPath =
+                    null;
+            }
+
+            var refreshed =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var updatedSnapshot =
+                ReplaceLoadedTileContent(
+                    snapshot,
+                    tile,
+                    refreshed);
+
+            CurrentMap =
+                updatedSnapshot;
+
+            LastBackupDirectory =
+                backupRoot;
+
+            return new NativeWaterUpdateResult(
+                updatedSnapshot,
+                tile,
+                refreshed.Water,
+                backupRoot);
+        }
+        catch
+        {
+            try
+            {
+                if (
+                    File.Exists(
+                        backupTile))
+                {
+                    File.Copy(
+                        backupTile,
+                        tilePath,
+                        overwrite:
+                            true);
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (waterExisted)
+                {
+                    if (
+                        File.Exists(
+                            backupWater))
+                    {
+                        File.Copy(
+                            backupWater,
+                            waterPath,
+                            overwrite:
+                                true);
+                    }
+                }
+                else if (
+                    File.Exists(
+                        waterPath))
+                {
+                    File.Delete(
+                        waterPath);
+                }
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
+        finally
+        {
+            if (
+                !string.IsNullOrWhiteSpace(
+                    temporaryWaterPath))
+            {
+                try
+                {
+                    if (
+                        File.Exists(
+                            temporaryWaterPath))
+                    {
+                        File.Delete(
+                            temporaryWaterPath);
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+    }
+
+    public async Task<NativeWaterUpdateResult>
+        RemoveTileWaterAsync(
+            int tileX,
+            int tileY,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeWaterEdit");
+        }
+
+        var tile =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.X ==
+                            tileX &&
+                        candidate.Y ==
+                            tileY)
+            ?? throw new InvalidDataException(
+                "unknownTile");
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map
+                        .DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var tilePath) ||
+            !File.Exists(
+                tilePath))
+        {
+            throw new InvalidDataException(
+                "waterTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var markerPresent =
+            document.FindFirstSection(
+                "water") is not null;
+
+        var waterPath =
+            tilePath +
+            ".water";
+
+        var waterExists =
+            File.Exists(
+                waterPath);
+
+        if (
+            !markerPresent &&
+            !waterExists)
+        {
+            return new NativeWaterUpdateResult(
+                snapshot,
+                tile,
+                null,
+                string.Empty);
+        }
+
+        var tileBytes =
+            OmsiTileWaterMarkerEditor
+                .Remove(
+                    document);
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture);
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                ".mapstudio-backups",
+                timestamp +
+                $"-remove-water-{tileX}-{tileY}-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var tileRelative =
+            Path.GetRelativePath(
+                snapshot.Map
+                    .DirectoryPath,
+                tilePath);
+
+        var waterRelative =
+            Path.GetRelativePath(
+                snapshot.Map
+                    .DirectoryPath,
+                waterPath);
+
+        if (
+            !IsSafeRelativePath(
+                tileRelative) ||
+            !IsSafeRelativePath(
+                waterRelative))
+        {
+            throw new InvalidDataException(
+                "invalidWaterPath");
+        }
+
+        var backupTile =
+            Path.Combine(
+                backupRoot,
+                tileRelative);
+
+        var backupWater =
+            Path.Combine(
+                backupRoot,
+                waterRelative);
+
+        try
+        {
+            if (waterExists)
+            {
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(
+                        backupWater)!);
+
+                File.Copy(
+                    waterPath,
+                    backupWater,
+                    overwrite:
+                        false);
+            }
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            tilePath,
+                            backupTile,
+                            tileBytes)
+                    ],
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (waterExists)
+            {
+                File.Delete(
+                    waterPath);
+            }
+
+            var refreshed =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var updatedSnapshot =
+                ReplaceLoadedTileContent(
+                    snapshot,
+                    tile,
+                    refreshed);
+
+            CurrentMap =
+                updatedSnapshot;
+
+            LastBackupDirectory =
+                backupRoot;
+
+            return new NativeWaterUpdateResult(
+                updatedSnapshot,
+                tile,
+                null,
+                backupRoot);
+        }
+        catch
+        {
+            try
+            {
+                if (
+                    File.Exists(
+                        backupTile))
+                {
+                    File.Copy(
+                        backupTile,
+                        tilePath,
+                        overwrite:
+                            true);
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                if (
+                    waterExists &&
+                    File.Exists(
+                        backupWater))
+                {
+                    Directory.CreateDirectory(
+                        Path.GetDirectoryName(
+                            waterPath)!);
+
+                    File.Copy(
+                        backupWater,
+                        waterPath,
+                        overwrite:
+                            true);
+                }
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
+    }
+
+    private static NativeMapSnapshot
+        ReplaceLoadedTileContent(
+            NativeMapSnapshot snapshot,
+            OmsiTileReference tile,
+            OmsiTileContent content)
+    {
+        if (
+            !snapshot.Tiles.Any(
+                loaded =>
+                    loaded.Reference.X ==
+                        tile.X &&
+                    loaded.Reference.Y ==
+                        tile.Y))
+        {
+            return snapshot;
+        }
+
+        return snapshot with
+        {
+            Tiles =
+                snapshot.Tiles
+                    .Select(
+                        loaded =>
+                            loaded.Reference.X ==
+                                tile.X &&
+                            loaded.Reference.Y ==
+                                tile.Y
+                                ? new NativeLoadedTile(
+                                    loaded.Reference,
+                                    content)
+                                : loaded)
+                    .ToArray()
+        };
+    }
+
     public async Task<NativeTileCreateResult>
         CreateTileFromTemplateAsync(
             int tileX,
