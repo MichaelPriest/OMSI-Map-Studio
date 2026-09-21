@@ -766,11 +766,11 @@ WGS84 coordinates are projected through the same `.mapstudio/georeference.json` 
 
 **Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled.
 
-**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes plus `natural=tree_row` and `barrier=hedge` ways. `species`, `genus`, `leaf_type`, and `name` are preserved when present.
+**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes, `natural=tree_row` and `barrier=hedge` ways, plus closed `natural=wood`, `landuse=forest`, and `natural=scrub` ways. `species`, `genus`, `leaf_type`, and `name` are preserved when present.
 
-Tree rows and hedges use the same georeference anchor and are sampled into regular 4 m placement points at this stage. The dialog lets the user choose **two real SCOs** already indexed in the Vegetation category: one for trees/tree rows and one for shrubs/hedges. The viewport previews those points on loaded terrain; confirmation aligns every placement to the real terrain height and writes both groups through one safe multi-batch transaction with backup. The operational limit remains 256 selected points per execution, and varied rotation remains optional and deterministic per OSM ID/sample.
+Tree rows and hedges use the same georeference anchor and are sampled into regular 4 m placement points. Forest/wood areas use deterministic scattering at roughly 14 m spacing and scrub areas at 7 m, while every generated point remains inside the projected OSM polygon. The dialog lets the user choose **two real SCOs** already indexed in the Vegetation category: one for trees/tree rows/forest and one for shrubs/hedges/scrub. The viewport previews those points on loaded terrain; confirmation aligns every placement to the real terrain height and writes both groups through one safe multi-batch transaction with backup. The operational limit remains 256 selected points per execution, and varied rotation remains optional and deterministic per OSM ID/sample.
 
-Forest/wood areas and automatic species-to-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
+Forest multipolygon relations and automatic species-to-specific-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
 
 ### OMSI attachments
 
