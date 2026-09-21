@@ -17674,7 +17674,7 @@ public sealed partial class MainWindow : Window
                     Title =
                         "Footprint real",
                     Message =
-                        "O O3D preserva o contorno do way OSM e a altura/andares quando disponíveis. Nesta primeira versão do footprint irregular, o topo é extrudado plano; os metadados de roof:shape/roof:height permanecem preservados para evolução do telhado procedural."
+                        "O O3D preserva o contorno OSM e a altura/andares quando disponíveis. Gable e Shed são gerados em footprints quadriláteros; Hip/Pyramidal também é gerado em footprints convexos com 3 ou mais lados. Footprints côncavos continuam com topo plano quando a forma de roof não puder ser construída com segurança."
                 });
 
             var dialog =
