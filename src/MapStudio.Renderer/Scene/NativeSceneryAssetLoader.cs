@@ -439,6 +439,8 @@ public sealed class NativeSceneryAssetLoader
                 metadata.LightPoints,
             TrafficLightControllers =
                 metadata.TrafficLightControllers,
+            Paths =
+                metadata.Paths,
             IsTrafficLightObject =
                 metadata.IsTrafficLightObject,
             UsesLightMapMapping =

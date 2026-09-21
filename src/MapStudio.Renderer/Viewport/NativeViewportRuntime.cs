@@ -2605,7 +2605,8 @@ public sealed class NativeViewportRuntime : IDisposable
             new NativeTrafficPathGeometryBuilder()
                 .Build(
                     Scene,
-                    _splineAssets);
+                    _splineAssets,
+                    _sceneryAssets);
 
         var sceneryLightGeometry =
             new NativeSceneryLightGeometryBuilder()

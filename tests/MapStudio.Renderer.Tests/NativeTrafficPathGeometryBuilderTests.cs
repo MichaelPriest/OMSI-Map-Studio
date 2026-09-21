@@ -113,4 +113,109 @@ public sealed class NativeTrafficPathGeometryBuilderTests
                     vertex.Position.Y >
                     0.1f));
     }
+    [Fact]
+    public void BuildAddsCrossingPathsFromSceneryObjects()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var placed =
+            new OmsiPlacedObject(
+                "0",
+                @"Sceneryobjects\Crossings\x.sco",
+                50,
+                10,
+                20,
+                0,
+                0,
+                0,
+                0,
+                []);
+
+        var scene =
+            new NativeSceneBuilder()
+                .Build(
+                    [
+                        new NativeSceneTile(
+                            tile,
+                            new OmsiTileContent(
+                                new OmsiTileSummary(
+                                    true,
+                                    1,
+                                    0,
+                                    0),
+                                [placed],
+                                []))
+                    ],
+                    new PickingRegistry<object>());
+
+        var asset =
+            new NativeSceneryAsset(
+                placed.SceneryObjectPath,
+                @"C:\OMSI\Sceneryobjects\Crossings\x.sco",
+                [],
+                null,
+                false,
+                null)
+            {
+                Paths =
+                    [
+                        new OmsiSceneryPathDefinition(
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            10,
+                            0,
+                            0,
+                            0,
+                            3,
+                            0,
+                            0,
+                            1,
+                            null,
+                            false)
+                    ]
+            };
+
+        var result =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSplineAsset>(
+                            StringComparer.OrdinalIgnoreCase),
+                    new Dictionary<
+                        string,
+                        NativeSceneryAsset>(
+                            StringComparer.OrdinalIgnoreCase)
+                    {
+                        [placed.SceneryObjectPath] =
+                            asset
+                    });
+
+        Assert.Equal(
+            1,
+            result.PathCount);
+
+        Assert.True(
+            result.LineCount >
+            6);
+
+        Assert.Contains(
+            result.Vertices,
+            vertex =>
+                vertex.Position.X >
+                    9.8f &&
+                vertex.Position.X <
+                    10.2f &&
+                vertex.Position.Z >
+                    19.8f);
+    }
+
 }

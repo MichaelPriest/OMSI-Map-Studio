@@ -60,6 +60,10 @@ public sealed record NativeSceneryAsset(
         TrafficLightControllers { get; init; } =
             Array.Empty<OmsiTrafficLightController>();
 
+    public IReadOnlyList<OmsiSceneryPathDefinition>
+        Paths { get; init; } =
+            Array.Empty<OmsiSceneryPathDefinition>();
+
     public bool IsTrafficLightObject { get; init; }
 
     public bool UsesLightMapMapping { get; init; }
