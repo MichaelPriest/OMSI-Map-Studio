@@ -68,6 +68,8 @@ public sealed class OmsiNativeSession
 
     public NativeMapSnapshot? CurrentMap { get; private set; }
 
+    public string? LastBackupDirectory { get; private set; }
+
     public int PendingTransformCount =>
         _pendingTransforms.Count;
 
@@ -745,6 +747,9 @@ public sealed class OmsiNativeSession
                 ],
                 cancellationToken)
             .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
 
         if (
             snapshot.Tiles.Any(
@@ -2173,6 +2178,9 @@ public sealed class OmsiNativeSession
                 cancellationToken)
             .ConfigureAwait(false);
 
+        LastBackupDirectory =
+            backupRoot;
+
         var refreshedByPath =
             new Dictionary<
                 string,
@@ -2566,6 +2574,9 @@ public sealed class OmsiNativeSession
                 cancellationToken)
             .ConfigureAwait(false);
 
+        LastBackupDirectory =
+            backupRoot;
+
         var refreshedByPath =
             new Dictionary<
                 string,
@@ -2806,25 +2817,31 @@ public sealed class OmsiNativeSession
                         request.Bank,
                         extraValues));
 
-        var backupDirectory =
+        var backupRoot =
             Path.Combine(
-                snapshot.Map
-                    .DirectoryPath,
-                ".mapstudio-backups");
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                DateTimeOffset.UtcNow.ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture) +
+                "-native-object-" +
+                Guid.NewGuid().ToString("N"));
+
+        var relativeTarget =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                targetPath);
+
+        if (!IsSafeRelativePath(relativeTarget))
+        {
+            throw new InvalidDataException(
+                "placementTilePathInvalid");
+        }
 
         var backupPath =
             Path.Combine(
-                backupDirectory,
-                Path.GetFileName(
-                    targetPath) +
-                "." +
-                DateTime.UtcNow
-                    .ToString(
-                        "yyyyMMdd-HHmmssfff") +
-                "." +
-                Guid.NewGuid()
-                    .ToString("N") +
-                ".bak");
+                backupRoot,
+                relativeTarget);
 
         await SafeFileTransaction
             .WriteAllAsync(
@@ -2836,6 +2853,9 @@ public sealed class OmsiNativeSession
                 ],
                 cancellationToken)
             .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
 
         var refreshedContent =
             await _tileReader
@@ -3017,6 +3037,16 @@ public sealed class OmsiNativeSession
 
         var targetBytes =
             insertion.Bytes;
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                DateTimeOffset.UtcNow.ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture) +
+                "-native-spline-" +
+                Guid.NewGuid().ToString("N"));
 
         var writes =
             new List<PendingFileWrite>();
@@ -3237,18 +3267,22 @@ public sealed class OmsiNativeSession
             writes.Add(
                 new PendingFileWrite(
                     pair.Key,
-                    CreateNativeBackupPath(
-                        snapshot.Map.DirectoryPath,
-                        pair.Key),
+                    Path.Combine(
+                        backupRoot,
+                        Path.GetRelativePath(
+                            snapshot.Map.DirectoryPath,
+                            pair.Key)),
                     bytes));
         }
 
         writes.Add(
             new PendingFileWrite(
                 targetPath,
-                CreateNativeBackupPath(
-                    snapshot.Map.DirectoryPath,
-                    targetPath),
+                Path.Combine(
+                    backupRoot,
+                    Path.GetRelativePath(
+                        snapshot.Map.DirectoryPath,
+                        targetPath)),
                 targetBytes));
 
         await SafeFileTransaction
@@ -3256,6 +3290,9 @@ public sealed class OmsiNativeSession
                 writes,
                 cancellationToken)
             .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
 
         var refreshed =
             new List<NativeLoadedTile>(
