@@ -223,11 +223,20 @@ public sealed class OmsiTileReader
             ReadAttachments(document);
 
         var attachmentCount =
-            attachments.Count(
-                attachment =>
-                    attachment.Kind !=
-                    OmsiAttachmentKind
-                        .ObjectAttachment);
+            document.Sections.Count(
+                section =>
+                    section.Keyword.Equals(
+                        "splineAttachement",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    section.Keyword.Equals(
+                        "splineAttachment",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    section.Keyword.Equals(
+                        "splineAttachement_repeater",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    section.Keyword.Equals(
+                        "splineAttachment_repeater",
+                        StringComparison.OrdinalIgnoreCase));
 
         var splineCount =
             document.Sections.Count(
