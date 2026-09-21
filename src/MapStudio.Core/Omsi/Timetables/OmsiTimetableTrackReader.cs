@@ -76,25 +76,35 @@ public sealed class OmsiTimetableTrackReader
                     7);
 
             if (
-                data.Count < 6 ||
+                data.Count < 2 ||
                 !int.TryParse(
                     data[0],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var id) ||
-                !int.TryParse(
+                    out var id))
+            {
+                continue;
+            }
+
+            var line2 =
+                data[1];
+
+            var tileIndex = -1;
+
+            if (data.Count >= 3)
+            {
+                int.TryParse(
                     data[2],
                     NumberStyles.Integer,
                     CultureInfo.InvariantCulture,
-                    out var tileIndex))
-            {
-                continue;
+                    out tileIndex);
             }
 
             double? length =
                 null;
 
             if (
+                data.Count >= 5 &&
                 double.TryParse(
                     data[4],
                     NumberStyles.Float,
@@ -113,11 +123,15 @@ public sealed class OmsiTimetableTrackReader
                         lines,
                         index - 1),
                     id,
-                    data[1],
+                    line2,
                     tileIndex,
-                    data[3],
+                    data.Count > 3
+                        ? data[3]
+                        : string.Empty,
                     length,
-                    data[5],
+                    data.Count > 5
+                        ? data[5]
+                        : string.Empty,
                     data.Count > 6
                         ? data[6]
                         : null));

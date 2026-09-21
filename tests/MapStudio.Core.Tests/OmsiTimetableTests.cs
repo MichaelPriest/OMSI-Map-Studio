@@ -357,4 +357,68 @@ public sealed class OmsiTimetableTests
         }
     }
 
+    [Fact]
+    public async Task ReaderAcceptsCompactLegacyTrackEntries()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-ttr-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        Directory.CreateDirectory(
+            root);
+
+        var path =
+            Path.Combine(
+                root,
+                "Legacy.ttr");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                path,
+                "-----------------------\r\n" +
+                "Time Table Track File\r\n" +
+                "-----------------------\r\n\r\n" +
+                "Created\r\nDate\r\n\r\n" +
+                "0:\r\n" +
+                "[track_entry]\r\n" +
+                "156078\r\n1\r\n\r\n" +
+                "1:\r\n" +
+                "[track_entry]\r\n" +
+                "191432\r\n0\r\n",
+                Encoding.Latin1);
+
+            var track =
+                await new OmsiTimetableTrackReader()
+                    .ReadAsync(
+                        root,
+                        path);
+
+            Assert.Equal(
+                2,
+                track.Entries.Count);
+
+            Assert.Equal(
+                156078,
+                track.Entries[0].Id);
+
+            Assert.Equal(
+                "1",
+                track.Entries[0].Line2);
+
+            Assert.Equal(
+                -1,
+                track.Entries[0].TileIndex);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
 }
