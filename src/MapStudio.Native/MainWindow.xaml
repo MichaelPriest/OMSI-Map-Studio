@@ -128,6 +128,16 @@
             <MenuBar>
                 <MenuBarItem Title="Arquivo">
                     <MenuFlyoutItem
+                        Text="Workspace Map Studio"
+                        Click="OnOpenWorkspaceClick" />
+                    <MenuFlyoutItem
+                        Text="Novo mapa..."
+                        Click="OnCreateStandaloneMapClick" />
+                    <MenuFlyoutItem
+                        Text="Adicionar pasta de itens..."
+                        Click="OnAddAssetFolderClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
                         Text="Abrir OMSI..."
                         Click="OnOpenOmsiClick" />
                     <MenuFlyoutItem
@@ -385,8 +395,26 @@
                     Content="Rotacionar"
                     ToolTipService.ToolTip="Gizmo rotacionar (E)"
                     Click="OnRotateGizmoClick" />
+                <Border
+                    Padding="8,4"
+                    Background="#102C3E"
+                    BorderBrush="#315064"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <TextBlock
+                        x:Name="RootModeText"
+                        Text="WORKSPACE"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="#9FE4FF" />
+                </Border>
+                <Button
+                    Content="Workspace"
+                    ToolTipService.ToolTip="Voltar ao Workspace Map Studio"
+                    Click="OnOpenWorkspaceClick" />
                 <Button
                     Content="Abrir OMSI"
+                    ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
                     Click="OnOpenOmsiClick" />
                 <Button
                     x:Name="OpenMapButton"
@@ -450,7 +478,7 @@
                     <StackPanel Grid.Row="3"
                                 Spacing="6">
                         <TextBlock x:Name="RootText"
-                                   Text="Nenhuma instalação OMSI selecionada."
+                                   Text="Inicializando Workspace Map Studio..."
                                    TextWrapping="Wrap"
                                    Foreground="#9FB5C5" />
                         <TextBlock x:Name="MapText"

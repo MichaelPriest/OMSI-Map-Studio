@@ -6,12 +6,20 @@ using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Timetables;
+using MapStudio.Core.Workspace;
 using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
 using System.Text.Json;
 
 namespace MapStudio.Native.Services;
+
+public enum NativeContentRootKind
+{
+    None = 0,
+    StandaloneWorkspace = 1,
+    OmsiInstallation = 2
+}
 
 public sealed record NativeLoadedTile(
     OmsiTileReference Reference,
@@ -62,7 +70,20 @@ public sealed class OmsiNativeSession
     private OmsiAssetIndex?
         _assetIndex;
 
+    private readonly
+        MapStudioWorkspaceBootstrapper
+        _workspaceBootstrapper =
+            new();
+
     public string? OmsiRootPath { get; private set; }
+
+    public NativeContentRootKind
+        ContentRootKind { get; private set; }
+
+    public bool IsStandaloneWorkspace =>
+        ContentRootKind ==
+        NativeContentRootKind
+            .StandaloneWorkspace;
 
     public IReadOnlyList<OmsiMapDescriptor> Maps { get; private set; } =
         Array.Empty<OmsiMapDescriptor>();
@@ -86,7 +107,7 @@ public sealed class OmsiNativeSession
         var index =
             _assetIndex ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         return
             await index
@@ -109,7 +130,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         var index =
             _assetIndex ??
@@ -134,7 +155,7 @@ public sealed class OmsiNativeSession
         var index =
             _assetIndex ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         return
             await index
@@ -1380,7 +1401,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -1768,7 +1789,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -2119,7 +2140,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         directoryName =
             directoryName.Trim();
@@ -2698,7 +2719,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -3081,7 +3102,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -3565,7 +3586,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -3953,7 +3974,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (_pendingTransforms.Count > 0)
         {
@@ -5409,7 +5430,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
+                "Nenhuma fonte de conteúdo ativa.");
 
         if (
             _pendingTransforms.Count >
@@ -7704,6 +7725,116 @@ public sealed class OmsiNativeSession
 
     public async Task<
         IReadOnlyList<OmsiMapDescriptor>>
+        SelectStandaloneWorkspaceAsync(
+            string? rootPath = null,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var requestedRoot =
+            string.IsNullOrWhiteSpace(
+                rootPath)
+                ? MapStudioWorkspaceBootstrapper
+                    .GetDefaultWorkspacePath()
+                : rootPath;
+
+        var info =
+            await _workspaceBootstrapper
+                .EnsureAsync(
+                    requestedRoot!,
+                    seedStarterAssets:
+                        true,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return await SelectContentRootAsync(
+                info.RootPath,
+                NativeContentRootKind
+                    .StandaloneWorkspace,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<NativeMapSnapshot>
+        CreateStandaloneMapAsync(
+            string directoryName,
+            string displayName,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (!IsStandaloneWorkspace)
+        {
+            await SelectStandaloneWorkspaceAsync(
+                    cancellationToken:
+                        cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Workspace Map Studio não disponível.");
+
+        var mapDirectory =
+            await _workspaceBootstrapper
+                .CreateBlankMapAsync(
+                    root,
+                    directoryName,
+                    displayName,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        Maps =
+            await new OmsiMapCatalog()
+                .DiscoverAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return await OpenMapAsync(
+                mapDirectory,
+                loadFullMap:
+                    true,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<MapStudioWorkspaceImportResult>
+        ImportWorkspaceAssetFolderAsync(
+            string sourcePath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (!IsStandaloneWorkspace)
+        {
+            await SelectStandaloneWorkspaceAsync(
+                    cancellationToken:
+                        cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Workspace Map Studio não disponível.");
+
+        var result =
+            await _workspaceBootstrapper
+                .ImportAssetFolderAsync(
+                    root,
+                    sourcePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        await RefreshAssetLibraryAsync(
+                cancellationToken:
+                    cancellationToken)
+            .ConfigureAwait(false);
+
+        return result;
+    }
+
+    public async Task<
+        IReadOnlyList<OmsiMapDescriptor>>
         SelectOmsiRootAsync(
             string rootPath,
             CancellationToken cancellationToken =
@@ -7728,8 +7859,35 @@ public sealed class OmsiNativeSession
                 mapsDirectory))
         {
             throw new InvalidDataException(
-                @"A pasta selecionada não contém OMSI 2\maps.");
+                @"A pasta selecionada não contém a estrutura OMSI 2\maps.");
         }
+
+        return await SelectContentRootAsync(
+                normalized,
+                NativeContentRootKind
+                    .OmsiInstallation,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private async Task<
+        IReadOnlyList<OmsiMapDescriptor>>
+        SelectContentRootAsync(
+            string rootPath,
+            NativeContentRootKind kind,
+            CancellationToken cancellationToken)
+    {
+        var normalized =
+            Path.GetFullPath(
+                rootPath)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        Directory.CreateDirectory(
+            Path.Combine(
+                normalized,
+                "maps"));
 
         var maps =
             await new OmsiMapCatalog()
@@ -7751,10 +7909,20 @@ public sealed class OmsiNativeSession
                 cancellationToken)
             .ConfigureAwait(false);
 
-        OmsiRootPath = normalized;
-        Maps = maps;
-        CurrentMap = null;
-        _pendingTransforms.Clear();
+        OmsiRootPath =
+            normalized;
+
+        ContentRootKind =
+            kind;
+
+        Maps =
+            maps;
+
+        CurrentMap =
+            null;
+
+        _pendingTransforms
+            .Clear();
 
         return maps;
     }
@@ -7768,7 +7936,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         var maps =
             await new OmsiMapCatalog()
@@ -7803,7 +7971,7 @@ public sealed class OmsiNativeSession
         var root =
             OmsiRootPath ??
             throw new InvalidOperationException(
-                "Selecione primeiro a instalação do OMSI 2.");
+                "Selecione primeiro o Workspace Map Studio ou uma instalação do OMSI 2.");
 
         ArgumentException.ThrowIfNullOrWhiteSpace(
             mapDirectory);

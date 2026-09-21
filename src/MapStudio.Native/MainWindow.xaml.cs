@@ -340,6 +340,7 @@ public sealed partial class MainWindow : Window
     private bool _resizingInspectorPanel;
     private bool _fullMapMode = true;
     private bool _mapLoadModeChanging;
+    private bool _standaloneWorkspaceInitialized;
 
     private double _explorerPanelWidth =
         300;
@@ -693,6 +694,9 @@ public sealed partial class MainWindow : Window
         MapToolPaletteTranslate.Y =
             _assetLibraryState
                 .ToolPaletteOffsetY;
+
+        Activated +=
+            OnMainWindowActivatedInitializeWorkspace;
     }
 
     private void OnExplorerSearchTextChanged(
@@ -12189,6 +12193,277 @@ public sealed partial class MainWindow : Window
             "Ferramenta rotacionar ativa.";
     }
 
+    private async void
+        OnMainWindowActivatedInitializeWorkspace(
+            object sender,
+            WindowActivatedEventArgs e)
+    {
+        if (_standaloneWorkspaceInitialized)
+        {
+            return;
+        }
+
+        _standaloneWorkspaceInitialized =
+            true;
+
+        await ActivateStandaloneWorkspaceAsync(
+            announce:
+                false);
+    }
+
+    private async Task
+        ActivateStandaloneWorkspaceAsync(
+            bool announce)
+    {
+        try
+        {
+            StatusText.Text =
+                "Inicializando Workspace Map Studio...";
+
+            var maps =
+                await _session
+                    .SelectStandaloneWorkspaceAsync();
+
+            var root =
+                _session.OmsiRootPath!;
+
+            RootModeText.Text =
+                "WORKSPACE";
+
+            RootText.Text =
+                $"Workspace: {root}\nMapas: {maps.Count}";
+
+            OpenMapButton.IsEnabled =
+                true;
+
+            OpenMapMenuItem.IsEnabled =
+                true;
+
+            RefreshMapCatalogMenuItem.IsEnabled =
+                true;
+
+            RefreshLibraryButton.IsEnabled =
+                true;
+
+            var progress =
+                new Progress<
+                    OmsiAssetIndexProgress>(
+                    value =>
+                    {
+                        LibraryStatusText.Text =
+                            $"Indexando Workspace... {value.CandidateFiles} assets";
+                    });
+
+            await _session
+                .RefreshAssetLibraryAsync(
+                    progress);
+
+            await LoadAssetLibraryAsync();
+
+            StatusText.Text =
+                announce
+                    ? "Workspace Map Studio ativo. O OMSI é opcional."
+                    : "Workspace Map Studio pronto · editor standalone ativo.";
+        }
+        catch (Exception exception)
+        {
+            RootModeText.Text =
+                "WORKSPACE !";
+
+            StatusText.Text =
+                $"Falha ao inicializar Workspace: {exception.Message}";
+        }
+    }
+
+    private async void OnOpenWorkspaceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as alterações pendentes antes de trocar para o Workspace.";
+
+            return;
+        }
+
+        await ActivateStandaloneWorkspaceAsync(
+            announce:
+                true);
+    }
+
+    private async void OnCreateStandaloneMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as alterações pendentes antes de criar outro mapa.";
+
+            return;
+        }
+
+        var directoryBox =
+            new TextBox
+            {
+                Header =
+                    "Pasta do projeto",
+                PlaceholderText =
+                    "Ex.: Minha_Cidade"
+            };
+
+        var displayNameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do mapa",
+                PlaceholderText =
+                    "Ex.: Minha Cidade"
+            };
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "O mapa será criado no Workspace Map Studio com terreno inicial e formato compatível com o pipeline OMSI. O jogo não precisa estar instalado.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10,
+                MinWidth =
+                    420
+            };
+
+        panel.Children.Add(
+            directoryBox);
+
+        panel.Children.Add(
+            displayNameBox);
+
+        panel.Children.Add(
+            note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Novo mapa",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar e abrir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Criando mapa no Workspace...";
+
+            if (!_session.IsStandaloneWorkspace)
+            {
+                await ActivateStandaloneWorkspaceAsync(
+                    announce:
+                        false);
+            }
+
+            var snapshot =
+                await _session
+                    .CreateStandaloneMapAsync(
+                        directoryBox.Text,
+                        displayNameBox.Text);
+
+            _fullMapMode =
+                true;
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            RootModeText.Text =
+                "WORKSPACE";
+
+            RootText.Text =
+                $"Workspace: {_session.OmsiRootPath}\nMapas: {_session.Maps.Count}";
+
+            StatusText.Text =
+                $"Mapa “{snapshot.Map.DisplayName}” criado e aberto sem depender do OMSI.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar mapa: {exception.Message}";
+        }
+    }
+
+    private async void OnAddAssetFolderClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var source =
+            await PickFolderAsync();
+
+        if (string.IsNullOrWhiteSpace(
+                source))
+        {
+            return;
+        }
+
+        try
+        {
+            if (!_session.IsStandaloneWorkspace)
+            {
+                await ActivateStandaloneWorkspaceAsync(
+                    announce:
+                        false);
+            }
+
+            StatusText.Text =
+                "Importando pasta de itens para o Workspace...";
+
+            var result =
+                await _session
+                    .ImportWorkspaceAssetFolderAsync(
+                        source);
+
+            await LoadAssetLibraryAsync();
+
+            StatusText.Text =
+                $"Pasta adicionada: {result.CopiedFiles} arquivo(s) importado(s) em {result.DestinationDirectories.Count} pacote(s).";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao adicionar pasta de itens: {exception.Message}";
+        }
+    }
+
     private async void OnOpenOmsiClick(
         object sender,
         RoutedEventArgs e)
@@ -12213,8 +12488,11 @@ public sealed partial class MainWindow : Window
                     .SelectOmsiRootAsync(
                         root);
 
+            RootModeText.Text =
+                "OMSI";
+
             RootText.Text =
-                $"OMSI: {root}\nMapas encontrados: {maps.Count}";
+                $"OMSI opcional: {root}\nMapas encontrados: {maps.Count}";
 
             OpenMapButton.IsEnabled =
                 true;
@@ -12231,7 +12509,7 @@ public sealed partial class MainWindow : Window
             await LoadAssetLibraryAsync();
 
             StatusText.Text =
-                "Instalação OMSI carregada pelo Core nativo.";
+                "Fonte OMSI ativa. Use “Workspace” para voltar ao editor standalone.";
         }
         catch (Exception exception)
         {
@@ -14330,7 +14608,7 @@ public sealed partial class MainWindow : Window
         if (root is null)
         {
             StatusText.Text =
-                "Selecione primeiro a instalação do OMSI.";
+                "Ative o Workspace Map Studio ou abra uma instalação do OMSI.";
 
             return;
         }
@@ -14373,7 +14651,7 @@ public sealed partial class MainWindow : Window
         if (_session.OmsiRootPath is null)
         {
             StatusText.Text =
-                "Selecione primeiro a instalação do OMSI.";
+                "Ative o Workspace Map Studio ou abra uma instalação do OMSI.";
 
             return;
         }
@@ -14566,7 +14844,7 @@ public sealed partial class MainWindow : Window
                     null)
             {
                 StatusText.Text =
-                    "Selecione primeiro a instalação do OMSI.";
+                    "Ative o Workspace Map Studio ou abra uma instalação do OMSI.";
 
                 return;
             }
