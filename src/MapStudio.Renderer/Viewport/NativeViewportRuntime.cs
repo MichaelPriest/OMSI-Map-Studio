@@ -1046,6 +1046,104 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool TryFinishSceneryPlacementAtWorldPoint(
+        Vector3 worldPoint,
+        double rotation,
+        out NativeSceneryPlacementRequest?
+            request)
+    {
+        ThrowIfDisposed();
+
+        request =
+            null;
+
+        if (
+            !_sceneryPlacementActive ||
+            Scene is null ||
+            string.IsNullOrWhiteSpace(
+                _placementSceneryPath) ||
+            !float.IsFinite(
+                worldPoint.X) ||
+            !float.IsFinite(
+                worldPoint.Z))
+        {
+            return false;
+        }
+
+        var point =
+            worldPoint;
+
+        var terrainHeight =
+            NativeTerrainSampler
+                .GetHeightAtWorldPoint(
+                    Scene,
+                    point.X,
+                    point.Z);
+
+        point.Y =
+            _placementZOverride.HasValue
+                ? _placementUsesAbsoluteHeight
+                    ? (float)
+                        _placementZOverride.Value
+                    : (float)(
+                        terrainHeight +
+                        _placementZOverride.Value)
+                : (float)terrainHeight;
+
+        var tileX =
+            (int)Math.Floor(
+                point.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                point.Z /
+                300.0f);
+
+        var tile =
+            Scene.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            tileX &&
+                        item.Reference.Y ==
+                            tileY);
+
+        if (tile is null)
+        {
+            return false;
+        }
+
+        _placementRotation =
+            rotation;
+
+        request =
+            new NativeSceneryPlacementRequest(
+                tile.Reference,
+                _placementSceneryPath,
+                point.X -
+                    tileX *
+                    300.0,
+                point.Z -
+                    tileY *
+                    300.0,
+                _placementZOverride ??
+                    (
+                        _placementUsesAbsoluteHeight
+                            ? point.Y
+                            : 0.0
+                    ),
+                rotation,
+                _placementPitch,
+                _placementBank,
+                point,
+                _placementUsesAbsoluteHeight);
+
+        CancelSceneryPlacement();
+
+        return true;
+    }
+
     public void CancelSceneryPlacement()
     {
         if (!_sceneryPlacementActive)

@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
@@ -487,6 +488,23 @@ public sealed partial class NativeViewport : UserControl
         }
 
         return result;
+    }
+
+    public bool TryFinishSceneryPlacementAtWorldPoint(
+        Vector3 worldPoint,
+        double rotation,
+        out NativeSceneryPlacementRequest?
+            request)
+    {
+        request =
+            null;
+
+        return _runtime
+            ?.TryFinishSceneryPlacementAtWorldPoint(
+                worldPoint,
+                rotation,
+                out request) ??
+            false;
     }
 
     public void RestoreSceneView()

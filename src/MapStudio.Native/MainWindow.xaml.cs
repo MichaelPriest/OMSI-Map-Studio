@@ -96,6 +96,16 @@ public sealed partial class MainWindow : Window
     private bool _transportMode;
     private bool _trafficMode;
     private bool _validationMode;
+    private bool _junctionMode;
+
+    private IReadOnlyList<
+        NativeJunctionSuggestion>
+        _junctionSuggestions =
+            Array.Empty<
+                NativeJunctionSuggestion>();
+
+    private NativeJunctionSuggestion?
+        _junctionPlacementTarget;
 
     private IReadOnlyList<
         ValidationExplorerItem>
@@ -406,7 +416,11 @@ public sealed partial class MainWindow : Window
         object sender,
         TextChangedEventArgs e)
     {
-        if (_validationMode)
+        if (_junctionMode)
+        {
+            RefreshJunctionSuggestionFilter();
+        }
+        else if (_validationMode)
         {
             RefreshValidationFilter();
         }
@@ -467,6 +481,12 @@ public sealed partial class MainWindow : Window
         _validationMode =
             false;
 
+        _junctionMode =
+            false;
+
+        _junctionPlacementTarget =
+            null;
+
         _trafficPreviewTimer.Stop();
 
         TrafficControlPanel.Visibility =
@@ -502,6 +522,12 @@ public sealed partial class MainWindow : Window
 
         _validationMode =
             false;
+
+        _junctionMode =
+            false;
+
+        _junctionPlacementTarget =
+            null;
 
         _trafficPreviewTimer.Stop();
 
@@ -1410,6 +1436,34 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (
+                asset.Kind ==
+                    OmsiAssetKind.SceneryObject &&
+                _junctionPlacementTarget is
+                    { } junctionTarget &&
+                Viewport
+                    .TryFinishSceneryPlacementAtWorldPoint(
+                        junctionTarget.WorldPoint,
+                        junctionTarget.Rotation,
+                        out var junctionRequest) &&
+                junctionRequest is not
+                    null)
+            {
+                _junctionPlacementTarget =
+                    null;
+
+                PlaceAssetButton.Content =
+                    "Posicionar no mapa";
+
+                await HandleSceneryPlacementAsync(
+                    junctionRequest);
+
+                StatusText.Text +=
+                    $" · alvo geométrico #{junctionTarget.SplineA}/#{junctionTarget.SplineB}.";
+
+                return;
+            }
+
             PlaceAssetButton.Content =
                 "Cancelar posicionamento";
 
@@ -1994,8 +2048,27 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
+        if (_synchronizingExplorer)
+        {
+            return;
+        }
+
         if (
-            _synchronizingExplorer ||
+            ExplorerListView.SelectedItem is
+                NativeJunctionSuggestion
+                    suggestion)
+        {
+            Viewport.FocusWorldPoint(
+                suggestion.WorldPoint,
+                55);
+
+            StatusText.Text =
+                $"Encontro #{suggestion.SplineA}/#{suggestion.SplineB} · tile {suggestion.TileX},{suggestion.TileY} · duplo clique para usar como alvo.";
+
+            return;
+        }
+
+        if (
             ExplorerListView.SelectedItem is not
                 NativeExplorerItem item)
         {
@@ -2007,10 +2080,66 @@ public sealed partial class MainWindow : Window
             focus: false);
     }
 
-    private void OnExplorerDoubleTapped(
+    private async void OnExplorerDoubleTapped(
         object sender,
         DoubleTappedRoutedEventArgs e)
     {
+        if (
+            ExplorerListView.SelectedItem is
+                NativeJunctionSuggestion
+                    suggestion)
+        {
+            _junctionPlacementTarget =
+                suggestion;
+
+            Viewport.FocusWorldPoint(
+                suggestion.WorldPoint,
+                55);
+
+            ObjectPlacementModeComboBox
+                .SelectedIndex =
+                0;
+
+            await ActivateLibraryToolAsync(
+                1,
+                null,
+                $"Alvo de cruzamento definido entre splines #{suggestion.SplineA} e #{suggestion.SplineB}. Escolha um SCO compatível e clique Posicionar.");
+
+            var junctionIndex =
+                _libraryGroupOptions
+                    .Select(
+                        (option, index) =>
+                            (
+                                option,
+                                index
+                            ))
+                    .FirstOrDefault(
+                        pair =>
+                            pair.option.Group ==
+                            OmsiAssetLibraryGroup
+                                .Junctions)
+                    .index;
+
+            if (
+                junctionIndex >= 0 &&
+                junctionIndex <
+                    _libraryGroupOptions.Count)
+            {
+                LibraryViewComboBox
+                    .SelectedIndex =
+                    0;
+
+                LibraryGroupComboBox
+                    .SelectedIndex =
+                    junctionIndex;
+
+                RefreshLibrarySubcategoryOptions();
+                RefreshLibraryFilter();
+            }
+
+            return;
+        }
+
         if (
             ExplorerListView.SelectedItem is
                 NativeExplorerItem item)
@@ -3629,6 +3758,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        _junctionPlacementTarget =
+            null;
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -3642,6 +3774,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        _junctionPlacementTarget =
+            null;
+
         SetSelectionModeFromShortcut(
             2);
 
@@ -3651,23 +3786,121 @@ public sealed partial class MainWindow : Window
             "Ruas/Splines: escolha uma SLI e use o construtor reto ou curvo.");
     }
 
-    private async void OnToolCrossingsClick(
+    private void OnToolCrossingsClick(
         object sender,
         RoutedEventArgs e)
     {
-        SetSelectionModeFromShortcut(
-            1);
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Cruzamentos: abra um mapa primeiro.";
 
-        await ActivateLibraryToolAsync(
-            1,
-            "cross",
-            "Cruzamentos: mostrando objetos de cenário; refine a busca pelo nome do pacote quando necessário.");
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.RestoreSceneView();
+
+        SetSelectionModeFromShortcut(
+            2);
+
+        _libraryMode =
+            false;
+
+        _transportMode =
+            false;
+
+        _trafficMode =
+            false;
+
+        _validationMode =
+            false;
+
+        _junctionMode =
+            true;
+
+        _junctionPlacementTarget =
+            null;
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        ExplorerListView.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar encontros de splines...";
+
+        ExplorerSearchBox.Text =
+            string.Empty;
+
+        _junctionSuggestions =
+            Viewport
+                .GetJunctionSuggestions();
+
+        RefreshJunctionSuggestionFilter();
+
+        StatusText.Text =
+            _junctionSuggestions.Count == 0
+                ? "Assistente de cruzamentos: nenhum encontro geométrico detectado nas splines carregadas."
+                : $"Assistente de cruzamentos: {_junctionSuggestions.Count} encontro(s) detectado(s). Selecione para focar; duplo clique para usar o alvo.";
+    }
+
+    private void RefreshJunctionSuggestionFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            NativeJunctionSuggestion>
+            items =
+                _junctionSuggestions;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.DisplayText
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase) ||
+                        item.SplineA
+                            .ToString()
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase) ||
+                        item.SplineB
+                            .ToString()
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase));
+        }
+
+        ExplorerListView.ItemsSource =
+            items.ToArray();
     }
 
     private void OnToolTerrainClick(
         object sender,
         RoutedEventArgs e)
     {
+        _junctionPlacementTarget =
+            null;
+
         SetSelectionModeFromShortcut(
             3);
 
@@ -3679,6 +3912,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        _junctionPlacementTarget =
+            null;
+
         await ActivateLibraryToolAsync(
             1,
             "water",
@@ -4991,6 +5227,9 @@ public sealed partial class MainWindow : Window
             false;
 
         _validationMode =
+            false;
+
+        _junctionMode =
             false;
 
         _trafficPreviewTimer.Stop();
