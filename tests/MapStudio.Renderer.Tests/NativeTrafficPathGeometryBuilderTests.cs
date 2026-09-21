@@ -1,5 +1,6 @@
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using Xunit;
