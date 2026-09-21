@@ -5148,7 +5148,24 @@ public sealed partial class MainWindow : Window
         }
 
         ExplorerListView.ItemsSource =
-            items.ToArray();
+            items
+                .OrderBy(
+                    item =>
+                        item.Severity switch
+                        {
+                            "Erro" => 0,
+                            "Aviso" => 1,
+                            _ => 2
+                        })
+                .ThenBy(
+                    item =>
+                        item.Code,
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(
+                    item =>
+                        item.DisplayText,
+                    StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
     }
 
     private static async Task<IReadOnlyList<
@@ -5165,6 +5182,39 @@ public sealed partial class MainWindow : Window
             new Dictionary<
                 int,
                 List<string>>();
+
+        var missingSceneryDependencies =
+            new Dictionary<
+                string,
+                List<string>>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        var missingSplineDependencies =
+            new Dictionary<
+                string,
+                List<string>>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        static void RegisterMissingDependency(
+            Dictionary<
+                string,
+                List<string>> target,
+            string path,
+            string usage)
+        {
+            if (
+                !target.TryGetValue(
+                    path,
+                    out var values))
+            {
+                values = [];
+                target[path] =
+                    values;
+            }
+
+            values.Add(
+                usage);
+        }
 
         void RegisterId(
             int id,
@@ -5203,14 +5253,10 @@ public sealed partial class MainWindow : Window
                     !File.Exists(
                         fullPath))
                 {
-                    result.Add(
-                        new ValidationExplorerItem(
-                            "Erro",
-                            "missing-sco",
-                            $"ERRO · SCO ausente · #{item.ObjectId}",
-                            $"{item.SceneryObjectPath}\nTile {tile.Reference.X},{tile.Reference.Y}",
-                            OmsiAssetKind.SceneryObject,
-                            item.SceneryObjectPath));
+                    RegisterMissingDependency(
+                        missingSceneryDependencies,
+                        item.SceneryObjectPath,
+                        $"Objeto #{item.ObjectId} · tile {tile.Reference.X},{tile.Reference.Y}");
                 }
             }
 
@@ -5231,16 +5277,68 @@ public sealed partial class MainWindow : Window
                     !File.Exists(
                         fullPath))
                 {
-                    result.Add(
-                        new ValidationExplorerItem(
-                            "Erro",
-                            "missing-sli",
-                            $"ERRO · SLI ausente · #{item.SplineId}",
-                            $"{item.SplinePath}\nTile {tile.Reference.X},{tile.Reference.Y}",
-                            OmsiAssetKind.Spline,
-                            item.SplinePath));
+                    RegisterMissingDependency(
+                        missingSplineDependencies,
+                        item.SplinePath,
+                        $"Spline #{item.SplineId} · tile {tile.Reference.X},{tile.Reference.Y}");
                 }
             }
+        }
+
+        foreach (
+            var dependency in
+                missingSceneryDependencies
+                    .OrderBy(
+                        pair =>
+                            pair.Key,
+                        StringComparer.OrdinalIgnoreCase))
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "missing-sco",
+                    $"ERRO · SCO ausente · {Path.GetFileName(dependency.Key)} · {dependency.Value.Count} uso(s)",
+                    $"{dependency.Key}\n" +
+                    string.Join(
+                        "\n",
+                        dependency.Value
+                            .Take(12)) +
+                    (
+                        dependency.Value.Count >
+                            12
+                            ? $"\n… +{dependency.Value.Count - 12} uso(s)"
+                            : string.Empty
+                    ),
+                    OmsiAssetKind.SceneryObject,
+                    dependency.Key));
+        }
+
+        foreach (
+            var dependency in
+                missingSplineDependencies
+                    .OrderBy(
+                        pair =>
+                            pair.Key,
+                        StringComparer.OrdinalIgnoreCase))
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "missing-sli",
+                    $"ERRO · SLI ausente · {Path.GetFileName(dependency.Key)} · {dependency.Value.Count} uso(s)",
+                    $"{dependency.Key}\n" +
+                    string.Join(
+                        "\n",
+                        dependency.Value
+                            .Take(12)) +
+                    (
+                        dependency.Value.Count >
+                            12
+                            ? $"\n… +{dependency.Value.Count - 12} uso(s)"
+                            : string.Empty
+                    ),
+                    OmsiAssetKind.Spline,
+                    dependency.Key));
         }
 
         foreach (
