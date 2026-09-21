@@ -272,6 +272,9 @@
                         Text="Building Studio..."
                         Click="OnBuildingStudioClick" />
                     <MenuFlyoutItem
+                        Text="Importar edifícios OSM..."
+                        Click="OnImportOsmBuildingsClick" />
+                    <MenuFlyoutItem
                         Text="Instalar/atualizar Road Kit..."
                         Click="OnInstallRoadKitClick" />
                     <MenuFlyoutSubItem
