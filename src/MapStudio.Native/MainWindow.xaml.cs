@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Globalization;
 using MapStudio.Core.AI;
+using MapStudio.Core.Commercial;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
@@ -66,6 +67,11 @@ public sealed partial class MainWindow : Window
 
     private readonly OmsiNativeSession _session =
         new();
+
+    private MapStudioCommercialState
+        _commercialState =
+            MapStudioCommercialState
+                .DevelopmentPreview();
 
     private NativeAssetLibraryState
         _assetLibraryState =
@@ -12880,6 +12886,15 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .BuildingStudio,
+                "Building Studio"))
+        {
+            return;
+        }
+
         var root =
             _session.OmsiRootPath;
 
@@ -13208,6 +13223,95 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Building Studio falhou: {exception.Message}";
         }
+    }
+
+    private async void OnCommercialStatusClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var mode =
+            _commercialState
+                .EnforcementEnabled
+                ? "Cobrança/licença ativa"
+                : "Pré-lançamento · cobrança ainda não aplicada";
+
+        var status =
+            _commercialState
+                .Status
+                .ToString();
+
+        var content =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    480
+            };
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    mode,
+                FontSize =
+                    18,
+                FontWeight =
+                    Microsoft.UI.Text
+                        .FontWeights
+                        .SemiBold
+            });
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Estado: {status}\n" +
+                    "Billing planejado: Stripe via backend seguro.\n" +
+                    "O desktop não armazenará chave secreta da Stripe.\n" +
+                    "Checkout, portal do cliente, webhooks e entitlement serão validados no servidor.\n\n" +
+                    "Nesta fase de desenvolvimento todas as funções permanecem liberadas.",
+                TextWrapping =
+                    TextWrapping
+                        .Wrap
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Assinatura e licença",
+                Content =
+                    content,
+                CloseButtonText =
+                    "Fechar"
+            };
+
+        await dialog
+            .ShowAsync();
+    }
+
+    private bool EnsureCommercialFeature(
+        string entitlement,
+        string featureName)
+    {
+        var gate =
+            MapStudioFeatureGate
+                .Evaluate(
+                    _commercialState,
+                    entitlement);
+
+        if (gate.Allowed)
+        {
+            return true;
+        }
+
+        StatusText.Text =
+            $"{featureName}: assinatura/licença necessária.";
+
+        return false;
     }
 
     private async void OnRestoreBackupClick(

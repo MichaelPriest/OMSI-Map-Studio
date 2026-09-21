@@ -228,6 +228,11 @@
                         Text="Building Studio..."
                         Click="OnBuildingStudioClick" />
                 </MenuBarItem>
+                <MenuBarItem Title="Conta">
+                    <MenuFlyoutItem
+                        Text="Assinatura e licença..."
+                        Click="OnCommercialStatusClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Ajuda" />
             </MenuBar>
 
