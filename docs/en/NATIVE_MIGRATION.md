@@ -766,9 +766,11 @@ WGS84 coordinates are projected through the same `.mapstudio/georeference.json` 
 
 **Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled.
 
-**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes while preserving `species`, `genus`, `leaf_type`, and `name` when present. The user chooses a **real SCO** already indexed in the Vegetation category; the viewport previews placement points on loaded terrain and confirmation builds requests aligned to the real sampled terrain height. Persistence uses the existing safe batch pipeline, capped at 256 objects per operation, with a map backup before writing. Varied rotation is optional and deterministic by OSM ID.
+**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes plus `natural=tree_row` and `barrier=hedge` ways. `species`, `genus`, `leaf_type`, and `name` are preserved when present.
 
-Forest/wood areas, hedge ways, and automatic species-to-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
+Tree rows and hedges use the same georeference anchor and are sampled into regular 4 m placement points at this stage. The dialog lets the user choose **two real SCOs** already indexed in the Vegetation category: one for trees/tree rows and one for shrubs/hedges. The viewport previews those points on loaded terrain; confirmation aligns every placement to the real terrain height and writes both groups through one safe multi-batch transaction with backup. The operational limit remains 256 selected points per execution, and varied rotation remains optional and deterministic per OSM ID/sample.
+
+Forest/wood areas and automatic species-to-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
 
 ### OMSI attachments
 
