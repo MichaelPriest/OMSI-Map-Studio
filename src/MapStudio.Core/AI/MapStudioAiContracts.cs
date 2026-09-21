@@ -108,6 +108,13 @@ public sealed record MapStudioBuildingReferenceAnalysis(
     }
 }
 
+public enum MapStudioRoadReferenceCoordinateSpace
+{
+    NormalizedImage = 0,
+    ImagePixels = 1,
+    WorldMeters = 2
+}
+
 public sealed record MapStudioRoadPolylinePoint(
     double X,
     double Y);
@@ -126,7 +133,11 @@ public sealed record MapStudioRoadReferenceRequest(
 public sealed record MapStudioRoadReferenceAnalysis(
     IReadOnlyList<MapStudioRoadReferencePolyline> Roads,
     string? Notes,
-    double Confidence);
+    double Confidence,
+    MapStudioRoadReferenceCoordinateSpace CoordinateSpace =
+        MapStudioRoadReferenceCoordinateSpace.NormalizedImage,
+    int? ImageWidth = null,
+    int? ImageHeight = null);
 
 public interface IMapStudioAiProvider
 {
