@@ -407,7 +407,7 @@ public sealed class OmsiSceneryMaterialOverrideTests
             "255\n140\n20\n" +
             "0.25\n20\n50\n" +
             "NightLightA\n" +
-            "1\n0.1\n1\n0\n0.1\n0\n0.1\n" +
+            "1\n0.1\n1\n0\n0.1\n0\n" +
             "light.bmp\n";
 
         var metadata =
@@ -509,6 +509,70 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Equal(1, rail.SwitchDirection);
         Assert.Null(
             rail.TrafficLightIndex);
+    }
+
+    [Fact]
+    public void ReadMetadata_ParsesLegacyAndMapLights()
+    {
+        const string source =
+            "[light_enh]\n" +
+            "1\n2\n3\n255\n200\n100\n0.4\n" +
+            "NightLightA\n1\n0.1\n1\n0.2\nflare.bmp\n" +
+            "[maplight]\n" +
+            "4\n5\n6\n255\n180\n90\n25\n" +
+            "[spotlight]\n" +
+            "7\n8\n9\n0\n0\n-1\n" +
+            "255\n255\n220\n30\n20\n50\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            3,
+            metadata.LightPoints.Count);
+
+        var legacy =
+            metadata.LightPoints[0];
+
+        Assert.Equal(
+            "light_enh",
+            legacy.Keyword);
+
+        Assert.Equal(
+            "flare.bmp",
+            legacy.EffectTexture);
+
+        var mapLight =
+            metadata.LightPoints[1];
+
+        Assert.True(
+            mapLight.IsMapLight);
+
+        Assert.Equal(
+            25,
+            mapLight.Range);
+
+        var spot =
+            metadata.LightPoints[2];
+
+        Assert.Equal(
+            "spotlight",
+            spot.Keyword);
+
+        Assert.Equal(
+            30,
+            spot.Range);
+
+        Assert.Equal(
+            20,
+            spot.InnerAngle);
+
+        Assert.Equal(
+            50,
+            spot.OuterAngle);
     }
 
 }

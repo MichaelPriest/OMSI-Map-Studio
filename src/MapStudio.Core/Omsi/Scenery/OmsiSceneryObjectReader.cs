@@ -1004,106 +1004,253 @@ public sealed class OmsiSceneryObjectReader
             var section in
                 document.Sections)
         {
-            var enhanced2 =
-                string.Equals(
-                    section.Keyword,
-                    "light_enh_2",
-                    StringComparison.OrdinalIgnoreCase);
-
-            var legacy =
-                string.Equals(
-                    section.Keyword,
-                    "light_enh",
-                    StringComparison.OrdinalIgnoreCase);
-
-            if (!enhanced2 &&
-                !legacy)
-            {
-                continue;
-            }
+            var keyword =
+                section.Keyword
+                    .Trim();
 
             var values =
                 section.DataLines
                     .ToArray();
 
-            if (
-                enhanced2 &&
-                values.Length >= 17 &&
-                TryReadLightVector(
-                    values,
-                    0,
-                    out var positionX,
-                    out var positionY,
-                    out var positionZ) &&
-                TryReadLightVector(
-                    values,
-                    3,
-                    out var directionX,
-                    out var directionY,
-                    out var directionZ) &&
-                TryReadFiniteDouble(
-                    values[11],
-                    out var red) &&
-                TryReadFiniteDouble(
-                    values[12],
-                    out var green) &&
-                TryReadFiniteDouble(
-                    values[13],
-                    out var blue) &&
-                TryReadFiniteDouble(
-                    values[14],
-                    out var size) &&
-                TryReadFiniteDouble(
-                    values[15],
-                    out var innerAngle) &&
-                TryReadFiniteDouble(
-                    values[16],
-                    out var outerAngle))
+            if (string.Equals(
+                    keyword,
+                    "light_enh_2",
+                    StringComparison.OrdinalIgnoreCase))
             {
-                result.Add(
-                    new OmsiSceneryLightPoint(
-                        section.Keyword,
-                        positionX,
-                        positionY,
-                        positionZ,
-                        directionX,
-                        directionY,
-                        directionZ,
-                        red,
-                        green,
-                        blue,
-                        size,
-                        innerAngle,
-                        outerAngle,
-                        values.ElementAtOrDefault(17),
-                        values.ElementAtOrDefault(18),
-                        values.ElementAtOrDefault(19),
-                        values.ElementAtOrDefault(24),
-                        values));
+                if (
+                    values.Length >= 24 &&
+                    TryReadLightVector(
+                        values,
+                        0,
+                        out var positionX,
+                        out var positionY,
+                        out var positionZ) &&
+                    TryReadLightVector(
+                        values,
+                        3,
+                        out var directionX,
+                        out var directionY,
+                        out var directionZ) &&
+                    TryReadFiniteDouble(
+                        values[11],
+                        out var red) &&
+                    TryReadFiniteDouble(
+                        values[12],
+                        out var green) &&
+                    TryReadFiniteDouble(
+                        values[13],
+                        out var blue) &&
+                    TryReadFiniteDouble(
+                        values[14],
+                        out var size) &&
+                    TryReadFiniteDouble(
+                        values[15],
+                        out var innerAngle) &&
+                    TryReadFiniteDouble(
+                        values[16],
+                        out var outerAngle))
+                {
+                    result.Add(
+                        new OmsiSceneryLightPoint(
+                            keyword,
+                            positionX,
+                            positionY,
+                            positionZ,
+                            directionX,
+                            directionY,
+                            directionZ,
+                            red,
+                            green,
+                            blue,
+                            size,
+                            innerAngle,
+                            outerAngle,
+                            values.ElementAtOrDefault(17),
+                            values.ElementAtOrDefault(18),
+                            values.ElementAtOrDefault(19),
+                            values.ElementAtOrDefault(23),
+                            values));
+                }
 
                 continue;
             }
 
-            result.Add(
-                new OmsiSceneryLightPoint(
-                    section.Keyword,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    values));
+            if (string.Equals(
+                    keyword,
+                    "light_enh",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (
+                    values.Length >= 13 &&
+                    TryReadLightVector(
+                        values,
+                        0,
+                        out var positionX,
+                        out var positionY,
+                        out var positionZ) &&
+                    TryReadFiniteDouble(
+                        values[3],
+                        out var red) &&
+                    TryReadFiniteDouble(
+                        values[4],
+                        out var green) &&
+                    TryReadFiniteDouble(
+                        values[5],
+                        out var blue) &&
+                    TryReadFiniteDouble(
+                        values[6],
+                        out var size))
+                {
+                    result.Add(
+                        new OmsiSceneryLightPoint(
+                            keyword,
+                            positionX,
+                            positionY,
+                            positionZ,
+                            null,
+                            null,
+                            null,
+                            red,
+                            green,
+                            blue,
+                            size,
+                            null,
+                            null,
+                            values.ElementAtOrDefault(7),
+                            values.ElementAtOrDefault(8),
+                            values.ElementAtOrDefault(9),
+                            values.ElementAtOrDefault(12),
+                            values));
+                }
+
+                continue;
+            }
+
+            if (string.Equals(
+                    keyword,
+                    "maplight",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (
+                    values.Length >= 7 &&
+                    TryReadLightVector(
+                        values,
+                        0,
+                        out var positionX,
+                        out var positionY,
+                        out var positionZ) &&
+                    TryReadFiniteDouble(
+                        values[3],
+                        out var red) &&
+                    TryReadFiniteDouble(
+                        values[4],
+                        out var green) &&
+                    TryReadFiniteDouble(
+                        values[5],
+                        out var blue) &&
+                    TryReadFiniteDouble(
+                        values[6],
+                        out var range))
+                {
+                    result.Add(
+                        new OmsiSceneryLightPoint(
+                            keyword,
+                            positionX,
+                            positionY,
+                            positionZ,
+                            null,
+                            null,
+                            null,
+                            red,
+                            green,
+                            blue,
+                            Math.Clamp(
+                                range * 0.025,
+                                0.1,
+                                1.25),
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            values,
+                            Range:
+                                Math.Max(
+                                    0,
+                                    range),
+                            IsMapLight:
+                                true));
+                }
+
+                continue;
+            }
+
+            if (
+                string.Equals(
+                    keyword,
+                    "spotlight",
+                    StringComparison.OrdinalIgnoreCase) &&
+                values.Length >= 12 &&
+                TryReadLightVector(
+                    values,
+                    0,
+                    out var spotX,
+                    out var spotY,
+                    out var spotZ) &&
+                TryReadLightVector(
+                    values,
+                    3,
+                    out var spotDirectionX,
+                    out var spotDirectionY,
+                    out var spotDirectionZ) &&
+                TryReadFiniteDouble(
+                    values[6],
+                    out var spotRed) &&
+                TryReadFiniteDouble(
+                    values[7],
+                    out var spotGreen) &&
+                TryReadFiniteDouble(
+                    values[8],
+                    out var spotBlue) &&
+                TryReadFiniteDouble(
+                    values[9],
+                    out var spotRange) &&
+                TryReadFiniteDouble(
+                    values[10],
+                    out var spotInner) &&
+                TryReadFiniteDouble(
+                    values[11],
+                    out var spotOuter))
+            {
+                result.Add(
+                    new OmsiSceneryLightPoint(
+                        keyword,
+                        spotX,
+                        spotY,
+                        spotZ,
+                        spotDirectionX,
+                        spotDirectionY,
+                        spotDirectionZ,
+                        spotRed,
+                        spotGreen,
+                        spotBlue,
+                        Math.Clamp(
+                            spotRange * 0.02,
+                            0.1,
+                            1.0),
+                        spotInner,
+                        spotOuter,
+                        null,
+                        null,
+                        null,
+                        null,
+                        values,
+                        Range:
+                            Math.Max(
+                                0,
+                                spotRange)));
+            }
         }
 
         return result;

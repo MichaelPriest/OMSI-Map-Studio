@@ -18,7 +18,9 @@ public sealed record OmsiSceneryLightPoint(
     string? BrightnessVariable,
     string? MultiplicationFactor,
     string? EffectTexture,
-    IReadOnlyList<string> RawValues)
+    IReadOnlyList<string> RawValues,
+    double? Range = null,
+    bool IsMapLight = false)
 {
     public bool HasRenderableEnhancedData =>
         PositionX.HasValue &&
