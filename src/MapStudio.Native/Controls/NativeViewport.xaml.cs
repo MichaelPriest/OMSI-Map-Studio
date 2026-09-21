@@ -252,6 +252,7 @@ public sealed partial class NativeViewport : UserControl
         _runtime
             ?.SetSplinePlacementElevationOffset(
                 offset);
+
     public void SetSplinePlacementHeightMode(
         bool isHeightSpline) =>
         _runtime
@@ -346,11 +347,11 @@ public sealed partial class NativeViewport : UserControl
         _runtime.SetSplinePlacementElevationOffset(
             0.0);
 
-       
         _runtime.SetSplineEasyRoadOptions(
             enabled: false,
             curveOffset: 0.0);
- var started =
+
+        var started =
             await _runtime
                 .BeginSplinePlacementAsync(
                     omsiRoot,

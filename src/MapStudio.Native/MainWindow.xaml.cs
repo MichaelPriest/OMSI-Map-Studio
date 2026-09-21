@@ -3681,7 +3681,7 @@ public sealed partial class MainWindow : Window
 
             return;
         }
-if (
+        if (
             _session.CurrentMap.Map
                 .UsesWorldCoordinates)
         {
@@ -3711,7 +3711,6 @@ if (
                     0) >
                 0.001;
 
-            
             Viewport
                 .SetSplinePlacementHeightMode(
                     selection.IsHeightSpline ==
@@ -4416,7 +4415,7 @@ if (
         SplineElevationOffsetBox.Value =
             0;
 
-       
+
         SplineHeightCheckBox.IsChecked =
             false;
 
@@ -4434,7 +4433,7 @@ if (
 
         SplineAutoConnectCheckBox.IsEnabled =
             true;
- SplineEasyRoadCheckBox.IsChecked =
+        SplineEasyRoadCheckBox.IsChecked =
             true;
 
         SplineCurveOffsetBox.Value =
@@ -4459,7 +4458,7 @@ if (
         SplineElevationOffsetBox.Value =
             5;
 
-       
+
         SplineHeightCheckBox.IsChecked =
             false;
 
@@ -4477,7 +4476,7 @@ if (
 
         SplineAutoConnectCheckBox.IsEnabled =
             true;
- SplineEasyRoadCheckBox.IsChecked =
+        SplineEasyRoadCheckBox.IsChecked =
             true;
 
         SplineCurveOffsetBox.Value =
