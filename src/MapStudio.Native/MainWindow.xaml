@@ -1626,6 +1626,35 @@
                                 IsEnabled="False"
                                 Click="OnApplyTerrainLevelClick" />
 
+                        <NumberBox x:Name="TerrainBrushDeltaBox"
+                                   Header="Incremento elevar/abaixar (m)"
+                                   Value="1"
+                                   Minimum="0.05"
+                                   Maximum="100"
+                                   SpinButtonPlacementMode="Compact"
+                                   SmallChange="0.25" />
+
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Button x:Name="RaiseTerrainButton"
+                                    Grid.Column="0"
+                                    Content="Elevar"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnRaiseTerrainClick" />
+
+                            <Button x:Name="LowerTerrainButton"
+                                    Grid.Column="1"
+                                    Content="Abaixar"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnLowerTerrainClick" />
+                        </Grid>
+
                         <TextBlock Text="Pintura de textura"
                                    Margin="0,8,0,0"
                                    FontWeight="SemiBold" />
