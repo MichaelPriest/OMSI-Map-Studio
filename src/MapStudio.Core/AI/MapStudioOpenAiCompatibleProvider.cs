@@ -82,107 +82,16 @@ public sealed class MapStudioOpenAiCompatibleProvider
             prompt += " User notes: " + request.UserNotes.Trim();
         }
 
-        var parts = new List<object>
-        {
-            new { type = "text", text = prompt }
-        };
-
-        foreach (var image in images)
-        {
-            parts.Add(new
-            {
-                type = "image_url",
-                image_url = new
-                {
-                    url = "data:" + image.MimeType + ";base64," +
-                        Convert.ToBase64String(image.Data.Span),
-                    detail = "high"
-                }
-            });
-        }
-
-        var payload = JsonSerializer.Serialize(new
-        {
-            model = _model,
-            messages = new[]
-            {
-                new { role = "user", content = parts }
-            }
-        });
-
-        using var message = new HttpRequestMessage(
-            HttpMethod.Post,
-            _endpoint)
-        {
-            Content = new StringContent(
-                payload,
-                Encoding.UTF8,
-                "application/json")
-        };
-
-        if (_token is not null)
-        {
-            message.Headers.Authorization =
-                new AuthenticationHeaderValue(
-                    "Bearer",
-                    _token);
-        }
-
-        using var response = await _httpClient
-            .SendAsync(
-                message,
-                HttpCompletionOption.ResponseHeadersRead,
+        var analysisJson =
+            await SendVisionRequestAsync(
+                prompt,
+                images,
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var responseBody = await response.Content
-            .ReadAsStringAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new HttpRequestException(
-                "AI provider returned " +
-                (int)response.StatusCode +
-                ": " +
-                Limit(responseBody, 500));
-        }
-
-        using var responseDocument =
-            JsonDocument.Parse(responseBody);
-
-        var choices =
-            responseDocument.RootElement
-                .GetProperty("choices");
-
-        if (choices.GetArrayLength() == 0)
-        {
-            throw new InvalidDataException(
-                "aiCompatibleChoicesMissing");
-        }
-
-        var text = choices[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString();
-
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            throw new InvalidDataException(
-                "aiCompatibleContentMissing");
-        }
-
-        var start = text.IndexOf('{');
-        var end = text.LastIndexOf('}');
-
-        if (start < 0 || end <= start)
-        {
-            throw new InvalidDataException(
-                "aiCompatibleJsonMissing");
-        }
-
         using var analysisDocument =
-            JsonDocument.Parse(text[start..(end + 1)]);
+            JsonDocument.Parse(
+                analysisJson);
 
         var root = analysisDocument.RootElement;
 
@@ -202,12 +111,343 @@ public sealed class MapStudioOpenAiCompatibleProvider
             .Normalize();
     }
 
-    public Task<MapStudioRoadReferenceAnalysis>
+    public async Task<MapStudioRoadReferenceAnalysis>
         AnalyzeRoadReferenceAsync(
             MapStudioRoadReferenceRequest request,
-            CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException(
-            "openAiCompatibleRoadAnalysisNotEnabled");
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var images =
+            (request.Images ??
+                Array.Empty<MapStudioAiImageReference>())
+            .Where(image => image.IsUsable)
+            .Take(4)
+            .ToArray();
+
+        if (images.Length == 0)
+        {
+            throw new InvalidDataException(
+                "aiRoadReferenceImageRequired");
+        }
+
+        var prompt =
+            "Analyze the map/reference image and trace visible road centerlines. " +
+            "Return ONLY one JSON object. Coordinates must be normalized image coordinates: " +
+            "x=0 left, x=1 right, y=0 top, y=1 bottom. " +
+            "Schema: roads array; each road has kind, laneCount, oneWay, widthMeters, " +
+            "and points array with x,y. Include at least two points per road. " +
+            "Also return notes and confidence from 0 to 1.";
+
+        if (!string.IsNullOrWhiteSpace(request.UserNotes))
+        {
+            prompt += " User notes: " + request.UserNotes.Trim();
+        }
+
+        var json =
+            await SendVisionRequestAsync(
+                prompt,
+                images,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        using var document =
+            JsonDocument.Parse(json);
+
+        var root =
+            document.RootElement;
+
+        var roads =
+            new List<
+                MapStudioRoadReferencePolyline>();
+
+        if (
+            root.TryGetProperty(
+                "roads",
+                out var roadArray) &&
+            roadArray.ValueKind ==
+                JsonValueKind.Array)
+        {
+            foreach (var road in roadArray.EnumerateArray())
+            {
+                if (
+                    !road.TryGetProperty(
+                        "points",
+                        out var pointsElement) ||
+                    pointsElement.ValueKind !=
+                        JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                var points =
+                    new List<
+                        MapStudioRoadPolylinePoint>();
+
+                foreach (
+                    var point in
+                        pointsElement.EnumerateArray())
+                {
+                    var x =
+                        GetDouble(
+                            point,
+                            "x");
+
+                    var y =
+                        GetDouble(
+                            point,
+                            "y");
+
+                    if (
+                        x is null ||
+                        y is null)
+                    {
+                        continue;
+                    }
+
+                    points.Add(
+                        new MapStudioRoadPolylinePoint(
+                            Math.Clamp(
+                                x.Value,
+                                0,
+                                1),
+                            Math.Clamp(
+                                y.Value,
+                                0,
+                                1)));
+                }
+
+                if (points.Count < 2)
+                {
+                    continue;
+                }
+
+                var laneCount =
+                    GetInt(
+                        road,
+                        "laneCount");
+
+                var width =
+                    GetDouble(
+                        road,
+                        "widthMeters");
+
+                bool? oneWay =
+                    null;
+
+                if (
+                    road.TryGetProperty(
+                        "oneWay",
+                        out var oneWayElement))
+                {
+                    if (
+                        oneWayElement.ValueKind ==
+                            JsonValueKind.True)
+                    {
+                        oneWay =
+                            true;
+                    }
+                    else if (
+                        oneWayElement.ValueKind ==
+                            JsonValueKind.False)
+                    {
+                        oneWay =
+                            false;
+                    }
+                }
+
+                roads.Add(
+                    new MapStudioRoadReferencePolyline(
+                        GetString(
+                            road,
+                            "kind") ??
+                        "road",
+                        points,
+                        laneCount is > 0
+                            ? laneCount
+                            : null,
+                        oneWay,
+                        width is > 0 &&
+                        double.IsFinite(
+                            width.Value)
+                            ? width
+                            : null));
+            }
+        }
+
+        return new MapStudioRoadReferenceAnalysis(
+            roads,
+            GetString(
+                root,
+                "notes"),
+            Math.Clamp(
+                GetDouble(
+                    root,
+                    "confidence") ??
+                0,
+                0,
+                1),
+            MapStudioRoadReferenceCoordinateSpace
+                .NormalizedImage);
+    }
+
+    private async Task<string>
+        SendVisionRequestAsync(
+            string prompt,
+            IReadOnlyList<
+                MapStudioAiImageReference>
+                images,
+            CancellationToken cancellationToken)
+    {
+        var parts =
+            new List<object>
+            {
+                new
+                {
+                    type =
+                        "text",
+                    text =
+                        prompt
+                }
+            };
+
+        foreach (var image in images)
+        {
+            parts.Add(
+                new
+                {
+                    type =
+                        "image_url",
+                    image_url =
+                        new
+                        {
+                            url =
+                                "data:" +
+                                image.MimeType +
+                                ";base64," +
+                                Convert.ToBase64String(
+                                    image.Data.Span),
+                            detail =
+                                "high"
+                        }
+                });
+        }
+
+        var payload =
+            JsonSerializer.Serialize(
+                new
+                {
+                    model =
+                        _model,
+                    messages =
+                        new[]
+                        {
+                            new
+                            {
+                                role =
+                                    "user",
+                                content =
+                                    parts
+                            }
+                        }
+                });
+
+        using var message =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                _endpoint)
+            {
+                Content =
+                    new StringContent(
+                        payload,
+                        Encoding.UTF8,
+                        "application/json")
+            };
+
+        if (_token is not null)
+        {
+            message.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    _token);
+        }
+
+        using var response =
+            await _httpClient
+                .SendAsync(
+                    message,
+                    HttpCompletionOption
+                        .ResponseHeadersRead,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var responseBody =
+            await response.Content
+                .ReadAsStringAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new HttpRequestException(
+                "AI provider returned " +
+                (int)response.StatusCode +
+                ": " +
+                Limit(
+                    responseBody,
+                    500));
+        }
+
+        using var responseDocument =
+            JsonDocument.Parse(
+                responseBody);
+
+        var choices =
+            responseDocument.RootElement
+                .GetProperty(
+                    "choices");
+
+        if (choices.GetArrayLength() == 0)
+        {
+            throw new InvalidDataException(
+                "aiCompatibleChoicesMissing");
+        }
+
+        var text =
+            choices[0]
+                .GetProperty(
+                    "message")
+                .GetProperty(
+                    "content")
+                .GetString();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                text))
+        {
+            throw new InvalidDataException(
+                "aiCompatibleContentMissing");
+        }
+
+        var start =
+            text.IndexOf(
+                '{');
+
+        var end =
+            text.LastIndexOf(
+                '}');
+
+        if (
+            start < 0 ||
+            end <= start)
+        {
+            throw new InvalidDataException(
+                "aiCompatibleJsonMissing");
+        }
+
+        return text[
+            start..(end + 1)];
+    }
 
     private static MapStudioBuildingOpeningEstimate?
         BuildOpenings(JsonElement root)
