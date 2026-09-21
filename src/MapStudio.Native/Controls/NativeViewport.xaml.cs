@@ -729,6 +729,20 @@ public sealed partial class NativeViewport : UserControl
         return _runtime.HasSkyTexture;
     }
 
+    public void SetReferenceOverlay(
+        NativeReferenceOverlayDefinition?
+            overlay)
+    {
+        _runtime?.SetReferenceOverlay(
+            overlay);
+
+        PointerStatusChanged?.Invoke(
+            this,
+            overlay is null
+                ? "Referência geográfica removida."
+                : $"Referência geográfica ativa · {overlay.Attribution} · opacidade {overlay.Opacity:P0}.");
+    }
+
     public async Task SetMapSnapshotAsync(
         NativeMapSnapshot snapshot,
         string omsiRoot,

@@ -56,6 +56,9 @@ public sealed partial class MainWindow : Window
             NativeAssetLibraryStateStore
                 .Load();
 
+    private string?
+        _referenceOverlayMapDirectory;
+
     private readonly IntPtr _windowHandle;
 
     private readonly AppWindow _appWindow;
@@ -5929,6 +5932,17 @@ public sealed partial class MainWindow : Window
         NativeMapSnapshot snapshot,
         bool focusActiveTile)
     {
+        if (
+            _referenceOverlayMapDirectory is
+                { } overlayMap &&
+            !string.Equals(
+                overlayMap,
+                snapshot.Map.DirectoryPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            ClearReferenceOverlay();
+        }
+
         if (_session.OmsiRootPath is null)
         {
             throw new InvalidOperationException(
@@ -6184,6 +6198,205 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Falha ao criar mapa por coordenadas: {exception.Message}";
         }
+    }
+
+    private async void OnGoogleMapReferenceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Referência Google: abra um mapa primeiro.";
+
+            return;
+        }
+
+        NativeMapGeoreference? georeference;
+
+        try
+        {
+            georeference =
+                await _session
+                    .LoadMapGeoreferenceAsync();
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Não foi possível ler a georreferência: {exception.Message}";
+
+            return;
+        }
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Salve primeiro a georreferência do mapa.";
+
+            return;
+        }
+
+        var apiKeyBox =
+            new PasswordBox
+            {
+                Header =
+                    "Google Maps Platform API key",
+                PlaceholderText =
+                    "A chave não será salva"
+            };
+
+        var opacityBox =
+            new NumberBox
+            {
+                Header =
+                    "Opacidade",
+                Minimum =
+                    0.05,
+                Maximum =
+                    1.0,
+                Value =
+                    0.55,
+                SmallChange =
+                    0.05
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    440
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Centro: {georeference.Latitude:F6}, {georeference.Longitude:F6} · zoom {georeference.Zoom} · {georeference.MapType}",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "A imagem será encaixada pela âncora geográfica e acompanhará o relevo do terreno. Ela não participa do picking.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        panel.Children.Add(
+            apiKeyBox);
+
+        panel.Children.Add(
+            opacityBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Referência Google sobre o terreno",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Carregar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var answer =
+            await dialog
+                .ShowAsync();
+
+        if (
+            answer !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKeyBox.Password) ||
+            !double.IsFinite(
+                opacityBox.Value))
+        {
+            StatusText.Text =
+                "Dados inválidos para carregar a referência Google.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Carregando referência Google...";
+
+            var reference =
+                await _session
+                    .LoadGoogleMapReferenceAsync(
+                        apiKeyBox.Password);
+
+            var opacity =
+                (float)Math.Clamp(
+                    opacityBox.Value,
+                    0.05,
+                    1.0);
+
+            Viewport.SetReferenceOverlay(
+                new NativeReferenceOverlayDefinition(
+                    reference.ImagePath,
+                    reference.Width,
+                    reference.Height,
+                    reference.MetersPerPixel,
+                    reference.AnchorWorldX,
+                    reference.AnchorWorldZ,
+                    opacity,
+                    reference.Attribution));
+
+            _referenceOverlayMapDirectory =
+                snapshot.Map
+                    .DirectoryPath;
+
+            StatusText.Text =
+                $"Referência Google ativa · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao carregar referência Google: {exception.Message}";
+        }
+    }
+
+    private void OnClearGoogleMapReferenceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ClearReferenceOverlay();
+
+        StatusText.Text =
+            "Referência Google removida do viewport.";
+    }
+
+    private void ClearReferenceOverlay()
+    {
+        Viewport.SetReferenceOverlay(
+            null);
+
+        _referenceOverlayMapDirectory =
+            null;
     }
 
     private async void OnGoogleElevationClick(
@@ -6771,8 +6984,10 @@ public sealed partial class MainWindow : Window
                             "hybrid",
                             "Google Maps"));
 
+            ClearReferenceOverlay();
+
             StatusText.Text =
-                $"Georreferência salva em {path}.";
+                $"Georreferência salva em {path}. A referência visual anterior foi removida para evitar desalinhamento.";
         }
         catch (Exception exception)
         {
