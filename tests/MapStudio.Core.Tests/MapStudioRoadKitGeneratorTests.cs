@@ -29,7 +29,7 @@ public sealed class MapStudioRoadKitGeneratorTests
                         root);
 
             Assert.Equal(
-                6,
+                8,
                 first
                     .SplineRelativePaths
                     .Count);
