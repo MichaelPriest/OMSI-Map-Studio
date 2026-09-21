@@ -103,6 +103,65 @@ float4 PSAlphaBlend(
     return sampled *
         input.Color;
 }
+float ResolveTransMapAlpha(
+    PSInput input)
+{
+    float4 trans =
+        MaskTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float luminance =
+        dot(
+            trans.rgb,
+            float3(
+                0.333333f,
+                0.333333f,
+                0.333333f));
+
+    return min(
+        trans.a,
+        luminance);
+}
+
+float4 PSAlphaCutoutTransMap(
+    PSInput input) : SV_TARGET
+{
+    float4 sampled =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float alpha =
+        ResolveTransMapAlpha(
+            input);
+
+    clip(
+        alpha -
+        0.5f);
+
+    return float4(
+        sampled.rgb *
+            input.Color.rgb,
+        1.0f);
+}
+
+float4 PSAlphaBlendTransMap(
+    PSInput input) : SV_TARGET
+{
+    float4 sampled =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    return float4(
+        sampled.rgb *
+            input.Color.rgb,
+        ResolveTransMapAlpha(
+            input) *
+            input.Color.a);
+}
+
 
 float3 ComposeNightPreview(
     float3 baseRgb,
@@ -181,6 +240,58 @@ float4 PSNightMaterialBlend(
         baseColor.a *
             input.Color.a);
 }
+float4 PSNightMaterialCutoutTransMap(
+    PSInput input) : SV_TARGET
+{
+    float4 baseColor =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float4 secondary =
+        SecondaryTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float alpha =
+        ResolveTransMapAlpha(
+            input);
+
+    clip(
+        alpha -
+        0.5f);
+
+    return float4(
+        ComposeNightPreview(
+            baseColor.rgb,
+            secondary.rgb) *
+            input.Color.rgb,
+        1.0f);
+}
+
+float4 PSNightMaterialBlendTransMap(
+    PSInput input) : SV_TARGET
+{
+    float4 baseColor =
+        DiffuseTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    float4 secondary =
+        SecondaryTexture.Sample(
+            DiffuseSampler,
+            input.TexCoord);
+
+    return float4(
+        ComposeNightPreview(
+            baseColor.rgb,
+            secondary.rgb) *
+            input.Color.rgb,
+        ResolveTransMapAlpha(
+            input) *
+            input.Color.a);
+}
+
 
 float3 ComposeTerrainDetail(
     float3 baseRgb,

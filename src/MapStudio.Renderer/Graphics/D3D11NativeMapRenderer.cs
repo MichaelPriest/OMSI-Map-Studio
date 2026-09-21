@@ -25,9 +25,13 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11PixelShader _texturedPixelShader;
     private readonly ID3D11PixelShader _alphaCutoutPixelShader;
     private readonly ID3D11PixelShader _alphaBlendPixelShader;
+    private readonly ID3D11PixelShader _alphaCutoutTransMapPixelShader;
+    private readonly ID3D11PixelShader _alphaBlendTransMapPixelShader;
     private readonly ID3D11PixelShader _nightMaterialPixelShader;
     private readonly ID3D11PixelShader _nightMaterialCutoutPixelShader;
     private readonly ID3D11PixelShader _nightMaterialBlendPixelShader;
+    private readonly ID3D11PixelShader _nightMaterialCutoutTransMapPixelShader;
+    private readonly ID3D11PixelShader _nightMaterialBlendTransMapPixelShader;
     private readonly ID3D11PixelShader _terrainLayerPixelShader;
     private readonly ID3D11PixelShader _terrainBaseDetailPixelShader;
     private readonly ID3D11PixelShader _terrainLayerDetailPixelShader;
@@ -290,6 +294,20 @@ public sealed class D3D11NativeMapRenderer :
                     "ps_4_0");
 
         ReadOnlyMemory<byte>
+            alphaCutoutTransMapPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSAlphaCutoutTransMap",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            alphaBlendTransMapPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSAlphaBlendTransMap",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
             nightMaterialPixelShaderBytecode =
                 Compiler.CompileFromFile(
                     shaderPath,
@@ -308,6 +326,20 @@ public sealed class D3D11NativeMapRenderer :
                 Compiler.CompileFromFile(
                     shaderPath,
                     "PSNightMaterialBlend",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            nightMaterialCutoutTransMapPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSNightMaterialCutoutTransMap",
+                    "ps_4_0");
+
+        ReadOnlyMemory<byte>
+            nightMaterialBlendTransMapPixelShaderBytecode =
+                Compiler.CompileFromFile(
+                    shaderPath,
+                    "PSNightMaterialBlendTransMap",
                     "ps_4_0");
 
         ReadOnlyMemory<byte>
@@ -361,6 +393,18 @@ public sealed class D3D11NativeMapRenderer :
                     alphaBlendPixelShaderBytecode
                         .Span);
 
+        _alphaCutoutTransMapPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    alphaCutoutTransMapPixelShaderBytecode
+                        .Span);
+
+        _alphaBlendTransMapPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    alphaBlendTransMapPixelShaderBytecode
+                        .Span);
+
         _nightMaterialPixelShader =
             _deviceHost.Device
                 .CreatePixelShader(
@@ -377,6 +421,18 @@ public sealed class D3D11NativeMapRenderer :
             _deviceHost.Device
                 .CreatePixelShader(
                     nightMaterialBlendPixelShaderBytecode
+                        .Span);
+
+        _nightMaterialCutoutTransMapPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    nightMaterialCutoutTransMapPixelShaderBytecode
+                        .Span);
+
+        _nightMaterialBlendTransMapPixelShader =
+            _deviceHost.Device
+                .CreatePixelShader(
+                    nightMaterialBlendTransMapPixelShaderBytecode
                         .Span);
 
         _terrainLayerPixelShader =
@@ -1544,9 +1600,32 @@ public sealed class D3D11NativeMapRenderer :
                             ? _alphaBlendState
                             : null);
 
-                context
-                    .PSUnsetShaderResource(
-                        1);
+                NativeGpuTexture?
+                    transMapTexture =
+                        null;
+
+                var hasTransMap =
+                    batch.TransMapTexturePath is
+                        { Length: > 0 }
+                        transMapPath &&
+                    _textureCache
+                        .TryGetValue(
+                            transMapPath,
+                            out transMapTexture);
+
+                if (hasTransMap)
+                {
+                    context
+                        .PSSetShaderResource(
+                            1,
+                            transMapTexture!.View);
+                }
+                else
+                {
+                    context
+                        .PSUnsetShaderResource(
+                            1);
+                }
 
                 var secondaryPath =
                     _nightPreviewEnabled
@@ -1587,6 +1666,10 @@ public sealed class D3D11NativeMapRenderer :
                     shader =
                         alphaMode switch
                         {
+                            1 when hasTransMap =>
+                                _nightMaterialCutoutTransMapPixelShader,
+                            2 when hasTransMap =>
+                                _nightMaterialBlendTransMapPixelShader,
                             1 =>
                                 _nightMaterialCutoutPixelShader,
                             2 =>
@@ -1605,6 +1688,10 @@ public sealed class D3D11NativeMapRenderer :
                     shader =
                         alphaMode switch
                         {
+                            1 when hasTransMap =>
+                                _alphaCutoutTransMapPixelShader,
+                            2 when hasTransMap =>
+                                _alphaBlendTransMapPixelShader,
                             1 =>
                                 _alphaCutoutPixelShader,
                             2 =>
@@ -1740,7 +1827,8 @@ public sealed class D3D11NativeMapRenderer :
                         {
                             batch.NightTexturePath,
                             batch.LightTexturePath,
-                            batch.DetailTexturePath
+                            batch.DetailTexturePath,
+                            batch.TransMapTexturePath
                         })
                 .Where(
                     path =>
@@ -2463,9 +2551,13 @@ public sealed class D3D11NativeMapRenderer :
         _terrainLayerDetailPixelShader.Dispose();
         _terrainBaseDetailPixelShader.Dispose();
         _terrainLayerPixelShader.Dispose();
+        _nightMaterialBlendTransMapPixelShader.Dispose();
+        _nightMaterialCutoutTransMapPixelShader.Dispose();
         _nightMaterialBlendPixelShader.Dispose();
         _nightMaterialCutoutPixelShader.Dispose();
         _nightMaterialPixelShader.Dispose();
+        _alphaBlendTransMapPixelShader.Dispose();
+        _alphaCutoutTransMapPixelShader.Dispose();
         _alphaBlendPixelShader.Dispose();
         _alphaCutoutPixelShader.Dispose();
         _texturedPixelShader.Dispose();

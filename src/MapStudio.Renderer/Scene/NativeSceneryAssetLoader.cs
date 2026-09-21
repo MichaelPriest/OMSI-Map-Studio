@@ -218,6 +218,26 @@ public sealed class NativeSceneryAssetLoader
                 new string?[
                     geometry.Materials.Count];
 
+            var materialTransMapTexturePaths =
+                new string?[
+                    geometry.Materials.Count];
+
+            var materialBumpTexturePaths =
+                new string?[
+                    geometry.Materials.Count];
+
+            var materialBumpStrengths =
+                new double?[
+                    geometry.Materials.Count];
+
+            var materialEnvironmentTexturePaths =
+                new string?[
+                    geometry.Materials.Count];
+
+            var materialEnvironmentStrengths =
+                new double?[
+                    geometry.Materials.Count];
+
             var materialAlphaModes =
                 new int?[
                     geometry.Materials.Count];
@@ -262,6 +282,70 @@ public sealed class NativeSceneryAssetLoader
                     materialIndex] =
                     materialOverride
                         .NoZCheck;
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        materialOverride
+                            .TransMapSource) &&
+                    OmsiTextureAssetPathResolver
+                        .TryResolveSceneryTexture(
+                            omsiRoot,
+                            fullScoPath,
+                            meshPath,
+                            materialOverride
+                                .TransMapSource!,
+                            out var transMapTexturePath))
+                {
+                    materialTransMapTexturePaths[
+                        materialIndex] =
+                        transMapTexturePath;
+                }
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        materialOverride
+                            .BumpMapTextureName) &&
+                    OmsiTextureAssetPathResolver
+                        .TryResolveSceneryTexture(
+                            omsiRoot,
+                            fullScoPath,
+                            meshPath,
+                            materialOverride
+                                .BumpMapTextureName!,
+                            out var bumpTexturePath))
+                {
+                    materialBumpTexturePaths[
+                        materialIndex] =
+                        bumpTexturePath;
+                }
+
+                materialBumpStrengths[
+                    materialIndex] =
+                    materialOverride
+                        .BumpMapStrength;
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        materialOverride
+                            .EnvironmentMapTextureName) &&
+                    OmsiTextureAssetPathResolver
+                        .TryResolveSceneryTexture(
+                            omsiRoot,
+                            fullScoPath,
+                            meshPath,
+                            materialOverride
+                                .EnvironmentMapTextureName!,
+                            out var environmentTexturePath))
+                {
+                    materialEnvironmentTexturePaths[
+                        materialIndex] =
+                        environmentTexturePath;
+                }
+
+                materialEnvironmentStrengths[
+                    materialIndex] =
+                    materialOverride
+                        .EnvironmentMapStrength;
 
                 if (
                     !string.IsNullOrWhiteSpace(
@@ -312,7 +396,12 @@ public sealed class NativeSceneryAssetLoader
                     materialLightTexturePaths,
                     materialAlphaModes,
                     materialNoZWriteFlags,
-                    materialNoZCheckFlags));
+                    materialNoZCheckFlags,
+                    materialTransMapTexturePaths,
+                    materialBumpTexturePaths,
+                    materialBumpStrengths,
+                    materialEnvironmentTexturePaths,
+                    materialEnvironmentStrengths));
         }
 
         string? treeTexturePath =

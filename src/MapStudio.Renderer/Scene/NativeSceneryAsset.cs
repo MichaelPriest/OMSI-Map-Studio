@@ -25,6 +25,21 @@ public sealed record NativeSceneryMeshAsset(
             null,
     IReadOnlyList<bool>?
         MaterialNoZCheckFlags =
+            null,
+    IReadOnlyList<string?>?
+        MaterialTransMapTexturePaths =
+            null,
+    IReadOnlyList<string?>?
+        MaterialBumpTexturePaths =
+            null,
+    IReadOnlyList<double?>?
+        MaterialBumpStrengths =
+            null,
+    IReadOnlyList<string?>?
+        MaterialEnvironmentTexturePaths =
+            null,
+    IReadOnlyList<double?>?
+        MaterialEnvironmentStrengths =
             null);
 
 public sealed record NativeSceneryAsset(

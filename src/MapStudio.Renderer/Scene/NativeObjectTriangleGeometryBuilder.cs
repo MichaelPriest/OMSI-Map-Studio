@@ -20,7 +20,12 @@ public readonly record struct NativeMaterialBatch(
     bool NoZWrite = false,
     bool NoZCheck = false,
     string? DetailTexturePath = null,
-    bool DoubleSided = false);
+    bool DoubleSided = false,
+    string? TransMapTexturePath = null,
+    string? BumpTexturePath = null,
+    double? BumpStrength = null,
+    string? EnvironmentTexturePath = null,
+    double? EnvironmentStrength = null);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
@@ -352,6 +357,37 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         materialIndex)
                     : null;
 
+            var transMapTexturePath =
+                hasUvs
+                    ? GetMaterialOverridePath(
+                        mesh.MaterialTransMapTexturePaths,
+                        materialIndex)
+                    : null;
+
+            var bumpTexturePath =
+                hasUvs
+                    ? GetMaterialOverridePath(
+                        mesh.MaterialBumpTexturePaths,
+                        materialIndex)
+                    : null;
+
+            var bumpStrength =
+                GetMaterialOverrideValue(
+                    mesh.MaterialBumpStrengths,
+                    materialIndex);
+
+            var environmentTexturePath =
+                hasUvs
+                    ? GetMaterialOverridePath(
+                        mesh.MaterialEnvironmentTexturePaths,
+                        materialIndex)
+                    : null;
+
+            var environmentStrength =
+                GetMaterialOverrideValue(
+                    mesh.MaterialEnvironmentStrengths,
+                    materialIndex);
+
             var alphaMode =
                 GetMaterialAlphaMode(
                     mesh,
@@ -447,7 +483,12 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 alphaMode,
                 noZWrite,
                 noZCheck,
-                doubleSided);
+                doubleSided,
+                transMapTexturePath,
+                bumpTexturePath,
+                bumpStrength,
+                environmentTexturePath,
+                environmentStrength);
         }
     }
 
@@ -461,7 +502,12 @@ public sealed class NativeObjectTriangleGeometryBuilder
         int? alphaMode,
         bool noZWrite,
         bool noZCheck,
-        bool doubleSided)
+        bool doubleSided,
+        string? transMapTexturePath = null,
+        string? bumpTexturePath = null,
+        double? bumpStrength = null,
+        string? environmentTexturePath = null,
+        double? environmentStrength = null)
     {
         if (
             batches.Count > 0)
@@ -492,7 +538,23 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 previous.NoZCheck ==
                     noZCheck &&
                 previous.DoubleSided ==
-                    doubleSided)
+                    doubleSided &&
+                string.Equals(
+                    previous.TransMapTexturePath,
+                    transMapTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    previous.BumpTexturePath,
+                    bumpTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                previous.BumpStrength ==
+                    bumpStrength &&
+                string.Equals(
+                    previous.EnvironmentTexturePath,
+                    environmentTexturePath,
+                    StringComparison.OrdinalIgnoreCase) &&
+                previous.EnvironmentStrength ==
+                    environmentStrength)
             {
                 batches[^1] =
                     previous with
@@ -518,7 +580,12 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 noZWrite,
                 noZCheck,
                 null,
-                doubleSided));
+                doubleSided,
+                transMapTexturePath,
+                bumpTexturePath,
+                bumpStrength,
+                environmentTexturePath,
+                environmentStrength));
     }
 
     private static int?
@@ -576,6 +643,23 @@ public sealed class NativeObjectTriangleGeometryBuilder
         }
 
         return paths[index];
+    }
+
+    private static double?
+        GetMaterialOverrideValue(
+            IReadOnlyList<double?>? values,
+            int? materialIndex)
+    {
+        if (
+            values is null ||
+            materialIndex is not int index ||
+            index < 0 ||
+            index >= values.Count)
+        {
+            return null;
+        }
+
+        return values[index];
     }
 
     private static int?
