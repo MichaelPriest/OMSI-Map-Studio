@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
+using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
@@ -95,6 +96,21 @@ public sealed partial class NativeViewport : UserControl
             Array.Empty<
                 NativeProceduralRoadPlacementLink>(),
             graph.Segments.Count);
+
+    public NativeBuildingFootprintPreviewGeometry
+        PreviewBuildingFootprints(
+            IReadOnlyList<MapStudioProjectedBuildingFootprint> buildings) =>
+        _runtime
+            ?.PreviewBuildingFootprints(
+                buildings) ??
+        new NativeBuildingFootprintPreviewGeometry(
+            [],
+            0,
+            buildings.Count);
+
+    public void ClearBuildingFootprintPreview() =>
+        _runtime
+            ?.ClearBuildingFootprintPreview();
 
     public NativeProceduralRoadPreviewGeometry
         PreviewProceduralRoadGraph(

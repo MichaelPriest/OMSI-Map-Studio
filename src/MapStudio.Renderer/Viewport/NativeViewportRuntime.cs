@@ -1,4 +1,5 @@
 using System.Numerics;
+using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
@@ -273,6 +274,46 @@ public sealed class NativeViewportRuntime : IDisposable
             .Build(
                 Scene,
                 graph);
+    }
+
+    public NativeBuildingFootprintPreviewGeometry
+        PreviewBuildingFootprints(
+            IReadOnlyList<MapStudioProjectedBuildingFootprint> buildings)
+    {
+        ThrowIfDisposed();
+
+        if (Scene is null)
+        {
+            return new NativeBuildingFootprintPreviewGeometry(
+                [],
+                0,
+                buildings.Count);
+        }
+
+        var geometry =
+            new NativeBuildingFootprintPreviewGeometryBuilder()
+                .Build(
+                    Scene,
+                    buildings);
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                geometry.Vertices);
+
+        RenderInitialFrame();
+
+        return geometry;
+    }
+
+    public void ClearBuildingFootprintPreview()
+    {
+        ThrowIfDisposed();
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                null);
+
+        RenderInitialFrame();
     }
 
     public NativeProceduralRoadPreviewGeometry
