@@ -2057,6 +2057,152 @@ public sealed partial class MainWindow : Window
             Viewport.CanRedo;
     }
 
+    private void OnToolSelectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnSceneExplorerModeClick(
+            sender,
+            e);
+
+        SetSelectionModeFromShortcut(
+            0);
+
+        StatusText.Text =
+            "Ferramenta Seleção ativa: clique no cenário para selecionar e editar.";
+    }
+
+    private async void OnToolObjectsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryToolAsync(
+            1,
+            null,
+            "Objetos: biblioteca SCO pronta para posicionar e editar.");
+    }
+
+    private async void OnToolSplinesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            2);
+
+        await ActivateLibraryToolAsync(
+            2,
+            null,
+            "Ruas/Splines: escolha uma SLI e use o construtor reto ou curvo.");
+    }
+
+    private async void OnToolCrossingsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryToolAsync(
+            1,
+            "cross",
+            "Cruzamentos: mostrando objetos de cenário; refine a busca pelo nome do pacote quando necessário.");
+    }
+
+    private void OnToolTerrainClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            3);
+
+        StatusText.Text =
+            "Terreno: clique no chão para selecionar tile; nivelamento e pintura ficam no Inspector.";
+    }
+
+    private async void OnToolWaterClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await ActivateLibraryToolAsync(
+            1,
+            "water",
+            "Água: atalho de assets ativo. O editor nativo dedicado de planos de água entra na próxima etapa.");
+    }
+
+    private async void OnToolTrafficClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await ActivateLibraryToolAsync(
+            1,
+            null,
+            "Tráfego: biblioteca de objetos aberta para sinais e elementos viários; editor de paths/tráfego ainda será migrado.");
+    }
+
+    private async void OnToolTransportClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await ActivateLibraryToolAsync(
+            1,
+            null,
+            "Transporte: acesso rápido ao cenário de operação; editor de paradas/tracks/trips ainda será migrado.");
+    }
+
+    private void OnToolValidationClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnSceneExplorerModeClick(
+            sender,
+            e);
+
+        StatusText.Text =
+            _session.CurrentMap is null
+                ? "Validação: abra um mapa para iniciar a análise."
+                : "Validação: atalho preparado; a varredura dedicada de referências, paths e dependências será ligada nesta área.";
+    }
+
+    private async Task ActivateLibraryToolAsync(
+        int kindIndex,
+        string? searchText,
+        string status)
+    {
+        _libraryMode =
+            true;
+
+        ExplorerListView.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar na biblioteca...";
+
+        if (
+            LibraryKindComboBox
+                .SelectedIndex !=
+            kindIndex)
+        {
+            LibraryKindComboBox
+                .SelectedIndex =
+                kindIndex;
+        }
+
+        ExplorerSearchBox.Text =
+            searchText ??
+            string.Empty;
+
+        await LoadAssetLibraryAsync();
+
+        StatusText.Text =
+            status;
+    }
+
     private void OnSelectionFilterChanged(
         object sender,
         SelectionChangedEventArgs e) =>
