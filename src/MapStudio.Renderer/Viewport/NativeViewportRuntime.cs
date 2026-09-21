@@ -3890,6 +3890,11 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene,
                     _sceneryAssets);
 
+        var waterGeometry =
+            new NativeWaterTriangleGeometryBuilder()
+                .Build(
+                    Scene);
+
         MapRenderer.Upload(
             Scene,
             objectGeometry,
@@ -3897,7 +3902,8 @@ public sealed class NativeViewportRuntime : IDisposable
             terrainGeometry,
             splineGeometry,
             trafficPathGeometry,
-            sceneryLightGeometry);
+            sceneryLightGeometry,
+            waterGeometry);
 
         UploadReferenceOverlay();
 
