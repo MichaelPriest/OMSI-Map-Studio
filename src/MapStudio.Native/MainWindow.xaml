@@ -256,6 +256,11 @@
                             Click="OnClearProceduralRoadGraphClick" />
                     </MenuFlyoutSubItem>
                 </MenuBarItem>
+                <MenuBarItem Title="IA">
+                    <MenuFlyoutItem
+                        Text="Configurar provedores..."
+                        Click="OnAiProvidersClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Conta">
                     <MenuFlyoutItem
                         Text="Assinatura e licença..."
