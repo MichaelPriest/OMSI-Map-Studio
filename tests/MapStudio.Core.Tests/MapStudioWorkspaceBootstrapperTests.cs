@@ -79,7 +79,97 @@ public sealed class MapStudioWorkspaceBootstrapperTests
         }
     }
 
+
     [Fact]
+    public async Task EnsureSeedsOwnStarterAssetsWithoutOmsiInstallation()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-Starter-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var bootstrapper =
+                new MapStudioWorkspaceBootstrapper();
+
+            var first =
+                await bootstrapper
+                    .EnsureAsync(
+                        root,
+                        seedStarterAssets:
+                            true);
+
+            Assert.True(
+                first.StarterAssetsCreated);
+
+            Assert.True(
+                Directory.Exists(
+                    first.TexturePath));
+
+            Assert.NotEmpty(
+                Directory.EnumerateFiles(
+                    first.SplinesPath,
+                    "*.sli",
+                    SearchOption
+                        .AllDirectories));
+
+            Assert.NotEmpty(
+                Directory.EnumerateFiles(
+                    first.SceneryObjectsPath,
+                    "*.sco",
+                    SearchOption
+                        .AllDirectories));
+
+            var manifestPath =
+                Path.Combine(
+                    first.RootPath,
+                    ".mapstudio",
+                    "workspace.json");
+
+            Assert.True(
+                File.Exists(
+                    manifestPath));
+
+            var manifest =
+                await File.ReadAllTextAsync(
+                    manifestPath);
+
+            Assert.Contains(
+                "standalone-workspace",
+                manifest,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "omsi-compatible-content-root",
+                manifest,
+                StringComparison.Ordinal);
+
+            var second =
+                await bootstrapper
+                    .EnsureAsync(
+                        root,
+                        seedStarterAssets:
+                            true);
+
+            Assert.False(
+                second.StarterAssetsCreated);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+[Fact]
     public async Task CreateBlankMapProducesMapReadableByCore()
     {
         var root =
