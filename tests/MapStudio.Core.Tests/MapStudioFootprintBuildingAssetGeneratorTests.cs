@@ -66,6 +66,52 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
             0);
     }
 
+    [Theory]
+    [InlineData(MapStudioBuildingRoofType.Gable)]
+    [InlineData(MapStudioBuildingRoofType.Hip)]
+    [InlineData(MapStudioBuildingRoofType.Shed)]
+    public void QuadrilateralRoofShapeRaisesGeometryAboveWall(
+        MapStudioBuildingRoofType roofType)
+    {
+        var building =
+            new MapStudioProjectedBuildingFootprint(
+                "roof-test",
+                [
+                    new(0, 0),
+                    new(12, 0),
+                    new(12, 8),
+                    new(0, 8)
+                ],
+                new(6, 4),
+                "house",
+                null,
+                2,
+                6,
+                roofType,
+                2,
+                null,
+                null);
+
+        var geometry =
+            new MapStudioFootprintBuildingAssetGenerator()
+                .BuildGeometry(
+                    building);
+
+        var maximumY =
+            geometry.Positions
+                .Where(
+                    (_, index) =>
+                        index %
+                            3 ==
+                        1)
+                .Max();
+
+        Assert.InRange(
+            maximumY,
+            7.99f,
+            8.01f);
+    }
+
     [Fact]
     public async Task GeneratorWritesFootprintScoAndO3d()
     {
