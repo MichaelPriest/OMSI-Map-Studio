@@ -78,6 +78,11 @@ public sealed partial class MainWindow : Window
         bool IsActive,
         bool IsLoaded);
 
+    private sealed record AttachmentInspectorItem(
+        OmsiTileReference Tile,
+        OmsiPlacedAttachment Attachment,
+        string DisplayText);
+
     private sealed class AssetLibraryViewItem
         : INotifyPropertyChanged
     {
@@ -17310,11 +17315,13 @@ public sealed partial class MainWindow : Window
                                         ? string.Empty
                                         : $" · varparent {attachment.VariableParentValue}";
 
-                                return
+                                return new AttachmentInspectorItem(
+                                    tile.Reference,
+                                    attachment,
                                     $"Tile {tile.Reference.X},{tile.Reference.Y} · {attachment.Kind} · #{attachment.AttachmentId}\n" +
                                     $"{attachment.AssetPath}\n" +
                                     detail +
-                                    parent;
+                                    parent);
                             }))
                 .ToArray();
 
@@ -17325,15 +17332,13 @@ public sealed partial class MainWindow : Window
                     420,
                 SelectionMode =
                     ListViewSelectionMode
-                        .None,
+                        .Single,
+                DisplayMemberPath =
+                    nameof(
+                        AttachmentInspectorItem
+                            .DisplayText),
                 ItemsSource =
-                    items.Length >
-                        0
-                        ? items
-                        : new[]
-                        {
-                            "Nenhum attachment reconhecido na região carregada."
-                        }
+                    items
             };
 
         var panel =
@@ -17372,9 +17377,9 @@ public sealed partial class MainWindow : Window
                     InfoBarSeverity
                         .Informational,
                 Title =
-                    "Leitura preservativa",
+                    "Round-trip preservativo",
                 Message =
-                    "attachObj, splineAttachement/Attachment, repetidores e varparent são reconhecidos. A edição permanece somente leitura até o writer/round-trip dessas variantes ser validado. Em modo desempenho, a lista cobre apenas os tiles atualmente carregados."
+                    "Transformações numéricas de attachments válidos podem ser editadas com backup. Asset, IDs, parent/attach point, varparent e campos desconhecidos permanecem preservados e somente leitura. Em modo desempenho, a lista cobre apenas os tiles carregados."
             });
 
         var dialog =
@@ -17386,12 +17391,286 @@ public sealed partial class MainWindow : Window
                     "Attachments do mapa",
                 Content =
                     panel,
+                PrimaryButtonText =
+                    "Editar...",
                 CloseButtonText =
-                    "Fechar"
+                    "Fechar",
+                IsPrimaryButtonEnabled =
+                    false
             };
 
-        await dialog
-            .ShowAsync();
+        list.SelectionChanged +=
+            (_, _) =>
+            {
+                dialog.IsPrimaryButtonEnabled =
+                    list.SelectedItem is
+                        AttachmentInspectorItem;
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary ||
+            list.SelectedItem is not
+                AttachmentInspectorItem selected)
+        {
+            return;
+        }
+
+        await EditAttachmentAsync(
+            selected);
+    }
+
+    private static NumberBox CreateAttachmentNumberBox(
+        string header,
+        double value)
+    {
+        return new NumberBox
+        {
+            Header =
+                header,
+            Minimum =
+                -1_000_000,
+            Maximum =
+                1_000_000,
+            Value =
+                value,
+            SmallChange =
+                0.1,
+            SpinButtonPlacementMode =
+                NumberBoxSpinButtonPlacementMode
+                    .Compact
+        };
+    }
+
+    private async Task EditAttachmentAsync(
+        AttachmentInspectorItem item)
+    {
+        var attachment =
+            item.Attachment;
+
+        NumberBox? xBox =
+            null;
+
+        NumberBox? zBox =
+            null;
+
+        NumberBox? yBox =
+            null;
+
+        NumberBox? intervalBox =
+            null;
+
+        NumberBox? distanceBox =
+            null;
+
+        var rotationBox =
+            CreateAttachmentNumberBox(
+                "Rotação",
+                attachment.Rotation);
+
+        var pitchBox =
+            CreateAttachmentNumberBox(
+                "Pitch",
+                attachment.Pitch);
+
+        var bankBox =
+            CreateAttachmentNumberBox(
+                "Bank",
+                attachment.Bank);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{attachment.Kind} · #{attachment.AttachmentId}\n{attachment.AssetPath}",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                FontWeight =
+                    Microsoft.UI.Text
+                        .FontWeights
+                        .SemiBold
+            });
+
+        if (
+            attachment.Kind !=
+            OmsiAttachmentKind
+                .ObjectAttachment)
+        {
+            xBox =
+                CreateAttachmentNumberBox(
+                    "X",
+                    attachment.X ??
+                        0);
+
+            zBox =
+                CreateAttachmentNumberBox(
+                    "Z",
+                    attachment.Z ??
+                        0);
+
+            yBox =
+                CreateAttachmentNumberBox(
+                    "Y",
+                    attachment.Y ??
+                        0);
+
+            intervalBox =
+                CreateAttachmentNumberBox(
+                    "Intervalo",
+                    attachment.Interval ??
+                        0);
+
+            distanceBox =
+                CreateAttachmentNumberBox(
+                    "Distância",
+                    attachment.Distance ??
+                        0);
+
+            panel.Children.Add(
+                xBox);
+
+            panel.Children.Add(
+                zBox);
+
+            panel.Children.Add(
+                yBox);
+        }
+        else
+        {
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text =
+                        $"Parent #{attachment.AttachedToObjectId?.ToString() ?? "?"} · attach point {attachment.AttachPointIndex?.ToString() ?? "?"} · esses vínculos são preservados.",
+                    TextWrapping =
+                        TextWrapping.Wrap,
+                    Foreground =
+                        new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                            Windows.UI.Color.FromArgb(
+                                255,
+                                120,
+                                149,
+                                173))
+                });
+        }
+
+        panel.Children.Add(
+            rotationBox);
+
+        panel.Children.Add(
+            pitchBox);
+
+        panel.Children.Add(
+            bankBox);
+
+        if (
+            intervalBox is not
+                null &&
+            distanceBox is not
+                null)
+        {
+            panel.Children.Add(
+                intervalBox);
+
+            panel.Children.Add(
+                distanceBox);
+        }
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                attachment
+                    .VariableParentValue))
+        {
+            panel.Children.Add(
+                new TextBlock
+                {
+                    Text =
+                        $"varparent: {attachment.VariableParentValue} (somente leitura)",
+                    TextWrapping =
+                        TextWrapping.Wrap
+                });
+        }
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Editar attachment",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var edit =
+            new OmsiAttachmentTransformEdit(
+                attachment
+                    .SourceSectionOrdinal,
+                attachment.Kind,
+                attachment.AttachmentId,
+                attachment.AssetPath,
+                attachment.RawValues,
+                xBox?.Value ??
+                    attachment.X,
+                zBox?.Value ??
+                    attachment.Z,
+                yBox?.Value ??
+                    attachment.Y,
+                rotationBox.Value,
+                pitchBox.Value,
+                bankBox.Value,
+                intervalBox?.Value ??
+                    attachment.Interval,
+                distanceBox?.Value ??
+                    attachment.Distance);
+
+        try
+        {
+            StatusText.Text =
+                $"Salvando attachment #{attachment.AttachmentId}...";
+
+            var result =
+                await _session
+                    .UpdateAttachmentAsync(
+                        item.Tile,
+                        edit);
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile:
+                    false);
+
+            StatusText.Text =
+                $"Attachment #{result.Attachment.AttachmentId} atualizado com backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao editar attachment: {exception.Message}";
+        }
     }
 
     private async void OnRestoreBackupClick(
