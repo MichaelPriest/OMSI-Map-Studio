@@ -71,6 +71,77 @@ public sealed class OmsiTerrainEditingTests
     }
 
     [Fact]
+    public void OffsetCircularBrush_RaisesCenterByDelta()
+    {
+        var terrain =
+            new OmsiTerrainGrid(
+                2,
+                Enumerable
+                    .Repeat(
+                        5f,
+                        9)
+                    .ToArray());
+
+        var result =
+            OmsiTerrainLeveler
+                .OffsetCircularBrush(
+                    terrain,
+                    localX: 150,
+                    localY: 150,
+                    deltaHeight: 2.5,
+                    radius: 20,
+                    feather: 0);
+
+        Assert.Equal(
+            1,
+            result.ChangedSamples);
+
+        Assert.Equal(
+            7.5f,
+            result.Terrain.Heights[4]);
+
+        Assert.Equal(
+            5f,
+            result.Terrain.Heights[0]);
+    }
+
+    [Fact]
+    public void OffsetCircularBrush_LowersAndFeathersOuterSamples()
+    {
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        20f,
+                        25)
+                    .ToArray());
+
+        var result =
+            OmsiTerrainLeveler
+                .OffsetCircularBrush(
+                    terrain,
+                    localX: 150,
+                    localY: 150,
+                    deltaHeight: -4,
+                    radius: 120,
+                    feather: 0.5);
+
+        Assert.Equal(
+            16f,
+            result.Terrain.Heights[12]);
+
+        Assert.InRange(
+            result.Terrain.Heights[7],
+            16.01f,
+            19.99f);
+
+        Assert.True(
+            result.ChangedSamples >
+            1);
+    }
+
+    [Fact]
     public void ApplyElevationGrid_ResamplesCornersAndCenter()
     {
         var terrain =
