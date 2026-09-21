@@ -3353,6 +3353,7 @@ public sealed class OmsiNativeSession
     public async Task<NativeSplineBatchInsertionResult>
         InsertSplineBatchAsync(
             IReadOnlyList<NativeSplinePlacementRequest> requests,
+            IReadOnlyList<NativeProceduralRoadPlacementLink>? links = null,
             CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(requests);
@@ -3367,7 +3368,46 @@ public sealed class OmsiNativeSession
                 request.NextSplineId >= 0))
         {
             throw new InvalidDataException(
-                "batchSplineLinksUnsupported");
+                "batchSplineExplicitLinksUnsupported");
+        }
+
+        links ??=
+            Array.Empty<
+                NativeProceduralRoadPlacementLink>();
+
+        var previousByIndex =
+            new Dictionary<int, int>();
+
+        var nextByIndex =
+            new Dictionary<int, int>();
+
+        foreach (var link in links)
+        {
+            if (
+                link.PreviousRequestIndex < 0 ||
+                link.PreviousRequestIndex >=
+                    requests.Count ||
+                link.NextRequestIndex < 0 ||
+                link.NextRequestIndex >=
+                    requests.Count ||
+                link.PreviousRequestIndex ==
+                    link.NextRequestIndex ||
+                nextByIndex.ContainsKey(
+                    link.PreviousRequestIndex) ||
+                previousByIndex.ContainsKey(
+                    link.NextRequestIndex))
+            {
+                throw new InvalidDataException(
+                    "batchSplineLinkInvalid");
+            }
+
+            nextByIndex[
+                link.PreviousRequestIndex] =
+                link.NextRequestIndex;
+
+            previousByIndex[
+                link.NextRequestIndex] =
+                link.PreviousRequestIndex;
         }
 
         var snapshot =
@@ -3445,12 +3485,21 @@ public sealed class OmsiNativeSession
         var grouped =
             new Dictionary<
                 string,
-                (OmsiTileReference Tile, List<NativeSplinePlacementRequest> Requests)>(
+                (
+                    OmsiTileReference Tile,
+                    List<(int Index, NativeSplinePlacementRequest Request)> Requests
+                )>(
                     StringComparer.OrdinalIgnoreCase);
 
-        foreach (var request in requests)
+        for (
+            var requestIndex = 0;
+            requestIndex < requests.Count;
+            requestIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            var request =
+                requests[requestIndex];
 
             if (!OmsiMapPathResolver.TryResolveTilePath(
                     snapshot.Map.DirectoryPath,
@@ -3468,14 +3517,18 @@ public sealed class OmsiNativeSession
                 group =
                     (
                         request.Tile,
-                        new List<NativeSplinePlacementRequest>()
+                        new List<(int Index, NativeSplinePlacementRequest Request)>()
                     );
 
                 grouped[targetPath] =
                     group;
             }
 
-            group.Requests.Add(request);
+            group.Requests.Add(
+                (
+                    requestIndex,
+                    request
+                ));
         }
 
         var backupRoot =
@@ -3496,6 +3549,25 @@ public sealed class OmsiNativeSession
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
+        var assignedIds =
+            new int[
+                requests.Count];
+
+        for (
+            var index = 0;
+            index < requests.Count;
+            index++)
+        {
+            assignedIds[index] =
+                checked(
+                    maxUsedId +
+                    index +
+                    1);
+        }
+
+        maxUsedId =
+            assignedIds[^1];
+
         var insertedIds =
             new List<int>(
                 requests.Count);
@@ -3514,8 +3586,14 @@ public sealed class OmsiNativeSession
             byte[]? finalBytes =
                 null;
 
-            foreach (var request in pair.Value.Requests)
+            foreach (var item in pair.Value.Requests)
             {
+                var requestIndex =
+                    item.Index;
+
+                var request =
+                    item.Request;
+
                 var template =
                     contents
                         .SelectMany(content => content.Splines)
@@ -3539,7 +3617,26 @@ public sealed class OmsiNativeSession
                 }
 
                 var newSplineId =
-                    checked(++maxUsedId);
+                    assignedIds[
+                        requestIndex];
+
+                var previousSplineId =
+                    previousByIndex
+                        .TryGetValue(
+                            requestIndex,
+                            out var previousIndex)
+                        ? assignedIds[
+                            previousIndex]
+                        : -1;
+
+                var nextSplineId =
+                    nextByIndex
+                        .TryGetValue(
+                            requestIndex,
+                            out var nextIndex)
+                        ? assignedIds[
+                            nextIndex]
+                        : -1;
 
                 var insertion =
                     OmsiTileSplineInserter.Append(
@@ -3548,8 +3645,8 @@ public sealed class OmsiNativeSession
                             template?.HeaderValue ?? "0",
                             request.SplinePath,
                             newSplineId,
-                            -1,
-                            -1,
+                            previousSplineId,
+                            nextSplineId,
                             request.X,
                             request.Z,
                             request.Y,
