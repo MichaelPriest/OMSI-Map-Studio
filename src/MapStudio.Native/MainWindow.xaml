@@ -112,6 +112,11 @@
                         IsEnabled="False"
                         Click="OnOpenMapCatalogClick" />
                     <MenuFlyoutItem
+                        x:Name="RefreshMapCatalogMenuItem"
+                        Text="Atualizar catálogo de mapas"
+                        IsEnabled="False"
+                        Click="OnRefreshMapCatalogClick" />
+                    <MenuFlyoutItem
                         Text="Abrir pasta de mapa..."
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
