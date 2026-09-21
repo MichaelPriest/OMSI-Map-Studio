@@ -790,6 +790,8 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
@@ -804,20 +806,58 @@
                                               Grid.Row="1"
                                               Header="Regra do editor OMSI"
                                               DisplayMemberPath="DisplayName"
-                                              HorizontalAlignment="Stretch" />
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnTrafficRulePresetSelectionChanged" />
+
+                                    <Grid Grid.Row="2"
+                                          ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <NumberBox x:Name="TrafficRulePathIndexBox"
+                                                   Grid.Column="0"
+                                                   Header="Path index"
+                                                   Minimum="0"
+                                                   Maximum="100000"
+                                                   Value="0"
+                                                   SmallChange="1" />
+                                        <NumberBox x:Name="TrafficRuleValueBox"
+                                                   Grid.Column="1"
+                                                   Header="Valor"
+                                                   Minimum="-1000000"
+                                                   Maximum="1000000"
+                                                   Value="0"
+                                                   SmallChange="0.1" />
+                                    </Grid>
+
+                                    <CheckBox x:Name="TrafficRuleKillCheckBox"
+                                              Grid.Row="3"
+                                              Content="Usar [kill_rule]" />
 
                                     <ListView x:Name="TrafficRuleListView"
-                                              Grid.Row="2"
+                                              Grid.Row="4"
                                               SelectionMode="Single"
                                               DisplayMemberPath="DisplayText"
                                               SelectionChanged="OnTrafficRuleSelectionChanged" />
 
-                                    <Button x:Name="FocusTrafficRuleOwnerButton"
-                                            Grid.Row="3"
-                                            Content="Focar regra no mapa"
-                                            IsEnabled="False"
-                                            HorizontalAlignment="Stretch"
-                                            Click="OnFocusTrafficRuleOwnerClick" />
+                                    <StackPanel Grid.Row="5"
+                                                Spacing="5">
+                                        <Button x:Name="ApplyTrafficRuleButton"
+                                                Content="Aplicar / adicionar regra"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnApplyTrafficRuleClick" />
+                                        <Button x:Name="DeleteTrafficRuleButton"
+                                                Content="Excluir regra selecionada"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnDeleteTrafficRuleClick" />
+                                        <Button x:Name="FocusTrafficRuleOwnerButton"
+                                                Content="Focar regra no mapa"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnFocusTrafficRuleOwnerClick" />
+                                    </StackPanel>
                                 </Grid>
                             </Grid>
 

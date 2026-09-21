@@ -35,6 +35,7 @@ public sealed partial class MainWindow : Window
         int TileX,
         int TileY,
         string AssetPath,
+        int RuleIndex,
         OmsiTrafficRule Rule,
         string DisplayText,
         string Detail);
@@ -4435,9 +4436,11 @@ public sealed partial class MainWindow : Window
                 var item in
                     tile.Content.Splines)
             {
-                foreach (
-                    var rule in
-                        item.TrafficRules)
+                for (
+                    var ruleIndex = 0;
+                    ruleIndex <
+                        item.TrafficRules.Count;
+                    ruleIndex++)
                 {
                     result.Add(
                         CreateTrafficRuleItem(
@@ -4446,7 +4449,9 @@ public sealed partial class MainWindow : Window
                             tile.Reference.X,
                             tile.Reference.Y,
                             item.SplinePath,
-                            rule));
+                            ruleIndex,
+                            item.TrafficRules[
+                                ruleIndex]));
                 }
             }
 
@@ -4454,9 +4459,11 @@ public sealed partial class MainWindow : Window
                 var item in
                     tile.Content.Objects)
             {
-                foreach (
-                    var rule in
-                        item.TrafficRules)
+                for (
+                    var ruleIndex = 0;
+                    ruleIndex <
+                        item.TrafficRules.Count;
+                    ruleIndex++)
                 {
                     result.Add(
                         CreateTrafficRuleItem(
@@ -4465,7 +4472,9 @@ public sealed partial class MainWindow : Window
                             tile.Reference.X,
                             tile.Reference.Y,
                             item.SceneryObjectPath,
-                            rule));
+                            ruleIndex,
+                            item.TrafficRules[
+                                ruleIndex]));
                 }
             }
         }
@@ -4480,6 +4489,7 @@ public sealed partial class MainWindow : Window
             int tileX,
             int tileY,
             string assetPath,
+            int ruleIndex,
             OmsiTrafficRule rule)
     {
         var preset =
@@ -4508,6 +4518,7 @@ public sealed partial class MainWindow : Window
             tileX,
             tileY,
             assetPath,
+            ruleIndex,
             rule,
             $"{displayName} · path {pathText} · grupo {groupText}",
             $"{(ownerKind == PickingKind.Spline ? "Spline" : "Objeto")} #{entityId} · tile {tileX},{tileY}\n" +
@@ -4584,11 +4595,455 @@ public sealed partial class MainWindow : Window
             FocusTrafficRuleOwnerButton.IsEnabled =
                 true;
 
+            DeleteTrafficRuleButton.IsEnabled =
+                true;
+
+            if (
+                item.Rule.PathIndex is
+                    int pathIndex)
+            {
+                TrafficRulePathIndexBox.Value =
+                    pathIndex;
+            }
+
+            if (
+                item.Rule.NumericValue is
+                    double numeric)
+            {
+                TrafficRuleValueBox.Value =
+                    numeric;
+            }
+
+            TrafficRuleKillCheckBox.IsChecked =
+                item.Rule.IsKillRule;
+
+            if (
+                item.Rule.VehicleGroupIndex is
+                    int groupIndex &&
+                groupIndex >= 0 &&
+                groupIndex <
+                    _trafficVehicleGroups.Count)
+            {
+                TrafficVehicleGroupComboBox.SelectedIndex =
+                    groupIndex;
+            }
+
+            var preset =
+                OmsiTrafficRulePresets
+                    .TryMatch(
+                        item.Rule.RuleName,
+                        item.Rule.NumericValue);
+
+            if (preset is not null)
+            {
+                var presetIndex =
+                    OmsiTrafficRulePresets.All
+                        .ToList()
+                        .FindIndex(
+                            candidate =>
+                                candidate.Key ==
+                                    preset.Key);
+
+                if (presetIndex >= 0)
+                {
+                    TrafficRulePresetComboBox.SelectedIndex =
+                        presetIndex;
+                }
+            }
+
             return;
         }
 
         FocusTrafficRuleOwnerButton.IsEnabled =
             false;
+
+        DeleteTrafficRuleButton.IsEnabled =
+            false;
+    }
+
+
+    private void OnTrafficRulePresetSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            TrafficRulePresetComboBox
+                .SelectedItem is not
+                OmsiTrafficRulePreset
+                    preset)
+        {
+            return;
+        }
+
+        if (
+            preset.FixedValue is
+                double fixedValue)
+        {
+            TrafficRuleValueBox.Value =
+                fixedValue;
+        }
+
+        TrafficRuleValueBox.IsEnabled =
+            preset.RequiresCustomValue;
+    }
+
+    private async void OnApplyTrafficRuleClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } omsiRoot ||
+            TrafficRulePresetComboBox
+                .SelectedItem is not
+                OmsiTrafficRulePreset
+                    preset ||
+            !double.IsFinite(
+                TrafficRulePathIndexBox.Value))
+        {
+            StatusText.Text =
+                "Traffic Rule: selecione uma regra/preset e informe um path válido.";
+            return;
+        }
+
+        PickingKind ownerKind;
+        int entityId;
+        int tileX;
+        int tileY;
+        int replaceIndex;
+
+        if (
+            TrafficRuleListView.SelectedItem is
+                TrafficRuleExplorerItem
+                    selected)
+        {
+            ownerKind =
+                selected.OwnerKind;
+
+            entityId =
+                selected.EntityId;
+
+            tileX =
+                selected.TileX;
+
+            tileY =
+                selected.TileY;
+
+            replaceIndex =
+                selected.RuleIndex;
+        }
+        else if (
+            _selectionInfo is
+                { } mapSelection &&
+            mapSelection.Kind is
+                PickingKind.Object or
+                PickingKind.Spline)
+        {
+            ownerKind =
+                mapSelection.Kind;
+
+            entityId =
+                mapSelection.EntityId;
+
+            tileX =
+                mapSelection.TileX;
+
+            tileY =
+                mapSelection.TileY;
+
+            replaceIndex =
+                -1;
+        }
+        else
+        {
+            StatusText.Text =
+                "Traffic Rule: selecione uma regra existente ou selecione um objeto/spline no mapa para adicionar.";
+            return;
+        }
+
+        var currentRules =
+            GetOwnerTrafficRules(
+                snapshot,
+                ownerKind,
+                tileX,
+                tileY,
+                entityId);
+
+        if (currentRules is null)
+        {
+            StatusText.Text =
+                "Traffic Rule: dono não encontrado no tile carregado.";
+            return;
+        }
+
+        var pathIndex =
+            checked(
+                (int)Math.Round(
+                    TrafficRulePathIndexBox.Value));
+
+        if (pathIndex < 0)
+        {
+            StatusText.Text =
+                "Traffic Rule: path index inválido.";
+            return;
+        }
+
+        double value;
+
+        if (preset.RequiresCustomValue)
+        {
+            if (
+                !double.IsFinite(
+                    TrafficRuleValueBox.Value))
+            {
+                StatusText.Text =
+                    "Traffic Rule: informe um valor numérico.";
+                return;
+            }
+
+            value =
+                TrafficRuleValueBox.Value;
+        }
+        else
+        {
+            value =
+                preset.FixedValue ??
+                (
+                    double.IsFinite(
+                        TrafficRuleValueBox.Value)
+                        ? TrafficRuleValueBox.Value
+                        : 0
+                );
+        }
+
+        var groupIndex =
+            Math.Max(
+                0,
+                TrafficVehicleGroupComboBox
+                    .SelectedIndex);
+
+        var newRule =
+            new OmsiTrafficRule(
+                TrafficRuleKillCheckBox.IsChecked ==
+                    true,
+                pathIndex,
+                preset.SerializedRuleName,
+                value.ToString(
+                    "G17",
+                    CultureInfo.InvariantCulture),
+                value,
+                groupIndex,
+                []);
+
+        var rules =
+            currentRules.ToList();
+
+        if (
+            replaceIndex >= 0 &&
+            replaceIndex <
+                rules.Count)
+        {
+            rules[
+                replaceIndex] =
+                newRule;
+        }
+        else
+        {
+            rules.Add(
+                newRule);
+        }
+
+        try
+        {
+            ApplyTrafficRuleButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                replaceIndex >= 0
+                    ? "Atualizando Traffic Rule com backup..."
+                    : "Adicionando Traffic Rule com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTrafficRulesAsync(
+                        ownerKind,
+                        tileX,
+                        tileY,
+                        entityId,
+                        rules);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    updated.Snapshot,
+                    omsiRoot);
+
+            _trafficRuleItems =
+                BuildTrafficRuleItems(
+                    updated.Snapshot);
+
+            RefreshTrafficFilter();
+
+            TrafficRuleListView.SelectedItem =
+                _trafficRuleItems
+                    .FirstOrDefault(
+                        item =>
+                            item.OwnerKind ==
+                                ownerKind &&
+                            item.EntityId ==
+                                entityId &&
+                            item.TileX ==
+                                tileX &&
+                            item.TileY ==
+                                tileY &&
+                            item.RuleIndex ==
+                                (
+                                    replaceIndex >= 0
+                                        ? replaceIndex
+                                        : rules.Count - 1
+                                ));
+
+            StatusText.Text =
+                $"Traffic Rule salva · {preset.DisplayName} · path {pathIndex} · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar Traffic Rule: {exception.Message}";
+        }
+        finally
+        {
+            ApplyTrafficRuleButton.IsEnabled =
+                true;
+        }
+    }
+
+    private async void OnDeleteTrafficRuleClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TrafficRuleListView.SelectedItem is not
+                TrafficRuleExplorerItem
+                    selected ||
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } omsiRoot)
+        {
+            return;
+        }
+
+        var currentRules =
+            GetOwnerTrafficRules(
+                snapshot,
+                selected.OwnerKind,
+                selected.TileX,
+                selected.TileY,
+                selected.EntityId);
+
+        if (
+            currentRules is null ||
+            selected.RuleIndex <
+                0 ||
+            selected.RuleIndex >=
+                currentRules.Count)
+        {
+            return;
+        }
+
+        var rules =
+            currentRules.ToList();
+
+        rules.RemoveAt(
+            selected.RuleIndex);
+
+        try
+        {
+            DeleteTrafficRuleButton.IsEnabled =
+                false;
+
+            var updated =
+                await _session
+                    .UpdateTrafficRulesAsync(
+                        selected.OwnerKind,
+                        selected.TileX,
+                        selected.TileY,
+                        selected.EntityId,
+                        rules);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    updated.Snapshot,
+                    omsiRoot);
+
+            _trafficRuleItems =
+                BuildTrafficRuleItems(
+                    updated.Snapshot);
+
+            TrafficRuleListView.SelectedItem =
+                null;
+
+            RefreshTrafficFilter();
+
+            StatusText.Text =
+                $"Traffic Rule excluída · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao excluir Traffic Rule: {exception.Message}";
+        }
+    }
+
+    private static IReadOnlyList<OmsiTrafficRule>?
+        GetOwnerTrafficRules(
+            NativeMapSnapshot snapshot,
+            PickingKind ownerKind,
+            int tileX,
+            int tileY,
+            int entityId)
+    {
+        var tile =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            tileX &&
+                        item.Reference.Y ==
+                            tileY);
+
+        if (tile is null)
+        {
+            return null;
+        }
+
+        if (
+            ownerKind ==
+            PickingKind.Spline)
+        {
+            return tile.Content.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.SplineId ==
+                            entityId)
+                ?.TrafficRules;
+        }
+
+        if (
+            ownerKind ==
+            PickingKind.Object)
+        {
+            return tile.Content.Objects
+                .FirstOrDefault(
+                    item =>
+                        item.ObjectId ==
+                            entityId)
+                ?.TrafficRules;
+        }
+
+        return null;
     }
 
     private void OnFocusTrafficRuleOwnerClick(
