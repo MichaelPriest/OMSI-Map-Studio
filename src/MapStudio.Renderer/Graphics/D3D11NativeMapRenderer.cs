@@ -40,6 +40,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11DepthStencilState _depthReadState;
     private readonly ID3D11DepthStencilState _depthDisabledState;
     private readonly ID3D11BlendState _alphaBlendState;
+    private readonly ID3D11RasterizerState _terrainRasterizerState;
     private readonly NativeGpuTextureLoader _textureLoader;
     private readonly ID3D11Buffer _skyTriangleBuffer;
     private readonly int _skyTriangleVertexCount;
@@ -492,6 +493,12 @@ public sealed class D3D11NativeMapRenderer :
                 .CreateBlendState(
                     BlendDescription
                         .NonPremultiplied);
+
+        _terrainRasterizerState =
+            _deviceHost.Device
+                .CreateRasterizerState(
+                    RasterizerDescription
+                        .CullNone);
 
         _textureLoader =
             new NativeGpuTextureLoader(
@@ -1313,11 +1320,19 @@ public sealed class D3D11NativeMapRenderer :
     private void DrawTerrainGeometry(
         ID3D11DeviceContext context)
     {
+        context
+            .RSSetState(
+                _terrainRasterizerState);
+
         DrawMaterialGeometry(
             context,
             _terrainTriangleBuffer,
             _terrainTriangleVertexCount,
             _terrainMaterialBatches);
+
+        context
+            .RSSetState(
+                null);
     }
 
     private void DrawSplineGeometry(
@@ -2421,6 +2436,7 @@ public sealed class D3D11NativeMapRenderer :
         _skyTexture?.Dispose();
         _skyTexture = null;
         _skyTriangleBuffer.Dispose();
+        _terrainRasterizerState.Dispose();
         _alphaBlendState.Dispose();
         _depthDisabledState.Dispose();
         _depthReadState.Dispose();

@@ -562,3 +562,13 @@ Keys 1 and 2 use the exact same native methods already exposed by the View menu.
 
 Escape keeps the native host's safety priority: it first cancels placement/construction tools, then exits fullscreen, and only then restores the general selection filter.
 
+### Checkpoint N3.32 — double-sided terrain in the native rasterizer
+
+Alpha.4 Test 1 validation showed that terrain geometry could exist and be counted by the renderer while remaining invisible in the viewport. Once the OMSI sky was enabled this became obvious because clouds were visible through the grid, making them look like a ground texture.
+
+The React version already rendered terrain with `backFaceCulling = false`. The Direct3D 11 host was still using the default rasterizer state, which may cull the visible terrain face depending on the effective mesh/camera winding.
+
+The terrain pass now uses a dedicated `ID3D11RasterizerState` with `RasterizerDescription.CullNone`. This state is active only while terrain is drawn and is restored immediately afterwards, so objects, splines, sky, and gizmos keep their normal rasterizer behavior.
+
+No `.terrain` data, UVs, textures, or masks are modified; this is a rendering-only fix that restores parity with the behavior already validated in the React viewport.
+

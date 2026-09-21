@@ -562,3 +562,13 @@ As teclas 1 e 2 usam exatamente os mesmos métodos nativos já expostos pelo men
 
 O comportamento de Esc preserva a prioridade de segurança do host nativo: primeiro cancela ferramentas de placement/construção, depois sai da tela cheia e somente então restaura o filtro geral de seleção.
 
+### Checkpoint N3.32 — terreno double-sided no rasterizer nativo
+
+A validação da Alpha.4 Test 1 revelou que a malha de terreno podia existir e ser contabilizada pelo renderer, mas continuar invisível no viewport. Com o céu OMSI ativo, isso ficava evidente porque as nuvens apareciam através da grade como se fossem a textura do chão.
+
+A versão React já renderizava o terreno com `backFaceCulling = false`. O host Direct3D 11 ainda usava o rasterizer padrão, que pode descartar a face visível do terreno dependendo do winding efetivo da malha/câmera.
+
+O passe de terreno agora usa um `ID3D11RasterizerState` dedicado com `RasterizerDescription.CullNone`. Esse estado vale somente durante o desenho do terreno e é restaurado imediatamente depois, portanto objetos, splines, céu e gizmos continuam usando seus estados normais.
+
+Nenhum dado do `.terrain`, UV, textura ou máscara é alterado; a correção é exclusivamente de rasterização e mantém paridade com o comportamento já validado no viewport React.
+
