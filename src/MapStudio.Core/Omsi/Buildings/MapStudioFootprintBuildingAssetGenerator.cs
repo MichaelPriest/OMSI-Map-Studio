@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Text;
+using MapStudio.Core.AI;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Models;
