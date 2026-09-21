@@ -67,6 +67,51 @@ public sealed class
             preview.Maximum.Y);
     }
 
+
+    [Fact]
+    public void ModelPreviewUsesStandaloneO3dGeometry()
+    {
+        var geometry =
+            new OmsiO3dGeometry(
+                true,
+                null,
+                [
+                    -3, 0, -2,
+                     4, 0, -2,
+                     0, 5, 3
+                ],
+                Array.Empty<float>(),
+                Array.Empty<float>(),
+                [0u, 1u, 2u],
+                Array.Empty<ushort>(),
+                Array.Empty<
+                    OmsiO3dMaterial>());
+
+        var preview =
+            new NativeAssetPreviewGeometryBuilder()
+                .BuildModel(
+                    geometry);
+
+        Assert.True(
+            preview.IsRenderable);
+
+        Assert.Equal(
+            1,
+            preview.SourceMeshCount);
+
+        Assert.Equal(
+            1,
+            preview.TriangleCount);
+
+        Assert.Equal(
+            -3,
+            preview.Minimum.X);
+
+        Assert.Equal(
+            5,
+            preview.Maximum.Y);
+    }
+
     [Fact]
     public void SplinePreviewExtrudesRealProfile()
     {

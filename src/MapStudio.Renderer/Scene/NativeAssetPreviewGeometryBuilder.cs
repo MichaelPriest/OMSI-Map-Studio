@@ -105,6 +105,50 @@ public sealed class NativeAssetPreviewGeometryBuilder
     }
 
     public NativeAssetPreviewGeometry
+        BuildModel(
+            OmsiO3dGeometry geometry)
+    {
+        ArgumentNullException.ThrowIfNull(
+            geometry);
+
+        if (
+            !geometry.IsLoaded ||
+            geometry.Positions.Length <
+                3 ||
+            geometry.Indices.Length <
+                3)
+        {
+            return
+                NativeAssetPreviewGeometry
+                    .Error(
+                        geometry.ErrorCode ??
+                        "previewModelNotRenderable");
+        }
+
+        var vertices =
+            new List<NativeMapVertex>(
+                Math.Max(
+                    3,
+                    geometry.Indices.Length));
+
+        AppendGeometry(
+            geometry,
+            Matrix4x4.Identity,
+            vertices);
+
+        return
+            CreateResult(
+                vertices,
+                sourceMeshCount:
+                    vertices.Count > 0
+                        ? 1
+                        : 0,
+                vertices.Count == 0
+                    ? "previewModelNoTriangles"
+                    : null);
+    }
+
+    public NativeAssetPreviewGeometry
         BuildSpline(
             NativeSplineAsset asset,
             float previewLength =
@@ -235,6 +279,27 @@ public sealed class NativeAssetPreviewGeometryBuilder
         var transform =
             CreateMeshTransform(
                 mesh.Transform);
+
+        AppendGeometry(
+            geometry,
+            transform,
+            output);
+    }
+
+    private static void AppendGeometry(
+        OmsiO3dGeometry geometry,
+        Matrix4x4 transform,
+        List<NativeMapVertex> output)
+    {
+        if (
+            !geometry.IsLoaded ||
+            geometry.Positions.Length <
+                3 ||
+            geometry.Indices.Length <
+                3)
+        {
+            return;
+        }
 
         var triangleCount =
             geometry.Indices.Length /

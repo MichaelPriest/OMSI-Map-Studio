@@ -1286,11 +1286,13 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 result.IsRenderable
                     ? $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos · thumbnail geométrico atualizado."
-                    : asset.Kind is
-                        OmsiAssetKind.Model or
+                    : asset.Kind ==
                         OmsiAssetKind.Texture
-                        ? $"Prévia 3D desta categoria ainda não está habilitada: {asset.RelativePath}."
-                        : $"Não foi possível gerar a prévia: {asset.RelativePath} · {result.ErrorCode}.";
+                        ? $"Prévia visual de textura ainda não está habilitada: {asset.RelativePath}."
+                        : asset.Kind ==
+                            OmsiAssetKind.Model
+                            ? $"Não foi possível renderizar o modelo: {asset.RelativePath} · {result.ErrorCode}."
+                            : $"Não foi possível gerar a prévia: {asset.RelativePath} · {result.ErrorCode}.";
         }
         catch (
             OperationCanceledException)

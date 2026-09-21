@@ -4,6 +4,7 @@ using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Vegetation;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Renderer.Graphics;
 using MapStudio.Renderer.Picking;
@@ -2172,6 +2173,45 @@ public sealed class NativeViewportRuntime : IDisposable
                 builder.BuildSpline(
                     asset);
         }
+        else if (
+            kind ==
+            OmsiAssetKind.Model)
+        {
+            if (
+                !TryResolveIndexedAssetPath(
+                    omsiRoot,
+                    relativePath,
+                    out var modelPath))
+            {
+                preview =
+                    NativeAssetPreviewGeometry
+                        .Error(
+                            "previewModelPathInvalid");
+            }
+            else
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var geometry =
+                    string.Equals(
+                        Path.GetExtension(
+                            modelPath),
+                        ".x",
+                        StringComparison
+                            .OrdinalIgnoreCase)
+                        ? new OmsiDirectXTextGeometryReader()
+                            .Read(
+                                modelPath)
+                        : new OmsiO3dGeometryReader()
+                            .Read(
+                                modelPath);
+
+                preview =
+                    builder.BuildModel(
+                        geometry);
+            }
+        }
         else
         {
             preview =
@@ -2229,8 +2269,9 @@ public sealed class NativeViewportRuntime : IDisposable
                     NativeTriangleRange>(),
                 Array.Empty<
                     NativeMaterialBatch>(),
-                kind ==
-                    OmsiAssetKind.SceneryObject
+                kind is
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Model
                     ? 1
                     : 0,
                 preview.SourceMeshCount);
@@ -5068,6 +5109,82 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.End,
             _splineNextId,
             _splinePlacementIsHeight);
+    }
+
+    private static bool TryResolveIndexedAssetPath(
+        string root,
+        string relativePath,
+        out string fullPath)
+    {
+        fullPath =
+            string.Empty;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                root) ||
+            string.IsNullOrWhiteSpace(
+                relativePath) ||
+            Path.IsPathRooted(
+                relativePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var normalizedRoot =
+                Path.GetFullPath(
+                        root)
+                    .TrimEnd(
+                        Path.DirectorySeparatorChar,
+                        Path.AltDirectorySeparatorChar);
+
+            var rootPrefix =
+                normalizedRoot +
+                Path.DirectorySeparatorChar;
+
+            var normalizedRelative =
+                relativePath
+                    .Replace(
+                        Path.AltDirectorySeparatorChar,
+                        Path.DirectorySeparatorChar)
+                    .TrimStart(
+                        Path.DirectorySeparatorChar);
+
+            var candidate =
+                Path.GetFullPath(
+                    Path.Combine(
+                        normalizedRoot,
+                        normalizedRelative));
+
+            if (
+                !candidate.StartsWith(
+                    rootPrefix,
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                !File.Exists(
+                    candidate))
+            {
+                return false;
+            }
+
+            fullPath =
+                candidate;
+
+            return true;
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    ArgumentException or
+                    NotSupportedException or
+                    PathTooLongException or
+                    IOException or
+                    UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private void ApplySkyTexture()
