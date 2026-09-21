@@ -23,6 +23,10 @@ public sealed class NativeAssetLibraryState
 
     public List<NativeConstructionSetDefinition>
         ConstructionSets { get; init; } = [];
+
+    public double ToolPaletteOffsetX { get; init; }
+
+    public double ToolPaletteOffsetY { get; init; }
 }
 
 public static class NativeAssetLibraryStateStore
@@ -211,7 +215,23 @@ public static class NativeAssetLibraryStateStore
                         group =>
                             group.Last())
                     .Take(64)
-                    .ToList()
+                    .ToList(),
+            ToolPaletteOffsetX =
+                double.IsFinite(
+                    state.ToolPaletteOffsetX)
+                    ? Math.Clamp(
+                        state.ToolPaletteOffsetX,
+                        -4000,
+                        4000)
+                    : 0,
+            ToolPaletteOffsetY =
+                double.IsFinite(
+                    state.ToolPaletteOffsetY)
+                    ? Math.Clamp(
+                        state.ToolPaletteOffsetY,
+                        -4000,
+                        4000)
+                    : 0
         };
     }
 

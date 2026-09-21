@@ -58,6 +58,13 @@ public sealed partial class MainWindow : Window
             NativeAssetLibraryStateStore
                 .Load();
 
+    private bool _isMapToolPaletteDragging;
+    private uint _mapToolPaletteDragPointerId;
+    private double _mapToolPaletteDragStartX;
+    private double _mapToolPaletteDragStartY;
+    private double _mapToolPaletteOriginX;
+    private double _mapToolPaletteOriginY;
+
     private string?
         _referenceOverlayMapDirectory;
 
@@ -418,6 +425,13 @@ public sealed partial class MainWindow : Window
                 SynchronizeExplorerSelection(
                     info);
             };
+        MapToolPaletteTranslate.X =
+            _assetLibraryState
+                .ToolPaletteOffsetX;
+
+        MapToolPaletteTranslate.Y =
+            _assetLibraryState
+                .ToolPaletteOffsetY;
     }
 
     private void OnExplorerSearchTextChanged(
@@ -6153,6 +6167,157 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Inspector restaurado.";
+    }
+
+    private void OnMapToolPaletteDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not
+                UIElement element)
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        _isMapToolPaletteDragging =
+            true;
+
+        _mapToolPaletteDragPointerId =
+            e.Pointer.PointerId;
+
+        _mapToolPaletteDragStartX =
+            point.Position.X;
+
+        _mapToolPaletteDragStartY =
+            point.Position.Y;
+
+        _mapToolPaletteOriginX =
+            MapToolPaletteTranslate.X;
+
+        _mapToolPaletteOriginY =
+            MapToolPaletteTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnMapToolPaletteDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_isMapToolPaletteDragging ||
+            e.Pointer.PointerId !=
+                _mapToolPaletteDragPointerId)
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        var nextX =
+            _mapToolPaletteOriginX +
+            point.Position.X -
+            _mapToolPaletteDragStartX;
+
+        var nextY =
+            _mapToolPaletteOriginY +
+            point.Position.Y -
+            _mapToolPaletteDragStartY;
+
+        var maxX =
+            Math.Max(
+                40,
+                MainRoot.ActualWidth /
+                    2.0 -
+                60);
+
+        var maxY =
+            Math.Max(
+                40,
+                MainRoot.ActualHeight -
+                100);
+
+        MapToolPaletteTranslate.X =
+            Math.Clamp(
+                nextX,
+                -maxX,
+                maxX);
+
+        MapToolPaletteTranslate.Y =
+            Math.Clamp(
+                nextY,
+                -maxY,
+                40);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnMapToolPaletteDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_isMapToolPaletteDragging ||
+            e.Pointer.PointerId !=
+                _mapToolPaletteDragPointerId)
+        {
+            return;
+        }
+
+        _isMapToolPaletteDragging =
+            false;
+
+        if (
+            sender is
+                UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        _assetLibraryState =
+            new NativeAssetLibraryState
+            {
+                Favorites =
+                    _assetLibraryState
+                        .Favorites,
+                Recent =
+                    _assetLibraryState
+                        .Recent,
+                Usage =
+                    _assetLibraryState
+                        .Usage,
+                Collections =
+                    _assetLibraryState
+                        .Collections,
+                ConstructionSets =
+                    _assetLibraryState
+                        .ConstructionSets,
+                ToolPaletteOffsetX =
+                    MapToolPaletteTranslate.X,
+                ToolPaletteOffsetY =
+                    MapToolPaletteTranslate.Y
+            };
+
+        SaveAssetLibraryState();
+
+        StatusText.Text =
+            "Posição da barra de ferramentas salva.";
+
+        e.Handled =
+            true;
     }
 
     private void OnPanelSplitterPointerPressed(

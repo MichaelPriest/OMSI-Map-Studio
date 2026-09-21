@@ -848,8 +848,27 @@
                     BorderThickness="1"
                     CornerRadius="13"
                     Canvas.ZIndex="50">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="MapToolPaletteTranslate" />
+                </Border.RenderTransform>
                 <StackPanel Orientation="Horizontal"
                             Spacing="6">
+                    <Border x:Name="MapToolPaletteDragGrip"
+                            Width="20"
+                            MinHeight="48"
+                            Background="#142D3E"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para mover a barra"
+                            PointerPressed="OnMapToolPaletteDragPressed"
+                            PointerMoved="OnMapToolPaletteDragMoved"
+                            PointerReleased="OnMapToolPaletteDragReleased"
+                            PointerCanceled="OnMapToolPaletteDragReleased">
+                        <TextBlock Text="⋮⋮"
+                                   FontSize="16"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="#9FCBE2" />
+                    </Border>
                     <Button x:Name="ToolSelectionButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Seleção e edição"
