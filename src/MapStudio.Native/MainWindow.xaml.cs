@@ -5713,10 +5713,419 @@ public sealed partial class MainWindow : Window
         _junctionPlacementTarget =
             null;
 
-        await ActivateLibraryToolAsync(
-            1,
-            "water",
-            "Água: atalho de assets ativo. O editor nativo dedicado de planos de água entra na próxima etapa.");
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            snapshot.ActiveTile is not
+                { } active)
+        {
+            StatusText.Text =
+                "Água: abra um mapa e mantenha um tile ativo.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de editar a água.";
+
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.RestoreSceneView();
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            active.X &&
+                        tile.Reference.Y ==
+                            active.Y);
+
+        if (loaded is null)
+        {
+            StatusText.Text =
+                $"Água: o tile ativo {active.X},{active.Y} não está carregado no viewport.";
+
+            return;
+        }
+
+        var existingWater =
+            loaded.Content.Water;
+
+        var hasWaterState =
+            existingWater is not null ||
+            loaded.Content.Summary
+                .WaterMarkerPresent ||
+            loaded.Content.Summary
+                .WaterFileExists;
+
+        var initial =
+            existingWater?.Heights
+                .ToArray();
+
+        if (
+            initial is null ||
+            initial.Length !=
+                OmsiWaterGrid.HeightCount)
+        {
+            var terrain =
+                loaded.Content.Terrain;
+
+            if (
+                terrain is not null &&
+                terrain.Heights.Count ==
+                    terrain.SampleCount *
+                    terrain.SampleCount)
+            {
+                var last =
+                    terrain.SampleCount -
+                    1;
+
+                initial =
+                    [
+                        terrain.Heights[0],
+                        terrain.Heights[last],
+                        terrain.Heights[
+                            last *
+                                terrain.SampleCount],
+                        terrain.Heights[
+                            terrain.Heights.Count -
+                                1]
+                    ];
+            }
+            else
+            {
+                initial =
+                    [0, 0, 0, 0];
+            }
+        }
+
+        NumberBox CreateHeightBox(
+            string header,
+            double value) =>
+            new()
+            {
+                Header =
+                    header,
+                Minimum =
+                    -10000,
+                Maximum =
+                    10000,
+                Value =
+                    value,
+                SmallChange =
+                    0.10,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var h00Box =
+            CreateHeightBox(
+                "Canto 0,0 · oeste/norte",
+                initial[0]);
+
+        var h10Box =
+            CreateHeightBox(
+                "Canto 1,0 · leste/norte",
+                initial[1]);
+
+        var h01Box =
+            CreateHeightBox(
+                "Canto 0,1 · oeste/sul",
+                initial[2]);
+
+        var h11Box =
+            CreateHeightBox(
+                "Canto 1,1 · leste/sul",
+                initial[3]);
+
+        var levelButton =
+            new Button
+            {
+                Content =
+                    "Nivelar os quatro cantos pela média"
+            };
+
+        levelButton.Click +=
+            (_, _) =>
+            {
+                var values =
+                    new[]
+                    {
+                        h00Box.Value,
+                        h10Box.Value,
+                        h01Box.Value,
+                        h11Box.Value
+                    };
+
+                if (
+                    values.Any(
+                        value =>
+                            !double.IsFinite(
+                                value)))
+                {
+                    return;
+                }
+
+                var level =
+                    values.Average();
+
+                h00Box.Value =
+                    level;
+                h10Box.Value =
+                    level;
+                h01Box.Value =
+                    level;
+                h11Box.Value =
+                    level;
+            };
+
+        var grid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8,
+                RowSpacing =
+                    8
+            };
+
+        grid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        grid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        grid.RowDefinitions.Add(
+            new RowDefinition());
+
+        grid.RowDefinitions.Add(
+            new RowDefinition());
+
+        Grid.SetColumn(
+            h00Box,
+            0);
+
+        Grid.SetRow(
+            h00Box,
+            0);
+
+        Grid.SetColumn(
+            h10Box,
+            1);
+
+        Grid.SetRow(
+            h10Box,
+            0);
+
+        Grid.SetColumn(
+            h01Box,
+            0);
+
+        Grid.SetRow(
+            h01Box,
+            1);
+
+        Grid.SetColumn(
+            h11Box,
+            1);
+
+        Grid.SetRow(
+            h11Box,
+            1);
+
+        grid.Children.Add(
+            h00Box);
+
+        grid.Children.Add(
+            h10Box);
+
+        grid.Children.Add(
+            h01Box);
+
+        grid.Children.Add(
+            h11Box);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    $"Água do tile {active.X},{active.Y}",
+                Message =
+                    existingWater is not null
+                        ? "Os quatro valores abaixo são as alturas reais do sidecar .map.water. O preview D3D11 usa exatamente esses quatro cantos."
+                        : "O tile ainda não possui uma grade de água válida. Os valores iniciais foram derivados dos quatro cantos do terreno quando disponíveis; revise-os antes de salvar."
+            });
+
+        panel.Children.Add(
+            grid);
+
+        panel.Children.Add(
+            levelButton);
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Salvar cria/atualiza [water] e tile_X_Y.map.water com backup. Remover Água apaga o marcador e o sidecar com rollback em caso de falha.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Editor de água OMSI",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar água",
+                SecondaryButtonText =
+                    hasWaterState
+                        ? "Remover água"
+                        : string.Empty,
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var answer =
+            await dialog
+                .ShowAsync();
+
+        if (
+            answer ==
+                ContentDialogResult
+                    .Secondary &&
+            hasWaterState)
+        {
+            try
+            {
+                StatusText.Text =
+                    $"Removendo água do tile {active.X},{active.Y} com backup...";
+
+                var removed =
+                    await _session
+                        .RemoveTileWaterAsync(
+                            active.X,
+                            active.Y);
+
+                await ApplyMapSnapshotAsync(
+                    removed.Snapshot,
+                    focusActiveTile:
+                        false);
+
+                StatusText.Text =
+                    string.IsNullOrWhiteSpace(
+                        removed.BackupDirectory)
+                        ? $"Tile {active.X},{active.Y} já não possuía água."
+                        : $"Água removida do tile {active.X},{active.Y}. Backup: {removed.BackupDirectory}";
+            }
+            catch (Exception exception)
+            {
+                StatusText.Text =
+                    $"Falha ao remover água: {exception.Message}";
+            }
+
+            return;
+        }
+
+        if (
+            answer !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        var heights =
+            new[]
+            {
+                h00Box.Value,
+                h10Box.Value,
+                h01Box.Value,
+                h11Box.Value
+            };
+
+        if (
+            heights.Any(
+                value =>
+                    !double.IsFinite(
+                        value) ||
+                    value <
+                        -10000 ||
+                    value >
+                        10000))
+        {
+            StatusText.Text =
+                "Água não salva: informe quatro alturas finitas válidas.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Salvando água do tile {active.X},{active.Y} com backup...";
+
+            var result =
+                await _session
+                    .SetTileWaterAsync(
+                        active.X,
+                        active.Y,
+                        new OmsiWaterGrid(
+                            heights
+                                .Select(
+                                    value =>
+                                        (float)value)
+                                .ToArray()));
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile:
+                    false);
+
+            StatusText.Text =
+                $"Água salva no tile {active.X},{active.Y}. Backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar água: {exception.Message}";
+        }
     }
 
     private async void OnToolTrafficClick(
