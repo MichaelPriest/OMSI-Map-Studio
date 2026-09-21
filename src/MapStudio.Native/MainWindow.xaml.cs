@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Globalization;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
