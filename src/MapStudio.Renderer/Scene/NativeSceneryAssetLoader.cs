@@ -428,11 +428,22 @@ public sealed class NativeSceneryAssetLoader
             metadata.Tree,
             metadata.UsesAbsoluteHeight,
             meshes.Count == 0 &&
-            metadata.Tree is null
+            metadata.Tree is null &&
+            metadata.LightPoints.Count == 0
                 ? "noRenderableMeshes"
                 : null,
             treeTexturePath,
-            metadata.RenderType);
+            metadata.RenderType)
+        {
+            LightPoints =
+                metadata.LightPoints,
+            TrafficLightControllers =
+                metadata.TrafficLightControllers,
+            IsTrafficLightObject =
+                metadata.IsTrafficLightObject,
+            UsesLightMapMapping =
+                metadata.UsesLightMapMapping
+        };
     }
 
     private static int ResolveMaterialIndex(

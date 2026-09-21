@@ -1710,6 +1710,18 @@ public sealed class NativeViewportRuntime : IDisposable
         private set;
     }
 
+    public int SceneryLightPointCount
+    {
+        get;
+        private set;
+    }
+
+    public int TrafficLightProgramCount
+    {
+        get;
+        private set;
+    }
+
     public bool NightPreviewEnabled =>
         _nightPreviewEnabled;
 
@@ -2537,13 +2549,20 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene,
                     _splineAssets);
 
+        var sceneryLightGeometry =
+            new NativeSceneryLightGeometryBuilder()
+                .Build(
+                    Scene,
+                    _sceneryAssets);
+
         MapRenderer.Upload(
             Scene,
             objectGeometry,
             proxyGeometry,
             terrainGeometry,
             splineGeometry,
-            trafficPathGeometry);
+            trafficPathGeometry,
+            sceneryLightGeometry);
 
         LoadedObjectMeshCount =
             objectGeometry
@@ -2552,6 +2571,21 @@ public sealed class NativeViewportRuntime : IDisposable
         LoadedSplineSurfaceCount =
             splineGeometry
                 .RenderedSurfaceCount;
+
+        SceneryLightPointCount =
+            sceneryLightGeometry
+                .LightPointCount;
+
+        TrafficLightProgramCount =
+            _sceneryAssets.Values
+                .SelectMany(
+                    asset =>
+                        asset
+                            .TrafficLightControllers)
+                .Sum(
+                    controller =>
+                        controller
+                            .Programs.Count);
     }
 
     private NativeTransformHistoryEntry?

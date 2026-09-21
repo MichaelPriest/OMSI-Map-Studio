@@ -97,6 +97,9 @@ public sealed class D3D11NativeMapRenderer :
     private int _trafficPathVertexCount;
     private bool _trafficPathsVisible;
 
+    private ID3D11Buffer? _sceneryLightBuffer;
+    private int _sceneryLightVertexCount;
+
     private bool _gridVisible =
         true;
 
@@ -875,7 +878,9 @@ public sealed class D3D11NativeMapRenderer :
         NativeSplineTriangleGeometry?
             splineGeometry = null,
         NativeTrafficPathGeometry?
-            trafficPathGeometry = null)
+            trafficPathGeometry = null,
+        NativeSceneryLightGeometry?
+            sceneryLightGeometry = null)
     {
         ThrowIfDisposed();
 
@@ -894,6 +899,10 @@ public sealed class D3D11NativeMapRenderer :
         _trafficPathBuffer?.Dispose();
         _trafficPathBuffer = null;
         _trafficPathVertexCount = 0;
+
+        _sceneryLightBuffer?.Dispose();
+        _sceneryLightBuffer = null;
+        _sceneryLightVertexCount = 0;
 
         _terrainTriangleBuffer
             ?.Dispose();
@@ -1071,6 +1080,25 @@ public sealed class D3D11NativeMapRenderer :
 
             _trafficPathVertexCount =
                 trafficPathGeometry
+                    .Vertices.Length;
+        }
+
+        if (
+            sceneryLightGeometry is not null &&
+            sceneryLightGeometry
+                .Vertices.Length > 0)
+        {
+            _sceneryLightBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        sceneryLightGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _sceneryLightVertexCount =
+                sceneryLightGeometry
                     .Vertices.Length;
         }
 
@@ -1255,6 +1283,60 @@ public sealed class D3D11NativeMapRenderer :
                         context,
                         _trafficPathBuffer,
                         _trafficPathVertexCount);
+                }
+
+                if (
+                    _nightPreviewEnabled &&
+                    _visibility.ObjectsVisible &&
+                    _sceneryLightBuffer is
+                        not null &&
+                    _sceneryLightVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _sceneryLightBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context
+                        .PSSetShader(
+                            _pixelShader);
+
+                    context
+                        .OMSetDepthStencilState(
+                            _depthReadState);
+
+                    context
+                        .OMSetBlendState(
+                            _alphaBlendState);
+
+                    context
+                        .RSSetState(
+                            _terrainRasterizerState);
+
+                    context.Draw(
+                        (uint)
+                            _sceneryLightVertexCount,
+                        0);
+
+                    context
+                        .OMSetBlendState(
+                            null);
+
+                    context
+                        .OMSetDepthStencilState(
+                            null);
+
+                    context
+                        .RSSetState(
+                            null);
                 }
 
                 if (
@@ -2785,6 +2867,7 @@ public sealed class D3D11NativeMapRenderer :
         _terrainTriangleBuffer
             ?.Dispose();
 
+        _sceneryLightBuffer?.Dispose();
         _trafficPathBuffer?.Dispose();
         _splineGuideBuffer?.Dispose();
         _objectGuideBuffer?.Dispose();

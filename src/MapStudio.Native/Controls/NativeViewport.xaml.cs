@@ -749,6 +749,8 @@ public sealed partial class NativeViewport : UserControl
             $"{_runtime.LoadedSplineAssetCount} SLI · " +
             $"{_runtime.LoadedSplineSurfaceCount} superfícies spline · " +
             $"{_runtime.TrafficPathLineCount} linhas de path · " +
+            $"{_runtime.SceneryLightPointCount} pontos de luz · " +
+            $"{_runtime.TrafficLightProgramCount} programas de semáforo · " +
             $"{scene.SelectableCount} IDs de seleção.");
     }
 

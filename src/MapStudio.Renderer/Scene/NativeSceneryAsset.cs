@@ -52,6 +52,18 @@ public sealed record NativeSceneryAsset(
     string? TreeTexturePath = null,
     string? RenderType = null)
 {
+    public IReadOnlyList<OmsiSceneryLightPoint>
+        LightPoints { get; init; } =
+            Array.Empty<OmsiSceneryLightPoint>();
+
+    public IReadOnlyList<OmsiTrafficLightController>
+        TrafficLightControllers { get; init; } =
+            Array.Empty<OmsiTrafficLightController>();
+
+    public bool IsTrafficLightObject { get; init; }
+
+    public bool UsesLightMapMapping { get; init; }
+
     public bool IsLoaded =>
         ErrorCode is null &&
         (
@@ -62,6 +74,9 @@ public sealed record NativeSceneryAsset(
                 Tree is not null &&
                 !string.IsNullOrWhiteSpace(
                     TreeTexturePath)
-            )
+            ) ||
+            LightPoints.Any(
+                light =>
+                    light.HasRenderableEnhancedData)
         );
 }
