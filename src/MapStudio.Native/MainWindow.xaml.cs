@@ -8,6 +8,7 @@ using MapStudio.Core.Commercial;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
+using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
@@ -13704,6 +13705,21 @@ public sealed partial class MainWindow : Window
                 .BuildProceduralRoadPlacementRequests(
                     graph);
 
+        var junctionPlan =
+            Viewport
+                .BuildProceduralJunctionPlan(
+                    graph);
+
+        if (
+            junctionPlan.SkippedJunctions >
+                0)
+        {
+            StatusText.Text =
+                $"Geração cancelada: {junctionPlan.SkippedJunctions} cruzamento(s) ficaram fora do terreno carregado.";
+
+            return;
+        }
+
         if (
             placement.SkippedSegments >
                 0 ||
@@ -13739,6 +13755,103 @@ public sealed partial class MainWindow : Window
                 .InstallOrUpdateAsync(
                     root);
 
+            var junctionGroups =
+                new List<
+                    NativeSceneryPlacementBatchGroup>();
+
+            if (
+                junctionPlan.Items.Count >
+                    0)
+            {
+                StatusText.Text =
+                    $"Gerando {junctionPlan.UniqueAssetCount} tipo(s) de junction próprio(s)...";
+
+                var generatedAssets =
+                    new Dictionary<
+                        string,
+                        string>(
+                            StringComparer
+                                .OrdinalIgnoreCase);
+
+                foreach (
+                    var topology in
+                        junctionPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    var sample =
+                        topology.First();
+
+                    var asset =
+                        await new MapStudioJunctionAssetGenerator()
+                            .GenerateAsync(
+                                root,
+                                sample.Spec);
+
+                    var sceneryRoot =
+                        Path.Combine(
+                            root,
+                            "Sceneryobjects");
+
+                    var relativePath =
+                        Path.GetRelativePath(
+                            sceneryRoot,
+                            asset.SceneryObjectPath)
+                            .Replace(
+                                Path.DirectorySeparatorChar,
+                                '\\');
+
+                    generatedAssets[
+                        sample.AssetName] =
+                        relativePath;
+                }
+
+                foreach (
+                    var topology in
+                        junctionPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    var sceneryPath =
+                        generatedAssets[
+                            topology.Key];
+
+                    var requests =
+                        topology
+                            .Select(
+                                item =>
+                                    new NativeSceneryPlacementRequest(
+                                        item.Tile,
+                                        sceneryPath,
+                                        item.X,
+                                        item.Y,
+                                        0,
+                                        item.Rotation,
+                                        0,
+                                        0,
+                                        item.WorldPoint,
+                                        false))
+                            .ToArray();
+
+                    foreach (
+                        var chunk in
+                            requests.Chunk(
+                                256))
+                    {
+                        junctionGroups.Add(
+                            new NativeSceneryPlacementBatchGroup(
+                                sceneryPath,
+                                chunk));
+                    }
+                }
+            }
+
             StatusText.Text =
                 $"Gerando {placement.Requests.Count} spline(s) em uma única transação...";
 
@@ -13748,11 +13861,58 @@ public sealed partial class MainWindow : Window
                         placement.Requests,
                         placement.Links);
 
+            var finalSnapshot =
+                insertion.Snapshot;
+
+            var junctionBackupDirectories =
+                new List<string>();
+
+            try
+            {
+                foreach (
+                    var batch in
+                        junctionGroups
+                            .Chunk(
+                                16))
+                {
+                    StatusText.Text =
+                        $"Inserindo junctions automáticos · {batch.Sum(group => group.Placements.Count)} objeto(s)...";
+
+                    finalSnapshot =
+                        await _session
+                            .InsertSceneryObjectMultiBatchAsync(
+                                batch);
+
+                    if (
+                        !string.IsNullOrWhiteSpace(
+                            _session.LastBackupDirectory))
+                    {
+                        junctionBackupDirectories.Add(
+                            _session.LastBackupDirectory!);
+                    }
+                }
+            }
+            catch
+            {
+                try
+                {
+                    await _session
+                        .RestoreMapStudioBackupAsync(
+                            insertion.BackupDirectory);
+                }
+                catch
+                {
+                    // Keep the original junction exception as the primary failure.
+                }
+
+                throw;
+            }
+
             RegisterConstructionHistory(
                 "Gerar vias procedurais");
 
             await ApplyMapSnapshotAsync(
-                insertion.Snapshot,
+                finalSnapshot,
                 focusActiveTile:
                     false);
 
@@ -13784,7 +13944,14 @@ public sealed partial class MainWindow : Window
                 false;
 
             StatusText.Text =
-                $"{insertion.SplineIds.Count} spline(s) procedurais gravadas. Backup: {insertion.BackupDirectory}";
+                $"{insertion.SplineIds.Count} spline(s) procedurais + {junctionPlan.Items.Count} junction(s) próprios gravados. " +
+                $"Backup das vias: {insertion.BackupDirectory}" +
+                (
+                    junctionBackupDirectories.Count >
+                        0
+                        ? $" · backup(s) de junction: {junctionBackupDirectories.Count}"
+                        : string.Empty
+                );
         }
         catch (Exception exception)
         {
