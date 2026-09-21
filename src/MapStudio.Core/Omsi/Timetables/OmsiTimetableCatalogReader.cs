@@ -99,8 +99,46 @@ public sealed class OmsiTimetableCatalogReader
             }
         }
 
+        var busStopsPath =
+            Path.Combine(
+                ttDataPath,
+                "Busstops.cfg");
+
+        var stationLinksPath =
+            Path.Combine(
+                ttDataPath,
+                "StnLinks.cfg");
+
+        var busStops =
+            File.Exists(
+                busStopsPath)
+                ? await new OmsiTimetableBusStopReader()
+                    .ReadAsync(
+                        busStopsPath,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : Array.Empty<
+                    OmsiTimetableBusStop>();
+
+        var stationLinks =
+            File.Exists(
+                stationLinksPath)
+                ? await new OmsiStationLinkReader()
+                    .ReadAsync(
+                        stationLinksPath,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                : Array.Empty<
+                    OmsiStationLink>();
+
         return new OmsiTimetableCatalog(
             tracks,
-            trips);
+            trips)
+        {
+            BusStops =
+                busStops,
+            StationLinks =
+                stationLinks
+        };
     }
 }

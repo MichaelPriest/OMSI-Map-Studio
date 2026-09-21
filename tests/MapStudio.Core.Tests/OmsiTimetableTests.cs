@@ -48,6 +48,39 @@ public sealed class OmsiTimetableTests
                 Encoding.Latin1);
 
             await File.WriteAllTextAsync(
+                Path.Combine(
+                    tt,
+                    "Busstops.cfg"),
+                "---------------------------\r\n" +
+                "Time Table BusStopList File\r\n" +
+                "---------------------------\r\n\r\n" +
+                "Created\r\nDate\r\n\r\n" +
+                "[busstop]\r\n" +
+                "Central\r\n" +
+                "5\r\n5001\r\n0\r\n0\r\n0\r\n\r\n" +
+                "[busstop]\r\n" +
+                "Depot\r\n" +
+                "6\r\n5002\r\n0\r\n0\r\n0\r\n\r\n",
+                Encoding.Latin1);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    tt,
+                    "StnLinks.cfg"),
+                "---------------------------\r\n" +
+                "Time Table StnLinkList File\r\n" +
+                "---------------------------\r\n\r\n" +
+                "Created\r\nDate\r\n\r\n" +
+                "Central ==> Depot\r\n" +
+                "[StnLink]\r\n" +
+                "182\r\n5001\r\n5002\r\n" +
+                "3.3\r\n3.2\r\n0.7\r\n20.9\r\n1\r\n10\r\n\r\n" +
+                "0:\r\n" +
+                "[StnLink_entry]\r\n" +
+                "77\r\n0\r\n5\r\n125.5\r\n-1\r\n0\r\n0\r\n\r\n",
+                Encoding.Latin1);
+
+            await File.WriteAllTextAsync(
                 tripPath,
                 "-----------------------\r\n" +
                 "Time Table Trip File\r\n" +
@@ -109,6 +142,33 @@ public sealed class OmsiTimetableTests
                 0,
                 catalog
                     .BrokenTripTrackReferenceCount);
+
+            Assert.Equal(
+                2,
+                catalog.BusStops.Count);
+
+            Assert.Equal(
+                1,
+                catalog.StationLinks.Count);
+
+            Assert.Equal(
+                0,
+                catalog
+                    .BrokenStationLinkStopReferenceCount);
+
+            var link =
+                catalog.StationLinks[0];
+
+            Assert.Equal(
+                5001,
+                link.StartBusStopId);
+
+            Assert.Equal(
+                5002,
+                link.EndBusStopId);
+
+            Assert.Single(
+                link.Entries);
         }
         finally
         {
