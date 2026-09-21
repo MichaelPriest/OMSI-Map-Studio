@@ -714,6 +714,10 @@ A seção histórica **“Fase de estabilização do viewport”** acima registr
 
 Estado atual dos diferenciais novos:
 
+- ✅ editor standalone com Workspace próprio, template/terreno inicial e criação/edição sem instalação do OMSI;
+- ✅ importação opcional de pastas de itens SCO/SLI para a biblioteca do Workspace;
+- ✅ atalho **Abrir OMSI** preservado como fonte opcional de mapas/assets;
+- ✅ chrome nativo remodelado com menu + ribbon desktop e barra de editor específica no fullscreen;
 - ✅ Road Kit próprio;
 - ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
 - ✅ Cant/Mirror avançado exposto no Inspector nativo com persistência preservativa e backup;

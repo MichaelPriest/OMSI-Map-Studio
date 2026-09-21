@@ -700,7 +700,7 @@ O host WinUI agora cria tiles OMSI reais sem depender do editor antigo.
 
 **Mapa → Criar tile...**:
 
-- usa os arquivos do template oficial `template/NewMap` da instalação selecionada;
+- usa `template/NewMap` da fonte ativa: o **template próprio do Workspace Map Studio** no modo standalone ou o template da instalação quando a fonte opcional OMSI estiver ativa;
 - copia o `.map`, `.terrain`, lightmap e demais arquivos auxiliares associados ao tile do template;
 - não copia `.prt`, pois é um arquivo temporário regenerável do editor;
 - acrescenta uma nova seção `[map]` ao fim de `global.cfg`, preservando a ordem e os índices existentes;
@@ -724,6 +724,28 @@ A exclusão inicial é propositalmente conservadora.
 Todos os arquivos `tile_X_Y.map*` são copiados para `.mapstudio-backups` antes da remoção. Se qualquer etapa falhar, `global.cfg` e arquivos do tile são restaurados.
 
 A remoção arbitrária de tiles intermediários continua bloqueada até existir um reindexador validado para referências dependentes de índice em `global.cfg` e dados operacionais.
+
+
+## Workspace standalone e fonte OMSI opcional
+
+O editor nativo agora inicia em um **Workspace Map Studio próprio**, sem exigir que o OMSI esteja instalado.
+
+O Workspace é uma raiz de conteúdo compatível com o pipeline OMSI e cria automaticamente:
+
+- `maps`;
+- `Sceneryobjects`;
+- `Splines`;
+- `Texture`;
+- `template/NewMap`;
+- metadados privados em `.mapstudio`.
+
+O template de mapa e o terreno inicial são gerados pelo próprio Map Studio. O Workspace também semeia assets próprios quando ainda não existirem: Road Kit, túnel inicial, junction inicial e uma casa inicial gerada pelo Building Studio.
+
+**Arquivo → Novo mapa...** cria e abre um mapa diretamente no Workspace. **Arquivo → Adicionar pasta de itens...** copia packs SCO/SLI para a biblioteca standalone, preservando a estrutura interna do pack.
+
+**Abrir OMSI** continua disponível no menu, na ribbon desktop e na barra do modo tela cheia. Ele apenas troca a fonte ativa para uma instalação OMSI escolhida pelo usuário; não é requisito de inicialização nem de criação/edição.
+
+A UI mostra explicitamente `WORKSPACE` ou `OMSI` para evitar ambiguidade sobre a fonte ativa. A barra superior foi reorganizada em menu + ribbon de comandos, e o fullscreen possui barra própria com salvar/desfazer/refazer, novo mapa, Assets, Explorer, Inspector, Workspace e Abrir OMSI.
 
 
 ## Estado consolidado da migração nativa — 21/09/2026

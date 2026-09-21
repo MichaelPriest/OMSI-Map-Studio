@@ -714,6 +714,10 @@ The historical **“Viewport stabilization phase”** section above records the 
 
 Current state of the new differentiators:
 
+- ✅ standalone editor with its own Workspace, native template/terrain, and map creation/editing without an OMSI installation;
+- ✅ optional SCO/SLI item-folder import into the Workspace library;
+- ✅ **Open OMSI** preserved as an optional map/asset content source;
+- ✅ reshaped native chrome with desktop menu + command ribbon and a dedicated fullscreen editor bar;
 - ✅ original Road Kit;
 - ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
 - ✅ advanced Cant/Mirror exposed in the native Inspector with preservation-safe persistence and backup;
