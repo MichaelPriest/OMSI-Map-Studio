@@ -39,17 +39,23 @@ public sealed class OmsiTimetableTripReader
                 "tripSectionMissing");
         }
 
-        var tripData =
-            ReadFollowingDataLines(
-                lines,
-                tripIndex + 1,
-                3);
-
-        if (tripData.Count < 3)
+        if (
+            tripIndex + 3 >=
+                lines.Length)
         {
             throw new InvalidDataException(
                 "tripSectionMalformed");
         }
+
+        var tripData =
+            lines
+                .Skip(
+                    tripIndex + 1)
+                .Take(3)
+                .Select(
+                    line =>
+                        line.Trim())
+                .ToArray();
 
         var comments =
             lines
@@ -103,15 +109,16 @@ public sealed class OmsiTimetableTripReader
                     StringComparison.OrdinalIgnoreCase))
             {
                 var data =
-                    ReadFollowingDataLines(
-                        lines,
-                        index + 1,
-                        1);
+                    index + 1 <
+                        lines.Length
+                        ? lines[index + 1]
+                            .Trim()
+                        : null;
 
                 if (
-                    data.Count == 1 &&
+                    data is not null &&
                     int.TryParse(
-                        data[0],
+                        data,
                         NumberStyles.Integer,
                         CultureInfo.InvariantCulture,
                         out var id))
@@ -130,13 +137,19 @@ public sealed class OmsiTimetableTripReader
                     StringComparison.OrdinalIgnoreCase))
             {
                 var data =
-                    ReadFollowingDataLines(
-                        lines,
-                        index + 1,
-                        8);
+                    index + 8 <
+                        lines.Length
+                        ? lines
+                            .Skip(index + 1)
+                            .Take(8)
+                            .Select(
+                                line =>
+                                    line.Trim())
+                            .ToArray()
+                        : Array.Empty<string>();
 
                 if (
-                    data.Count >= 8 &&
+                    data.Length >= 8 &&
                     int.TryParse(
                         data[0],
                         NumberStyles.Integer,

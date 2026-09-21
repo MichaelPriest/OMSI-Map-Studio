@@ -286,4 +286,75 @@ public sealed class OmsiTimetableTests
                 recursive: true);
         }
     }
+    [Fact]
+    public async Task TripReaderPreservesBlankTrackLineAndStationName()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-ttp-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        Directory.CreateDirectory(
+            root);
+
+        var path =
+            Path.Combine(
+                root,
+                "RealStyle.ttp");
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                path,
+                "-----------------------\r\n" +
+                "Time Table Trip File\r\n" +
+                "-----------------------\r\n\r\n" +
+                "Created\r\nDate\r\n\r\n" +
+                "[trip]\r\n" +
+                "\r\n" +
+                "54 GBB-NBH\r\n" +
+                "54\r\n\r\n" +
+                "[station]\r\n" +
+                "738\r\n0\r\n\r\n0\r\n" +
+                "-0.061\r\n31.205\r\n31.205\r\n5.000\r\n",
+                Encoding.Latin1);
+
+            var trip =
+                await new OmsiTimetableTripReader()
+                    .ReadAsync(
+                        root,
+                        path);
+
+            Assert.Equal(
+                string.Empty,
+                trip.TrackName);
+
+            Assert.Equal(
+                "54 GBB-NBH",
+                trip.Destination);
+
+            Assert.Equal(
+                "54",
+                trip.Line);
+
+            var station =
+                Assert.IsType<
+                    OmsiTimetableTripStationType1>(
+                    Assert.Single(
+                        trip.Stations));
+
+            Assert.Equal(
+                string.Empty,
+                station.Name);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
 }

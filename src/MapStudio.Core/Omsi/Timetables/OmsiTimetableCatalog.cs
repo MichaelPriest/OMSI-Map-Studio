@@ -50,6 +50,8 @@ public sealed record OmsiTimetableCatalog(
     public int BrokenTripTrackReferenceCount =>
         Trips.Count(
             trip =>
+                !string.IsNullOrWhiteSpace(
+                    trip.TrackName) &&
                 !Tracks.Any(
                     track =>
                         KeysMatch(
