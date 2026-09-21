@@ -604,3 +604,81 @@ Regras:
 - não existem respostas simuladas em produção;
 - chaves/tokens não devem ser gravados no mapa, no `.sco`, no `.o3d` ou em assets gerados;
 - o resultado final deve continuar sendo dado OMSI real, inspecionável e independente do serviço de IA usado.
+
+
+## Paridade avançada e geração procedural de vias
+
+A migração nativa agora também cobre os fluxos avançados que permaneciam somente no React:
+
+- **Estrada fácil com prévia editável antes de salvar**: início/fim podem ser ajustados por coordenadas, offset de curva é atualizado em tempo real e a spline só é persistida após confirmação explícita;
+- **catálogo pesquisável de mapas instalados**;
+- **drag-and-drop da biblioteca para o mapa**;
+- **thumbnails geométricos reais e persistentes** para assets SCO/SLI no Explorer, gerados a partir da própria geometria nativa;
+- **nivelamento de spline pela altura real do terreno**;
+- **[spline_h] nativo** com criação, cópia e validação de template;
+- **camadas de pintura do terreno** ocultáveis individualmente.
+
+### Grafo procedural de vias
+
+O gerador procedural usa um único grafo independente do formato OMSI.
+
+Entradas atualmente suportadas:
+
+1. traçado manual por cliques no terreno;
+2. GeoJSON georreferenciado (`LineString` e `MultiLineString`);
+3. futuramente, saída estruturada de IA e outros provedores vetoriais.
+
+O grafo:
+
+- detecta cruzamentos X e T;
+- divide as vias nos nós de interseção;
+- preserva metadados de faixa, largura e mão;
+- cria preview D3D11 sobre a altura real do terreno;
+- planeja auto-link apenas em nós lineares seguros;
+- não tenta representar cruzamentos de grau 3/4 apenas com `Previous/Next`.
+
+### Road Kit e junctions próprios
+
+O Map Studio gera seu próprio Road Kit e também assets de junction procedurais.
+
+O fluxo atual:
+
+1. traçado → grafo;
+2. grafo → requests OMSI;
+3. preview D3D11;
+4. geração/atualização do Road Kit;
+5. gravação das splines em batch transacional;
+6. aplicação de auto-links lineares;
+7. geração de junctions próprios conforme a topologia;
+8. inserção dos junctions como scenery objects;
+9. rollback das vias se a etapa de junction falhar.
+
+### Importação GeoJSON
+
+O GeoJSON utiliza a âncora de `.mapstudio/georeference.json`.
+
+A projeção geográfica é mantida no Core e não depende do OMSI, para poder ser reutilizada por adapters de outros simuladores.
+
+A importação lê, quando disponíveis:
+
+- `highway`;
+- `lanes`;
+- `oneway`;
+- `width`;
+- `name`.
+
+Os dados são classificados para perfis do Road Kit, entram primeiro no preview e só são persistidos quando o usuário escolhe **Gerar vias**.
+
+### Perfis de IA
+
+O menu **IA → Configurar provedores...** armazena apenas:
+
+- nome do perfil;
+- adapter ID;
+- endpoint;
+- modelo;
+- indicador local/offline.
+
+Nenhuma chave/token é gravada nesse JSON. Credenciais deverão ser resolvidas por adapter, Credential Manager ou backend.
+
+O Building Studio mostra o perfil ativo configurado, mas não apresenta uma análise automática como disponível até existir um adapter real conectado.
