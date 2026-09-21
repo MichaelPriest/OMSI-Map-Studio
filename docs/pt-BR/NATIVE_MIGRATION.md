@@ -770,7 +770,9 @@ As coordenadas WGS84 são projetadas pela mesma âncora de `.mapstudio/georefere
 
 Tree rows e hedges são projetados pela mesma âncora geográfica e amostrados em pontos regulares de 4 m. Áreas de floresta/bosque recebem dispersão determinística de aproximadamente 14 m e áreas de scrub de 7 m, sempre mantendo os pontos dentro do polígono OSM. O diálogo permite escolher **dois SCOs reais** já indexados na categoria Vegetação: um para árvores/tree rows/floresta e outro para arbustos/hedges/scrub. O viewport mostra a prévia sobre o terreno carregado; a confirmação alinha cada item à altura real do terreno e grava os grupos em uma única transação multi-batch com backup. O limite operacional permanece 256 pontos selecionados por execução e a rotação variada continua opcional e determinística por ID/amostra.
 
-Relations OSM `type=multipolygon` de floresta/bosque/scrub agora são aceitas quando podem ser montadas apenas com **outer rings** seguros; os ways consumidos pela relation não são duplicados como áreas standalone. Relações com `inner` continuam recusadas nesta etapa para não preencher holes incorretamente. O mapeamento automático de espécies para assets específicos ainda não é feito. Pontos sem terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
+Relations OSM `type=multipolygon` de floresta/bosque/scrub agora são aceitas quando podem ser montadas apenas com **outer rings** seguros; os ways consumidos pela relation não são duplicados como áreas standalone. Relações com `inner` continuam recusadas nesta etapa para não preencher holes incorretamente.
+
+O diálogo também usa `species`, `genus` e `leaf_type` como **sugestão** para pré-selecionar o SCO real mais compatível já existente na biblioteca. Essa heurística nunca cria assets nem bloqueia a escolha manual do usuário; uma seleção de vegetação já ativa na biblioteca continua tendo prioridade. Pontos sem terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
 
 ### Attachments OMSI
 
