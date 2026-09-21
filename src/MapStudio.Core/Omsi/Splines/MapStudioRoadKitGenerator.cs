@@ -322,6 +322,18 @@ public sealed class MapStudioRoadKitGenerator
                 sidewalkWidth: 0,
                 oneWay: true),
             RoadVariant.CreateRoad(
+                "ms_road_oneway_2lane_7m.sli",
+                laneCount: 2,
+                laneWidth: 3.5,
+                sidewalkWidth: 0,
+                oneWay: true),
+            RoadVariant.CreateRoad(
+                "ms_road_oneway_3lane_10_5m.sli",
+                laneCount: 3,
+                laneWidth: 3.5,
+                sidewalkWidth: 0,
+                oneWay: true),
+            RoadVariant.CreateRoad(
                 "ms_road_2lane_7m.sli",
                 laneCount: 2,
                 laneWidth: 3.5,
