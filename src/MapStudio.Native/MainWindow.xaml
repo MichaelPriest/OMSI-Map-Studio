@@ -229,6 +229,9 @@
                         Text="Criar tile..."
                         Click="OnCreateMapTileClick" />
                     <MenuFlyoutItem
+                        Text="Excluir tile ativo..."
+                        Click="OnDeleteActiveMapTileClick" />
+                    <MenuFlyoutItem
                         Text="Criar mapa real por coordenadas..."
                         Click="OnCreateCoordinateMapClick" />
                     <MenuFlyoutItem
