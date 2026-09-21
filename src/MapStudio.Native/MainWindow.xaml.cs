@@ -6074,6 +6074,247 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnGoogleElevationClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            snapshot.ActiveTile is not
+                { } active)
+        {
+            StatusText.Text =
+                "Elevação Google: abra um mapa e mantenha um tile ativo.";
+
+            return;
+        }
+
+        NativeMapGeoreference? georeference;
+
+        try
+        {
+            georeference =
+                await _session
+                    .LoadMapGeoreferenceAsync();
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Não foi possível ler a georreferência: {exception.Message}";
+            return;
+        }
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Salve primeiro a georreferência do mapa.";
+
+            return;
+        }
+
+        var apiKeyBox =
+            new PasswordBox
+            {
+                Header =
+                    "Google Maps Platform API key",
+                PlaceholderText =
+                    "A chave é usada somente nesta operação"
+            };
+
+        var samplesBox =
+            new NumberBox
+            {
+                Header =
+                    "Amostras por eixo",
+                Minimum =
+                    3,
+                Maximum =
+                    33,
+                Value =
+                    17,
+                SmallChange =
+                    2
+            };
+
+        var offsetBox =
+            new NumberBox
+            {
+                Header =
+                    "Offset vertical (m)",
+                Minimum =
+                    -10000,
+                Maximum =
+                    10000,
+                Value =
+                    0,
+                SmallChange =
+                    1
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    440
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Tile ativo: {active.X},{active.Y}\nÂncora: {georeference.Latitude:F6}, {georeference.Longitude:F6}",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "A chave não é salva pelo Map Studio. O relevo retornado será interpolado para a grade .terrain do tile.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        panel.Children.Add(
+            apiKeyBox);
+
+        panel.Children.Add(
+            samplesBox);
+
+        panel.Children.Add(
+            offsetBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Google Elevation",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Buscar relevo",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var answer =
+            await dialog
+                .ShowAsync();
+
+        if (
+            answer !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKeyBox.Password) ||
+            !double.IsFinite(
+                samplesBox.Value) ||
+            !double.IsFinite(
+                offsetBox.Value))
+        {
+            StatusText.Text =
+                "Dados inválidos para buscar a elevação.";
+
+            return;
+        }
+
+        var sampleCount =
+            Math.Clamp(
+                (int)Math.Round(
+                    samplesBox.Value),
+                3,
+                33);
+
+        try
+        {
+            StatusText.Text =
+                $"Buscando elevação real para tile {active.X},{active.Y} ({sampleCount}×{sampleCount})...";
+
+            var grid =
+                await _session
+                    .LoadGoogleElevationGridAsync(
+                        apiKeyBox.Password,
+                        active.X,
+                        active.Y,
+                        sampleCount);
+
+            var confirm =
+                new ContentDialog
+                {
+                    XamlRoot =
+                        MainRoot.XamlRoot,
+                    Title =
+                        "Aplicar relevo real?",
+                    Content =
+                        $"Tile {grid.TileX},{grid.TileY}\n" +
+                        $"Amostras: {grid.Rows}×{grid.Columns}\n" +
+                        $"Elevação mínima: {grid.MinimumElevation:F2} m\n" +
+                        $"Elevação máxima: {grid.MaximumElevation:F2} m\n" +
+                        $"Offset: {offsetBox.Value:F2} m\n\n" +
+                        "O arquivo .terrain atual será salvo em backup antes da alteração.",
+                    PrimaryButtonText =
+                        "Aplicar",
+                    CloseButtonText =
+                        "Cancelar",
+                    DefaultButton =
+                        ContentDialogButton
+                            .Close
+                };
+
+            var apply =
+                await confirm
+                    .ShowAsync();
+
+            if (
+                apply !=
+                    ContentDialogResult
+                        .Primary)
+            {
+                StatusText.Text =
+                    "Grade de elevação carregada, mas não aplicada.";
+
+                return;
+            }
+
+            var result =
+                await _session
+                    .ApplyTerrainElevationGridAsync(
+                        grid,
+                        offsetBox.Value);
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile: true);
+
+            StatusText.Text =
+                result.ChangedSamples ==
+                    0
+                    ? "A grade de elevação não alterou amostras do terreno."
+                    : $"Relevo real aplicado: {result.ChangedSamples} amostra(s) alterada(s). Backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha no Google Elevation: {exception.Message}";
+        }
+    }
+
     private async void OnEditMapGeoreferenceClick(
         object sender,
         RoutedEventArgs e)
