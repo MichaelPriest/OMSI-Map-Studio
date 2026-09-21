@@ -13745,7 +13745,8 @@ public sealed partial class MainWindow : Window
             var insertion =
                 await _session
                     .InsertSplineBatchAsync(
-                        placement.Requests);
+                        placement.Requests,
+                        placement.Links);
 
             RegisterConstructionHistory(
                 "Gerar vias procedurais");
