@@ -416,6 +416,7 @@ public sealed partial class MainWindow : Window
 
         Viewport.CancelSceneryPlacement();
         Viewport.CancelSplinePlacement();
+        Viewport.ClearTimetableRoutePreview();
         Viewport.RestoreSceneView();
 
         PlaceAssetButton.Content =
@@ -2977,11 +2978,80 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
+        if (
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item)
+        {
+            TransportDetailText.Text =
+                "Selecione um item para ver detalhes.";
+
+            Viewport
+                .ClearTimetableRoutePreview();
+
+            return;
+        }
+
         TransportDetailText.Text =
-            TransportListView.SelectedItem is
-                TransportExplorerItem item
-                ? item.Detail
-                : "Selecione um item para ver detalhes.";
+            item.Detail;
+
+        if (_timetableCatalog is null)
+        {
+            return;
+        }
+
+        if (item.Kind == "Track")
+        {
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (track is not null)
+            {
+                var resolved =
+                    Viewport
+                        .PreviewTimetableTrack(
+                            track.Entries);
+
+                StatusText.Text =
+                    $"Track {track.Name}: {resolved}/{track.Entries.Count} segmento(s) resolvido(s) no mapa carregado.";
+            }
+
+            return;
+        }
+
+        if (item.Kind == "StationLink")
+        {
+            var link =
+                _timetableCatalog
+                    .StationLinks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                $"{candidate.StartBusStopId}>{candidate.EndBusStopId}",
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (link is not null)
+            {
+                var resolved =
+                    Viewport
+                        .PreviewStationLink(
+                            link.Entries);
+
+                StatusText.Text =
+                    $"StationLink {item.Key}: {resolved}/{link.Entries.Count} segmento(s) resolvido(s).";
+            }
+
+            return;
+        }
+
+        Viewport
+            .ClearTimetableRoutePreview();
     }
 
     private async void OnToolValidationClick(

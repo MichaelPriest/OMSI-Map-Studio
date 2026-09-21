@@ -98,6 +98,9 @@ public sealed class D3D11NativeMapRenderer :
     private int _trafficPathVertexCount;
     private bool _trafficPathsVisible;
 
+    private ID3D11Buffer? _timetableRouteBuffer;
+    private int _timetableRouteVertexCount;
+
     private ID3D11Buffer? _sceneryLightBuffer;
     private int _sceneryLightVertexCount;
 
@@ -666,6 +669,42 @@ public sealed class D3D11NativeMapRenderer :
 
     public int TrafficPathLineCount =>
         _trafficPathVertexCount / 2;
+
+    public void SetTimetableRoutePreview(
+        IReadOnlyList<NativeMapVertex>?
+            vertices)
+    {
+        ThrowIfDisposed();
+
+        _timetableRouteBuffer
+            ?.Dispose();
+
+        _timetableRouteBuffer =
+            null;
+
+        _timetableRouteVertexCount =
+            0;
+
+        if (
+            vertices is null ||
+            vertices.Count == 0)
+        {
+            return;
+        }
+
+        var data =
+            vertices.ToArray();
+
+        _timetableRouteBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    data.AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _timetableRouteVertexCount =
+            data.Length;
+    }
 
     public bool SetTrafficPathsVisible(
         bool visible)
@@ -1291,6 +1330,11 @@ public sealed class D3D11NativeMapRenderer :
                         _trafficPathBuffer,
                         _trafficPathVertexCount);
                 }
+
+                DrawLineGeometry(
+                    context,
+                    _timetableRouteBuffer,
+                    _timetableRouteVertexCount);
 
                 if (
                     _nightPreviewEnabled &&
@@ -2921,6 +2965,7 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _sceneryLightBuffer?.Dispose();
+        _timetableRouteBuffer?.Dispose();
         _trafficPathBuffer?.Dispose();
         _splineGuideBuffer?.Dispose();
         _objectGuideBuffer?.Dispose();

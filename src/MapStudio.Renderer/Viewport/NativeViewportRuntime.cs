@@ -1,6 +1,7 @@
 using System.Numerics;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Renderer.Graphics;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -175,6 +176,96 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
+
+    public int PreviewTimetableTrack(
+        IReadOnlyList<
+            OmsiTimetableTrackEntry>
+            entries)
+    {
+        ThrowIfDisposed();
+
+        if (Scene is null)
+        {
+            return 0;
+        }
+
+        var references =
+            entries
+                .Select(
+                    entry =>
+                        new NativeTimetablePathReference(
+                            entry.Id,
+                            entry.Line2,
+                            entry.Length))
+                .ToArray();
+
+        return SetTimetableRoutePreview(
+            references);
+    }
+
+    public int PreviewStationLink(
+        IReadOnlyList<
+            OmsiStationLinkEntry>
+            entries)
+    {
+        ThrowIfDisposed();
+
+        if (Scene is null)
+        {
+            return 0;
+        }
+
+        var references =
+            entries
+                .Select(
+                    entry =>
+                        new NativeTimetablePathReference(
+                            entry.Id,
+                            entry.Line2,
+                            entry.Length))
+                .ToArray();
+
+        return SetTimetableRoutePreview(
+            references);
+    }
+
+    public void ClearTimetableRoutePreview()
+    {
+        ThrowIfDisposed();
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                null);
+
+        RenderInitialFrame();
+    }
+
+    private int SetTimetableRoutePreview(
+        IReadOnlyList<
+            NativeTimetablePathReference>
+            references)
+    {
+        if (Scene is null)
+        {
+            return 0;
+        }
+
+        var geometry =
+            new NativeTimetableRouteGeometryBuilder()
+                .Build(
+                    Scene,
+                    _splineAssets,
+                    _sceneryAssets,
+                    references);
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                geometry.Vertices);
+
+        RenderInitialFrame();
+
+        return geometry.ResolvedReferenceCount;
+    }
 
     public IReadOnlyList<
         NativeTrafficLightProgramInfo>

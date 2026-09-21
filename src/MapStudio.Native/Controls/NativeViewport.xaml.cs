@@ -66,6 +66,30 @@ public sealed partial class NativeViewport : UserControl
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
+    public int PreviewTimetableTrack(
+        IReadOnlyList<
+            MapStudio.Core.Omsi.Timetables
+                .OmsiTimetableTrackEntry>
+            entries) =>
+        _runtime
+            ?.PreviewTimetableTrack(
+                entries) ??
+        0;
+
+    public int PreviewStationLink(
+        IReadOnlyList<
+            MapStudio.Core.Omsi.Timetables
+                .OmsiStationLinkEntry>
+            entries) =>
+        _runtime
+            ?.PreviewStationLink(
+                entries) ??
+        0;
+
+    public void ClearTimetableRoutePreview() =>
+        _runtime
+            ?.ClearTimetableRoutePreview();
+
     public IReadOnlyList<
         NativeTrafficLightProgramInfo>
         GetTrafficLightPrograms() =>
