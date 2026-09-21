@@ -626,16 +626,18 @@ Current inputs:
 
 1. manual tracing by clicking the terrain;
 2. georeferenced GeoJSON (`LineString` and `MultiLineString`);
-3. future structured AI output and other vector providers.
+3. georeferenced OSM XML;
+4. structured AI output from a connected provider.
 
 The graph:
 
 - detects X and T intersections;
 - splits roads at intersection nodes;
 - preserves lane/width/one-way metadata;
-- builds a D3D11 preview following real terrain height;
-- plans auto-links only across safe linear nodes;
-- does not try to represent degree 3/4 junctions using only `Previous/Next`.
+- smooths polylines before building the persistent graph while preserving control points;
+- builds the D3D11 preview from the same geometry that will be persisted, following real terrain height;
+- plans auto-links across safe degree-2 linear nodes, including continuity assembled from separate traces;
+- never links through degree 3/4 nodes with `Previous/Next`; those nodes are handled by original junction assets.
 
 ### Original Road Kit and junctions
 
@@ -669,6 +671,12 @@ When present, import reads:
 
 Imported data is classified into Road Kit profiles, enters preview first, and is persisted only when the user chooses **Generate roads**.
 
+### OSM buildings and multipolygons
+
+Building import reads both `way` footprints and `type=multipolygon` relations carrying `building=*`. Outer ways that form a continuous ring are assembled into one footprint while preserving metadata such as `building:levels`, `height`, `roof:shape`, `roof:height`, name, and address.
+
+Relations with `inner` rings are still rejected conservatively because filling a courtyard/hole as a solid volume would generate incorrect geometry. Malformed relations or relations with unresolved references are not persisted either.
+
 ### AI profiles
 
 **AI → Configure providers...** stores metadata only:
@@ -679,9 +687,9 @@ Imported data is classified into Road Kit profiles, enters preview first, and is
 - model;
 - local/offline flag.
 
-No key/token is persisted in this JSON. Credentials must later be resolved by the adapter, Credential Manager, or the commercial backend.
+No key/token is persisted in this JSON. On Windows, local credentials are stored separately in Windows Credential Manager; a future commercial backend may resolve its own credentials without placing a secret key in the desktop client.
 
-Building Studio shows the configured active profile, but does not claim automatic analysis is available until a real adapter is connected.
+The host currently implements `openai-compatible`, `ollama`, and `lmstudio` adapters. Other providers remain extensible through the neutral contract and must not be advertised as supported until a real adapter exists.
 
 
 ## Native tile management
@@ -732,8 +740,8 @@ In addition to the checkpoints already described, the native host currently incl
 - individual `groundtex` layer visibility;
 - persistent geometry thumbnails and visual library cards;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
-- procedural-road generation using one graph, original junction assets, and rollback;
-- georeferenced GeoJSON and **OSM XML** import;
+- procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
+- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, and safe outer multipolygons;
 - AI analysis of the Google reference for road extraction;
 - Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
 - provider-neutral AI configuration and connection probing;
