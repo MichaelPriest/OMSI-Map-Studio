@@ -17,4 +17,5 @@ public sealed record NativeSplinePlacementRequest(
     double GradientEnd,
     bool IsCurved,
     Vector3 StartWorld,
-    Vector3 EndWorld);
+    Vector3 EndWorld,
+    int NextSplineId = -1);

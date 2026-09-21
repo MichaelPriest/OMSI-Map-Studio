@@ -247,6 +247,16 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public void SetSplineEndpointSnapOptions(
+        bool enabled,
+        double distance,
+        bool autoConnect) =>
+        _runtime
+            ?.SetSplineEndpointSnapOptions(
+                enabled,
+                distance,
+                autoConnect);
+
     public bool SeedSplinePlacementStart(
         System.Numerics.Vector3 start,
         int previousSplineId =

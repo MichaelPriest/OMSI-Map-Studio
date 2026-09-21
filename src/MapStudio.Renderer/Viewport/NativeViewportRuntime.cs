@@ -81,6 +81,18 @@ public sealed class NativeViewportRuntime : IDisposable
     private NativeSplinePlacementShape? _splinePlacementShape;
     private int _splinePreviousId =
         -1;
+
+    private int _splineNextId =
+        -1;
+
+    private bool _splineEndpointSnapEnabled =
+        true;
+
+    private double _splineEndpointSnapDistance =
+        5.0;
+
+    private bool _splineAutoConnectEnabled =
+        true;
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
 
@@ -355,6 +367,29 @@ public sealed class NativeViewportRuntime : IDisposable
         return changed;
     }
 
+    public void SetSplineEndpointSnapOptions(
+        bool enabled,
+        double distance,
+        bool autoConnect)
+    {
+        ThrowIfDisposed();
+
+        _splineEndpointSnapEnabled =
+            enabled;
+
+        _splineEndpointSnapDistance =
+            Math.Clamp(
+                double.IsFinite(
+                    distance)
+                    ? distance
+                    : 5.0,
+                0.5,
+                30.0);
+
+        _splineAutoConnectEnabled =
+            autoConnect;
+    }
+
     public bool SeedSplinePlacementStart(
         Vector3 start,
         int previousSplineId =
@@ -395,6 +430,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _splinePreviousId =
             previousSplineId;
+
+        _splineNextId =
+            -1;
 
         _splineEndWorld =
             null;
@@ -466,6 +504,7 @@ public sealed class NativeViewportRuntime : IDisposable
         _splinePointerWorld = null;
         _splinePlacementShape = null;
         _splinePreviousId = -1;
+        _splineNextId = -1;
         _splinePlacementStage =
             NativeSplinePlacementStage.AwaitingStart;
 
@@ -590,14 +629,53 @@ public sealed class NativeViewportRuntime : IDisposable
             _splinePlacementStage ==
             NativeSplinePlacementStage.AwaitingStart)
         {
-            _splineStartWorld = point;
+            NativeSplineEndpointSnap?
+                startSnap =
+                    null;
+
+            if (_splineEndpointSnapEnabled)
+            {
+                startSnap =
+                    NativeSplineEndpointSnapFinder
+                        .FindFreeEndpoint(
+                            Scene,
+                            point,
+                            NativeSplineEndpointKind.End,
+                            _splineEndpointSnapDistance);
+
+                if (startSnap is not null)
+                {
+                    point =
+                        startSnap.WorldPoint;
+                }
+            }
+
+            _splineStartWorld =
+                point;
+
+            _splinePreviousId =
+                _splineAutoConnectEnabled &&
+                startSnap is not null
+                    ? startSnap.SplineId
+                    : -1;
+
+            _splineNextId =
+                -1;
+
             _splinePlacementStage =
                 NativeSplinePlacementStage.AwaitingEnd;
 
             status =
-                _splinePlacementCurved
-                    ? "Início definido. Clique no ponto final; depois ajuste a curva."
-                    : "Início definido. Clique no ponto final para criar a spline.";
+                startSnap is not null
+                    ? $"Início encaixado na spline #{startSnap.SplineId} ({startSnap.Distance:F2} m). " +
+                      (
+                          _splineAutoConnectEnabled
+                              ? "Previous será conectado automaticamente."
+                              : "Auto-link desativado."
+                      )
+                    : _splinePlacementCurved
+                        ? "Início definido. Clique no ponto final; depois ajuste a curva."
+                        : "Início definido. Clique no ponto final para criar a spline.";
 
             MapRenderer.SetPlacementPreview(
                 null,
@@ -610,6 +688,34 @@ public sealed class NativeViewportRuntime : IDisposable
             _splinePlacementStage ==
             NativeSplinePlacementStage.AwaitingEnd)
         {
+            NativeSplineEndpointSnap?
+                endSnap =
+                    null;
+
+            if (_splineEndpointSnapEnabled)
+            {
+                endSnap =
+                    NativeSplineEndpointSnapFinder
+                        .FindFreeEndpoint(
+                            Scene,
+                            point,
+                            NativeSplineEndpointKind.Start,
+                            _splineEndpointSnapDistance,
+                            _splinePreviousId);
+
+                if (endSnap is not null)
+                {
+                    point =
+                        endSnap.WorldPoint;
+                }
+            }
+
+            _splineNextId =
+                _splineAutoConnectEnabled &&
+                endSnap is not null
+                    ? endSnap.SplineId
+                    : -1;
+
             if (
                 _splineStartWorld is not { } start ||
                 !NativeSplinePlacementMath.TryCreateStraight(
@@ -630,7 +736,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 _splinePlacementShape = straight;
 
                 status =
-                    "Final definido. Mova o cursor para curvar e clique para confirmar.";
+                    endSnap is not null
+                        ? $"Final encaixado na spline #{endSnap.SplineId} ({endSnap.Distance:F2} m). Ajuste a curva e clique para confirmar."
+                        : "Final definido. Mova o cursor para curvar e clique para confirmar.";
 
                 return true;
             }
@@ -692,6 +800,7 @@ public sealed class NativeViewportRuntime : IDisposable
         _splinePointerWorld = null;
         _splinePlacementShape = null;
         _splinePreviousId = -1;
+        _splineNextId = -1;
         _splinePlacementStage =
             NativeSplinePlacementStage.AwaitingStart;
 
@@ -3986,7 +4095,8 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.GradientEnd,
             shape.IsCurved,
             shape.Start,
-            shape.End);
+            shape.End,
+            _splineNextId);
     }
 
     private void ApplySkyTexture()
