@@ -1,3 +1,4 @@
+using System.Numerics;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
@@ -111,6 +112,11 @@ public sealed partial class MainWindow : Window
         _transportItems =
             Array.Empty<
                 TransportExplorerItem>();
+
+    private NativeSceneryPlacementRequest?
+        _patternLineStart;
+
+    private bool _applyingConstructionPreset;
 
     private CancellationTokenSource?
         _assetPreviewCancellation;
@@ -584,6 +590,15 @@ public sealed partial class MainWindow : Window
                 ? "Construir spline"
                 : "Posicionar no mapa";
 
+        ObjectPlacementOptionsPanel.Visibility =
+            selected?.Kind ==
+                OmsiAssetKind.SceneryObject
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        _patternLineStart =
+            null;
+
         SplineCurveCheckBox.Visibility =
             selected?.Kind ==
                 OmsiAssetKind.Spline
@@ -650,6 +665,134 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnObjectPlacementModeChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        _patternLineStart =
+            null;
+
+        if (
+            !_applyingConstructionPreset &&
+            ConstructionPresetComboBox
+                .SelectedIndex !=
+            0)
+        {
+            ConstructionPresetComboBox
+                .SelectedIndex =
+                0;
+        }
+    }
+
+    private void OnConstructionPresetChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            ConstructionPresetComboBox
+                .SelectedIndex <=
+            0)
+        {
+            return;
+        }
+
+        _applyingConstructionPreset =
+            true;
+
+        try
+        {
+            _patternLineStart =
+                null;
+
+            switch (
+                ConstructionPresetComboBox
+                    .SelectedIndex)
+            {
+                case 1:
+                    ObjectPlacementModeComboBox.SelectedIndex =
+                        2;
+                    PlacementSpacingBox.Value =
+                        8;
+                    PlacementRandomRotationCheckBox.IsChecked =
+                        true;
+                    break;
+
+                case 2:
+                    ObjectPlacementModeComboBox.SelectedIndex =
+                        2;
+                    PlacementSpacingBox.Value =
+                        25;
+                    PlacementRandomRotationCheckBox.IsChecked =
+                        false;
+                    break;
+
+                case 3:
+                    ObjectPlacementModeComboBox.SelectedIndex =
+                        6;
+                    PlacementSpacingBox.Value =
+                        18;
+                    PlacementSetbackBox.Value =
+                        7;
+                    PlacementRandomRotationCheckBox.IsChecked =
+                        false;
+                    break;
+
+                case 4:
+                    ObjectPlacementModeComboBox.SelectedIndex =
+                        3;
+                    PlacementRadiusBox.Value =
+                        25;
+                    PlacementCountBox.Value =
+                        30;
+                    PlacementRandomRotationCheckBox.IsChecked =
+                        true;
+                    break;
+
+                case 5:
+                    ObjectPlacementModeComboBox.SelectedIndex =
+                        4;
+                    PlacementRowsBox.Value =
+                        5;
+                    PlacementColumnsBox.Value =
+                        8;
+                    PlacementSpacingXBox.Value =
+                        3;
+                    PlacementSpacingZBox.Value =
+                        6;
+                    PlacementRandomRotationCheckBox.IsChecked =
+                        false;
+                    break;
+            }
+        }
+        finally
+        {
+            _applyingConstructionPreset =
+                false;
+        }
+    }
+
+    private static double PlacementValue(
+        NumberBox box,
+        double fallback) =>
+        double.IsFinite(
+            box.Value)
+            ? box.Value
+            : fallback;
+
+    private static int PlacementIntValue(
+        NumberBox box,
+        int fallback,
+        int minimum,
+        int maximum) =>
+        Math.Clamp(
+            double.IsFinite(
+                box.Value)
+                ? (int)Math.Round(
+                    box.Value)
+                : fallback,
+            minimum,
+            maximum);
+
     private async void OnPlaceAssetClick(
         object sender,
         RoutedEventArgs e)
@@ -668,6 +811,9 @@ public sealed partial class MainWindow : Window
                     OmsiAssetKind.Spline
                     ? "Construir spline"
                     : "Posicionar no mapa";
+
+            _patternLineStart =
+                null;
 
             StatusText.Text =
                 "Posicionamento cancelado.";
@@ -728,7 +874,19 @@ public sealed partial class MainWindow : Window
                         true
                         ? "Spline curva: clique início, fim e ponto de curvatura."
                         : "Spline reta: clique início e fim."
-                    : "Mova o ghost sobre o terreno e clique para inserir.";
+                    : ObjectPlacementModeComboBox.SelectedIndex switch
+                    {
+                        2 or 6 =>
+                            "Mova o ghost e clique o ponto inicial.",
+                        3 =>
+                            "Clique o centro do pincel/área.",
+                        4 =>
+                            "Clique o centro da matriz.",
+                        5 =>
+                            "Clique o centro do círculo.",
+                        _ =>
+                            "Mova o ghost sobre o terreno e clique para inserir."
+                    };
         }
         catch (Exception exception)
         {
@@ -866,12 +1024,6 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            PlaceAssetButton.Content =
-                "Posicionar no mapa";
-
-            PlaceAssetButton.IsEnabled =
-                false;
-
             if (
                 _session.PendingTransformCount >
                 0)
@@ -886,13 +1038,187 @@ public sealed partial class MainWindow : Window
                     false;
             }
 
+            var mode =
+                ObjectPlacementModeComboBox
+                    .SelectedIndex;
+
+            IReadOnlyList<
+                NativeSceneryPatternPlacement>
+                pattern;
+
+            if (mode is 2 or 6)
+            {
+                if (_patternLineStart is null)
+                {
+                    _patternLineStart =
+                        request;
+
+                    if (
+                        AssetLibraryListView
+                            .SelectedItem is
+                            OmsiAssetIndexEntry
+                                selected &&
+                        selected.Kind ==
+                            OmsiAssetKind
+                                .SceneryObject)
+                    {
+                        await Viewport
+                            .BeginSceneryPlacementAsync(
+                                _session
+                                    .OmsiRootPath,
+                                selected);
+                    }
+
+                    PlaceAssetButton.Content =
+                        "Cancelar posicionamento";
+
+                    StatusText.Text =
+                        mode == 2
+                            ? "Linha: ponto inicial definido. Clique o ponto final."
+                            : "Lotes: início definido. Clique o fim da frente dos lotes.";
+
+                    return;
+                }
+
+                var start =
+                    _patternLineStart;
+
+                _patternLineStart =
+                    null;
+
+                pattern =
+                    mode == 2
+                        ? NativeSceneryPlacementPatternBuilder
+                            .BuildLine(
+                                start,
+                                request,
+                                PlacementValue(
+                                    PlacementSpacingBox,
+                                    12),
+                                PlacementRandomRotationCheckBox
+                                    .IsChecked ==
+                                true)
+                        : NativeSceneryPlacementPatternBuilder
+                            .BuildLot(
+                                start,
+                                request,
+                                PlacementValue(
+                                    PlacementSpacingBox,
+                                    18),
+                                PlacementValue(
+                                    PlacementSetbackBox,
+                                    7),
+                                PlacementRandomRotationCheckBox
+                                    .IsChecked ==
+                                true);
+            }
+            else
+            {
+                pattern =
+                    mode switch
+                    {
+                        3 =>
+                            NativeSceneryPlacementPatternBuilder
+                                .BuildArea(
+                                    request,
+                                    PlacementValue(
+                                        PlacementRadiusBox,
+                                        20),
+                                    PlacementIntValue(
+                                        PlacementCountBox,
+                                        18,
+                                        1,
+                                        256),
+                                    PlacementRandomRotationCheckBox
+                                        .IsChecked ==
+                                    true),
+
+                        4 =>
+                            NativeSceneryPlacementPatternBuilder
+                                .BuildMatrix(
+                                    request,
+                                    PlacementIntValue(
+                                        PlacementRowsBox,
+                                        4,
+                                        1,
+                                        16),
+                                    PlacementIntValue(
+                                        PlacementColumnsBox,
+                                        4,
+                                        1,
+                                        16),
+                                    PlacementValue(
+                                        PlacementSpacingXBox,
+                                        6),
+                                    PlacementValue(
+                                        PlacementSpacingZBox,
+                                        6),
+                                    PlacementRandomRotationCheckBox
+                                        .IsChecked ==
+                                    true),
+
+                        5 =>
+                            NativeSceneryPlacementPatternBuilder
+                                .BuildCircle(
+                                    request,
+                                    PlacementValue(
+                                        PlacementRadiusBox,
+                                        15),
+                                    PlacementIntValue(
+                                        PlacementCountBox,
+                                        12,
+                                        1,
+                                        256),
+                                    PlacementTangentCheckBox
+                                        .IsChecked ==
+                                    true,
+                                    PlacementRandomRotationCheckBox
+                                        .IsChecked ==
+                                    true),
+
+                        _ =>
+                            [
+                                new NativeSceneryPatternPlacement(
+                                    request.WorldPoint.X,
+                                    request.WorldPoint.Z,
+                                    request.Z,
+                                    request.Rotation,
+                                    request.Pitch,
+                                    request.Bank)
+                            ]
+                    };
+            }
+
+            var requests =
+                BuildPatternRequests(
+                    request,
+                    pattern);
+
+            if (requests.Count == 0)
+            {
+                throw new InvalidDataException(
+                    "patternOutsideMap");
+            }
+
+            PlaceAssetButton.Content =
+                "Posicionar no mapa";
+
+            PlaceAssetButton.IsEnabled =
+                false;
+
             StatusText.Text =
-                "Inserindo objeto no tile OMSI com backup...";
+                requests.Count == 1
+                    ? "Inserindo objeto com backup..."
+                    : $"Inserindo {requests.Count} objetos em lote com backup...";
 
             var snapshot =
-                await _session
-                    .InsertSceneryObjectAsync(
-                        request);
+                requests.Count == 1
+                    ? await _session
+                        .InsertSceneryObjectAsync(
+                            requests[0])
+                    : await _session
+                        .InsertSceneryObjectBatchAsync(
+                            requests);
 
             await Viewport
                 .SetMapSnapshotAsync(
@@ -915,10 +1241,42 @@ public sealed partial class MainWindow : Window
                         .SceneryObject;
 
             StatusText.Text =
-                $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro.";
+                requests.Count == 1
+                    ? $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro."
+                    : $"{requests.Count} objetos inseridos em lote com backup seguro.";
+
+            if (
+                mode == 1 &&
+                AssetLibraryListView
+                    .SelectedItem is
+                    OmsiAssetIndexEntry
+                        repeatAsset &&
+                repeatAsset.Kind ==
+                    OmsiAssetKind
+                        .SceneryObject)
+            {
+                var restarted =
+                    await Viewport
+                        .BeginSceneryPlacementAsync(
+                            _session
+                                .OmsiRootPath,
+                            repeatAsset);
+
+                if (restarted)
+                {
+                    PlaceAssetButton.Content =
+                        "Cancelar posicionamento";
+
+                    StatusText.Text +=
+                        " · Repetir continua ativo.";
+                }
+            }
         }
         catch (Exception exception)
         {
+            _patternLineStart =
+                null;
+
             PlaceAssetButton.IsEnabled =
                 AssetLibraryListView.SelectedItem is
                     OmsiAssetIndexEntry asset &&
@@ -929,6 +1287,89 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Falha ao inserir objeto: {exception.Message}";
         }
+    }
+
+    private IReadOnlyList<
+        NativeSceneryPlacementRequest>
+        BuildPatternRequests(
+            NativeSceneryPlacementRequest template,
+            IReadOnlyList<
+                NativeSceneryPatternPlacement>
+                placements)
+    {
+        var map =
+            _session.CurrentMap?
+                .Map;
+
+        if (map is null)
+        {
+            return Array.Empty<
+                NativeSceneryPlacementRequest>();
+        }
+
+        var result =
+            new List<
+                NativeSceneryPlacementRequest>(
+                    placements.Count);
+
+        foreach (
+            var placement in
+                placements.Take(256))
+        {
+            var tileX =
+                (int)Math.Floor(
+                    placement.WorldX /
+                    300.0);
+
+            var tileY =
+                (int)Math.Floor(
+                    placement.WorldZ /
+                    300.0);
+
+            var tile =
+                map.Tiles
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.X ==
+                                tileX &&
+                            candidate.Y ==
+                                tileY);
+
+            if (tile is null)
+            {
+                continue;
+            }
+
+            result.Add(
+                template with
+                {
+                    Tile = tile,
+                    X =
+                        placement.WorldX -
+                        tileX *
+                        300.0,
+                    Y =
+                        placement.WorldZ -
+                        tileY *
+                        300.0,
+                    Z = placement.Z,
+                    Rotation =
+                        placement.Rotation,
+                    Pitch =
+                        placement.Pitch,
+                    Bank =
+                        placement.Bank,
+                    WorldPoint =
+                        new Vector3(
+                            (float)
+                                placement.WorldX,
+                            template.WorldPoint.Y,
+                            (float)
+                                placement.WorldZ)
+                });
+        }
+
+        return result;
     }
 
     private void OnAssetLibraryDoubleTapped(

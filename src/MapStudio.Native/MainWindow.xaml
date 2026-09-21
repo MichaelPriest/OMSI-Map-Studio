@@ -389,6 +389,126 @@
                                         IsEnabled="False"
                                         HorizontalAlignment="Stretch"
                                         Click="OnPlaceAssetClick" />
+
+                                <StackPanel x:Name="ObjectPlacementOptionsPanel"
+                                            Visibility="Collapsed"
+                                            Spacing="6">
+                                    <ComboBox x:Name="ConstructionPresetComboBox"
+                                              Header="Preset de construção"
+                                              SelectedIndex="0"
+                                              SelectionChanged="OnConstructionPresetChanged">
+                                        <ComboBoxItem Content="Personalizado" />
+                                        <ComboBoxItem Content="Arborização de avenida" />
+                                        <ComboBoxItem Content="Postes de iluminação" />
+                                        <ComboBoxItem Content="Casas alinhadas" />
+                                        <ComboBoxItem Content="Praça arborizada" />
+                                        <ComboBoxItem Content="Grade / estacionamento" />
+                                    </ComboBox>
+
+                                    <ComboBox x:Name="ObjectPlacementModeComboBox"
+                                              Header="Modo de posicionamento"
+                                              SelectedIndex="0"
+                                              SelectionChanged="OnObjectPlacementModeChanged">
+                                        <ComboBoxItem Content="Único" />
+                                        <ComboBoxItem Content="Repetir" />
+                                        <ComboBoxItem Content="Linha" />
+                                        <ComboBoxItem Content="Pincel / área" />
+                                        <ComboBoxItem Content="Matriz" />
+                                        <ComboBoxItem Content="Círculo" />
+                                        <ComboBoxItem Content="Lotes" />
+                                    </ComboBox>
+
+                                    <Grid ColumnSpacing="6"
+                                          RowSpacing="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <NumberBox x:Name="PlacementSpacingBox"
+                                                   Grid.Row="0"
+                                                   Grid.Column="0"
+                                                   Header="Espaço (m)"
+                                                   Minimum="0.5"
+                                                   Maximum="100"
+                                                   Value="12"
+                                                   SmallChange="0.5" />
+                                        <NumberBox x:Name="PlacementRadiusBox"
+                                                   Grid.Row="0"
+                                                   Grid.Column="1"
+                                                   Header="Raio (m)"
+                                                   Minimum="0.5"
+                                                   Maximum="150"
+                                                   Value="20"
+                                                   SmallChange="1" />
+                                        <NumberBox x:Name="PlacementCountBox"
+                                                   Grid.Row="1"
+                                                   Grid.Column="0"
+                                                   Header="Quantidade"
+                                                   Minimum="1"
+                                                   Maximum="256"
+                                                   Value="18"
+                                                   SmallChange="1" />
+                                        <NumberBox x:Name="PlacementSetbackBox"
+                                                   Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   Header="Recuo (m)"
+                                                   Minimum="-100"
+                                                   Maximum="100"
+                                                   Value="7"
+                                                   SmallChange="0.5" />
+                                        <NumberBox x:Name="PlacementRowsBox"
+                                                   Grid.Row="2"
+                                                   Grid.Column="0"
+                                                   Header="Linhas"
+                                                   Minimum="1"
+                                                   Maximum="16"
+                                                   Value="4"
+                                                   SmallChange="1" />
+                                        <NumberBox x:Name="PlacementColumnsBox"
+                                                   Grid.Row="2"
+                                                   Grid.Column="1"
+                                                   Header="Colunas"
+                                                   Minimum="1"
+                                                   Maximum="16"
+                                                   Value="4"
+                                                   SmallChange="1" />
+                                        <NumberBox x:Name="PlacementSpacingXBox"
+                                                   Grid.Row="3"
+                                                   Grid.Column="0"
+                                                   Header="Espaço X"
+                                                   Minimum="0.5"
+                                                   Maximum="100"
+                                                   Value="6"
+                                                   SmallChange="0.5" />
+                                        <NumberBox x:Name="PlacementSpacingZBox"
+                                                   Grid.Row="3"
+                                                   Grid.Column="1"
+                                                   Header="Espaço Y"
+                                                   Minimum="0.5"
+                                                   Maximum="100"
+                                                   Value="6"
+                                                   SmallChange="0.5" />
+                                    </Grid>
+
+                                    <CheckBox x:Name="PlacementRandomRotationCheckBox"
+                                              Content="Rotação variada" />
+                                    <CheckBox x:Name="PlacementTangentCheckBox"
+                                              Content="Círculo tangencial"
+                                              IsChecked="True" />
+
+                                    <TextBlock Text="Linha/Lotes: clique o início e depois o fim. Área, matriz e círculo usam o clique como centro."
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="#7895AD" />
+                                </StackPanel>
+
                                 <CheckBox x:Name="SplineCurveCheckBox"
                                           Content="Curva (3 cliques)"
                                           Visibility="Collapsed" />
