@@ -5994,6 +5994,30 @@ public sealed class OmsiNativeSession
         return maps;
     }
 
+    public async Task<
+        IReadOnlyList<OmsiMapDescriptor>>
+        RefreshMapCatalogAsync(
+            CancellationToken cancellationToken =
+                default)
+    {
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Selecione primeiro a instalação do OMSI 2.");
+
+        var maps =
+            await new OmsiMapCatalog()
+                .DiscoverAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        Maps =
+            maps;
+
+        return maps;
+    }
+
     public Task<NativeMapSnapshot>
         OpenMapAsync(
             string mapDirectory,
