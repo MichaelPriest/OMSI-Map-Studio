@@ -3537,6 +3537,140 @@ public sealed class OmsiNativeSession
             backupPath);
     }
 
+    public async Task<NativeBusStopUpdateResult>
+        UpdateBusStopAsync(
+            int stopIndex,
+            OmsiTimetableBusStop updatedStop,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            updatedStop);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var target =
+            Path.GetFullPath(
+                Path.Combine(
+                    snapshot.Map.DirectoryPath,
+                    "TTData",
+                    "Busstops.cfg"));
+
+        var relative =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        if (
+            !IsSafeRelativePath(
+                relative) ||
+            !File.Exists(
+                target))
+        {
+            throw new InvalidDataException(
+                "invalidBusStopPath");
+        }
+
+        var reader =
+            new OmsiTimetableBusStopReader();
+
+        var stops =
+            (
+                await reader
+                    .ReadAsync(
+                        target,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+            )
+            .ToList();
+
+        if (
+            stopIndex < 0 ||
+            stopIndex >=
+                stops.Count)
+        {
+            throw new InvalidDataException(
+                "busStopIndexInvalid");
+        }
+
+        stops[stopIndex] =
+            updatedStop;
+
+        var duplicateIds =
+            stops
+                .GroupBy(
+                    stop =>
+                        stop.Id)
+                .Any(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (duplicateIds)
+        {
+            throw new InvalidDataException(
+                "duplicateBusStopId");
+        }
+
+        var existingText =
+            await File.ReadAllTextAsync(
+                    target,
+                    System.Text.Encoding
+                        .Latin1,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var newLine =
+            existingText.Contains(
+                "\r\n",
+                StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+
+        var bytes =
+            new OmsiTimetableBusStopWriter()
+                .Write(
+                    stops,
+                    newLine);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await reader
+                .ReadAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeBusStopUpdateResult(
+            reloaded,
+            stopIndex,
+            backupPath);
+    }
+
     public async Task<NativeStationLinkUpdateResult>
         UpdateStationLinkAsync(
             int linkIndex,
