@@ -17304,37 +17304,53 @@ public sealed partial class MainWindow : Window
                     0;
             };
 
+        var referenceImagePaths =
+            new List<string>();
+
         var facadePathBox =
             new TextBox
             {
                 Header =
-                    "Imagem de fachada / referência",
+                    "Imagens de referência / fachada",
                 IsReadOnly =
                     true,
                 PlaceholderText =
-                    "Opcional"
+                    "Opcional · até 8 imagens"
             };
 
         var facadeButton =
             new Button
             {
                 Content =
-                    "Escolher imagem..."
+                    "Escolher imagens..."
             };
 
         facadeButton.Click +=
             async (_, _) =>
             {
-                var image =
-                    await PickImageFileAsync();
+                var images =
+                    await PickImageFilesAsync();
 
                 if (
-                    !string.IsNullOrWhiteSpace(
-                        image))
+                    images.Count ==
+                    0)
                 {
-                    facadePathBox.Text =
-                        image;
+                    return;
                 }
+
+                referenceImagePaths
+                    .Clear();
+
+                referenceImagePaths
+                    .AddRange(
+                        images.Take(
+                            8));
+
+                facadePathBox.Text =
+                    referenceImagePaths.Count ==
+                        1
+                        ? referenceImagePaths[0]
+                        : $"{referenceImagePaths.Count} imagens · principal: {Path.GetFileName(referenceImagePaths[0])}";
             };
 
         var activeAiProfile =
@@ -17382,7 +17398,7 @@ public sealed partial class MainWindow : Window
             new Button
             {
                 Content =
-                    "Analisar imagem com IA",
+                    "Analisar referências com IA",
                 HorizontalAlignment =
                     HorizontalAlignment
                         .Stretch,
@@ -17430,37 +17446,42 @@ public sealed partial class MainWindow : Window
                     return;
                 }
 
-                var imagePath =
-                    facadePathBox.Text;
+                var aiImagePaths =
+                    referenceImagePaths
+                        .Where(
+                            path =>
+                                File.Exists(
+                                    path))
+                        .Select(
+                            path =>
+                                (
+                                    Path:
+                                        path,
+                                    MimeType:
+                                        GetAiImageMimeType(
+                                            path)
+                                ))
+                        .Where(
+                            item =>
+                                item.MimeType is
+                                    not null)
+                        .Take(
+                            8)
+                        .ToArray();
 
                 if (
-                    string.IsNullOrWhiteSpace(
-                        imagePath) ||
-                    !File.Exists(
-                        imagePath))
+                    aiImagePaths.Length ==
+                    0)
                 {
                     aiInfo.Severity =
                         InfoBarSeverity
                             .Warning;
 
                     aiInfo.Message =
-                        "Escolha primeiro uma imagem de referência/fachada.";
-
-                    return;
-                }
-
-                var mimeType =
-                    GetAiImageMimeType(
-                        imagePath);
-
-                if (mimeType is null)
-                {
-                    aiInfo.Severity =
-                        InfoBarSeverity
-                            .Warning;
-
-                    aiInfo.Message =
-                        "Para análise por IA use PNG, JPG/JPEG ou WEBP. A imagem ainda pode ser usada manualmente como textura.";
+                        referenceImagePaths.Count ==
+                            0
+                            ? "Escolha primeiro uma ou mais imagens de referência/fachada."
+                            : "Para análise por IA use PNG, JPG/JPEG ou WEBP. BMP/TGA/DDS ainda podem ser usados manualmente como fachada principal.";
 
                     return;
                 }
@@ -17476,12 +17497,73 @@ public sealed partial class MainWindow : Window
                             .Informational;
 
                     aiInfo.Message =
-                        $"Analisando com {activeAiProfile.DisplayName}...";
+                        $"Analisando {aiImagePaths.Length} referência(s) com {activeAiProfile.DisplayName}...";
 
-                    var bytes =
-                        await File
-                            .ReadAllBytesAsync(
-                                imagePath);
+                    const long maximumImageBytes =
+                        20L *
+                        1024L *
+                        1024L;
+
+                    const long maximumTotalBytes =
+                        64L *
+                        1024L *
+                        1024L;
+
+                    long totalBytes =
+                        0;
+
+                    var imageReferences =
+                        new List<
+                            MapStudioAiImageReference>(
+                                aiImagePaths.Length);
+
+                    foreach (
+                        var item in
+                            aiImagePaths)
+                    {
+                        var length =
+                            new FileInfo(
+                                item.Path)
+                                .Length;
+
+                        if (
+                            length >
+                            maximumImageBytes)
+                        {
+                            throw new InvalidDataException(
+                                $"aiBuildingReferenceImageTooLarge:{Path.GetFileName(item.Path)}");
+                        }
+
+                        totalBytes +=
+                            length;
+
+                        if (
+                            totalBytes >
+                            maximumTotalBytes)
+                        {
+                            throw new InvalidDataException(
+                                "aiBuildingReferenceImagesTooLarge");
+                        }
+
+                        var bytes =
+                            await File
+                                .ReadAllBytesAsync(
+                                    item.Path);
+
+                        imageReferences.Add(
+                            new MapStudioAiImageReference(
+                                bytes,
+                                item.MimeType!,
+                                Path.GetFileName(
+                                    item.Path)));
+                    }
+
+                    var primaryFacadePath =
+                        referenceImagePaths
+                            .FirstOrDefault(
+                                path =>
+                                    File.Exists(
+                                        path));
 
                     var provider =
                         NativeAiProviderFactory
@@ -17493,19 +17575,13 @@ public sealed partial class MainWindow : Window
                             .AnalyzeAsync(
                                 provider,
                                 new MapStudioBuildingReferenceRequest(
-                                    [
-                                        new MapStudioAiImageReference(
-                                            bytes,
-                                            mimeType,
-                                            Path.GetFileName(
-                                                imagePath))
-                                    ],
+                                    imageReferences,
                                     string.IsNullOrWhiteSpace(
                                         aiNotesBox.Text)
                                         ? null
                                         : aiNotesBox.Text),
                                 nameBox.Text,
-                                imagePath);
+                                primaryFacadePath);
 
                     widthBox.Value =
                         spec.WidthMeters;
@@ -17560,7 +17636,7 @@ public sealed partial class MainWindow : Window
                             .Success;
 
                     aiInfo.Message =
-                        $"Análise concluída por {activeAiProfile.DisplayName}. Revise dimensões, andares e telhado antes de gerar o asset.";
+                        $"Análise de {aiImagePaths.Length} referência(s) concluída por {activeAiProfile.DisplayName}. Revise dimensões, andares e telhado antes de gerar o asset.";
                 }
                 catch (Exception exception)
                 {
@@ -17792,10 +17868,11 @@ public sealed partial class MainWindow : Window
                         floorsBox.Value),
                     roofType,
                     roofHeightBox.Value,
-                    string.IsNullOrWhiteSpace(
-                        facadePathBox.Text)
-                        ? null
-                        : facadePathBox.Text,
+                    referenceImagePaths
+                        .FirstOrDefault(
+                            path =>
+                                File.Exists(
+                                    path)),
                     (int)Math.Round(
                         windowsPerFloorBox.Value),
                     (int)Math.Round(
@@ -18468,8 +18545,8 @@ public sealed partial class MainWindow : Window
                 null
         };
 
-    private async Task<string?>
-        PickImageFileAsync()
+    private async Task<IReadOnlyList<string>>
+        PickImageFilesAsync()
     {
         var picker =
             new FileOpenPicker
@@ -18498,11 +18575,21 @@ public sealed partial class MainWindow : Window
             picker,
             _windowHandle);
 
-        var file =
+        var files =
             await picker
-                .PickSingleFileAsync();
+                .PickMultipleFilesAsync();
 
-        return file?.Path;
+        return files
+            .Take(
+                8)
+            .Select(
+                file =>
+                    file.Path)
+            .Where(
+                path =>
+                    !string.IsNullOrWhiteSpace(
+                        path))
+            .ToArray();
     }
 
     private async Task<string?>
