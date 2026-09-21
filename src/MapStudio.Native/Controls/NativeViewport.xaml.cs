@@ -563,6 +563,114 @@ public sealed partial class NativeViewport : UserControl
         return result;
     }
 
+    public bool TryFinishSceneryPlacementAtPoint(
+        double x,
+        double y,
+        out NativeSceneryPlacementRequest?
+            request)
+    {
+        request =
+            null;
+
+        if (
+            _runtime is null ||
+            !TryConvertPointToPixels(
+                x,
+                y,
+                out var pixelX,
+                out var pixelY) ||
+            !_runtime.UpdateSceneryPlacement(
+                pixelX,
+                pixelY))
+        {
+            return false;
+        }
+
+        return _runtime
+            .TryFinishSceneryPlacement(
+                out request);
+    }
+
+    public bool TrySeedSplinePlacementAtPoint(
+        double x,
+        double y,
+        out string status)
+    {
+        status =
+            "Não foi possível iniciar a spline neste ponto.";
+
+        if (
+            _runtime is null ||
+            !_runtime.IsSplinePlacementActive ||
+            !TryConvertPointToPixels(
+                x,
+                y,
+                out var pixelX,
+                out var pixelY))
+        {
+            return false;
+        }
+
+        if (
+            !_runtime.TryAdvanceSplinePlacement(
+                pixelX,
+                pixelY,
+                out var request,
+                out status))
+        {
+            return false;
+        }
+
+        return request is null;
+    }
+
+    private bool TryConvertPointToPixels(
+        double x,
+        double y,
+        out uint pixelX,
+        out uint pixelY)
+    {
+        pixelX = 0;
+        pixelY = 0;
+
+        if (
+            !double.IsFinite(x) ||
+            !double.IsFinite(y) ||
+            x < 0 ||
+            y < 0)
+        {
+            return false;
+        }
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    x *
+                    scaleX));
+
+        pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    y *
+                    scaleY));
+
+        return true;
+    }
+
     public bool TryFinishSceneryPlacementAtWorldPoint(
         Vector3 worldPoint,
         double rotation,

@@ -702,6 +702,8 @@
                                       Grid.Row="3"
                                       SelectionMode="Single"
                                       DisplayMemberPath="RelativePath"
+                                      CanDragItems="True"
+                                      DragItemsStarting="OnAssetLibraryDragItemsStarting"
                                       SelectionChanged="OnAssetLibrarySelectionChanged"
                                       DoubleTapped="OnAssetLibraryDoubleTapped" />
                         </Grid>
@@ -938,7 +940,10 @@
             <controls:NativeViewport
                 x:Name="Viewport"
                 Grid.Column="2"
-                Margin="0,8" />
+                Margin="0,8"
+                AllowDrop="True"
+                DragOver="OnViewportLibraryDragOver"
+                Drop="OnViewportLibraryDrop" />
 
             <Border x:Name="MapToolPalette"
                     Grid.Column="0"

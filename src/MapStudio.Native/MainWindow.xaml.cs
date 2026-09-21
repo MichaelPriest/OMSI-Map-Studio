@@ -15,6 +15,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.Storage.Pickers;
 using WinRT.Interop;
@@ -2243,6 +2244,289 @@ public sealed partial class MainWindow : Window
         }
 
         return result;
+    }
+
+    private void OnAssetLibraryDragItemsStarting(
+        object sender,
+        DragItemsStartingEventArgs e)
+    {
+        var asset =
+            e.Items
+                .OfType<
+                    OmsiAssetIndexEntry>()
+                .FirstOrDefault();
+
+        if (
+            asset is null ||
+            asset.Kind is not
+                (
+                    OmsiAssetKind
+                        .SceneryObject or
+                    OmsiAssetKind
+                        .Spline
+                ) ||
+            _session.CurrentMap is null)
+        {
+            e.Cancel =
+                true;
+
+            return;
+        }
+
+        var kind =
+            asset.Kind ==
+                OmsiAssetKind
+                    .SceneryObject
+                ? "object"
+                : "spline";
+
+        e.Data.SetText(
+            kind +
+            "\n" +
+            asset.RelativePath);
+
+        e.Data.RequestedOperation =
+            DataPackageOperation.Copy;
+    }
+
+    private void OnViewportLibraryDragOver(
+        object sender,
+        DragEventArgs e)
+    {
+        if (
+            _session.CurrentMap is null ||
+            !e.DataView.Contains(
+                StandardDataFormats.Text))
+        {
+            return;
+        }
+
+        e.AcceptedOperation =
+            DataPackageOperation.Copy;
+
+        e.DragUIOverride.Caption =
+            "Posicionar no mapa";
+
+        e.DragUIOverride
+            .IsCaptionVisible =
+            true;
+
+        e.Handled =
+            true;
+    }
+
+    private async void OnViewportLibraryDrop(
+        object sender,
+        DragEventArgs e)
+    {
+        if (
+            _session.CurrentMap is null ||
+            _session.OmsiRootPath is null ||
+            !e.DataView.Contains(
+                StandardDataFormats.Text))
+        {
+            return;
+        }
+
+        var payload =
+            await e.DataView
+                .GetTextAsync();
+
+        var separator =
+            payload.IndexOf(
+                '\n');
+
+        if (
+            separator <= 0 ||
+            separator >=
+                payload.Length - 1)
+        {
+            return;
+        }
+
+        var kind =
+            payload[..separator]
+                .Trim();
+
+        var path =
+            payload[(separator + 1)..]
+                .Trim();
+
+        var expectedKind =
+            string.Equals(
+                kind,
+                "object",
+                StringComparison.Ordinal)
+                ? OmsiAssetKind
+                    .SceneryObject
+                : string.Equals(
+                    kind,
+                    "spline",
+                    StringComparison.Ordinal)
+                    ? OmsiAssetKind
+                        .Spline
+                    : (OmsiAssetKind?)
+                        null;
+
+        if (expectedKind is null)
+        {
+            return;
+        }
+
+        var asset =
+            _assetLibraryItems
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Kind ==
+                            expectedKind.Value &&
+                        string.Equals(
+                            candidate
+                                .RelativePath,
+                            path,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+        if (asset is null)
+        {
+            StatusText.Text =
+                "O asset arrastado não está mais disponível na biblioteca.";
+
+            return;
+        }
+
+        var position =
+            e.GetPosition(
+                Viewport);
+
+        e.AcceptedOperation =
+            DataPackageOperation.Copy;
+
+        e.Handled =
+            true;
+
+        await HandleLibraryAssetDropAsync(
+            asset,
+            position.X,
+            position.Y);
+    }
+
+    private async Task HandleLibraryAssetDropAsync(
+        OmsiAssetIndexEntry asset,
+        double x,
+        double y)
+    {
+        var root =
+            _session.OmsiRootPath;
+
+        if (
+            root is null ||
+            _session.CurrentMap is null)
+        {
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.RestoreSceneView();
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+
+        if (
+            asset.Kind ==
+            OmsiAssetKind
+                .SceneryObject)
+        {
+            ObjectPlacementModeComboBox
+                .SelectedIndex =
+                0;
+
+            var started =
+                await Viewport
+                    .BeginSceneryPlacementAsync(
+                        root,
+                        asset);
+
+            if (
+                !started ||
+                !Viewport
+                    .TryFinishSceneryPlacementAtPoint(
+                        x,
+                        y,
+                        out var request) ||
+                request is null)
+            {
+                Viewport.CancelSceneryPlacement();
+
+                StatusText.Text =
+                    "Não foi possível posicionar o objeto no ponto solto.";
+
+                return;
+            }
+
+            await HandleSceneryPlacementAsync(
+                request);
+
+            StatusText.Text +=
+                " · inserido por arrastar/soltar.";
+
+            return;
+        }
+
+        if (
+            asset.Kind !=
+            OmsiAssetKind.Spline)
+        {
+            return;
+        }
+
+        SplineHeightCheckBox.IsChecked =
+            false;
+
+        SplineEasyRoadCheckBox.IsChecked =
+            false;
+
+        SplineCurveCheckBox.IsChecked =
+            false;
+
+        Viewport
+            .SetSplinePlacementHeightMode(
+                false);
+
+        Viewport
+            .SetSplineEasyRoadOptions(
+                enabled: false,
+                curveOffset: 0);
+
+        var splineStarted =
+            await Viewport
+                .BeginSplinePlacementAsync(
+                    root,
+                    asset,
+                    curved: false);
+
+        if (
+            !splineStarted ||
+            !Viewport
+                .TrySeedSplinePlacementAtPoint(
+                    x,
+                    y,
+                    out var status))
+        {
+            Viewport.CancelSplinePlacement();
+
+            StatusText.Text =
+                "Não foi possível iniciar a spline no ponto solto.";
+
+            return;
+        }
+
+        PlaceAssetButton.Content =
+            "Cancelar posicionamento";
+
+        StatusText.Text =
+            status +
+            " · início definido por arrastar/soltar.";
     }
 
     private void OnAssetLibraryDoubleTapped(
