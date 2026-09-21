@@ -219,9 +219,15 @@ public sealed class OmsiTileReader
         ArgumentNullException.ThrowIfNull(
             document);
 
+        var attachments =
+            ReadAttachments(document);
+
         var attachmentCount =
-            document.FindSections("splineAttachement").Count() +
-            document.FindSections("splineAttachment").Count();
+            attachments.Count(
+                attachment =>
+                    attachment.Kind !=
+                    OmsiAttachmentKind
+                        .ObjectAttachment);
 
         var splineCount =
             document.Sections.Count(
@@ -243,7 +249,9 @@ public sealed class OmsiTileReader
         return new OmsiTileContent(
             summary,
             ReadObjects(document),
-            ReadSplines(document));
+            ReadSplines(document),
+            Attachments:
+                attachments);
     }
 
     public async Task<OmsiTileSummary> ReadSummaryAsync(
@@ -377,6 +385,329 @@ public sealed class OmsiTileReader
         }
 
         return objects;
+    }
+
+    public static IReadOnlyList<OmsiPlacedAttachment>
+        ReadAttachments(
+            OmsiConfigDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        var result =
+            new List<OmsiPlacedAttachment>();
+
+        var sourceOrdinal =
+            0;
+
+        foreach (
+            var section in
+                document.Sections)
+        {
+            var keyword =
+                section.Keyword;
+
+            var isObjectAttachment =
+                string.Equals(
+                    keyword,
+                    "attachObj",
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            var isSplineAttachment =
+                string.Equals(
+                    keyword,
+                    "splineAttachement",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                string.Equals(
+                    keyword,
+                    "splineAttachment",
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            var isRepeater =
+                string.Equals(
+                    keyword,
+                    "splineAttachement_repeater",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                string.Equals(
+                    keyword,
+                    "splineAttachment_repeater",
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            if (
+                !isObjectAttachment &&
+                !isSplineAttachment &&
+                !isRepeater)
+            {
+                continue;
+            }
+
+            var currentOrdinal =
+                sourceOrdinal++;
+
+            var values =
+                section.DataLines
+                    .ToArray();
+
+            OmsiPlacedAttachment?
+                attachment =
+                    null;
+
+            if (
+                isObjectAttachment &&
+                values.Length >=
+                    10 &&
+                int.TryParse(
+                    values[2],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var attachmentId) &&
+                int.TryParse(
+                    values[3],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var parentId) &&
+                int.TryParse(
+                    values[5],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var attachPoint) &&
+                TryParseDouble(
+                    values[6],
+                    out var rotation) &&
+                TryParseDouble(
+                    values[7],
+                    out var pitch) &&
+                TryParseDouble(
+                    values[8],
+                    out var bank) &&
+                int.TryParse(
+                    values[9],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var labelsCount))
+            {
+                attachment =
+                    new OmsiPlacedAttachment(
+                        OmsiAttachmentKind
+                            .ObjectAttachment,
+                        values[0],
+                        values[1],
+                        attachmentId,
+                        parentId,
+                        attachPoint,
+                        null,
+                        null,
+                        null,
+                        rotation,
+                        pitch,
+                        bank,
+                        null,
+                        null,
+                        labelsCount,
+                        values);
+            }
+            else if (
+                isSplineAttachment &&
+                values.Length >=
+                    14 &&
+                int.TryParse(
+                    values[2],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var splineAttachmentId) &&
+                TryParseDouble(
+                    values[4],
+                    out var x) &&
+                TryParseDouble(
+                    values[5],
+                    out var z) &&
+                TryParseDouble(
+                    values[6],
+                    out var y) &&
+                TryParseDouble(
+                    values[7],
+                    out var splineRotation) &&
+                TryParseDouble(
+                    values[8],
+                    out var splinePitch) &&
+                TryParseDouble(
+                    values[9],
+                    out var splineBank) &&
+                TryParseDouble(
+                    values[10],
+                    out var interval) &&
+                TryParseDouble(
+                    values[11],
+                    out var distance))
+            {
+                attachment =
+                    new OmsiPlacedAttachment(
+                        OmsiAttachmentKind
+                            .SplineAttachment,
+                        values[0],
+                        values[1],
+                        splineAttachmentId,
+                        null,
+                        null,
+                        x,
+                        z,
+                        y,
+                        splineRotation,
+                        splinePitch,
+                        splineBank,
+                        interval,
+                        distance,
+                        null,
+                        values);
+            }
+            else if (
+                isRepeater &&
+                values.Length >=
+                    16 &&
+                int.TryParse(
+                    values[4],
+                    NumberStyles.Integer,
+                    CultureInfo
+                        .InvariantCulture,
+                    out var repeaterId) &&
+                TryParseDouble(
+                    values[6],
+                    out var repeaterX) &&
+                TryParseDouble(
+                    values[7],
+                    out var repeaterZ) &&
+                TryParseDouble(
+                    values[8],
+                    out var repeaterY) &&
+                TryParseDouble(
+                    values[9],
+                    out var repeaterRotation) &&
+                TryParseDouble(
+                    values[10],
+                    out var repeaterPitch) &&
+                TryParseDouble(
+                    values[11],
+                    out var repeaterBank) &&
+                TryParseDouble(
+                    values[12],
+                    out var repeaterInterval) &&
+                TryParseDouble(
+                    values[13],
+                    out var repeaterDistance))
+            {
+                attachment =
+                    new OmsiPlacedAttachment(
+                        OmsiAttachmentKind
+                            .SplineAttachmentRepeater,
+                        values[0],
+                        values[3],
+                        repeaterId,
+                        null,
+                        null,
+                        repeaterX,
+                        repeaterZ,
+                        repeaterY,
+                        repeaterRotation,
+                        repeaterPitch,
+                        repeaterBank,
+                        repeaterInterval,
+                        repeaterDistance,
+                        null,
+                        values);
+            }
+
+            if (attachment is null)
+            {
+                continue;
+            }
+
+            result.Add(
+                attachment with
+                {
+                    SourceSectionOrdinal =
+                        currentOrdinal,
+                    VariableParentValue =
+                        ReadFollowingSectionValue(
+                            document,
+                            section,
+                            "varparent")
+                });
+        }
+
+        return result;
+    }
+
+    private static string?
+        ReadFollowingSectionValue(
+            OmsiConfigDocument document,
+            OmsiConfigSection owner,
+            string keyword)
+    {
+        var ownerIndex =
+            document.Sections
+                .Select(
+                    (section, index) =>
+                        (
+                            section,
+                            index
+                        ))
+                .Where(
+                    pair =>
+                        pair.section
+                            .KeywordLineIndex ==
+                        owner.KeywordLineIndex)
+                .Select(
+                    pair =>
+                        pair.index)
+                .DefaultIfEmpty(-1)
+                .Single();
+
+        if (ownerIndex < 0)
+        {
+            return null;
+        }
+
+        for (
+            var index =
+                ownerIndex + 1;
+            index <
+                document.Sections.Count;
+            index++)
+        {
+            var section =
+                document.Sections[index];
+
+            if (
+                string.Equals(
+                    section.Keyword,
+                    keyword,
+                    StringComparison
+                        .OrdinalIgnoreCase))
+            {
+                return section
+                    .DataLines
+                    .FirstOrDefault();
+            }
+
+            if (
+                IsPlacementBoundary(
+                    section))
+            {
+                break;
+            }
+        }
+
+        return null;
     }
 
     public static IReadOnlyList<OmsiPlacedSpline> ReadSplines(
