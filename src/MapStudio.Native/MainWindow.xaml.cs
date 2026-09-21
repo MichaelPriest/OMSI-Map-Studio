@@ -1,5 +1,7 @@
 using System.Numerics;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using MapStudio.Core.AI;
 using MapStudio.Core.Commercial;
 using MapStudio.Core.Generation.Roads;
@@ -592,6 +594,12 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        LibraryThumbnailImage.Source =
+            null;
+
+        LibraryThumbnailBorder.Visibility =
+            Visibility.Collapsed;
+
         _assetPreviewCancellation
             ?.Cancel();
 
@@ -1104,9 +1112,37 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            if (
+                result.IsRenderable &&
+                result.ThumbnailBmp is
+                    { Length: > 54 })
+            {
+                var thumbnailPath =
+                    await SaveAssetThumbnailAsync(
+                        asset,
+                        result.ThumbnailBmp);
+
+                LibraryThumbnailImage.Source =
+                    new Microsoft.UI.Xaml.Media.Imaging
+                        .BitmapImage(
+                            new Uri(
+                                thumbnailPath));
+
+                LibraryThumbnailBorder.Visibility =
+                    Visibility.Visible;
+            }
+            else
+            {
+                LibraryThumbnailImage.Source =
+                    null;
+
+                LibraryThumbnailBorder.Visibility =
+                    Visibility.Collapsed;
+            }
+
             StatusText.Text =
                 result.IsRenderable
-                    ? $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos."
+                    ? $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos · thumbnail geométrico atualizado."
                     : asset.Kind is
                         OmsiAssetKind.Model or
                         OmsiAssetKind.Texture
@@ -2971,6 +3007,79 @@ public sealed partial class MainWindow : Window
 
         ExplorerListView.ItemsSource =
             items.ToArray();
+    }
+
+    private async Task<string>
+        SaveAssetThumbnailAsync(
+            OmsiAssetIndexEntry asset,
+            byte[] bytes)
+    {
+        var root =
+            _session.OmsiRootPath ??
+            string.Empty;
+
+        var keySource =
+            root +
+            "|" +
+            asset.Kind +
+            "|" +
+            asset.RelativePath;
+
+        var hash =
+            Convert.ToHexString(
+                SHA256.HashData(
+                    Encoding.UTF8
+                        .GetBytes(
+                            keySource)))
+                .ToLowerInvariant();
+
+        var directory =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder
+                        .LocalApplicationData),
+                "OMSI Map Studio",
+                "Cache",
+                "Thumbnails");
+
+        Directory.CreateDirectory(
+            directory);
+
+        var path =
+            Path.Combine(
+                directory,
+                hash +
+                ".bmp");
+
+        await File.WriteAllBytesAsync(
+            path,
+            bytes);
+
+        var files =
+            new DirectoryInfo(
+                directory)
+                .EnumerateFiles(
+                    "*.bmp")
+                .OrderByDescending(
+                    file =>
+                        file.LastWriteTimeUtc)
+                .ToArray();
+
+        foreach (
+            var stale in
+                files.Skip(64))
+        {
+            try
+            {
+                stale.Delete();
+            }
+            catch
+            {
+                // Thumbnail cleanup must never block editing.
+            }
+        }
+
+        return path;
     }
 
     private async Task LoadAssetLibraryAsync()

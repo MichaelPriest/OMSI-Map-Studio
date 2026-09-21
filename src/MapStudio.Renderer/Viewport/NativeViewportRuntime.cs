@@ -1851,6 +1851,11 @@ public sealed class NativeViewportRuntime : IDisposable
                 preview.ErrorCode);
         }
 
+        var thumbnail =
+            new NativeAssetThumbnailGenerator()
+                .RenderBmp(
+                    preview);
+
         _assetPreviewActive =
             true;
 
@@ -1910,7 +1915,8 @@ public sealed class NativeViewportRuntime : IDisposable
             true,
             preview.TriangleCount,
             preview.SourceMeshCount,
-            null);
+            null,
+            thumbnail);
     }
 
     public void RestoreSceneView()

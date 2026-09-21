@@ -455,6 +455,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
@@ -775,8 +776,21 @@
                                        TextWrapping="Wrap"
                                        Foreground="#9FB5C5" />
 
+                            <Border x:Name="LibraryThumbnailBorder"
+                                    Grid.Row="3"
+                                    Height="128"
+                                    Visibility="Collapsed"
+                                    Background="#071621"
+                                    BorderBrush="#315064"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="4">
+                                <Image x:Name="LibraryThumbnailImage"
+                                       Stretch="Uniform" />
+                            </Border>
+
                             <ListView x:Name="AssetLibraryListView"
-                                      Grid.Row="3"
+                                      Grid.Row="4"
                                       SelectionMode="Single"
                                       DisplayMemberPath="RelativePath"
                                       CanDragItems="True"

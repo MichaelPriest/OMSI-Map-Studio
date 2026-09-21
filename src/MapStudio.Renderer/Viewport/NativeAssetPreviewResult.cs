@@ -8,4 +8,5 @@ public sealed record NativeAssetPreviewResult(
     bool IsRenderable,
     int TriangleCount,
     int SourceMeshCount,
-    string? ErrorCode);
+    string? ErrorCode,
+    byte[]? ThumbnailBmp = null);
