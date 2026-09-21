@@ -3,10 +3,22 @@ using System.Numerics;
 namespace MapStudio.Renderer.Scene;
 
 public sealed record NativeMapGeometry(
-    NativeMapVertex[] Vertices)
+    NativeMapVertex[] GridVertices,
+    NativeMapVertex[] ObjectGuideVertices,
+    NativeMapVertex[] SplineGuideVertices)
 {
+    public NativeMapVertex[] Vertices =>
+        GridVertices
+            .Concat(ObjectGuideVertices)
+            .Concat(SplineGuideVertices)
+            .ToArray();
+
     public int LineCount =>
-        Vertices.Length / 2;
+        (
+            GridVertices.Length +
+            ObjectGuideVertices.Length +
+            SplineGuideVertices.Length
+        ) / 2;
 }
 
 public sealed class NativeMapGeometryBuilder
@@ -41,15 +53,29 @@ public sealed class NativeMapGeometryBuilder
         if (scene.Tiles.Count == 0)
         {
             return new NativeMapGeometry(
-                Array.Empty<
-                    NativeMapVertex>());
+                [],
+                [],
+                []);
         }
 
-        var vertices =
+        var gridVertices =
             new List<NativeMapVertex>(
-                8192);
+                4096);
 
-        void AddLine(
+        var objectGuideVertices =
+            new List<NativeMapVertex>(
+                Math.Max(
+                    64,
+                    scene.Objects.Count * 4));
+
+        var splineGuideVertices =
+            new List<NativeMapVertex>(
+                Math.Max(
+                    128,
+                    scene.Splines.Count * 16));
+
+        static void AddLine(
+            List<NativeMapVertex> output,
             double x1,
             double y1,
             double z1,
@@ -58,7 +84,7 @@ public sealed class NativeMapGeometryBuilder
             double z2,
             Vector4 color)
         {
-            vertices.Add(
+            output.Add(
                 new NativeMapVertex(
                     new Vector3(
                         (float)x1,
@@ -66,7 +92,7 @@ public sealed class NativeMapGeometryBuilder
                         (float)z1),
                     color));
 
-            vertices.Add(
+            output.Add(
                 new NativeMapVertex(
                     new Vector3(
                         (float)x2,
@@ -74,6 +100,60 @@ public sealed class NativeMapGeometryBuilder
                         (float)z2),
                     color));
         }
+
+        void AddGridLine(
+            double x1,
+            double y1,
+            double z1,
+            double x2,
+            double y2,
+            double z2,
+            Vector4 color) =>
+            AddLine(
+                gridVertices,
+                x1,
+                y1,
+                z1,
+                x2,
+                y2,
+                z2,
+                color);
+
+        void AddObjectLine(
+            double x1,
+            double y1,
+            double z1,
+            double x2,
+            double y2,
+            double z2,
+            Vector4 color) =>
+            AddLine(
+                objectGuideVertices,
+                x1,
+                y1,
+                z1,
+                x2,
+                y2,
+                z2,
+                color);
+
+        void AddSplineLine(
+            double x1,
+            double y1,
+            double z1,
+            double x2,
+            double y2,
+            double z2,
+            Vector4 color) =>
+            AddLine(
+                splineGuideVertices,
+                x1,
+                y1,
+                z1,
+                x2,
+                y2,
+                z2,
+                color);
 
         foreach (var tile in scene.Tiles)
         {
@@ -85,10 +165,10 @@ public sealed class NativeMapGeometryBuilder
                 tile.Reference.Y *
                 300.0;
 
-            AddTerrainLine(tile, 0, 0, 300, 0, originX, originZ, TerrainColor, AddLine);
-            AddTerrainLine(tile, 300, 0, 300, 300, originX, originZ, TerrainColor, AddLine);
-            AddTerrainLine(tile, 300, 300, 0, 300, originX, originZ, TerrainColor, AddLine);
-            AddTerrainLine(tile, 0, 300, 0, 0, originX, originZ, TerrainColor, AddLine);
+            AddTerrainLine(tile, 0, 0, 300, 0, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, 300, 0, 300, 300, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, 300, 300, 0, 300, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, 0, 300, 0, 0, originX, originZ, TerrainColor, AddGridLine);
 
             var terrain =
                 tile.Content.Terrain;
@@ -116,8 +196,8 @@ public sealed class NativeMapGeometryBuilder
                     cell /
                     terrain.CellCount;
 
-                AddTerrainLine(tile, offset, 0, offset, 300, originX, originZ, TerrainColor, AddLine);
-                AddTerrainLine(tile, 0, offset, 300, offset, originX, originZ, TerrainColor, AddLine);
+                AddTerrainLine(tile, offset, 0, offset, 300, originX, originZ, TerrainColor, AddGridLine);
+                AddTerrainLine(tile, 0, offset, 300, offset, originX, originZ, TerrainColor, AddGridLine);
             }
         }
 
@@ -134,7 +214,7 @@ public sealed class NativeMapGeometryBuilder
                         item) +
                 0.35;
 
-            AddLine(
+            AddObjectLine(
                 item.WorldX - marker,
                 baseHeight,
                 item.WorldZ,
@@ -143,7 +223,7 @@ public sealed class NativeMapGeometryBuilder
                 item.WorldZ,
                 ObjectColor);
 
-            AddLine(
+            AddObjectLine(
                 item.WorldX,
                 baseHeight,
                 item.WorldZ - marker,
@@ -158,11 +238,13 @@ public sealed class NativeMapGeometryBuilder
         {
             AddSpline(
                 item,
-                AddLine);
+                AddSplineLine);
         }
 
         return new NativeMapGeometry(
-            vertices.ToArray());
+            gridVertices.ToArray(),
+            objectGuideVertices.ToArray(),
+            splineGuideVertices.ToArray());
     }
 
     private static void AddTerrainLine(
@@ -220,13 +302,10 @@ public sealed class NativeMapGeometryBuilder
             double,
             Vector4> addLine)
     {
-        var spline =
-            entity.Spline;
-
         var length =
             Math.Max(
                 0.0,
-                spline.Length);
+                entity.Spline.Length);
 
         if (length < 0.01)
         {
@@ -241,9 +320,13 @@ public sealed class NativeMapGeometryBuilder
                 64);
 
         var previous =
-            GetSplinePoint(
-                entity,
-                0);
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0)
+                .Center +
+            Vector3.UnitY *
+            0.30f;
 
         for (
             var index = 1;
@@ -251,11 +334,15 @@ public sealed class NativeMapGeometryBuilder
             index++)
         {
             var current =
-                GetSplinePoint(
-                    entity,
-                    length *
-                    index /
-                    segmentCount);
+                NativeSplinePathMath
+                    .GetFrame(
+                        entity,
+                        length *
+                        index /
+                        segmentCount)
+                    .Center +
+                Vector3.UnitY *
+                0.30f;
 
             addLine(
                 previous.X,
@@ -268,22 +355,5 @@ public sealed class NativeMapGeometryBuilder
 
             previous = current;
         }
-    }
-
-    private static Vector3 GetSplinePoint(
-        NativeSplineEntity entity,
-        double distance)
-    {
-        var frame =
-            NativeSplinePathMath
-                .GetFrame(
-                    entity,
-                    distance);
-
-        return
-            frame.Center +
-            Vector3.UnitY *
-            0.30f;
-
     }
 }

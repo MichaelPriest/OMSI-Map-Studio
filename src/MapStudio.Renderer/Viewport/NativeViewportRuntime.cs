@@ -176,6 +176,9 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public bool GridVisible =>
+        MapRenderer.GridVisible;
+
     public bool SeedSplinePlacementStart(
         Vector3 start,
         int previousSplineId =
@@ -1883,6 +1886,23 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetSelectionFilter(
             filter);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool SetGridVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !MapRenderer.SetGridVisible(
+                visible))
+        {
+            return false;
+        }
 
         RenderInitialFrame();
 

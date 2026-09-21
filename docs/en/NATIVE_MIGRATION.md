@@ -502,3 +502,16 @@ The current selection, hover, and gizmos are cleared when they are no longer val
 
 Terrain mode remains separate because native terrain editing uses the dedicated leveling/painting raycast rather than the object/spline ID Buffer.
 
+### Checkpoint N3.28 — grid independent from scene guides
+
+The React editor's **Grid** control has been migrated into the WinUI host's **View** menu.
+
+The renderer's previous combined line buffer has been split into three sets:
+- tile borders / terrain subdivision grid;
+- object guide markers;
+- spline guide lines.
+
+As a result, disabling **Grid** hides only the terrain reference mesh. Object markers and spline guides continue to follow their own category visibility.
+
+The change does not rebuild the map or alter picking, materials, or OMSI geometry; it only enables/disables the Direct3D 11 grid line buffer.
+

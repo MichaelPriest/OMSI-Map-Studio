@@ -2234,6 +2234,24 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnGridVisibilityClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var visible =
+            ShowGridMenuItem.IsChecked;
+
+        if (
+            Viewport.SetGridVisible(
+                visible))
+        {
+            StatusText.Text =
+                visible
+                    ? "Grade do mapa visível."
+                    : "Grade do mapa oculta.";
+        }
+    }
+
     private void OnToggleExplorerClick(
         object sender,
         RoutedEventArgs e) =>

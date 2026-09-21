@@ -530,6 +530,30 @@ public sealed partial class NativeViewport : UserControl
         return changed;
     }
 
+    public bool SetGridVisible(
+        bool visible)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime.SetGridVisible(
+                visible);
+
+        if (changed)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                visible
+                    ? "Grade do mapa visível."
+                    : "Grade do mapa oculta.");
+        }
+
+        return changed;
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

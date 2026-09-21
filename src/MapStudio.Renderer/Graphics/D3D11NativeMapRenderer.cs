@@ -68,6 +68,15 @@ public sealed class D3D11NativeMapRenderer :
     private ID3D11Buffer? _vertexBuffer;
     private int _vertexCount;
 
+    private ID3D11Buffer? _objectGuideBuffer;
+    private int _objectGuideVertexCount;
+
+    private ID3D11Buffer? _splineGuideBuffer;
+    private int _splineGuideVertexCount;
+
+    private bool _gridVisible =
+        true;
+
     private ID3D11Buffer?
         _terrainTriangleBuffer;
 
@@ -533,6 +542,25 @@ public sealed class D3D11NativeMapRenderer :
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public bool GridVisible =>
+        _gridVisible;
+
+    public bool SetGridVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (_gridVisible == visible)
+        {
+            return false;
+        }
+
+        _gridVisible =
+            visible;
+
+        return true;
+    }
+
     public bool SetSceneVisibility(
         NativeSceneVisibility visibility)
     {
@@ -705,6 +733,14 @@ public sealed class D3D11NativeMapRenderer :
         _vertexBuffer = null;
         _vertexCount = 0;
 
+        _objectGuideBuffer?.Dispose();
+        _objectGuideBuffer = null;
+        _objectGuideVertexCount = 0;
+
+        _splineGuideBuffer?.Dispose();
+        _splineGuideBuffer = null;
+        _splineGuideVertexCount = 0;
+
         _terrainTriangleBuffer
             ?.Dispose();
         _terrainTriangleBuffer = null;
@@ -813,18 +849,56 @@ public sealed class D3D11NativeMapRenderer :
             new NativeMapGeometryBuilder()
                 .Build(scene);
 
-        if (geometry.Vertices.Length > 0)
+        if (geometry.GridVertices.Length > 0)
         {
             _vertexBuffer =
                 _deviceHost.Device
                     .CreateBuffer(
-                        geometry.Vertices
+                        geometry.GridVertices
                             .AsSpan(),
                         BindFlags
                             .VertexBuffer);
 
             _vertexCount =
-                geometry.Vertices.Length;
+                geometry.GridVertices.Length;
+        }
+
+        if (
+            geometry.ObjectGuideVertices.Length >
+            0)
+        {
+            _objectGuideBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry
+                            .ObjectGuideVertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _objectGuideVertexCount =
+                geometry
+                    .ObjectGuideVertices
+                    .Length;
+        }
+
+        if (
+            geometry.SplineGuideVertices.Length >
+            0)
+        {
+            _splineGuideBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry
+                            .SplineGuideVertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _splineGuideVertexCount =
+                geometry
+                    .SplineGuideVertices
+                    .Length;
         }
 
         if (
@@ -976,26 +1050,28 @@ public sealed class D3D11NativeMapRenderer :
                         context);
                 }
 
-                if (
-                    _vertexBuffer is
-                        not null &&
-                    _vertexCount > 0)
+                if (_gridVisible)
                 {
-                    context
-                        .IASetPrimitiveTopology(
-                            PrimitiveTopology
-                                .LineList);
+                    DrawLineGeometry(
+                        context,
+                        _vertexBuffer,
+                        _vertexCount);
+                }
 
-                    context
-                        .IASetVertexBuffer(
-                            0,
-                            _vertexBuffer,
-                            NativeMapVertex
-                                .SizeInBytes);
+                if (_visibility.ObjectsVisible)
+                {
+                    DrawLineGeometry(
+                        context,
+                        _objectGuideBuffer,
+                        _objectGuideVertexCount);
+                }
 
-                    context.Draw(
-                        (uint)_vertexCount,
-                        0);
+                if (_visibility.SplinesVisible)
+                {
+                    DrawLineGeometry(
+                        context,
+                        _splineGuideBuffer,
+                        _splineGuideVertexCount);
                 }
 
                 if (
@@ -1177,6 +1253,35 @@ public sealed class D3D11NativeMapRenderer :
         context
             .PSSetShader(
                 _pixelShader);
+    }
+
+    private static void DrawLineGeometry(
+        ID3D11DeviceContext context,
+        ID3D11Buffer? buffer,
+        int vertexCount)
+    {
+        if (
+            buffer is null ||
+            vertexCount <= 0)
+        {
+            return;
+        }
+
+        context
+            .IASetPrimitiveTopology(
+                PrimitiveTopology
+                    .LineList);
+
+        context
+            .IASetVertexBuffer(
+                0,
+                buffer,
+                NativeMapVertex
+                    .SizeInBytes);
+
+        context.Draw(
+            (uint)vertexCount,
+            0);
     }
 
     private void DrawTerrainGeometry(
@@ -2273,6 +2378,8 @@ public sealed class D3D11NativeMapRenderer :
         _terrainTriangleBuffer
             ?.Dispose();
 
+        _splineGuideBuffer?.Dispose();
+        _objectGuideBuffer?.Dispose();
         _vertexBuffer?.Dispose();
         _viewProjectionBuffer.Dispose();
         foreach (

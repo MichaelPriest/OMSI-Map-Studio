@@ -77,6 +77,15 @@ public sealed class NativeMapGeometryBuilderTests
         Assert.NotEmpty(
             geometry.Vertices);
 
+        Assert.NotEmpty(
+            geometry.GridVertices);
+
+        Assert.NotEmpty(
+            geometry.ObjectGuideVertices);
+
+        Assert.NotEmpty(
+            geometry.SplineGuideVertices);
+
         Assert.True(
             geometry.LineCount >= 10);
 

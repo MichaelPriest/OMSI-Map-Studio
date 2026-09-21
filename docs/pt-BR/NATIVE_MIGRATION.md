@@ -502,3 +502,16 @@ Seleção atual, hover e gizmos são limpos quando deixam de ser válidos para o
 
 O modo de terreno continua separado porque a edição de terreno no host nativo usa o raycast próprio da ferramenta de nivelamento/pintura, não o ID Buffer de objetos e splines.
 
+### Checkpoint N3.28 — grade independente dos guias de cena
+
+O controle **Grade** da versão React foi migrado para o menu **Visualizar** do host WinUI.
+
+O antigo buffer de linhas do renderer foi separado em três conjuntos:
+- grade/bordas dos tiles e subdivisões do terreno;
+- marcadores-guia de objetos;
+- linhas-guia de splines.
+
+Com isso, desativar **Grade** oculta somente a malha de referência do terreno. Marcadores de objetos e linhas-guia de splines continuam acompanhando a visibilidade das respectivas categorias.
+
+A mudança não reconstrói o mapa nem altera picking, materiais ou geometria OMSI; apenas habilita/desabilita o buffer de linhas da grade no Direct3D 11.
+
