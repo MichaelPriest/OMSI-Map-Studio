@@ -741,7 +741,7 @@ In addition to the checkpoints already described, the native host currently incl
 - persistent geometry thumbnails and visual library cards;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
 - procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
-- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, and safe outer multipolygons;
+- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, safe outer multipolygons, and `natural=tree`/`natural=shrub` vegetation points;
 - AI analysis of the Google reference for road extraction;
 - Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
 - provider-neutral AI configuration and connection probing;
@@ -763,6 +763,12 @@ The importer reads ways tagged with `highway`, resolves their nodes, and preserv
 - the `highway` classification.
 
 WGS84 coordinates are projected through the same `.mapstudio/georeference.json` anchor used by GeoJSON. OSM, GeoJSON, manual tracing, and AI then feed exactly the same `MapStudioRoadGraph`, D3D11 preview, Road Kit, junction planner, and transactional persistence pipeline.
+
+**Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled.
+
+**Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes while preserving `species`, `genus`, `leaf_type`, and `name` when present. The user chooses a **real SCO** already indexed in the Vegetation category; the viewport previews placement points on loaded terrain and confirmation builds requests aligned to the real sampled terrain height. Persistence uses the existing safe batch pipeline, capped at 256 objects per operation, with a map backup before writing. Varied rotation is optional and deterministic by OSM ID.
+
+Forest/wood areas, hedge ways, and automatic species-to-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
 
 ### OMSI attachments
 
