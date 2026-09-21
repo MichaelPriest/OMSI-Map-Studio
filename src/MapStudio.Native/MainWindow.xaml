@@ -370,17 +370,26 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <ComboBox x:Name="LibraryKindComboBox"
-                                      Grid.Row="0"
-                                      SelectedIndex="0"
-                                      HorizontalAlignment="Stretch"
-                                      SelectionChanged="OnLibraryKindSelectionChanged">
-                                <ComboBoxItem Content="Todos" />
-                                <ComboBoxItem Content="Objetos SCO" />
-                                <ComboBoxItem Content="Splines SLI" />
-                                <ComboBoxItem Content="Modelos" />
-                                <ComboBoxItem Content="Texturas" />
-                            </ComboBox>
+                            <StackPanel Grid.Row="0"
+                                        Spacing="6">
+                                <ComboBox x:Name="LibraryKindComboBox"
+                                          SelectedIndex="0"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="OnLibraryKindSelectionChanged">
+                                    <ComboBoxItem Content="Todos" />
+                                    <ComboBoxItem Content="Objetos SCO" />
+                                    <ComboBoxItem Content="Splines SLI" />
+                                    <ComboBoxItem Content="Modelos" />
+                                    <ComboBoxItem Content="Texturas" />
+                                </ComboBox>
+
+                                <ComboBox x:Name="LibraryGroupComboBox"
+                                          Header="Categoria"
+                                          SelectedIndex="0"
+                                          HorizontalAlignment="Stretch"
+                                          DisplayMemberPath="Label"
+                                          SelectionChanged="OnLibraryGroupSelectionChanged" />
+                            </StackPanel>
 
                             <StackPanel Grid.Row="1"
                                         Spacing="6">

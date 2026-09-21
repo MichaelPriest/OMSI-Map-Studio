@@ -44,6 +44,10 @@ public sealed partial class MainWindow : Window
         string DisplayText,
         string Detail);
 
+    private sealed record LibraryGroupOption(
+        OmsiAssetLibraryGroup Group,
+        string Label);
+
     private readonly OmsiNativeSession _session =
         new();
 
@@ -70,6 +74,15 @@ public sealed partial class MainWindow : Window
         _assetLibraryItems =
             Array.Empty<
                 OmsiAssetIndexEntry>();
+
+    private IReadOnlyList<
+        LibraryGroupOption>
+        _libraryGroupOptions =
+            [
+                new(
+                    OmsiAssetLibraryGroup.All,
+                    "Todos")
+            ];
 
     private bool _libraryMode;
     private bool _transportMode;
@@ -564,6 +577,16 @@ public sealed partial class MainWindow : Window
                 not null)
         {
             await LoadAssetLibraryAsync();
+        }
+    }
+
+    private void OnLibraryGroupSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_libraryMode)
+        {
+            RefreshLibraryFilter();
         }
     }
 
@@ -1611,6 +1634,9 @@ public sealed partial class MainWindow : Window
             AssetLibraryListView.ItemsSource =
                 _assetLibraryItems;
 
+            RefreshLibraryGroupOptions(
+                null);
+
             return;
         }
 
@@ -1623,6 +1649,9 @@ public sealed partial class MainWindow : Window
                 await _session
                     .GetAssetLibraryAsync(
                         kind);
+
+            RefreshLibraryGroupOptions(
+                kind);
 
             var stats =
                 await _session
@@ -1642,6 +1671,66 @@ public sealed partial class MainWindow : Window
             LibraryStatusText.Text =
                 $"Falha ao abrir biblioteca: {exception.Message}";
         }
+    }
+
+    private void RefreshLibraryGroupOptions(
+        OmsiAssetKind? kind)
+    {
+        var previous =
+            LibraryGroupComboBox
+                .SelectedItem is
+                LibraryGroupOption option
+                ? option.Group
+                : OmsiAssetLibraryGroup.All;
+
+        _libraryGroupOptions =
+            kind is null
+                ? [
+                    new LibraryGroupOption(
+                        OmsiAssetLibraryGroup.All,
+                        OmsiAssetLibraryClassifier
+                            .GetDisplayName(
+                                OmsiAssetLibraryGroup.All))
+                  ]
+                : OmsiAssetLibraryClassifier
+                    .GetGroupsForKind(
+                        kind.Value)
+                    .Select(
+                        group =>
+                            new LibraryGroupOption(
+                                group,
+                                OmsiAssetLibraryClassifier
+                                    .GetDisplayName(
+                                        group)))
+                    .ToArray();
+
+        LibraryGroupComboBox.ItemsSource =
+            _libraryGroupOptions;
+
+        var index =
+            _libraryGroupOptions
+                .Select(
+                    (item, itemIndex) =>
+                        (
+                            item,
+                            itemIndex
+                        ))
+                .FirstOrDefault(
+                    pair =>
+                        pair.item.Group ==
+                            previous)
+                .itemIndex;
+
+        if (
+            index < 0 ||
+            index >=
+                _libraryGroupOptions.Count)
+        {
+            index = 0;
+        }
+
+        LibraryGroupComboBox.SelectedIndex =
+            index;
     }
 
     private OmsiAssetKind?
@@ -1676,21 +1765,52 @@ public sealed partial class MainWindow : Window
             _assetLibraryItems;
 
         if (
+            LibraryGroupComboBox
+                .SelectedItem is
+                LibraryGroupOption option &&
+            option.Group !=
+                OmsiAssetLibraryGroup.All)
+        {
+            items =
+                items.Where(
+                    item =>
+                        OmsiAssetLibraryClassifier
+                            .Classify(
+                                item) ==
+                        option.Group);
+        }
+
+        if (
             !string.IsNullOrWhiteSpace(
                 query))
         {
             items =
                 items.Where(
                     item =>
-                        item.RelativePath
-                            .Contains(
-                                query,
-                                StringComparison
-                                    .OrdinalIgnoreCase));
+                        OmsiAssetLibraryClassifier
+                            .MatchesSmartSearch(
+                                item.RelativePath,
+                                query));
         }
 
-        AssetLibraryListView.ItemsSource =
+        var filtered =
             items.ToArray();
+
+        AssetLibraryListView.ItemsSource =
+            filtered;
+
+        if (_assetLibraryItems.Count > 0)
+        {
+            var groupName =
+                LibraryGroupComboBox
+                    .SelectedItem is
+                    LibraryGroupOption selectedGroup
+                    ? selectedGroup.Label
+                    : "Todos";
+
+            LibraryStatusText.Text =
+                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {groupName}";
+        }
     }
 
     private void SynchronizeExplorerSelection(
