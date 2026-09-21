@@ -13478,11 +13478,23 @@ public sealed partial class MainWindow : Window
         GetProceduralRoadProfiles() =>
         [
             new(
-                "Mão única 3,5 m",
+                "Mão única 1 faixa · 3,5 m",
                 @"Splines\MapStudio_RoadKit\ms_road_oneway_3_5m.sli",
                 1,
                 true,
                 3.5),
+            new(
+                "Mão única 2 faixas · 7 m",
+                @"Splines\MapStudio_RoadKit\ms_road_oneway_2lane_7m.sli",
+                2,
+                true,
+                7.0),
+            new(
+                "Mão única 3 faixas · 10,5 m",
+                @"Splines\MapStudio_RoadKit\ms_road_oneway_3lane_10_5m.sli",
+                3,
+                true,
+                10.5),
             new(
                 "Rua 2 faixas · 7 m",
                 @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
@@ -13533,12 +13545,20 @@ public sealed partial class MainWindow : Window
                 "steps" or
                 "cycleway")
         {
-            return profiles[5];
+            return profiles[7];
         }
 
         if (road.OneWay == true)
         {
-            return profiles[0];
+            return road.LaneCount switch
+            {
+                >= 3 =>
+                    profiles[2],
+                2 =>
+                    profiles[1],
+                _ =>
+                    profiles[0]
+            };
         }
 
         if (
@@ -13548,7 +13568,7 @@ public sealed partial class MainWindow : Window
                 "motorway_link" or
                 "trunk_link")
         {
-            return profiles[4];
+            return profiles[6];
         }
 
         if (
@@ -13557,17 +13577,17 @@ public sealed partial class MainWindow : Window
                 "primary" or
                 "primary_link")
         {
-            return profiles[3];
+            return profiles[5];
         }
 
         if (
             highway is
                 "service")
         {
-            return profiles[1];
+            return profiles[3];
         }
 
-        return profiles[2];
+        return profiles[4];
     }
 
     private async void OnImportProceduralRoadGeoJsonClick(
@@ -13832,7 +13852,7 @@ public sealed partial class MainWindow : Window
                         RoadProfileOption
                             .Label),
                 SelectedIndex =
-                    1,
+                    3,
                 HorizontalAlignment =
                     HorizontalAlignment
                         .Stretch,
