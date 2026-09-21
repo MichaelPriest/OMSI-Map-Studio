@@ -79,4 +79,46 @@ public sealed class OmsiAssetLibraryClassifierTests
                     text,
                     query));
     }
+    [Theory]
+    [InlineData(
+        @"Sceneryobjects\Houses\residential_house.sco",
+        "Residencial")]
+    [InlineData(
+        @"Sceneryobjects\Nature\grass_patch.sco",
+        "Grama")]
+    [InlineData(
+        @"Sceneryobjects\Street\traffic_light.sco",
+        "Sinalização")]
+    [InlineData(
+        @"Splines\Roads\avenue_4lane.sli",
+        "Avenidas")]
+    [InlineData(
+        @"Splines\Rail\tram_track.sli",
+        "Bonde / tram")]
+    public void SubcategoriesMatchReactLibrary(
+        string path,
+        string expected)
+    {
+        var kind =
+            Path.GetExtension(path)
+                .Equals(
+                    ".sli",
+                    StringComparison.OrdinalIgnoreCase)
+                ? OmsiAssetKind.Spline
+                : OmsiAssetKind.SceneryObject;
+
+        var entry =
+            new OmsiAssetIndexEntry(
+                path,
+                kind,
+                1,
+                1);
+
+        Assert.Equal(
+            expected,
+            OmsiAssetLibraryClassifier
+                .GetSubcategory(
+                    entry));
+    }
+
 }

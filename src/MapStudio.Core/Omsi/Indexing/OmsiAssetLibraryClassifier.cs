@@ -406,6 +406,224 @@ public static class OmsiAssetLibraryClassifier
             });
     }
 
+    public static string GetSubcategory(
+        OmsiAssetIndexEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(
+            entry);
+
+        var text =
+            Normalize(
+                entry.RelativePath);
+
+        var group =
+            Classify(
+                entry);
+
+        return group switch
+        {
+            OmsiAssetLibraryGroup.Junctions =>
+                ContainsAny(
+                    text,
+                    "roundabout",
+                    "rotatoria")
+                    ? "Rotatórias"
+                    : "Interseções",
+
+            OmsiAssetLibraryGroup.Bridges
+                when entry.Kind ==
+                    OmsiAssetKind.SceneryObject =>
+                ContainsAny(
+                    text,
+                    "viaduct",
+                    "viaduto",
+                    "overpass",
+                    "elevated")
+                    ? "Viadutos / elevados"
+                    : "Pontes",
+
+            OmsiAssetLibraryGroup.Buildings =>
+                ContainsAny(
+                    text,
+                    "shop",
+                    "store",
+                    "commercial",
+                    "loja")
+                    ? "Comercial"
+                    : ContainsAny(
+                        text,
+                        "factory",
+                        "warehouse",
+                        "industrial",
+                        "fabrica")
+                        ? "Industrial"
+                        : ContainsAny(
+                            text,
+                            "school",
+                            "hospital",
+                            "church",
+                            "public",
+                            "escola",
+                            "igreja")
+                            ? "Público"
+                            : ContainsAny(
+                                text,
+                                "house",
+                                "haus",
+                                "wohn",
+                                "apartment",
+                                "residential",
+                                "casa")
+                                ? "Residencial"
+                                : "Edificações",
+
+            OmsiAssetLibraryGroup.Vegetation =>
+                ContainsAny(
+                    text,
+                    "grass",
+                    "grama")
+                    ? "Grama"
+                    : ContainsAny(
+                        text,
+                        "bush",
+                        "shrub",
+                        "hedge",
+                        "arbusto")
+                        ? "Arbustos"
+                        : ContainsAny(
+                            text,
+                            "tree",
+                            "baum",
+                            "arvore")
+                            ? "Árvores"
+                            : "Vegetação",
+
+            OmsiAssetLibraryGroup.Transit =>
+                ContainsAny(
+                    text,
+                    "garage",
+                    "depot",
+                    "garagem")
+                    ? "Garagens / depósitos"
+                    : ContainsAny(
+                        text,
+                        "terminal",
+                        "station",
+                        "bahnhof",
+                        "estacao")
+                        ? "Terminais / estações"
+                        : ContainsAny(
+                            text,
+                            "busstop",
+                            "bus stop",
+                            "haltestelle",
+                            "shelter",
+                            "ponto")
+                            ? "Pontos / abrigos"
+                            : "Transporte",
+
+            OmsiAssetLibraryGroup.StreetFurniture =>
+                ContainsAny(
+                    text,
+                    "lamp",
+                    "light",
+                    "pole",
+                    "poste")
+                    ? "Iluminação"
+                    : ContainsAny(
+                        text,
+                        "sign",
+                        "schild",
+                        "traffic",
+                        "semaforo",
+                        "placa")
+                        ? "Sinalização"
+                        : ContainsAny(
+                            text,
+                            "fence",
+                            "zaun",
+                            "barrier",
+                            "bollard",
+                            "cerca")
+                            ? "Cercas / barreiras"
+                            : "Mobiliário urbano",
+
+            OmsiAssetLibraryGroup.Utilities =>
+                ContainsAny(
+                    text,
+                    "power",
+                    "substation",
+                    "transformer",
+                    "energia")
+                    ? "Energia"
+                    : ContainsAny(
+                        text,
+                        "water",
+                        "wasser",
+                        "sewer",
+                        "saneamento")
+                        ? "Água / saneamento"
+                        : "Infraestrutura",
+
+            OmsiAssetLibraryGroup.Roads =>
+                ContainsAny(
+                    text,
+                    "oneway",
+                    "one-way",
+                    "einbahn")
+                    ? "Mão única"
+                    : ContainsAny(
+                        text,
+                        "avenue",
+                        "boulevard",
+                        "allee",
+                        "avenida")
+                        ? "Avenidas"
+                        : ContainsAny(
+                            text,
+                            "highway",
+                            "country",
+                            "landstrasse",
+                            "estrada")
+                            ? "Estradas"
+                            : "Ruas urbanas",
+
+            OmsiAssetLibraryGroup.Paths =>
+                ContainsAny(
+                    text,
+                    "cycle",
+                    "bike",
+                    "radweg",
+                    "ciclovia")
+                    ? "Ciclovias"
+                    : "Calçadas / caminhos",
+
+            OmsiAssetLibraryGroup.Rail =>
+                ContainsAny(
+                    text,
+                    "tram",
+                    "strab",
+                    "streetcar",
+                    "bonde")
+                    ? "Bonde / tram"
+                    : "Ferrovia",
+
+            OmsiAssetLibraryGroup.Bridges =>
+                ContainsAny(
+                    text,
+                    "tunnel",
+                    "tunel")
+                    ? "Túneis"
+                    : "Pontes / elevados",
+
+            OmsiAssetLibraryGroup.Markings =>
+                "Marcação viária",
+
+            _ =>
+                "Outros"
+        };
+    }
+
     public static string GetDisplayName(
         OmsiAssetLibraryGroup group) =>
         group switch
