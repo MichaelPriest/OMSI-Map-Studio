@@ -962,8 +962,17 @@ public sealed class D3D11NativeMapRenderer :
         _referenceOverlayBuffer
             ?.Dispose();
 
+        _referenceOverlayBuffer =
+            null;
+
+        _referenceOverlayVertexCount =
+            0;
+
         _referenceOverlayTexture
             ?.Dispose();
+
+        _referenceOverlayTexture =
+            null;
 
         _terrainTriangleBuffer
             ?.Dispose();
@@ -3115,6 +3124,12 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _splineTriangleBuffer
+            ?.Dispose();
+
+        _referenceOverlayBuffer
+            ?.Dispose();
+
+        _referenceOverlayTexture
             ?.Dispose();
 
         _terrainTriangleBuffer
