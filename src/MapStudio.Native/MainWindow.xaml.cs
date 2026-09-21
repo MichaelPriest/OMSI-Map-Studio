@@ -560,6 +560,10 @@ public sealed partial class MainWindow : Window
                     info.NextSplineId ==
                         -1;
 
+                ExportSplineXButton.IsEnabled =
+                    info?.Kind ==
+                    PickingKind.Spline;
+
                 LevelSplineToTerrainButton.IsEnabled =
                     info is
                     {
@@ -4537,6 +4541,214 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao atualizar vínculos: {exception.Message}";
+        }
+    }
+
+    private async void OnExportSplineXClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        var snapshot =
+            _session.CurrentMap;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline ||
+            snapshot is null)
+        {
+            return;
+        }
+
+        var list =
+            new ListView
+            {
+                Header =
+                    "Splines carregadas",
+                SelectionMode =
+                    ListViewSelectionMode.Multiple,
+                MaxHeight =
+                    360,
+                MinWidth =
+                    420
+            };
+
+        var seen =
+            new HashSet<int>();
+
+        foreach (
+            var tile in
+                snapshot.Tiles)
+        {
+            foreach (
+                var spline in
+                    tile.Content.Splines
+                        .OrderBy(
+                            item =>
+                                item.SplineId))
+            {
+                if (
+                    !seen.Add(
+                        spline.SplineId))
+                {
+                    continue;
+                }
+
+                var item =
+                    new ListViewItem
+                    {
+                        Content =
+                            $"#{spline.SplineId} · tile {tile.Reference.X},{tile.Reference.Y} · {spline.SplinePath}",
+                        Tag =
+                            spline.SplineId
+                    };
+
+                item.IsSelected =
+                    spline.SplineId ==
+                    selection.EntityId;
+
+                list.Items.Add(
+                    item);
+            }
+        }
+
+        if (list.Items.Count == 0)
+        {
+            StatusText.Text =
+                "Spline Export: não há splines carregadas.";
+            return;
+        }
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "Exporta a geometria real das SLI selecionadas para um único arquivo DirectX .x, usando como origem o início da primeira spline. UVs são preservadas; texturas não são incorporadas, mantendo o fluxo clássico de preparação no Blender.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10
+            };
+
+        panel.Children.Add(
+            list);
+        panel.Children.Add(
+            note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Spline Export (.x)",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Exportar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        var ids =
+            list.SelectedItems
+                .OfType<
+                    ListViewItem>()
+                .Select(
+                    item =>
+                        item.Tag)
+                .OfType<int>()
+                .Distinct()
+                .ToArray();
+
+        if (
+            ids.Length == 0)
+        {
+            StatusText.Text =
+                "Spline Export: selecione ao menos uma spline.";
+            return;
+        }
+
+        if (
+            !Viewport
+                .TryBuildSplineXExport(
+                    ids,
+                    out var export,
+                    out var exportStatus) ||
+            export is null)
+        {
+            StatusText.Text =
+                exportStatus;
+            return;
+        }
+
+        var picker =
+            new FileSavePicker
+            {
+                SuggestedFileName =
+                    $"spline_export_{selection.EntityId}"
+            };
+
+        picker.FileTypeChoices.Add(
+            "DirectX model (.x)",
+            new List<string>
+            {
+                ".x"
+            });
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSaveFileAsync();
+
+        if (file is null)
+        {
+            StatusText.Text =
+                "Spline Export cancelado.";
+            return;
+        }
+
+        try
+        {
+            await File
+                .WriteAllTextAsync(
+                    file.Path,
+                    export.Content,
+                    new UTF8Encoding(
+                        encoderShouldEmitUTF8Identifier:
+                            false));
+
+            StatusText.Text =
+                $"Spline Export concluído: {export.SplineCount} spline(s), {export.TriangleCount} triângulo(s) · {file.Path}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Spline Export falhou: {exception.Message}";
         }
     }
 

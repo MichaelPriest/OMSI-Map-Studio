@@ -74,6 +74,25 @@ public sealed partial class NativeViewport : UserControl
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
+    public bool TryBuildSplineXExport(
+        IReadOnlyCollection<int> splineIds,
+        out NativeSplineXExportResult? result,
+        out string status)
+    {
+        result =
+            null;
+
+        status =
+            "Spline Export indisponível.";
+
+        return _runtime is not null &&
+            _runtime
+                .TryBuildSplineXExport(
+                    splineIds,
+                    out result,
+                    out status);
+    }
+
     public bool TryBuildSplineCompleteToRequest(
         int sourceSplineId,
         int targetSplineId,

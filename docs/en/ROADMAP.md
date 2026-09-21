@@ -250,7 +250,7 @@ Legend:
 | Spline Mirror | ✅ |
 | Cant start/end | ✅ |
 | Complete to… | ✅ — connects compatible end→start pairs with straight/arc solver, maximum radius, transactional links and backup |
-| Spline export | ⬜ |
+| Spline export | ✅ — multi-select loaded splines and export real DirectX `.x` geometry with UVs for Blender |
 | Editable paths | 🟡 |
 | Traffic Rules | ✅ |
 | Speed limits | ⬜ |
@@ -718,6 +718,7 @@ Current state of the new differentiators:
 - ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
 - ✅ advanced Cant/Mirror exposed in the native Inspector with preservation-safe persistence and backup;
 - ✅ native Complete to with a conservative tangent solver, radius limit, and transactional Previous/Next linkage;
+- ✅ native `.x` Spline Export with multi-selection, real SLI mesh geometry, and UVs for Blender;
 - ✅ procedural road graph;
 - ✅ manual tracing;
 - ✅ georeferenced GeoJSON;

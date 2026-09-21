@@ -229,6 +229,100 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public bool TryBuildSplineXExport(
+        IReadOnlyCollection<int> splineIds,
+        out NativeSplineXExportResult? result,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        result =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            splineIds.Count == 0)
+        {
+            status =
+                "Spline Export: selecione ao menos uma spline carregada.";
+            return false;
+        }
+
+        var idSet =
+            splineIds
+                .ToHashSet();
+
+        var selected =
+            Scene.Splines
+                .Where(
+                    entity =>
+                        idSet.Contains(
+                            entity.Spline
+                                .SplineId))
+                .OrderBy(
+                    entity =>
+                        entity.Spline
+                            .SplineId)
+                .ToArray();
+
+        if (
+            selected.Length !=
+                idSet.Count)
+        {
+            status =
+                "Spline Export: uma ou mais splines selecionadas não estão carregadas no viewport.";
+            return false;
+        }
+
+        var filteredScene =
+            new NativeSceneSnapshot(
+                Scene.Tiles,
+                [],
+                selected,
+                []);
+
+        var geometry =
+            new NativeSplineTriangleGeometryBuilder()
+                .Build(
+                    filteredScene,
+                    _splineAssets);
+
+        if (
+            geometry.LoadedSplineCount !=
+                selected.Length ||
+            geometry.Vertices.Length ==
+                0)
+        {
+            status =
+                "Spline Export: uma ou mais SLI não possuem geometria renderizável carregada.";
+            return false;
+        }
+
+        var first =
+            selected[0];
+
+        var origin =
+            new Vector3(
+                first.WorldX,
+                first.WorldY,
+                first.WorldZ);
+
+        result =
+            new NativeSplineXExporter()
+                .Build(
+                    geometry,
+                    origin,
+                    selected.Length);
+
+        status =
+            $"Spline Export: {result.SplineCount} spline(s), {result.TriangleCount} triângulo(s).";
+
+        return true;
+    }
+
     public bool TryBuildSplineCompleteToRequest(
         int sourceSplineId,
         int targetSplineId,

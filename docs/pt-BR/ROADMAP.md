@@ -250,7 +250,7 @@ Legenda:
 | Mirror de spline | ⬜ |
 | Cant start/end | ✅ |
 | Complete to… | ✅ — conecta fim→início compatíveis com solver reto/arco, raio máximo, vínculos transacionais e backup |
-| Spline export | ⬜ |
+| Spline export | ✅ — seleção múltipla das splines carregadas e exportação geométrica DirectX `.x` com UVs para Blender |
 | Paths editáveis | 🟡 |
 | Traffic Rules | ✅ |
 | Speed limits | ⬜ |
@@ -718,6 +718,7 @@ Estado atual dos diferenciais novos:
 - ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
 - ✅ Cant/Mirror avançado exposto no Inspector nativo com persistência preservativa e backup;
 - ✅ Complete to nativo com solver tangencial conservador, limite de raio e conexão Previous/Next transacional;
+- ✅ Spline Export nativo `.x` com seleção múltipla, malha real SLI e UVs para Blender;
 - ✅ grafo procedural de vias;
 - ✅ traçado manual;
 - ✅ GeoJSON georreferenciado;

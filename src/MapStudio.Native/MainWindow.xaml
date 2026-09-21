@@ -1599,6 +1599,12 @@
                                     HorizontalAlignment="Stretch"
                                     IsEnabled="False"
                                     Click="OnCompleteToSplineClick" />
+
+                            <Button x:Name="ExportSplineXButton"
+                                    Content="Spline Export (.x)..."
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnExportSplineXClick" />
                         </StackPanel>
 
                         <Button x:Name="ApplyInspectorButton"
