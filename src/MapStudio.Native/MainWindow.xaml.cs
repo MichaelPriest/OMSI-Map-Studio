@@ -1285,10 +1285,13 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 result.IsRenderable
-                    ? $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos · thumbnail geométrico atualizado."
+                    ? asset.Kind ==
+                        OmsiAssetKind.Texture
+                        ? $"Prévia de textura: {asset.RelativePath} · thumbnail atualizado."
+                        : $"Prévia 3D nativa: {asset.RelativePath} · {result.TriangleCount} triângulos · thumbnail geométrico atualizado."
                     : asset.Kind ==
                         OmsiAssetKind.Texture
-                        ? $"Prévia visual de textura ainda não está habilitada: {asset.RelativePath}."
+                        ? $"Não foi possível decodificar a textura: {asset.RelativePath} · {result.ErrorCode}."
                         : asset.Kind ==
                             OmsiAssetKind.Model
                             ? $"Não foi possível renderizar o modelo: {asset.RelativePath} · {result.ErrorCode}."

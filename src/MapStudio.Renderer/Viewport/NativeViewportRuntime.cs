@@ -2136,6 +2136,49 @@ public sealed class NativeViewportRuntime : IDisposable
         CancelSceneryPlacement();
         CancelSplinePlacement();
 
+        if (
+            kind ==
+            OmsiAssetKind.Texture)
+        {
+            if (_assetPreviewActive)
+            {
+                RestoreSceneView();
+            }
+
+            if (
+                !TryResolveIndexedAssetPath(
+                    omsiRoot,
+                    relativePath,
+                    out var texturePath))
+            {
+                return new NativeAssetPreviewResult(
+                    kind,
+                    relativePath,
+                    false,
+                    0,
+                    0,
+                    "previewTexturePathInvalid");
+            }
+
+            var thumbnail =
+                new NativeTextureThumbnailGenerator()
+                    .RenderBmp(
+                        texturePath);
+
+            return new NativeAssetPreviewResult(
+                kind,
+                relativePath,
+                thumbnail.Length > 54,
+                0,
+                0,
+                thumbnail.Length > 54
+                    ? null
+                    : "previewTextureDecodeFailed",
+                thumbnail.Length > 54
+                    ? thumbnail
+                    : null);
+        }
+
         var builder =
             new NativeAssetPreviewGeometryBuilder();
 
