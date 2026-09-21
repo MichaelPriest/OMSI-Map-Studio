@@ -17674,7 +17674,7 @@ public sealed partial class MainWindow : Window
                     Title =
                         "Footprint real",
                     Message =
-                        "O O3D preserva o contorno OSM e a altura/andares quando disponíveis. Gable e Shed são gerados em footprints quadriláteros; Hip/Pyramidal também é gerado em footprints convexos com 3 ou mais lados. Footprints côncavos continuam com topo plano quando a forma de roof não puder ser construída com segurança."
+                        "O O3D preserva o contorno OSM e a altura/andares quando disponíveis. Gable permanece restrito a footprints quadriláteros; Hip/Pyramidal é gerado em footprints convexos com 3 ou mais lados; Shed/Skillion usa um plano inclinado e também funciona em footprints simples irregulares ou côncavos. Quando uma forma de roof não puder ser construída com segurança, o topo permanece plano."
                 });
 
             var dialog =
