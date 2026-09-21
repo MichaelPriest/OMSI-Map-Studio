@@ -43,13 +43,19 @@ public static class MapStudioBuildingSpecFactory
             {
                 MapStudioBuildingRoofType.Gable =>
                     MapStudioBuildingRoofType.Gable,
+                MapStudioBuildingRoofType.Hip =>
+                    MapStudioBuildingRoofType.Hip,
+                MapStudioBuildingRoofType.Shed =>
+                    MapStudioBuildingRoofType.Shed,
                 _ =>
                     MapStudioBuildingRoofType.Flat
             };
 
         var roofHeight =
-            roofType ==
-                MapStudioBuildingRoofType.Gable
+            roofType is
+                MapStudioBuildingRoofType.Gable or
+                MapStudioBuildingRoofType.Hip or
+                MapStudioBuildingRoofType.Shed
                 ? normalized.RoofHeightMeters ??
                   Math.Clamp(
                       width *
