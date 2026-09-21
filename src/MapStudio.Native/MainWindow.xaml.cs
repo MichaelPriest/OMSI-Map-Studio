@@ -1568,6 +1568,8 @@ public sealed partial class MainWindow : Window
                     OmsiAssetIndexEntry;
 
             var canContinue =
+                request.NextSplineId <
+                    0 &&
                 SplineContinuousCheckBox.IsChecked ==
                     true &&
                 selectedAsset?.Kind ==
@@ -1596,9 +1598,7 @@ public sealed partial class MainWindow : Window
                         "Cancelar posicionamento";
 
                     StatusText.Text =
-                        request.NextSplineId >= 0
-                            ? $"Spline inserida ({request.Length:F1} m) e conectada entre #{request.PreviousSplineId} / #{request.NextSplineId}. Próximo segmento iniciado no novo endpoint."
-                            : $"Spline inserida ({request.Length:F1} m). Próximo segmento iniciado no endpoint anterior.";
+                        $"Spline inserida ({request.Length:F1} m). Próximo segmento iniciado no endpoint anterior.";
 
                     return;
                 }
