@@ -247,8 +247,8 @@ Legend:
 | Attach object → object | 🟡 |
 | Editable parent/hierarchy | ⬜ |
 | Object-specific labels/options | ⬜ |
-| Spline Mirror | ⬜ |
-| Cant start/end | ⬜ |
+| Spline Mirror | ✅ |
+| Cant start/end | ✅ |
 | Complete to… | ⬜ |
 | Spline export | ⬜ |
 | Editable paths | 🟡 |
@@ -716,6 +716,7 @@ Current state of the new differentiators:
 
 - ✅ original Road Kit;
 - ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
+- ✅ advanced Cant/Mirror exposed in the native Inspector with preservation-safe persistence and backup;
 - ✅ procedural road graph;
 - ✅ manual tracing;
 - ✅ georeferenced GeoJSON;

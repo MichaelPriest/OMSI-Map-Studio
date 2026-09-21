@@ -6914,6 +6914,163 @@ public sealed class OmsiNativeSession
         return CurrentMap;
     }
 
+    public async Task<NativeSplineAdvancedUpdateResult>
+        UpdateSplineAdvancedAsync(
+            NativeSelectionInfo selection,
+            double cantStart,
+            double cantEnd,
+            bool isMirrored,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            selection);
+
+        if (
+            selection.Kind !=
+                PickingKind.Spline ||
+            !double.IsFinite(
+                cantStart) ||
+            !double.IsFinite(
+                cantEnd))
+        {
+            throw new InvalidDataException(
+                "invalidSplineAdvancedEdit");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplineAdvancedEdit");
+        }
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            selection.TileX &&
+                        tile.Reference.Y ==
+                            selection.TileY)
+            ?? throw new InvalidDataException(
+                "splineAdvancedTileNotLoaded");
+
+        var source =
+            loaded.Content.Splines
+                .FirstOrDefault(
+                    spline =>
+                        spline.SplineId ==
+                            selection.EntityId &&
+                        string.Equals(
+                            spline.SplinePath,
+                            selection.AssetPath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                "splineSourceChanged");
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    loaded.Reference
+                        .RelativeMapPath,
+                    out var tilePath) ||
+            !File.Exists(
+                tilePath))
+        {
+            throw new InvalidDataException(
+                "splineAdvancedTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var result =
+            OmsiTileSplineAdvancedEditor
+                .Apply(
+                    document,
+                    [
+                        new OmsiSplineAdvancedEdit(
+                            source.SourceSectionOrdinal,
+                            source.SplinePath,
+                            source.SplineId,
+                            source.PreviousSplineId,
+                            source.NextSplineId,
+                            source.IsHeightSpline,
+                            cantStart,
+                            cantEnd,
+                            isMirrored)
+                    ]);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                tilePath);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        tilePath,
+                        backupPath,
+                        result.Bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshed =
+            await _tileReader
+                .ReadContentAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var updatedSpline =
+            refreshed.Splines
+                .FirstOrDefault(
+                    spline =>
+                        spline.SplineId ==
+                            source.SplineId &&
+                        string.Equals(
+                            spline.SplinePath,
+                            source.SplinePath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                "splineAdvancedReloadFailed");
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                tile.Reference.X ==
+                                    loaded.Reference.X &&
+                                tile.Reference.Y ==
+                                    loaded.Reference.Y
+                                    ? new NativeLoadedTile(
+                                        tile.Reference,
+                                        refreshed)
+                                    : tile)
+                        .ToArray()
+            };
+
+        return new NativeSplineAdvancedUpdateResult(
+            CurrentMap,
+            updatedSpline,
+            backupPath);
+    }
+
     public async Task<NativeMapSnapshot>
         DeleteSelectionAsync(
             NativeSelectionInfo selection,

@@ -1587,6 +1587,12 @@
                                     HorizontalAlignment="Stretch"
                                     IsEnabled="False"
                                     Click="OnSaveSplineLinksClick" />
+
+                            <Button x:Name="EditSplineAdvancedButton"
+                                    Content="Cant / Mirror..."
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnEditSplineAdvancedClick" />
                         </StackPanel>
 
                         <Button x:Name="ApplyInspectorButton"

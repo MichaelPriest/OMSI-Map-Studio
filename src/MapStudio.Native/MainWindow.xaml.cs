@@ -550,6 +550,10 @@ public sealed partial class MainWindow : Window
                     info?.Kind ==
                     PickingKind.Spline;
 
+                EditSplineAdvancedButton.IsEnabled =
+                    info?.Kind ==
+                    PickingKind.Spline;
+
                 LevelSplineToTerrainButton.IsEnabled =
                     info is
                     {
@@ -4527,6 +4531,236 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao atualizar vínculos: {exception.Message}";
+        }
+    }
+
+    private async void OnEditSplineAdvancedClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de alterar Cant/Mirror.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento antes de alterar Cant/Mirror.";
+
+            return;
+        }
+
+        var source =
+            _session.CurrentMap?
+                .Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            selection.TileX &&
+                        tile.Reference.Y ==
+                            selection.TileY)
+                ?.Content.Splines
+                .FirstOrDefault(
+                    spline =>
+                        spline.SplineId ==
+                            selection.EntityId &&
+                        string.Equals(
+                            spline.SplinePath,
+                            selection.AssetPath,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (source is null)
+        {
+            StatusText.Text =
+                "Não foi possível localizar a spline selecionada no tile carregado.";
+
+            return;
+        }
+
+        var cantStartBox =
+            new NumberBox
+            {
+                Header =
+                    "Cant inicial",
+                Value =
+                    source.CantStart,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var cantEndBox =
+            new NumberBox
+            {
+                Header =
+                    "Cant final",
+                Value =
+                    source.CantEnd,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var mirrorCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Mirror",
+                IsChecked =
+                    source.IsMirrored
+            };
+
+        var description =
+            new TextBlock
+            {
+                Text =
+                    "Os valores são gravados nos campos avançados reais da seção [spline]/[spline_h]. O restante do bloco é preservado e um backup é criado antes da alteração.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10
+            };
+
+        panel.Children.Add(
+            cantStartBox);
+        panel.Children.Add(
+            cantEndBox);
+        panel.Children.Add(
+            mirrorCheckBox);
+        panel.Children.Add(
+            description);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Spline #{selection.EntityId} · Cant / Mirror",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            !double.IsFinite(
+                cantStartBox.Value) ||
+            !double.IsFinite(
+                cantEndBox.Value))
+        {
+            StatusText.Text =
+                "Cant inicial/final precisam ser valores numéricos válidos.";
+
+            return;
+        }
+
+        try
+        {
+            EditSplineAdvancedButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Cant/Mirror da spline #{selection.EntityId} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateSplineAdvancedAsync(
+                        selection,
+                        cantStartBox.Value,
+                        cantEndBox.Value,
+                        mirrorCheckBox
+                            .IsChecked ==
+                        true);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    updated.Snapshot,
+                    _session.OmsiRootPath);
+
+            RefreshExplorer();
+
+            var refreshedItem =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                PickingKind.Spline &&
+                            item.EntityId ==
+                                selection.EntityId &&
+                            item.TileX ==
+                                selection.TileX &&
+                            item.TileY ==
+                                selection.TileY);
+
+            if (refreshedItem is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    refreshedItem,
+                    focus:
+                        false);
+            }
+
+            StatusText.Text =
+                $"Spline #{selection.EntityId}: Cant {updated.Spline.CantStart:G4} → {updated.Spline.CantEnd:G4}, Mirror {(updated.Spline.IsMirrored ? "ativo" : "desativado")}. Backup: {updated.BackupPath}";
+        }
+        catch (Exception exception)
+        {
+            EditSplineAdvancedButton.IsEnabled =
+                _selectionInfo?.Kind ==
+                PickingKind.Spline;
+
+            StatusText.Text =
+                $"Falha ao salvar Cant/Mirror: {exception.Message}";
         }
     }
 

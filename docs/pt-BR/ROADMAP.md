@@ -248,7 +248,7 @@ Legenda:
 | Parent / hierarchy editável | ⬜ |
 | Labels/opções específicas do objeto | ⬜ |
 | Mirror de spline | ⬜ |
-| Cant start/end | ⬜ |
+| Cant start/end | ✅ |
 | Complete to… | ⬜ |
 | Spline export | ⬜ |
 | Paths editáveis | 🟡 |
@@ -716,6 +716,7 @@ Estado atual dos diferenciais novos:
 
 - ✅ Road Kit próprio;
 - ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
+- ✅ Cant/Mirror avançado exposto no Inspector nativo com persistência preservativa e backup;
 - ✅ grafo procedural de vias;
 - ✅ traçado manual;
 - ✅ GeoJSON georreferenciado;
