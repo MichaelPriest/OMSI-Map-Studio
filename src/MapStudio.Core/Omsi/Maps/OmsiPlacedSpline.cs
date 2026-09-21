@@ -22,4 +22,8 @@ public sealed record OmsiPlacedSpline(
         get;
         init;
     } = -1;
+
+    public IReadOnlyList<OmsiTrafficRule>
+        TrafficRules { get; init; } =
+            Array.Empty<OmsiTrafficRule>();
 }

@@ -13,4 +13,8 @@ public sealed record OmsiPlacedObject(
     IReadOnlyList<string> ExtraValues)
 {
     public int SourceSectionOrdinal { get; init; } = -1;
+
+    public IReadOnlyList<OmsiTrafficRule>
+        TrafficRules { get; init; } =
+            Array.Empty<OmsiTrafficRule>();
 }

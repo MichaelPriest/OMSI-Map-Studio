@@ -368,7 +368,11 @@ public sealed class OmsiTileReader
                     values.Skip(9).ToArray())
                 {
                     SourceSectionOrdinal =
-                        sectionOrdinal
+                        sectionOrdinal,
+                    TrafficRules =
+                        ReadTrafficRulesAfter(
+                            document,
+                            section)
                 });
         }
 
@@ -497,11 +501,173 @@ public sealed class OmsiTileReader
                         .ToArray())
                 {
                     SourceSectionOrdinal =
-                        currentSectionOrdinal
+                        currentSectionOrdinal,
+                    TrafficRules =
+                        ReadTrafficRulesAfter(
+                            document,
+                            section)
                 });
         }
 
         return splines;
+    }
+
+    private static IReadOnlyList<
+        OmsiTrafficRule>
+        ReadTrafficRulesAfter(
+            OmsiConfigDocument document,
+            OmsiConfigSection owner)
+    {
+        var result =
+            new List<
+                OmsiTrafficRule>();
+
+        var ownerIndex = -1;
+
+        for (
+            var index = 0;
+            index <
+                document.Sections.Count;
+            index++)
+        {
+            if (
+                document.Sections[index]
+                    .KeywordLineIndex ==
+                owner.KeywordLineIndex)
+            {
+                ownerIndex =
+                    index;
+                break;
+            }
+        }
+
+        if (ownerIndex < 0)
+        {
+            return result;
+        }
+
+        for (
+            var index =
+                ownerIndex + 1;
+            index <
+                document.Sections.Count;
+            index++)
+        {
+            var section =
+                document.Sections[index];
+
+            if (IsPlacementBoundary(
+                    section))
+            {
+                break;
+            }
+
+            var isRule =
+                string.Equals(
+                    section.Keyword,
+                    "rule",
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            var isKillRule =
+                string.Equals(
+                    section.Keyword,
+                    "kill_rule",
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            if (
+                !isRule &&
+                !isKillRule)
+            {
+                continue;
+            }
+
+            var values =
+                section.DataLines
+                    .Take(4)
+                    .ToArray();
+
+            if (values.Length < 4)
+            {
+                continue;
+            }
+
+            int? pathIndex =
+                int.TryParse(
+                    values[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var parsedPath)
+                    ? parsedPath
+                    : null;
+
+            double? numericValue =
+                TryParseDouble(
+                    values[2],
+                    out var parsedValue)
+                    ? parsedValue
+                    : null;
+
+            int? vehicleGroupIndex =
+                int.TryParse(
+                    values[3],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var parsedGroup)
+                    ? parsedGroup
+                    : null;
+
+            result.Add(
+                new OmsiTrafficRule(
+                    isKillRule,
+                    pathIndex,
+                    values[1],
+                    values[2],
+                    numericValue,
+                    vehicleGroupIndex,
+                    values));
+        }
+
+        return result;
+    }
+
+    private static bool IsPlacementBoundary(
+        OmsiConfigSection section)
+    {
+        if (
+            OmsiSplineFieldLayout
+                .IsSplineSection(
+                    section))
+        {
+            return true;
+        }
+
+        return section.Keyword
+            .Equals(
+                "object",
+                StringComparison
+                    .OrdinalIgnoreCase) ||
+            section.Keyword
+                .Equals(
+                    "attachObj",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+            section.Keyword
+                .Equals(
+                    "splineAttachement",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+            section.Keyword
+                .Equals(
+                    "splineAttachment",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+            section.Keyword
+                .Equals(
+                    "splineAttachement_repeater",
+                    StringComparison
+                        .OrdinalIgnoreCase);
     }
 
     private static bool TryParseDouble(
