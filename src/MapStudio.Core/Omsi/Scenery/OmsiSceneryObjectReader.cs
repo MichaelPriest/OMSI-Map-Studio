@@ -76,7 +76,21 @@ public sealed class OmsiSceneryObjectReader
                 document.FindFirstSection(
                     "absheight") is not null,
             Tree: tree,
-            RenderType: renderType);
+            RenderType: renderType)
+        {
+            TrafficLightControllers =
+                ReadTrafficLightControllers(
+                    document),
+            LightPoints =
+                ReadLightPoints(
+                    document),
+            IsTrafficLightObject =
+                document.FindFirstSection(
+                    "trafficlight") is not null,
+            UsesLightMapMapping =
+                document.FindFirstSection(
+                    "LightMapMapping") is not null
+        };
     }
 
     private static MeshReadResult
@@ -642,6 +656,309 @@ public sealed class OmsiSceneryObjectReader
             .ToArray();
     }
 
+    private static IReadOnlyList<
+        OmsiTrafficLightController>
+        ReadTrafficLightControllers(
+            OmsiConfigDocument document)
+    {
+        var controllers =
+            new List<
+                TrafficLightControllerBuilder>();
+
+        TrafficLightControllerBuilder?
+            currentController =
+                null;
+
+        TrafficLightProgramBuilder?
+            currentProgram =
+                null;
+
+        foreach (
+            var section in
+                document.Sections)
+        {
+            if (
+                string.Equals(
+                    section.Keyword,
+                    "traffic_lights_group",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    section.Keyword,
+                    "trafficlight_group",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                double? cycleDuration =
+                    null;
+
+                if (
+                    TryReadFiniteDouble(
+                        section.DataLines
+                            .FirstOrDefault(),
+                        out var parsedCycle) &&
+                    parsedCycle >= 0)
+                {
+                    cycleDuration =
+                        parsedCycle;
+                }
+
+                currentController =
+                    new TrafficLightControllerBuilder(
+                        cycleDuration);
+
+                controllers.Add(
+                    currentController);
+
+                currentProgram =
+                    null;
+
+                continue;
+            }
+
+            if (string.Equals(
+                    section.Keyword,
+                    "traffic_light",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                currentController ??=
+                    CreateImplicitTrafficController(
+                        controllers);
+
+                var name =
+                    section.DataLines
+                        .FirstOrDefault()
+                        ?.Trim();
+
+                if (string.IsNullOrWhiteSpace(
+                        name))
+                {
+                    currentProgram =
+                        null;
+
+                    continue;
+                }
+
+                currentProgram =
+                    new TrafficLightProgramBuilder(
+                        name);
+
+                currentController
+                    .Programs.Add(
+                        currentProgram);
+
+                continue;
+            }
+
+            if (
+                currentProgram is null ||
+                !string.Equals(
+                    section.Keyword,
+                    "phase",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var values =
+                section.DataLines
+                    .Take(2)
+                    .ToArray();
+
+            if (
+                values.Length < 2 ||
+                !int.TryParse(
+                    values[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var signalCode) ||
+                !TryReadFiniteDouble(
+                    values[1],
+                    out var duration) ||
+                duration < 0)
+            {
+                continue;
+            }
+
+            currentProgram.Phases.Add(
+                new OmsiTrafficLightPhase(
+                    signalCode,
+                    duration));
+        }
+
+        return controllers
+            .Select(
+                controller =>
+                    new OmsiTrafficLightController(
+                        controller.CycleDuration,
+                        controller.Programs
+                            .Select(
+                                program =>
+                                    new OmsiTrafficLightProgram(
+                                        program.Name,
+                                        program.Phases
+                                            .ToArray()))
+                            .ToArray()))
+            .ToArray();
+    }
+
+    private static TrafficLightControllerBuilder
+        CreateImplicitTrafficController(
+            List<TrafficLightControllerBuilder>
+                controllers)
+    {
+        var controller =
+            new TrafficLightControllerBuilder(
+                null);
+
+        controllers.Add(
+            controller);
+
+        return controller;
+    }
+
+    private static IReadOnlyList<
+        OmsiSceneryLightPoint>
+        ReadLightPoints(
+            OmsiConfigDocument document)
+    {
+        var result =
+            new List<
+                OmsiSceneryLightPoint>();
+
+        foreach (
+            var section in
+                document.Sections)
+        {
+            var enhanced2 =
+                string.Equals(
+                    section.Keyword,
+                    "light_enh_2",
+                    StringComparison.OrdinalIgnoreCase);
+
+            var legacy =
+                string.Equals(
+                    section.Keyword,
+                    "light_enh",
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (!enhanced2 &&
+                !legacy)
+            {
+                continue;
+            }
+
+            var values =
+                section.DataLines
+                    .ToArray();
+
+            if (
+                enhanced2 &&
+                values.Length >= 17 &&
+                TryReadLightVector(
+                    values,
+                    0,
+                    out var positionX,
+                    out var positionY,
+                    out var positionZ) &&
+                TryReadLightVector(
+                    values,
+                    3,
+                    out var directionX,
+                    out var directionY,
+                    out var directionZ) &&
+                TryReadFiniteDouble(
+                    values[11],
+                    out var red) &&
+                TryReadFiniteDouble(
+                    values[12],
+                    out var green) &&
+                TryReadFiniteDouble(
+                    values[13],
+                    out var blue) &&
+                TryReadFiniteDouble(
+                    values[14],
+                    out var size) &&
+                TryReadFiniteDouble(
+                    values[15],
+                    out var innerAngle) &&
+                TryReadFiniteDouble(
+                    values[16],
+                    out var outerAngle))
+            {
+                result.Add(
+                    new OmsiSceneryLightPoint(
+                        section.Keyword,
+                        positionX,
+                        positionY,
+                        positionZ,
+                        directionX,
+                        directionY,
+                        directionZ,
+                        red,
+                        green,
+                        blue,
+                        size,
+                        innerAngle,
+                        outerAngle,
+                        values.ElementAtOrDefault(17),
+                        values.ElementAtOrDefault(18),
+                        values.ElementAtOrDefault(19),
+                        values.ElementAtOrDefault(24),
+                        values));
+
+                continue;
+            }
+
+            result.Add(
+                new OmsiSceneryLightPoint(
+                    section.Keyword,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    values));
+        }
+
+        return result;
+    }
+
+    private static bool TryReadLightVector(
+        IReadOnlyList<string> values,
+        int offset,
+        out double x,
+        out double y,
+        out double z)
+    {
+        x = 0;
+        y = 0;
+        z = 0;
+
+        return
+            offset >= 0 &&
+            values.Count >=
+                offset + 3 &&
+            TryReadFiniteDouble(
+                values[offset],
+                out x) &&
+            TryReadFiniteDouble(
+                values[offset + 1],
+                out y) &&
+            TryReadFiniteDouble(
+                values[offset + 2],
+                out z);
+    }
+
     private static OmsiSceneryTreeDefinition?
         ReadTree(
             OmsiConfigDocument document)
@@ -737,6 +1054,33 @@ public sealed class OmsiSceneryObjectReader
         IReadOnlyList<string> Paths,
         IReadOnlyList<double?> LodThresholds,
         IReadOnlyList<OmsiSceneryMeshTransform> Transforms);
+
+    private sealed class
+        TrafficLightControllerBuilder(
+            double? cycleDuration)
+    {
+        public double? CycleDuration
+        { get; } =
+            cycleDuration;
+
+        public List<
+            TrafficLightProgramBuilder>
+            Programs
+        { get; } = [];
+    }
+
+    private sealed class
+        TrafficLightProgramBuilder(
+            string name)
+    {
+        public string Name { get; } =
+            name;
+
+        public List<
+            OmsiTrafficLightPhase>
+            Phases
+        { get; } = [];
+    }
 
     private sealed class MaterialOverrideBuilder(
         int meshOrdinal,

@@ -13,6 +13,18 @@ public sealed record OmsiSceneryObjectMetadata(
     OmsiSceneryTreeDefinition? Tree,
     string? RenderType)
 {
+    public IReadOnlyList<OmsiTrafficLightController>
+        TrafficLightControllers { get; init; } =
+            Array.Empty<OmsiTrafficLightController>();
+
+    public IReadOnlyList<OmsiSceneryLightPoint>
+        LightPoints { get; init; } =
+            Array.Empty<OmsiSceneryLightPoint>();
+
+    public bool IsTrafficLightObject { get; init; }
+
+    public bool UsesLightMapMapping { get; init; }
+
     public static OmsiSceneryObjectMetadata Missing { get; } = new(
         Exists: false,
         FriendlyName: null,

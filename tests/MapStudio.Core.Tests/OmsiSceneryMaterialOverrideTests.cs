@@ -342,4 +342,123 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Null(
             material.AlphaMode);
     }
+    [Fact]
+    public void ReadMetadata_ParsesTrafficLightProgramsAndPhases()
+    {
+        const string source =
+            "[traffic_lights_group]\n" +
+            "70\n" +
+            "[traffic_light]\n" +
+            "Main\n" +
+            "[phase]\n3\n2\n" +
+            "[phase]\n6\n26\n" +
+            "[phase]\n9\n3\n" +
+            "[phase]\n0\n39\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        var controller =
+            Assert.Single(
+                metadata
+                    .TrafficLightControllers);
+
+        Assert.Equal(
+            70,
+            controller.CycleDuration);
+
+        var program =
+            Assert.Single(
+                controller.Programs);
+
+        Assert.Equal(
+            "Main",
+            program.Name);
+
+        Assert.Equal(
+            4,
+            program.Phases.Count);
+
+        Assert.Equal(
+            6,
+            program.Phases[1]
+                .SignalCode);
+
+        Assert.Equal(
+            26,
+            program.Phases[1]
+                .Duration);
+    }
+
+    [Fact]
+    public void ReadMetadata_ParsesEnhancedLightAndLightMapFlags()
+    {
+        const string source =
+            "[trafficlight]\n" +
+            "[LightMapMapping]\n" +
+            "[light_enh_2]\n" +
+            "1\n2\n3\n" +
+            "0\n1\n0\n" +
+            "0\n0\n1\n" +
+            "0\n0\n" +
+            "255\n140\n20\n" +
+            "0.25\n20\n50\n" +
+            "NightLightA\n" +
+            "1\n0.1\n1\n0\n0.1\n0\n0.1\n" +
+            "light.bmp\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.True(
+            metadata
+                .IsTrafficLightObject);
+
+        Assert.True(
+            metadata
+                .UsesLightMapMapping);
+
+        var light =
+            Assert.Single(
+                metadata.LightPoints);
+
+        Assert.Equal(
+            1,
+            light.PositionX);
+
+        Assert.Equal(
+            2,
+            light.PositionY);
+
+        Assert.Equal(
+            3,
+            light.PositionZ);
+
+        Assert.Equal(
+            255,
+            light.Red);
+
+        Assert.Equal(
+            140,
+            light.Green);
+
+        Assert.Equal(
+            20,
+            light.Blue);
+
+        Assert.Equal(
+            "NightLightA",
+            light.ActivationVariable);
+
+        Assert.Equal(
+            "light.bmp",
+            light.EffectTexture);
+    }
+
 }
