@@ -216,6 +216,9 @@ public sealed partial class MainWindow : Window
     private string?
         _referenceOverlayMapDirectory;
 
+    private NativeGoogleMapReference?
+        _activeGoogleMapReference;
+
     private string?
         _terrainLayerVisibilityMapDirectory;
 
@@ -11605,6 +11608,9 @@ public sealed partial class MainWindow : Window
                 snapshot.Map
                     .DirectoryPath;
 
+            _activeGoogleMapReference =
+                reference;
+
             StatusText.Text =
                 $"Referência Google ativa · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
@@ -11631,6 +11637,9 @@ public sealed partial class MainWindow : Window
             null);
 
         _referenceOverlayMapDirectory =
+            null;
+
+        _activeGoogleMapReference =
             null;
     }
 
@@ -13588,6 +13597,398 @@ public sealed partial class MainWindow : Window
         }
 
         return profiles[4];
+    }
+
+    private static RoadProfileOption
+        SelectProceduralRoadProfile(
+            MapStudioProjectedRoadReference road,
+            IReadOnlyList<RoadProfileOption> profiles)
+    {
+        var kind =
+            road.Kind
+                ?.Trim()
+                .ToLowerInvariant();
+
+        if (
+            kind is
+                "footway" or
+                "pedestrian" or
+                "path" or
+                "steps" or
+                "cycleway")
+        {
+            return profiles[7];
+        }
+
+        if (road.OneWay == true)
+        {
+            return road.LaneCount switch
+            {
+                >= 3 =>
+                    profiles[2],
+                2 =>
+                    profiles[1],
+                _ =>
+                    profiles[0]
+            };
+        }
+
+        if (
+            kind is
+                "motorway" or
+                "trunk" or
+                "motorway_link" or
+                "trunk_link")
+        {
+            return profiles[6];
+        }
+
+        if (
+            road.LaneCount is >= 4 ||
+            kind is
+                "primary" or
+                "primary_link" or
+                "avenue")
+        {
+            return profiles[5];
+        }
+
+        if (kind is "service")
+        {
+            return profiles[3];
+        }
+
+        return profiles[4];
+    }
+
+    private async void OnAnalyzeGoogleRoadReferenceWithAiClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .AiAssistance,
+                "Análise de vias por IA") ||
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Gerador procedural de vias"))
+        {
+            return;
+        }
+
+        if (
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "IA de vias: abra um mapa primeiro.";
+
+            return;
+        }
+
+        if (_proceduralRoadTraceMode)
+        {
+            StatusText.Text =
+                "Finalize ou limpe a linha manual atual antes da análise por IA.";
+
+            return;
+        }
+
+        var reference =
+            _activeGoogleMapReference;
+
+        if (
+            reference is null ||
+            !string.Equals(
+                _referenceOverlayMapDirectory,
+                snapshot.Map.DirectoryPath,
+                StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(
+                reference.ImagePath))
+        {
+            StatusText.Text =
+                "IA de vias: carregue primeiro Mapa → Referência Google sobre o terreno.";
+
+            return;
+        }
+
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            StatusText.Text =
+                "IA de vias: configure e ative um perfil em IA → Configurar provedores.";
+
+            return;
+        }
+
+        if (
+            !NativeAiProviderFactory
+                .IsImplemented(
+                    activeProfile))
+        {
+            StatusText.Text =
+                $"IA de vias: adapter {activeProfile.AdapterId} ainda não implementado nesta build.";
+
+            return;
+        }
+
+        var mimeType =
+            GetAiImageMimeType(
+                reference.ImagePath);
+
+        if (mimeType is null)
+        {
+            StatusText.Text =
+                "IA de vias: a referência precisa estar em PNG, JPG/JPEG ou WEBP.";
+
+            return;
+        }
+
+        var notesBox =
+            new TextBox
+            {
+                Header =
+                    "Orientações para a IA",
+                PlaceholderText =
+                    "Opcional · ex.: ignore estacionamentos, trace apenas ruas públicas, avenida principal tem 4 faixas...",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                MinHeight =
+                    72
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{reference.Width}×{reference.Height}px · {reference.WidthMeters:F1}×{reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Apenas preview",
+                Message =
+                    "A IA detectará eixos de vias na imagem Google. O resultado será projetado pela mesma âncora georreferenciada e exibido no D3D11; nada será gravado até você usar Gerar vias."
+            });
+
+        panel.Children.Add(
+            notesBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Detectar vias da referência com IA",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Analisar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"IA de vias: analisando com {activeProfile.DisplayName}...";
+
+            var bytes =
+                await File
+                    .ReadAllBytesAsync(
+                        reference.ImagePath);
+
+            var provider =
+                NativeAiProviderFactory
+                    .Create(
+                        activeProfile);
+
+            var analysis =
+                await provider
+                    .AnalyzeRoadReferenceAsync(
+                        new MapStudioRoadReferenceRequest(
+                            [
+                                new MapStudioAiImageReference(
+                                    bytes,
+                                    mimeType,
+                                    Path.GetFileName(
+                                        reference.ImagePath))
+                            ],
+                            string.IsNullOrWhiteSpace(
+                                notesBox.Text)
+                                ? null
+                                : notesBox.Text));
+
+            if (analysis.Roads.Count == 0)
+            {
+                StatusText.Text =
+                    "IA de vias: nenhuma via válida foi detectada.";
+
+                return;
+            }
+
+            var projected =
+                MapStudioRoadReferenceProjector
+                    .Project(
+                        analysis,
+                        new MapStudioRoadReferenceImageProjection(
+                            reference.Width,
+                            reference.Height,
+                            reference.MetersPerPixel,
+                            reference.AnchorWorldX,
+                            reference.AnchorWorldZ));
+
+            var pointCount =
+                projected.Sum(
+                    road =>
+                        road.Points.Count);
+
+            if (
+                projected.Count >
+                    5_000 ||
+                pointCount >
+                    100_000)
+            {
+                StatusText.Text =
+                    $"IA de vias recusada por segurança: {projected.Count} linha(s), {pointCount} ponto(s).";
+
+                return;
+            }
+
+            var profiles =
+                GetProceduralRoadProfiles();
+
+            var added =
+                0;
+
+            foreach (
+                var road in projected)
+            {
+                var points =
+                    road.Points
+                        .Where(
+                            point =>
+                                double.IsFinite(
+                                    point.X) &&
+                                double.IsFinite(
+                                    point.Z))
+                        .Aggregate(
+                            new List<
+                                MapStudioRoadPoint>(),
+                            (list, point) =>
+                            {
+                                if (
+                                    list.Count ==
+                                        0 ||
+                                    list[^1]
+                                        .DistanceTo(
+                                            point) >=
+                                        0.20)
+                                {
+                                    list.Add(
+                                        point);
+                                }
+
+                                return list;
+                            });
+
+                if (points.Count < 2)
+                {
+                    continue;
+                }
+
+                var roadProfile =
+                    SelectProceduralRoadProfile(
+                        road,
+                        profiles);
+
+                _proceduralRoadTraces.Add(
+                    new MapStudioRoadTrace(
+                        $"ai-{++_proceduralRoadTraceSequence}",
+                        points,
+                        roadProfile.ProfileId,
+                        road.LaneCount ??
+                            roadProfile.LaneCount,
+                        road.OneWay ??
+                            roadProfile.OneWay,
+                        road.WidthMeters ??
+                            roadProfile.WidthMeters));
+
+                added++;
+            }
+
+            if (added == 0)
+            {
+                StatusText.Text =
+                    "IA de vias: os eixos detectados não produziram traçados utilizáveis.";
+
+                return;
+            }
+
+            AnalyzeProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            ClearProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            var graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        _proceduralRoadTraces);
+
+            var preview =
+                Viewport
+                    .PreviewProceduralRoadGraph(
+                        graph);
+
+            StatusText.Text =
+                $"IA de vias: {added} linha(s) adicionadas · {graph.Segments.Count} segmentos · {graph.Junctions.Count} cruzamentos · preview {preview.RenderedSegmentCount} segmentos.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"IA de vias falhou: {exception.Message}";
+        }
     }
 
     private async void OnImportProceduralRoadGeoJsonClick(
