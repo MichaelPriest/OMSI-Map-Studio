@@ -227,6 +227,29 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public NativeProceduralRoadPlacementBuildResult
+        BuildProceduralRoadPlacementRequests(
+            MapStudioRoadGraph graph)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            graph);
+
+        if (Scene is null)
+        {
+            return new NativeProceduralRoadPlacementBuildResult(
+                Array.Empty<
+                    NativeSplinePlacementRequest>(),
+                graph.Segments.Count);
+        }
+
+        return new NativeProceduralRoadPlacementBuilder()
+            .Build(
+                Scene,
+                graph);
+    }
+
     public NativeProceduralRoadPreviewGeometry
         PreviewProceduralRoadGraph(
             MapStudioRoadGraph graph)

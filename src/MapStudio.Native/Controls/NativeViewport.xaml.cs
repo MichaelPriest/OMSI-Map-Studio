@@ -72,6 +72,17 @@ public sealed partial class NativeViewport : UserControl
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
+    public NativeProceduralRoadPlacementBuildResult
+        BuildProceduralRoadPlacementRequests(
+            MapStudioRoadGraph graph) =>
+        _runtime
+            ?.BuildProceduralRoadPlacementRequests(
+                graph) ??
+        new NativeProceduralRoadPlacementBuildResult(
+            Array.Empty<
+                NativeSplinePlacementRequest>(),
+            graph.Segments.Count);
+
     public NativeProceduralRoadPreviewGeometry
         PreviewProceduralRoadGraph(
             MapStudioRoadGraph graph) =>
