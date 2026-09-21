@@ -14529,6 +14529,44 @@ public sealed partial class MainWindow : Window
                     "Opcional"
             };
 
+        var tokenBox =
+            new PasswordBox
+            {
+                Header =
+                    "Token / API key",
+                PlaceholderText =
+                    "Opcional",
+                PasswordRevealMode =
+                    PasswordRevealMode
+                        .Peek
+            };
+
+        var clearCredentialCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Remover credencial salva deste perfil"
+            };
+
+        var credentialStatusText =
+            new TextBlock
+            {
+                FontSize =
+                    11,
+                Foreground =
+                    new Microsoft.UI.Xaml.Media
+                        .SolidColorBrush(
+                            Windows.UI.Color
+                                .FromArgb(
+                                    255,
+                                    120,
+                                    149,
+                                    173)),
+                TextWrapping =
+                    TextWrapping
+                        .Wrap
+            };
+
         var localCheckBox =
             new CheckBox
             {
@@ -14573,6 +14611,30 @@ public sealed partial class MainWindow : Window
                 profile
                     ?.IsLocal ??
                 false;
+
+            tokenBox.Password =
+                string.Empty;
+
+            clearCredentialCheckBox.IsChecked =
+                false;
+
+            var hasCredential =
+                profile is not null &&
+                NativeAiCredentialStore
+                    .HasSecret(
+                        profile.Id);
+
+            tokenBox.PlaceholderText =
+                hasCredential
+                    ? "Credencial já salva · deixe vazio para manter"
+                    : "Opcional";
+
+            credentialStatusText.Text =
+                profile is null
+                    ? "Novo perfil: nenhuma credencial salva."
+                    : hasCredential
+                        ? "Credencial protegida no Windows Credential Manager."
+                        : "Nenhuma credencial salva para este perfil.";
 
             activeCheckBox.IsChecked =
                 profile is not null &&
@@ -14636,9 +14698,9 @@ public sealed partial class MainWindow : Window
                     InfoBarSeverity
                         .Informational,
                 Title =
-                    "Credenciais não são salvas aqui",
+                    "Credenciais ficam separadas do perfil",
                 Message =
-                    "Este arquivo guarda apenas nome, adapter, endpoint e modelo. Tokens/chaves serão resolvidos separadamente pelo adapter/Credential Manager ou backend."
+                    "Nome, adapter, endpoint e modelo ficam no JSON local. Token/API key é salvo separadamente no Windows Credential Manager e nunca é gravado no mapa ou nos assets."
             };
 
         var panel =
@@ -14667,6 +14729,15 @@ public sealed partial class MainWindow : Window
 
         panel.Children.Add(
             modelBox);
+
+        panel.Children.Add(
+            tokenBox);
+
+        panel.Children.Add(
+            credentialStatusText);
+
+        panel.Children.Add(
+            clearCredentialCheckBox);
 
         panel.Children.Add(
             localCheckBox);
@@ -14747,8 +14818,12 @@ public sealed partial class MainWindow : Window
                 .Save(
                     _aiConnectionSettings);
 
+            NativeAiCredentialStore
+                .DeleteSecret(
+                    removedId);
+
             StatusText.Text =
-                $"IA: perfil '{selected.Profile.DisplayName}' excluído.";
+                $"IA: perfil '{selected.Profile.DisplayName}' e sua credencial foram excluídos.";
 
             return;
         }
@@ -14815,11 +14890,40 @@ public sealed partial class MainWindow : Window
                 .Save(
                     _aiConnectionSettings);
 
+            if (
+                clearCredentialCheckBox
+                    .IsChecked ==
+                true)
+            {
+                NativeAiCredentialStore
+                    .DeleteSecret(
+                        profile.Id);
+            }
+            else if (
+                !string.IsNullOrWhiteSpace(
+                    tokenBox.Password))
+            {
+                NativeAiCredentialStore
+                    .SaveSecret(
+                        profile.Id,
+                        tokenBox.Password);
+            }
+
+            var credentialMessage =
+                NativeAiCredentialStore
+                    .HasSecret(
+                        profile.Id)
+                    ? " · credencial protegida no Windows Credential Manager"
+                    : " · sem credencial salva";
+
             StatusText.Text =
-                activeCheckBox.IsChecked ==
-                    true
-                    ? $"IA: perfil ativo '{profile.DisplayName}' salvo."
-                    : $"IA: perfil '{profile.DisplayName}' salvo.";
+                (
+                    activeCheckBox.IsChecked ==
+                        true
+                        ? $"IA: perfil ativo '{profile.DisplayName}' salvo."
+                        : $"IA: perfil '{profile.DisplayName}' salvo."
+                ) +
+                credentialMessage;
         }
         catch (Exception exception)
         {
