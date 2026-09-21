@@ -741,7 +741,7 @@ In addition to the checkpoints already described, the native host currently incl
 - persistent geometry thumbnails and visual library cards;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
 - procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
-- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, safe outer multipolygons, and `natural=tree`/`natural=shrub` vegetation points;
+- georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, safe outer multipolygons, and vegetation from points, lines, areas, and safe outer multipolygons;
 - AI analysis of the Google reference for road extraction;
 - Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
 - provider-neutral AI configuration and connection probing;
@@ -764,7 +764,7 @@ The importer reads ways tagged with `highway`, resolves their nodes, and preserv
 
 WGS84 coordinates are projected through the same `.mapstudio/georeference.json` anchor used by GeoJSON. OSM, GeoJSON, manual tracing, and AI then feed exactly the same `MapStudioRoadGraph`, D3D11 preview, Road Kit, junction planner, and transactional persistence pipeline.
 
-**Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled.
+**Tools → Import OSM buildings...** imports `building=*` way footprints and `type=multipolygon` relations when their outer rings can be assembled safely. Relations with inner rings/courtyards remain refused at this stage so holes are not incorrectly filled. The generator preserves height/levels and `roof:shape`/`roof:height`: Gable and Shed are generated for quadrilateral footprints, while Hip — including `pyramidal`/pyramid — is also generated for any simple convex footprint with three or more sides. Concave footprints keep a flat top when the requested roof cannot be produced safely.
 
 **Tools → Import OSM vegetation...** imports individual `natural=tree` and `natural=shrub` nodes, `natural=tree_row` and `barrier=hedge` ways, plus closed `natural=wood`, `landuse=forest`, and `natural=scrub` ways. `species`, `genus`, `leaf_type`, and `name` are preserved when present.
 
