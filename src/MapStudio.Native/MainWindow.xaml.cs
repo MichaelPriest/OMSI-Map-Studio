@@ -2496,7 +2496,7 @@ public sealed partial class MainWindow : Window
             $"Keyword: {rule.RuleName}\n" +
             $"Valor: {rule.RawValue}\n" +
             $"Grupo: {groupText}\n" +
-            $"Tipo: {(rule.IsKillRule ? "[kill_rule]" : "[rule]")}"));
+            $"Tipo: {(rule.IsKillRule ? "[kill_rule]" : "[rule]")}");
     }
 
     private void OnTrafficViewSelectionChanged(
