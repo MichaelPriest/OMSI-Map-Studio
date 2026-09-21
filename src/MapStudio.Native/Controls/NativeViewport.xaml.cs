@@ -81,6 +81,8 @@ public sealed partial class NativeViewport : UserControl
         new NativeProceduralRoadPlacementBuildResult(
             Array.Empty<
                 NativeSplinePlacementRequest>(),
+            Array.Empty<
+                NativeProceduralRoadPlacementLink>(),
             graph.Segments.Count);
 
     public NativeProceduralRoadPreviewGeometry
