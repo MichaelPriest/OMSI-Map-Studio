@@ -170,9 +170,8 @@ public sealed class OmsiTimetableTests
                 2,
                 catalog.BusStops.Count);
 
-            Assert.Equal(
-                1,
-                catalog.StationLinks.Count);
+            Assert.Single(
+                catalog.StationLinks);
 
             Assert.Equal(
                 0,
