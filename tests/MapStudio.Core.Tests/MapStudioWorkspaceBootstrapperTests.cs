@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Workspace;
 using Xunit;
 
@@ -122,6 +123,64 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                     "*.sco",
                     SearchOption
                         .AllDirectories));
+
+            var vegetationRoot =
+                Path.Combine(
+                    first.SceneryObjectsPath,
+                    MapStudioStarterVegetationGenerator
+                        .RootFolderName);
+
+            var starterTree =
+                Path.Combine(
+                    vegetationRoot,
+                    "Starter_Tree",
+                    "starter_tree.sco");
+
+            var starterShrub =
+                Path.Combine(
+                    vegetationRoot,
+                    "Starter_Shrub",
+                    "starter_shrub.sco");
+
+            Assert.True(
+                File.Exists(
+                    starterTree));
+
+            Assert.True(
+                File.Exists(
+                    starterShrub));
+
+            var treeMetadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        starterTree);
+
+            var shrubMetadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        starterShrub);
+
+            Assert.NotNull(
+                treeMetadata.Tree);
+
+            Assert.NotNull(
+                shrubMetadata.Tree);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        vegetationRoot,
+                        "Starter_Tree",
+                        treeMetadata.Tree!
+                            .TextureName)));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        vegetationRoot,
+                        "Starter_Shrub",
+                        shrubMetadata.Tree!
+                            .TextureName)));
 
             var manifestPath =
                 Path.Combine(

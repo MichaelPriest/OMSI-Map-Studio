@@ -859,6 +859,17 @@ public sealed class MapStudioWorkspaceBootstrapper
                 true;
         }
 
+        var vegetationCreated =
+            await new MapStudioStarterVegetationGenerator()
+                .EnsureAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        created =
+            created ||
+            vegetationCreated;
+
         var buildingDirectory =
             Path.Combine(
                 root,

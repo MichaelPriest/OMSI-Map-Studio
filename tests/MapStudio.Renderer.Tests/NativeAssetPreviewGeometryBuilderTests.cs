@@ -69,6 +69,45 @@ public sealed class
 
 
     [Fact]
+    public void TreePreviewBuildsCrossedBillboards()
+    {
+        var asset =
+            new NativeSceneryAsset(
+                @"Sceneryobjects\MapStudio_Vegetation\Starter_Tree\starter_tree.sco",
+                @"C:\Workspace\Sceneryobjects\MapStudio_Vegetation\Starter_Tree\starter_tree.sco",
+                [],
+                new OmsiSceneryTreeDefinition(
+                    "Texture\\starter_tree.tga",
+                    8,
+                    12,
+                    0.45,
+                    0.60),
+                false,
+                null,
+                @"C:\Workspace\Sceneryobjects\MapStudio_Vegetation\Starter_Tree\Texture\starter_tree.tga");
+
+        var preview =
+            new NativeAssetPreviewGeometryBuilder()
+                .BuildScenery(
+                    asset);
+
+        Assert.True(
+            preview.IsRenderable);
+
+        Assert.True(
+            preview.TriangleCount >=
+            8);
+
+        Assert.Equal(
+            1,
+            preview.SourceMeshCount);
+
+        Assert.True(
+            preview.Maximum.Y >
+            9);
+    }
+
+    [Fact]
     public void ModelPreviewUsesStandaloneO3dGeometry()
     {
         var geometry =

@@ -30,7 +30,8 @@ public sealed class NativeAssetPreviewGeometryBuilder
             asset);
 
         if (
-            asset.Meshes.Count == 0)
+            asset.Meshes.Count == 0 &&
+            asset.Tree is null)
         {
             return
                 NativeAssetPreviewGeometry
@@ -85,6 +86,25 @@ public sealed class NativeAssetPreviewGeometryBuilder
 
             AppendMesh(
                 mesh,
+                vertices);
+
+            if (
+                vertices.Count >
+                before)
+            {
+                meshCount++;
+            }
+        }
+
+        if (
+            asset.Tree is
+                { } tree)
+        {
+            var before =
+                vertices.Count;
+
+            AppendTreePreview(
+                tree,
                 vertices);
 
             if (
@@ -257,6 +277,120 @@ public sealed class NativeAssetPreviewGeometryBuilder
                 vertices.Count == 0
                     ? "previewNoSplineTriangles"
                     : null);
+    }
+
+    private static void AppendTreePreview(
+        OmsiSceneryTreeDefinition tree,
+        List<NativeMapVertex> output)
+    {
+        var height =
+            (float)Math.Max(
+                0.5,
+                (
+                    tree.MinimumHeight +
+                    tree.MaximumHeight
+                ) /
+                2.0);
+
+        var aspect =
+            (float)Math.Max(
+                0.05,
+                (
+                    tree.MinimumAspect +
+                    tree.MaximumAspect
+                ) /
+                2.0);
+
+        var halfWidth =
+            height *
+            aspect *
+            0.5f;
+
+        var bottom =
+            Vector3.Zero;
+
+        var top =
+            Vector3.UnitY *
+            height;
+
+        var treeColor =
+            new Vector4(
+                0.35f,
+                0.68f,
+                0.30f,
+                1.0f);
+
+        var leftX =
+            bottom -
+            Vector3.UnitX *
+            halfWidth;
+
+        var rightX =
+            bottom +
+            Vector3.UnitX *
+            halfWidth;
+
+        var topLeftX =
+            top -
+            Vector3.UnitX *
+            halfWidth;
+
+        var topRightX =
+            top +
+            Vector3.UnitX *
+            halfWidth;
+
+        AppendQuad(
+            leftX,
+            topLeftX,
+            topRightX,
+            rightX,
+            treeColor,
+            output);
+
+        AppendQuad(
+            rightX,
+            topRightX,
+            topLeftX,
+            leftX,
+            treeColor,
+            output);
+
+        var leftZ =
+            bottom -
+            Vector3.UnitZ *
+            halfWidth;
+
+        var rightZ =
+            bottom +
+            Vector3.UnitZ *
+            halfWidth;
+
+        var topLeftZ =
+            top -
+            Vector3.UnitZ *
+            halfWidth;
+
+        var topRightZ =
+            top +
+            Vector3.UnitZ *
+            halfWidth;
+
+        AppendQuad(
+            leftZ,
+            topLeftZ,
+            topRightZ,
+            rightZ,
+            treeColor,
+            output);
+
+        AppendQuad(
+            rightZ,
+            topRightZ,
+            topLeftZ,
+            leftZ,
+            treeColor,
+            output);
     }
 
     private static void AppendMesh(
