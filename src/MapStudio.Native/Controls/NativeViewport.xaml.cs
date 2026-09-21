@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Vegetation;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
 using MapStudio.Core.Omsi.Indexing;
@@ -96,6 +97,35 @@ public sealed partial class NativeViewport : UserControl
             Array.Empty<
                 NativeProceduralRoadPlacementLink>(),
             graph.Segments.Count);
+
+    public NativeOsmVegetationPlacementBuildResult
+        BuildOsmVegetationPlacementRequests(
+            IReadOnlyList<MapStudioProjectedVegetationPoint> points,
+            string sceneryObjectPath,
+            bool randomRotation) =>
+        _runtime
+            ?.BuildOsmVegetationPlacementRequests(
+                points,
+                sceneryObjectPath,
+                randomRotation) ??
+        new NativeOsmVegetationPlacementBuildResult(
+            Array.Empty<NativeSceneryPlacementRequest>(),
+            points.Count);
+
+    public NativeVegetationPreviewGeometry
+        PreviewVegetationPoints(
+            IReadOnlyList<MapStudioProjectedVegetationPoint> points) =>
+        _runtime
+            ?.PreviewVegetationPoints(
+                points) ??
+        new NativeVegetationPreviewGeometry(
+            [],
+            0,
+            points.Count);
+
+    public void ClearVegetationPreview() =>
+        _runtime
+            ?.ClearVegetationPreview();
 
     public NativeBuildingFootprintPreviewGeometry
         PreviewBuildingFootprints(
