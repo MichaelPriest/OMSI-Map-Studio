@@ -7,7 +7,8 @@ public sealed record OmsiTileContent(
     OmsiTerrainGrid? Terrain = null,
     OmsiTerrainRenderDataSummary? TerrainRenderData = null,
     IReadOnlyList<OmsiTerrainTextureMask>? TerrainTextureMasks = null,
-    IReadOnlyList<OmsiPlacedAttachment>? Attachments = null)
+    IReadOnlyList<OmsiPlacedAttachment>? Attachments = null,
+    OmsiWaterGrid? Water = null)
 {
     public static OmsiTileContent Missing { get; } = new(
         OmsiTileSummary.Missing,
