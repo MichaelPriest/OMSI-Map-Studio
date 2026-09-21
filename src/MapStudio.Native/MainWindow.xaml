@@ -87,6 +87,30 @@
                                  Invoked="OnPerspectiveAcceleratorInvoked" />
             <KeyboardAccelerator Key="Number2"
                                  Invoked="OnTopAcceleratorInvoked" />
+            <KeyboardAccelerator Key="R"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="C"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="O"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="B"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="G"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Y"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="T"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="A"
+                                 Modifiers="Shift"
+                                 Invoked="OnQuickCreateAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -1148,7 +1172,7 @@
 
                     <Button x:Name="ToolObjectsButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Objetos e cenário"
+                            ToolTipService.ToolTip="Objetos e cenário · Shift+O"
                             Click="OnToolObjectsClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1166,7 +1190,7 @@
 
                     <Button x:Name="ToolSplinesButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Ruas e splines"
+                            ToolTipService.ToolTip="Ruas e splines · Shift+R"
                             Click="OnToolSplinesClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1202,7 +1226,7 @@
 
                     <Button x:Name="ToolBuildingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Casas e prédios"
+                            ToolTipService.ToolTip="Casas e prédios · Shift+B"
                             Click="OnToolBuildingsClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1220,7 +1244,7 @@
 
                     <Button x:Name="ToolVegetationButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Árvores e vegetação"
+                            ToolTipService.ToolTip="Árvores e vegetação · Shift+G / Shift+Y"
                             Click="OnToolVegetationClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1292,7 +1316,7 @@
 
                     <Button x:Name="ToolCrossingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Cruzamentos"
+                            ToolTipService.ToolTip="Cruzamentos · Shift+C"
                             Click="OnToolCrossingsClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1310,7 +1334,7 @@
 
                     <Button x:Name="ToolTerrainButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Terreno e pintura"
+                            ToolTipService.ToolTip="Terreno e pintura · Shift+T"
                             Click="OnToolTerrainClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -1328,7 +1352,7 @@
 
                     <Button x:Name="ToolWaterButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Água"
+                            ToolTipService.ToolTip="Água · Shift+A"
                             Click="OnToolWaterClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
