@@ -770,7 +770,7 @@ WGS84 coordinates are projected through the same `.mapstudio/georeference.json` 
 
 Tree rows and hedges use the same georeference anchor and are sampled into regular 4 m placement points. Forest/wood areas use deterministic scattering at roughly 14 m spacing and scrub areas at 7 m, while every generated point remains inside the projected OSM polygon. The dialog lets the user choose **two real SCOs** already indexed in the Vegetation category: one for trees/tree rows/forest and one for shrubs/hedges/scrub. The viewport previews those points on loaded terrain; confirmation aligns every placement to the real terrain height and writes both groups through one safe multi-batch transaction with backup. The operational limit remains 256 selected points per execution, and varied rotation remains optional and deterministic per OSM ID/sample.
 
-Forest multipolygon relations and automatic species-to-specific-asset mapping are not converted yet. Points without currently loaded terrain are also not inserted, avoiding invented heights.
+OSM `type=multipolygon` relations for forest/wood/scrub are now accepted when they can be assembled using safe **outer rings only**; ways consumed by the relation are not duplicated as standalone areas. Relations with `inner` members remain refused at this stage so holes are not filled incorrectly. Automatic species-to-specific-asset mapping is still not performed. Points without currently loaded terrain are also not inserted, avoiding invented heights.
 
 ### OMSI attachments
 
