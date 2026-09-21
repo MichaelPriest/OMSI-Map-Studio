@@ -150,6 +150,13 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 fallbackToHeightColor:
                     baseTexturePath is null);
 
+            var lightMapPath =
+                map is null
+                    ? null
+                    : ResolveTerrainLightMapPath(
+                        map,
+                        tile.Reference);
+
             if (
                 map is null ||
                 omsiRoot is null ||
@@ -160,6 +167,23 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     not { Count: > 0 }
                     masks)
             {
+                if (lightMapPath is not null)
+                {
+                    AppendTileLayer(
+                        tile,
+                        terrain,
+                        vertices,
+                        batches,
+                        lightMapPath,
+                        maskTexturePath: null,
+                        detailTexturePath: null,
+                        repeating: 1.0,
+                        detailRepeating: 1.0,
+                        heightOffset: 0.04f,
+                        fallbackToHeightColor: false,
+                        additiveLightMap: true);
+                }
+
                 continue;
             }
 
@@ -243,6 +267,23 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     fallbackToHeightColor:
                         false);
             }
+
+            if (lightMapPath is not null)
+            {
+                AppendTileLayer(
+                    tile,
+                    terrain,
+                    vertices,
+                    batches,
+                    lightMapPath,
+                    maskTexturePath: null,
+                    detailTexturePath: null,
+                    repeating: 1.0,
+                    detailRepeating: 1.0,
+                    heightOffset: 0.04f,
+                    fallbackToHeightColor: false,
+                    additiveLightMap: true);
+            }
         }
 
         return new NativeTerrainTriangleGeometry(
@@ -261,7 +302,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         double repeating,
         double detailRepeating,
         float heightOffset,
-        bool fallbackToHeightColor)
+        bool fallbackToHeightColor,
+        bool additiveLightMap = false)
     {
         var cellCount =
             terrain.CellCount;
@@ -521,8 +563,32 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 layerVertexCount,
                 texturePath,
                 maskTexturePath,
-                detailTexturePath);
+                detailTexturePath,
+                additiveLightMap);
         }
+    }
+
+    private static string? ResolveTerrainLightMapPath(
+        OmsiMapDescriptor map,
+        OmsiTileReference tile)
+    {
+        var mapFilePath =
+            Path.GetFullPath(
+                Path.Combine(
+                    map.DirectoryPath,
+                    tile.RelativeMapPath));
+
+        var candidates =
+            new[]
+            {
+                mapFilePath + ".LM.bmp",
+                mapFilePath + ".LM",
+                mapFilePath + ".LM.dds"
+            };
+
+        return candidates
+            .FirstOrDefault(
+                File.Exists);
     }
 
     private static Vector2 CreateUv(
@@ -565,7 +631,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         int vertexCount,
         string? texturePath,
         string? maskTexturePath,
-        string? detailTexturePath)
+        string? detailTexturePath,
+        bool additiveLightMap)
     {
         if (
             batches.Count > 0)
@@ -588,7 +655,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 string.Equals(
                     previous.DetailTexturePath,
                     detailTexturePath,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.OrdinalIgnoreCase) &&
+                previous.AdditiveLightMap ==
+                    additiveLightMap)
             {
                 batches[^1] =
                     previous with
@@ -609,7 +678,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 texturePath,
                 maskTexturePath,
                 DetailTexturePath:
-                    detailTexturePath));
+                    detailTexturePath,
+                AdditiveLightMap:
+                    additiveLightMap));
     }
 
     private static void AppendTriangle(

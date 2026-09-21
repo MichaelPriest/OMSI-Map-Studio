@@ -58,6 +58,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11DepthStencilState _depthReadState;
     private readonly ID3D11DepthStencilState _depthDisabledState;
     private readonly ID3D11BlendState _alphaBlendState;
+    private readonly ID3D11BlendState _additiveBlendState;
     private readonly ID3D11RasterizerState _terrainRasterizerState;
     private readonly NativeGpuTextureLoader _textureLoader;
     private readonly ID3D11Buffer _skyTriangleBuffer;
@@ -589,6 +590,12 @@ public sealed class D3D11NativeMapRenderer :
                 .CreateBlendState(
                     BlendDescription
                         .NonPremultiplied);
+
+        _additiveBlendState =
+            _deviceHost.Device
+                .CreateBlendState(
+                    BlendDescription
+                        .Additive);
 
         _terrainRasterizerState =
             _deviceHost.Device
@@ -1771,7 +1778,53 @@ public sealed class D3D11NativeMapRenderer :
                         5);
             }
 
-            if (
+            if (batch.AdditiveLightMap)
+            {
+                if (
+                    !_nightPreviewEnabled ||
+                    !hasTexture)
+                {
+                    continue;
+                }
+
+                context
+                    .OMSetBlendState(
+                        _additiveBlendState);
+
+                context
+                    .OMSetDepthStencilState(
+                        _depthReadState);
+
+                context
+                    .PSSetShader(
+                        _texturedPixelShader);
+
+                context
+                    .PSSetShaderResource(
+                        0,
+                        texture!.View);
+
+                context
+                    .PSUnsetShaderResource(
+                        1);
+
+                context
+                    .PSUnsetShaderResource(
+                        2);
+
+                context
+                    .PSUnsetShaderResource(
+                        3);
+
+                context
+                    .PSUnsetShaderResource(
+                        4);
+
+                context
+                    .PSUnsetShaderResource(
+                        5);
+            }
+            else if (
                 batch.MaskTexturePath is
                     { Length: > 0 }
                     maskPath)
@@ -2888,6 +2941,7 @@ public sealed class D3D11NativeMapRenderer :
         _skyTexture = null;
         _skyTriangleBuffer.Dispose();
         _terrainRasterizerState.Dispose();
+        _additiveBlendState.Dispose();
         _alphaBlendState.Dispose();
         _depthDisabledState.Dispose();
         _depthReadState.Dispose();

@@ -468,4 +468,154 @@ public sealed class NativeTerrainTests
                     30.0f) <
                 0.001f);
     }
+    [Fact]
+    public void TerrainBuilderAddsTileLightMapAsAdditiveLayer()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-TerrainLightMap",
+                Guid.NewGuid().ToString("N"));
+
+        var mapDirectory =
+            Path.Combine(
+                root,
+                "maps",
+                "TestMap");
+
+        var textureDirectory =
+            Path.Combine(
+                mapDirectory,
+                "texture");
+
+        var baseTexture =
+            Path.Combine(
+                textureDirectory,
+                "base.bmp");
+
+        var lightMap =
+            Path.Combine(
+                mapDirectory,
+                "tile_0_0.map.LM.bmp");
+
+        try
+        {
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            File.WriteAllBytes(
+                baseTexture,
+                [1]);
+
+            File.WriteAllBytes(
+                lightMap,
+                [2]);
+
+            var reference =
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map");
+
+            var tile =
+                new NativeSceneTile(
+                    reference,
+                    new OmsiTileContent(
+                        new OmsiTileSummary(
+                            true,
+                            0,
+                            0,
+                            0),
+                        [],
+                        [],
+                        new OmsiTerrainGrid(
+                            1,
+                            [0, 0, 0, 0])));
+
+            var scene =
+                new NativeSceneSnapshot(
+                    [tile],
+                    [],
+                    [],
+                    [
+                        new NativeTerrainEntity(
+                            reference,
+                            tile.Content.Terrain!)
+                    ]);
+
+            var map =
+                new OmsiMapDescriptor(
+                    "TestMap",
+                    "Test Map",
+                    mapDirectory,
+                    Path.Combine(
+                        mapDirectory,
+                        "global.cfg"),
+                    false,
+                    [reference],
+                    [
+                        new OmsiGroundTexture(
+                            @"texture\base.bmp",
+                            @"texture\base.bmp",
+                            0,
+                            1,
+                            1)
+                    ]);
+
+            var geometry =
+                new NativeTerrainTriangleGeometryBuilder()
+                    .Build(
+                        scene,
+                        map,
+                        root);
+
+            Assert.Equal(
+                2,
+                geometry.MaterialBatches.Count);
+
+            var lightBatch =
+                geometry.MaterialBatches[1];
+
+            Assert.True(
+                lightBatch.AdditiveLightMap);
+
+            Assert.Equal(
+                Path.GetFullPath(
+                    lightMap),
+                lightBatch.TexturePath);
+
+            var lightVertices =
+                geometry.Vertices
+                    .Skip(
+                        lightBatch.StartVertex)
+                    .Take(
+                        lightBatch.VertexCount)
+                    .ToArray();
+
+            Assert.InRange(
+                lightVertices.Max(
+                    vertex =>
+                        vertex.TexCoord.X),
+                0.999f,
+                1.001f);
+
+            Assert.All(
+                lightVertices,
+                vertex =>
+                    Assert.InRange(
+                        vertex.Position.Y,
+                        0.039f,
+                        0.041f));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
 }
