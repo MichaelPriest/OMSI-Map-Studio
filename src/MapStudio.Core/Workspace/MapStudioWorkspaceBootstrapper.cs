@@ -916,6 +916,17 @@ public sealed class MapStudioWorkspaceBootstrapper
             created ||
             propsCreated;
 
+        var trafficCreated =
+            await new MapStudioStarterTrafficGenerator()
+                .EnsureAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        created =
+            created ||
+            trafficCreated;
+
         var buildingDirectory =
             Path.Combine(
                 root,
