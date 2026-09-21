@@ -4986,6 +4986,13 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (item.Kind == "Line")
+        {
+            await EditTimetableLineAsync(
+                item);
+            return;
+        }
+
         if (item.Kind == "StationLink")
         {
             await EditStationLinkAsync(
@@ -5257,6 +5264,326 @@ public sealed partial class MainWindow : Window
                     TransportExplorerItem selected &&
                 selected.Kind ==
                     "Track";
+        }
+    }
+
+    private async Task EditTimetableLineAsync(
+        TransportExplorerItem item)
+    {
+        if (_timetableCatalog is null)
+        {
+            return;
+        }
+
+        var line =
+            _timetableCatalog.Lines
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (line is null)
+        {
+            return;
+        }
+
+        var priorityBox =
+            new TextBox
+            {
+                Header =
+                    "Priority",
+                Text =
+                    line.Priority
+            };
+
+        var userAllowedBox =
+            new CheckBox
+            {
+                Content =
+                    "Jogador permitido [userallowed]",
+                IsChecked =
+                    line.UserAllowed
+            };
+
+        var toursBox =
+            new TextBox
+            {
+                Header =
+                    "Tours · tour|AI group|line3|comentário|trip|line2|departureSeconds",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinWidth =
+                    620,
+                MinHeight =
+                    320,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        line.Tours
+                            .SelectMany(
+                                tour =>
+                                    tour.Trips.Select(
+                                        trip =>
+                                            $"{tour.Name}|{tour.AiGroupName}|{tour.Line3}|{trip.Comment}|{trip.TripName}|{trip.Line2}|{trip.DepartureTime}")))
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    640
+            };
+
+        panel.Children.Add(
+            priorityBox);
+        panel.Children.Add(
+            userAllowedBox);
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Repita o mesmo nome do tour em várias linhas para adicionar vários Trips ao mesmo tour.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+        panel.Children.Add(
+            toursBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar Line/Tours · {line.Name}",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            650
+                    },
+                PrimaryButtonText =
+                    "Salvar Line/Tours",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var tourOrder =
+            new List<string>();
+
+        var tourData =
+            new Dictionary<
+                string,
+                (
+                    string AiGroup,
+                    string Line3,
+                    List<OmsiTimetableAddTrip>
+                        Trips
+                )>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        var sourceLineNumber =
+            0;
+
+        foreach (
+            var rawLine in
+                toursBox.Text
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Split('\n'))
+        {
+            sourceLineNumber++;
+
+            var value =
+                rawLine.Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    value))
+            {
+                continue;
+            }
+
+            var parts =
+                value.Split(
+                    '|');
+
+            if (
+                parts.Length !=
+                    7 ||
+                string.IsNullOrWhiteSpace(
+                    parts[0]) ||
+                string.IsNullOrWhiteSpace(
+                    parts[4]) ||
+                !double.TryParse(
+                    parts[6],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var departure) ||
+                !double.IsFinite(
+                    departure))
+            {
+                StatusText.Text =
+                    $"Line não salva: linha {sourceLineNumber} inválida.";
+                return;
+            }
+
+            var tourName =
+                parts[0].Trim();
+
+            if (
+                !tourData.TryGetValue(
+                    tourName,
+                    out var current))
+            {
+                current =
+                    (
+                        parts[1].Trim(),
+                        parts[2].Trim(),
+                        []
+                    );
+
+                tourData[
+                    tourName] =
+                    current;
+
+                tourOrder.Add(
+                    tourName);
+            }
+            else if (
+                !string.Equals(
+                    current.AiGroup,
+                    parts[1].Trim(),
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    current.Line3,
+                    parts[2].Trim(),
+                    StringComparison.Ordinal))
+            {
+                StatusText.Text =
+                    $"Line não salva: o tour {tourName} usa AI group/line3 diferentes entre as linhas.";
+                return;
+            }
+
+            current.Trips.Add(
+                new OmsiTimetableAddTrip(
+                    parts[3].Trim(),
+                    parts[4].Trim(),
+                    parts[5].Trim(),
+                    parts[6].Trim()));
+        }
+
+        if (tourOrder.Count == 0)
+        {
+            StatusText.Text =
+                "Line não salva: mantenha pelo menos um Tour/Trip.";
+            return;
+        }
+
+        var tours =
+            tourOrder
+                .Select(
+                    name =>
+                    {
+                        var data =
+                            tourData[name];
+
+                        return new OmsiTimetableTour(
+                            name,
+                            data.AiGroup,
+                            data.Line3,
+                            data.Trips
+                                .ToArray());
+                    })
+                .ToArray();
+
+        var updatedLine =
+            line with
+            {
+                Priority =
+                    priorityBox.Text.Trim(),
+                UserAllowed =
+                    userAllowedBox.IsChecked ==
+                    true,
+                Tours =
+                    tours
+            };
+
+        try
+        {
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Line/Tours {line.Name} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTimetableLineAsync(
+                        line,
+                        updatedLine);
+
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        _session.CurrentMap!
+                            .Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            TransportListView.SelectedItem =
+                _transportItems
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Kind ==
+                                "Line" &&
+                            string.Equals(
+                                candidate.Key,
+                                updated.Line.Name,
+                                StringComparison.OrdinalIgnoreCase));
+
+            StatusText.Text =
+                $"Line/Tours {updated.Line.Name} salvo · {updated.Line.Tours.Count} tour(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar Line/Tours: {exception.Message}";
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind is
+                    "Track" or
+                    "Trip" or
+                    "StationLink" or
+                    "Line";
         }
     }
 
@@ -5603,7 +5930,8 @@ public sealed partial class MainWindow : Window
                 selected.Kind is
                     "Track" or
                     "Trip" or
-                    "StationLink";
+                    "StationLink" or
+                    "Line";
         }
     }
 
@@ -5972,7 +6300,8 @@ public sealed partial class MainWindow : Window
                 selected.Kind is
                     "Track" or
                     "Trip" or
-                    "StationLink";
+                    "StationLink" or
+                    "Line";
         }
     }
 
@@ -6005,7 +6334,8 @@ public sealed partial class MainWindow : Window
             item.Kind is
                 "Track" or
                 "Trip" or
-                "StationLink";
+                "StationLink" or
+                "Line";
 
         EditTrackButton.Visibility =
             editable
@@ -6022,6 +6352,8 @@ public sealed partial class MainWindow : Window
                     "Editar Trip",
                 "StationLink" =>
                     "Editar StationLink",
+                "Line" =>
+                    "Editar Line/Tours",
                 _ =>
                     "Editar Track"
             };
