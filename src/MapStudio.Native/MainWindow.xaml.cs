@@ -17122,7 +17122,7 @@ public sealed partial class MainWindow : Window
                     Text =
                         $"OSM: {imported.Points.Count} node(s) individual(is) + {linearImported.Lines.Count} linha(s) + {areaImported.Areas.Count} área(s).\n" +
                         $"Após amostragem/dispersão: {treeCount} ponto(s) de árvore · {shrubCount} ponto(s) de arbusto/hedge · tree rows: {treeRowCount} · hedges: {hedgeCount} · floresta/bosque: {forestAreaCount} · scrub: {scrubAreaCount}.\n" +
-                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes ignorados: {imported.IgnoredNodeCount} · ways lineares ignorados: {linearImported.IgnoredWayCount} · refs lineares ausentes: {linearImported.MissingNodeReferenceCount} · áreas ignoradas: {areaImported.IgnoredWayCount} · refs de área ausentes: {areaImported.MissingNodeReferenceCount}.",
+                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes ignorados: {imported.IgnoredNodeCount} · ways lineares ignorados: {linearImported.IgnoredWayCount} · refs lineares ausentes: {linearImported.MissingNodeReferenceCount} · áreas ignoradas: {areaImported.IgnoredWayCount} · relations recusadas/sem suporte seguro: {areaImported.IgnoredRelationCount} · refs de área ausentes: {areaImported.MissingNodeReferenceCount}.",
                     TextWrapping =
                         TextWrapping.Wrap
                 };
@@ -17167,7 +17167,7 @@ public sealed partial class MainWindow : Window
                     Title =
                         "Assets reais + terreno real",
                     Message =
-                        $"Tree rows e hedges são amostrados a cada {linearSpacingMeters:F0} m. Áreas de floresta/bosque usam dispersão determinística de aproximadamente {forestSpacingMeters:F0} m e scrub de {scrubSpacingMeters:F0} m, sempre dentro do polígono OSM. O preview mostra os pontos de colocação; na confirmação o Map Studio usa os SCOs escolhidos da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava tudo em uma única transação com backup."
+                        $"Tree rows e hedges são amostrados a cada {linearSpacingMeters:F0} m. Áreas de floresta/bosque usam dispersão determinística de aproximadamente {forestSpacingMeters:F0} m e scrub de {scrubSpacingMeters:F0} m, sempre dentro do polígono OSM. Multipolygons com apenas outer rings são aceitos; relações com inner rings continuam recusadas para não preencher holes incorretamente. O preview mostra os pontos de colocação; na confirmação o Map Studio usa os SCOs escolhidos da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava tudo em uma única transação com backup."
                 });
 
             var dialog =
