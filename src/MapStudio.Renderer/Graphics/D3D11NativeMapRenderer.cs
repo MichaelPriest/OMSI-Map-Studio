@@ -130,6 +130,12 @@ public sealed class D3D11NativeMapRenderer :
                 NativeMaterialBatch>();
 
     private ID3D11Buffer?
+        _waterTriangleBuffer;
+
+    private int
+        _waterTriangleVertexCount;
+
+    private ID3D11Buffer?
         _referenceOverlayBuffer;
 
     private int
@@ -653,6 +659,9 @@ public sealed class D3D11NativeMapRenderer :
     public int TerrainTriangleVertexCount =>
         _terrainTriangleVertexCount;
 
+    public int WaterTriangleVertexCount =>
+        _waterTriangleVertexCount;
+
     public int SplineTriangleVertexCount =>
         _splineTriangleVertexCount;
 
@@ -996,7 +1005,9 @@ public sealed class D3D11NativeMapRenderer :
         NativeTrafficPathGeometry?
             trafficPathGeometry = null,
         NativeSceneryLightGeometry?
-            sceneryLightGeometry = null)
+            sceneryLightGeometry = null,
+        NativeWaterTriangleGeometry?
+            waterGeometry = null)
     {
         ThrowIfDisposed();
 
@@ -1043,6 +1054,15 @@ public sealed class D3D11NativeMapRenderer :
         _terrainMaterialBatches =
             Array.Empty<
                 NativeMaterialBatch>();
+
+        _waterTriangleBuffer
+            ?.Dispose();
+
+        _waterTriangleBuffer =
+            null;
+
+        _waterTriangleVertexCount =
+            0;
 
         _objectTriangleBuffer
             ?.Dispose();
@@ -1257,6 +1277,26 @@ public sealed class D3D11NativeMapRenderer :
         }
 
         if (
+            waterGeometry is not null &&
+            waterGeometry
+                .Vertices.Length >
+                0)
+        {
+            _waterTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        waterGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _waterTriangleVertexCount =
+                waterGeometry
+                    .Vertices.Length;
+        }
+
+        if (
             objectGeometry is not null &&
             objectGeometry
                 .Vertices.Length > 0)
@@ -1367,6 +1407,9 @@ public sealed class D3D11NativeMapRenderer :
                 if (_visibility.TerrainVisible)
                 {
                     DrawTerrainGeometry(
+                        context);
+
+                    DrawWaterGeometry(
                         context);
 
                     DrawReferenceOverlay(
@@ -1701,6 +1744,67 @@ public sealed class D3D11NativeMapRenderer :
             _terrainMaterialBatches,
             forceDoubleSided: true,
             filterTerrainLayers: true);
+    }
+
+    private void DrawWaterGeometry(
+        ID3D11DeviceContext context)
+    {
+        if (
+            _waterTriangleBuffer is
+                null ||
+            _waterTriangleVertexCount <=
+                0)
+        {
+            return;
+        }
+
+        ResetMaterialPreview(
+            context);
+
+        context
+            .IASetPrimitiveTopology(
+                PrimitiveTopology
+                    .TriangleList);
+
+        context
+            .IASetVertexBuffer(
+                0,
+                _waterTriangleBuffer,
+                NativeMapVertex
+                    .SizeInBytes);
+
+        context
+            .PSSetShader(
+                _pixelShader);
+
+        context
+            .OMSetDepthStencilState(
+                _depthReadState);
+
+        context
+            .OMSetBlendState(
+                _alphaBlendState);
+
+        context
+            .RSSetState(
+                _terrainRasterizerState);
+
+        context.Draw(
+            (uint)
+                _waterTriangleVertexCount,
+            0);
+
+        context
+            .OMSetBlendState(
+                null);
+
+        context
+            .OMSetDepthStencilState(
+                null);
+
+        context
+            .RSSetState(
+                null);
     }
 
     private void DrawReferenceOverlay(
@@ -3210,6 +3314,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _terrainTriangleBuffer
+            ?.Dispose();
+
+        _waterTriangleBuffer
             ?.Dispose();
 
         _sceneryLightBuffer?.Dispose();
