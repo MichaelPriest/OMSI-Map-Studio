@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Numerics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -67,6 +68,89 @@ public sealed partial class MainWindow : Window
     private sealed record MapCatalogViewItem(
         OmsiMapDescriptor Map,
         string DisplayText);
+
+    private sealed class AssetLibraryViewItem
+        : INotifyPropertyChanged
+    {
+        private Microsoft.UI.Xaml.Media.ImageSource?
+            _thumbnailSource;
+
+        public AssetLibraryViewItem(
+            OmsiAssetIndexEntry asset,
+            string displayName,
+            string detail,
+            string kindLabel,
+            Microsoft.UI.Xaml.Media.ImageSource?
+                thumbnailSource)
+        {
+            Asset =
+                asset;
+
+            DisplayName =
+                displayName;
+
+            Detail =
+                detail;
+
+            KindLabel =
+                kindLabel;
+
+            _thumbnailSource =
+                thumbnailSource;
+        }
+
+        public event PropertyChangedEventHandler?
+            PropertyChanged;
+
+        public OmsiAssetIndexEntry Asset
+        {
+            get;
+        }
+
+        public string DisplayName
+        {
+            get;
+        }
+
+        public string Detail
+        {
+            get;
+        }
+
+        public string KindLabel
+        {
+            get;
+        }
+
+        public string RelativePath =>
+            Asset.RelativePath;
+
+        public Microsoft.UI.Xaml.Media.ImageSource?
+            ThumbnailSource =>
+            _thumbnailSource;
+
+        public void SetThumbnailPath(
+            string? path)
+        {
+            _thumbnailSource =
+                string.IsNullOrWhiteSpace(
+                    path) ||
+                !File.Exists(path)
+                    ? null
+                    : new Microsoft.UI.Xaml.Media.Imaging
+                        .BitmapImage(
+                            new Uri(
+                                path,
+                                UriKind.Absolute));
+
+            PropertyChanged
+                ?.Invoke(
+                    this,
+                    new PropertyChangedEventArgs(
+                        nameof(
+                            ThumbnailSource)));
+        }
+    }
 
     private sealed record RoadProfileOption(
         string Label,
@@ -1011,8 +1095,7 @@ public sealed partial class MainWindow : Window
         SelectionChangedEventArgs e)
     {
         var selected =
-            AssetLibraryListView.SelectedItem as
-                OmsiAssetIndexEntry;
+            GetSelectedAssetLibraryEntry();
 
         var placeable =
             selected?.Kind is
@@ -1081,8 +1164,8 @@ public sealed partial class MainWindow : Window
         if (
             !_libraryMode ||
             _session.OmsiRootPath is null ||
-            AssetLibraryListView.SelectedItem is not
-                OmsiAssetIndexEntry asset)
+            GetSelectedAssetLibraryEntry() is not
+                { } asset)
         {
             return;
         }
@@ -1297,8 +1380,8 @@ public sealed partial class MainWindow : Window
                 { } repairKind ||
             string.IsNullOrWhiteSpace(
                 _dependencyRepairOldPath) ||
-            AssetLibraryListView.SelectedItem is not
-                OmsiAssetIndexEntry replacement ||
+            GetSelectedAssetLibraryEntry() is not
+                { } replacement ||
             replacement.Kind !=
                 repairKind)
         {
@@ -1682,8 +1765,8 @@ public sealed partial class MainWindow : Window
             Viewport.CancelSplinePlacement();
 
             PlaceAssetButton.Content =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry selectedAsset &&
+                GetSelectedAssetLibraryEntry() is
+                    { } selectedAsset &&
                 selectedAsset.Kind ==
                     OmsiAssetKind.Spline
                     ? "Construir spline"
@@ -1701,8 +1784,8 @@ public sealed partial class MainWindow : Window
         if (
             _session.OmsiRootPath is null ||
             _session.CurrentMap is null ||
-            AssetLibraryListView.SelectedItem is not
-                OmsiAssetIndexEntry asset ||
+            GetSelectedAssetLibraryEntry() is not
+                { } asset ||
             asset.Kind is not
                 (
                     OmsiAssetKind.SceneryObject or
@@ -1935,8 +2018,7 @@ public sealed partial class MainWindow : Window
                 false;
 
             var selectedAsset =
-                AssetLibraryListView.SelectedItem as
-                    OmsiAssetIndexEntry;
+                GetSelectedAssetLibraryEntry();
 
             var canContinue =
                 !request.IsHeightSpline &&
@@ -1993,8 +2075,8 @@ public sealed partial class MainWindow : Window
         catch (Exception exception)
         {
             PlaceAssetButton.IsEnabled =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry asset &&
+                GetSelectedAssetLibraryEntry() is
+                    { } asset &&
                 asset.Kind is
                     OmsiAssetKind.SceneryObject or
                     OmsiAssetKind.Spline;
@@ -2225,8 +2307,8 @@ public sealed partial class MainWindow : Window
                 false;
 
             PlaceAssetButton.IsEnabled =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry asset &&
+                GetSelectedAssetLibraryEntry() is
+                    { } asset &&
                 asset.Kind ==
                     OmsiAssetKind
                         .SceneryObject;
@@ -2277,8 +2359,8 @@ public sealed partial class MainWindow : Window
                 null;
 
             PlaceAssetButton.IsEnabled =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry asset &&
+                GetSelectedAssetLibraryEntry() is
+                    { } asset &&
                 asset.Kind ==
                     OmsiAssetKind
                         .SceneryObject;
@@ -2377,9 +2459,20 @@ public sealed partial class MainWindow : Window
     {
         var asset =
             e.Items
-                .OfType<
-                    OmsiAssetIndexEntry>()
-                .FirstOrDefault();
+                .Select(
+                    item =>
+                        item switch
+                        {
+                            AssetLibraryViewItem view =>
+                                view.Asset,
+                            OmsiAssetIndexEntry entry =>
+                                entry,
+                            _ =>
+                                null
+                        })
+                .FirstOrDefault(
+                    item =>
+                        item is not null);
 
         if (
             asset is null ||
@@ -2659,8 +2752,8 @@ public sealed partial class MainWindow : Window
         DoubleTappedRoutedEventArgs e)
     {
         if (
-            AssetLibraryListView.SelectedItem is not
-                OmsiAssetIndexEntry asset)
+            GetSelectedAssetLibraryEntry() is not
+                { } asset)
         {
             return;
         }
@@ -2860,8 +2953,8 @@ public sealed partial class MainWindow : Window
                 $"Substituir {Path.GetFileName(validation.AssetPath)} pelo asset selecionado";
 
             RepairDependencyButton.IsEnabled =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry selected &&
+                GetSelectedAssetLibraryEntry() is
+                    { } selected &&
                 selected.Kind ==
                     repairKind;
 
@@ -3009,10 +3102,8 @@ public sealed partial class MainWindow : Window
             items.ToArray();
     }
 
-    private async Task<string>
-        SaveAssetThumbnailAsync(
-            OmsiAssetIndexEntry asset,
-            byte[] bytes)
+    private string GetAssetThumbnailPath(
+        OmsiAssetIndexEntry asset)
     {
         var root =
             _session.OmsiRootPath ??
@@ -3023,7 +3114,11 @@ public sealed partial class MainWindow : Window
             "|" +
             asset.Kind +
             "|" +
-            asset.RelativePath;
+            asset.RelativePath +
+            "|" +
+            asset.Size +
+            "|" +
+            asset.LastWriteUtcTicks;
 
         var hash =
             Convert.ToHexString(
@@ -3033,27 +3128,135 @@ public sealed partial class MainWindow : Window
                             keySource)))
                 .ToLowerInvariant();
 
+        return Path.Combine(
+            Environment.GetFolderPath(
+                Environment.SpecialFolder
+                    .LocalApplicationData),
+            "OMSI Map Studio",
+            "Cache",
+            "Thumbnails",
+            hash +
+            ".bmp");
+    }
+
+    private AssetLibraryViewItem
+        CreateAssetLibraryViewItem(
+            OmsiAssetIndexEntry asset)
+    {
+        var group =
+            OmsiAssetLibraryClassifier
+                .Classify(
+                    asset);
+
+        var groupName =
+            OmsiAssetLibraryClassifier
+                .GetDisplayName(
+                    group);
+
+        var subcategory =
+            OmsiAssetLibraryClassifier
+                .GetSubcategory(
+                    asset);
+
+        var detail =
+            string.IsNullOrWhiteSpace(
+                subcategory)
+                ? groupName
+                : groupName +
+                  " · " +
+                  subcategory;
+
+        var kindLabel =
+            asset.Kind switch
+            {
+                OmsiAssetKind.SceneryObject =>
+                    "SCO",
+                OmsiAssetKind.Spline =>
+                    "SLI",
+                OmsiAssetKind.Model =>
+                    "3D",
+                OmsiAssetKind.Texture =>
+                    "TEX",
+                _ =>
+                    asset.Kind.ToString()
+            };
+
+        var item =
+            new AssetLibraryViewItem(
+                asset,
+                Path.GetFileName(
+                    asset.RelativePath),
+                detail,
+                kindLabel,
+                null);
+
+        var thumbnailPath =
+            GetAssetThumbnailPath(
+                asset);
+
+        if (
+            File.Exists(
+                thumbnailPath))
+        {
+            item.SetThumbnailPath(
+                thumbnailPath);
+        }
+
+        return item;
+    }
+
+    private OmsiAssetIndexEntry?
+        GetSelectedAssetLibraryEntry() =>
+        AssetLibraryListView
+            .SelectedItem switch
+        {
+            AssetLibraryViewItem view =>
+                view.Asset,
+            OmsiAssetIndexEntry asset =>
+                asset,
+            _ =>
+                null
+        };
+
+    private async Task<string>
+        SaveAssetThumbnailAsync(
+            OmsiAssetIndexEntry asset,
+            byte[] bytes)
+    {
+        var path =
+            GetAssetThumbnailPath(
+                asset);
+
         var directory =
-            Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder
-                        .LocalApplicationData),
-                "OMSI Map Studio",
-                "Cache",
-                "Thumbnails");
+            Path.GetDirectoryName(
+                path) ??
+            throw new InvalidOperationException(
+                "thumbnailCacheDirectoryUnavailable");
 
         Directory.CreateDirectory(
             directory);
 
-        var path =
-            Path.Combine(
-                directory,
-                hash +
-                ".bmp");
-
         await File.WriteAllBytesAsync(
             path,
             bytes);
+
+        var visibleItem =
+            AssetLibraryListView
+                .Items
+                .OfType<
+                    AssetLibraryViewItem>()
+                .FirstOrDefault(
+                    item =>
+                        string.Equals(
+                            item.Asset
+                                .RelativePath,
+                            asset.RelativePath,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+        visibleItem
+            ?.SetThumbnailPath(
+                path);
 
         var files =
             new DirectoryInfo(
@@ -3091,7 +3294,8 @@ public sealed partial class MainWindow : Window
                     OmsiAssetIndexEntry>();
 
             AssetLibraryListView.ItemsSource =
-                _assetLibraryItems;
+                Array.Empty<
+                    AssetLibraryViewItem>();
 
             RefreshLibraryGroupOptions(
                 null);
@@ -3522,7 +3726,10 @@ public sealed partial class MainWindow : Window
             items.ToArray();
 
         AssetLibraryListView.ItemsSource =
-            filtered;
+            filtered
+                .Select(
+                    CreateAssetLibraryViewItem)
+                .ToArray();
 
         if (_assetLibraryItems.Count > 0)
         {

@@ -792,11 +792,56 @@
                             <ListView x:Name="AssetLibraryListView"
                                       Grid.Row="4"
                                       SelectionMode="Single"
-                                      DisplayMemberPath="RelativePath"
                                       CanDragItems="True"
                                       DragItemsStarting="OnAssetLibraryDragItemsStarting"
                                       SelectionChanged="OnAssetLibrarySelectionChanged"
-                                      DoubleTapped="OnAssetLibraryDoubleTapped" />
+                                      DoubleTapped="OnAssetLibraryDoubleTapped">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid MinHeight="78"
+                                              ColumnSpacing="8"
+                                              Padding="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="76" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Width="76"
+                                                    Height="68"
+                                                    Background="#071621"
+                                                    BorderBrush="#315064"
+                                                    BorderThickness="1"
+                                                    CornerRadius="5">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding KindLabel}"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"
+                                                               FontSize="11"
+                                                               Foreground="#7895AD" />
+                                                    <Image Source="{Binding ThumbnailSource}"
+                                                           Stretch="Uniform"
+                                                           Margin="2" />
+                                                </Grid>
+                                            </Border>
+                                            <StackPanel Grid.Column="1"
+                                                        VerticalAlignment="Center"
+                                                        Spacing="2">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Detail}"
+                                                           FontSize="11"
+                                                           Foreground="#9FB5C5"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding RelativePath}"
+                                                           FontSize="10"
+                                                           Foreground="#7895AD"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+                            </ListView>
                         </Grid>
 
                         <Grid x:Name="TransportPanel"
