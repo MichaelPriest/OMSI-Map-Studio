@@ -1345,6 +1345,9 @@ public sealed class D3D11NativeMapRenderer :
             skyTransform *
             _viewProjection);
 
+        ResetMaterialPreview(
+            context);
+
         context
             .PSSetSampler(
                 0,
@@ -2603,6 +2606,35 @@ public sealed class D3D11NativeMapRenderer :
             .PSSetConstantBuffer(
                 0,
                 _viewProjectionBuffer);
+    }
+
+    private void ResetMaterialPreview(
+        ID3D11DeviceContext context)
+    {
+        Span<Vector4> data =
+            stackalloc Vector4[1];
+
+        data[0] =
+            Vector4.Zero;
+
+        _materialPreviewBuffer
+            .SetData(
+                context,
+                data,
+                MapMode.WriteDiscard);
+
+        context
+            .PSSetConstantBuffer(
+                1,
+                _materialPreviewBuffer);
+
+        context
+            .PSUnsetShaderResource(
+                4);
+
+        context
+            .PSUnsetShaderResource(
+                5);
     }
 
     private void ApplyMaterialPreview(
