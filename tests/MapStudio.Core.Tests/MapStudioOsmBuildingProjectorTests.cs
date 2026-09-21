@@ -75,6 +75,51 @@ public sealed class MapStudioOsmBuildingProjectorTests
     }
 
     [Fact]
+    public void ProjectorMapsPyramidalRoofToHipGeometry()
+    {
+        var source =
+            new MapStudioOsmBuildingFootprint(
+                "building-pyramid",
+                [
+                    new(-23.5500, -46.6300),
+                    new(-23.5500, -46.6299),
+                    new(-23.5499, -46.6299),
+                    new(-23.5499, -46.6300)
+                ],
+                "house",
+                null,
+                2,
+                8,
+                "pyramidal",
+                2,
+                null,
+                null);
+
+        var building =
+            Assert.Single(
+                new MapStudioOsmBuildingProjector()
+                    .Project(
+                        [source],
+                        new MapStudioGeographicAnchor(
+                            -23.55,
+                            -46.63,
+                            0,
+                            0)));
+
+        Assert.Equal(
+            MapStudioBuildingRoofType.Hip,
+            building.RoofType);
+
+        Assert.Equal(
+            2,
+            building.RoofHeightMeters);
+
+        Assert.Equal(
+            6,
+            building.WallHeightMeters);
+    }
+
+    [Fact]
     public void ProjectorDefaultsMissingHeightAndUnknownRoofSafely()
     {
         var source =
