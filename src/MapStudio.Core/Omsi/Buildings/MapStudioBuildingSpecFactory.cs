@@ -66,7 +66,19 @@ public static class MapStudioBuildingSpecFactory
             floors,
             roofType,
             roofHeight,
-            facadeImagePath)
+            facadeImagePath,
+            normalized.Openings
+                ?.WindowsPerFloor ??
+            0,
+            normalized.Openings
+                ?.DoorCount ??
+            0,
+            normalized.Openings
+                ?.TypicalWindowWidthMeters ??
+            1.2,
+            normalized.Openings
+                ?.TypicalWindowHeightMeters ??
+            1.2)
             .Normalize();
     }
 
