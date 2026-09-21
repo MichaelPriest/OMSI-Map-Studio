@@ -113,6 +113,93 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
     }
 
     [Fact]
+    public void ConvexPentagonHipRoofRaisesGeometryAboveWall()
+    {
+        var building =
+            new MapStudioProjectedBuildingFootprint(
+                "roof-pentagon",
+                [
+                    new(0, 0),
+                    new(10, 0),
+                    new(13, 5),
+                    new(7, 10),
+                    new(0, 7)
+                ],
+                new(6, 4),
+                "house",
+                null,
+                2,
+                6,
+                MapStudioBuildingRoofType.Hip,
+                2,
+                null,
+                null);
+
+        var geometry =
+            new MapStudioFootprintBuildingAssetGenerator()
+                .BuildGeometry(
+                    building);
+
+        var maximumY =
+            geometry.Positions
+                .Where(
+                    (_, index) =>
+                        index %
+                            3 ==
+                        1)
+                .Max();
+
+        Assert.InRange(
+            maximumY,
+            7.99f,
+            8.01f);
+    }
+
+    [Fact]
+    public void ConcaveHipRoofFallsBackToFlatTop()
+    {
+        var building =
+            new MapStudioProjectedBuildingFootprint(
+                "roof-concave",
+                [
+                    new(0, 0),
+                    new(12, 0),
+                    new(12, 4),
+                    new(5, 4),
+                    new(5, 10),
+                    new(0, 10)
+                ],
+                new(5.0, 4.0),
+                "commercial",
+                null,
+                3,
+                9,
+                MapStudioBuildingRoofType.Hip,
+                2,
+                null,
+                null);
+
+        var geometry =
+            new MapStudioFootprintBuildingAssetGenerator()
+                .BuildGeometry(
+                    building);
+
+        var maximumY =
+            geometry.Positions
+                .Where(
+                    (_, index) =>
+                        index %
+                            3 ==
+                        1)
+                .Max();
+
+        Assert.InRange(
+            maximumY,
+            8.99f,
+            9.01f);
+    }
+
+    [Fact]
     public async Task GeneratorWritesFootprintScoAndO3d()
     {
         var root =
