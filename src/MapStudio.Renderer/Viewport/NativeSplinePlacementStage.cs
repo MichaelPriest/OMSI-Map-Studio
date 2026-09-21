@@ -4,5 +4,6 @@ public enum NativeSplinePlacementStage
 {
     AwaitingStart = 0,
     AwaitingEnd = 1,
-    AwaitingCurve = 2
+    AwaitingCurve = 2,
+    AwaitingEasyRoadConfirm = 3
 }

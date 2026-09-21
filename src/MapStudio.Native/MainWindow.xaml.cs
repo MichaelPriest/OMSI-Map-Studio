@@ -290,6 +290,36 @@ public sealed partial class MainWindow : Window
                     request);
             };
 
+        Viewport.SplinePlacementControlStateChanged +=
+            state =>
+            {
+                var visible =
+                    state is not null &&
+                    state.AwaitingConfirmation;
+
+                EasyRoadControlGrid.Visibility =
+                    visible
+                        ? Visibility.Visible
+                        : Visibility.Collapsed;
+
+                if (state is null)
+                {
+                    return;
+                }
+
+                EasyRoadStartXBox.Value =
+                    state.Start.X;
+
+                EasyRoadStartZBox.Value =
+                    state.Start.Z;
+
+                EasyRoadEndXBox.Value =
+                    state.End.X;
+
+                EasyRoadEndZBox.Value =
+                    state.End.Z;
+            };
+
         Viewport.TerrainPointSelected +=
             point =>
             {
@@ -4702,6 +4732,9 @@ public sealed partial class MainWindow : Window
                 false;
         }
 
+        EasyRoadControlGrid.Visibility =
+            Visibility.Collapsed;
+
         Viewport
             .SetSplineEasyRoadOptions(
                 SplineEasyRoadCheckBox
@@ -4720,6 +4753,71 @@ public sealed partial class MainWindow : Window
             true
                 ? "Estrada fácil ativa: dois cliques criam a via; ajuste o offset lateral para curvar."
                 : "Estrada fácil desativada: use reta ou curva manual de 3 cliques.";
+    }
+
+    private void OnApplyEasyRoadPointsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !double.IsFinite(
+                EasyRoadStartXBox.Value) ||
+            !double.IsFinite(
+                EasyRoadStartZBox.Value) ||
+            !double.IsFinite(
+                EasyRoadEndXBox.Value) ||
+            !double.IsFinite(
+                EasyRoadEndZBox.Value))
+        {
+            StatusText.Text =
+                "Estrada fácil: coordenadas inválidas.";
+
+            return;
+        }
+
+        if (
+            Viewport
+                .TryApplyEasyRoadControlPoints(
+                    EasyRoadStartXBox.Value,
+                    EasyRoadStartZBox.Value,
+                    EasyRoadEndXBox.Value,
+                    EasyRoadEndZBox.Value))
+        {
+            StatusText.Text =
+                "Estrada fácil: pontos atualizados na prévia. Auto-link foi limpo porque os endpoints mudaram.";
+
+            return;
+        }
+
+        StatusText.Text =
+            "Estrada fácil: não foi possível aplicar os pontos; mantenha início e fim sobre terreno carregado.";
+    }
+
+    private async void OnConfirmEasyRoadClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !Viewport
+                .TryConfirmEasyRoad(
+                    out var request,
+                    out var status) ||
+            request is null)
+        {
+            StatusText.Text =
+                status;
+
+            return;
+        }
+
+        EasyRoadControlGrid.Visibility =
+            Visibility.Collapsed;
+
+        await HandleSplinePlacementAsync(
+            request);
+
+        StatusText.Text +=
+            " · confirmado pela prévia da Estrada fácil.";
     }
 
     private void OnSplineCurveOffsetChanged(

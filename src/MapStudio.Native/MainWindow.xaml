@@ -668,7 +668,51 @@
                                                SmallChange="0.5"
                                                SpinButtonPlacementMode="Compact"
                                                ValueChanged="OnSplineCurveOffsetChanged" />
-                                    <TextBlock Text="Estrada fácil usa início + fim; offset 0 = reta. Valores positivos/negativos curvam para lados opostos."
+                                    <Grid x:Name="EasyRoadControlGrid"
+                                          Visibility="Collapsed"
+                                          ColumnSpacing="6"
+                                          RowSpacing="4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <NumberBox x:Name="EasyRoadStartXBox"
+                                                   Grid.Row="0"
+                                                   Grid.Column="0"
+                                                   Header="Início X"
+                                                   SpinButtonPlacementMode="Compact" />
+                                        <NumberBox x:Name="EasyRoadStartZBox"
+                                                   Grid.Row="0"
+                                                   Grid.Column="1"
+                                                   Header="Início Z"
+                                                   SpinButtonPlacementMode="Compact" />
+                                        <NumberBox x:Name="EasyRoadEndXBox"
+                                                   Grid.Row="1"
+                                                   Grid.Column="0"
+                                                   Header="Fim X"
+                                                   SpinButtonPlacementMode="Compact" />
+                                        <NumberBox x:Name="EasyRoadEndZBox"
+                                                   Grid.Row="1"
+                                                   Grid.Column="1"
+                                                   Header="Fim Z"
+                                                   SpinButtonPlacementMode="Compact" />
+                                        <Button Grid.Row="2"
+                                                Grid.Column="0"
+                                                Content="Aplicar pontos"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnApplyEasyRoadPointsClick" />
+                                        <Button Grid.Row="2"
+                                                Grid.Column="1"
+                                                Content="Confirmar via"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnConfirmEasyRoadClick" />
+                                    </Grid>
+                                    <TextBlock Text="Estrada fácil: marque início e fim, ajuste os pontos/offset na prévia e só então confirme. Offset 0 = reta."
                                                FontSize="11"
                                                TextWrapping="Wrap"
                                                Foreground="#7895AD" />

@@ -64,6 +64,10 @@ public sealed partial class NativeViewport : UserControl
         SplinePlacementRequested;
 
     public event Action<
+        NativeSplinePlacementControlState?>?
+        SplinePlacementControlStateChanged;
+
+    public event Action<
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
@@ -298,6 +302,64 @@ public sealed partial class NativeViewport : UserControl
                 enabled,
                 curveOffset);
 
+    public bool TryApplyEasyRoadControlPoints(
+        double startX,
+        double startZ,
+        double endX,
+        double endZ)
+    {
+        if (
+            _runtime is null ||
+            !_runtime
+                .TrySetEasyRoadControlPoints(
+                    startX,
+                    startZ,
+                    endX,
+                    endZ,
+                    out var state))
+        {
+            return false;
+        }
+
+        SplinePlacementControlStateChanged
+            ?.Invoke(
+                state);
+
+        return true;
+    }
+
+    public bool TryConfirmEasyRoad(
+        out NativeSplinePlacementRequest?
+            request,
+        out string status)
+    {
+        request =
+            null;
+
+        status =
+            "Estrada fácil indisponível.";
+
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var result =
+            _runtime
+                .TryConfirmEasyRoad(
+                    out request,
+                    out status);
+
+        if (result)
+        {
+            SplinePlacementControlStateChanged
+                ?.Invoke(
+                    null);
+        }
+
+        return result;
+    }
+
     public void SetSplineEndpointSnapOptions(
         bool enabled,
         double distance,
@@ -408,6 +470,10 @@ public sealed partial class NativeViewport : UserControl
     public void CancelSplinePlacement()
     {
         _runtime?.CancelSplinePlacement();
+
+        SplinePlacementControlStateChanged
+            ?.Invoke(
+                null);
     }
 
     public async Task<bool>
@@ -1374,6 +1440,11 @@ public sealed partial class NativeViewport : UserControl
                 PointerStatusChanged?.Invoke(
                     this,
                     splineStatus);
+
+                SplinePlacementControlStateChanged
+                    ?.Invoke(
+                        _runtime
+                            .GetSplinePlacementControlState());
             }
 
             e.Handled = true;
@@ -1631,6 +1702,8 @@ public sealed partial class NativeViewport : UserControl
                             "Spline: clique no ponto final.",
                         NativeSplinePlacementStage.AwaitingCurve =>
                             "Spline: ajuste a curva e clique para confirmar.",
+                        NativeSplinePlacementStage.AwaitingEasyRoadConfirm =>
+                            "Estrada fácil: ajuste os pontos/curva no painel e confirme.",
                         _ =>
                             "Construindo spline..."
                     });

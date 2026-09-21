@@ -191,6 +191,35 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
 
+    public NativeSplinePlacementControlState?
+        GetSplinePlacementControlState()
+    {
+        if (
+            !_splinePlacementActive ||
+            !_splineEasyRoadEnabled ||
+            _splineStartWorld is not { } start)
+        {
+            return null;
+        }
+
+        var end =
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm
+                ? _splineEndWorld
+                : _splinePointerWorld;
+
+        return end is { } value
+            ? new NativeSplinePlacementControlState(
+                start,
+                value,
+                _splineEasyRoadCurveOffset,
+                _splinePlacementStage ==
+                    NativeSplinePlacementStage
+                        .AwaitingEasyRoadConfirm)
+            : null;
+    }
+
     public NativeSceneVisibility SceneVisibility =>
         _sceneVisibility;
 
@@ -462,10 +491,25 @@ public sealed class NativeViewportRuntime : IDisposable
             !_splinePlacementActive ||
             Scene is null ||
             _placementSplineAsset is null ||
-            _splinePlacementStage !=
-                NativeSplinePlacementStage.AwaitingEnd ||
-            _splineStartWorld is not { } start ||
-            _splinePointerWorld is not { } end)
+            _splineStartWorld is not { } start)
+        {
+            return;
+        }
+
+        var end =
+            _splinePlacementStage switch
+            {
+                NativeSplinePlacementStage
+                    .AwaitingEnd =>
+                    _splinePointerWorld,
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm =>
+                    _splineEndWorld,
+                _ =>
+                    null
+            };
+
+        if (end is not { } endPoint)
         {
             return;
         }
@@ -477,13 +521,13 @@ public sealed class NativeViewportRuntime : IDisposable
                 ? NativeSplinePlacementMath
                     .TryCreateArcFromOffset(
                         start,
-                        end,
+                        endPoint,
                         _splineEasyRoadCurveOffset,
                         out shape)
                 : NativeSplinePlacementMath
                     .TryCreateStraight(
                         start,
-                        end,
+                        endPoint,
                         out shape);
 
         _splinePlacementShape =
@@ -658,6 +702,14 @@ public sealed class NativeViewportRuntime : IDisposable
             _placementSplineAsset is null)
         {
             return false;
+        }
+
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm)
+        {
+            return true;
         }
 
         if (
@@ -906,18 +958,40 @@ public sealed class NativeViewportRuntime : IDisposable
                 _splineEasyRoadEnabled &&
                 !_splinePlacementIsHeight)
             {
-                request =
-                    CreateSplinePlacementRequest(
-                        endShape);
+                _splineEndWorld =
+                    point;
 
-                CancelSplinePlacement();
+                _splinePointerWorld =
+                    point;
+
+                _splinePlacementShape =
+                    endShape;
+
+                _splinePlacementStage =
+                    NativeSplinePlacementStage
+                        .AwaitingEasyRoadConfirm;
+
+                var previewGeometry =
+                    new NativeSplinePlacementGeometryBuilder()
+                        .Build(
+                            _placementSplineAsset!,
+                            endShape);
+
+                MapRenderer
+                    .SetPlacementPreview(
+                        previewGeometry.IsRenderable
+                            ? previewGeometry
+                            : null,
+                        Matrix4x4.Identity);
+
+                RenderInitialFrame();
 
                 status =
                     endShape.IsCurved
-                        ? $"Via curva pronta · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m."
-                        : "Via reta pronta pelo modo Estrada fácil.";
+                        ? $"Fim definido · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m. Ajuste os pontos/curva e confirme."
+                        : "Fim definido. Ajuste os pontos se necessário e confirme a Estrada fácil.";
 
-                return request is not null;
+                return true;
             }
 
             if (_splinePlacementCurved)
@@ -972,8 +1046,181 @@ public sealed class NativeViewportRuntime : IDisposable
             return request is not null;
         }
 
+        if (
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm)
+        {
+            status =
+                "Estrada fácil aguardando confirmação pelo painel.";
+
+            return true;
+        }
+
         status = "Curva inválida.";
         return false;
+    }
+
+    public bool TrySetEasyRoadControlPoints(
+        double startX,
+        double startZ,
+        double endX,
+        double endZ,
+        out NativeSplinePlacementControlState?
+            state)
+    {
+        ThrowIfDisposed();
+
+        state = null;
+
+        if (
+            !_splinePlacementActive ||
+            !_splineEasyRoadEnabled ||
+            _splinePlacementStage !=
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm ||
+            Scene is null ||
+            _placementSplineAsset is null ||
+            !double.IsFinite(startX) ||
+            !double.IsFinite(startZ) ||
+            !double.IsFinite(endX) ||
+            !double.IsFinite(endZ))
+        {
+            return false;
+        }
+
+        if (
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    Scene,
+                    startX,
+                    startZ,
+                    out var startHeight) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    Scene,
+                    endX,
+                    endZ,
+                    out var endHeight))
+        {
+            return false;
+        }
+
+        var start =
+            new Vector3(
+                (float)startX,
+                (float)(
+                    startHeight +
+                    _splineElevationOffset),
+                (float)startZ);
+
+        var end =
+            new Vector3(
+                (float)endX,
+                (float)(
+                    endHeight +
+                    _splineElevationOffset),
+                (float)endZ);
+
+        if (
+            !NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    start,
+                    end,
+                    _splineEasyRoadCurveOffset,
+                    out var shape) ||
+            shape is null)
+        {
+            return false;
+        }
+
+        _splineStartWorld =
+            start;
+
+        _splineEndWorld =
+            end;
+
+        _splinePointerWorld =
+            end;
+
+        _splinePlacementShape =
+            shape;
+
+        _splinePreviousId =
+            -1;
+
+        _splineNextId =
+            -1;
+
+        var geometry =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    _placementSplineAsset,
+                    shape);
+
+        MapRenderer
+            .SetPlacementPreview(
+                geometry.IsRenderable
+                    ? geometry
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        state =
+            GetSplinePlacementControlState();
+
+        return state is not null;
+    }
+
+    public bool TryConfirmEasyRoad(
+        out NativeSplinePlacementRequest?
+            request,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        request =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            !_splinePlacementActive ||
+            !_splineEasyRoadEnabled ||
+            _splinePlacementStage !=
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm ||
+            _splinePlacementShape is not
+                { } shape)
+        {
+            status =
+                "Estrada fácil ainda não possui uma prévia pronta para confirmar.";
+
+            return false;
+        }
+
+        request =
+            CreateSplinePlacementRequest(
+                shape);
+
+        if (request is null)
+        {
+            status =
+                "Não foi possível criar a solicitação da Estrada fácil.";
+
+            return false;
+        }
+
+        status =
+            shape.IsCurved
+                ? "Estrada fácil curva confirmada."
+                : "Estrada fácil reta confirmada.";
+
+        CancelSplinePlacement();
+
+        return true;
     }
 
     public void CancelSplinePlacement()
