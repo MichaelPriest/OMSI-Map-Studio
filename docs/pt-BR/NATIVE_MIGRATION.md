@@ -533,3 +533,20 @@ A opção **Perfis reais das splines** foi separada da visibilidade lógica de S
 
 Os atalhos não interceptam digitação quando o foco está em TextBox, RichEditBox, PasswordBox ou NumberBox.
 
+### Checkpoint N3.30 — modos de seleção Q/Alt+1…4 e enquadrar mapa
+
+A seleção rápida da versão React foi migrada para o host WinUI:
+
+- **Q** volta para seleção geral;
+- **Alt+1** seleciona tudo;
+- **Alt+2** filtra apenas objetos;
+- **Alt+3** filtra apenas splines;
+- **Alt+4** ativa seleção de terreno/tile;
+- **Home** enquadra o mapa carregado.
+
+O filtro nativo ganhou o modo `Terrain`. Nesse modo, objetos, splines e gizmos deixam de participar do ID Buffer de seleção e o clique passa a usar o raycast real contra a malha de terreno. O modo permanece ativo após cada clique até o usuário trocar de filtro.
+
+Ao entrar em Terreno, a camada de terreno é reativada automaticamente caso estivesse oculta. O ponto selecionado continua alimentando o mesmo Inspector usado para nivelamento e pintura das máscaras DDS, então seleção e edição compartilham o mesmo estado real.
+
+O botão **Enquadrar** e a tecla Home usam `NativeViewportNavigation.FitToScene`, preservando uma única câmera e recalculando o enquadramento a partir dos bounds reais da cena carregada.
+

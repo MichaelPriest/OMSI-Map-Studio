@@ -6,7 +6,8 @@ public enum NativeSelectionFilter
 {
     All = 0,
     Objects = 1,
-    Splines = 2
+    Splines = 2,
+    Terrain = 3
 }
 
 public static class NativeSelectionFilterExtensions
@@ -25,6 +26,9 @@ public static class NativeSelectionFilterExtensions
                 kind is
                     PickingKind.Spline or
                     PickingKind.Gizmo,
+
+            NativeSelectionFilter.Terrain =>
+                false,
 
             _ =>
                 kind is

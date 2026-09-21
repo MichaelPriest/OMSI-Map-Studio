@@ -156,6 +156,15 @@ public sealed partial class MainWindow : Window
 
                 StatusText.Text =
                     "Ponto de terreno selecionado. Ajuste nivelamento ou pintura, raio e feather.";
+
+                if (
+                    SelectionFilterComboBox
+                        .SelectedIndex ==
+                    3)
+                {
+                    Viewport
+                        .BeginTerrainSelectionMode();
+                }
             };
 
         Viewport.SelectionChanged +=
@@ -2050,35 +2059,85 @@ public sealed partial class MainWindow : Window
 
     private void OnSelectionFilterChanged(
         object sender,
-        SelectionChangedEventArgs e)
+        SelectionChangedEventArgs e) =>
+        ApplySelectionMode(
+            SelectionFilterComboBox
+                .SelectedIndex);
+
+    private void ApplySelectionMode(
+        int selectedIndex)
     {
         var filter =
-            SelectionFilterComboBox
-                .SelectedIndex switch
+            selectedIndex switch
             {
                 1 =>
                     NativeSelectionFilter.Objects,
                 2 =>
                     NativeSelectionFilter.Splines,
+                3 =>
+                    NativeSelectionFilter.Terrain,
                 _ =>
                     NativeSelectionFilter.All
             };
 
         if (
-            Viewport.SetSelectionFilter(
-                filter))
+            filter ==
+                NativeSelectionFilter.Terrain)
         {
+            if (
+                !ShowTerrainMenuItem.IsChecked)
+            {
+                ShowTerrainMenuItem.IsChecked =
+                    true;
+
+                ApplySceneVisibility();
+            }
+
+            Viewport.SetSelectionFilter(
+                filter);
+
+            Viewport.BeginTerrainSelectionMode();
+
             StatusText.Text =
-                filter switch
-                {
-                    NativeSelectionFilter.Objects =>
-                        "Seleção filtrada para objetos.",
-                    NativeSelectionFilter.Splines =>
-                        "Seleção filtrada para splines.",
-                    _ =>
-                        "Seleção liberada para objetos e splines."
-                };
+                "Seleção filtrada para terreno/tile. Clique no terreno para selecionar.";
+
+            return;
         }
+
+        Viewport.CancelTerrainPointPick();
+
+        Viewport.SetSelectionFilter(
+            filter);
+
+        StatusText.Text =
+            filter switch
+            {
+                NativeSelectionFilter.Objects =>
+                    "Seleção filtrada para objetos.",
+                NativeSelectionFilter.Splines =>
+                    "Seleção filtrada para splines.",
+                _ =>
+                    "Seleção liberada para objetos e splines."
+            };
+    }
+
+    private void SetSelectionModeFromShortcut(
+        int selectedIndex)
+    {
+        if (
+            SelectionFilterComboBox
+                .SelectedIndex ==
+            selectedIndex)
+        {
+            ApplySelectionMode(
+                selectedIndex);
+
+            return;
+        }
+
+        SelectionFilterComboBox
+            .SelectedIndex =
+            selectedIndex;
     }
 
     private void OnSnapClick(
@@ -2208,6 +2267,25 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Câmera em vista superior.";
+    }
+
+    private void OnFitSceneClick(
+        object sender,
+        RoutedEventArgs e) =>
+        FitCurrentScene();
+
+    private void FitCurrentScene()
+    {
+        if (!Viewport.FitScene())
+        {
+            StatusText.Text =
+                "Abra um mapa antes de enquadrar a cena.";
+
+            return;
+        }
+
+        StatusText.Text =
+            "Mapa enquadrado na câmera.";
     }
 
     private void OnFocusSelectionClick(
@@ -2743,6 +2821,97 @@ public sealed partial class MainWindow : Window
                 .IsChecked
                 ? "Perfis reais das splines visíveis (P)."
                 : "Perfis reais das splines ocultos (P).";
+
+        args.Handled = true;
+    }
+
+    private void OnSelectAllAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        SetSelectionModeFromShortcut(
+            0);
+
+        StatusText.Text =
+            "Ferramenta selecionar ativa (Q).";
+
+        args.Handled = true;
+    }
+
+    private void OnFitSceneAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        FitCurrentScene();
+        args.Handled = true;
+    }
+
+    private void OnSelectionAllAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        SetSelectionModeFromShortcut(
+            0);
+
+        args.Handled = true;
+    }
+
+    private void OnSelectionObjectsAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        SetSelectionModeFromShortcut(
+            1);
+
+        args.Handled = true;
+    }
+
+    private void OnSelectionSplinesAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        SetSelectionModeFromShortcut(
+            2);
+
+        args.Handled = true;
+    }
+
+    private void OnSelectionTerrainAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        SetSelectionModeFromShortcut(
+            3);
 
         args.Handled = true;
     }

@@ -31,6 +31,18 @@ public sealed class NativeSelectionFilterTests
         NativeSelectionFilter.Splines,
         PickingKind.Spline,
         true)]
+    [InlineData(
+        NativeSelectionFilter.Terrain,
+        PickingKind.Object,
+        false)]
+    [InlineData(
+        NativeSelectionFilter.Terrain,
+        PickingKind.Spline,
+        false)]
+    [InlineData(
+        NativeSelectionFilter.Terrain,
+        PickingKind.Gizmo,
+        false)]
     public void FilterControlsEditablePickingKinds(
         NativeSelectionFilter filter,
         PickingKind kind,

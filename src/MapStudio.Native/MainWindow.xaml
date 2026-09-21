@@ -44,6 +44,22 @@
                                  Invoked="OnSplinesVisibilityAcceleratorInvoked" />
             <KeyboardAccelerator Key="P"
                                  Invoked="OnSplineProfilesVisibilityAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Q"
+                                 Invoked="OnSelectAllAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Home"
+                                 Invoked="OnFitSceneAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number1"
+                                 Modifiers="Menu"
+                                 Invoked="OnSelectionAllAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number2"
+                                 Modifiers="Menu"
+                                 Invoked="OnSelectionObjectsAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number3"
+                                 Modifiers="Menu"
+                                 Invoked="OnSelectionSplinesAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number4"
+                                 Modifiers="Menu"
+                                 Invoked="OnSelectionTerrainAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -157,7 +173,12 @@
                     <ComboBoxItem Content="Selecionar: todos" />
                     <ComboBoxItem Content="Só objetos" />
                     <ComboBoxItem Content="Só splines" />
+                    <ComboBoxItem Content="Só terreno" />
                 </ComboBox>
+                <Button
+                    Content="Enquadrar"
+                    ToolTipService.ToolTip="Enquadrar mapa (Home)"
+                    Click="OnFitSceneClick" />
                 <Button
                     Content="Focar"
                     ToolTipService.ToolTip="Focar seleção (F)"

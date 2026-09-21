@@ -533,3 +533,20 @@ Focus uses the native ID-buffer selection and the same anchor used by gizmos, wi
 
 Shortcuts do not intercept typing when focus is inside TextBox, RichEditBox, PasswordBox, or NumberBox controls.
 
+### Checkpoint N3.30 — Q/Alt+1…4 selection modes and fit-map
+
+The React editor's quick selection modes have been migrated to the WinUI host:
+
+- **Q** returns to general selection;
+- **Alt+1** selects all categories;
+- **Alt+2** filters objects only;
+- **Alt+3** filters splines only;
+- **Alt+4** activates terrain/tile selection;
+- **Home** frames the loaded map.
+
+The native selection filter now includes a `Terrain` mode. In this mode objects, splines, and gizmos are removed from the picking ID Buffer and clicks use the real terrain-mesh raycast instead. The mode remains active after each click until the user changes filters.
+
+Entering Terrain automatically makes the terrain layer visible if it had been hidden. The selected point feeds the same Inspector already used by leveling and DDS-mask painting, so selection and editing share the same real state.
+
+The **Fit** button and Home key use `NativeViewportNavigation.FitToScene`, keeping a single camera and recalculating framing from the real loaded-scene bounds.
+

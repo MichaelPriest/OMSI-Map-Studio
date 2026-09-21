@@ -27,6 +27,7 @@ public sealed partial class NativeViewport : UserControl
         uint.MaxValue;
     private bool _swapChainBound;
     private bool _terrainPointPickActive;
+    private bool _terrainPointPickPersistent;
 
     public NativeViewport()
     {
@@ -384,6 +385,9 @@ public sealed partial class NativeViewport : UserControl
         _runtime?.CancelSceneryPlacement();
         _runtime?.CancelSplinePlacement();
 
+        _terrainPointPickPersistent =
+            false;
+
         _terrainPointPickActive =
             true;
 
@@ -392,9 +396,28 @@ public sealed partial class NativeViewport : UserControl
             "Terreno: clique no ponto que deseja nivelar.");
     }
 
+    public void BeginTerrainSelectionMode()
+    {
+        _runtime?.CancelSceneryPlacement();
+        _runtime?.CancelSplinePlacement();
+
+        _terrainPointPickPersistent =
+            true;
+
+        _terrainPointPickActive =
+            true;
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Seleção de terreno ativa: clique em qualquer tile.");
+    }
+
     public void CancelTerrainPointPick()
     {
         _terrainPointPickActive =
+            false;
+
+        _terrainPointPickPersistent =
             false;
     }
 
@@ -439,6 +462,23 @@ public sealed partial class NativeViewport : UserControl
         _runtime?.RestoreSceneView();
 
         PublishSelectionInfo();
+    }
+
+    public bool FitScene()
+    {
+        var fitted =
+            _runtime
+                ?.FitScene() ??
+            false;
+
+        if (fitted)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                "Mapa enquadrado.");
+        }
+
+        return fitted;
     }
 
     public bool FocusSelection()
@@ -941,8 +981,12 @@ public sealed partial class NativeViewport : UserControl
             _terrainPointPickActive &&
             _runtime is not null)
         {
-            _terrainPointPickActive =
-                false;
+            if (
+                !_terrainPointPickPersistent)
+            {
+                _terrainPointPickActive =
+                    false;
+            }
 
             if (
                 _runtime.TryGetTerrainEditPoint(

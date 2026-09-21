@@ -1795,6 +1795,26 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public bool FitScene()
+    {
+        ThrowIfDisposed();
+
+        if (Scene is null)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+
+        Navigation.FitToScene(
+            Scene);
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public void ResetView()
     {
         ThrowIfDisposed();
