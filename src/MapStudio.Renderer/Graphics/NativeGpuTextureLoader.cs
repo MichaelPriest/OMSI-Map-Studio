@@ -234,6 +234,21 @@ internal sealed class NativeGpuTextureLoader
             return null;
         }
 
+        if (
+            string.Equals(
+                Path.GetExtension(path),
+                ".tga",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var tga =
+                TryLoadTga(path);
+
+            if (tga is not null)
+            {
+                return tga;
+            }
+        }
+
         try
         {
             using var factory =
@@ -307,7 +322,291 @@ internal sealed class NativeGpuTextureLoader
         {
             return null;
         }
-    }    private NativeGpuTexture CreateRgbaTexture(
+    }    private NativeGpuTexture? TryLoadTga(
+        string path)
+    {
+        try
+        {
+            using var stream =
+                new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read);
+
+            Span<byte> header =
+                stackalloc byte[18];
+
+            stream.ReadExactly(
+                header);
+
+            var idLength =
+                header[0];
+
+            var colorMapType =
+                header[1];
+
+            var imageType =
+                header[2];
+
+            var width =
+                BinaryPrimitives
+                    .ReadUInt16LittleEndian(
+                        header.Slice(
+                            12,
+                            2));
+
+            var height =
+                BinaryPrimitives
+                    .ReadUInt16LittleEndian(
+                        header.Slice(
+                            14,
+                            2));
+
+            var pixelDepth =
+                header[16];
+
+            var descriptor =
+                header[17];
+
+            if (
+                colorMapType != 0 ||
+                imageType is not
+                    (2 or 10) ||
+                width == 0 ||
+                height == 0 ||
+                width > 16_384 ||
+                height > 16_384 ||
+                pixelDepth is not
+                    (24 or 32))
+            {
+                return null;
+            }
+
+            if (idLength > 0)
+            {
+                stream.Seek(
+                    idLength,
+                    SeekOrigin.Current);
+            }
+
+            var bytesPerPixel =
+                pixelDepth / 8;
+
+            var pixelCount =
+                checked(
+                    (int)width *
+                    (int)height);
+
+            var source =
+                new byte[
+                    checked(
+                        pixelCount *
+                        bytesPerPixel)];
+
+            if (imageType == 2)
+            {
+                stream.ReadExactly(
+                    source);
+            }
+            else if (
+                !TryDecodeTgaRle(
+                    stream,
+                    source,
+                    bytesPerPixel,
+                    pixelCount))
+            {
+                return null;
+            }
+
+            var rgba =
+                new byte[
+                    checked(
+                        pixelCount *
+                        4)];
+
+            var topOrigin =
+                (descriptor &
+                    0x20) !=
+                0;
+
+            var rightOrigin =
+                (descriptor &
+                    0x10) !=
+                0;
+
+            for (
+                var sourceIndex = 0;
+                sourceIndex <
+                    pixelCount;
+                sourceIndex++)
+            {
+                var sourceX =
+                    sourceIndex %
+                    width;
+
+                var sourceY =
+                    sourceIndex /
+                    width;
+
+                var targetX =
+                    rightOrigin
+                        ? width -
+                            1 -
+                            sourceX
+                        : sourceX;
+
+                var targetY =
+                    topOrigin
+                        ? sourceY
+                        : height -
+                            1 -
+                            sourceY;
+
+                var inputOffset =
+                    sourceIndex *
+                    bytesPerPixel;
+
+                var outputOffset =
+                    (
+                        targetY *
+                        width +
+                        targetX
+                    ) *
+                    4;
+
+                rgba[
+                    outputOffset] =
+                    source[
+                        inputOffset +
+                        2];
+
+                rgba[
+                    outputOffset +
+                    1] =
+                    source[
+                        inputOffset +
+                        1];
+
+                rgba[
+                    outputOffset +
+                    2] =
+                    source[
+                        inputOffset];
+
+                rgba[
+                    outputOffset +
+                    3] =
+                    bytesPerPixel == 4
+                        ? source[
+                            inputOffset +
+                            3]
+                        : (byte)255;
+            }
+
+            return CreateRgbaTexture(
+                rgba,
+                width,
+                height);
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    IOException or
+                    UnauthorizedAccessException or
+                    ArgumentException or
+                    NotSupportedException or
+                    OverflowException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryDecodeTgaRle(
+        Stream stream,
+        byte[] destination,
+        int bytesPerPixel,
+        int pixelCount)
+    {
+        var pixelIndex = 0;
+
+        Span<byte> pixel =
+            stackalloc byte[4];
+
+        while (
+            pixelIndex <
+                pixelCount)
+        {
+            var packetHeader =
+                stream.ReadByte();
+
+            if (packetHeader < 0)
+            {
+                return false;
+            }
+
+            var count =
+                (packetHeader &
+                    0x7F) +
+                1;
+
+            if (
+                pixelIndex +
+                    count >
+                pixelCount)
+            {
+                return false;
+            }
+
+            if (
+                (packetHeader &
+                    0x80) !=
+                0)
+            {
+                stream.ReadExactly(
+                    pixel[
+                        ..bytesPerPixel]);
+
+                for (
+                    var repeat = 0;
+                    repeat < count;
+                    repeat++)
+                {
+                    pixel[
+                        ..bytesPerPixel]
+                        .CopyTo(
+                            destination
+                                .AsSpan(
+                                    pixelIndex *
+                                        bytesPerPixel,
+                                    bytesPerPixel));
+
+                    pixelIndex++;
+                }
+
+                continue;
+            }
+
+            var byteCount =
+                checked(
+                    count *
+                    bytesPerPixel);
+
+            stream.ReadExactly(
+                destination.AsSpan(
+                    pixelIndex *
+                        bytesPerPixel,
+                    byteCount));
+
+            pixelIndex +=
+                count;
+        }
+
+        return true;
+    }
+
+    private NativeGpuTexture CreateRgbaTexture(
         byte[] pixels,
         int width,
         int height)
