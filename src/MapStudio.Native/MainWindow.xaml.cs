@@ -333,11 +333,14 @@ public sealed partial class MainWindow : Window
                     info?.Kind ==
                     PickingKind.Spline;
 
-        LevelSplineToTerrainButton.IsEnabled =
-            selection.Kind ==
-                PickingKind.Spline &&
-            selection.Length.GetValueOrDefault() >
-                0.001;
+                LevelSplineToTerrainButton.IsEnabled =
+                    info is
+                    {
+                        Kind:
+                            PickingKind.Spline,
+                        Length:
+                            > 0.001
+                    };
 
                 if (info is null)
                 {
