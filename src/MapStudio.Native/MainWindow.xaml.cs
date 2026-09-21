@@ -10629,6 +10629,73 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
     }
 
+    private void OnQuickCreateAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        args.Handled =
+            true;
+
+        var routed =
+            new RoutedEventArgs();
+
+        switch (sender.Key)
+        {
+            case Windows.System.VirtualKey.R:
+                OnToolSplinesClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.C:
+                OnToolCrossingsClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.O:
+                OnToolObjectsClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.B:
+                OnToolBuildingsClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.G:
+            case Windows.System.VirtualKey.Y:
+                OnToolVegetationClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.T:
+                OnToolTerrainClick(
+                    sender,
+                    routed);
+                break;
+
+            case Windows.System.VirtualKey.A:
+                OnToolWaterClick(
+                    sender,
+                    routed);
+                break;
+
+            default:
+                args.Handled =
+                    false;
+                break;
+        }
+    }
+
     private void OnPerspectiveAcceleratorInvoked(
         KeyboardAccelerator sender,
         KeyboardAcceleratorInvokedEventArgs args)
