@@ -108,7 +108,7 @@ public static class NativeConstructionSetBuilder
                     companion
                         .RotationOffset;
 
-                var sideSigns =
+                double[] sideSigns =
                     companion.Side switch
                     {
                         NativeConstructionSetSide
