@@ -441,6 +441,23 @@ public sealed partial class NativeViewport : UserControl
         PublishSelectionInfo();
     }
 
+    public bool FocusSelection()
+    {
+        var focused =
+            _runtime
+                ?.FocusSelection() ??
+            false;
+
+        if (focused)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                "Seleção focada.");
+        }
+
+        return focused;
+    }
+
     public bool FocusTile(
         int tileX,
         int tileY)
@@ -525,6 +542,31 @@ public sealed partial class NativeViewport : UserControl
             SelectionStatusChanged?.Invoke(
                 this,
                 $"Filtro de seleção: {filter}.");
+        }
+
+        return changed;
+    }
+
+    public bool SetSplineProfilesVisible(
+        bool visible)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime
+                .SetSplineProfilesVisible(
+                    visible);
+
+        if (changed)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                visible
+                    ? "Perfis reais das splines visíveis."
+                    : "Perfis reais das splines ocultos.");
         }
 
         return changed;

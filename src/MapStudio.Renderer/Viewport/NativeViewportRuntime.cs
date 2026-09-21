@@ -1444,6 +1444,33 @@ public sealed class NativeViewportRuntime : IDisposable
             GetSelectionInfo();
     }
 
+    public bool FocusSelection()
+    {
+        ThrowIfDisposed();
+
+        if (
+            _selectedPickingId.IsNone ||
+            !TryGetSelectionAnchor(
+                out var anchor))
+        {
+            return false;
+        }
+
+        Navigation.FocusOn(
+            anchor,
+            preferredDistance:
+                Math.Clamp(
+                    Navigation.Distance *
+                    0.35f,
+                    35.0f,
+                    180.0f));
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public bool FocusTile(
         int tileX,
         int tileY)
@@ -1886,6 +1913,24 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetSelectionFilter(
             filter);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool SetSplineProfilesVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !MapRenderer
+                .SetSplineProfilesVisible(
+                    visible))
+        {
+            return false;
+        }
 
         RenderInitialFrame();
 

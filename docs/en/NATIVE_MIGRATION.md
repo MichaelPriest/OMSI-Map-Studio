@@ -515,3 +515,21 @@ As a result, disabling **Grid** hides only the terrain reference mesh. Object ma
 
 The change does not rebuild the map or alter picking, materials, or OMSI geometry; it only enables/disables the Direct3D 11 grid line buffer.
 
+### Checkpoint N3.29 — view shortcut and selection-focus parity
+
+The native toolbar now migrates the quick shortcuts used by the React version:
+
+- **F** focuses the camera on the selected object or spline;
+- **N** toggles transform snapping;
+- **T** toggles terrain visibility;
+- **G** toggles only the grid;
+- **O** toggles objects;
+- **L** toggles splines;
+- **P** toggles only the real 3D spline profiles.
+
+Focus uses the native ID-buffer selection and the same anchor used by gizmos, without creating a second camera or parallel state.
+
+**Real spline profiles** is now separate from logical spline visibility. Turning P off hides the textured SLI mesh while spline guide lines remain visible and selectable as long as Splines itself is enabled. This more closely matches the React viewport toolbar workflow.
+
+Shortcuts do not intercept typing when focus is inside TextBox, RichEditBox, PasswordBox, or NumberBox controls.
+

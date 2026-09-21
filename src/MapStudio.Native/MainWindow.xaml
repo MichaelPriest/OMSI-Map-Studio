@@ -30,6 +30,20 @@
             <KeyboardAccelerator Key="D"
                                  Modifiers="Control"
                                  Invoked="OnDuplicateAcceleratorInvoked" />
+            <KeyboardAccelerator Key="F"
+                                 Invoked="OnFocusSelectionAcceleratorInvoked" />
+            <KeyboardAccelerator Key="N"
+                                 Invoked="OnSnapAcceleratorInvoked" />
+            <KeyboardAccelerator Key="T"
+                                 Invoked="OnTerrainVisibilityAcceleratorInvoked" />
+            <KeyboardAccelerator Key="G"
+                                 Invoked="OnGridVisibilityAcceleratorInvoked" />
+            <KeyboardAccelerator Key="O"
+                                 Invoked="OnObjectsVisibilityAcceleratorInvoked" />
+            <KeyboardAccelerator Key="L"
+                                 Invoked="OnSplinesVisibilityAcceleratorInvoked" />
+            <KeyboardAccelerator Key="P"
+                                 Invoked="OnSplineProfilesVisibilityAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -88,6 +102,11 @@
                         Text="Grade"
                         IsChecked="True"
                         Click="OnGridVisibilityClick" />
+                    <ToggleMenuFlyoutItem
+                        x:Name="ShowSplineProfilesMenuItem"
+                        Text="Perfis reais das splines"
+                        IsChecked="True"
+                        Click="OnSplineProfilesVisibilityClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Alternar Explorer"
@@ -140,8 +159,13 @@
                     <ComboBoxItem Content="Só splines" />
                 </ComboBox>
                 <Button
+                    Content="Focar"
+                    ToolTipService.ToolTip="Focar seleção (F)"
+                    Click="OnFocusSelectionClick" />
+                <Button
                     x:Name="SnapButton"
                     Content="Snap: off"
+                    ToolTipService.ToolTip="Alternar snap (N)"
                     Click="OnSnapClick" />
                 <CheckBox
                     x:Name="NightPreviewCheckBox"

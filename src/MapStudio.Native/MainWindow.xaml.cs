@@ -2210,9 +2210,26 @@ public sealed partial class MainWindow : Window
             "Câmera em vista superior.";
     }
 
-    private void OnSceneVisibilityClick(
+    private void OnFocusSelectionClick(
         object sender,
-        RoutedEventArgs e)
+        RoutedEventArgs e) =>
+        FocusCurrentSelection();
+
+    private void FocusCurrentSelection()
+    {
+        if (!Viewport.FocusSelection())
+        {
+            StatusText.Text =
+                "Selecione um objeto ou spline antes de focar.";
+
+            return;
+        }
+
+        StatusText.Text =
+            "Câmera focada na seleção.";
+    }
+
+    private void ApplySceneVisibility()
     {
         var visibility =
             new NativeSceneVisibility(
@@ -2234,6 +2251,11 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnSceneVisibilityClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ApplySceneVisibility();
+
     private void OnGridVisibilityClick(
         object sender,
         RoutedEventArgs e)
@@ -2249,6 +2271,26 @@ public sealed partial class MainWindow : Window
                 visible
                     ? "Grade do mapa visível."
                     : "Grade do mapa oculta.";
+        }
+    }
+
+    private void OnSplineProfilesVisibilityClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var visible =
+            ShowSplineProfilesMenuItem
+                .IsChecked;
+
+        if (
+            Viewport
+                .SetSplineProfilesVisible(
+                    visible))
+        {
+            StatusText.Text =
+                visible
+                    ? "Perfis reais das splines visíveis."
+                    : "Perfis reais das splines ocultos; guias continuam visíveis.";
         }
     }
 
@@ -2576,6 +2618,133 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
 
         await DeleteCurrentSelectionAsync();
+    }
+
+    private void OnFocusSelectionAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        FocusCurrentSelection();
+        args.Handled = true;
+    }
+
+    private void OnSnapAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        OnSnapClick(
+            this,
+            new RoutedEventArgs());
+
+        args.Handled = true;
+    }
+
+    private void OnTerrainVisibilityAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        ShowTerrainMenuItem.IsChecked =
+            !ShowTerrainMenuItem.IsChecked;
+
+        ApplySceneVisibility();
+        args.Handled = true;
+    }
+
+    private void OnGridVisibilityAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        ShowGridMenuItem.IsChecked =
+            !ShowGridMenuItem.IsChecked;
+
+        Viewport.SetGridVisible(
+            ShowGridMenuItem.IsChecked);
+
+        StatusText.Text =
+            ShowGridMenuItem.IsChecked
+                ? "Grade do mapa visível (G)."
+                : "Grade do mapa oculta (G).";
+
+        args.Handled = true;
+    }
+
+    private void OnObjectsVisibilityAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        ShowObjectsMenuItem.IsChecked =
+            !ShowObjectsMenuItem.IsChecked;
+
+        ApplySceneVisibility();
+        args.Handled = true;
+    }
+
+    private void OnSplinesVisibilityAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        ShowSplinesMenuItem.IsChecked =
+            !ShowSplinesMenuItem.IsChecked;
+
+        ApplySceneVisibility();
+        args.Handled = true;
+    }
+
+    private void OnSplineProfilesVisibilityAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        ShowSplineProfilesMenuItem.IsChecked =
+            !ShowSplineProfilesMenuItem
+                .IsChecked;
+
+        Viewport
+            .SetSplineProfilesVisible(
+                ShowSplineProfilesMenuItem
+                    .IsChecked);
+
+        StatusText.Text =
+            ShowSplineProfilesMenuItem
+                .IsChecked
+                ? "Perfis reais das splines visíveis (P)."
+                : "Perfis reais das splines ocultos (P).";
+
+        args.Handled = true;
     }
 
     private void OnEscapeAcceleratorInvoked(

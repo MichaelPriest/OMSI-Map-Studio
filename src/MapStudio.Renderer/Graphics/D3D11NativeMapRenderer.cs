@@ -77,6 +77,9 @@ public sealed class D3D11NativeMapRenderer :
     private bool _gridVisible =
         true;
 
+    private bool _splineProfilesVisible =
+        true;
+
     private ID3D11Buffer?
         _terrainTriangleBuffer;
 
@@ -544,6 +547,27 @@ public sealed class D3D11NativeMapRenderer :
 
     public bool GridVisible =>
         _gridVisible;
+
+    public bool SplineProfilesVisible =>
+        _splineProfilesVisible;
+
+    public bool SetSplineProfilesVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            _splineProfilesVisible ==
+                visible)
+        {
+            return false;
+        }
+
+        _splineProfilesVisible =
+            visible;
+
+        return true;
+    }
 
     public bool SetGridVisible(
         bool visible)
@@ -1038,7 +1062,9 @@ public sealed class D3D11NativeMapRenderer :
                         context);
                 }
 
-                if (_visibility.SplinesVisible)
+                if (
+                    _visibility.SplinesVisible &&
+                    _splineProfilesVisible)
                 {
                     DrawSplineGeometry(
                         context);

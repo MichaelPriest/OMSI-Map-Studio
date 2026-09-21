@@ -515,3 +515,21 @@ Com isso, desativar **Grade** oculta somente a malha de referência do terreno. 
 
 A mudança não reconstrói o mapa nem altera picking, materiais ou geometria OMSI; apenas habilita/desabilita o buffer de linhas da grade no Direct3D 11.
 
+### Checkpoint N3.29 — paridade de atalhos de visualização e foco da seleção
+
+A barra nativa passa a migrar os atalhos rápidos usados pela versão React:
+
+- **F** foca a câmera no objeto ou spline selecionado;
+- **N** alterna o snap de transformação;
+- **T** mostra/oculta o terreno;
+- **G** mostra/oculta somente a grade;
+- **O** mostra/oculta objetos;
+- **L** mostra/oculta splines;
+- **P** mostra/oculta apenas os perfis 3D reais das splines.
+
+O foco usa a própria seleção do ID Buffer e o mesmo anchor usado pelos gizmos, sem criar uma segunda câmera ou estado paralelo.
+
+A opção **Perfis reais das splines** foi separada da visibilidade lógica de Splines. Ao desligar P, a malha SLI texturizada some, mas as linhas-guia de spline continuam visíveis e selecionáveis enquanto Splines estiver ativo. Isso replica melhor o fluxo da barra de visualização da versão React.
+
+Os atalhos não interceptam digitação quando o foco está em TextBox, RichEditBox, PasswordBox ou NumberBox.
+
