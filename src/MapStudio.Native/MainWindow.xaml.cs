@@ -1,5 +1,7 @@
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Scenery;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
 using MapStudio.Native.Services;
@@ -35,6 +37,12 @@ public sealed partial class MainWindow : Window
         string DisplayText,
         string Detail);
 
+    private sealed record ValidationExplorerItem(
+        string Severity,
+        string Code,
+        string DisplayText,
+        string Detail);
+
     private readonly OmsiNativeSession _session =
         new();
 
@@ -65,6 +73,13 @@ public sealed partial class MainWindow : Window
     private bool _libraryMode;
     private bool _transportMode;
     private bool _trafficMode;
+    private bool _validationMode;
+
+    private IReadOnlyList<
+        ValidationExplorerItem>
+        _validationItems =
+            Array.Empty<
+                ValidationExplorerItem>();
 
     private readonly DispatcherTimer
         _trafficPreviewTimer =
@@ -364,7 +379,11 @@ public sealed partial class MainWindow : Window
         object sender,
         TextChangedEventArgs e)
     {
-        if (_trafficMode)
+        if (_validationMode)
+        {
+            RefreshValidationFilter();
+        }
+        else if (_trafficMode)
         {
             RefreshTrafficFilter();
         }
@@ -417,6 +436,9 @@ public sealed partial class MainWindow : Window
         _trafficMode =
             false;
 
+        _validationMode =
+            false;
+
         _trafficPreviewTimer.Stop();
 
         TrafficControlPanel.Visibility =
@@ -448,6 +470,9 @@ public sealed partial class MainWindow : Window
             false;
 
         _trafficMode =
+            false;
+
+        _validationMode =
             false;
 
         _trafficPreviewTimer.Stop();
@@ -2262,6 +2287,9 @@ public sealed partial class MainWindow : Window
         _trafficMode =
             true;
 
+        _validationMode =
+            false;
+
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
@@ -2769,6 +2797,9 @@ public sealed partial class MainWindow : Window
         _trafficMode =
             false;
 
+        _validationMode =
+            false;
+
         _trafficPreviewTimer.Stop();
 
         TrafficControlPanel.Visibility =
@@ -2953,18 +2984,494 @@ public sealed partial class MainWindow : Window
                 : "Selecione um item para ver detalhes.";
     }
 
-    private void OnToolValidationClick(
+    private async void OnToolValidationClick(
         object sender,
         RoutedEventArgs e)
     {
-        OnSceneExplorerModeClick(
-            sender,
-            e);
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } omsiRoot)
+        {
+            StatusText.Text =
+                "Validação: abra um mapa OMSI primeiro.";
+
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.RestoreSceneView();
+
+        _libraryMode =
+            false;
+
+        _transportMode =
+            false;
+
+        _trafficMode =
+            false;
+
+        _validationMode =
+            true;
+
+        _trafficPreviewTimer.Stop();
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
+
+        ExplorerListView.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar problemas de validação...";
 
         StatusText.Text =
-            _session.CurrentMap is null
-                ? "Validação: abra um mapa para iniciar a análise."
-                : "Validação: atalho preparado; a varredura dedicada de referências, paths e dependências será ligada nesta área.";
+            "Validação: analisando mapa, TTData, links e dependências...";
+
+        try
+        {
+            _validationItems =
+                await BuildValidationItemsAsync(
+                    snapshot,
+                    omsiRoot);
+
+            RefreshValidationFilter();
+
+            var errors =
+                _validationItems.Count(
+                    item =>
+                        item.Severity ==
+                        "Erro");
+
+            var warnings =
+                _validationItems.Count(
+                    item =>
+                        item.Severity ==
+                        "Aviso");
+
+            StatusText.Text =
+                $"Validação concluída: {errors} erro(s) · {warnings} aviso(s) · {_validationItems.Count} item(ns).";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha na validação: {exception.Message}";
+        }
+    }
+
+    private void RefreshValidationFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            ValidationExplorerItem> items =
+                _validationItems;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.DisplayText
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase) ||
+                        item.Detail
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase) ||
+                        item.Code
+                            .Contains(
+                                query,
+                                StringComparison.OrdinalIgnoreCase));
+        }
+
+        ExplorerListView.ItemsSource =
+            items.ToArray();
+    }
+
+    private static async Task<IReadOnlyList<
+        ValidationExplorerItem>>
+        BuildValidationItemsAsync(
+            NativeMapSnapshot snapshot,
+            string omsiRoot)
+    {
+        var result =
+            new List<
+                ValidationExplorerItem>();
+
+        var allIds =
+            new Dictionary<
+                int,
+                List<string>>();
+
+        void RegisterId(
+            int id,
+            string description)
+        {
+            if (!allIds.TryGetValue(
+                    id,
+                    out var values))
+            {
+                values = [];
+                allIds[id] =
+                    values;
+            }
+
+            values.Add(
+                description);
+        }
+
+        foreach (
+            var tile in snapshot.Tiles)
+        {
+            foreach (
+                var item in
+                    tile.Content.Objects)
+            {
+                RegisterId(
+                    item.ObjectId,
+                    $"Objeto {item.SceneryObjectPath} · tile {tile.Reference.X},{tile.Reference.Y}");
+
+                if (
+                    !OmsiSceneryObjectPathResolver
+                        .TryResolve(
+                            omsiRoot,
+                            item.SceneryObjectPath,
+                            out var fullPath) ||
+                    !File.Exists(
+                        fullPath))
+                {
+                    result.Add(
+                        new ValidationExplorerItem(
+                            "Erro",
+                            "missing-sco",
+                            $"ERRO · SCO ausente · #{item.ObjectId}",
+                            $"{item.SceneryObjectPath}\nTile {tile.Reference.X},{tile.Reference.Y}"));
+                }
+            }
+
+            foreach (
+                var item in
+                    tile.Content.Splines)
+            {
+                RegisterId(
+                    item.SplineId,
+                    $"Spline {item.SplinePath} · tile {tile.Reference.X},{tile.Reference.Y}");
+
+                if (
+                    !OmsiSplinePathResolver
+                        .TryResolve(
+                            omsiRoot,
+                            item.SplinePath,
+                            out var fullPath) ||
+                    !File.Exists(
+                        fullPath))
+                {
+                    result.Add(
+                        new ValidationExplorerItem(
+                            "Erro",
+                            "missing-sli",
+                            $"ERRO · SLI ausente · #{item.SplineId}",
+                            $"{item.SplinePath}\nTile {tile.Reference.X},{tile.Reference.Y}"));
+                }
+            }
+        }
+
+        foreach (
+            var duplicate in allIds
+                .Where(
+                    pair =>
+                        pair.Value.Count >
+                        1))
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "duplicate-id",
+                    $"ERRO · ID duplicado · {duplicate.Key}",
+                    string.Join(
+                        "\n",
+                        duplicate.Value)));
+        }
+
+        var fullMapLoaded =
+            snapshot.Tiles.Count ==
+            snapshot.Map.Tiles.Count;
+
+        if (fullMapLoaded)
+        {
+            var splineIds =
+                snapshot.Tiles
+                    .SelectMany(
+                        tile =>
+                            tile.Content.Splines)
+                    .Select(
+                        item =>
+                            item.SplineId)
+                    .ToHashSet();
+
+            foreach (
+                var spline in snapshot.Tiles
+                    .SelectMany(
+                        tile =>
+                            tile.Content.Splines))
+            {
+                if (
+                    spline.PreviousSplineId >
+                        0 &&
+                    !splineIds.Contains(
+                        spline.PreviousSplineId))
+                {
+                    result.Add(
+                        new ValidationExplorerItem(
+                            "Erro",
+                            "broken-spline-previous",
+                            $"ERRO · link anterior ausente · spline #{spline.SplineId}",
+                            $"PreviousSplineId={spline.PreviousSplineId}\n{spline.SplinePath}"));
+                }
+
+                if (
+                    spline.NextSplineId >
+                        0 &&
+                    !splineIds.Contains(
+                        spline.NextSplineId))
+                {
+                    result.Add(
+                        new ValidationExplorerItem(
+                            "Erro",
+                            "broken-spline-next",
+                            $"ERRO · link seguinte ausente · spline #{spline.SplineId}",
+                            $"NextSplineId={spline.NextSplineId}\n{spline.SplinePath}"));
+                }
+            }
+        }
+        else
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Aviso",
+                    "partial-map",
+                    "AVISO · validação parcial de links",
+                    "O mapa está no modo 3×3; links para tiles não carregados não foram marcados como erro."));
+        }
+
+        var timetable =
+            await new OmsiTimetableCatalogReader()
+                .ReadAsync(
+                    snapshot.Map.DirectoryPath);
+
+        if (
+            timetable
+                .BrokenTripTrackReferenceCount >
+            0)
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "trip-track",
+                    $"ERRO · {timetable.BrokenTripTrackReferenceCount} Trip→Track quebrado(s)",
+                    "Há .ttp referenciando Track inexistente."));
+        }
+
+        if (
+            timetable
+                .BrokenStationLinkStopReferenceCount >
+            0)
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "stationlink-stop",
+                    $"ERRO · {timetable.BrokenStationLinkStopReferenceCount} StationLink→Stop quebrado(s)",
+                    "Há StnLinks.cfg referenciando Busstops inexistentes."));
+        }
+
+        if (
+            timetable
+                .BrokenLineTripReferenceCount >
+            0)
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "line-trip",
+                    $"ERRO · {timetable.BrokenLineTripReferenceCount} Line→Trip quebrado(s)",
+                    "Há .ttl referenciando .ttp inexistente."));
+        }
+
+        var splinePathCounts =
+            new Dictionary<
+                string,
+                int>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        var objectPathCounts =
+            new Dictionary<
+                string,
+                int>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        var splineReader =
+            new OmsiSplineDefinitionReader();
+
+        var sceneryReader =
+            new OmsiSceneryObjectReader();
+
+        foreach (
+            var tile in snapshot.Tiles)
+        {
+            foreach (
+                var spline in
+                    tile.Content.Splines)
+            {
+                if (
+                    spline.TrafficRules.Count ==
+                    0)
+                {
+                    continue;
+                }
+
+                if (
+                    !splinePathCounts.TryGetValue(
+                        spline.SplinePath,
+                        out var pathCount))
+                {
+                    pathCount = -1;
+
+                    if (
+                        OmsiSplinePathResolver
+                            .TryResolve(
+                                omsiRoot,
+                                spline.SplinePath,
+                                out var path) &&
+                        File.Exists(path))
+                    {
+                        pathCount =
+                            (
+                                await splineReader
+                                    .ReadAsync(path)
+                            ).Paths.Count;
+                    }
+
+                    splinePathCounts[
+                        spline.SplinePath] =
+                        pathCount;
+                }
+
+                foreach (
+                    var rule in
+                        spline.TrafficRules)
+                {
+                    if (
+                        rule.PathIndex is
+                            int index &&
+                        pathCount >= 0 &&
+                        (
+                            index < 0 ||
+                            index >=
+                                pathCount
+                        ))
+                    {
+                        result.Add(
+                            new ValidationExplorerItem(
+                                "Erro",
+                                "rule-path-index",
+                                $"ERRO · Traffic Rule fora do path · spline #{spline.SplineId}",
+                                $"{rule.RuleName} · path {index} · paths disponíveis {pathCount}\n{spline.SplinePath}"));
+                    }
+                }
+            }
+
+            foreach (
+                var item in
+                    tile.Content.Objects)
+            {
+                if (
+                    item.TrafficRules.Count ==
+                    0)
+                {
+                    continue;
+                }
+
+                if (
+                    !objectPathCounts.TryGetValue(
+                        item.SceneryObjectPath,
+                        out var pathCount))
+                {
+                    pathCount = -1;
+
+                    if (
+                        OmsiSceneryObjectPathResolver
+                            .TryResolve(
+                                omsiRoot,
+                                item.SceneryObjectPath,
+                                out var path) &&
+                        File.Exists(path))
+                    {
+                        pathCount =
+                            (
+                                await sceneryReader
+                                    .ReadMetadataAsync(path)
+                            ).Paths.Count;
+                    }
+
+                    objectPathCounts[
+                        item.SceneryObjectPath] =
+                        pathCount;
+                }
+
+                foreach (
+                    var rule in
+                        item.TrafficRules)
+                {
+                    if (
+                        rule.PathIndex is
+                            int index &&
+                        pathCount >= 0 &&
+                        (
+                            index < 0 ||
+                            index >=
+                                pathCount
+                        ))
+                    {
+                        result.Add(
+                            new ValidationExplorerItem(
+                                "Erro",
+                                "rule-path-index",
+                                $"ERRO · Traffic Rule fora do path · objeto #{item.ObjectId}",
+                                $"{rule.RuleName} · path {index} · paths disponíveis {pathCount}\n{item.SceneryObjectPath}"));
+                    }
+                }
+            }
+        }
+
+        if (result.Count == 0)
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "OK",
+                    "ok",
+                    "OK · nenhuma inconsistência detectada",
+                    "Assets, IDs, links, TTData e Traffic Rules passaram nas validações disponíveis."));
+        }
+
+        return result;
     }
 
     private async Task ActivateLibraryToolAsync(
@@ -2979,6 +3486,9 @@ public sealed partial class MainWindow : Window
             false;
 
         _trafficMode =
+            false;
+
+        _validationMode =
             false;
 
         _trafficPreviewTimer.Stop();
