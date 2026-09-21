@@ -11451,6 +11451,233 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnCreateMapTileClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (snapshot is null)
+        {
+            StatusText.Text =
+                "Abra um mapa antes de criar um tile.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de criar um tile.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento antes de criar um tile.";
+
+            return;
+        }
+
+        var baseTile =
+            snapshot.ActiveTile ??
+            OmsiTileRegionSelector
+                .FindInitialTile(
+                    snapshot.Map.Tiles);
+
+        var tileXBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile X",
+                Minimum =
+                    -100000,
+                Maximum =
+                    100000,
+                Value =
+                    (baseTile?.X ?? 0) +
+                    1,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var tileYBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile Y",
+                Minimum =
+                    -100000,
+                Maximum =
+                    100000,
+                Value =
+                    baseTile?.Y ??
+                    0,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var grid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8
+            };
+
+        grid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        grid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            tileXBox,
+            0);
+
+        Grid.SetColumn(
+            tileYBox,
+            1);
+
+        grid.Children.Add(
+            tileXBox);
+
+        grid.Children.Add(
+            tileYBox);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    420
+            };
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Tile OMSI real",
+                Message =
+                    "O tile será criado a partir do template oficial NewMap do OMSI. O global.cfg será anexado sem reordenar tiles existentes e terá backup automático."
+            });
+
+        panel.Children.Add(
+            grid);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Criar tile",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            !double.IsFinite(
+                tileXBox.Value) ||
+            !double.IsFinite(
+                tileYBox.Value))
+        {
+            StatusText.Text =
+                "Coordenadas de tile inválidas.";
+
+            return;
+        }
+
+        var tileX =
+            checked(
+                (int)Math.Round(
+                    tileXBox.Value));
+
+        var tileY =
+            checked(
+                (int)Math.Round(
+                    tileYBox.Value));
+
+        if (
+            Math.Abs(
+                tileXBox.Value -
+                tileX) >
+                0.0001 ||
+            Math.Abs(
+                tileYBox.Value -
+                tileY) >
+                0.0001)
+        {
+            StatusText.Text =
+                "As coordenadas do tile precisam ser números inteiros.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Criando tile {tileX},{tileY} a partir do template oficial...";
+
+            var result =
+                await _session
+                    .CreateTileFromTemplateAsync(
+                        tileX,
+                        tileY);
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile:
+                    true);
+
+            RootText.Text =
+                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+
+            StatusText.Text =
+                $"Tile {result.Tile.X},{result.Tile.Y} criado com {result.CreatedFiles.Count} arquivo(s). Backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar tile: {exception.Message}";
+        }
+    }
+
     private async void OnCreateCoordinateMapClick(
         object sender,
         RoutedEventArgs e)
