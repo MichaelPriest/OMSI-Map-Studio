@@ -13,7 +13,8 @@ public static class NativeAiProviderFactory
         };
 
     public static IMapStudioAiProvider Create(
-        MapStudioAiConnectionProfile profile)
+        MapStudioAiConnectionProfile profile,
+        string? secretOverride = null)
     {
         ArgumentNullException.ThrowIfNull(
             profile);
@@ -32,12 +33,42 @@ public static class NativeAiProviderFactory
             "lmstudio" or
             "ollama" =>
                 CreateOpenAiCompatible(
-                    normalized),
+                    normalized,
+                    secretOverride),
             _ =>
                 throw new NotSupportedException(
                     "aiAdapterNotImplemented:" +
                     normalized.AdapterId)
         };
+    }
+
+    public static async Task TestConnectionAsync(
+        MapStudioAiConnectionProfile profile,
+        string? secretOverride = null,
+        CancellationToken cancellationToken =
+            default)
+    {
+        var provider =
+            Create(
+                profile,
+                secretOverride);
+
+        if (
+            provider is
+                MapStudioOpenAiCompatibleProvider
+                    compatible)
+        {
+            await compatible
+                .TestConnectionAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            return;
+        }
+
+        throw new NotSupportedException(
+            "aiAdapterConnectionProbeUnsupported:" +
+            profile.AdapterId);
     }
 
     public static bool IsImplemented(
@@ -59,7 +90,8 @@ public static class NativeAiProviderFactory
 
     private static IMapStudioAiProvider
         CreateOpenAiCompatible(
-            MapStudioAiConnectionProfile profile)
+            MapStudioAiConnectionProfile profile,
+            string? secretOverride)
     {
         if (
             string.IsNullOrWhiteSpace(
@@ -72,9 +104,12 @@ public static class NativeAiProviderFactory
         }
 
         var secret =
-            NativeAiCredentialStore
-                .TryGetSecret(
-                    profile.Id);
+            string.IsNullOrWhiteSpace(
+                secretOverride)
+                ? NativeAiCredentialStore
+                    .TryGetSecret(
+                        profile.Id)
+                : secretOverride;
 
         return new MapStudioOpenAiCompatibleProvider(
             HttpClient,
