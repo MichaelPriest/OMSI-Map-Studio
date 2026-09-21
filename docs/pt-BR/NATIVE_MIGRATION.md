@@ -682,3 +682,37 @@ O menu **IA → Configurar provedores...** armazena apenas:
 Nenhuma chave/token é gravada nesse JSON. Credenciais deverão ser resolvidas por adapter, Credential Manager ou backend.
 
 O Building Studio mostra o perfil ativo configurado, mas não apresenta uma análise automática como disponível até existir um adapter real conectado.
+
+
+## Gerenciamento nativo de tiles
+
+O host WinUI agora cria tiles OMSI reais sem depender do editor antigo.
+
+### Criar tile
+
+**Mapa → Criar tile...**:
+
+- usa os arquivos do template oficial `template/NewMap` da instalação selecionada;
+- copia o `.map`, `.terrain`, lightmap e demais arquivos auxiliares associados ao tile do template;
+- não copia `.prt`, pois é um arquivo temporário regenerável do editor;
+- acrescenta uma nova seção `[map]` ao fim de `global.cfg`, preservando a ordem e os índices existentes;
+- recusa coordenada ou caminho já existente;
+- cria backup do `global.cfg`;
+- remove os arquivos recém-criados e restaura o global em caso de falha;
+- foca o tile novo após recarregar o mapa.
+
+### Excluir tile
+
+A exclusão inicial é propositalmente conservadora.
+
+**Mapa → Excluir tile ativo...** só grava quando todas estas condições são satisfeitas:
+
+- o mapa possui mais de um tile;
+- o tile está vazio de objetos e splines;
+- o tile corresponde à última entrada válida `[map]`;
+- nenhum `[entrypoints]` referencia o índice daquele tile;
+- a lista de seções `[map]` é canônica e pode ser preservada sem reindexação.
+
+Todos os arquivos `tile_X_Y.map*` são copiados para `.mapstudio-backups` antes da remoção. Se qualquer etapa falhar, `global.cfg` e arquivos do tile são restaurados.
+
+A remoção arbitrária de tiles intermediários continua bloqueada até existir um reindexador validado para referências dependentes de índice em `global.cfg` e dados operacionais.
