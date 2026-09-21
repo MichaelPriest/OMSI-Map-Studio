@@ -13,7 +13,13 @@ public sealed record MapStudioBuildingSpec(
     int FloorCount,
     MapStudioBuildingRoofType RoofType,
     double RoofHeightMeters = 0,
-    string? FacadeImagePath = null)
+    string? FacadeImagePath = null,
+    int WindowsPerFloor = 0,
+    int DoorCount = 0,
+    double WindowWidthMeters = 1.2,
+    double WindowHeightMeters = 1.2,
+    double DoorWidthMeters = 1.0,
+    double DoorHeightMeters = 2.1)
 {
     public MapStudioBuildingSpec Normalize()
     {
@@ -70,6 +76,68 @@ public sealed record MapStudioBuildingSpec(
                     100)
                 : 0;
 
+        var windowsPerFloor =
+            Math.Clamp(
+                WindowsPerFloor,
+                0,
+                64);
+
+        var doorCount =
+            Math.Clamp(
+                DoorCount,
+                0,
+                16);
+
+        var floorHeight =
+            wallHeight /
+            floors;
+
+        var windowWidth =
+            Math.Clamp(
+                double.IsFinite(
+                    WindowWidthMeters)
+                    ? WindowWidthMeters
+                    : 1.2,
+                0.30,
+                Math.Max(
+                    0.30,
+                    width));
+
+        var windowHeight =
+            Math.Clamp(
+                double.IsFinite(
+                    WindowHeightMeters)
+                    ? WindowHeightMeters
+                    : 1.2,
+                0.30,
+                Math.Max(
+                    0.30,
+                    floorHeight *
+                    0.85));
+
+        var doorWidth =
+            Math.Clamp(
+                double.IsFinite(
+                    DoorWidthMeters)
+                    ? DoorWidthMeters
+                    : 1.0,
+                0.50,
+                Math.Max(
+                    0.50,
+                    width));
+
+        var doorHeight =
+            Math.Clamp(
+                double.IsFinite(
+                    DoorHeightMeters)
+                    ? DoorHeightMeters
+                    : 2.1,
+                1.20,
+                Math.Max(
+                    1.20,
+                    floorHeight *
+                    0.95));
+
         return this with
         {
             Name = name,
@@ -79,7 +147,19 @@ public sealed record MapStudioBuildingSpec(
                 wallHeight,
             FloorCount = floors,
             RoofHeightMeters =
-                roofHeight
+                roofHeight,
+            WindowsPerFloor =
+                windowsPerFloor,
+            DoorCount =
+                doorCount,
+            WindowWidthMeters =
+                windowWidth,
+            WindowHeightMeters =
+                windowHeight,
+            DoorWidthMeters =
+                doorWidth,
+            DoorHeightMeters =
+                doorHeight
         };
     }
 }
