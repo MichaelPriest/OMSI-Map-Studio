@@ -5950,6 +5950,304 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnReplaceDependencyClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ))
+        {
+            StatusText.Text =
+                "Substituição: selecione primeiro um objeto ou spline no mapa.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de substituir dependências.";
+
+            return;
+        }
+
+        var expectedKind =
+            selection.Kind ==
+                PickingKind.Object
+                ? OmsiAssetKind
+                    .SceneryObject
+                : OmsiAssetKind
+                    .Spline;
+
+        var suggestedPath =
+            AssetLibraryListView
+                .SelectedItem is
+                OmsiAssetIndexEntry
+                    selectedAsset &&
+            selectedAsset.Kind ==
+                expectedKind
+                ? selectedAsset
+                    .RelativePath
+                : selection.AssetPath;
+
+        var pathBox =
+            new TextBox
+            {
+                Text =
+                    suggestedPath,
+                Header =
+                    selection.Kind ==
+                        PickingKind.Object
+                        ? "Novo caminho SCO"
+                        : "Novo caminho SLI",
+                PlaceholderText =
+                    selection.Kind ==
+                        PickingKind.Object
+                        ? @"SceneryobjectsPastaobjeto.sco"
+                        : @"SplinesPastaua.sli",
+                MinWidth = 430
+            };
+
+        var content =
+            new StackPanel
+            {
+                Spacing = 8
+            };
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Atual: {selection.AssetPath}",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "A substituição será feita em todos os tiles do mapa e um backup transacional será criado.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        content.Children.Add(
+            pathBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    selection.Kind ==
+                        PickingKind.Object
+                        ? "Substituir objeto no mapa inteiro"
+                        : "Substituir spline no mapa inteiro",
+                Content =
+                    content,
+                PrimaryButtonText =
+                    "Substituir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var result =
+            await dialog
+                .ShowAsync();
+
+        if (
+            result !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        var newPath =
+            pathBox.Text
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                newPath))
+        {
+            StatusText.Text =
+                "Substituição cancelada: informe o novo caminho do asset.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Substituindo {selection.AssetPath} por {newPath}...";
+
+            var replacement =
+                await _session
+                    .ReplaceMapAssetPathAsync(
+                        selection.Kind,
+                        selection.AssetPath,
+                        newPath);
+
+            await ApplyMapSnapshotAsync(
+                replacement.Snapshot,
+                focusActiveTile: false);
+
+            StatusText.Text =
+                replacement.Replacements ==
+                    0
+                    ? "Nenhuma referência correspondente foi encontrada no mapa."
+                    : $"{replacement.Replacements} referência(s) substituída(s) em {replacement.FilesSaved} arquivo(s). Backup: {replacement.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao substituir dependência: {exception.Message}";
+        }
+    }
+
+    private async void OnRestoreBackupClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Restauração: abra um mapa primeiro.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de restaurar um backup.";
+
+            return;
+        }
+
+        var backupDirectory =
+            await PickFolderAsync();
+
+        if (string.IsNullOrWhiteSpace(
+                backupDirectory))
+        {
+            return;
+        }
+
+        var backupsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    snapshot.Map
+                        .DirectoryPath,
+                    ".mapstudio-backups"));
+
+        var selected =
+            Path.GetFullPath(
+                backupDirectory);
+
+        var relative =
+            Path.GetRelativePath(
+                backupsRoot,
+                selected);
+
+        var valid =
+            !Path.IsPathRooted(
+                relative) &&
+            !relative.Equals(
+                "..",
+                StringComparison.Ordinal) &&
+            !relative.StartsWith(
+                ".." +
+                Path.DirectorySeparatorChar,
+                StringComparison.Ordinal) &&
+            !relative.StartsWith(
+                ".." +
+                Path.AltDirectorySeparatorChar,
+                StringComparison.Ordinal);
+
+        if (!valid)
+        {
+            StatusText.Text =
+                "A pasta escolhida não pertence a .mapstudio-backups do mapa aberto.";
+
+            return;
+        }
+
+        var confirm =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Restaurar backup?",
+                Content =
+                    $"Origem: {selected}\n\nOs arquivos atuais serão preservados em um novo backup de rollback antes da restauração.",
+                PrimaryButtonText =
+                    "Restaurar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Close
+            };
+
+        var answer =
+            await confirm
+                .ShowAsync();
+
+        if (
+            answer !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Restaurando backup com rollback de segurança...";
+
+            var restored =
+                await _session
+                    .RestoreMapStudioBackupAsync(
+                        selected);
+
+            await ApplyMapSnapshotAsync(
+                restored.Snapshot,
+                focusActiveTile: false);
+
+            StatusText.Text =
+                $"{restored.FilesRestored} arquivo(s) restaurado(s). Rollback salvo em: {restored.RollbackBackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao restaurar backup: {exception.Message}";
+        }
+    }
+
     private async Task<string?>
         PickFolderAsync()
     {

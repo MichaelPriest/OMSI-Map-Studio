@@ -168,7 +168,14 @@
                         Text="Modo desempenho 3×3"
                         Click="OnPerformanceMapModeClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ferramentas" />
+                <MenuBarItem Title="Ferramentas">
+                    <MenuFlyoutItem
+                        Text="Substituir dependência SCO/SLI..."
+                        Click="OnReplaceDependencyClick" />
+                    <MenuFlyoutItem
+                        Text="Restaurar backup do Map Studio..."
+                        Click="OnRestoreBackupClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Ajuda" />
             </MenuBar>
 
