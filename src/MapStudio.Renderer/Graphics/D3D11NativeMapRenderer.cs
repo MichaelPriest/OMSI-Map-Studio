@@ -93,6 +93,10 @@ public sealed class D3D11NativeMapRenderer :
     private ID3D11Buffer? _splineGuideBuffer;
     private int _splineGuideVertexCount;
 
+    private ID3D11Buffer? _trafficPathBuffer;
+    private int _trafficPathVertexCount;
+    private bool _trafficPathsVisible;
+
     private bool _gridVisible =
         true;
 
@@ -647,6 +651,30 @@ public sealed class D3D11NativeMapRenderer :
     public bool SplineProfilesVisible =>
         _splineProfilesVisible;
 
+    public bool TrafficPathsVisible =>
+        _trafficPathsVisible;
+
+    public int TrafficPathLineCount =>
+        _trafficPathVertexCount / 2;
+
+    public bool SetTrafficPathsVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            _trafficPathsVisible ==
+                visible)
+        {
+            return false;
+        }
+
+        _trafficPathsVisible =
+            visible;
+
+        return true;
+    }
+
     public bool SetSplineProfilesVisible(
         bool visible)
     {
@@ -845,7 +873,9 @@ public sealed class D3D11NativeMapRenderer :
         NativeTerrainTriangleGeometry?
             terrainGeometry = null,
         NativeSplineTriangleGeometry?
-            splineGeometry = null)
+            splineGeometry = null,
+        NativeTrafficPathGeometry?
+            trafficPathGeometry = null)
     {
         ThrowIfDisposed();
 
@@ -860,6 +890,10 @@ public sealed class D3D11NativeMapRenderer :
         _splineGuideBuffer?.Dispose();
         _splineGuideBuffer = null;
         _splineGuideVertexCount = 0;
+
+        _trafficPathBuffer?.Dispose();
+        _trafficPathBuffer = null;
+        _trafficPathVertexCount = 0;
 
         _terrainTriangleBuffer
             ?.Dispose();
@@ -1019,6 +1053,25 @@ public sealed class D3D11NativeMapRenderer :
                 geometry
                     .SplineGuideVertices
                     .Length;
+        }
+
+        if (
+            trafficPathGeometry is not null &&
+            trafficPathGeometry
+                .Vertices.Length > 0)
+        {
+            _trafficPathBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        trafficPathGeometry
+                            .Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _trafficPathVertexCount =
+                trafficPathGeometry
+                    .Vertices.Length;
         }
 
         if (
@@ -1194,6 +1247,14 @@ public sealed class D3D11NativeMapRenderer :
                         context,
                         _splineGuideBuffer,
                         _splineGuideVertexCount);
+                }
+
+                if (_trafficPathsVisible)
+                {
+                    DrawLineGeometry(
+                        context,
+                        _trafficPathBuffer,
+                        _trafficPathVertexCount);
                 }
 
                 if (
@@ -2724,6 +2785,7 @@ public sealed class D3D11NativeMapRenderer :
         _terrainTriangleBuffer
             ?.Dispose();
 
+        _trafficPathBuffer?.Dispose();
         _splineGuideBuffer?.Dispose();
         _objectGuideBuffer?.Dispose();
         _vertexBuffer?.Dispose();

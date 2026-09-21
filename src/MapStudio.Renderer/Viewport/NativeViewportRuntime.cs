@@ -179,6 +179,30 @@ public sealed class NativeViewportRuntime : IDisposable
     public bool GridVisible =>
         MapRenderer.GridVisible;
 
+    public bool TrafficPathsVisible =>
+        MapRenderer.TrafficPathsVisible;
+
+    public int TrafficPathLineCount =>
+        MapRenderer.TrafficPathLineCount;
+
+    public bool SetTrafficPathsVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        var changed =
+            MapRenderer
+                .SetTrafficPathsVisible(
+                    visible);
+
+        if (changed)
+        {
+            RenderInitialFrame();
+        }
+
+        return changed;
+    }
+
     public bool SeedSplinePlacementStart(
         Vector3 start,
         int previousSplineId =
@@ -2507,12 +2531,19 @@ public sealed class NativeViewportRuntime : IDisposable
                         throw new InvalidOperationException(
                             "OMSI root is not loaded."));
 
+        var trafficPathGeometry =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    Scene,
+                    _splineAssets);
+
         MapRenderer.Upload(
             Scene,
             objectGeometry,
             proxyGeometry,
             terrainGeometry,
-            splineGeometry);
+            splineGeometry,
+            trafficPathGeometry);
 
         LoadedObjectMeshCount =
             objectGeometry

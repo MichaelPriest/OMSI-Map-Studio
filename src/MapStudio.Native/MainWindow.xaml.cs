@@ -2132,14 +2132,29 @@ public sealed partial class MainWindow : Window
             "Água: atalho de assets ativo. O editor nativo dedicado de planos de água entra na próxima etapa.");
     }
 
-    private async void OnToolTrafficClick(
+    private void OnToolTrafficClick(
         object sender,
         RoutedEventArgs e)
     {
-        await ActivateLibraryToolAsync(
-            1,
-            null,
-            "Tráfego: biblioteca de objetos aberta para sinais e elementos viários; editor de paths/tráfego ainda será migrado.");
+        OnSceneExplorerModeClick(
+            sender,
+            e);
+
+        SetSelectionModeFromShortcut(
+            2);
+
+        var visible =
+            !Viewport
+                .TrafficPathsVisible;
+
+        Viewport
+            .SetTrafficPathsVisible(
+                visible);
+
+        StatusText.Text =
+            visible
+                ? $"Tráfego: overlay real de [path] ativo · {Viewport.TrafficPathLineCount} linhas. Edição de regras entra na próxima etapa."
+                : "Tráfego: overlay de paths oculto.";
     }
 
     private async void OnToolTransportClick(

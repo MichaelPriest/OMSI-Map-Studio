@@ -612,6 +612,39 @@ public sealed partial class NativeViewport : UserControl
         return changed;
     }
 
+    public bool TrafficPathsVisible =>
+        _runtime?.TrafficPathsVisible ??
+        false;
+
+    public int TrafficPathLineCount =>
+        _runtime?.TrafficPathLineCount ??
+        0;
+
+    public bool SetTrafficPathsVisible(
+        bool visible)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime
+                .SetTrafficPathsVisible(
+                    visible);
+
+        if (changed)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                visible
+                    ? $"Paths OMSI visíveis · {_runtime.TrafficPathLineCount} linhas."
+                    : "Paths OMSI ocultos.");
+        }
+
+        return changed;
+    }
+
     public bool SetGridVisible(
         bool visible)
     {
@@ -715,6 +748,7 @@ public sealed partial class NativeViewport : UserControl
             $"{_runtime.MapRenderer.LoadedTextureCount} texturas O3D · " +
             $"{_runtime.LoadedSplineAssetCount} SLI · " +
             $"{_runtime.LoadedSplineSurfaceCount} superfícies spline · " +
+            $"{_runtime.TrafficPathLineCount} linhas de path · " +
             $"{scene.SelectableCount} IDs de seleção.");
     }
 
