@@ -15314,6 +15314,105 @@ public sealed partial class MainWindow : Window
                     "Nome, adapter, endpoint e modelo ficam no JSON local. Token/API key é salvo separadamente no Windows Credential Manager e nunca é gravado no mapa ou nos assets."
             };
 
+
+        var testConnectionButton =
+            new Button
+            {
+                Content =
+                    "Testar conexão",
+                HorizontalAlignment =
+                    HorizontalAlignment
+                        .Stretch
+            };
+
+        testConnectionButton.Click +=
+            async (_, _) =>
+            {
+                if (
+                    !EnsureCommercialFeature(
+                        MapStudioEntitlementKeys
+                            .AiAssistance,
+                        "Teste de IA"))
+                {
+                    return;
+                }
+
+                try
+                {
+                    testConnectionButton
+                        .IsEnabled =
+                        false;
+
+                    info.Severity =
+                        InfoBarSeverity
+                            .Informational;
+
+                    info.Title =
+                        "Testando conexão...";
+
+                    info.Message =
+                        "Nenhuma configuração será salva durante o teste.";
+
+                    var selectedProfile =
+                        (profileCombo.SelectedItem as
+                            AiProfileOption)
+                        ?.Profile;
+
+                    var temporaryProfile =
+                        new MapStudioAiConnectionProfile(
+                            selectedProfile
+                                ?.Id ??
+                            "connection-test",
+                            string.IsNullOrWhiteSpace(
+                                nameBox.Text)
+                                ? "Teste de conexão"
+                                : nameBox.Text,
+                            adapterBox.Text,
+                            endpointBox.Text,
+                            modelBox.Text,
+                            localCheckBox
+                                .IsChecked ==
+                            true)
+                        .Normalize();
+
+                    await NativeAiProviderFactory
+                        .TestConnectionAsync(
+                            temporaryProfile,
+                            string.IsNullOrWhiteSpace(
+                                tokenBox.Password)
+                                ? null
+                                : tokenBox.Password);
+
+                    info.Severity =
+                        InfoBarSeverity
+                            .Success;
+
+                    info.Title =
+                        "Conexão OK";
+
+                    info.Message =
+                        $"O adapter {temporaryProfile.AdapterId} respondeu usando o modelo {temporaryProfile.Model}.";
+                }
+                catch (Exception exception)
+                {
+                    info.Severity =
+                        InfoBarSeverity
+                            .Error;
+
+                    info.Title =
+                        "Falha na conexão";
+
+                    info.Message =
+                        exception.Message;
+                }
+                finally
+                {
+                    testConnectionButton
+                        .IsEnabled =
+                        true;
+                }
+            };
+
         var panel =
             new StackPanel
             {
@@ -15343,6 +15442,9 @@ public sealed partial class MainWindow : Window
 
         panel.Children.Add(
             tokenBox);
+
+        panel.Children.Add(
+            testConnectionButton);
 
         panel.Children.Add(
             credentialStatusText);
