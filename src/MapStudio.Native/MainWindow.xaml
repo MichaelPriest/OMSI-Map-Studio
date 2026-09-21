@@ -865,6 +865,26 @@
 
                                     <CheckBox x:Name="PlacementRandomRotationCheckBox"
                                               Content="Rotação variada" />
+
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox x:Name="PlacementAlignRoadCheckBox"
+                                                  Grid.Column="0"
+                                                  Content="Encaixar / alinhar à rua"
+                                                  ToolTipService.ToolTip="Move o ghost para o eixo da spline mais próxima e alinha a rotação à tangente da via." />
+                                        <NumberBox x:Name="PlacementRoadSnapDistanceBox"
+                                                   Grid.Column="1"
+                                                   Header="Alcance rua (m)"
+                                                   Minimum="1"
+                                                   Maximum="50"
+                                                   Value="8"
+                                                   SmallChange="1"
+                                                   SpinButtonPlacementMode="Compact" />
+                                    </Grid>
+
                                     <CheckBox x:Name="PlacementTangentCheckBox"
                                               Content="Círculo tangencial"
                                               IsChecked="True" />

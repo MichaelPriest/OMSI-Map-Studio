@@ -602,6 +602,14 @@ public sealed partial class NativeViewport : UserControl
                 null);
     }
 
+    public void SetSceneryRoadSnapOptions(
+        bool enabled,
+        double distance) =>
+        _runtime
+            ?.SetSceneryRoadSnapOptions(
+                enabled,
+                distance);
+
     public async Task<bool>
         BeginSceneryPlacementAsync(
             string omsiRoot,
@@ -653,6 +661,11 @@ public sealed partial class NativeViewport : UserControl
         {
             return false;
         }
+
+        _runtime
+            .SetSceneryRoadSnapOptions(
+                enabled: false,
+                distance: 8.0);
 
         var started =
             await _runtime

@@ -1353,6 +1353,8 @@ public sealed partial class MainWindow : Window
                         8;
                     PlacementRandomRotationCheckBox.IsChecked =
                         true;
+                    PlacementAlignRoadCheckBox.IsChecked =
+                        true;
                     break;
 
                 case 2:
@@ -1362,6 +1364,8 @@ public sealed partial class MainWindow : Window
                         25;
                     PlacementRandomRotationCheckBox.IsChecked =
                         false;
+                    PlacementAlignRoadCheckBox.IsChecked =
+                        true;
                     break;
 
                 case 3:
@@ -1373,6 +1377,8 @@ public sealed partial class MainWindow : Window
                         7;
                     PlacementRandomRotationCheckBox.IsChecked =
                         false;
+                    PlacementAlignRoadCheckBox.IsChecked =
+                        true;
                     break;
 
                 case 4:
@@ -1384,6 +1390,8 @@ public sealed partial class MainWindow : Window
                         30;
                     PlacementRandomRotationCheckBox.IsChecked =
                         true;
+                    PlacementAlignRoadCheckBox.IsChecked =
+                        false;
                     break;
 
                 case 5:
@@ -1393,6 +1401,8 @@ public sealed partial class MainWindow : Window
                         5;
                     PlacementColumnsBox.Value =
                         8;
+                    PlacementAlignRoadCheckBox.IsChecked =
+                        false;
                     PlacementSpacingXBox.Value =
                         3;
                     PlacementSpacingZBox.Value =
@@ -1862,6 +1872,23 @@ public sealed partial class MainWindow : Window
 
         try
         {
+            if (
+                asset.Kind ==
+                    OmsiAssetKind.SceneryObject)
+            {
+                Viewport
+                    .SetSceneryRoadSnapOptions(
+                        PlacementAlignRoadCheckBox
+                            .IsChecked ==
+                        true,
+                        double.IsFinite(
+                            PlacementRoadSnapDistanceBox
+                                .Value)
+                            ? PlacementRoadSnapDistanceBox
+                                .Value
+                            : 8.0);
+            }
+
             if (
                 asset.Kind ==
                     OmsiAssetKind.Spline)

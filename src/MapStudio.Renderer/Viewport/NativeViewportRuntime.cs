@@ -70,6 +70,9 @@ public sealed class NativeViewportRuntime : IDisposable
     private double _placementRotation;
     private double _placementPitch;
     private double _placementBank;
+    private bool _sceneryRoadSnapEnabled;
+    private double _sceneryRoadSnapDistance =
+        8.0;
     private NativeAssetPreviewGeometry?
         _placementGeometry;
     private Vector3? _placementWorldPoint;
@@ -1578,6 +1581,23 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public void SetSceneryRoadSnapOptions(
+        bool enabled,
+        double distance)
+    {
+        _sceneryRoadSnapEnabled =
+            enabled;
+
+        _sceneryRoadSnapDistance =
+            double.IsFinite(
+                distance)
+                ? Math.Clamp(
+                    distance,
+                    1.0,
+                    50.0)
+                : 8.0;
+    }
+
     public Task<bool>
         BeginSceneryPlacementAsync(
             string omsiRoot,
@@ -1781,6 +1801,33 @@ public sealed class NativeViewportRuntime : IDisposable
                     point.Z /
                     MoveSnapMeters) *
                 MoveSnapMeters;
+
+            height =
+                (float)
+                    NativeTerrainSampler
+                        .GetHeightAtWorldPoint(
+                            Scene,
+                            point.X,
+                            point.Z);
+        }
+
+        if (
+            _sceneryRoadSnapEnabled &&
+            NativeSceneryRoadSnapper
+                .FindNearest(
+                    Scene,
+                    point,
+                    _sceneryRoadSnapDistance) is
+                { } roadSnap)
+        {
+            point.X =
+                roadSnap.WorldPoint.X;
+
+            point.Z =
+                roadSnap.WorldPoint.Z;
+
+            _placementRotation =
+                roadSnap.Rotation;
 
             height =
                 (float)
