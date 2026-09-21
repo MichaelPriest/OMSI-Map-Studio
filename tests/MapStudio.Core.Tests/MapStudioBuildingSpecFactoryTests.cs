@@ -55,6 +55,51 @@ public sealed class MapStudioBuildingSpecFactoryTests
     }
 
     [Fact]
+    public void FactoryPreservesFacadeOpeningEstimates()
+    {
+        var spec =
+            MapStudioBuildingSpecFactory
+                .FromAnalysis(
+                    "Facade",
+                    new MapStudioBuildingReferenceAnalysis(
+                        14,
+                        9,
+                        10,
+                        3,
+                        MapStudioBuildingRoofType
+                            .Flat,
+                        null,
+                        new MapStudioBuildingOpeningEstimate(
+                            4,
+                            2,
+                            1.4,
+                            1.1),
+                        null,
+                        null,
+                        null,
+                        null,
+                        0.9));
+
+        Assert.Equal(
+            4,
+            spec.WindowsPerFloor);
+
+        Assert.Equal(
+            2,
+            spec.DoorCount);
+
+        Assert.Equal(
+            1.4,
+            spec.WindowWidthMeters,
+            3);
+
+        Assert.Equal(
+            1.1,
+            spec.WindowHeightMeters,
+            3);
+    }
+
+    [Fact]
     public void FactoryBuildsSafeFallbacksFromPartialAnalysis()
     {
         var spec =
