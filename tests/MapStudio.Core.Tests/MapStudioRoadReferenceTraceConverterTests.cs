@@ -83,8 +83,8 @@ public sealed class MapStudioRoadReferenceTraceConverterTests
                     new MapStudioRoadReferencePolyline(
                         "avenue",
                         [
-                            new(100, 50),
-                            new(300, 50)
+                            new(100, 100),
+                            new(300, 100)
                         ])
                 ],
                 null,
