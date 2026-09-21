@@ -260,6 +260,9 @@
                     <MenuFlyoutItem
                         Text="Restaurar backup do Map Studio..."
                         Click="OnRestoreBackupClick" />
+                    <MenuFlyoutItem
+                        Text="Inspecionar attachments..."
+                        Click="OnInspectAttachmentsClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Construction Sets..."
