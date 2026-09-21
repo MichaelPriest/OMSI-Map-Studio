@@ -1,3 +1,4 @@
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.IO;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
@@ -617,6 +618,33 @@ public sealed class OmsiNativeSession
             elevations.Max(),
             georeference.Latitude,
             georeference.Longitude);
+    }
+
+    public Task<NativeTerrainElevationApplyResult>
+        ApplyLocalTerrainElevationGridAsync(
+            int tileX,
+            int tileY,
+            MapStudioElevationGrid grid,
+            double verticalOffset,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            grid);
+
+        return ApplyTerrainElevationGridAsync(
+            new NativeGoogleElevationGrid(
+                tileX,
+                tileY,
+                grid.Rows,
+                grid.Columns,
+                grid.Elevations,
+                grid.MinimumElevation,
+                grid.MaximumElevation,
+                0,
+                0),
+            verticalOffset,
+            cancellationToken);
     }
 
     public async Task<NativeTerrainElevationApplyResult>
