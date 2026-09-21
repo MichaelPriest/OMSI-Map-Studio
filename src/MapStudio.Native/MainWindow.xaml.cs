@@ -357,6 +357,9 @@ public sealed partial class MainWindow : Window
         _trafficPreviewTimer.Tick +=
             OnTrafficPreviewTimerTick;
 
+        TrafficViewComboBox.SelectionChanged +=
+            OnTrafficViewSelectionChanged;
+
         SelectionFilterComboBox.SelectionChanged +=
             OnSelectionFilterChanged;
 
