@@ -160,6 +160,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 AppendMesh(
                     entity,
                     mesh,
+                    asset.RenderType,
                     terrainOffset,
                     vertices,
                     pickingVertices,
@@ -225,6 +226,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
     private static void AppendMesh(
         NativeObjectEntity entity,
         NativeSceneryMeshAsset mesh,
+        string? renderType,
         double terrainOffset,
         List<NativeMapVertex> output,
         List<NativeMapVertex>
@@ -251,7 +253,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
 
         var surfaceRenderLift =
             string.Equals(
-                asset.RenderType,
+                renderType,
                 "on_surface",
                 StringComparison.OrdinalIgnoreCase)
                 ? 0.015f
