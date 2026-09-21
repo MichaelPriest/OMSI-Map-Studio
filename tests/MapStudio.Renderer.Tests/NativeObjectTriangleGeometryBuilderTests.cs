@@ -263,6 +263,113 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
             });
     }
     [Fact]
+    public void BuildLiftsOnSurfaceObjectVisuallyWithoutChangingPlacement()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var placed =
+            new OmsiPlacedObject(
+                "object",
+                @"Sceneryobjects\Test\crossing.sco",
+                20,
+                X: 10,
+                Y: 10,
+                Z: 0,
+                Rotation: 0,
+                Pitch: 0,
+                Bank: 0,
+                ExtraValues:
+                    Array.Empty<string>());
+
+        var scene =
+            new NativeSceneBuilder()
+                .Build(
+                    [
+                        new NativeSceneTile(
+                            tile,
+                            new OmsiTileContent(
+                                new OmsiTileSummary(
+                                    true,
+                                    1,
+                                    0,
+                                    0),
+                                [placed],
+                                Array.Empty<OmsiPlacedSpline>()))
+                    ],
+                    new PickingRegistry<object>());
+
+        var geometry =
+            new OmsiO3dGeometry(
+                true,
+                null,
+                [
+                    0, 0, 0,
+                    1, 0, 0,
+                    0, 0, 1
+                ],
+                [
+                    0, 1, 0,
+                    0, 1, 0,
+                    0, 1, 0
+                ],
+                [],
+                [0u, 1u, 2u],
+                [0],
+                [
+                    new OmsiO3dMaterial(
+                        1, 1, 1, 1,
+                        0, 0, 0, 0,
+                        0, 0, 0, null)
+                ]);
+
+        var asset =
+            new NativeSceneryAsset(
+                placed.SceneryObjectPath,
+                @"C:\OMSI\Sceneryobjects\Test\crossing.sco",
+                [
+                    new NativeSceneryMeshAsset(
+                        "crossing.o3d",
+                        @"C:\OMSI\Sceneryobjects\Test\model\crossing.o3d",
+                        OmsiSceneryMeshTransform.Identity,
+                        null,
+                        geometry,
+                        [null])
+                ],
+                null,
+                false,
+                null,
+                null,
+                "on_surface");
+
+        var result =
+            new NativeObjectTriangleGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<string, NativeSceneryAsset>(
+                        StringComparer.OrdinalIgnoreCase)
+                    {
+                        [placed.SceneryObjectPath] =
+                            asset
+                    });
+
+        Assert.All(
+            result.Vertices,
+            vertex =>
+                Assert.InRange(
+                    vertex.Position.Y,
+                    0.014f,
+                    0.016f));
+
+        Assert.Equal(
+            0,
+            placed.Z);
+    }
+
+    [Fact]
     public void BuildCreatesNativeTreeCrossBillboard()
     {
         var tile =

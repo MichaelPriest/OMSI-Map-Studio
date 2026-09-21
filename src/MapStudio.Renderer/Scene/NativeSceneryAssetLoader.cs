@@ -431,7 +431,8 @@ public sealed class NativeSceneryAssetLoader
             metadata.Tree is null
                 ? "noRenderableMeshes"
                 : null,
-            treeTexturePath);
+            treeTexturePath,
+            metadata.RenderType);
     }
 
     private static int ResolveMaterialIndex(

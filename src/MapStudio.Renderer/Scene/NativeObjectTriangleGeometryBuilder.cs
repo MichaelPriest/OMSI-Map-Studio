@@ -249,6 +249,14 @@ public sealed class NativeObjectTriangleGeometryBuilder
             CreateMeshTransform(
                 mesh.Transform);
 
+        var surfaceRenderLift =
+            string.Equals(
+                asset.RenderType,
+                "on_surface",
+                StringComparison.OrdinalIgnoreCase)
+                ? 0.015f
+                : 0.0f;
+
         var objectTransform =
             Matrix4x4.CreateFromYawPitchRoll(
                 DegreesToRadians(
@@ -264,7 +272,8 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 entity.WorldX,
                 entity.WorldY +
                     (float)
-                        terrainOffset,
+                        terrainOffset +
+                    surfaceRenderLift,
                 entity.WorldZ);
 
         var worldTransform =

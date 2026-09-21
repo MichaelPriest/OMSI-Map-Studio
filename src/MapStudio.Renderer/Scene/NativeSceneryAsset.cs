@@ -49,7 +49,8 @@ public sealed record NativeSceneryAsset(
     OmsiSceneryTreeDefinition? Tree,
     bool UsesAbsoluteHeight,
     string? ErrorCode,
-    string? TreeTexturePath = null)
+    string? TreeTexturePath = null,
+    string? RenderType = null)
 {
     public bool IsLoaded =>
         ErrorCode is null &&
