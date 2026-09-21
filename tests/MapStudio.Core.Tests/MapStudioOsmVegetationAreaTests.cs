@@ -114,6 +114,131 @@ public sealed class MapStudioOsmVegetationAreaTests
     }
 
     [Fact]
+    public void ImporterAssemblesVegetationMultipolygonRelation()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="0.0000" lon="0.0000" />
+              <node id="2" lat="0.0000" lon="0.0010" />
+              <node id="3" lat="0.0010" lon="0.0010" />
+              <node id="4" lat="0.0010" lon="0.0000" />
+
+              <way id="10">
+                <nd ref="1" />
+                <nd ref="2" />
+                <nd ref="3" />
+              </way>
+
+              <way id="20">
+                <nd ref="3" />
+                <nd ref="4" />
+                <nd ref="1" />
+              </way>
+
+              <relation id="30">
+                <member type="way" ref="10" role="outer" />
+                <member type="way" ref="20" role="outer" />
+                <tag k="type" v="multipolygon" />
+                <tag k="landuse" v="forest" />
+                <tag k="species" v="Pinus" />
+                <tag k="name" v="Bosque relation" />
+              </relation>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmVegetationAreaImporter()
+                .Parse(
+                    xml);
+
+        var area =
+            Assert.Single(
+                result.Areas);
+
+        Assert.Equal(
+            "osm-vegetation-area-relation-30",
+            area.Id);
+
+        Assert.Equal(
+            MapStudioOsmVegetationAreaKind.Forest,
+            area.Kind);
+
+        Assert.Equal(
+            "Pinus",
+            area.Species);
+
+        Assert.Equal(
+            "Bosque relation",
+            area.Name);
+
+        Assert.Equal(
+            4,
+            area.Points.Count);
+
+        Assert.Equal(
+            0,
+            result.IgnoredRelationCount);
+
+        Assert.Equal(
+            0,
+            result.MissingNodeReferenceCount);
+    }
+
+    [Fact]
+    public void ImporterRejectsVegetationMultipolygonWithInnerRing()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="0.0000" lon="0.0000" />
+              <node id="2" lat="0.0000" lon="0.0020" />
+              <node id="3" lat="0.0020" lon="0.0020" />
+              <node id="4" lat="0.0020" lon="0.0000" />
+              <node id="5" lat="0.0005" lon="0.0005" />
+              <node id="6" lat="0.0005" lon="0.0010" />
+              <node id="7" lat="0.0010" lon="0.0010" />
+              <node id="8" lat="0.0010" lon="0.0005" />
+
+              <way id="10">
+                <nd ref="1" />
+                <nd ref="2" />
+                <nd ref="3" />
+                <nd ref="4" />
+                <nd ref="1" />
+              </way>
+
+              <way id="20">
+                <nd ref="5" />
+                <nd ref="6" />
+                <nd ref="7" />
+                <nd ref="8" />
+                <nd ref="5" />
+              </way>
+
+              <relation id="30">
+                <member type="way" ref="10" role="outer" />
+                <member type="way" ref="20" role="inner" />
+                <tag k="type" v="multipolygon" />
+                <tag k="natural" v="wood" />
+              </relation>
+            </osm>
+            """;
+
+        var result =
+            new MapStudioOsmVegetationAreaImporter()
+                .Parse(
+                    xml);
+
+        Assert.Empty(
+            result.Areas);
+
+        Assert.Equal(
+            1,
+            result.IgnoredRelationCount);
+    }
+
+    [Fact]
     public void ScattererIsDeterministicAndStaysInsideProjectedBounds()
     {
         var anchor =
