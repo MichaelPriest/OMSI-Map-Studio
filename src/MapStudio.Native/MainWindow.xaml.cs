@@ -16812,7 +16812,7 @@ public sealed partial class MainWindow : Window
                 {
                     Text =
                         $"Encontrados: {imported.Buildings.Count} footprint(s) · projetados: {projected.Count} · dentro do catálogo do mapa: {candidates.Length}.\n" +
-                        $"Ways ignorados: {imported.IgnoredWayCount} · node refs ausentes: {imported.MissingNodeReferenceCount} · relations multipolygon ainda não geradas: {imported.IgnoredRelationCount}.",
+                        $"Ways ignorados: {imported.IgnoredWayCount} · node refs ausentes: {imported.MissingNodeReferenceCount} · relations multipolygon recusadas/sem suporte seguro: {imported.IgnoredRelationCount}.",
                     TextWrapping =
                         TextWrapping.Wrap
                 };
