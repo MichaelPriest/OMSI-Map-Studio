@@ -176,6 +176,64 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
 
+    public IReadOnlyList<
+        NativeTrafficLightProgramInfo>
+        GetTrafficLightPrograms()
+    {
+        if (Scene is null)
+        {
+            return Array.Empty<
+                NativeTrafficLightProgramInfo>();
+        }
+
+        var result =
+            new List<
+                NativeTrafficLightProgramInfo>();
+
+        foreach (
+            var entity in
+                Scene.Objects)
+        {
+            if (
+                !_sceneryAssets.TryGetValue(
+                    entity.Object
+                        .SceneryObjectPath,
+                    out var asset) ||
+                asset
+                    .TrafficLightControllers
+                    .Count == 0)
+            {
+                continue;
+            }
+
+            foreach (
+                var controller in
+                    asset
+                        .TrafficLightControllers)
+            {
+                foreach (
+                    var program in
+                        controller.Programs)
+                {
+                    result.Add(
+                        new NativeTrafficLightProgramInfo(
+                            entity.Object
+                                .ObjectId,
+                            entity.Tile.X,
+                            entity.Tile.Y,
+                            entity.Object
+                                .SceneryObjectPath,
+                            program.Name,
+                            controller
+                                .CycleDuration,
+                            program.Phases));
+                }
+            }
+        }
+
+        return result;
+    }
+
     public bool GridVisible =>
         MapRenderer.GridVisible;
 

@@ -454,6 +454,67 @@
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
                         </Grid>
+
+                        <Grid x:Name="TrafficControlPanel"
+                              Visibility="Collapsed"
+                              RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0"
+                                       Text="Traffic Paths + Semáforos"
+                                       FontSize="15"
+                                       FontWeight="SemiBold" />
+
+                            <TextBlock x:Name="TrafficStatusText"
+                                       Grid.Row="1"
+                                       Text="Nenhum controlador carregado."
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="#9FB5C5" />
+
+                            <ListView x:Name="TrafficProgramListView"
+                                      Grid.Row="2"
+                                      Height="150"
+                                      SelectionMode="Single"
+                                      DisplayMemberPath="DisplayText"
+                                      SelectionChanged="OnTrafficProgramSelectionChanged" />
+
+                            <StackPanel Grid.Row="3"
+                                        Spacing="4">
+                                <Slider x:Name="TrafficPreviewTimeSlider"
+                                        Minimum="0"
+                                        Maximum="60"
+                                        StepFrequency="0.25"
+                                        ValueChanged="OnTrafficPreviewTimeChanged" />
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="8">
+                                    <Button x:Name="TrafficPlayButton"
+                                            Content="▶ Play"
+                                            Click="OnTrafficPlayClick" />
+                                    <TextBlock x:Name="TrafficPhaseText"
+                                               VerticalAlignment="Center"
+                                               Text="Fase: —" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <ListView x:Name="TrafficPhaseListView"
+                                      Grid.Row="4"
+                                      SelectionMode="None" />
+
+                            <TextBlock x:Name="TrafficDetailText"
+                                       Grid.Row="5"
+                                       Text="Selecione um programa."
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="#B7CEDC" />
+                        </Grid>
                     </Grid>
                 </Grid>
             </Border>

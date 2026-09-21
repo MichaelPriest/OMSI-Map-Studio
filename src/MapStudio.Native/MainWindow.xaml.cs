@@ -52,6 +52,17 @@ public sealed partial class MainWindow : Window
 
     private bool _libraryMode;
     private bool _transportMode;
+    private bool _trafficMode;
+
+    private readonly DispatcherTimer
+        _trafficPreviewTimer =
+            new();
+
+    private IReadOnlyList<
+        NativeTrafficLightProgramInfo>
+        _trafficPrograms =
+            Array.Empty<
+                NativeTrafficLightProgramInfo>();
 
     private OmsiTimetableCatalog?
         _timetableCatalog;
@@ -79,6 +90,13 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _trafficPreviewTimer.Interval =
+            TimeSpan.FromMilliseconds(
+                250);
+
+        _trafficPreviewTimer.Tick +=
+            OnTrafficPreviewTimerTick;
 
         SelectionFilterComboBox.SelectionChanged +=
             OnSelectionFilterChanged;
@@ -322,7 +340,11 @@ public sealed partial class MainWindow : Window
         object sender,
         TextChangedEventArgs e)
     {
-        if (_transportMode)
+        if (_trafficMode)
+        {
+            RefreshTrafficFilter();
+        }
+        else if (_transportMode)
         {
             RefreshTransportFilter();
         }
@@ -368,6 +390,14 @@ public sealed partial class MainWindow : Window
         _transportMode =
             false;
 
+        _trafficMode =
+            false;
+
+        _trafficPreviewTimer.Stop();
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
+
         ExplorerListView.Visibility =
             Visibility.Visible;
 
@@ -392,6 +422,14 @@ public sealed partial class MainWindow : Window
 
         _transportMode =
             false;
+
+        _trafficMode =
+            false;
+
+        _trafficPreviewTimer.Stop();
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
 
         ExplorerListView.Visibility =
             Visibility.Collapsed;
@@ -2169,25 +2207,243 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        OnSceneExplorerModeClick(
-            sender,
-            e);
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Tráfego: abra um mapa OMSI primeiro.";
+
+            return;
+        }
+
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.RestoreSceneView();
 
         SetSelectionModeFromShortcut(
             2);
 
-        var visible =
-            !Viewport
-                .TrafficPathsVisible;
-
         Viewport
             .SetTrafficPathsVisible(
-                visible);
+                true);
+
+        _libraryMode =
+            false;
+
+        _transportMode =
+            false;
+
+        _trafficMode =
+            true;
+
+        ExplorerListView.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
+
+        TrafficControlPanel.Visibility =
+            Visibility.Visible;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar programas de semáforo...";
+
+        _trafficPrograms =
+            Viewport
+                .GetTrafficLightPrograms();
+
+        RefreshTrafficFilter();
+
+        TrafficStatusText.Text =
+            $"{Viewport.TrafficPathLineCount} linhas de path · " +
+            $"{_trafficPrograms.Count} programa(s) de semáforo.";
+
+        TrafficProgramListView.SelectedIndex =
+            _trafficPrograms.Count > 0
+                ? 0
+                : -1;
 
         StatusText.Text =
-            visible
-                ? $"Tráfego: overlay real de [path] ativo · {Viewport.TrafficPathLineCount} linhas. Edição de regras entra na próxima etapa."
-                : "Tráfego: overlay de paths oculto.";
+            "Tráfego: paths reais e preview de semáforos ativos.";
+    }
+
+    private void RefreshTrafficFilter()
+    {
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        IEnumerable<
+            NativeTrafficLightProgramInfo>
+            items =
+                _trafficPrograms;
+
+        if (
+            !string.IsNullOrWhiteSpace(
+                query))
+        {
+            items =
+                items.Where(
+                    item =>
+                        item.DisplayText
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        item.AssetPath
+                            .Contains(
+                                query,
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+        }
+
+        TrafficProgramListView.ItemsSource =
+            items.ToArray();
+    }
+
+    private void OnTrafficProgramSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            TrafficProgramListView
+                .SelectedItem is not
+                NativeTrafficLightProgramInfo
+                    program)
+        {
+            TrafficPhaseListView.ItemsSource =
+                null;
+
+            TrafficPhaseText.Text =
+                "Fase: —";
+
+            TrafficDetailText.Text =
+                "Selecione um programa.";
+
+            return;
+        }
+
+        var duration =
+            Math.Max(
+                1.0,
+                program
+                    .EffectiveCycleDuration);
+
+        TrafficPreviewTimeSlider.Maximum =
+            duration;
+
+        if (
+            TrafficPreviewTimeSlider.Value >
+                duration)
+        {
+            TrafficPreviewTimeSlider.Value =
+                0;
+        }
+
+        TrafficPhaseListView.ItemsSource =
+            program.Phases
+                .Select(
+                    (phase, index) =>
+                        $"F{index + 1} · " +
+                        $"{NativeTrafficLightProgramInfo.DescribeSignalCode(phase.SignalCode)} " +
+                        $"[{phase.SignalCode}] · {phase.Duration:F2}s")
+                .ToArray();
+
+        TrafficDetailText.Text =
+            $"Objeto #{program.ObjectId} · tile {program.TileX},{program.TileY}\n" +
+            $"{program.AssetPath}\n" +
+            $"Programa: {program.ProgramName} · ciclo {duration:F2}s";
+
+        UpdateTrafficPhasePreview();
+    }
+
+    private void OnTrafficPreviewTimeChanged(
+        object sender,
+        RangeBaseValueChangedEventArgs e)
+    {
+        if (_trafficMode)
+        {
+            UpdateTrafficPhasePreview();
+        }
+    }
+
+    private void UpdateTrafficPhasePreview()
+    {
+        if (
+            TrafficProgramListView
+                .SelectedItem is not
+                NativeTrafficLightProgramInfo
+                    program)
+        {
+            return;
+        }
+
+        var phase =
+            program.GetPhaseAt(
+                TrafficPreviewTimeSlider
+                    .Value);
+
+        TrafficPhaseText.Text =
+            phase is null
+                ? "Fase: —"
+                : $"t={TrafficPreviewTimeSlider.Value:F2}s · " +
+                  $"{NativeTrafficLightProgramInfo.DescribeSignalCode(phase.SignalCode)} [{phase.SignalCode}]";
+    }
+
+    private void OnTrafficPlayClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_trafficPreviewTimer.IsEnabled)
+        {
+            _trafficPreviewTimer.Stop();
+
+            TrafficPlayButton.Content =
+                "▶ Play";
+
+            return;
+        }
+
+        _trafficPreviewTimer.Start();
+
+        TrafficPlayButton.Content =
+            "⏸ Pausar";
+    }
+
+    private void OnTrafficPreviewTimerTick(
+        object? sender,
+        object e)
+    {
+        if (
+            !_trafficMode ||
+            TrafficProgramListView
+                .SelectedItem is not
+                NativeTrafficLightProgramInfo
+                    program)
+        {
+            _trafficPreviewTimer.Stop();
+            return;
+        }
+
+        var duration =
+            Math.Max(
+                1.0,
+                program
+                    .EffectiveCycleDuration);
+
+        var next =
+            TrafficPreviewTimeSlider.Value +
+            0.25;
+
+        TrafficPreviewTimeSlider.Value =
+            next >= duration
+                ? 0
+                : next;
     }
 
     private async void OnToolTransportClick(
@@ -2215,6 +2471,14 @@ public sealed partial class MainWindow : Window
 
         _transportMode =
             true;
+
+        _trafficMode =
+            false;
+
+        _trafficPreviewTimer.Stop();
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
 
         ExplorerListView.Visibility =
             Visibility.Collapsed;
@@ -2404,6 +2668,14 @@ public sealed partial class MainWindow : Window
 
         _transportMode =
             false;
+
+        _trafficMode =
+            false;
+
+        _trafficPreviewTimer.Stop();
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
 
         TransportPanel.Visibility =
             Visibility.Collapsed;

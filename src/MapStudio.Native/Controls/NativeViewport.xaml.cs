@@ -67,6 +67,14 @@ public sealed partial class NativeViewport : UserControl
         TerrainPointSelected;
 
     public IReadOnlyList<
+        NativeTrafficLightProgramInfo>
+        GetTrafficLightPrograms() =>
+        _runtime
+            ?.GetTrafficLightPrograms() ??
+        Array.Empty<
+            NativeTrafficLightProgramInfo>();
+
+    public IReadOnlyList<
         NativeExplorerItem>
         GetExplorerItems() =>
         _runtime
