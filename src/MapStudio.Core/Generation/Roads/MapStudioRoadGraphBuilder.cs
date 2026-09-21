@@ -266,9 +266,7 @@ public sealed class MapStudioRoadGraphBuilder
 
                         var isJunction =
                             nodeDegree >=
-                                3 ||
-                            node.TraceIds.Count >=
-                                2;
+                                3;
 
                         return new MapStudioRoadGraphNode(
                             node.Id,
