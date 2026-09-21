@@ -230,6 +230,27 @@
                     <MenuFlyoutItem
                         Text="Instalar/atualizar Road Kit..."
                         Click="OnInstallRoadKitClick" />
+                    <MenuFlyoutSubItem
+                        Text="Gerador procedural de vias">
+                        <MenuFlyoutItem
+                            Text="Iniciar nova linha..."
+                            Click="OnStartProceduralRoadTraceClick" />
+                        <MenuFlyoutItem
+                            x:Name="FinishProceduralRoadTraceMenuItem"
+                            Text="Finalizar linha atual"
+                            IsEnabled="False"
+                            Click="OnFinishProceduralRoadTraceClick" />
+                        <MenuFlyoutItem
+                            x:Name="AnalyzeProceduralRoadGraphMenuItem"
+                            Text="Analisar grafo/interseções..."
+                            IsEnabled="False"
+                            Click="OnAnalyzeProceduralRoadGraphClick" />
+                        <MenuFlyoutItem
+                            x:Name="ClearProceduralRoadGraphMenuItem"
+                            Text="Limpar traçado"
+                            IsEnabled="False"
+                            Click="OnClearProceduralRoadGraphClick" />
+                    </MenuFlyoutSubItem>
                 </MenuBarItem>
                 <MenuBarItem Title="Conta">
                     <MenuFlyoutItem

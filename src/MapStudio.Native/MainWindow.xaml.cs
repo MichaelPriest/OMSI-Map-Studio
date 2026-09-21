@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Globalization;
 using MapStudio.Core.AI;
 using MapStudio.Core.Commercial;
+using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
@@ -65,8 +66,28 @@ public sealed partial class MainWindow : Window
         OmsiMapDescriptor Map,
         string DisplayText);
 
+    private sealed record RoadProfileOption(
+        string Label,
+        string ProfileId,
+        int LaneCount,
+        bool OneWay,
+        double WidthMeters);
+
     private readonly OmsiNativeSession _session =
         new();
+
+    private readonly List<MapStudioRoadTrace>
+        _proceduralRoadTraces =
+            [];
+
+    private readonly List<MapStudioRoadPoint>
+        _activeRoadTracePoints =
+            [];
+
+    private bool _proceduralRoadTraceMode;
+    private int _proceduralRoadTraceSequence;
+    private RoadProfileOption?
+        _activeRoadProfile;
 
     private MapStudioCommercialState
         _commercialState =
@@ -323,6 +344,36 @@ public sealed partial class MainWindow : Window
         Viewport.TerrainPointSelected +=
             point =>
             {
+                if (_proceduralRoadTraceMode)
+                {
+                    var roadPoint =
+                        new MapStudioRoadPoint(
+                            point.WorldPoint.X,
+                            point.WorldPoint.Z);
+
+                    if (
+                        _activeRoadTracePoints.Count ==
+                            0 ||
+                        _activeRoadTracePoints[^1]
+                            .DistanceTo(
+                                roadPoint) >=
+                            0.20)
+                    {
+                        _activeRoadTracePoints.Add(
+                            roadPoint);
+                    }
+
+                    FinishProceduralRoadTraceMenuItem
+                        .IsEnabled =
+                        _activeRoadTracePoints.Count >=
+                        2;
+
+                    StatusText.Text =
+                        $"Traçado procedural: {_activeRoadTracePoints.Count} ponto(s) na linha atual · clique novos pontos ou finalize a linha.";
+
+                    return;
+                }
+
                 _terrainEditPoint =
                     point;
 
@@ -12978,6 +13029,366 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Falha ao substituir dependência: {exception.Message}";
         }
+    }
+
+    private static IReadOnlyList<RoadProfileOption>
+        GetProceduralRoadProfiles() =>
+        [
+            new(
+                "Mão única 3,5 m",
+                @"Splines\MapStudio_RoadKit\ms_road_oneway_3_5m.sli",
+                1,
+                true,
+                3.5),
+            new(
+                "Rua 2 faixas · 7 m",
+                @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
+                2,
+                false,
+                7.0),
+            new(
+                "Rua 2 faixas + calçada",
+                @"Splines\MapStudio_RoadKit\ms_road_2lane_7m_sidewalk.sli",
+                2,
+                false,
+                11.0),
+            new(
+                "Avenida 4 faixas + calçada",
+                @"Splines\MapStudio_RoadKit\ms_avenue_4lane_14m_sidewalk.sli",
+                4,
+                false,
+                18.0),
+            new(
+                "Avenida dividida 4 faixas",
+                @"Splines\MapStudio_RoadKit\ms_avenue_divided_4lane.sli",
+                4,
+                false,
+                20.0),
+            new(
+                "Via de pedestres · 3 m",
+                @"Splines\MapStudio_RoadKit\ms_pedestrian_3m.sli",
+                0,
+                false,
+                3.0)
+        ];
+
+    private async void OnStartProceduralRoadTraceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Gerador procedural de vias"))
+        {
+            return;
+        }
+
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Gerador de vias: abra um mapa primeiro.";
+
+            return;
+        }
+
+        if (_proceduralRoadTraceMode)
+        {
+            StatusText.Text =
+                "Finalize ou limpe a linha atual antes de iniciar outra.";
+
+            return;
+        }
+
+        var profiles =
+            GetProceduralRoadProfiles();
+
+        var combo =
+            new ComboBox
+            {
+                Header =
+                    "Perfil da via",
+                ItemsSource =
+                    profiles,
+                DisplayMemberPath =
+                    nameof(
+                        RoadProfileOption
+                            .Label),
+                SelectedIndex =
+                    1,
+                HorizontalAlignment =
+                    HorizontalAlignment
+                        .Stretch,
+                MinWidth =
+                    420
+            };
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Nova linha de via",
+                Content =
+                    combo,
+                PrimaryButtonText =
+                    "Começar traçado",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary ||
+            combo.SelectedItem is not
+                RoadProfileOption profile)
+        {
+            return;
+        }
+
+        _activeRoadProfile =
+            profile;
+
+        _activeRoadTracePoints
+            .Clear();
+
+        _proceduralRoadTraceMode =
+            true;
+
+        FinishProceduralRoadTraceMenuItem
+            .IsEnabled =
+            false;
+
+        ClearProceduralRoadGraphMenuItem
+            .IsEnabled =
+            true;
+
+        Viewport
+            .BeginTerrainSelectionMode();
+
+        StatusText.Text =
+            $"Traçado procedural ativo · {profile.Label}. Clique pontos sucessivos sobre o terreno; use Ferramentas → Gerador procedural de vias → Finalizar linha atual.";
+    }
+
+    private void OnFinishProceduralRoadTraceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !_proceduralRoadTraceMode ||
+            _activeRoadProfile is null ||
+            _activeRoadTracePoints.Count <
+                2)
+        {
+            StatusText.Text =
+                "Traçado procedural: defina pelo menos dois pontos.";
+
+            return;
+        }
+
+        var trace =
+            new MapStudioRoadTrace(
+                $"trace-{++_proceduralRoadTraceSequence}",
+                _activeRoadTracePoints
+                    .ToArray(),
+                _activeRoadProfile
+                    .ProfileId,
+                _activeRoadProfile
+                    .LaneCount,
+                _activeRoadProfile
+                    .OneWay,
+                _activeRoadProfile
+                    .WidthMeters);
+
+        _proceduralRoadTraces.Add(
+            trace);
+
+        _activeRoadTracePoints
+            .Clear();
+
+        _proceduralRoadTraceMode =
+            false;
+
+        _activeRoadProfile =
+            null;
+
+        FinishProceduralRoadTraceMenuItem
+            .IsEnabled =
+            false;
+
+        AnalyzeProceduralRoadGraphMenuItem
+            .IsEnabled =
+            _proceduralRoadTraces.Count >
+            0;
+
+        ClearProceduralRoadGraphMenuItem
+            .IsEnabled =
+            true;
+
+        Viewport
+            .CancelTerrainPointPick();
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    _proceduralRoadTraces);
+
+        StatusText.Text =
+            $"Linha registrada. Grafo: {_proceduralRoadTraces.Count} linha(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s).";
+    }
+
+    private async void OnAnalyzeProceduralRoadGraphClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _proceduralRoadTraces.Count ==
+            0)
+        {
+            StatusText.Text =
+                "Gerador de vias: nenhum traçado registrado.";
+
+            return;
+        }
+
+        MapStudioRoadGraph graph;
+
+        try
+        {
+            graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        _proceduralRoadTraces);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao analisar traçado: {exception.Message}";
+
+            return;
+        }
+
+        var details =
+            graph.Junctions.Count ==
+                0
+                ? "Nenhum cruzamento foi detectado."
+                : string.Join(
+                    Environment.NewLine,
+                    graph.Junctions
+                        .Take(20)
+                        .Select(
+                            junction =>
+                                $"Nó {junction.NodeId} · grau {junction.Degree} · " +
+                                $"X {junction.Position.X:F2} / Z {junction.Position.Z:F2} · " +
+                                string.Join(
+                                    ", ",
+                                    junction.TraceIds)));
+
+        var content =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    540
+            };
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{_proceduralRoadTraces.Count} linha(s) · {graph.Nodes.Count} nós · " +
+                    $"{graph.Segments.Count} segmentos · {graph.Junctions.Count} cruzamento(s)",
+                FontSize =
+                    16,
+                FontWeight =
+                    Microsoft.UI.Text
+                        .FontWeights
+                        .SemiBold
+            });
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    details,
+                TextWrapping =
+                    TextWrapping
+                        .Wrap
+            });
+
+        content.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Preview lógico",
+                Message =
+                    "Nesta etapa nada é gravado no mapa. O próximo passo conecta estes segmentos ao Road Kit/adapter OMSI e adiciona preview 3D antes da gravação em lote."
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Grafo procedural de vias",
+                Content =
+                    content,
+                CloseButtonText =
+                    "Fechar"
+            };
+
+        await dialog
+            .ShowAsync();
+    }
+
+    private void OnClearProceduralRoadGraphClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _proceduralRoadTraceMode =
+            false;
+
+        _activeRoadProfile =
+            null;
+
+        _activeRoadTracePoints
+            .Clear();
+
+        _proceduralRoadTraces
+            .Clear();
+
+        Viewport
+            .CancelTerrainPointPick();
+
+        FinishProceduralRoadTraceMenuItem
+            .IsEnabled =
+            false;
+
+        AnalyzeProceduralRoadGraphMenuItem
+            .IsEnabled =
+            false;
+
+        ClearProceduralRoadGraphMenuItem
+            .IsEnabled =
+            false;
+
+        StatusText.Text =
+            "Traçado procedural limpo.";
     }
 
     private async void OnInstallRoadKitClick(
