@@ -118,6 +118,12 @@ public sealed class MapStudioOsmBuildingImporter
                     longitude);
         }
 
+        var relationAssembly =
+            new MapStudioOsmBuildingRelationAssembler()
+                .Assemble(
+                    root,
+                    nodes);
+
         var buildings =
             new List<
                 MapStudioOsmBuildingFootprint>();
@@ -136,6 +142,25 @@ public sealed class MapStudioOsmBuildingImporter
                             item.Name.LocalName ==
                             "way"))
         {
+            var wayId =
+                TryLong(
+                    way.Attribute(
+                        "id")?.Value,
+                    out var parsedWayId)
+                    ? parsedWayId
+                    : (long?)null;
+
+            if (
+                wayId is
+                    { } numericWayId &&
+                relationAssembly
+                    .ConsumedWayIds
+                    .Contains(
+                        numericWayId))
+            {
+                continue;
+            }
+
             var tags =
                 ReadTags(
                     way);
@@ -249,22 +274,20 @@ public sealed class MapStudioOsmBuildingImporter
                         "addr:housenumber")));
         }
 
-        var ignoredRelations =
-            root.Elements()
-                .Count(
-                    item =>
-                        item.Name.LocalName ==
-                            "relation" &&
-                        ReadTags(
-                            item)
-                            .ContainsKey(
-                                "building"));
+        buildings.AddRange(
+            relationAssembly
+                .Buildings);
+
+        missingNodes +=
+            relationAssembly
+                .MissingNodeReferenceCount;
 
         return new MapStudioOsmBuildingImportResult(
             buildings,
             ignoredWays,
             missingNodes,
-            ignoredRelations);
+            relationAssembly
+                .IgnoredRelationCount);
     }
 
     private static Dictionary<string, string?>
