@@ -488,6 +488,13 @@
                                             Click="OnCollectionAssetClick" />
                                 </Grid>
 
+                                <Button x:Name="RepairDependencyButton"
+                                        Content="Usar como substituição"
+                                        Visibility="Collapsed"
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        Click="OnRepairDependencyClick" />
+
                                 <StackPanel x:Name="ObjectPlacementOptionsPanel"
                                             Visibility="Collapsed"
                                             Spacing="6">

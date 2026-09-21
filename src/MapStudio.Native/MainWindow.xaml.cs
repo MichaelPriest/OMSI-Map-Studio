@@ -42,7 +42,9 @@ public sealed partial class MainWindow : Window
         string Severity,
         string Code,
         string DisplayText,
-        string Detail);
+        string Detail,
+        OmsiAssetKind? AssetKind = null,
+        string? AssetPath = null);
 
     private sealed record LibraryGroupOption(
         OmsiAssetLibraryGroup Group,
@@ -106,6 +108,12 @@ public sealed partial class MainWindow : Window
 
     private NativeJunctionSuggestion?
         _junctionPlacementTarget;
+
+    private OmsiAssetKind?
+        _dependencyRepairKind;
+
+    private string?
+        _dependencyRepairOldPath;
 
     private IReadOnlyList<
         ValidationExplorerItem>
@@ -484,6 +492,15 @@ public sealed partial class MainWindow : Window
         _junctionPlacementTarget =
             null;
 
+        _dependencyRepairKind =
+            null;
+
+        _dependencyRepairOldPath =
+            null;
+
+        RepairDependencyButton.Visibility =
+            Visibility.Collapsed;
+
         _trafficPreviewTimer.Stop();
 
         TrafficControlPanel.Visibility =
@@ -525,6 +542,15 @@ public sealed partial class MainWindow : Window
 
         _junctionPlacementTarget =
             null;
+
+        _dependencyRepairKind =
+            null;
+
+        _dependencyRepairOldPath =
+            null;
+
+        RepairDependencyButton.Visibility =
+            Visibility.Collapsed;
 
         _trafficPreviewTimer.Stop();
 
@@ -850,6 +876,13 @@ public sealed partial class MainWindow : Window
         var hasSelection =
             selected is not null;
 
+        RepairDependencyButton.IsEnabled =
+            selected is not null &&
+            _dependencyRepairKind is
+                { } repairKind &&
+            selected.Kind ==
+                repairKind;
+
         FavoriteAssetButton.IsEnabled =
             hasSelection;
 
@@ -1080,6 +1113,113 @@ public sealed partial class MainWindow : Window
                 : fallback,
             minimum,
             maximum);
+
+    private async void OnRepairDependencyClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _dependencyRepairKind is not
+                { } repairKind ||
+            string.IsNullOrWhiteSpace(
+                _dependencyRepairOldPath) ||
+            AssetLibraryListView.SelectedItem is not
+                OmsiAssetIndexEntry replacement ||
+            replacement.Kind !=
+                repairKind)
+        {
+            StatusText.Text =
+                "Selecione um asset do mesmo tipo da dependência ausente.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes do reparo.";
+
+            return;
+        }
+
+        var oldPath =
+            _dependencyRepairOldPath;
+
+        var kind =
+            repairKind ==
+                OmsiAssetKind.SceneryObject
+                ? PickingKind.Object
+                : PickingKind.Spline;
+
+        var confirm =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Reparar dependência ausente?",
+                Content =
+                    $"Ausente: {oldPath}\n\nSubstituir por: {replacement.RelativePath}\n\nA alteração será aplicada em todos os tiles do mapa e terá backup transacional.",
+                PrimaryButtonText =
+                    "Substituir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await confirm.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            RepairDependencyButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Reparando dependência {oldPath}...";
+
+            var result =
+                await _session
+                    .ReplaceMapAssetPathAsync(
+                        kind,
+                        oldPath,
+                        replacement.RelativePath);
+
+            _dependencyRepairKind =
+                null;
+
+            _dependencyRepairOldPath =
+                null;
+
+            RepairDependencyButton.Visibility =
+                Visibility.Collapsed;
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile: false);
+
+            StatusText.Text =
+                result.Replacements > 0
+                    ? $"Dependência reparada: {result.Replacements} referência(s) em {result.FilesSaved} arquivo(s). Backup: {result.BackupDirectory}"
+                    : "Nenhuma referência foi substituída.";
+        }
+        catch (Exception exception)
+        {
+            RepairDependencyButton.IsEnabled =
+                true;
+
+            StatusText.Text =
+                $"Falha ao reparar dependência: {exception.Message}";
+        }
+    }
 
     private void OnFavoriteAssetClick(
         object sender,
@@ -2155,6 +2295,55 @@ public sealed partial class MainWindow : Window
                 RefreshLibrarySubcategoryOptions();
                 RefreshLibraryFilter();
             }
+
+            return;
+        }
+
+        if (
+            ExplorerListView.SelectedItem is
+                ValidationExplorerItem validation &&
+            validation.AssetKind is
+                { } repairKind &&
+            !string.IsNullOrWhiteSpace(
+                validation.AssetPath))
+        {
+            _dependencyRepairKind =
+                repairKind;
+
+            _dependencyRepairOldPath =
+                validation.AssetPath;
+
+            _junctionPlacementTarget =
+                null;
+
+            await ActivateLibraryToolAsync(
+                repairKind ==
+                    OmsiAssetKind.SceneryObject
+                    ? 1
+                    : 2,
+                null,
+                $"Reparo: escolha um {(repairKind == OmsiAssetKind.SceneryObject ? "SCO" : "SLI")} para substituir {validation.AssetPath}.");
+
+            LibraryViewComboBox.SelectedIndex =
+                0;
+
+            LibraryGroupComboBox.SelectedIndex =
+                0;
+
+            RefreshLibrarySubcategoryOptions();
+            RefreshLibraryFilter();
+
+            RepairDependencyButton.Visibility =
+                Visibility.Visible;
+
+            RepairDependencyButton.Content =
+                $"Substituir {Path.GetFileName(validation.AssetPath)} pelo asset selecionado";
+
+            RepairDependencyButton.IsEnabled =
+                AssetLibraryListView.SelectedItem is
+                    OmsiAssetIndexEntry selected &&
+                selected.Kind ==
+                    repairKind;
 
             return;
         }
@@ -4919,7 +5108,9 @@ public sealed partial class MainWindow : Window
                             "Erro",
                             "missing-sco",
                             $"ERRO · SCO ausente · #{item.ObjectId}",
-                            $"{item.SceneryObjectPath}\nTile {tile.Reference.X},{tile.Reference.Y}"));
+                            $"{item.SceneryObjectPath}\nTile {tile.Reference.X},{tile.Reference.Y}",
+                            OmsiAssetKind.SceneryObject,
+                            item.SceneryObjectPath));
                 }
             }
 
@@ -4945,7 +5136,9 @@ public sealed partial class MainWindow : Window
                             "Erro",
                             "missing-sli",
                             $"ERRO · SLI ausente · #{item.SplineId}",
-                            $"{item.SplinePath}\nTile {tile.Reference.X},{tile.Reference.Y}"));
+                            $"{item.SplinePath}\nTile {tile.Reference.X},{tile.Reference.Y}",
+                            OmsiAssetKind.Spline,
+                            item.SplinePath));
                 }
             }
         }
@@ -5283,6 +5476,13 @@ public sealed partial class MainWindow : Window
             string.Empty;
 
         await LoadAssetLibraryAsync();
+
+        RepairDependencyButton.Visibility =
+            _dependencyRepairKind is not null &&
+            !string.IsNullOrWhiteSpace(
+                _dependencyRepairOldPath)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
 
         StatusText.Text =
             status;
