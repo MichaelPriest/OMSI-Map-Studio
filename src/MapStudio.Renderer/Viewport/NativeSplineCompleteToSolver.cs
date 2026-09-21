@@ -265,7 +265,7 @@ public static class NativeSplineCompleteToSolver
                 return false;
             }
 
-            var gradient =
+            var straightGradient =
                 (
                     end.Center.Y -
                     start.Center.Y
@@ -282,8 +282,8 @@ public static class NativeSplineCompleteToSolver
                             startHeading)),
                     horizontalDistance,
                     0,
-                    gradient,
-                    gradient,
+                    straightGradient,
+                    straightGradient,
                     false);
 
             return true;
@@ -462,7 +462,7 @@ public static class NativeSplineCompleteToSolver
             return false;
         }
 
-        var gradient =
+        var curveGradient =
             (
                 end.Center.Y -
                 start.Center.Y
@@ -479,8 +479,8 @@ public static class NativeSplineCompleteToSolver
                         startHeading)),
                 length,
                 radius,
-                gradient,
-                gradient,
+                curveGradient,
+                curveGradient,
                 true);
 
         return true;
