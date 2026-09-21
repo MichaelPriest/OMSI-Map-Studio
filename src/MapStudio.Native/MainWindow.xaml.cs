@@ -2366,6 +2366,56 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private static bool MatchesTechnicalFilter(
+        OmsiAssetIndexEntry item,
+        string filter,
+        NativeAssetTechnicalSnapshot state)
+    {
+        var path =
+            item.RelativePath;
+
+        return item.Kind switch
+        {
+            OmsiAssetKind.SceneryObject =>
+                filter switch
+                {
+                    "Usados" =>
+                        state.UsedScenery
+                            .Contains(path),
+                    "Árvores" =>
+                        state.TreeScenery
+                            .Contains(path),
+                    "Carregados" =>
+                        state.LoadedScenery
+                            .Contains(path),
+                    "Problemas" =>
+                        state.ProblemScenery
+                            .Contains(path),
+                    _ =>
+                        true
+                },
+
+            OmsiAssetKind.Spline =>
+                filter switch
+                {
+                    "Usados" =>
+                        state.UsedSplines
+                            .Contains(path),
+                    "Carregados" =>
+                        state.LoadedSplines
+                            .Contains(path),
+                    "Problemas" =>
+                        state.ProblemSplines
+                            .Contains(path),
+                    _ =>
+                        true
+                },
+
+            _ =>
+                true
+        };
+    }
+
     private void SynchronizeExplorerSelection(
         NativeSelectionInfo info)
     {
