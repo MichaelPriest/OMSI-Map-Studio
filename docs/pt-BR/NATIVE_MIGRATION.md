@@ -626,16 +626,18 @@ Entradas atualmente suportadas:
 
 1. traçado manual por cliques no terreno;
 2. GeoJSON georreferenciado (`LineString` e `MultiLineString`);
-3. futuramente, saída estruturada de IA e outros provedores vetoriais.
+3. OSM XML georreferenciado;
+4. saída estruturada de IA por provedor conectado.
 
 O grafo:
 
 - detecta cruzamentos X e T;
 - divide as vias nos nós de interseção;
 - preserva metadados de faixa, largura e mão;
-- cria preview D3D11 sobre a altura real do terreno;
-- planeja auto-link apenas em nós lineares seguros;
-- não tenta representar cruzamentos de grau 3/4 apenas com `Previous/Next`.
+- suaviza polylines antes de montar o grafo persistente, preservando os pontos de controle;
+- cria preview D3D11 sobre a altura real do terreno usando a mesma geometria que será persistida;
+- planeja auto-link em nós lineares seguros de grau 2, inclusive quando a continuidade veio de traçados separados;
+- não atravessa nós de grau 3/4 com `Previous/Next`; esses nós seguem para junctions próprios.
 
 ### Road Kit e junctions próprios
 
@@ -669,6 +671,12 @@ A importação lê, quando disponíveis:
 
 Os dados são classificados para perfis do Road Kit, entram primeiro no preview e só são persistidos quando o usuário escolhe **Gerar vias**.
 
+### Edifícios OSM e multipolygons
+
+A importação de edificações lê footprints `way` e relações `type=multipolygon` com `building=*`. Ways externos que formam um anel contínuo são montados em um único footprint, preservando metadados como `building:levels`, `height`, `roof:shape`, `roof:height`, nome e endereço.
+
+Relações com anéis `inner` ainda são recusadas de forma conservadora, porque preencher um pátio/furo como volume sólido produziria geometria incorreta. Relações malformadas ou com referências ausentes também não são persistidas.
+
 ### Perfis de IA
 
 O menu **IA → Configurar provedores...** armazena apenas:
@@ -679,9 +687,9 @@ O menu **IA → Configurar provedores...** armazena apenas:
 - modelo;
 - indicador local/offline.
 
-Nenhuma chave/token é gravada nesse JSON. Credenciais deverão ser resolvidas por adapter, Credential Manager ou backend.
+Nenhuma chave/token é gravada nesse JSON. No host Windows, credenciais locais são armazenadas separadamente no Windows Credential Manager; um backend comercial futuro poderá resolver credenciais próprias sem colocar secret key no desktop.
 
-O Building Studio mostra o perfil ativo configurado, mas não apresenta uma análise automática como disponível até existir um adapter real conectado.
+Os adapters atualmente implementados no host são `openai-compatible`, `ollama` e `lmstudio`. Outros provedores permanecem extensíveis pelo contrato neutro e não devem ser anunciados como suportados antes de existir adapter real.
 
 
 ## Gerenciamento nativo de tiles
@@ -732,8 +740,8 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - visibilidade individual das camadas `groundtex`;
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
-- geração procedural de vias com grafo único, junctions próprios e rollback;
-- importação georreferenciada de GeoJSON e **OSM XML**;
+- geração procedural de vias com suavização, grafo único, auto-link de continuidade em grau 2, junctions próprios e rollback;
+- importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios e multipolygons externos seguros;
 - análise de vias da referência Google por IA conectável;
 - Building Studio com O3D/SCO próprios, telhados plano/duas águas/hip/shed e aberturas de fachada;
 - configuração e teste de provedores de IA compatíveis com o contrato neutro do Core;
