@@ -1900,6 +1900,87 @@ public sealed class NativeViewportRuntime : IDisposable
             PendingTransformEdit;
     }
 
+    public NativePendingTransformEdit?
+        LevelSelectedSplineToTerrain(
+            out double startHeight,
+            out double endHeight)
+    {
+        ThrowIfDisposed();
+
+        startHeight = 0.0;
+        endHeight = 0.0;
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline)
+        {
+            return null;
+        }
+
+        var entity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.PickingId ==
+                        _selectedPickingId);
+
+        if (
+            entity is null ||
+            entity.Spline.Length <=
+                0.001)
+        {
+            return null;
+        }
+
+        var endFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    entity.Spline.Length);
+
+        if (
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    Scene,
+                    entity.WorldX,
+                    entity.WorldZ,
+                    out startHeight) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    Scene,
+                    endFrame.Center.X,
+                    endFrame.Center.Z,
+                    out endHeight))
+        {
+            return null;
+        }
+
+        var gradient =
+            (
+                endHeight -
+                startHeight
+            ) /
+            entity.Spline.Length *
+            100.0;
+
+        var info =
+            GetSelectionInfo();
+
+        if (info is null)
+        {
+            return null;
+        }
+
+        return ApplySelectionInfo(
+            info with
+            {
+                Z = startHeight,
+                GradientStart = gradient,
+                GradientEnd = gradient
+            });
+    }
+
     public IReadOnlyList<
         NativeExplorerItem>
         GetExplorerItems()

@@ -333,6 +333,12 @@ public sealed partial class MainWindow : Window
                     info?.Kind ==
                     PickingKind.Spline;
 
+        LevelSplineToTerrainButton.IsEnabled =
+            selection.Kind ==
+                PickingKind.Spline &&
+            selection.Length.GetValueOrDefault() >
+                0.001;
+
                 if (info is null)
                 {
                     InspectorTypeText.Text =
@@ -2476,6 +2482,9 @@ public sealed partial class MainWindow : Window
         SaveSplineLinksButton.IsEnabled =
             false;
 
+        LevelSplineToTerrainButton.IsEnabled =
+            false;
+
         SelectionText.Text =
             "Sem seleção";
 
@@ -3428,6 +3437,34 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao pintar textura do terreno: {exception.Message}";
+        }
+    }
+
+    private void OnLevelSelectedSplineToTerrainClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo is null ||
+            _selectionInfo.Kind !=
+                PickingKind.Spline)
+        {
+            return;
+        }
+
+        if (
+            Viewport
+                .LevelSelectedSplineToTerrain(
+                    out var startHeight,
+                    out var endHeight))
+        {
+            StatusText.Text =
+                $"Rua/spline nivelada ao terreno: {startHeight:F2} → {endHeight:F2} m. Salve as alterações para persistir.";
+        }
+        else
+        {
+            StatusText.Text =
+                "Não foi possível nivelar: o início ou o fim da spline está fora do terreno carregado.";
         }
     }
 

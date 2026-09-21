@@ -1365,6 +1365,12 @@
                                            SmallChange="1" />
                             </Grid>
 
+                            <Button x:Name="LevelSplineToTerrainButton"
+                                    Content="Nivelar spline pela altura do terreno"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False"
+                                    Click="OnLevelSelectedSplineToTerrainClick" />
+
                             <Button x:Name="SaveSplineLinksButton"
                                     Content="Salvar vínculos"
                                     HorizontalAlignment="Stretch"

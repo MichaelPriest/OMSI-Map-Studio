@@ -27,9 +27,24 @@ public static class NativeTerrainSampler
     public static double GetHeightAtWorldPoint(
         NativeSceneSnapshot scene,
         double worldX,
-        double worldZ)
+        double worldZ) =>
+        TryGetHeightAtWorldPoint(
+            scene,
+            worldX,
+            worldZ,
+            out var height)
+            ? height
+            : 0.0;
+
+    public static bool TryGetHeightAtWorldPoint(
+        NativeSceneSnapshot scene,
+        double worldX,
+        double worldZ,
+        out double height)
     {
         ArgumentNullException.ThrowIfNull(scene);
+
+        height = 0.0;
 
         var tileX =
             (int)Math.Floor(
@@ -50,17 +65,43 @@ public static class NativeTerrainSampler
                 continue;
             }
 
-            return GetHeightAtLocalPoint(
-                tile,
-                worldX -
-                tileX *
-                300.0,
-                worldZ -
-                tileY *
-                300.0);
+            var terrain =
+                tile.Content.Terrain;
+
+            if (
+                terrain is null ||
+                terrain.CellCount <= 0)
+            {
+                return false;
+            }
+
+            var sampleCount =
+                terrain.CellCount + 1;
+
+            if (
+                terrain.Heights.Count !=
+                sampleCount *
+                sampleCount)
+            {
+                return false;
+            }
+
+            height =
+                GetHeightAtLocalPoint(
+                    tile,
+                    worldX -
+                    tileX *
+                    300.0,
+                    worldZ -
+                    tileY *
+                    300.0);
+
+            return
+                double.IsFinite(
+                    height);
         }
 
-        return 0;
+        return false;
     }
 
     public static double GetHeightAtLocalPoint(

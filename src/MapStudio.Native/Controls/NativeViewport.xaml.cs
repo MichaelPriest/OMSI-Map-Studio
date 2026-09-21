@@ -214,6 +214,37 @@ public sealed partial class NativeViewport : UserControl
         return true;
     }
 
+    public bool LevelSelectedSplineToTerrain(
+        out double startHeight,
+        out double endHeight)
+    {
+        startHeight = 0.0;
+        endHeight = 0.0;
+
+        var edit =
+            _runtime
+                ?.LevelSelectedSplineToTerrain(
+                    out startHeight,
+                    out endHeight);
+
+        if (edit is null)
+        {
+            return false;
+        }
+
+        TransformEditPending
+            ?.Invoke(
+                edit);
+
+        PublishSelectionInfo();
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            $"Spline nivelada ao terreno: {startHeight:F2} → {endHeight:F2} m.");
+
+        return true;
+    }
+
     public bool Redo()
     {
         var edit =

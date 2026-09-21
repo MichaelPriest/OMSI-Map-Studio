@@ -30,6 +30,60 @@ public sealed class NativeTerrainTests
     }
 
     [Fact]
+    public void WorldSamplerReportsMissingNeighborTile()
+    {
+        var tile =
+            new NativeSceneTile(
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map"),
+                new OmsiTileContent(
+                    new OmsiTileSummary(
+                        true,
+                        0,
+                        0,
+                        0),
+                    [],
+                    [],
+                    new OmsiTerrainGrid(
+                        1,
+                        [0, 10, 20, 30])));
+
+        var scene =
+            new NativeSceneSnapshot(
+                [tile],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        tile.Reference,
+                        tile.Content.Terrain!)
+                ]);
+
+        Assert.True(
+            NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    150,
+                    150,
+                    out var height));
+
+        Assert.InRange(
+            height,
+            14.999,
+            15.001);
+
+        Assert.False(
+            NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    301,
+                    150,
+                    out _));
+    }
+
+    [Fact]
     public void TerrainBuilderUsesResolvedGroundTextureAndRepeating()
     {
         var root =
