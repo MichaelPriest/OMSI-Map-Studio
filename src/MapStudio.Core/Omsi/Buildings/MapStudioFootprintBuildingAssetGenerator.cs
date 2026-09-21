@@ -313,18 +313,26 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
             IsConvexPolygon(
                 footprint);
 
-        var quadrilateralRoof =
+        var planarShedRoof =
+            footprint.Count >=
+                3 &&
+            building.RoofHeightMeters >
+                0.01 &&
+            building.RoofType ==
+                MapStudioBuildingRoofType.Shed;
+
+        var quadrilateralGableRoof =
             footprint.Count ==
                 4 &&
             building.RoofHeightMeters >
                 0.01 &&
-            building.RoofType is
-                MapStudioBuildingRoofType.Gable or
-                MapStudioBuildingRoofType.Shed;
+            building.RoofType ==
+                MapStudioBuildingRoofType.Gable;
 
         var shapedRoof =
             convexHipRoof ||
-            quadrilateralRoof;
+            planarShedRoof ||
+            quadrilateralGableRoof;
 
         if (convexHipRoof)
         {
@@ -338,7 +346,21 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 indices,
                 triangleMaterials);
         }
-        else if (quadrilateralRoof)
+        else if (planarShedRoof)
+        {
+            AddPlanarShedRoof(
+                (float)building.RoofHeightMeters,
+                footprint,
+                triangles,
+                height,
+                isCounterClockwise,
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials);
+        }
+        else if (quadrilateralGableRoof)
         {
             AddQuadrilateralRoof(
                 building.RoofType,
@@ -462,6 +484,257 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     8,
                     null)
             ]);
+    }
+
+    private static void AddPlanarShedRoof(
+        float roofHeight,
+        IReadOnlyList<Vector3> points,
+        IReadOnlyList<Triangle> triangles,
+        float wallHeight,
+        bool isCounterClockwise,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> materials)
+    {
+        var minX =
+            points.Min(
+                point =>
+                    point.X);
+
+        var maxX =
+            points.Max(
+                point =>
+                    point.X);
+
+        var minZ =
+            points.Min(
+                point =>
+                    point.Z);
+
+        var maxZ =
+            points.Max(
+                point =>
+                    point.Z);
+
+        var rangeX =
+            maxX -
+            minX;
+
+        var rangeZ =
+            maxZ -
+            minZ;
+
+        var useX =
+            rangeX <=
+                rangeZ;
+
+        var range =
+            useX
+                ? rangeX
+                : rangeZ;
+
+        if (
+            range <=
+                0.000001f)
+        {
+            useX =
+                !useX;
+
+            range =
+                useX
+                    ? rangeX
+                    : rangeZ;
+        }
+
+        if (
+            range <=
+                0.000001f)
+        {
+            return;
+        }
+
+        var roofPoints =
+            points
+                .Select(
+                    point =>
+                    {
+                        var axisValue =
+                            useX
+                                ? point.X
+                                : point.Z;
+
+                        var minimum =
+                            useX
+                                ? minX
+                                : minZ;
+
+                        var ratio =
+                            Math.Clamp(
+                                (
+                                    axisValue -
+                                    minimum
+                                ) /
+                                range,
+                                0.0f,
+                                1.0f);
+
+                        return new Vector3(
+                            point.X,
+                            wallHeight +
+                                roofHeight *
+                                ratio,
+                            point.Z);
+                    })
+                .ToArray();
+
+        foreach (
+            var triangle in
+                triangles)
+        {
+            AddAutoNormalTriangle(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                roofPoints[
+                    triangle.A],
+                roofPoints[
+                    triangle.B],
+                roofPoints[
+                    triangle.C],
+                1,
+                preferUp:
+                    true);
+        }
+
+        const float epsilon =
+            0.0001f;
+
+        for (
+            var index = 0;
+            index <
+                points.Count;
+            index++)
+        {
+            var next =
+                (
+                    index +
+                    1
+                ) %
+                points.Count;
+
+            var a =
+                points[index];
+
+            var b =
+                points[next];
+
+            var roofA =
+                roofPoints[index];
+
+            var roofB =
+                roofPoints[next];
+
+            var riseA =
+                roofA.Y -
+                wallHeight;
+
+            var riseB =
+                roofB.Y -
+                wallHeight;
+
+            if (
+                riseA <=
+                    epsilon &&
+                riseB <=
+                    epsilon)
+            {
+                continue;
+            }
+
+            var baseA =
+                new Vector3(
+                    a.X,
+                    wallHeight,
+                    a.Z);
+
+            var baseB =
+                new Vector3(
+                    b.X,
+                    wallHeight,
+                    b.Z);
+
+            var edge =
+                b -
+                a;
+
+            var normal =
+                isCounterClockwise
+                    ? Vector3.Normalize(
+                        new Vector3(
+                            edge.Z,
+                            0,
+                            -edge.X))
+                    : Vector3.Normalize(
+                        new Vector3(
+                            -edge.Z,
+                            0,
+                            edge.X));
+
+            if (
+                riseA <=
+                    epsilon)
+            {
+                AddTriangle(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    materials,
+                    baseA,
+                    baseB,
+                    roofB,
+                    normal,
+                    0);
+
+                continue;
+            }
+
+            if (
+                riseB <=
+                    epsilon)
+            {
+                AddTriangle(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    materials,
+                    baseA,
+                    baseB,
+                    roofA,
+                    normal,
+                    0);
+
+                continue;
+            }
+
+            AddQuad(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                baseA,
+                baseB,
+                roofB,
+                roofA,
+                normal,
+                0);
+        }
     }
 
     private static void AddConvexHipRoof(
