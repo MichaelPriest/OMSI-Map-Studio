@@ -70,6 +70,13 @@ public sealed partial class MainWindow : Window
         OmsiMapDescriptor Map,
         string DisplayText);
 
+    private sealed record TileManagerViewItem(
+        int X,
+        int Y,
+        string DisplayText,
+        bool IsActive,
+        bool IsLoaded);
+
     private sealed class AssetLibraryViewItem
         : INotifyPropertyChanged
     {
@@ -11449,6 +11456,181 @@ public sealed partial class MainWindow : Window
             TileNavigatorYBox.Value =
                 active.Y;
         }
+    }
+
+    private async void OnTileManagerClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (snapshot is null)
+        {
+            StatusText.Text =
+                "Abra um mapa antes de usar o Gerenciador de tiles.";
+
+            return;
+        }
+
+        var loadedByCoordinate =
+            snapshot.Tiles.ToDictionary(
+                tile =>
+                    (
+                        tile.Reference.X,
+                        tile.Reference.Y
+                    ));
+
+        var items =
+            snapshot.Map.Tiles
+                .OrderBy(
+                    tile =>
+                        tile.Y)
+                .ThenBy(
+                    tile =>
+                        tile.X)
+                .Select(
+                    tile =>
+                    {
+                        var isActive =
+                            snapshot.ActiveTile?.X ==
+                                tile.X &&
+                            snapshot.ActiveTile?.Y ==
+                                tile.Y;
+
+                        var isLoaded =
+                            loadedByCoordinate
+                                .TryGetValue(
+                                    (
+                                        tile.X,
+                                        tile.Y
+                                    ),
+                                    out var loaded);
+
+                        var detail =
+                            isLoaded &&
+                            loaded is not null
+                                ? $"objetos {loaded.Content.Objects.Count} · splines {loaded.Content.Splines.Count}"
+                                : "fora da região carregada";
+
+                        return new TileManagerViewItem(
+                            tile.X,
+                            tile.Y,
+                            $"{(isActive ? "●" : "○")} Tile {tile.X},{tile.Y} · {detail}",
+                            isActive,
+                            isLoaded);
+                    })
+                .ToArray();
+
+        var list =
+            new ListView
+            {
+                Height =
+                    Math.Min(
+                        460,
+                        Math.Max(
+                            180,
+                            items.Length *
+                                42)),
+                SelectionMode =
+                    ListViewSelectionMode
+                        .Single,
+                DisplayMemberPath =
+                    nameof(
+                        TileManagerViewItem
+                            .DisplayText),
+                ItemsSource =
+                    items
+            };
+
+        list.SelectedItem =
+            items.FirstOrDefault(
+                item =>
+                    item.IsActive);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"{snapshot.Map.Tiles.Count} tile(s) no mapa · {snapshot.Tiles.Count} carregado(s) no viewport",
+                FontSize =
+                    16,
+                FontWeight =
+                    Microsoft.UI.Text
+                        .FontWeights
+                        .SemiBold
+            });
+
+        panel.Children.Add(
+            list);
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Gerenciamento seguro",
+                Message =
+                    "Use Criar tile para expandir o mapa. Excluir tile continua restrito a tiles vazios e seguros para evitar deslocar índices usados por entrypoints ou dados operacionais."
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Gerenciador de tiles",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Focar tile",
+                CloseButtonText =
+                    "Fechar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary,
+                IsPrimaryButtonEnabled =
+                    list.SelectedItem is
+                    TileManagerViewItem
+            };
+
+        list.SelectionChanged +=
+            (_, _) =>
+            {
+                dialog.IsPrimaryButtonEnabled =
+                    list.SelectedItem is
+                    TileManagerViewItem;
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary ||
+            list.SelectedItem is not
+                TileManagerViewItem selected)
+        {
+            return;
+        }
+
+        await NavigateToTileAsync(
+            selected.X,
+            selected.Y);
     }
 
     private async void OnDeleteActiveMapTileClick(
