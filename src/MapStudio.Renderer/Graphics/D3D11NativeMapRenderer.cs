@@ -123,6 +123,15 @@ public sealed class D3D11NativeMapRenderer :
                 NativeMaterialBatch>();
 
     private ID3D11Buffer?
+        _referenceOverlayBuffer;
+
+    private int
+        _referenceOverlayVertexCount;
+
+    private NativeGpuTexture?
+        _referenceOverlayTexture;
+
+    private ID3D11Buffer?
         _objectTriangleBuffer;
 
     private int
@@ -950,6 +959,12 @@ public sealed class D3D11NativeMapRenderer :
         _sceneryLightBuffer = null;
         _sceneryLightVertexCount = 0;
 
+        _referenceOverlayBuffer
+            ?.Dispose();
+
+        _referenceOverlayTexture
+            ?.Dispose();
+
         _terrainTriangleBuffer
             ?.Dispose();
         _terrainTriangleBuffer = null;
@@ -1283,6 +1298,9 @@ public sealed class D3D11NativeMapRenderer :
                 {
                     DrawTerrainGeometry(
                         context);
+
+                    DrawReferenceOverlay(
+                        context);
                 }
 
                 if (
@@ -1612,6 +1630,88 @@ public sealed class D3D11NativeMapRenderer :
             _terrainTriangleVertexCount,
             _terrainMaterialBatches,
             forceDoubleSided: true);
+    }
+
+    private void DrawReferenceOverlay(
+        ID3D11DeviceContext context)
+    {
+        if (
+            _referenceOverlayBuffer is
+                null ||
+            _referenceOverlayTexture is
+                null ||
+            _referenceOverlayVertexCount <=
+                0)
+        {
+            return;
+        }
+
+        ResetMaterialPreview(
+            context);
+
+        context
+            .IASetPrimitiveTopology(
+                PrimitiveTopology
+                    .TriangleList);
+
+        context
+            .IASetVertexBuffer(
+                0,
+                _referenceOverlayBuffer,
+                NativeMapVertex
+                    .SizeInBytes);
+
+        context
+            .PSSetSampler(
+                0,
+                _textureSampler);
+
+        context
+            .PSSetShader(
+                _alphaBlendPixelShader);
+
+        context
+            .PSSetShaderResource(
+                0,
+                _referenceOverlayTexture
+                    .View);
+
+        context
+            .OMSetBlendState(
+                _alphaBlendState);
+
+        context
+            .OMSetDepthStencilState(
+                _depthReadState);
+
+        context
+            .RSSetState(
+                _terrainRasterizerState);
+
+        context.Draw(
+            (uint)
+                _referenceOverlayVertexCount,
+            0);
+
+        context
+            .PSUnsetShaderResource(
+                0);
+
+        context
+            .OMSetBlendState(
+                null);
+
+        context
+            .OMSetDepthStencilState(
+                null);
+
+        context
+            .RSSetState(
+                null);
+
+        context
+            .PSSetShader(
+                _pixelShader);
     }
 
     private void DrawSplineGeometry(
@@ -2330,6 +2430,62 @@ public sealed class D3D11NativeMapRenderer :
         _pickingSurface.Read(
             x,
             y);
+
+    public void SetReferenceOverlay(
+        NativeReferenceOverlayGeometry?
+            geometry)
+    {
+        _referenceOverlayBuffer
+            ?.Dispose();
+
+        _referenceOverlayBuffer =
+            null;
+
+        _referenceOverlayVertexCount =
+            0;
+
+        _referenceOverlayTexture
+            ?.Dispose();
+
+        _referenceOverlayTexture =
+            null;
+
+        if (
+            geometry is null ||
+            geometry.Vertices.Length ==
+                0 ||
+            string.IsNullOrWhiteSpace(
+                geometry.TexturePath) ||
+            !File.Exists(
+                geometry.TexturePath))
+        {
+            return;
+        }
+
+        var texture =
+            _textureLoader
+                .TryLoad(
+                    geometry.TexturePath);
+
+        if (texture is null)
+        {
+            return;
+        }
+
+        _referenceOverlayTexture =
+            texture;
+
+        _referenceOverlayBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    geometry.Vertices
+                        .AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _referenceOverlayVertexCount =
+            geometry.Vertices.Length;
+    }
 
     public void SetPlacementPreview(
         NativeAssetPreviewGeometry? geometry,
