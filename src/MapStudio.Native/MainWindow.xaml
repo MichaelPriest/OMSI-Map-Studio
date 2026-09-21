@@ -233,6 +233,10 @@
                     <MenuFlyoutSubItem
                         Text="Gerador procedural de vias">
                         <MenuFlyoutItem
+                            Text="Importar GeoJSON georreferenciado..."
+                            Click="OnImportProceduralRoadGeoJsonClick" />
+                        <MenuFlyoutSeparator />
+                        <MenuFlyoutItem
                             Text="Iniciar nova linha..."
                             Click="OnStartProceduralRoadTraceClick" />
                         <MenuFlyoutItem
