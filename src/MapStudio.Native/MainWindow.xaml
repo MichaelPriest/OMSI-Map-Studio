@@ -282,6 +282,9 @@
                         <MenuFlyoutItem
                             Text="Importar GeoJSON georreferenciado..."
                             Click="OnImportProceduralRoadGeoJsonClick" />
+                        <MenuFlyoutItem
+                            Text="Importar OSM XML georreferenciado..."
+                            Click="OnImportProceduralRoadOsmClick" />
                         <MenuFlyoutSeparator />
                         <MenuFlyoutItem
                             Text="Iniciar nova linha..."
