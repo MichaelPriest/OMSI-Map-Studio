@@ -112,7 +112,18 @@
                         IsEnabled="False"
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Editar" />
+                <MenuBarItem Title="Editar">
+                    <MenuFlyoutItem
+                        x:Name="UndoConstructionMenuItem"
+                        Text="Desfazer construção"
+                        IsEnabled="False"
+                        Click="OnUndoConstructionClick" />
+                    <MenuFlyoutItem
+                        x:Name="RedoConstructionMenuItem"
+                        Text="Refazer construção"
+                        IsEnabled="False"
+                        Click="OnRedoConstructionClick" />
+                </MenuBarItem>
                 <MenuBarItem Title="Visualizar">
                     <MenuFlyoutItem
                         Text="Tela cheia (F11)"

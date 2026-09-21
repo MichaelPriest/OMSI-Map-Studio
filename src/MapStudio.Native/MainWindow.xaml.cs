@@ -29,6 +29,11 @@ public sealed partial class MainWindow : Window
         string DisplayText,
         string Detail);
 
+    private sealed record ConstructionHistoryEntry(
+        string Label,
+        string MapDirectory,
+        string BackupDirectory);
+
     private sealed record TrafficRuleExplorerItem(
         PickingKind OwnerKind,
         int EntityId,
@@ -59,6 +64,17 @@ public sealed partial class MainWindow : Window
         _assetLibraryState =
             NativeAssetLibraryStateStore
                 .Load();
+
+    private readonly List<
+        ConstructionHistoryEntry>
+        _constructionUndoStack = [];
+
+    private readonly List<
+        ConstructionHistoryEntry>
+        _constructionRedoStack = [];
+
+    private string?
+        _constructionHistoryMapDirectory;
 
     private bool _isMapToolPaletteDragging;
     private uint _mapToolPaletteDragPointerId;
@@ -1721,6 +1737,9 @@ public sealed partial class MainWindow : Window
             var snapshot =
                 insertion.Snapshot;
 
+            RegisterConstructionHistory(
+                "Inserir spline");
+
             await Viewport
                 .SetMapSnapshotAsync(
                     snapshot,
@@ -2038,6 +2057,11 @@ public sealed partial class MainWindow : Window
 
             RecordAssetUsage(
                 request.SceneryObjectPath);
+
+            RegisterConstructionHistory(
+                requests.Count == 1
+                    ? "Inserir objeto"
+                    : $"Inserir {requests.Count} objetos");
 
             if (
                 mode == 1 &&
@@ -3932,6 +3956,231 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 "Valores do Inspector aplicados ao estado OMSI.";
+        }
+    }
+
+    private void RegisterConstructionHistory(
+        string label)
+    {
+        var mapDirectory =
+            _session.CurrentMap?
+                .Map.DirectoryPath;
+
+        var backupDirectory =
+            _session
+                .LastBackupDirectory;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                mapDirectory) ||
+            string.IsNullOrWhiteSpace(
+                backupDirectory) ||
+            !Directory.Exists(
+                backupDirectory))
+        {
+            return;
+        }
+
+        if (
+            !string.Equals(
+                _constructionHistoryMapDirectory,
+                mapDirectory,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            _constructionUndoStack.Clear();
+            _constructionRedoStack.Clear();
+            _constructionHistoryMapDirectory =
+                mapDirectory;
+        }
+
+        _constructionUndoStack.Add(
+            new ConstructionHistoryEntry(
+                label,
+                mapDirectory,
+                backupDirectory));
+
+        if (
+            _constructionUndoStack.Count >
+            32)
+        {
+            _constructionUndoStack
+                .RemoveAt(0);
+        }
+
+        _constructionRedoStack.Clear();
+        RefreshConstructionHistoryUi();
+    }
+
+    private void RefreshConstructionHistoryUi()
+    {
+        var currentMap =
+            _session.CurrentMap?
+                .Map.DirectoryPath;
+
+        if (
+            !string.Equals(
+                currentMap,
+                _constructionHistoryMapDirectory,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            _constructionUndoStack.Clear();
+            _constructionRedoStack.Clear();
+            _constructionHistoryMapDirectory =
+                currentMap;
+        }
+
+        UndoConstructionMenuItem.IsEnabled =
+            _constructionUndoStack.Count >
+            0;
+
+        RedoConstructionMenuItem.IsEnabled =
+            _constructionRedoStack.Count >
+            0;
+
+        UndoConstructionMenuItem.Text =
+            _constructionUndoStack.Count >
+                0
+                ? "Desfazer construção · " +
+                  _constructionUndoStack[^1]
+                      .Label
+                : "Desfazer construção";
+
+        RedoConstructionMenuItem.Text =
+            _constructionRedoStack.Count >
+                0
+                ? "Refazer construção · " +
+                  _constructionRedoStack[^1]
+                      .Label
+                : "Refazer construção";
+    }
+
+    private async void OnUndoConstructionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _constructionUndoStack.Count ==
+            0)
+        {
+            return;
+        }
+
+        var entry =
+            _constructionUndoStack[^1];
+
+        if (
+            !string.Equals(
+                _session.CurrentMap?
+                    .Map.DirectoryPath,
+                entry.MapDirectory,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            RefreshConstructionHistoryUi();
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Desfazendo construção: " +
+                entry.Label;
+
+            var restored =
+                await _session
+                    .RestoreMapStudioBackupAsync(
+                        entry.BackupDirectory);
+
+            _constructionUndoStack.RemoveAt(
+                _constructionUndoStack.Count -
+                1);
+
+            _constructionRedoStack.Add(
+                new ConstructionHistoryEntry(
+                    entry.Label,
+                    entry.MapDirectory,
+                    restored
+                        .RollbackBackupDirectory));
+
+            await ApplyMapSnapshotAsync(
+                restored.Snapshot,
+                focusActiveTile: false);
+
+            RefreshConstructionHistoryUi();
+
+            StatusText.Text =
+                "Construção desfeita: " +
+                entry.Label;
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                "Falha ao desfazer construção: " +
+                exception.Message;
+        }
+    }
+
+    private async void OnRedoConstructionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _constructionRedoStack.Count ==
+            0)
+        {
+            return;
+        }
+
+        var entry =
+            _constructionRedoStack[^1];
+
+        if (
+            !string.Equals(
+                _session.CurrentMap?
+                    .Map.DirectoryPath,
+                entry.MapDirectory,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            RefreshConstructionHistoryUi();
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Refazendo construção: " +
+                entry.Label;
+
+            var restored =
+                await _session
+                    .RestoreMapStudioBackupAsync(
+                        entry.BackupDirectory);
+
+            _constructionRedoStack.RemoveAt(
+                _constructionRedoStack.Count -
+                1);
+
+            _constructionUndoStack.Add(
+                new ConstructionHistoryEntry(
+                    entry.Label,
+                    entry.MapDirectory,
+                    restored
+                        .RollbackBackupDirectory));
+
+            await ApplyMapSnapshotAsync(
+                restored.Snapshot,
+                focusActiveTile: false);
+
+            RefreshConstructionHistoryUi();
+
+            StatusText.Text =
+                "Construção refeita: " +
+                entry.Label;
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                "Falha ao refazer construção: " +
+                exception.Message;
         }
     }
 
@@ -10398,6 +10647,14 @@ public sealed partial class MainWindow : Window
                 result.Snapshot,
                 focusActiveTile: true);
 
+            if (
+                result.ChangedSamples >
+                0)
+            {
+                RegisterConstructionHistory(
+                    "Aplicar relevo real");
+            }
+
             StatusText.Text =
                 result.ChangedSamples ==
                     0
@@ -11480,6 +11737,9 @@ public sealed partial class MainWindow : Window
                     group
                         .SceneryObjectPath);
             }
+
+            RegisterConstructionHistory(
+                "Construction Set");
 
             StatusText.Text =
                 $"Construction Set aplicado: {total} objeto(s) em {groups.Count} grupo(s), com backup único.";
