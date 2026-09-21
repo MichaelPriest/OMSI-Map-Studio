@@ -280,6 +280,9 @@
                     <MenuFlyoutItem
                         Text="Instalar/atualizar Road Kit..."
                         Click="OnInstallRoadKitClick" />
+                    <MenuFlyoutItem
+                        Text="Criador de túneis..."
+                        Click="OnCreateTunnelClick" />
                     <MenuFlyoutSubItem
                         Text="Gerador procedural de vias">
                         <MenuFlyoutItem

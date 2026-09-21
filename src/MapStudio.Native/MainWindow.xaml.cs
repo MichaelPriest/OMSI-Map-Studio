@@ -16395,6 +16395,282 @@ public sealed partial class MainWindow : Window
             "Traçado procedural limpo.";
     }
 
+    private async void OnCreateTunnelClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Criador de túneis"))
+        {
+            return;
+        }
+
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
+        {
+            StatusText.Text =
+                "Criador de túneis: selecione primeiro a instalação do OMSI.";
+
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome",
+                Text =
+                    "Túnel 2 faixas",
+                PlaceholderText =
+                    "Ex.: Túnel central"
+            };
+
+        var lanesBox =
+            new NumberBox
+            {
+                Header =
+                    "Número de faixas",
+                Minimum =
+                    1,
+                Maximum =
+                    8,
+                Value =
+                    2,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var laneWidthBox =
+            new NumberBox
+            {
+                Header =
+                    "Largura de cada faixa (m)",
+                Minimum =
+                    2.5,
+                Maximum =
+                    6,
+                Value =
+                    3.5,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var heightBox =
+            new NumberBox
+            {
+                Header =
+                    "Altura interna (m)",
+                Minimum =
+                    3.5,
+                Maximum =
+                    15,
+                Value =
+                    5.2,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var shoulderBox =
+            new NumberBox
+            {
+                Header =
+                    "Folga lateral / acostamento (m)",
+                Minimum =
+                    0,
+                Maximum =
+                    5,
+                Value =
+                    0.75,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var archSegmentsBox =
+            new NumberBox
+            {
+                Header =
+                    "Suavidade do arco",
+                Minimum =
+                    4,
+                Maximum =
+                    24,
+                Value =
+                    10,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Inline
+            };
+
+        var oneWayCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Mão única"
+            };
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "O túnel é gerado como uma SLI OMSI real: pista, marcações, paredes, teto em arco e paths de tráfego. Depois da geração ele aparece em Pontes / túneis e pode ser desenhado com a mesma ferramenta Estrada fácil, inclusive em curvas e gradientes.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10
+            };
+
+        panel.Children.Add(
+            nameBox);
+        panel.Children.Add(
+            lanesBox);
+        panel.Children.Add(
+            laneWidthBox);
+        panel.Children.Add(
+            heightBox);
+        panel.Children.Add(
+            shoulderBox);
+        panel.Children.Add(
+            archSegmentsBox);
+        panel.Children.Add(
+            oneWayCheckBox);
+        panel.Children.Add(
+            note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Criador de túneis",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Gerar túnel",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Criador de túneis: gerando spline e texturas OMSI...";
+
+            var spec =
+                new MapStudioTunnelSpec(
+                    nameBox.Text,
+                    (int)Math.Round(
+                        lanesBox.Value),
+                    laneWidthBox.Value,
+                    heightBox.Value,
+                    shoulderBox.Value,
+                    (int)Math.Round(
+                        archSegmentsBox.Value),
+                    oneWayCheckBox
+                        .IsChecked ==
+                    true);
+
+            var result =
+                await new MapStudioTunnelSplineGenerator()
+                    .GenerateAsync(
+                        root,
+                        spec);
+
+            StatusText.Text =
+                "Túnel gerado; atualizando biblioteca...";
+
+            await _session
+                .RefreshAssetLibraryAsync();
+
+            await LoadAssetLibraryAsync();
+
+            SplineElevationOffsetBox.Value =
+                0;
+
+            SplineHeightCheckBox.IsChecked =
+                false;
+
+            SplineEasyRoadCheckBox.IsEnabled =
+                true;
+
+            SplineContinuousCheckBox.IsEnabled =
+                true;
+
+            SplineEndpointSnapCheckBox.IsEnabled =
+                true;
+
+            SplineEndpointSnapDistanceBox.IsEnabled =
+                true;
+
+            SplineAutoConnectCheckBox.IsEnabled =
+                true;
+
+            SplineEasyRoadCheckBox.IsChecked =
+                true;
+
+            SplineCurveOffsetBox.Value =
+                0;
+
+            SplineCurveCheckBox.IsChecked =
+                false;
+
+            SetSelectionModeFromShortcut(
+                2);
+
+            await ActivateLibraryGroupToolAsync(
+                2,
+                OmsiAssetLibraryGroup.Bridges,
+                $"Túnel criado: {result.RelativeSplinePath}. Selecione-o na biblioteca e desenhe entrada, curva e saída com Estrada fácil." +
+                (
+                    result.BackupDirectory is null
+                        ? string.Empty
+                        : $" Backup da versão anterior: {result.BackupDirectory}"
+                ));
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Criador de túneis falhou: {exception.Message}";
+        }
+    }
+
     private async void OnInstallRoadKitClick(
         object sender,
         RoutedEventArgs e)

@@ -239,9 +239,9 @@ Legend:
 | Modern library / preview | ✅ |
 | Batch construction tools | ✅ |
 | Coordinates / real reference / elevation | ✅/🟡 |
-| Create/delete tiles | ⬜ |
+| Create/delete tiles | 🟡 — creation and safe deletion are integrated; intermediate-tile deletion remains blocked until dependent references can be reindexed |
 | Full tile properties | ⬜ |
-| Native tile/map water | ⬜ |
+| Native tile/map water | ✅ |
 | Tile lightmap / lighting | ⬜ |
 | Attach object → spline | 🟡 |
 | Attach object → object | 🟡 |
@@ -252,19 +252,19 @@ Legend:
 | Complete to… | ⬜ |
 | Spline export | ⬜ |
 | Editable paths | 🟡 |
-| Traffic Rules | ⬜ |
+| Traffic Rules | ✅ |
 | Speed limits | ⬜ |
 | Traffic density | ⬜ |
 | Vehicle restrictions | ⬜ |
 | Road priorities | ⬜ |
 | AI paths / crossing behavior | ⬜ |
-| Traffic lights / signal phases | ⬜ |
-| Tracks | ⬜ |
-| Trips | ⬜ |
-| Stops/stations | ⬜ |
-| StationLinks | ⬜ |
+| Traffic lights / signal phases | ✅ |
+| Tracks | ✅ |
+| Trips | ✅ |
+| Stops/stations | ✅ |
+| StationLinks | ✅ |
 | Time profiles | ⬜ |
-| Timetable editor | ⬜ |
+| Timetable editor | 🟡 — Tracks/Trips/Stops/StationLinks/Lines/Tours are editable; advanced profiles/workflows still evolve |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -422,7 +422,8 @@ Continue features that need not exist in the original editor:
 - replace tool;
 - visual elevation/depression;
 - cuts/embankments;
-- bridges/tunnels;
+- bridges;
+- ✅ real-SLI parametric tunnels with generated profile and traffic paths;
 - lots;
 - procedural vegetation;
 - distribution rules;
@@ -714,6 +715,7 @@ The historical **“Viewport stabilization phase”** section above records the 
 Current state of the new differentiators:
 
 - ✅ original Road Kit;
+- ✅ parametric SLI tunnel creator with roadway, markings, walls, arched ceiling, traffic paths, and Easy Road curve/gradient placement;
 - ✅ procedural road graph;
 - ✅ manual tracing;
 - ✅ georeferenced GeoJSON;

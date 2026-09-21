@@ -239,9 +239,9 @@ Legenda:
 | Biblioteca moderna / preview | ✅ |
 | Ferramentas de construção em massa | ✅ |
 | Coordenadas / referência real / elevação | ✅/🟡 |
-| Criar e excluir tiles | ⬜ |
+| Criar e excluir tiles | 🟡 — criação e exclusão segura já integradas; remoção de tile intermediário segue bloqueada até reindexar referências dependentes |
 | Propriedades completas do tile | ⬜ |
-| Água nativa do tile/mapa | ⬜ |
+| Água nativa do tile/mapa | ✅ |
 | Lightmap / iluminação de tile | ⬜ |
 | Attach object → spline | 🟡 |
 | Attach object → object | 🟡 |
@@ -252,19 +252,19 @@ Legenda:
 | Complete to… | ⬜ |
 | Spline export | ⬜ |
 | Paths editáveis | 🟡 |
-| Traffic Rules | ⬜ |
+| Traffic Rules | ✅ |
 | Speed limits | ⬜ |
 | Traffic density | ⬜ |
 | Vehicle restrictions | ⬜ |
 | Prioridades viárias | ⬜ |
 | AI paths / crossing behavior | ⬜ |
-| Traffic lights / signal phases | ⬜ |
-| Tracks | ⬜ |
-| Trips | ⬜ |
-| Stops/stations | ⬜ |
-| StationLinks | ⬜ |
+| Traffic lights / signal phases | ✅ |
+| Tracks | ✅ |
+| Trips | ✅ |
+| Stops/stations | ✅ |
+| StationLinks | ✅ |
 | Time profiles | ⬜ |
-| Timetable editor | ⬜ |
+| Timetable editor | 🟡 — Tracks/Trips/Stops/StationLinks/Lines/Tours já editáveis; perfis e fluxos avançados ainda evoluem |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -422,7 +422,8 @@ Continuar evoluindo ferramentas que não precisam existir no editor antigo:
 - replace tool;
 - elevação/depressão visual;
 - taludes/cortes;
-- pontes/túneis;
+- pontes;
+- ✅ túneis paramétricos por SLI real, com geração de perfil e paths;
 - lotes;
 - vegetação procedural;
 - regras de distribuição;
@@ -714,6 +715,7 @@ A seção histórica **“Fase de estabilização do viewport”** acima registr
 Estado atual dos diferenciais novos:
 
 - ✅ Road Kit próprio;
+- ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
 - ✅ grafo procedural de vias;
 - ✅ traçado manual;
 - ✅ GeoJSON georreferenciado;
