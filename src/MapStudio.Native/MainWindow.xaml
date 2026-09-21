@@ -985,8 +985,7 @@
                             <ComboBox x:Name="TrafficViewComboBox"
                                       Grid.Row="2"
                                       SelectedIndex="0"
-                                      HorizontalAlignment="Stretch"
-                                      SelectionChanged="OnTrafficViewSelectionChanged">
+                                      HorizontalAlignment="Stretch">
                                 <ComboBoxItem Content="Semáforos e fases" />
                                 <ComboBoxItem Content="Traffic Rules" />
                             </ComboBox>
