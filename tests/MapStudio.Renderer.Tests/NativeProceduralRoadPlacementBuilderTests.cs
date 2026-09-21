@@ -240,4 +240,92 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             1,
             result.SkippedSegments);
     }
+    [Fact]
+    public void BuilderLinksSequentialDegreeTwoTraces()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "part-a",
+                            [
+                                new(20, 30),
+                                new(80, 30)
+                            ],
+                            "road.sli"),
+                        new MapStudioRoadTrace(
+                            "part-b",
+                            [
+                                new(80, 30),
+                                new(120, 30)
+                            ],
+                            "road.sli")
+                    ]);
+
+        Assert.Empty(
+            graph.Junctions);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            2,
+            result.Requests.Count);
+
+        var link =
+            Assert.Single(
+                result.Links);
+
+        Assert.Equal(
+            0,
+            link.PreviousRequestIndex);
+
+        Assert.Equal(
+            1,
+            link.NextRequestIndex);
+    }
+
 }
