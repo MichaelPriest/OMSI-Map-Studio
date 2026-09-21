@@ -3303,6 +3303,155 @@ public sealed class OmsiNativeSession
             newSplineId);
     }
 
+    public async Task<NativeTrafficRulesUpdateResult>
+        UpdateTrafficRulesAsync(
+            PickingKind ownerKind,
+            int tileX,
+            int tileY,
+            int entityId,
+            IReadOnlyList<
+                OmsiTrafficRule>
+                rules,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            rules);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTrafficRuleEdit");
+        }
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            tileX &&
+                        tile.Reference.Y ==
+                            tileY)
+            ?? throw new InvalidDataException(
+                "trafficRuleTileNotLoaded");
+
+        var splineOwner =
+            ownerKind ==
+            PickingKind.Spline;
+
+        if (
+            ownerKind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ))
+        {
+            throw new InvalidDataException(
+                "trafficRuleOwnerKindInvalid");
+        }
+
+        var sourceOrdinal =
+            splineOwner
+                ? loaded.Content.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.SplineId ==
+                            entityId)
+                    ?.SourceSectionOrdinal ??
+                  -1
+                : loaded.Content.Objects
+                    .FirstOrDefault(
+                        item =>
+                            item.ObjectId ==
+                            entityId)
+                    ?.SourceSectionOrdinal ??
+                  -1;
+
+        if (sourceOrdinal < 0)
+        {
+            throw new InvalidDataException(
+                "trafficRuleOwnerMissing");
+        }
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    loaded.Reference
+                        .RelativeMapPath,
+                    out var tilePath) ||
+            !File.Exists(tilePath))
+        {
+            throw new InvalidDataException(
+                "trafficRuleTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var bytes =
+            new OmsiTileTrafficRulePatcher()
+                .Patch(
+                    document,
+                    splineOwner,
+                    sourceOrdinal,
+                    rules);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                tilePath);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        tilePath,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshed =
+            await _tileReader
+                .ReadContentAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                tile.Reference.X ==
+                                    tileX &&
+                                tile.Reference.Y ==
+                                    tileY
+                                    ? new NativeLoadedTile(
+                                        tile.Reference,
+                                        refreshed)
+                                    : tile)
+                        .ToArray()
+            };
+
+        return new NativeTrafficRulesUpdateResult(
+            CurrentMap,
+            backupPath);
+    }
+
     public async Task<NativeTrafficLightProgramUpdateResult>
         UpdateTrafficLightProgramAsync(
             NativeTrafficLightProgramInfo info,
