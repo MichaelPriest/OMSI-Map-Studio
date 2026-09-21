@@ -1,6 +1,7 @@
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Timetables;
+using MapStudio.Core.Omsi.Traffic;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -21,6 +22,16 @@ public sealed partial class MainWindow : Window
     private sealed record TransportExplorerItem(
         string Kind,
         string Key,
+        string DisplayText,
+        string Detail);
+
+    private sealed record TrafficRuleExplorerItem(
+        PickingKind OwnerKind,
+        int EntityId,
+        int TileX,
+        int TileY,
+        string AssetPath,
+        OmsiTrafficRule Rule,
         string DisplayText,
         string Detail);
 
@@ -64,6 +75,18 @@ public sealed partial class MainWindow : Window
         _trafficPrograms =
             Array.Empty<
                 NativeTrafficLightProgramInfo>();
+
+    private IReadOnlyList<
+        TrafficRuleExplorerItem>
+        _trafficRuleItems =
+            Array.Empty<
+                TrafficRuleExplorerItem>();
+
+    private IReadOnlyList<
+        OmsiUnscheduledVehicleGroup>
+        _trafficVehicleGroups =
+            Array.Empty<
+                OmsiUnscheduledVehicleGroup>();
 
     private OmsiTimetableCatalog?
         _timetableCatalog;
@@ -2204,7 +2227,7 @@ public sealed partial class MainWindow : Window
             "Água: atalho de assets ativo. O editor nativo dedicado de planos de água entra na próxima etapa.");
     }
 
-    private void OnToolTrafficClick(
+    private async void OnToolTrafficClick(
         object sender,
         RoutedEventArgs e)
     {
@@ -2224,7 +2247,7 @@ public sealed partial class MainWindow : Window
         Viewport.RestoreSceneView();
 
         SetSelectionModeFromShortcut(
-            2);
+            0);
 
         Viewport
             .SetTrafficPathsVisible(
@@ -2258,11 +2281,39 @@ public sealed partial class MainWindow : Window
             Viewport
                 .GetTrafficLightPrograms();
 
+        _trafficRuleItems =
+            BuildTrafficRuleItems(
+                _session.CurrentMap);
+
+        _trafficVehicleGroups =
+            await new OmsiUnscheduledVehicleGroupReader()
+                .ReadMapAsync(
+                    _session.CurrentMap
+                        .Map
+                        .DirectoryPath);
+
+        TrafficVehicleGroupComboBox.ItemsSource =
+            _trafficVehicleGroups;
+
+        TrafficVehicleGroupComboBox.SelectedIndex =
+            _trafficVehicleGroups.Count >
+                0
+                ? 0
+                : -1;
+
+        TrafficRulePresetComboBox.ItemsSource =
+            OmsiTrafficRulePresets.All;
+
+        TrafficRulePresetComboBox.SelectedIndex =
+            0;
+
         RefreshTrafficFilter();
 
         TrafficStatusText.Text =
             $"{Viewport.TrafficPathLineCount} linhas de path · " +
-            $"{_trafficPrograms.Count} programa(s) de semáforo.";
+            $"{_trafficPrograms.Count} programa(s) de semáforo · " +
+            $"{_trafficRuleItems.Count} regra(s) aplicada(s) · " +
+            $"{_trafficVehicleGroups.Count} grupo(s) de veículo.";
 
         TrafficProgramListView.SelectedIndex =
             _trafficPrograms.Count > 0
@@ -2278,6 +2329,46 @@ public sealed partial class MainWindow : Window
         var query =
             ExplorerSearchBox.Text
                 .Trim();
+
+        if (
+            TrafficViewComboBox
+                .SelectedIndex ==
+            1)
+        {
+            IEnumerable<
+                TrafficRuleExplorerItem>
+                rules =
+                    _trafficRuleItems;
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    query))
+            {
+                rules =
+                    rules.Where(
+                        item =>
+                            item.DisplayText
+                                .Contains(
+                                    query,
+                                    StringComparison
+                                        .OrdinalIgnoreCase) ||
+                            item.Detail
+                                .Contains(
+                                    query,
+                                    StringComparison
+                                        .OrdinalIgnoreCase) ||
+                            item.AssetPath
+                                .Contains(
+                                    query,
+                                    StringComparison
+                                        .OrdinalIgnoreCase));
+            }
+
+            TrafficRuleListView.ItemsSource =
+                rules.ToArray();
+
+            return;
+        }
 
         IEnumerable<
             NativeTrafficLightProgramInfo>
@@ -2305,6 +2396,208 @@ public sealed partial class MainWindow : Window
 
         TrafficProgramListView.ItemsSource =
             items.ToArray();
+    }
+
+    private IReadOnlyList<
+        TrafficRuleExplorerItem>
+        BuildTrafficRuleItems(
+            NativeMapSnapshot snapshot)
+    {
+        var result =
+            new List<
+                TrafficRuleExplorerItem>();
+
+        foreach (
+            var tile in
+                snapshot.Tiles)
+        {
+            foreach (
+                var item in
+                    tile.Content.Splines)
+            {
+                foreach (
+                    var rule in
+                        item.TrafficRules)
+                {
+                    result.Add(
+                        CreateTrafficRuleItem(
+                            PickingKind.Spline,
+                            item.SplineId,
+                            tile.Reference.X,
+                            tile.Reference.Y,
+                            item.SplinePath,
+                            rule));
+                }
+            }
+
+            foreach (
+                var item in
+                    tile.Content.Objects)
+            {
+                foreach (
+                    var rule in
+                        item.TrafficRules)
+                {
+                    result.Add(
+                        CreateTrafficRuleItem(
+                            PickingKind.Object,
+                            item.ObjectId,
+                            tile.Reference.X,
+                            tile.Reference.Y,
+                            item.SceneryObjectPath,
+                            rule));
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private static TrafficRuleExplorerItem
+        CreateTrafficRuleItem(
+            PickingKind ownerKind,
+            int entityId,
+            int tileX,
+            int tileY,
+            string assetPath,
+            OmsiTrafficRule rule)
+    {
+        var preset =
+            OmsiTrafficRulePresets
+                .TryMatch(
+                    rule.RuleName,
+                    rule.NumericValue);
+
+        var displayName =
+            preset?.DisplayName ??
+            rule.RuleName;
+
+        var pathText =
+            rule.PathIndex
+                ?.ToString() ??
+            "?";
+
+        var groupText =
+            rule.VehicleGroupIndex
+                ?.ToString() ??
+            "?";
+
+        return new TrafficRuleExplorerItem(
+            ownerKind,
+            entityId,
+            tileX,
+            tileY,
+            assetPath,
+            rule,
+            $"{displayName} · path {pathText} · grupo {groupText}",
+            $"{(ownerKind == PickingKind.Spline ? "Spline" : "Objeto")} #{entityId} · tile {tileX},{tileY}\n" +
+            $"{assetPath}\n" +
+            $"Path: {pathText}\n" +
+            $"Keyword: {rule.RuleName}\n" +
+            $"Valor: {rule.RawValue}\n" +
+            $"Grupo: {groupText}\n" +
+            $"Tipo: {(rule.IsKillRule ? "[kill_rule]" : "[rule]")}"));
+    }
+
+    private void OnTrafficViewSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var rules =
+            TrafficViewComboBox
+                .SelectedIndex ==
+            1;
+
+        TrafficSignalsPanel.Visibility =
+            rules
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TrafficRulesPanel.Visibility =
+            rules
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        _trafficPreviewTimer.Stop();
+
+        TrafficPlayButton.Content =
+            "▶ Play";
+
+        ExplorerSearchBox.PlaceholderText =
+            rules
+                ? "Buscar Traffic Rules..."
+                : "Buscar programas de semáforo...";
+
+        RefreshTrafficFilter();
+
+        TrafficDetailText.Text =
+            rules
+                ? "Selecione uma Traffic Rule."
+                : "Selecione um programa de semáforo.";
+    }
+
+    private void OnTrafficRuleSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            TrafficRuleListView.SelectedItem is
+                TrafficRuleExplorerItem
+                    item)
+        {
+            TrafficDetailText.Text =
+                item.Detail;
+
+            FocusTrafficRuleOwnerButton.IsEnabled =
+                true;
+
+            return;
+        }
+
+        FocusTrafficRuleOwnerButton.IsEnabled =
+            false;
+    }
+
+    private void OnFocusTrafficRuleOwnerClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TrafficRuleListView.SelectedItem is not
+                TrafficRuleExplorerItem
+                    rule)
+        {
+            return;
+        }
+
+        var explorer =
+            _explorerItems
+                .FirstOrDefault(
+                    item =>
+                        item.Kind ==
+                            rule.OwnerKind &&
+                        item.EntityId ==
+                            rule.EntityId &&
+                        item.TileX ==
+                            rule.TileX &&
+                        item.TileY ==
+                            rule.TileY);
+
+        if (explorer is null)
+        {
+            StatusText.Text =
+                "Dono da Traffic Rule não está no conjunto de tiles carregado.";
+            return;
+        }
+
+        if (
+            Viewport.SelectExplorerItem(
+                explorer,
+                focus: true))
+        {
+            StatusText.Text =
+                $"Traffic Rule focada no mapa · path {rule.Rule.PathIndex?.ToString() ?? "?"}.";
+        }
     }
 
     private void OnTrafficProgramSelectionChanged(

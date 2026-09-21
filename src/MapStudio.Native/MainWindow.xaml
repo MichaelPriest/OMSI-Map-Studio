@@ -463,55 +463,110 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0"
-                                       Text="Traffic Paths + Semáforos"
+                                       Text="Tráfego OMSI"
                                        FontSize="15"
                                        FontWeight="SemiBold" />
 
                             <TextBlock x:Name="TrafficStatusText"
                                        Grid.Row="1"
-                                       Text="Nenhum controlador carregado."
+                                       Text="Nenhum dado de tráfego carregado."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#9FB5C5" />
 
-                            <ListView x:Name="TrafficProgramListView"
+                            <ComboBox x:Name="TrafficViewComboBox"
                                       Grid.Row="2"
-                                      Height="150"
-                                      SelectionMode="Single"
-                                      DisplayMemberPath="DisplayText"
-                                      SelectionChanged="OnTrafficProgramSelectionChanged" />
+                                      SelectedIndex="0"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnTrafficViewSelectionChanged">
+                                <ComboBoxItem Content="Semáforos e fases" />
+                                <ComboBoxItem Content="Traffic Rules" />
+                            </ComboBox>
 
-                            <StackPanel Grid.Row="3"
-                                        Spacing="4">
-                                <Slider x:Name="TrafficPreviewTimeSlider"
-                                        Minimum="0"
-                                        Maximum="60"
-                                        StepFrequency="0.25"
-                                        ValueChanged="OnTrafficPreviewTimeChanged" />
-                                <StackPanel Orientation="Horizontal"
-                                            Spacing="8">
-                                    <Button x:Name="TrafficPlayButton"
-                                            Content="▶ Play"
-                                            Click="OnTrafficPlayClick" />
-                                    <TextBlock x:Name="TrafficPhaseText"
-                                               VerticalAlignment="Center"
-                                               Text="Fase: —" />
-                                </StackPanel>
-                            </StackPanel>
+                            <Grid Grid.Row="3">
+                                <Grid x:Name="TrafficSignalsPanel"
+                                      RowSpacing="6">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
 
-                            <ListView x:Name="TrafficPhaseListView"
-                                      Grid.Row="4"
-                                      SelectionMode="None" />
+                                    <ListView x:Name="TrafficProgramListView"
+                                              Grid.Row="0"
+                                              Height="132"
+                                              SelectionMode="Single"
+                                              DisplayMemberPath="DisplayText"
+                                              SelectionChanged="OnTrafficProgramSelectionChanged" />
+
+                                    <StackPanel Grid.Row="1"
+                                                Spacing="4">
+                                        <Slider x:Name="TrafficPreviewTimeSlider"
+                                                Minimum="0"
+                                                Maximum="60"
+                                                StepFrequency="0.25"
+                                                ValueChanged="OnTrafficPreviewTimeChanged" />
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="8">
+                                            <Button x:Name="TrafficPlayButton"
+                                                    Content="▶ Play"
+                                                    Click="OnTrafficPlayClick" />
+                                            <TextBlock x:Name="TrafficPhaseText"
+                                                       VerticalAlignment="Center"
+                                                       Text="Fase: —" />
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <ListView x:Name="TrafficPhaseListView"
+                                              Grid.Row="2"
+                                              SelectionMode="None" />
+                                </Grid>
+
+                                <Grid x:Name="TrafficRulesPanel"
+                                      Visibility="Collapsed"
+                                      RowSpacing="6">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <ComboBox x:Name="TrafficVehicleGroupComboBox"
+                                              Grid.Row="0"
+                                              Header="Grupo de veículo"
+                                              DisplayMemberPath="Name"
+                                              HorizontalAlignment="Stretch" />
+
+                                    <ComboBox x:Name="TrafficRulePresetComboBox"
+                                              Grid.Row="1"
+                                              Header="Regra do editor OMSI"
+                                              DisplayMemberPath="DisplayName"
+                                              HorizontalAlignment="Stretch" />
+
+                                    <ListView x:Name="TrafficRuleListView"
+                                              Grid.Row="2"
+                                              SelectionMode="Single"
+                                              DisplayMemberPath="DisplayText"
+                                              SelectionChanged="OnTrafficRuleSelectionChanged" />
+
+                                    <Button x:Name="FocusTrafficRuleOwnerButton"
+                                            Grid.Row="3"
+                                            Content="Focar regra no mapa"
+                                            IsEnabled="False"
+                                            HorizontalAlignment="Stretch"
+                                            Click="OnFocusTrafficRuleOwnerClick" />
+                                </Grid>
+                            </Grid>
 
                             <TextBlock x:Name="TrafficDetailText"
-                                       Grid.Row="5"
-                                       Text="Selecione um programa."
+                                       Grid.Row="4"
+                                       Text="Selecione um programa ou Traffic Rule."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
