@@ -226,6 +226,9 @@
                         Click="OnPerformanceMapModeClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
+                        Text="Gerenciador de tiles..."
+                        Click="OnTileManagerClick" />
+                    <MenuFlyoutItem
                         Text="Criar tile..."
                         Click="OnCreateMapTileClick" />
                     <MenuFlyoutItem
