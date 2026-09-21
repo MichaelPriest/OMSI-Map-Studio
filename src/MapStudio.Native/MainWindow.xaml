@@ -175,6 +175,10 @@
                     <MenuFlyoutItem
                         Text="Restaurar backup do Map Studio..."
                         Click="OnRestoreBackupClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
+                        Text="Construction Sets..."
+                        Click="OnConstructionSetsClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Ajuda" />
             </MenuBar>

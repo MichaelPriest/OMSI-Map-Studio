@@ -1,3 +1,4 @@
+using MapStudio.Renderer.Viewport;
 using System.Text.Json;
 
 namespace MapStudio.Native.Services;
@@ -19,6 +20,9 @@ public sealed class NativeAssetLibraryState
             {
                 ["Minha coleção"] = []
             };
+
+    public List<NativeConstructionSetDefinition>
+        ConstructionSets { get; init; } = [];
 }
 
 public static class NativeAssetLibraryStateStore
@@ -188,7 +192,26 @@ public static class NativeAssetLibraryStateStore
             Usage =
                 usage,
             Collections =
-                collections
+                collections,
+            ConstructionSets =
+                state.ConstructionSets
+                    .Where(
+                        set =>
+                            !string.IsNullOrWhiteSpace(
+                                set.Id) &&
+                            !string.IsNullOrWhiteSpace(
+                                set.Name) &&
+                            set.Companions.Count >
+                                0)
+                    .GroupBy(
+                        set =>
+                            set.Id,
+                        StringComparer.OrdinalIgnoreCase)
+                    .Select(
+                        group =>
+                            group.Last())
+                    .Take(64)
+                    .ToList()
         };
     }
 

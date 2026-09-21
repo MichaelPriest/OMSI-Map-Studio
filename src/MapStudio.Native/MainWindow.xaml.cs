@@ -5950,6 +5950,785 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnConstructionSetsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Construction Sets: selecione primeiro uma spline no mapa.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de aplicar Construction Sets.";
+
+            return;
+        }
+
+        var tile =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Reference.X ==
+                            selection.TileX &&
+                        candidate.Reference.Y ==
+                            selection.TileY);
+
+        var placedSpline =
+            tile?.Content.Splines
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.SplineId ==
+                            selection.EntityId);
+
+        if (
+            tile is null ||
+            placedSpline is null)
+        {
+            StatusText.Text =
+                "Não foi possível localizar a spline selecionada no snapshot atual.";
+
+            return;
+        }
+
+        var splineEntity =
+            new NativeSplineEntity(
+                PickingId.None,
+                tile.Reference,
+                placedSpline,
+                (float)(
+                    tile.Reference.X *
+                        300.0 +
+                    placedSpline.X),
+                (float)
+                    placedSpline.Z,
+                (float)(
+                    tile.Reference.Y *
+                        300.0 +
+                    placedSpline.Y));
+
+        var editing =
+            new List<
+                NativeConstructionSetCompanion>();
+
+        var savedSets =
+            _assetLibraryState
+                .ConstructionSets
+                .ToArray();
+
+        var savedCombo =
+            new ComboBox
+            {
+                Header =
+                    "Set salvo",
+                ItemsSource =
+                    savedSets,
+                DisplayMemberPath =
+                    "Name",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do set",
+                Text =
+                    "Novo Construction Set"
+            };
+
+        var lockSpline =
+            new CheckBox
+            {
+                Content =
+                    "Vincular ao tipo desta spline",
+                IsChecked =
+                    true
+            };
+
+        var companionPath =
+            new TextBox
+            {
+                Header =
+                    "SCO companheiro",
+                Text =
+                    AssetLibraryListView
+                        .SelectedItem is
+                        OmsiAssetIndexEntry
+                            selectedAsset &&
+                    selectedAsset.Kind ==
+                        OmsiAssetKind
+                            .SceneryObject
+                        ? selectedAsset
+                            .RelativePath
+                        : string.Empty,
+                PlaceholderText =
+                    @"SceneryobjectsPastaobjeto.sco"
+            };
+
+        var spacingBox =
+            new NumberBox
+            {
+                Header =
+                    "Espaçamento (m)",
+                Minimum =
+                    1,
+                Maximum =
+                    200,
+                Value =
+                    20,
+                SmallChange =
+                    1
+            };
+
+        var offsetBox =
+            new NumberBox
+            {
+                Header =
+                    "Offset lateral (m)",
+                Minimum =
+                    0,
+                Maximum =
+                    100,
+                Value =
+                    4,
+                SmallChange =
+                    0.5
+            };
+
+        var rotationBox =
+            new NumberBox
+            {
+                Header =
+                    "Rotação adicional (°)",
+                Minimum =
+                    -360,
+                Maximum =
+                    360,
+                Value =
+                    0,
+                SmallChange =
+                    5
+            };
+
+        var sideCombo =
+            new ComboBox
+            {
+                Header =
+                    "Lado",
+                SelectedIndex =
+                    2,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        sideCombo.Items.Add(
+            "Esquerdo");
+
+        sideCombo.Items.Add(
+            "Direito");
+
+        sideCombo.Items.Add(
+            "Ambos");
+
+        var companionsList =
+            new ListView
+            {
+                Height =
+                    150,
+                SelectionMode =
+                    ListViewSelectionMode
+                        .Single
+            };
+
+        void RefreshCompanions()
+        {
+            companionsList.ItemsSource =
+                editing
+                    .Select(
+                        item =>
+                            $"{item.SceneryObjectPath} · {item.Spacing:F1}m · offset {item.LateralOffset:F1}m · {DescribeConstructionSide(item.Side)} · rot {item.RotationOffset:F0}°")
+                    .ToArray();
+        }
+
+        var addButton =
+            new Button
+            {
+                Content =
+                    "Adicionar companheiro",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        addButton.Click +=
+            (_, _) =>
+            {
+                var path =
+                    companionPath.Text
+                        .Trim();
+
+                if (
+                    string.IsNullOrWhiteSpace(
+                        path))
+                {
+                    return;
+                }
+
+                var spacing =
+                    double.IsFinite(
+                        spacingBox.Value)
+                        ? Math.Max(
+                            1,
+                            spacingBox.Value)
+                        : 20;
+
+                var offset =
+                    double.IsFinite(
+                        offsetBox.Value)
+                        ? Math.Max(
+                            0,
+                            offsetBox.Value)
+                        : 4;
+
+                var rotation =
+                    double.IsFinite(
+                        rotationBox.Value)
+                        ? rotationBox.Value
+                        : 0;
+
+                var side =
+                    sideCombo
+                        .SelectedIndex switch
+                    {
+                        0 =>
+                            NativeConstructionSetSide.Left,
+                        1 =>
+                            NativeConstructionSetSide.Right,
+                        _ =>
+                            NativeConstructionSetSide.Both
+                    };
+
+                editing.Add(
+                    new NativeConstructionSetCompanion(
+                        Guid.NewGuid()
+                            .ToString("N"),
+                        path,
+                        spacing,
+                        offset,
+                        side,
+                        rotation));
+
+                RefreshCompanions();
+            };
+
+        var removeButton =
+            new Button
+            {
+                Content =
+                    "Remover selecionado",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        removeButton.Click +=
+            (_, _) =>
+            {
+                var index =
+                    companionsList
+                        .SelectedIndex;
+
+                if (
+                    index < 0 ||
+                    index >=
+                        editing.Count)
+                {
+                    return;
+                }
+
+                editing.RemoveAt(
+                    index);
+
+                RefreshCompanions();
+            };
+
+        var deleteSetButton =
+            new Button
+            {
+                Content =
+                    "Excluir set salvo",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch,
+                IsEnabled =
+                    savedSets.Length >
+                    0
+            };
+
+        void LoadSet(
+            NativeConstructionSetDefinition?
+                set)
+        {
+            editing.Clear();
+
+            if (set is null)
+            {
+                nameBox.Text =
+                    "Novo Construction Set";
+
+                lockSpline.IsChecked =
+                    true;
+
+                RefreshCompanions();
+                return;
+            }
+
+            nameBox.Text =
+                set.Name;
+
+            lockSpline.IsChecked =
+                !string.IsNullOrWhiteSpace(
+                    set.SplinePath);
+
+            editing.AddRange(
+                set.Companions);
+
+            RefreshCompanions();
+        }
+
+        savedCombo.SelectionChanged +=
+            (_, _) =>
+            {
+                LoadSet(
+                    savedCombo.SelectedItem as
+                        NativeConstructionSetDefinition);
+            };
+
+        deleteSetButton.Click +=
+            (_, _) =>
+            {
+                if (
+                    savedCombo.SelectedItem is not
+                        NativeConstructionSetDefinition
+                            selectedSet)
+                {
+                    return;
+                }
+
+                _assetLibraryState
+                    .ConstructionSets
+                    .RemoveAll(
+                        item =>
+                            string.Equals(
+                                item.Id,
+                                selectedSet.Id,
+                                StringComparison.OrdinalIgnoreCase));
+
+                SaveAssetLibraryState();
+
+                savedSets =
+                    _assetLibraryState
+                        .ConstructionSets
+                        .ToArray();
+
+                savedCombo.ItemsSource =
+                    savedSets;
+
+                savedCombo.SelectedIndex =
+                    -1;
+
+                deleteSetButton.IsEnabled =
+                    savedSets.Length >
+                    0;
+
+                LoadSet(null);
+            };
+
+        if (savedSets.Length > 0)
+        {
+            savedCombo.SelectedIndex =
+                0;
+        }
+
+        var companionGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        companionGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        companionGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            spacingBox,
+            0);
+
+        Grid.SetColumn(
+            offsetBox,
+            1);
+
+        companionGrid.Children.Add(
+            spacingBox);
+
+        companionGrid.Children.Add(
+            offsetBox);
+
+        var controls =
+            new StackPanel
+            {
+                Spacing =
+                    7,
+                MinWidth =
+                    480
+            };
+
+        controls.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Spline #{selection.EntityId} · {selection.AssetPath}",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        controls.Children.Add(
+            savedCombo);
+
+        controls.Children.Add(
+            nameBox);
+
+        controls.Children.Add(
+            lockSpline);
+
+        controls.Children.Add(
+            companionPath);
+
+        controls.Children.Add(
+            companionGrid);
+
+        controls.Children.Add(
+            sideCombo);
+
+        controls.Children.Add(
+            rotationBox);
+
+        controls.Children.Add(
+            addButton);
+
+        controls.Children.Add(
+            companionsList);
+
+        controls.Children.Add(
+            removeButton);
+
+        controls.Children.Add(
+            deleteSetButton);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Construction Sets",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            controls,
+                        MaxHeight =
+                            620
+                    },
+                PrimaryButtonText =
+                    "Aplicar",
+                SecondaryButtonText =
+                    "Salvar set",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        var result =
+            await dialog
+                .ShowAsync();
+
+        var name =
+            nameBox.Text
+                .Trim();
+
+        if (
+            result ==
+                ContentDialogResult
+                    .Secondary)
+        {
+            if (
+                string.IsNullOrWhiteSpace(
+                    name) ||
+                editing.Count ==
+                    0)
+            {
+                StatusText.Text =
+                    "Construction Set não salvo: informe nome e pelo menos um companheiro.";
+
+                return;
+            }
+
+            var existing =
+                savedCombo.SelectedItem as
+                    NativeConstructionSetDefinition;
+
+            var saved =
+                new NativeConstructionSetDefinition(
+                    existing?.Id ??
+                        Guid.NewGuid()
+                            .ToString("N"),
+                    name,
+                    lockSpline.IsChecked ==
+                        true
+                        ? selection.AssetPath
+                        : null,
+                    editing
+                        .Take(16)
+                        .ToArray());
+
+            _assetLibraryState
+                .ConstructionSets
+                .RemoveAll(
+                    item =>
+                        string.Equals(
+                            item.Id,
+                            saved.Id,
+                            StringComparison.OrdinalIgnoreCase));
+
+            _assetLibraryState
+                .ConstructionSets
+                .Add(
+                    saved);
+
+            SaveAssetLibraryState();
+
+            StatusText.Text =
+                $"Construction Set “{saved.Name}” salvo com {saved.Companions.Count} companheiro(s).";
+
+            return;
+        }
+
+        if (
+            result !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (editing.Count == 0)
+        {
+            StatusText.Text =
+                "Construction Set vazio: adicione pelo menos um SCO companheiro.";
+
+            return;
+        }
+
+        var definition =
+            new NativeConstructionSetDefinition(
+                "temporary",
+                string.IsNullOrWhiteSpace(
+                    name)
+                    ? "Construction Set"
+                    : name,
+                lockSpline.IsChecked ==
+                    true
+                    ? selection.AssetPath
+                    : null,
+                editing
+                    .Take(16)
+                    .ToArray());
+
+        try
+        {
+            var generated =
+                NativeConstructionSetBuilder
+                    .Build(
+                        splineEntity,
+                        definition);
+
+            var groups =
+                BuildConstructionSetBatchGroups(
+                    generated);
+
+            var total =
+                groups.Sum(
+                    group =>
+                        group.Placements.Count);
+
+            if (
+                groups.Count == 0 ||
+                total == 0)
+            {
+                StatusText.Text =
+                    "Construction Set não gerou posições válidas dentro dos tiles do mapa.";
+
+                return;
+            }
+
+            StatusText.Text =
+                $"Aplicando Construction Set: {groups.Count} grupo(s), {total} objeto(s)...";
+
+            var updated =
+                await _session
+                    .InsertSceneryObjectMultiBatchAsync(
+                        groups);
+
+            await ApplyMapSnapshotAsync(
+                updated,
+                focusActiveTile: false);
+
+            foreach (
+                var group in
+                    groups)
+            {
+                RecordAssetUsage(
+                    group
+                        .SceneryObjectPath);
+            }
+
+            StatusText.Text =
+                $"Construction Set aplicado: {total} objeto(s) em {groups.Count} grupo(s), com backup único.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao aplicar Construction Set: {exception.Message}";
+        }
+    }
+
+    private IReadOnlyList<
+        NativeSceneryPlacementBatchGroup>
+        BuildConstructionSetBatchGroups(
+            IReadOnlyList<
+                NativeConstructionSetPlacementGroup>
+                generated)
+    {
+        var map =
+            _session.CurrentMap?
+                .Map;
+
+        if (map is null)
+        {
+            return Array.Empty<
+                NativeSceneryPlacementBatchGroup>();
+        }
+
+        var result =
+            new List<
+                NativeSceneryPlacementBatchGroup>();
+
+        foreach (
+            var group in
+                generated.Take(16))
+        {
+            var placements =
+                new List<
+                    NativeSceneryPlacementRequest>();
+
+            foreach (
+                var placement in
+                    group.Placements
+                        .Take(256))
+            {
+                var tileX =
+                    (int)Math.Floor(
+                        placement.WorldX /
+                        300.0);
+
+                var tileY =
+                    (int)Math.Floor(
+                        placement.WorldZ /
+                        300.0);
+
+                var tile =
+                    map.Tiles
+                        .FirstOrDefault(
+                            candidate =>
+                                candidate.X ==
+                                    tileX &&
+                                candidate.Y ==
+                                    tileY);
+
+                if (tile is null)
+                {
+                    continue;
+                }
+
+                placements.Add(
+                    new NativeSceneryPlacementRequest(
+                        tile,
+                        group.SceneryObjectPath,
+                        placement.WorldX -
+                            tileX *
+                            300.0,
+                        placement.WorldZ -
+                            tileY *
+                            300.0,
+                        placement.Z,
+                        placement.Rotation,
+                        placement.Pitch,
+                        placement.Bank,
+                        new Vector3(
+                            (float)
+                                placement.WorldX,
+                            (float)
+                                placement.Z,
+                            (float)
+                                placement.WorldZ),
+                        UsesAbsoluteHeight:
+                            false));
+            }
+
+            if (placements.Count > 0)
+            {
+                result.Add(
+                    new NativeSceneryPlacementBatchGroup(
+                        group
+                            .SceneryObjectPath,
+                        placements));
+            }
+        }
+
+        return result;
+    }
+
+    private static string DescribeConstructionSide(
+        NativeConstructionSetSide side) =>
+        side switch
+        {
+            NativeConstructionSetSide.Left =>
+                "esquerdo",
+            NativeConstructionSetSide.Right =>
+                "direito",
+            _ =>
+                "ambos"
+        };
+
     private async void OnReplaceDependencyClick(
         object sender,
         RoutedEventArgs e)
