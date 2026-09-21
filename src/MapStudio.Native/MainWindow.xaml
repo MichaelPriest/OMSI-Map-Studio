@@ -389,6 +389,18 @@
                                           HorizontalAlignment="Stretch"
                                           DisplayMemberPath="Label"
                                           SelectionChanged="OnLibraryGroupSelectionChanged" />
+
+                                <ComboBox x:Name="LibraryViewComboBox"
+                                          Header="Visualização"
+                                          SelectedIndex="0"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="OnLibraryViewSelectionChanged">
+                                    <ComboBoxItem Content="Grupos" />
+                                    <ComboBoxItem Content="Favoritos" />
+                                    <ComboBoxItem Content="Recentes" />
+                                    <ComboBoxItem Content="Frequentes" />
+                                    <ComboBoxItem Content="Minha coleção" />
+                                </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1"
@@ -398,6 +410,23 @@
                                         IsEnabled="False"
                                         HorizontalAlignment="Stretch"
                                         Click="OnPlaceAssetClick" />
+
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="FavoriteAssetButton"
+                                            Grid.Column="0"
+                                            Content="☆ Favoritar"
+                                            IsEnabled="False"
+                                            Click="OnFavoriteAssetClick" />
+                                    <Button x:Name="CollectionAssetButton"
+                                            Grid.Column="1"
+                                            Content="+ Coleção"
+                                            IsEnabled="False"
+                                            Click="OnCollectionAssetClick" />
+                                </Grid>
 
                                 <StackPanel x:Name="ObjectPlacementOptionsPanel"
                                             Visibility="Collapsed"

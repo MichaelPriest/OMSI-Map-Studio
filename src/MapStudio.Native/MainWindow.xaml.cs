@@ -51,6 +51,11 @@ public sealed partial class MainWindow : Window
     private readonly OmsiNativeSession _session =
         new();
 
+    private NativeAssetLibraryState
+        _assetLibraryState =
+            NativeAssetLibraryStateStore
+                .Load();
+
     private readonly IntPtr _windowHandle;
 
     private readonly AppWindow _appWindow;
@@ -590,6 +595,22 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnLibraryViewSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_libraryMode)
+        {
+            LibraryGroupComboBox.IsEnabled =
+                LibraryViewComboBox
+                    .SelectedIndex ==
+                0;
+
+            RefreshLibraryFilter();
+        }
+    }
+
+
     private async void OnAssetLibrarySelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -602,6 +623,47 @@ public sealed partial class MainWindow : Window
             selected?.Kind is
                 OmsiAssetKind.SceneryObject or
                 OmsiAssetKind.Spline;
+
+        var hasSelection =
+            selected is not null;
+
+        FavoriteAssetButton.IsEnabled =
+            hasSelection;
+
+        CollectionAssetButton.IsEnabled =
+            hasSelection;
+
+        if (selected is not null)
+        {
+            FavoriteAssetButton.Content =
+                _assetLibraryState
+                    .Favorites
+                    .Contains(
+                        selected.RelativePath,
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    ? "★ Favorito"
+                    : "☆ Favoritar";
+
+            var inCollection =
+                _assetLibraryState
+                    .Collections
+                    .TryGetValue(
+                        "Minha coleção",
+                        out var collection) &&
+                collection.Contains(
+                    selected.RelativePath,
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+            CollectionAssetButton.Content =
+                inCollection
+                    ? "− Coleção"
+                    : "+ Coleção";
+
+            RecordRecentAsset(
+                selected.RelativePath);
+        }
 
         PlaceAssetButton.IsEnabled =
             _session.CurrentMap is not null &&
@@ -815,6 +877,181 @@ public sealed partial class MainWindow : Window
                 : fallback,
             minimum,
             maximum);
+
+    private void OnFavoriteAssetClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            AssetLibraryListView
+                .SelectedItem is not
+                OmsiAssetIndexEntry asset)
+        {
+            return;
+        }
+
+        if (
+            _assetLibraryState
+                .Favorites
+                .Contains(
+                    asset.RelativePath,
+                    StringComparer
+                        .OrdinalIgnoreCase))
+        {
+            _assetLibraryState
+                .Favorites
+                .RemoveAll(
+                    value =>
+                        string.Equals(
+                            value,
+                            asset.RelativePath,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+        }
+        else
+        {
+            _assetLibraryState
+                .Favorites
+                .Add(
+                    asset.RelativePath);
+        }
+
+        SaveAssetLibraryState();
+
+        FavoriteAssetButton.Content =
+            _assetLibraryState
+                .Favorites
+                .Contains(
+                    asset.RelativePath,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                ? "★ Favorito"
+                : "☆ Favoritar";
+
+        RefreshLibraryFilter();
+    }
+
+    private void OnCollectionAssetClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            AssetLibraryListView
+                .SelectedItem is not
+                OmsiAssetIndexEntry asset)
+        {
+            return;
+        }
+
+        if (
+            !_assetLibraryState
+                .Collections
+                .TryGetValue(
+                    "Minha coleção",
+                    out var collection))
+        {
+            collection = [];
+            _assetLibraryState
+                .Collections[
+                    "Minha coleção"] =
+                collection;
+        }
+
+        if (collection.Contains(
+                asset.RelativePath,
+                StringComparer.OrdinalIgnoreCase))
+        {
+            collection.RemoveAll(
+                value =>
+                    string.Equals(
+                        value,
+                        asset.RelativePath,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+        else
+        {
+            collection.Add(
+                asset.RelativePath);
+        }
+
+        SaveAssetLibraryState();
+
+        CollectionAssetButton.Content =
+            collection.Contains(
+                asset.RelativePath,
+                StringComparer.OrdinalIgnoreCase)
+                ? "− Coleção"
+                : "+ Coleção";
+
+        RefreshLibraryFilter();
+    }
+
+    private void RecordRecentAsset(
+        string relativePath)
+    {
+        _assetLibraryState
+            .Recent
+            .RemoveAll(
+                value =>
+                    string.Equals(
+                        value,
+                        relativePath,
+                        StringComparison.OrdinalIgnoreCase));
+
+        _assetLibraryState
+            .Recent
+            .Insert(
+                0,
+                relativePath);
+
+        if (
+            _assetLibraryState
+                .Recent.Count >
+            64)
+        {
+            _assetLibraryState
+                .Recent
+                .RemoveRange(
+                    64,
+                    _assetLibraryState
+                        .Recent.Count -
+                    64);
+        }
+
+        SaveAssetLibraryState();
+    }
+
+    private void RecordAssetUsage(
+        string relativePath)
+    {
+        _assetLibraryState
+            .Usage
+            .TryGetValue(
+                relativePath,
+                out var count);
+
+        _assetLibraryState
+            .Usage[
+                relativePath] =
+            count + 1;
+
+        RecordRecentAsset(
+            relativePath);
+    }
+
+    private void SaveAssetLibraryState()
+    {
+        try
+        {
+            NativeAssetLibraryStateStore
+                .Save(
+                    _assetLibraryState);
+        }
+        catch
+        {
+            // Personalização nunca deve bloquear edição do mapa.
+        }
+    }
 
     private async void OnPlaceAssetClick(
         object sender,
@@ -1267,6 +1504,9 @@ public sealed partial class MainWindow : Window
                 requests.Count == 1
                     ? $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro."
                     : $"{requests.Count} objetos inseridos em lote com backup seguro.";
+
+            RecordAssetUsage(
+                request.SceneryObjectPath);
 
             if (
                 mode == 1 &&
@@ -1764,7 +2004,93 @@ public sealed partial class MainWindow : Window
             OmsiAssetIndexEntry> items =
             _assetLibraryItems;
 
+        var view =
+            LibraryViewComboBox
+                .SelectedIndex;
+
+        if (view == 1)
+        {
+            var favorites =
+                _assetLibraryState
+                    .Favorites
+                    .ToHashSet(
+                        StringComparer
+                            .OrdinalIgnoreCase);
+
+            items =
+                items.Where(
+                    item =>
+                        favorites.Contains(
+                            item.RelativePath));
+        }
+        else if (view == 2)
+        {
+            var order =
+                _assetLibraryState
+                    .Recent
+                    .Select(
+                        (path, index) =>
+                            (
+                                path,
+                                index
+                            ))
+                    .ToDictionary(
+                        pair =>
+                            pair.path,
+                        pair =>
+                            pair.index,
+                        StringComparer
+                            .OrdinalIgnoreCase);
+
+            items =
+                items.Where(
+                        item =>
+                            order.ContainsKey(
+                                item.RelativePath))
+                    .OrderBy(
+                        item =>
+                            order[
+                                item.RelativePath]);
+        }
+        else if (view == 3)
+        {
+            items =
+                items.Where(
+                        item =>
+                            _assetLibraryState
+                                .Usage
+                                .ContainsKey(
+                                    item.RelativePath))
+                    .OrderByDescending(
+                        item =>
+                            _assetLibraryState
+                                .Usage[
+                                    item.RelativePath]);
+        }
+        else if (view == 4)
+        {
+            var collection =
+                _assetLibraryState
+                    .Collections
+                    .TryGetValue(
+                        "Minha coleção",
+                        out var paths)
+                    ? paths.ToHashSet(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    : new HashSet<string>(
+                        StringComparer
+                            .OrdinalIgnoreCase);
+
+            items =
+                items.Where(
+                    item =>
+                        collection.Contains(
+                            item.RelativePath));
+        }
+
         if (
+            view == 0 &&
             LibraryGroupComboBox
                 .SelectedItem is
                 LibraryGroupOption option &&
@@ -1808,8 +2134,17 @@ public sealed partial class MainWindow : Window
                     ? selectedGroup.Label
                     : "Todos";
 
+            var viewName =
+                LibraryViewComboBox
+                    .SelectedItem is
+                    ComboBoxItem viewItem
+                    ? viewItem.Content
+                        ?.ToString() ??
+                      "Grupos"
+                    : "Grupos";
+
             LibraryStatusText.Text =
-                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {groupName}";
+                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName}";
         }
     }
 
