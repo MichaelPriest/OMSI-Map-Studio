@@ -2519,7 +2519,7 @@ public sealed class OmsiNativeSession
 
         if (
             groups.Count == 0 ||
-            groups.Count > 16 ||
+            groups.Count > 128 ||
             totalPlacements == 0 ||
             totalPlacements > 512)
         {
