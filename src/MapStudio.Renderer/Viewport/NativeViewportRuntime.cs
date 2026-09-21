@@ -314,15 +314,29 @@ public sealed class NativeViewportRuntime : IDisposable
                 continue;
             }
 
-            foreach (
-                var controller in
+            for (
+                var controllerIndex = 0;
+                controllerIndex <
                     asset
-                        .TrafficLightControllers)
+                        .TrafficLightControllers
+                        .Count;
+                controllerIndex++)
             {
-                foreach (
-                    var program in
-                        controller.Programs)
+                var controller =
+                    asset
+                        .TrafficLightControllers[
+                            controllerIndex];
+
+                for (
+                    var programIndex = 0;
+                    programIndex <
+                        controller.Programs.Count;
+                    programIndex++)
                 {
+                    var program =
+                        controller.Programs[
+                            programIndex];
+
                     result.Add(
                         new NativeTrafficLightProgramInfo(
                             entity.Object
@@ -331,6 +345,8 @@ public sealed class NativeViewportRuntime : IDisposable
                             entity.Tile.Y,
                             entity.Object
                                 .SceneryObjectPath,
+                            controllerIndex,
+                            programIndex,
                             program.Name,
                             controller
                                 .CycleDuration,

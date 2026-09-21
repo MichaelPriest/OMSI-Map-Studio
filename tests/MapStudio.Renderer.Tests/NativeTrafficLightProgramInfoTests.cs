@@ -15,6 +15,8 @@ public sealed class NativeTrafficLightProgramInfoTests
                 0,
                 0,
                 @"Sceneryobjects\Test\crossing.sco",
+                0,
+                0,
                 "Main",
                 10,
                 [

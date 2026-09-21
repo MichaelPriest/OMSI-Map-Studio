@@ -7,6 +7,8 @@ public sealed record NativeTrafficLightProgramInfo(
     int TileX,
     int TileY,
     string AssetPath,
+    int ControllerIndex,
+    int ProgramIndex,
     string ProgramName,
     double? DeclaredCycleDuration,
     IReadOnlyList<OmsiTrafficLightPhase> Phases)
