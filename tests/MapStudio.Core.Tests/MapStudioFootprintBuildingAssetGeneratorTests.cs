@@ -200,6 +200,58 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
     }
 
     [Fact]
+    public void ConcaveShedRoofRaisesGeometryAboveWall()
+    {
+        var building =
+            new MapStudioProjectedBuildingFootprint(
+                "roof-concave-shed",
+                [
+                    new(0, 0),
+                    new(12, 0),
+                    new(12, 4),
+                    new(5, 4),
+                    new(5, 10),
+                    new(0, 10)
+                ],
+                new(5.0, 4.0),
+                "commercial",
+                null,
+                3,
+                9,
+                MapStudioBuildingRoofType.Shed,
+                2,
+                null,
+                null);
+
+        var geometry =
+            new MapStudioFootprintBuildingAssetGenerator()
+                .BuildGeometry(
+                    building);
+
+        var yValues =
+            geometry.Positions
+                .Where(
+                    (_, index) =>
+                        index %
+                            3 ==
+                        1)
+                .ToArray();
+
+        Assert.InRange(
+            yValues.Max(),
+            10.99f,
+            11.01f);
+
+        Assert.Contains(
+            yValues,
+            value =>
+                value >
+                    9.1f &&
+                value <
+                    10.9f);
+    }
+
+    [Fact]
     public async Task GeneratorWritesFootprintScoAndO3d()
     {
         var root =
