@@ -6007,6 +6007,19 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
+        if (
+            TrafficViewComboBox is null ||
+            TrafficSignalsPanel is null ||
+            TrafficRulesPanel is null ||
+            EditTrafficProgramButton is null ||
+            TrafficProgramListView is null ||
+            TrafficPlayButton is null ||
+            ExplorerSearchBox is null ||
+            TrafficDetailText is null)
+        {
+            return;
+        }
+
         var rules =
             TrafficViewComboBox
                 .SelectedIndex ==
