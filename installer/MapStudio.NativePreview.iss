@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.0-alpha.3-native"
+  #define AppVersion "0.2.0-alpha.4-test.1-native"
 #endif
 
 #ifndef SourceDir
