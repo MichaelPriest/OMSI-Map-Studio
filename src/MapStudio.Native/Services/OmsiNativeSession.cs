@@ -3303,6 +3303,123 @@ public sealed class OmsiNativeSession
             newSplineId);
     }
 
+    public async Task<NativeTimetableLineUpdateResult>
+        UpdateTimetableLineAsync(
+            OmsiTimetableLine line,
+            OmsiTimetableLine updatedLine,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            line);
+
+        ArgumentNullException.ThrowIfNull(
+            updatedLine);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map.DirectoryPath);
+
+        var target =
+            Path.GetFullPath(
+                line.FilePath);
+
+        var relative =
+            Path.GetRelativePath(
+                mapRoot,
+                target);
+
+        if (
+            !IsSafeRelativePath(
+                relative) ||
+            !relative.StartsWith(
+                "TTData" +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                Path.GetExtension(
+                    target),
+                ".ttl",
+                StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(
+                target))
+        {
+            throw new InvalidDataException(
+                "invalidTimetableLinePath");
+        }
+
+        var existingText =
+            await File.ReadAllTextAsync(
+                    target,
+                    System.Text.Encoding
+                        .Latin1,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var newLine =
+            existingText.Contains(
+                "\r\n",
+                StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+
+        var normalized =
+            updatedLine with
+            {
+                FilePath =
+                    line.FilePath,
+                RelativePath =
+                    line.RelativePath,
+                Name =
+                    line.Name
+            };
+
+        var bytes =
+            new OmsiTimetableLineWriter()
+                .Write(
+                    normalized,
+                    newLine);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiTimetableLineReader()
+                .ReadAsync(
+                    snapshot.Map.DirectoryPath,
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeTimetableLineUpdateResult(
+            reloaded,
+            backupPath);
+    }
+
     public async Task<NativeTimetableTripUpdateResult>
         UpdateTimetableTripAsync(
             OmsiTimetableTrip trip,
