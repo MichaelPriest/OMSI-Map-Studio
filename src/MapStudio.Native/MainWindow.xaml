@@ -275,6 +275,9 @@
                         Text="Importar edifícios OSM..."
                         Click="OnImportOsmBuildingsClick" />
                     <MenuFlyoutItem
+                        Text="Importar vegetação OSM..."
+                        Click="OnImportOsmVegetationClick" />
+                    <MenuFlyoutItem
                         Text="Instalar/atualizar Road Kit..."
                         Click="OnInstallRoadKitClick" />
                     <MenuFlyoutSubItem
