@@ -4,8 +4,13 @@ using MapStudio.Renderer.Scene;
 
 namespace MapStudio.Renderer.Viewport;
 
+public sealed record NativeProceduralRoadPlacementLink(
+    int PreviousRequestIndex,
+    int NextRequestIndex);
+
 public sealed record NativeProceduralRoadPlacementBuildResult(
     IReadOnlyList<NativeSplinePlacementRequest> Requests,
+    IReadOnlyList<NativeProceduralRoadPlacementLink> Links,
     int SkippedSegments);
 
 public sealed class NativeProceduralRoadPlacementBuilder
@@ -24,6 +29,10 @@ public sealed class NativeProceduralRoadPlacementBuilder
             new List<
                 NativeSplinePlacementRequest>(
                     graph.Segments.Count);
+
+        var requestSegmentIds =
+            new List<int>(
+                graph.Segments.Count);
 
         var skipped =
             0;
@@ -99,6 +108,9 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 continue;
             }
 
+            requestSegmentIds.Add(
+                segment.Id);
+
             requests.Add(
                 new NativeSplinePlacementRequest(
                     tile.Reference,
@@ -123,8 +135,80 @@ public sealed class NativeProceduralRoadPlacementBuilder
                     false));
         }
 
+        var requestIndexBySegmentId =
+            requestSegmentIds
+                .Select(
+                    (segmentId, index) =>
+                        (
+                            segmentId,
+                            index
+                        ))
+                .ToDictionary(
+                    item =>
+                        item.segmentId,
+                    item =>
+                        item.index);
+
+        var links =
+            new List<
+                NativeProceduralRoadPlacementLink>();
+
+        var nodeById =
+            graph.Nodes.ToDictionary(
+                node =>
+                    node.Id);
+
+        foreach (
+            var current in
+                graph.Segments)
+        {
+            if (
+                !requestIndexBySegmentId
+                    .TryGetValue(
+                        current.Id,
+                        out var currentIndex) ||
+                !nodeById.TryGetValue(
+                    current.ToNodeId,
+                    out var node) ||
+                node.IsJunction ||
+                node.Degree !=
+                    2 ||
+                node.TraceIds.Count !=
+                    1)
+            {
+                continue;
+            }
+
+            var next =
+                graph.Segments
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Id !=
+                                current.Id &&
+                            candidate.TraceId ==
+                                current.TraceId &&
+                            candidate.FromNodeId ==
+                                current.ToNodeId);
+
+            if (
+                next is null ||
+                !requestIndexBySegmentId
+                    .TryGetValue(
+                        next.Id,
+                        out var nextIndex))
+            {
+                continue;
+            }
+
+            links.Add(
+                new NativeProceduralRoadPlacementLink(
+                    currentIndex,
+                    nextIndex));
+        }
+
         return new NativeProceduralRoadPlacementBuildResult(
             requests,
+            links,
             skipped);
     }
 }
