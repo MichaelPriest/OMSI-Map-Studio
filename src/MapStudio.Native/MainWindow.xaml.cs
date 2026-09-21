@@ -463,10 +463,7 @@ public sealed partial class MainWindow : Window
         PlaceAssetButton.Content =
             "Posicionar no mapa";
 
-        SplineCurveCheckBox.Visibility =
-            Visibility.Collapsed;
-
-        SplineContinuousCheckBox.Visibility =
+        SplinePlacementOptionsPanel.Visibility =
             Visibility.Collapsed;
 
         _libraryMode =
@@ -896,13 +893,7 @@ public sealed partial class MainWindow : Window
         _patternLineStart =
             null;
 
-        SplineCurveCheckBox.Visibility =
-            selected?.Kind ==
-                OmsiAssetKind.Spline
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-
-        SplineContinuousCheckBox.Visibility =
+        SplinePlacementOptionsPanel.Visibility =
             selected?.Kind ==
                 OmsiAssetKind.Spline
                 ? Visibility.Visible
@@ -1414,6 +1405,26 @@ public sealed partial class MainWindow : Window
 
         try
         {
+            if (
+                asset.Kind ==
+                    OmsiAssetKind.Spline)
+            {
+                Viewport
+                    .SetSplineEndpointSnapOptions(
+                        SplineEndpointSnapCheckBox
+                            .IsChecked ==
+                        true,
+                        double.IsFinite(
+                            SplineEndpointSnapDistanceBox
+                                .Value)
+                            ? SplineEndpointSnapDistanceBox
+                                .Value
+                            : 5.0,
+                        SplineAutoConnectCheckBox
+                            .IsChecked ==
+                        true);
+            }
+
             var started =
                 asset.Kind ==
                     OmsiAssetKind.Spline
@@ -1585,7 +1596,9 @@ public sealed partial class MainWindow : Window
                         "Cancelar posicionamento";
 
                     StatusText.Text =
-                        $"Spline inserida ({request.Length:F1} m). Próximo segmento iniciado no endpoint anterior.";
+                        request.NextSplineId >= 0
+                            ? $"Spline inserida ({request.Length:F1} m) e conectada entre #{request.PreviousSplineId} / #{request.NextSplineId}. Próximo segmento iniciado no novo endpoint."
+                            : $"Spline inserida ({request.Length:F1} m). Próximo segmento iniciado no endpoint anterior.";
 
                     return;
                 }
@@ -1596,8 +1609,14 @@ public sealed partial class MainWindow : Window
                     OmsiAssetKind.SceneryObject or
                     OmsiAssetKind.Spline;
 
+            var linkStatus =
+                request.PreviousSplineId >= 0 ||
+                request.NextSplineId >= 0
+                    ? $" · links {request.PreviousSplineId} → #{insertion.SplineId} → {request.NextSplineId}"
+                    : string.Empty;
+
             StatusText.Text =
-                $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}.";
+                $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}{linkStatus}.";
         }
         catch (Exception exception)
         {

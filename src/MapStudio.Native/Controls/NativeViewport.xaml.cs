@@ -319,6 +319,11 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
+        _runtime.SetSplineEndpointSnapOptions(
+            enabled: false,
+            distance: 5.0,
+            autoConnect: false);
+
         var started =
             await _runtime
                 .BeginSplinePlacementAsync(

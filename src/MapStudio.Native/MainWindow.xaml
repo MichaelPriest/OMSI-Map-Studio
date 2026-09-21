@@ -607,13 +607,28 @@
                                                Foreground="#7895AD" />
                                 </StackPanel>
 
-                                <CheckBox x:Name="SplineCurveCheckBox"
-                                          Content="Curva (3 cliques)"
-                                          Visibility="Collapsed" />
-                                <CheckBox x:Name="SplineContinuousCheckBox"
-                                          Content="Continuar segmentos"
-                                          IsChecked="True"
-                                          Visibility="Collapsed" />
+                                <StackPanel x:Name="SplinePlacementOptionsPanel"
+                                            Visibility="Collapsed"
+                                            Spacing="5">
+                                    <CheckBox x:Name="SplineCurveCheckBox"
+                                              Content="Curva (3 cliques)" />
+                                    <CheckBox x:Name="SplineContinuousCheckBox"
+                                              Content="Continuar segmentos"
+                                              IsChecked="True" />
+                                    <CheckBox x:Name="SplineEndpointSnapCheckBox"
+                                              Content="Encaixar endpoints"
+                                              IsChecked="True" />
+                                    <NumberBox x:Name="SplineEndpointSnapDistanceBox"
+                                               Header="Distância de snap (m)"
+                                               Minimum="0.5"
+                                               Maximum="30"
+                                               Value="5"
+                                               SmallChange="0.5"
+                                               SpinButtonPlacementMode="Compact" />
+                                    <CheckBox x:Name="SplineAutoConnectCheckBox"
+                                              Content="Conectar Previous/Next automaticamente"
+                                              IsChecked="True" />
+                                </StackPanel>
                             </StackPanel>
 
                             <TextBlock x:Name="LibraryStatusText"
