@@ -3,6 +3,7 @@ using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
