@@ -26,7 +26,8 @@ public sealed record MapStudioGeoVegetationArea(
 public sealed record MapStudioOsmVegetationAreaImportResult(
     IReadOnlyList<MapStudioGeoVegetationArea> Areas,
     int IgnoredWayCount,
-    int MissingNodeReferenceCount);
+    int MissingNodeReferenceCount,
+    int IgnoredRelationCount = 0);
 
 public sealed class MapStudioOsmVegetationAreaImporter
 {
@@ -124,15 +125,23 @@ public sealed class MapStudioOsmVegetationAreaImporter
                     longitude);
         }
 
+        var relationAssembly =
+            new MapStudioOsmVegetationAreaRelationAssembler()
+                .Assemble(
+                    root,
+                    nodes);
+
         var areas =
             new List<
-                MapStudioGeoVegetationArea>();
+                MapStudioGeoVegetationArea>(
+                    relationAssembly.Areas);
 
         var ignoredWays =
             0;
 
         var missingReferences =
-            0;
+            relationAssembly
+                .MissingNodeReferenceCount;
 
         foreach (
             var way in
@@ -142,6 +151,21 @@ public sealed class MapStudioOsmVegetationAreaImporter
                             item.Name.LocalName ==
                             "way"))
         {
+            var wayId =
+                way.Attribute(
+                    "id")?.Value;
+
+            if (
+                !string.IsNullOrWhiteSpace(
+                    wayId) &&
+                relationAssembly
+                    .ConsumedWayIds
+                    .Contains(
+                        wayId))
+            {
+                continue;
+            }
+
             var tags =
                 ReadTags(
                     way);
@@ -254,7 +278,9 @@ public sealed class MapStudioOsmVegetationAreaImporter
         return new MapStudioOsmVegetationAreaImportResult(
             areas,
             ignoredWays,
-            missingReferences);
+            missingReferences,
+            relationAssembly
+                .IgnoredRelationCount);
     }
 
     private static bool TryGetKind(
