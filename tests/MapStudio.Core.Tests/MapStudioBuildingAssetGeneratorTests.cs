@@ -103,6 +103,38 @@ public sealed class MapStudioBuildingAssetGeneratorTests
             detailed.TriangleMaterialIndices);
     }
 
+    [Theory]
+    [InlineData(
+        MapStudioBuildingRoofType.Hip)]
+    [InlineData(
+        MapStudioBuildingRoofType.Shed)]
+    public void GeometryBuilderCreatesAdditionalSlopedRoofTypes(
+        MapStudioBuildingRoofType roofType)
+    {
+        var geometry =
+            new MapStudioBuildingAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioBuildingSpec(
+                        "Roof test",
+                        12,
+                        9,
+                        6,
+                        2,
+                        roofType,
+                        2));
+
+        Assert.True(
+            geometry.IsLoaded);
+
+        Assert.True(
+            geometry.Indices.Length >=
+            36);
+
+        Assert.Contains(
+            (ushort)1,
+            geometry.TriangleMaterialIndices);
+    }
+
     [Fact]
     public async Task GeneratorWritesScoO3dAndBacksUpExistingAsset()
     {
