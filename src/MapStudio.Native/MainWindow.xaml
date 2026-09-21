@@ -424,6 +424,10 @@
                     ToolTipService.ToolTip="Criar um novo mapa no Workspace"
                     Click="OnCreateStandaloneMapClick" />
                 <Button
+                    Content="Importar mapa"
+                    ToolTipService.ToolTip="Copiar e abrir um mapa externo no Workspace"
+                    Click="OnImportStandaloneMapClick" />
+                <Button
                     Content="Assets"
                     ToolTipService.ToolTip="Abrir biblioteca de itens"
                     Click="OnLibraryModeClick" />
