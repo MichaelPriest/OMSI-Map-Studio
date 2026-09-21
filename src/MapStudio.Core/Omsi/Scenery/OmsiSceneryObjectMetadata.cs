@@ -21,6 +21,10 @@ public sealed record OmsiSceneryObjectMetadata(
         LightPoints { get; init; } =
             Array.Empty<OmsiSceneryLightPoint>();
 
+    public IReadOnlyList<OmsiSceneryPathDefinition>
+        Paths { get; init; } =
+            Array.Empty<OmsiSceneryPathDefinition>();
+
     public bool IsTrafficLightObject { get; init; }
 
     public bool UsesLightMapMapping { get; init; }

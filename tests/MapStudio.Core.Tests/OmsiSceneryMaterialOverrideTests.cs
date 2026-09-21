@@ -461,4 +461,54 @@ public sealed class OmsiSceneryMaterialOverrideTests
             light.EffectTexture);
     }
 
+    [Fact]
+    public void ReadMetadata_ParsesCrossingPathsAndTrafficLightBinding()
+    {
+        const string source =
+            "[path]\n" +
+            "7\n2\n0.1\n-90\n5\n7.854\n" +
+            "0\n0\n0\n2.5\n0\n3\n" +
+            "[use_traffic_light]\n1\n" +
+            "[crossingproblem]\n" +
+            "[path]\n" +
+            "0\n0\n0.449\n0\n0\n6.97\n" +
+            "0\n0\n2\n2.5\n2\n0\n" +
+            "[switchdir]\n1\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            2,
+            metadata.Paths.Count);
+
+        var road =
+            metadata.Paths[0];
+
+        Assert.Equal(7, road.X);
+        Assert.Equal(2, road.Y);
+        Assert.Equal(0.1, road.Z);
+        Assert.Equal(-90, road.Rotation);
+        Assert.Equal(5, road.Radius);
+        Assert.Equal(7.854, road.Length);
+        Assert.Equal(0, road.Type);
+        Assert.Equal(2.5, road.Width);
+        Assert.Equal(0, road.Direction);
+        Assert.Equal(3, road.BlinkerCode);
+        Assert.Equal(1, road.TrafficLightIndex);
+        Assert.True(road.CrossingProblem);
+
+        var rail =
+            metadata.Paths[1];
+
+        Assert.Equal(2, rail.Type);
+        Assert.Equal(2, rail.Direction);
+        Assert.Equal(1, rail.SwitchDirection);
+        Assert.Null(
+            rail.TrafficLightIndex);
+    }
+
 }

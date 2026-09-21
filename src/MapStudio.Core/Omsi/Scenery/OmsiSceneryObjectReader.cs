@@ -84,6 +84,9 @@ public sealed class OmsiSceneryObjectReader
             LightPoints =
                 ReadLightPoints(
                     document),
+            Paths =
+                ReadPaths(
+                    document),
             IsTrafficLightObject =
                 document.FindFirstSection(
                     "trafficlight") is not null,
@@ -654,6 +657,179 @@ public sealed class OmsiSceneryObjectReader
                                 StringComparer.OrdinalIgnoreCase)
                             .ToArray()))
             .ToArray();
+    }
+
+    private static IReadOnlyList<
+        OmsiSceneryPathDefinition>
+        ReadPaths(
+            OmsiConfigDocument document)
+    {
+        var result =
+            new List<
+                OmsiSceneryPathDefinition>();
+
+        for (
+            var index = 0;
+            index < document.Sections.Count;
+            index++)
+        {
+            var section =
+                document.Sections[index];
+
+            if (!string.Equals(
+                    section.Keyword,
+                    "path",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var values =
+                section.DataLines
+                    .Take(12)
+                    .ToArray();
+
+            if (
+                values.Length < 12 ||
+                !TryReadFiniteDouble(values[0], out var x) ||
+                !TryReadFiniteDouble(values[1], out var y) ||
+                !TryReadFiniteDouble(values[2], out var z) ||
+                !TryReadFiniteDouble(values[3], out var rotation) ||
+                !TryReadFiniteDouble(values[4], out var radius) ||
+                !TryReadFiniteDouble(values[5], out var length) ||
+                !TryReadFiniteDouble(values[6], out var gradientStart) ||
+                !TryReadFiniteDouble(values[7], out var gradientEnd) ||
+                !int.TryParse(
+                    values[8],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var type) ||
+                !TryReadFiniteDouble(values[9], out var width) ||
+                !int.TryParse(
+                    values[10],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var direction) ||
+                !int.TryParse(
+                    values[11],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var blinkerCode))
+            {
+                continue;
+            }
+
+            int? trafficLightIndex = null;
+            int? switchDirection = null;
+            var crossingProblem = false;
+
+            for (
+                var nextIndex = index + 1;
+                nextIndex < document.Sections.Count;
+                nextIndex++)
+            {
+                var next =
+                    document.Sections[nextIndex];
+
+                if (string.Equals(
+                        next.Keyword,
+                        "path",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                if (
+                    string.Equals(
+                        next.Keyword,
+                        "mesh",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        next.Keyword,
+                        "tree",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        next.Keyword,
+                        "traffic_lights_group",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        next.Keyword,
+                        "trafficlight_group",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                if (string.Equals(
+                        next.Keyword,
+                        "use_traffic_light",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (
+                        int.TryParse(
+                            next.DataLines
+                                .FirstOrDefault(),
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out var parsed))
+                    {
+                        trafficLightIndex =
+                            parsed;
+                    }
+
+                    continue;
+                }
+
+                if (string.Equals(
+                        next.Keyword,
+                        "switchdir",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    if (
+                        int.TryParse(
+                            next.DataLines
+                                .FirstOrDefault(),
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out var parsed))
+                    {
+                        switchDirection =
+                            parsed;
+                    }
+
+                    continue;
+                }
+
+                if (string.Equals(
+                        next.Keyword,
+                        "crossingproblem",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    crossingProblem =
+                        true;
+                }
+            }
+
+            result.Add(
+                new OmsiSceneryPathDefinition(
+                    x,
+                    y,
+                    z,
+                    rotation,
+                    radius,
+                    Math.Max(0, length),
+                    gradientStart,
+                    gradientEnd,
+                    type,
+                    Math.Max(0, width),
+                    direction,
+                    blinkerCode,
+                    trafficLightIndex,
+                    switchDirection,
+                    crossingProblem));
+        }
+
+        return result;
     }
 
     private static IReadOnlyList<
