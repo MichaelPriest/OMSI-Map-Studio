@@ -3,7 +3,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:MapStudio.Native.Controls"
-    Title="OMSI Map Studio Native">
+    Title="OMSI Map Studio — World Creator">
 
     <Grid x:Name="MainRoot"
           Background="#08131D">
@@ -427,6 +427,10 @@
                     Content="Importar mapa"
                     ToolTipService.ToolTip="Copiar e abrir um mapa externo no Workspace"
                     Click="OnImportStandaloneMapClick" />
+                <Button
+                    Content="Adicionar itens"
+                    ToolTipService.ToolTip="Adicionar uma pasta de SCO/SLI/modelos/texturas ao Workspace"
+                    Click="OnAddAssetFolderClick" />
                 <Button
                     Content="Assets"
                     ToolTipService.ToolTip="Abrir biblioteca de itens"
@@ -1323,6 +1327,9 @@
                     <Button Content="Importar"
                             ToolTipService.ToolTip="Importar mapa externo para o Workspace"
                             Click="OnImportStandaloneMapClick" />
+                    <Button Content="Adicionar itens"
+                            ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
+                            Click="OnAddAssetFolderClick" />
                     <Button Content="Assets"
                             Click="OnLibraryModeClick" />
                     <Button Content="Explorer"

@@ -872,7 +872,9 @@ public sealed partial class MainWindow : Window
                 false;
 
             LibraryStatusText.Text =
-                "Indexando instalação OMSI...";
+                _session.IsStandaloneWorkspace
+                    ? "Indexando Workspace Map Studio..."
+                    : "Indexando instalação OMSI...";
 
             var progress =
                 new Progress<
@@ -12547,6 +12549,16 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as alterações pendentes antes de trocar para a fonte OMSI.";
+
+            return;
+        }
+
         try
         {
             var root =
