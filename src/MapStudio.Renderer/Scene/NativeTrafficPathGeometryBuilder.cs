@@ -1,5 +1,6 @@
 using System.Numerics;
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Scenery;
 
 namespace MapStudio.Renderer.Scene;
 
