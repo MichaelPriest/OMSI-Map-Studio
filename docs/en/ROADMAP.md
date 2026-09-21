@@ -703,3 +703,29 @@ Beyond parity with the legacy editor, the roadmap now officially includes:
 - mandatory preview before automatic generation is persisted into a real map.
 
 Implementation should keep one geometric engine: manual tracing, vector data, and AI must feed the same generation pipeline instead of creating parallel formats.
+
+
+---
+
+## Architecture update — the native host is the current direction
+
+The historical **“Viewport stabilization phase”** section above records the analysis that led to the architecture change. The later decision has already been executed: the production viewport now uses **WinUI 3 + Direct3D 11**. React/WebView2 is no longer the direction of the primary renderer.
+
+Current state of the new differentiators:
+
+- ✅ original Road Kit;
+- ✅ procedural road graph;
+- ✅ manual tracing;
+- ✅ georeferenced GeoJSON;
+- ✅ georeferenced OSM XML;
+- ✅ AI road analysis from the Google reference;
+- ✅ D3D11 preview before persistence;
+- ✅ auto-linking across safe linear continuity;
+- ✅ original procedural junctions;
+- ✅ transactional batch persistence with backup/rollback;
+- ✅ procedural Building Studio with O3D/SCO output;
+- ✅ multiple roof types and facade openings;
+- ✅ vendor-neutral AI contracts;
+- ✅ commercial/entitlement layer prepared, with no Alpha billing enforcement yet.
+
+Intermediate-tile deletion intentionally remains blocked until a reindexer can prove and update every tile-index-dependent reference. This limitation must not be bypassed by simply deleting a `[map]` section.

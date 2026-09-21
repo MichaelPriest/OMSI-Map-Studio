@@ -716,3 +716,62 @@ The initial deletion flow is intentionally conservative.
 All matching `tile_X_Y.map*` files are copied into `.mapstudio-backups` before deletion. If any step fails, both `global.cfg` and tile files are restored.
 
 Arbitrary removal of intermediate tiles remains blocked until a validated reindexer exists for index-based references in `global.cfg` and operational map data.
+
+
+## Consolidated native-migration status — 2026-09-21
+
+> “Next checkpoint”, “not included yet”, and similar statements in the historical sections above describe the state when each checkpoint was written. They must not be treated as the current backlog. This section is the latest consolidated reference.
+
+The production editor architecture is **WinUI 3 + Direct3D 11 + MapStudio.Core**. The earlier plan to keep React/WebView2 as the primary viewport has been superseded by the native migration and remains documented only as architectural history.
+
+In addition to the checkpoints already described, the native host currently includes:
+
+- tile creation, safe deletion, and visual tile management;
+- local elevation import from CSV and ESRI ASCII Grid;
+- incremental raise/lower terrain brush, leveling, and real DDS-mask painting;
+- individual `groundtex` layer visibility;
+- persistent geometry thumbnails and visual library cards;
+- Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
+- procedural-road generation using one graph, original junction assets, and rollback;
+- georeferenced GeoJSON and **OSM XML** import;
+- AI analysis of the Google reference for road extraction;
+- Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
+- provider-neutral AI configuration and connection probing;
+- reading of `attachObj`, `splineAttachment/splineAttachement`, and repeater variants;
+- preservative editing of validated numeric attachment fields with backup and round-trip checks;
+- commercial/entitlement architecture running in Development Preview without enforcement;
+- a formal simulator-adapter boundary; OMSI 2 remains the only operational adapter at this time.
+
+### OSM import
+
+**Tools → Procedural road generator → Import georeferenced OSM XML...** reads local `.osm`/`.xml` files while prohibiting DTD processing and external entity resolution.
+
+The importer reads ways tagged with `highway`, resolves their nodes, and preserves when present:
+
+- `lanes`;
+- `oneway`, including `-1` by reversing geometry direction;
+- `width`;
+- `name`;
+- the `highway` classification.
+
+WGS84 coordinates are projected through the same `.mapstudio/georeference.json` anchor used by GeoJSON. OSM, GeoJSON, manual tracing, and AI then feed exactly the same `MapStudioRoadGraph`, D3D11 preview, Road Kit, junction planner, and transactional persistence pipeline.
+
+### OMSI attachments
+
+The reader preserves recognized attachment variants without rewriting unknown sections. Editing is enabled only for sections parsed as valid, and the writer verifies that the original raw values are still unchanged before applying an edit.
+
+Currently editable:
+
+- rotation, pitch, and bank for `attachObj`;
+- X/Z/Y, rotation, pitch, bank, interval, and distance for spline attachments/repeaters.
+
+Still read-only at this stage:
+
+- IDs;
+- asset path;
+- parent ID;
+- attach point;
+- `varparent`;
+- unknown/extra fields.
+
+Persistence uses `SafeFileTransaction`, creates a backup, and reloads the tile before replacing the live snapshot.

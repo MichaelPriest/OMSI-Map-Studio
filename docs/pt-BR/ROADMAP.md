@@ -703,3 +703,29 @@ Além da paridade com o editor antigo, o roadmap passa a incluir oficialmente:
 - preview obrigatório antes de persistir geração automática em mapa real.
 
 A prioridade de implementação é manter um único motor geométrico: traçado manual, dados vetoriais e IA devem alimentar o mesmo pipeline de geração, evitando formatos paralelos.
+
+
+---
+
+## Atualização arquitetural — host nativo é a direção atual
+
+A seção histórica **“Fase de estabilização do viewport”** acima registra a análise que levou à mudança de arquitetura. A decisão posterior já foi executada: o viewport de produção passou para **WinUI 3 + Direct3D 11**. React/WebView2 não é mais a direção do renderer principal.
+
+Estado atual dos diferenciais novos:
+
+- ✅ Road Kit próprio;
+- ✅ grafo procedural de vias;
+- ✅ traçado manual;
+- ✅ GeoJSON georreferenciado;
+- ✅ OSM XML georreferenciado;
+- ✅ análise de vias da referência Google por IA;
+- ✅ preview D3D11 antes de persistir;
+- ✅ auto-link em continuidade linear segura;
+- ✅ junctions procedurais próprios;
+- ✅ persistência em batch com backup/rollback;
+- ✅ Building Studio procedural com O3D/SCO;
+- ✅ múltiplos tipos de telhado e aberturas de fachada;
+- ✅ contratos de IA independentes de fornecedor;
+- ✅ camada comercial/entitlements preparada, ainda sem cobrança aplicada no Alpha.
+
+A remoção de tiles intermediários continua conscientemente bloqueada até existir um reindexador que prove e atualize todas as referências dependentes do índice do tile. Essa limitação não deve ser contornada apenas removendo uma seção `[map]`.
