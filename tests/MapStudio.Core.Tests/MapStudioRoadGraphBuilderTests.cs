@@ -222,4 +222,55 @@ public sealed class MapStudioRoadGraphBuilderTests
                                     "road")
                             ]));
     }
+    [Fact]
+    public void DegreeTwoJoinAcrossTracesRemainsLinear()
+    {
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "part-a",
+                            [
+                                new(0, 0),
+                                new(10, 0)
+                            ],
+                            "road.sli"),
+                        new MapStudioRoadTrace(
+                            "part-b",
+                            [
+                                new(10, 0),
+                                new(20, 0)
+                            ],
+                            "road.sli")
+                    ]);
+
+        Assert.Empty(
+            graph.Junctions);
+
+        var join =
+            Assert.Single(
+                graph.Nodes
+                    .Where(
+                        node =>
+                            Math.Abs(
+                                node.Position.X -
+                                10) <
+                            0.001 &&
+                            Math.Abs(
+                                node.Position.Z) <
+                            0.001));
+
+        Assert.Equal(
+            2,
+            join.Degree);
+
+        Assert.False(
+            join.IsJunction);
+
+        Assert.Equal(
+            2,
+            join.TraceIds.Count);
+    }
+
 }
