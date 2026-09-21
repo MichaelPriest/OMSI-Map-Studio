@@ -4964,6 +4964,282 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnEditTrackClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _timetableCatalog is null ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind !=
+                "Track")
+        {
+            return;
+        }
+
+        var track =
+            _timetableCatalog.Tracks
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (track is null)
+        {
+            return;
+        }
+
+        var editor =
+            new TextBox
+            {
+                Header =
+                    "Segmentos do Track · ID:pathIndex",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinWidth =
+                    520,
+                MinHeight =
+                    300,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        track.Entries
+                            .Select(
+                                entry =>
+                                    $"{entry.Id}:{entry.Line2}"))
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Uma linha por segmento. Reordene, remova ou adicione entradas. Para novas linhas, o Map Studio grava o formato compacto OMSI; metadata estendida existente é preservada por posição.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        panel.Children.Add(
+            editor);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar Track · {track.Name}",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            560
+                    },
+                PrimaryButtonText =
+                    "Salvar Track",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var parsed =
+            new List<
+                (int Id, string PathIndex)>();
+
+        var lineNumber =
+            0;
+
+        foreach (
+            var rawLine in
+                editor.Text
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Split('\n'))
+        {
+            lineNumber++;
+
+            var line =
+                rawLine.Trim();
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    line))
+            {
+                continue;
+            }
+
+            var separator =
+                line.IndexOf(
+                    ':');
+
+            if (
+                separator <= 0 ||
+                separator >=
+                    line.Length - 1 ||
+                !int.TryParse(
+                    line[..separator]
+                        .Trim(),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var id) ||
+                id < 0)
+            {
+                StatusText.Text =
+                    $"Track não salvo: linha {lineNumber} inválida. Use ID:pathIndex.";
+
+                return;
+            }
+
+            var pathIndex =
+                line[(separator + 1)..]
+                    .Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    pathIndex))
+            {
+                StatusText.Text =
+                    $"Track não salvo: pathIndex vazio na linha {lineNumber}.";
+
+                return;
+            }
+
+            parsed.Add(
+                (
+                    id,
+                    pathIndex
+                ));
+        }
+
+        if (parsed.Count == 0)
+        {
+            StatusText.Text =
+                "Track não salvo: mantenha pelo menos um segmento.";
+
+            return;
+        }
+
+        var entries =
+            parsed
+                .Select(
+                    (value, index) =>
+                    {
+                        if (
+                            index <
+                            track.Entries.Count)
+                        {
+                            var source =
+                                track.Entries[
+                                    index];
+
+                            return source with
+                            {
+                                Comment =
+                                    string.IsNullOrWhiteSpace(
+                                        source.Comment)
+                                        ? $"{index}:"
+                                        : source.Comment,
+                                Id =
+                                    value.Id,
+                                Line2 =
+                                    value.PathIndex
+                            };
+                        }
+
+                        return new OmsiTimetableTrackEntry(
+                            $"{index}:",
+                            value.Id,
+                            value.PathIndex,
+                            -1,
+                            string.Empty,
+                            null,
+                            string.Empty,
+                            null);
+                    })
+                .ToArray();
+
+        try
+        {
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Track {track.Name} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTimetableTrackAsync(
+                        track,
+                        entries);
+
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        _session.CurrentMap!
+                            .Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            var refreshed =
+                _transportItems
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Kind ==
+                                "Track" &&
+                            string.Equals(
+                                candidate.Key,
+                                updated.Track.Name,
+                                StringComparison.OrdinalIgnoreCase));
+
+            TransportListView.SelectedItem =
+                refreshed;
+
+            StatusText.Text =
+                $"Track {updated.Track.Name} salvo · {updated.Track.Entries.Count} segmento(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar Track: {exception.Message}";
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind ==
+                    "Track";
+        }
+    }
+
     private void OnTransportSelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -4972,6 +5248,11 @@ public sealed partial class MainWindow : Window
             TransportListView.SelectedItem is not
                 TransportExplorerItem item)
         {
+            EditTrackButton.Visibility =
+                Visibility.Collapsed;
+
+            EditTrackButton.IsEnabled =
+                false;
             TransportDetailText.Text =
                 "Selecione um item para ver detalhes.";
 
@@ -4983,6 +5264,16 @@ public sealed partial class MainWindow : Window
 
         TransportDetailText.Text =
             item.Detail;
+
+        EditTrackButton.Visibility =
+            item.Kind ==
+                "Track"
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        EditTrackButton.IsEnabled =
+            item.Kind ==
+                "Track";
 
         if (_timetableCatalog is null)
         {

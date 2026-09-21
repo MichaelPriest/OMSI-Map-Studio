@@ -668,6 +668,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <ComboBox x:Name="TransportKindComboBox"
@@ -701,6 +702,14 @@
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
+
+                            <Button x:Name="EditTrackButton"
+                                    Grid.Row="4"
+                                    Content="Editar Track"
+                                    Visibility="Collapsed"
+                                    IsEnabled="False"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnEditTrackClick" />
                         </Grid>
 
                         <Grid x:Name="TrafficControlPanel"
