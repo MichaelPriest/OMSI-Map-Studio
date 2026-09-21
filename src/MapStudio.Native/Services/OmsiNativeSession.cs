@@ -2981,14 +2981,24 @@ public sealed class OmsiNativeSession
                 .SelectMany(content => content.Splines)
                 .FirstOrDefault(
                     item =>
-                        !item.IsHeightSpline &&
+                        item.IsHeightSpline ==
+                            request.IsHeightSpline &&
                         string.Equals(
                             item.SplinePath,
                             request.SplinePath,
                             StringComparison.OrdinalIgnoreCase))
             ?? OmsiSplinePlacementTemplateAnalyzer
-                .FindNeutralNormalTemplate(
-                    contents);
+                .FindNeutralTemplate(
+                    contents,
+                    request.IsHeightSpline);
+
+        if (
+            request.IsHeightSpline &&
+            template is null)
+        {
+            throw new InvalidDataException(
+                "splineInsertTemplateUnavailable");
+        }
 
         var headerValue =
             template?.HeaderValue ??
@@ -3032,7 +3042,7 @@ public sealed class OmsiNativeSession
                     request.Radius,
                     request.GradientStart,
                     request.GradientEnd,
-                    false,
+                    request.IsHeightSpline,
                     extraValues));
 
         var targetBytes =

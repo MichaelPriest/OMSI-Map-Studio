@@ -73,6 +73,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private bool _splinePlacementActive;
     private bool _splinePlacementCurved;
+    private bool _splinePlacementIsHeight;
     private bool _splineEasyRoadEnabled;
     private double _splineEasyRoadCurveOffset;
     private string? _placementSplinePath;
@@ -424,6 +425,21 @@ public sealed class NativeViewportRuntime : IDisposable
                 300.0);
     }
 
+    public void SetSplinePlacementHeightMode(
+        bool isHeightSpline)
+    {
+        ThrowIfDisposed();
+
+        _splinePlacementIsHeight =
+            isHeightSpline;
+
+        if (isHeightSpline)
+        {
+            _splineEasyRoadEnabled =
+                false;
+        }
+    }
+
     public void SetSplineEasyRoadOptions(
         bool enabled,
         double curveOffset)
@@ -666,7 +682,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeSplinePlacementStage.AwaitingEnd &&
             _splineStartWorld is { } start)
         {
-            if (_splineEasyRoadEnabled)
+            if (
+                _splineEasyRoadEnabled &&
+                !_splinePlacementIsHeight)
             {
                 NativeSplinePlacementMath
                     .TryCreateArcFromOffset(
@@ -762,7 +780,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 startSnap =
                     null;
 
-            if (_splineEndpointSnapEnabled)
+            if (
+                _splineEndpointSnapEnabled &&
+                !_splinePlacementIsHeight)
             {
                 startSnap =
                     NativeSplineEndpointSnapFinder
@@ -823,7 +843,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 endSnap =
                     null;
 
-            if (_splineEndpointSnapEnabled)
+            if (
+                _splineEndpointSnapEnabled &&
+                !_splinePlacementIsHeight)
             {
                 endSnap =
                     NativeSplineEndpointSnapFinder
@@ -858,7 +880,8 @@ public sealed class NativeViewportRuntime : IDisposable
                 endShape;
 
             var endShapeValid =
-                _splineEasyRoadEnabled
+                _splineEasyRoadEnabled &&
+                !_splinePlacementIsHeight
                     ? NativeSplinePlacementMath
                         .TryCreateArcFromOffset(
                             start,
@@ -879,7 +902,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 return false;
             }
 
-            if (_splineEasyRoadEnabled)
+            if (
+                _splineEasyRoadEnabled &&
+                !_splinePlacementIsHeight)
             {
                 request =
                     CreateSplinePlacementRequest(
@@ -4263,7 +4288,8 @@ public sealed class NativeViewportRuntime : IDisposable
             shape.IsCurved,
             shape.Start,
             shape.End,
-            _splineNextId);
+            _splineNextId,
+            _splinePlacementIsHeight);
     }
 
     private void ApplySkyTexture()

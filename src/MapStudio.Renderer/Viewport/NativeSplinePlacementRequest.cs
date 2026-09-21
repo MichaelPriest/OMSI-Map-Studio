@@ -18,4 +18,5 @@ public sealed record NativeSplinePlacementRequest(
     bool IsCurved,
     Vector3 StartWorld,
     Vector3 EndWorld,
-    int NextSplineId = -1);
+    int NextSplineId = -1,
+    bool IsHeightSpline = false);
