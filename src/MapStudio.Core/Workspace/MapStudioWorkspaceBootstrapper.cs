@@ -818,6 +818,40 @@ public sealed class MapStudioWorkspaceBootstrapper
                 true;
         }
 
+        var bridgeDirectory =
+            Path.Combine(
+                root,
+                "Splines",
+                MapStudioBridgeSplineGenerator
+                    .PackFolderName);
+
+        if (
+            !Directory.Exists(
+                bridgeDirectory) ||
+            !Directory
+                .EnumerateFiles(
+                    bridgeDirectory,
+                    "*.sli",
+                    SearchOption
+                        .TopDirectoryOnly)
+                .Any())
+        {
+            await new MapStudioBridgeSplineGenerator()
+                .GenerateAsync(
+                    root,
+                    new MapStudioBridgeSpec(
+                        "Starter Bridge 2 Lane",
+                        2,
+                        3.5,
+                        1.5,
+                        0.55),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            created =
+                true;
+        }
+
         var junctionDirectory =
             Path.Combine(
                 root,
