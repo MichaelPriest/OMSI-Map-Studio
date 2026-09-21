@@ -196,6 +196,12 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 "buildingFootprintTooSmall");
         }
 
+        if (!IsSimplePolygon(footprint))
+        {
+            throw new InvalidDataException(
+                "buildingFootprintSelfIntersecting");
+        }
+
         var triangles =
             Triangulate(
                 footprint);
@@ -452,6 +458,139 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
         }
 
         return result;
+    }
+
+    private static bool IsSimplePolygon(
+        IReadOnlyList<Vector3> points)
+    {
+        for (
+            var first = 0;
+            first < points.Count;
+            first++)
+        {
+            var firstNext =
+                (
+                    first +
+                    1
+                ) %
+                points.Count;
+
+            for (
+                var second =
+                    first + 1;
+                second < points.Count;
+                second++)
+            {
+                var secondNext =
+                    (
+                        second +
+                        1
+                    ) %
+                    points.Count;
+
+                if (
+                    first ==
+                        second ||
+                    firstNext ==
+                        second ||
+                    secondNext ==
+                        first)
+                {
+                    continue;
+                }
+
+                if (
+                    first ==
+                        0 &&
+                    secondNext ==
+                        0)
+                {
+                    continue;
+                }
+
+                if (
+                    SegmentsIntersect(
+                        points[first],
+                        points[firstNext],
+                        points[second],
+                        points[secondNext]))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static bool SegmentsIntersect(
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d)
+    {
+        static float Orientation(
+            Vector3 p,
+            Vector3 q,
+            Vector3 r) =>
+            (
+                q.X -
+                p.X
+            ) *
+            (
+                r.Z -
+                p.Z
+            ) -
+            (
+                q.Z -
+                p.Z
+            ) *
+            (
+                r.X -
+                p.X
+            );
+
+        var o1 =
+            Orientation(
+                a,
+                b,
+                c);
+
+        var o2 =
+            Orientation(
+                a,
+                b,
+                d);
+
+        var o3 =
+            Orientation(
+                c,
+                d,
+                a);
+
+        var o4 =
+            Orientation(
+                c,
+                d,
+                b);
+
+        const float epsilon =
+            0.000001f;
+
+        if (
+            Math.Abs(o1) <= epsilon ||
+            Math.Abs(o2) <= epsilon ||
+            Math.Abs(o3) <= epsilon ||
+            Math.Abs(o4) <= epsilon)
+        {
+            return false;
+        }
+
+        return
+            Math.Sign(o1) !=
+                Math.Sign(o2) &&
+            Math.Sign(o3) !=
+                Math.Sign(o4);
     }
 
     private static List<Triangle>
