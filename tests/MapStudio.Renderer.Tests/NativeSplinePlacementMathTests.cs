@@ -90,6 +90,75 @@ public sealed class
     }
 
     [Fact]
+    public void CurveOffsetCreatesTwoPointEasyRoadArc()
+    {
+        var ok =
+            NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    new Vector3(
+                        0,
+                        10,
+                        0),
+                    new Vector3(
+                        40,
+                        14,
+                        0),
+                    8,
+                    out var shape);
+
+        Assert.True(
+            ok);
+
+        Assert.NotNull(
+            shape);
+
+        Assert.True(
+            shape!.IsCurved);
+
+        Assert.True(
+            shape.Radius >
+            0);
+
+        Assert.True(
+            shape.Length >
+            40);
+
+        Assert.InRange(
+            shape.GradientStart,
+            0,
+            10);
+    }
+
+    [Fact]
+    public void NearZeroCurveOffsetFallsBackToStraight()
+    {
+        var ok =
+            NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    Vector3.Zero,
+                    new Vector3(
+                        0,
+                        0,
+                        30),
+                    0.01,
+                    out var shape);
+
+        Assert.True(
+            ok);
+
+        Assert.NotNull(
+            shape);
+
+        Assert.False(
+            shape!.IsCurved);
+
+        Assert.Equal(
+            30,
+            shape.Length,
+            6);
+    }
+
+    [Fact]
     public void CollinearCurveFallsBackToStraight()
     {
         var ok =

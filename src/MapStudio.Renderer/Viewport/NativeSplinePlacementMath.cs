@@ -273,6 +273,152 @@ public static class NativeSplinePlacementMath
         return true;
     }
 
+    public static bool TryCreateArcFromOffset(
+        Vector3 start,
+        Vector3 end,
+        double curveOffset,
+        out NativeSplinePlacementShape?
+            shape)
+    {
+        shape = null;
+
+        var dx =
+            end.X -
+            start.X;
+
+        var dz =
+            end.Z -
+            start.Z;
+
+        var chordLength =
+            Math.Sqrt(
+                dx * dx +
+                dz * dz);
+
+        if (
+            chordLength <
+            Epsilon)
+        {
+            return false;
+        }
+
+        if (
+            !double.IsFinite(
+                curveOffset) ||
+            Math.Abs(
+                curveOffset) <
+            0.05)
+        {
+            return TryCreateStraight(
+                start,
+                end,
+                out shape);
+        }
+
+        var maximumOffset =
+            Math.Max(
+                0.05,
+                chordLength *
+                0.49);
+
+        var sagitta =
+            Math.Clamp(
+                curveOffset,
+                -maximumOffset,
+                maximumOffset);
+
+        var radiusMagnitude =
+            (
+                chordLength *
+                chordLength
+            ) /
+            (
+                8.0 *
+                Math.Abs(
+                    sagitta)
+            ) +
+            Math.Abs(
+                sagitta) /
+            2.0;
+
+        if (
+            !double.IsFinite(
+                radiusMagnitude) ||
+            radiusMagnitude <
+            Epsilon)
+        {
+            return false;
+        }
+
+        var signedRadius =
+            Math.Sign(
+                sagitta) *
+            radiusMagnitude;
+
+        var halfAngle =
+            Math.Asin(
+                Math.Min(
+                    1.0,
+                    chordLength /
+                    (
+                        2.0 *
+                        radiusMagnitude
+                    )));
+
+        var signedAngle =
+            Math.Sign(
+                sagitta) *
+            halfAngle *
+            2.0;
+
+        var chordBearing =
+            Math.Atan2(
+                dx,
+                dz);
+
+        var rotation =
+            RadiansToDegrees(
+                chordBearing -
+                signedAngle /
+                2.0);
+
+        var arcLength =
+            radiusMagnitude *
+            Math.Abs(
+                signedAngle);
+
+        if (
+            !double.IsFinite(
+                arcLength) ||
+            arcLength <
+            Epsilon)
+        {
+            return false;
+        }
+
+        var gradient =
+            (
+                end.Y -
+                start.Y
+            ) /
+            arcLength *
+            100.0;
+
+        shape =
+            new NativeSplinePlacementShape(
+                start,
+                end,
+                NormalizeDegrees(
+                    rotation),
+                arcLength,
+                signedRadius,
+                gradient,
+                gradient,
+                true);
+
+        return true;
+    }
+
     private static double PositiveAngle(
         double radians)
     {
