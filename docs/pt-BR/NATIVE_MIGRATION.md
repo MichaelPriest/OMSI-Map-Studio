@@ -550,3 +550,15 @@ Ao entrar em Terreno, a camada de terreno é reativada automaticamente caso esti
 
 O botão **Enquadrar** e a tecla Home usam `NativeViewportNavigation.FitToScene`, preservando uma única câmera e recalculando o enquadramento a partir dos bounds reais da cena carregada.
 
+### Checkpoint N3.31 — paridade final dos atalhos de câmera e Escape
+
+Os atalhos restantes da barra React também foram migrados:
+
+- **1** muda imediatamente para câmera em perspectiva;
+- **2** muda para vista superior;
+- **Esc**, quando não está cancelando placement nem saindo da tela cheia, retorna ao modo **Selecionar / todos**.
+
+As teclas 1 e 2 usam exatamente os mesmos métodos nativos já expostos pelo menu Visualizar. Não existe câmera paralela nem estado duplicado entre atalho e menu.
+
+O comportamento de Esc preserva a prioridade de segurança do host nativo: primeiro cancela ferramentas de placement/construção, depois sai da tela cheia e somente então restaura o filtro geral de seleção.
+

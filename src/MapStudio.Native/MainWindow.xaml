@@ -60,6 +60,10 @@
             <KeyboardAccelerator Key="Number4"
                                  Modifiers="Menu"
                                  Invoked="OnSelectionTerrainAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number1"
+                                 Invoked="OnPerspectiveAcceleratorInvoked" />
+            <KeyboardAccelerator Key="Number2"
+                                 Invoked="OnTopAcceleratorInvoked" />
         </Grid.KeyboardAccelerators>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

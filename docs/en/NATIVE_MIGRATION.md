@@ -550,3 +550,15 @@ Entering Terrain automatically makes the terrain layer visible if it had been hi
 
 The **Fit** button and Home key use `NativeViewportNavigation.FitToScene`, keeping a single camera and recalculating framing from the real loaded-scene bounds.
 
+### Checkpoint N3.31 — final camera-shortcut and Escape parity
+
+The remaining React toolbar shortcuts have also been migrated:
+
+- **1** switches immediately to the perspective camera;
+- **2** switches to top view;
+- **Esc**, when it is not cancelling placement or leaving fullscreen, returns to **Select / all** mode.
+
+Keys 1 and 2 use the exact same native methods already exposed by the View menu. There is no parallel camera or duplicated state between shortcuts and menu actions.
+
+Escape keeps the native host's safety priority: it first cancels placement/construction tools, then exits fullscreen, and only then restores the general selection filter.
+

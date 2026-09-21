@@ -2916,6 +2916,40 @@ public sealed partial class MainWindow : Window
         args.Handled = true;
     }
 
+    private void OnPerspectiveAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        Viewport.SetPerspectiveView();
+
+        StatusText.Text =
+            "Câmera em perspectiva (1).";
+
+        args.Handled = true;
+    }
+
+    private void OnTopAcceleratorInvoked(
+        KeyboardAccelerator sender,
+        KeyboardAcceleratorInvokedEventArgs args)
+    {
+        if (IsTextInputFocused())
+        {
+            return;
+        }
+
+        Viewport.SetTopView();
+
+        StatusText.Text =
+            "Câmera em vista superior (2).";
+
+        args.Handled = true;
+    }
+
     private void OnEscapeAcceleratorInvoked(
         KeyboardAccelerator sender,
         KeyboardAcceleratorInvokedEventArgs args)
@@ -2945,6 +2979,18 @@ public sealed partial class MainWindow : Window
         if (IsFullscreen())
         {
             ExitFullscreen();
+            args.Handled = true;
+            return;
+        }
+
+        if (!IsTextInputFocused())
+        {
+            SetSelectionModeFromShortcut(
+                0);
+
+            StatusText.Text =
+                "Modo Selecionar restaurado (Esc).";
+
             args.Handled = true;
         }
     }
