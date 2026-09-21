@@ -47,7 +47,7 @@ public sealed class NativeSplineCompleteToSolverTests
         Assert.True(ok);
         Assert.NotNull(request);
         Assert.False(request!.IsCurved);
-        Assert.Equal(20, request.Length, 5);
+        Assert.Equal(30, request.Length, 5);
         Assert.Equal(0, request.Radius, 5);
         Assert.Equal(10, request.PreviousSplineId);
         Assert.Equal(20, request.NextSplineId);
