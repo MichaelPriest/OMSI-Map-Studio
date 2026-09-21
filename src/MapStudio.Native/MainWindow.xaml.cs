@@ -14906,9 +14906,7 @@ public sealed partial class MainWindow : Window
                 true;
 
             var graph =
-                new MapStudioRoadGraphBuilder()
-                    .Build(
-                        _proceduralRoadTraces);
+                BuildProceduralRoadGraph();
 
             var preview =
                 Viewport
@@ -15123,9 +15121,7 @@ public sealed partial class MainWindow : Window
                 true;
 
             var graph =
-                new MapStudioRoadGraphBuilder()
-                    .Build(
-                        _proceduralRoadTraces);
+                BuildProceduralRoadGraph();
 
             var preview =
                 Viewport
@@ -15338,9 +15334,7 @@ public sealed partial class MainWindow : Window
                 true;
 
             var graph =
-                new MapStudioRoadGraphBuilder()
-                    .Build(
-                        _proceduralRoadTraces);
+                BuildProceduralRoadGraph();
 
             var preview =
                 Viewport
@@ -15462,6 +15456,18 @@ public sealed partial class MainWindow : Window
             $"Traçado procedural ativo · {profile.Label}. Clique pontos sucessivos sobre o terreno; use Ferramentas → Gerador procedural de vias → Finalizar linha atual.";
     }
 
+    private MapStudioRoadGraph BuildProceduralRoadGraph()
+    {
+        var smoothedTraces =
+            new MapStudioRoadTraceSmoother()
+                .Smooth(
+                    _proceduralRoadTraces);
+
+        return new MapStudioRoadGraphBuilder()
+            .Build(
+                smoothedTraces);
+    }
+
     private void OnFinishProceduralRoadTraceClick(
         object sender,
         RoutedEventArgs e)
@@ -15521,9 +15527,7 @@ public sealed partial class MainWindow : Window
             .CancelTerrainPointPick();
 
         var graph =
-            new MapStudioRoadGraphBuilder()
-                .Build(
-                    _proceduralRoadTraces);
+            BuildProceduralRoadGraph();
 
         StatusText.Text =
             $"Linha registrada. Grafo: {_proceduralRoadTraces.Count} linha(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s).";
@@ -15548,9 +15552,7 @@ public sealed partial class MainWindow : Window
         try
         {
             graph =
-                new MapStudioRoadGraphBuilder()
-                    .Build(
-                        _proceduralRoadTraces);
+                BuildProceduralRoadGraph();
         }
         catch (Exception exception)
         {
@@ -15628,7 +15630,7 @@ public sealed partial class MainWindow : Window
                 Title =
                     "Preview antes de gravar",
                 Message =
-                    "As linhas exibidas serão convertidas em splines reais do Road Kit. Nesta etapa os segmentos são independentes; auto-link e objetos automáticos de cruzamento entram na próxima evolução."
+                    "O preview já usa o traçado suavizado que será persistido. Segmentos contínuos da mesma linha recebem auto-link somente em nós lineares de grau 2; nós de grau 3/4 não são ligados através do cruzamento e recebem junctions próprios gerados antes da gravação."
             });
 
         var dialog =
