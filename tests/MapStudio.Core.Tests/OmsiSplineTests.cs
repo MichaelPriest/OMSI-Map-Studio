@@ -974,4 +974,71 @@ public sealed class OmsiSplineTests
             rule.NumericValue);
     }
 
+    [Fact]
+    public void PlacedSpline_ExposesCantAndMirrorFromExtras()
+    {
+        var normal =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\Road.sli",
+                1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                10,
+                0,
+                0,
+                0,
+                false,
+                [
+                    "2.5",
+                    "-1.25",
+                    "0.1",
+                    "0.2",
+                    "0",
+                    "mirror"
+                ]);
+
+        Assert.Equal(
+            2.5,
+            normal.CantStart);
+
+        Assert.Equal(
+            -1.25,
+            normal.CantEnd);
+
+        Assert.True(
+            normal.IsMirrored);
+
+        var height =
+            normal with
+            {
+                IsHeightSpline = true,
+                ExtraValues =
+                    [
+                        "1.5",
+                        "3",
+                        "4",
+                        "0",
+                        "0",
+                        "0",
+                        "mirror"
+                    ]
+            };
+
+        Assert.Equal(
+            3,
+            height.CantStart);
+
+        Assert.Equal(
+            4,
+            height.CantEnd);
+
+        Assert.True(
+            height.IsMirrored);
+    }
+
 }
