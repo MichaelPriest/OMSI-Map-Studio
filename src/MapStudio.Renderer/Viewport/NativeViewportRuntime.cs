@@ -2160,7 +2160,7 @@ public sealed class NativeViewportRuntime : IDisposable
                     "previewTexturePathInvalid");
             }
 
-            var thumbnail =
+            var textureThumbnail =
                 new NativeTextureThumbnailGenerator()
                     .RenderBmp(
                         texturePath);
@@ -2168,14 +2168,14 @@ public sealed class NativeViewportRuntime : IDisposable
             return new NativeAssetPreviewResult(
                 kind,
                 relativePath,
-                thumbnail.Length > 54,
+                textureThumbnail.Length > 54,
                 0,
                 0,
-                thumbnail.Length > 54
+                textureThumbnail.Length > 54
                     ? null
                     : "previewTextureDecodeFailed",
-                thumbnail.Length > 54
-                    ? thumbnail
+                textureThumbnail.Length > 54
+                    ? textureThumbnail
                     : null);
         }
 
