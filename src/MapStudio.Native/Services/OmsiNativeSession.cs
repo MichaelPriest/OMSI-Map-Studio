@@ -142,6 +142,387 @@ public sealed class OmsiNativeSession
             edit;
     }
 
+    public async Task<NativeAssetReplacementResult>
+        ReplaceMapAssetPathAsync(
+            PickingKind kind,
+            string oldPath,
+            string newPath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            oldPath);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            newPath);
+
+        if (
+            string.Equals(
+                oldPath,
+                newPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "replacementPathUnchanged");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Instalação OMSI não selecionada.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeDependencyReplacement");
+        }
+
+        var replaceObjects =
+            kind ==
+            PickingKind.Object;
+
+        var replaceSplines =
+            kind ==
+            PickingKind.Spline;
+
+        if (
+            !replaceObjects &&
+            !replaceSplines)
+        {
+            throw new InvalidDataException(
+                "replacementKindUnsupported");
+        }
+
+        var replacementExists =
+            replaceObjects
+                ? OmsiSceneryObjectPathResolver
+                    .TryResolve(
+                        root,
+                        newPath,
+                        out var replacementPath) &&
+                  File.Exists(
+                      replacementPath)
+                : OmsiSplinePathResolver
+                    .TryResolve(
+                        root,
+                        newPath,
+                        out replacementPath) &&
+                  File.Exists(
+                      replacementPath);
+
+        if (!replacementExists)
+        {
+            throw new FileNotFoundException(
+                "replacementAssetMissing",
+                newPath);
+        }
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture);
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                timestamp +
+                "-replace-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var writes =
+            new List<PendingFileWrite>();
+
+        var replacements = 0;
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath) ||
+                !File.Exists(tilePath))
+            {
+                continue;
+            }
+
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var result =
+                OmsiTileAssetPathRewriter
+                    .Replace(
+                        document,
+                        oldPath,
+                        newPath,
+                        replaceObjects,
+                        replaceSplines);
+
+            var changed =
+                replaceObjects
+                    ? result.ObjectReplacements
+                    : result.SplineReplacements;
+
+            if (changed <= 0)
+            {
+                continue;
+            }
+
+            var relativePath =
+                Path.GetRelativePath(
+                    snapshot.Map.DirectoryPath,
+                    tilePath);
+
+            if (!IsSafeRelativePath(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "replacementTilePathInvalid");
+            }
+
+            writes.Add(
+                new PendingFileWrite(
+                    tilePath,
+                    Path.Combine(
+                        backupRoot,
+                        relativePath),
+                    result.Bytes));
+
+            replacements +=
+                changed;
+        }
+
+        if (writes.Count > 0)
+        {
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    writes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            await ReloadCurrentLoadedTilesAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return new NativeAssetReplacementResult(
+            CurrentMap!,
+            replacements,
+            writes.Count,
+            writes.Count > 0
+                ? backupRoot
+                : string.Empty);
+    }
+
+    public async Task<NativeBackupRestoreResult>
+        RestoreMapStudioBackupAsync(
+            string backupDirectory,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            backupDirectory);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeBackupRestore");
+        }
+
+        var backupsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    snapshot.Map.DirectoryPath,
+                    ".mapstudio-backups"));
+
+        var sourceRoot =
+            Path.GetFullPath(
+                backupDirectory);
+
+        var relativeSource =
+            Path.GetRelativePath(
+                backupsRoot,
+                sourceRoot);
+
+        if (
+            !IsSafeRelativePath(
+                relativeSource) ||
+            !Directory.Exists(
+                sourceRoot))
+        {
+            throw new InvalidDataException(
+                "invalidBackupPath");
+        }
+
+        var sourceFiles =
+            Directory
+                .EnumerateFiles(
+                    sourceRoot,
+                    "*",
+                    SearchOption
+                        .AllDirectories)
+                .ToArray();
+
+        if (sourceFiles.Length == 0)
+        {
+            throw new InvalidDataException(
+                "emptyBackup");
+        }
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture);
+
+        var rollbackRoot =
+            Path.Combine(
+                backupsRoot,
+                timestamp +
+                "-restore-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var writes =
+            new List<
+                PendingFileWrite>(
+                    sourceFiles.Length);
+
+        foreach (
+            var sourceFile in
+                sourceFiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var relativePath =
+                Path.GetRelativePath(
+                    sourceRoot,
+                    sourceFile);
+
+            if (!IsSafeRelativePath(
+                    relativePath))
+            {
+                throw new InvalidDataException(
+                    "invalidBackupEntry");
+            }
+
+            var target =
+                Path.GetFullPath(
+                    Path.Combine(
+                        snapshot.Map.DirectoryPath,
+                        relativePath));
+
+            var relativeTarget =
+                Path.GetRelativePath(
+                    snapshot.Map.DirectoryPath,
+                    target);
+
+            if (
+                !IsSafeRelativePath(
+                    relativeTarget) ||
+                !File.Exists(
+                    target))
+            {
+                throw new InvalidDataException(
+                    "invalidBackupTarget");
+            }
+
+            writes.Add(
+                new PendingFileWrite(
+                    target,
+                    Path.Combine(
+                        rollbackRoot,
+                        relativePath),
+                    await File
+                        .ReadAllBytesAsync(
+                            sourceFile,
+                            cancellationToken)
+                        .ConfigureAwait(false)));
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await ReloadCurrentLoadedTilesAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return new NativeBackupRestoreResult(
+            CurrentMap!,
+            writes.Count,
+            sourceRoot,
+            rollbackRoot);
+    }
+
+    private async Task ReloadCurrentLoadedTilesAsync(
+        CancellationToken cancellationToken)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var loaded =
+            await LoadSnapshotAsync(
+                    snapshot.Map,
+                    snapshot.ActiveTile,
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                tile.Reference)
+                        .ToArray(),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            loaded;
+
+        _pendingTransforms.Clear();
+    }
+
+    private static bool IsSafeRelativePath(
+        string relativePath) =>
+        !Path.IsPathRooted(
+            relativePath) &&
+        !relativePath.Equals(
+            "..",
+            StringComparison.Ordinal) &&
+        !relativePath.StartsWith(
+            ".." +
+            Path.DirectorySeparatorChar,
+            StringComparison.Ordinal) &&
+        !relativePath.StartsWith(
+            ".." +
+            Path.AltDirectorySeparatorChar,
+            StringComparison.Ordinal);
+
     public async Task<NativeMapSnapshot>
         InsertSceneryObjectBatchAsync(
             IReadOnlyList<
