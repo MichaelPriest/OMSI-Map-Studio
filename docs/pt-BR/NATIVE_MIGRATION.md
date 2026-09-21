@@ -487,3 +487,18 @@ Isso evita o problema de uma entidade invisível continuar bloqueando o clique e
 
 O terreno não participa do ID Buffer de objetos/splines; ocultá-lo altera apenas a renderização. As ferramentas de edição de terreno continuam usando o raycast matemático contra a malha real carregada.
 
+### Checkpoint N3.27 — filtro de seleção nativo por categoria
+
+O filtro de seleção da versão React foi migrado para a barra superior do host WinUI.
+
+O usuário pode alternar entre:
+- **Selecionar: todos**;
+- **Só objetos**;
+- **Só splines**.
+
+O filtro não altera a visibilidade da cena. Ele reconstrói apenas o ID Buffer usado por hover/click, removendo as categorias excluídas. Assim, por exemplo, em **Só splines** um objeto visualmente na frente não impede que a spline atrás dele seja selecionada.
+
+Seleção atual, hover e gizmos são limpos quando deixam de ser válidos para o novo filtro. A seleção via Explorer também respeita o mesmo filtro, evitando estados diferentes entre lista e viewport.
+
+O modo de terreno continua separado porque a edição de terreno no host nativo usa o raycast próprio da ferramenta de nivelamento/pintura, não o ID Buffer de objetos e splines.
+

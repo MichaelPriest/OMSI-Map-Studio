@@ -487,3 +487,18 @@ This prevents an invisible entity from still blocking clicks on visible geometry
 
 Terrain does not participate in the object/spline ID Buffer; hiding it affects rendering only. Terrain editing tools continue to use mathematical raycasts against the real loaded terrain mesh.
 
+### Checkpoint N3.27 — native category selection filter
+
+The React editor's selection filter has been migrated into the WinUI host's top toolbar.
+
+The user can switch between:
+- **Select: all**;
+- **Objects only**;
+- **Splines only**.
+
+The filter does not change scene visibility. It rebuilds only the ID Buffer used by hover/click, removing excluded categories. For example, in **Splines only** a visible object in front no longer blocks selecting a spline behind it.
+
+The current selection, hover, and gizmos are cleared when they are no longer valid for the new filter. Explorer selection follows the same filter so the list and viewport cannot enter different selection states.
+
+Terrain mode remains separate because native terrain editing uses the dedicated leveling/painting raycast rather than the object/spline ID Buffer.
+

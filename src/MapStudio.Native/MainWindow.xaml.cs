@@ -63,6 +63,9 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
+        SelectionFilterComboBox.SelectionChanged +=
+            OnSelectionFilterChanged;
+
         _windowHandle =
             WindowNative.GetWindowHandle(
                 this);
@@ -2043,6 +2046,39 @@ public sealed partial class MainWindow : Window
 
         RedoButton.IsEnabled =
             Viewport.CanRedo;
+    }
+
+    private void OnSelectionFilterChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var filter =
+            SelectionFilterComboBox
+                .SelectedIndex switch
+            {
+                1 =>
+                    NativeSelectionFilter.Objects,
+                2 =>
+                    NativeSelectionFilter.Splines,
+                _ =>
+                    NativeSelectionFilter.All
+            };
+
+        if (
+            Viewport.SetSelectionFilter(
+                filter))
+        {
+            StatusText.Text =
+                filter switch
+                {
+                    NativeSelectionFilter.Objects =>
+                        "Seleção filtrada para objetos.",
+                    NativeSelectionFilter.Splines =>
+                        "Seleção filtrada para splines.",
+                    _ =>
+                        "Seleção liberada para objetos e splines."
+                };
+        }
     }
 
     private void OnSnapClick(

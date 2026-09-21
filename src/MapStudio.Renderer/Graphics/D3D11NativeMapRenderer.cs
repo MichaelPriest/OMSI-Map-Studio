@@ -217,6 +217,10 @@ public sealed class D3D11NativeMapRenderer :
         _visibility =
             NativeSceneVisibility.All;
 
+    private NativeSelectionFilter
+        _selectionFilter =
+            NativeSelectionFilter.All;
+
     private bool _disposed;
 
     public D3D11NativeMapRenderer(
@@ -526,6 +530,9 @@ public sealed class D3D11NativeMapRenderer :
     public NativeSceneVisibility SceneVisibility =>
         _visibility;
 
+    public NativeSelectionFilter SelectionFilter =>
+        _selectionFilter;
+
     public bool SetSceneVisibility(
         NativeSceneVisibility visibility)
     {
@@ -551,6 +558,44 @@ public sealed class D3D11NativeMapRenderer :
 
         if (
             !_visibility.IsPickingKindVisible(
+                _selectionPickingId.Kind))
+        {
+            _selectionPickingId =
+                PickingId.None;
+
+            RebuildSelection();
+        }
+
+        RebuildScenePickingVertices();
+
+        return true;
+    }
+
+    public bool SetSelectionFilter(
+        NativeSelectionFilter filter)
+    {
+        ThrowIfDisposed();
+
+        if (_selectionFilter == filter)
+        {
+            return false;
+        }
+
+        _selectionFilter =
+            filter;
+
+        if (
+            !IsPickingKindEnabled(
+                _hoverPickingId.Kind))
+        {
+            _hoverPickingId =
+                PickingId.None;
+
+            RebuildHover();
+        }
+
+        if (
+            !IsPickingKindEnabled(
                 _selectionPickingId.Kind))
         {
             _selectionPickingId =
@@ -1799,7 +1844,7 @@ public sealed class D3D11NativeMapRenderer :
                         item.Value.StartVertex))
         {
             if (
-                !_visibility.IsPickingKindVisible(
+                !IsPickingKindEnabled(
                     pair.Key.Kind) ||
                 !IsValidRange(
                     _proxyVertices,
@@ -1816,13 +1861,19 @@ public sealed class D3D11NativeMapRenderer :
                     .ToArray());
         }
 
-        if (_visibility.ObjectsVisible)
+        if (
+            _visibility.ObjectsVisible &&
+            _selectionFilter.Allows(
+                PickingKind.Object))
         {
             vertices.AddRange(
                 _objectPickingVertices);
         }
 
-        if (_visibility.SplinesVisible)
+        if (
+            _visibility.SplinesVisible &&
+            _selectionFilter.Allows(
+                PickingKind.Spline))
         {
             vertices.AddRange(
                 _splinePickingVertices);
@@ -1869,7 +1920,7 @@ public sealed class D3D11NativeMapRenderer :
     {
         if (
             !pickingId.IsNone &&
-            !_visibility.IsPickingKindVisible(
+            !IsPickingKindEnabled(
                 pickingId.Kind))
         {
             pickingId =
@@ -1903,7 +1954,7 @@ public sealed class D3D11NativeMapRenderer :
     {
         if (
             !pickingId.IsNone &&
-            !_visibility.IsPickingKindVisible(
+            !IsPickingKindEnabled(
                 pickingId.Kind))
         {
             pickingId =
@@ -2061,7 +2112,7 @@ public sealed class D3D11NativeMapRenderer :
         out NativeTriangleRange range)
     {
         if (
-            !_visibility.IsPickingKindVisible(
+            !IsPickingKindEnabled(
                 pickingId.Kind))
         {
             sourceVertices =
@@ -2124,6 +2175,22 @@ public sealed class D3D11NativeMapRenderer :
             default;
 
         return false;
+    }
+
+    private bool IsPickingKindEnabled(
+        PickingKind kind)
+    {
+        if (kind == PickingKind.None)
+        {
+            return true;
+        }
+
+        return
+            _visibility
+                .IsPickingKindVisible(
+                    kind) &&
+            _selectionFilter
+                .Allows(kind);
     }
 
     private static bool IsValidRange(

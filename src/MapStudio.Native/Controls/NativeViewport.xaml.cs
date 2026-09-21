@@ -506,6 +506,30 @@ public sealed partial class NativeViewport : UserControl
         return changed;
     }
 
+    public bool SetSelectionFilter(
+        NativeSelectionFilter filter)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime.SetSelectionFilter(
+                filter);
+
+        if (changed)
+        {
+            PublishSelectionInfo();
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                $"Filtro de seleção: {filter}.");
+        }
+
+        return changed;
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

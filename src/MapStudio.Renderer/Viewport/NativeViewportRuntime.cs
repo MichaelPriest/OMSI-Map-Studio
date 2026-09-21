@@ -91,6 +91,10 @@ public sealed class NativeViewportRuntime : IDisposable
         _sceneVisibility =
             NativeSceneVisibility.All;
 
+    private NativeSelectionFilter
+        _selectionFilter =
+            NativeSelectionFilter.All;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -168,6 +172,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public NativeSceneVisibility SceneVisibility =>
         _sceneVisibility;
+
+    public NativeSelectionFilter SelectionFilter =>
+        _selectionFilter;
 
     public bool SeedSplinePlacementStart(
         Vector3 start,
@@ -1071,8 +1078,7 @@ public sealed class NativeViewportRuntime : IDisposable
         if (
             Scene is null ||
             _selectedPickingId.IsNone ||
-            !_sceneVisibility
-                .IsPickingKindVisible(
+            !IsSelectionKindEnabled(
                     _selectedPickingId.Kind))
         {
             return null;
@@ -1375,8 +1381,7 @@ public sealed class NativeViewportRuntime : IDisposable
                     PickingKind.Object or
                     PickingKind.Spline
                 ) ||
-            !_sceneVisibility
-                .IsPickingKindVisible(
+            !IsSelectionKindEnabled(
                     pickingId.Kind))
         {
             return null;
@@ -1813,8 +1818,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         var selectionHidden =
             !_selectedPickingId.IsNone &&
-            !_sceneVisibility
-                .IsPickingKindVisible(
+            !IsSelectionKindEnabled(
                     _selectedPickingId.Kind);
 
         if (selectionHidden)
@@ -1835,6 +1839,50 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetSceneVisibility(
             visibility);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool SetSelectionFilter(
+        NativeSelectionFilter filter)
+    {
+        ThrowIfDisposed();
+
+        if (_selectionFilter == filter)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+
+        _selectionFilter =
+            filter;
+
+        var selectionFiltered =
+            !_selectedPickingId.IsNone &&
+            !IsSelectionKindEnabled(
+                _selectedPickingId.Kind);
+
+        if (selectionFiltered)
+        {
+            _selectedPickingId =
+                PickingId.None;
+
+            MapRenderer.SetSelection(
+                PickingId.None);
+
+            MapRenderer
+                .SetSelectionPreviewTransform(
+                    Matrix4x4.Identity);
+
+            MapRenderer.SetGizmoGeometry(
+                null);
+        }
+
+        MapRenderer.SetSelectionFilter(
+            filter);
 
         RenderInitialFrame();
 
@@ -1873,8 +1921,7 @@ public sealed class NativeViewportRuntime : IDisposable
                     PickingKind.Object or
                     PickingKind.Spline
             ) &&
-            _sceneVisibility
-                .IsPickingKindVisible(
+            IsSelectionKindEnabled(
                     pickingId.Kind);
 
         var resolved =
@@ -1922,8 +1969,7 @@ public sealed class NativeViewportRuntime : IDisposable
             Surface is null ||
             Scene is null ||
             _selectedPickingId.IsNone ||
-            !_sceneVisibility
-                .IsPickingKindVisible(
+            !IsSelectionKindEnabled(
                     _selectedPickingId.Kind))
         {
             return false;
@@ -2266,8 +2312,7 @@ public sealed class NativeViewportRuntime : IDisposable
                     PickingKind.Object or
                     PickingKind.Spline
             ) &&
-            _sceneVisibility
-                .IsPickingKindVisible(
+            IsSelectionKindEnabled(
                     pickingId.Kind);
 
         var resolved =
@@ -2300,6 +2345,22 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             RenderInitialFrame();
         }
+    }
+
+    private bool IsSelectionKindEnabled(
+        PickingKind kind)
+    {
+        if (kind == PickingKind.None)
+        {
+            return true;
+        }
+
+        return
+            _sceneVisibility
+                .IsPickingKindVisible(
+                    kind) &&
+            _selectionFilter
+                .Allows(kind);
     }
 
     public void RenderInitialFrame()

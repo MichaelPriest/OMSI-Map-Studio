@@ -125,6 +125,15 @@
                     Content="Refazer"
                     IsEnabled="False"
                     Click="OnRedoClick" />
+                <ComboBox
+                    x:Name="SelectionFilterComboBox"
+                    Width="138"
+                    SelectedIndex="0"
+                    ToolTipService.ToolTip="Filtro do ID Buffer de seleção">
+                    <ComboBoxItem Content="Selecionar: todos" />
+                    <ComboBoxItem Content="Só objetos" />
+                    <ComboBoxItem Content="Só splines" />
+                </ComboBox>
                 <Button
                     x:Name="SnapButton"
                     Content="Snap: off"
