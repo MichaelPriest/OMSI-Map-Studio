@@ -589,48 +589,79 @@ public sealed class MapStudioBuildingAssetGenerator
                 -1,
             0);
 
-        if (
-            normalized.RoofType ==
-            MapStudioBuildingRoofType
-                .Gable)
+        switch (normalized.RoofType)
         {
-            AddGableRoof(
-                positions,
-                normals,
-                uvs,
-                indices,
-                triangleMaterials,
-                halfWidth,
-                halfDepth,
-                wallHeight,
-                roofHeight);
-        }
-        else
-        {
-            AddQuad(
-                positions,
-                normals,
-                uvs,
-                indices,
-                triangleMaterials,
-                new Vector3(
-                    -halfWidth,
-                    wallHeight,
-                    -halfDepth),
-                new Vector3(
+            case
+                MapStudioBuildingRoofType
+                    .Gable:
+                AddGableRoof(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials,
                     halfWidth,
+                    halfDepth,
                     wallHeight,
-                    -halfDepth),
-                new Vector3(
+                    roofHeight);
+                break;
+
+            case
+                MapStudioBuildingRoofType
+                    .Hip:
+                AddHipRoof(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials,
                     halfWidth,
+                    halfDepth,
                     wallHeight,
-                    halfDepth),
-                new Vector3(
-                    -halfWidth,
+                    roofHeight);
+                break;
+
+            case
+                MapStudioBuildingRoofType
+                    .Shed:
+                AddShedRoof(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials,
+                    halfWidth,
+                    halfDepth,
                     wallHeight,
-                    halfDepth),
-                Vector3.UnitY,
-                1);
+                    roofHeight);
+                break;
+
+            default:
+                AddQuad(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials,
+                    new Vector3(
+                        -halfWidth,
+                        wallHeight,
+                        -halfDepth),
+                    new Vector3(
+                        halfWidth,
+                        wallHeight,
+                        -halfDepth),
+                    new Vector3(
+                        halfWidth,
+                        wallHeight,
+                        halfDepth),
+                    new Vector3(
+                        -halfWidth,
+                        wallHeight,
+                        halfDepth),
+                    Vector3.UnitY,
+                    1);
+                break;
         }
 
         AddFacadeDetails(
@@ -953,6 +984,239 @@ public sealed class MapStudioBuildingAssetGenerator
                     -1,
                 doorMaterial);
         }
+    }
+
+    private static void AddHipRoof(
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials,
+        float halfWidth,
+        float halfDepth,
+        float wallHeight,
+        float roofHeight)
+    {
+        var apex =
+            new Vector3(
+                0,
+                wallHeight +
+                roofHeight,
+                0);
+
+        var frontLeft =
+            new Vector3(
+                -halfWidth,
+                wallHeight,
+                -halfDepth);
+
+        var frontRight =
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                -halfDepth);
+
+        var backRight =
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                halfDepth);
+
+        var backLeft =
+            new Vector3(
+                -halfWidth,
+                wallHeight,
+                halfDepth);
+
+        AddRoofTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            frontLeft,
+            frontRight,
+            apex);
+
+        AddRoofTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            frontRight,
+            backRight,
+            apex);
+
+        AddRoofTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            backRight,
+            backLeft,
+            apex);
+
+        AddRoofTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            backLeft,
+            frontLeft,
+            apex);
+    }
+
+    private static void AddShedRoof(
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials,
+        float halfWidth,
+        float halfDepth,
+        float wallHeight,
+        float roofHeight)
+    {
+        var lowFront =
+            new Vector3(
+                -halfWidth,
+                wallHeight,
+                -halfDepth);
+
+        var highFront =
+            new Vector3(
+                halfWidth,
+                wallHeight +
+                roofHeight,
+                -halfDepth);
+
+        var highBack =
+            new Vector3(
+                halfWidth,
+                wallHeight +
+                roofHeight,
+                halfDepth);
+
+        var lowBack =
+            new Vector3(
+                -halfWidth,
+                wallHeight,
+                halfDepth);
+
+        var roofNormal =
+            Vector3.Normalize(
+                Vector3.Cross(
+                    highFront -
+                    lowFront,
+                    lowBack -
+                    lowFront));
+
+        if (roofNormal.Y < 0)
+        {
+            roofNormal =
+                -roofNormal;
+        }
+
+        AddQuad(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            lowFront,
+            highFront,
+            highBack,
+            lowBack,
+            roofNormal,
+            1);
+
+        AddTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            lowFront,
+            highFront,
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                -halfDepth),
+            Vector3.UnitZ *
+                -1,
+            0);
+
+        AddTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                halfDepth),
+            highBack,
+            lowBack,
+            Vector3.UnitZ,
+            0);
+
+        AddQuad(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                -halfDepth),
+            new Vector3(
+                halfWidth,
+                wallHeight,
+                halfDepth),
+            highBack,
+            highFront,
+            Vector3.UnitX,
+            0);
+    }
+
+    private static void AddRoofTriangle(
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c)
+    {
+        var normal =
+            Vector3.Normalize(
+                Vector3.Cross(
+                    b - a,
+                    c - a));
+
+        if (normal.Y < 0)
+        {
+            normal =
+                -normal;
+        }
+
+        AddTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            a,
+            b,
+            c,
+            normal,
+            1);
     }
 
     private static void AddGableRoof(
