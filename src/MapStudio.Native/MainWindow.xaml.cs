@@ -160,6 +160,10 @@ public sealed partial class MainWindow : Window
         bool OneWay,
         double WidthMeters);
 
+    private sealed record AiProfileOption(
+        string Label,
+        MapStudioAiConnectionProfile? Profile);
+
     private readonly OmsiNativeSession _session =
         new();
 
@@ -180,6 +184,11 @@ public sealed partial class MainWindow : Window
         _commercialState =
             MapStudioCommercialState
                 .DevelopmentPreview();
+
+    private MapStudioAiConnectionSettings
+        _aiConnectionSettings =
+            NativeAiConnectionSettingsStore
+                .Load();
 
     private NativeAssetLibraryState
         _assetLibraryState =
@@ -14325,6 +14334,383 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnAiProvidersClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var profiles =
+            _aiConnectionSettings
+                .Profiles
+                .ToList();
+
+        var options =
+            new List<AiProfileOption>
+            {
+                new(
+                    "Novo perfil...",
+                    null)
+            };
+
+        options.AddRange(
+            profiles.Select(
+                profile =>
+                    new AiProfileOption(
+                        profile.DisplayName +
+                        " · " +
+                        profile.AdapterId,
+                        profile)));
+
+        var profileCombo =
+            new ComboBox
+            {
+                Header =
+                    "Perfil",
+                ItemsSource =
+                    options,
+                DisplayMemberPath =
+                    nameof(
+                        AiProfileOption
+                            .Label),
+                HorizontalAlignment =
+                    HorizontalAlignment
+                        .Stretch
+            };
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome",
+                PlaceholderText =
+                    "Ex.: Meu modelo local"
+            };
+
+        var adapterBox =
+            new TextBox
+            {
+                Header =
+                    "Adapter ID",
+                PlaceholderText =
+                    "Ex.: openai-compatible, ollama, anthropic, gemini, custom"
+            };
+
+        var endpointBox =
+            new TextBox
+            {
+                Header =
+                    "Endpoint",
+                PlaceholderText =
+                    "Opcional · http(s)://..."
+            };
+
+        var modelBox =
+            new TextBox
+            {
+                Header =
+                    "Modelo",
+                PlaceholderText =
+                    "Opcional"
+            };
+
+        var localCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Executa localmente/offline"
+            };
+
+        var activeCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Usar como perfil ativo"
+            };
+
+        void LoadOption(
+            AiProfileOption? option)
+        {
+            var profile =
+                option?.Profile;
+
+            nameBox.Text =
+                profile
+                    ?.DisplayName ??
+                string.Empty;
+
+            adapterBox.Text =
+                profile
+                    ?.AdapterId ??
+                "custom";
+
+            endpointBox.Text =
+                profile
+                    ?.Endpoint ??
+                string.Empty;
+
+            modelBox.Text =
+                profile
+                    ?.Model ??
+                string.Empty;
+
+            localCheckBox.IsChecked =
+                profile
+                    ?.IsLocal ??
+                false;
+
+            activeCheckBox.IsChecked =
+                profile is not null &&
+                string.Equals(
+                    _aiConnectionSettings
+                        .ActiveProfileId,
+                    profile.Id,
+                    StringComparison
+                        .OrdinalIgnoreCase);
+        }
+
+        profileCombo.SelectionChanged +=
+            (_, _) =>
+            {
+                LoadOption(
+                    profileCombo
+                        .SelectedItem as
+                        AiProfileOption);
+            };
+
+        var selectedIndex =
+            0;
+
+        if (
+            _aiConnectionSettings
+                .ActiveProfileId is
+                { } activeId)
+        {
+            var activeIndex =
+                options.FindIndex(
+                    option =>
+                        string.Equals(
+                            option.Profile
+                                ?.Id,
+                            activeId,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+            if (activeIndex >= 0)
+            {
+                selectedIndex =
+                    activeIndex;
+            }
+        }
+
+        profileCombo.SelectedIndex =
+            selectedIndex;
+
+        LoadOption(
+            options[
+                selectedIndex]);
+
+        var info =
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Credenciais não são salvas aqui",
+                Message =
+                    "Este arquivo guarda apenas nome, adapter, endpoint e modelo. Tokens/chaves serão resolvidos separadamente pelo adapter/Credential Manager ou backend."
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    560
+            };
+
+        panel.Children.Add(
+            info);
+
+        panel.Children.Add(
+            profileCombo);
+
+        panel.Children.Add(
+            nameBox);
+
+        panel.Children.Add(
+            adapterBox);
+
+        panel.Children.Add(
+            endpointBox);
+
+        panel.Children.Add(
+            modelBox);
+
+        panel.Children.Add(
+            localCheckBox);
+
+        panel.Children.Add(
+            activeCheckBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Provedores de IA",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar",
+                SecondaryButtonText =
+                    "Excluir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        var answer =
+            await dialog
+                .ShowAsync();
+
+        var selected =
+            profileCombo.SelectedItem as
+                AiProfileOption;
+
+        if (
+            answer ==
+                ContentDialogResult
+                    .Secondary)
+        {
+            if (selected?.Profile is null)
+            {
+                StatusText.Text =
+                    "IA: nenhum perfil existente selecionado para excluir.";
+
+                return;
+            }
+
+            var removedId =
+                selected.Profile.Id;
+
+            profiles.RemoveAll(
+                profile =>
+                    string.Equals(
+                        profile.Id,
+                        removedId,
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            var active =
+                string.Equals(
+                    _aiConnectionSettings
+                        .ActiveProfileId,
+                    removedId,
+                    StringComparison
+                        .OrdinalIgnoreCase)
+                    ? null
+                    : _aiConnectionSettings
+                        .ActiveProfileId;
+
+            _aiConnectionSettings =
+                new MapStudioAiConnectionSettings(
+                    active,
+                    profiles)
+                .Normalize();
+
+            NativeAiConnectionSettingsStore
+                .Save(
+                    _aiConnectionSettings);
+
+            StatusText.Text =
+                $"IA: perfil '{selected.Profile.DisplayName}' excluído.";
+
+            return;
+        }
+
+        if (
+            answer !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            var id =
+                selected?.Profile
+                    ?.Id ??
+                Guid.NewGuid()
+                    .ToString("N");
+
+            var profile =
+                new MapStudioAiConnectionProfile(
+                    id,
+                    nameBox.Text,
+                    adapterBox.Text,
+                    endpointBox.Text,
+                    modelBox.Text,
+                    localCheckBox.IsChecked ==
+                        true)
+                .Normalize();
+
+            profiles.RemoveAll(
+                existing =>
+                    string.Equals(
+                        existing.Id,
+                        profile.Id,
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            profiles.Add(
+                profile);
+
+            var active =
+                activeCheckBox.IsChecked ==
+                    true
+                    ? profile.Id
+                    : string.Equals(
+                        _aiConnectionSettings
+                            .ActiveProfileId,
+                        profile.Id,
+                        StringComparison
+                            .OrdinalIgnoreCase)
+                        ? null
+                        : _aiConnectionSettings
+                            .ActiveProfileId;
+
+            _aiConnectionSettings =
+                new MapStudioAiConnectionSettings(
+                    active,
+                    profiles)
+                .Normalize();
+
+            NativeAiConnectionSettingsStore
+                .Save(
+                    _aiConnectionSettings);
+
+            StatusText.Text =
+                activeCheckBox.IsChecked ==
+                    true
+                    ? $"IA: perfil ativo '{profile.DisplayName}' salvo."
+                    : $"IA: perfil '{profile.DisplayName}' salvo.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"IA: não foi possível salvar o perfil: {exception.Message}";
+        }
+    }
+
     private async void OnBuildingStudioClick(
         object sender,
         RoutedEventArgs e)
@@ -14509,6 +14895,10 @@ public sealed partial class MainWindow : Window
                 }
             };
 
+        var activeAiProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
         var aiInfo =
             new InfoBar
             {
@@ -14522,7 +14912,10 @@ public sealed partial class MainWindow : Window
                 Title =
                     "IA opcional",
                 Message =
-                    "A análise por IA usará provedores conectáveis e preencherá estes mesmos campos. A geração O3D/SCO continua local e editável."
+                    activeAiProfile is null
+                        ? "Nenhum perfil de IA ativo. O Building Studio continua 100% manual/local."
+                        : $"Perfil configurado: {activeAiProfile.DisplayName} · adapter {activeAiProfile.AdapterId}. " +
+                          "A análise automática será habilitada quando esse adapter tiver conexão/credencial real. A geração O3D/SCO continua local e editável."
             };
 
         var panel =
