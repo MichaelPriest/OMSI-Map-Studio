@@ -12444,6 +12444,63 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnImportStandaloneMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as alterações pendentes antes de importar outro mapa.";
+
+            return;
+        }
+
+        var source =
+            await PickFolderAsync();
+
+        if (string.IsNullOrWhiteSpace(
+                source))
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Importando mapa externo para o Workspace...";
+
+            var snapshot =
+                await _session
+                    .ImportStandaloneMapFolderAsync(
+                        source);
+
+            _fullMapMode =
+                true;
+
+            SetContentRootModeLabel(
+                "WORKSPACE");
+
+            RootText.Text =
+                $"Workspace: {_session.OmsiRootPath}\nMapas: {_session.Maps.Count}";
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            StatusText.Text =
+                $"Mapa “{snapshot.Map.DisplayName}” importado e aberto no Workspace. Adicione as pastas de itens caso existam dependências externas.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao importar mapa: {exception.Message}";
+        }
+    }
+
     private async void OnAddAssetFolderClick(
         object sender,
         RoutedEventArgs e)

@@ -23,6 +23,13 @@ public sealed record MapStudioWorkspaceImportResult(
     int CopiedFiles,
     IReadOnlyList<string> DestinationDirectories);
 
+public sealed record MapStudioWorkspaceMapImportResult(
+    string SourcePath,
+    string MapDirectory,
+    string DirectoryName,
+    string DisplayName,
+    int CopiedFiles);
+
 public sealed class MapStudioWorkspaceBootstrapper
 {
     public static string GetDefaultWorkspacePath()
@@ -296,6 +303,172 @@ public sealed class MapStudioWorkspaceBootstrapper
             .ConfigureAwait(false);
 
         return target;
+    }
+
+    public async Task<MapStudioWorkspaceMapImportResult>
+        ImportMapFolderAsync(
+            string workspaceRoot,
+            string sourcePath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            workspaceRoot);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            sourcePath);
+
+        var info =
+            await EnsureAsync(
+                    workspaceRoot,
+                    seedStarterAssets:
+                        false,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var source =
+            Path.GetFullPath(
+                sourcePath)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        if (!Directory.Exists(source))
+        {
+            throw new DirectoryNotFoundException(
+                source);
+        }
+
+        var globalPath =
+            Path.Combine(
+                source,
+                "global.cfg");
+
+        if (!File.Exists(globalPath))
+        {
+            throw new InvalidDataException(
+                "workspaceMapImportGlobalMissing");
+        }
+
+        var workspaceMaps =
+            Path.GetFullPath(
+                info.MapsPath)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        var mapsPrefix =
+            workspaceMaps +
+            Path.DirectorySeparatorChar;
+
+        if (
+            string.Equals(
+                source,
+                workspaceMaps,
+                StringComparison.OrdinalIgnoreCase) ||
+            source.StartsWith(
+                mapsPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "workspaceMapImportSourceAlreadyInWorkspace");
+        }
+
+        await OmsiMapCatalog
+            .OpenMapAsync(
+                source,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var preferredName =
+            SanitizeFolderName(
+                Path.GetFileName(
+                    source));
+
+        var destination =
+            CreateUniqueDirectoryPath(
+                Path.Combine(
+                    info.MapsPath,
+                    preferredName));
+
+        var copiedFiles =
+            0;
+
+        try
+        {
+            copiedFiles =
+                CopyDirectory(
+                    source,
+                    destination,
+                    overwrite:
+                        false);
+
+            var imported =
+                await OmsiMapCatalog
+                    .OpenMapAsync(
+                        destination,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var metadataDirectory =
+                Path.Combine(
+                    destination,
+                    ".mapstudio");
+
+            Directory.CreateDirectory(
+                metadataDirectory);
+
+            var importJson =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        version = 1,
+                        importedFrom =
+                            source,
+                        importedAtUtc =
+                            DateTimeOffset.UtcNow
+                    },
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented =
+                            true
+                    });
+
+            await File.WriteAllTextAsync(
+                    Path.Combine(
+                        metadataDirectory,
+                        "import.json"),
+                    importJson,
+                    Encoding.UTF8,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            return new MapStudioWorkspaceMapImportResult(
+                source,
+                destination,
+                imported.DirectoryName,
+                imported.DisplayName,
+                copiedFiles);
+        }
+        catch
+        {
+            try
+            {
+                if (Directory.Exists(
+                        destination))
+                {
+                    Directory.Delete(
+                        destination,
+                        recursive:
+                            true);
+                }
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
     }
 
     public async Task<MapStudioWorkspaceImportResult>

@@ -7798,6 +7798,54 @@ public sealed class OmsiNativeSession
             .ConfigureAwait(false);
     }
 
+    public async Task<NativeMapSnapshot>
+        ImportStandaloneMapFolderAsync(
+            string sourcePath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeMapImport");
+        }
+
+        if (!IsStandaloneWorkspace)
+        {
+            await SelectStandaloneWorkspaceAsync(
+                    cancellationToken:
+                        cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Workspace Map Studio não disponível.");
+
+        var imported =
+            await _workspaceBootstrapper
+                .ImportMapFolderAsync(
+                    root,
+                    sourcePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        Maps =
+            await new OmsiMapCatalog()
+                .DiscoverAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return await OpenMapAsync(
+                imported.MapDirectory,
+                loadFullMap:
+                    true,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<MapStudioWorkspaceImportResult>
         ImportWorkspaceAssetFolderAsync(
             string sourcePath,

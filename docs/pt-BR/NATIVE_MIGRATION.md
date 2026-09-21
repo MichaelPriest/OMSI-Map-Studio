@@ -743,6 +743,8 @@ O template de mapa e o terreno inicial são gerados pelo próprio Map Studio. O 
 
 **Arquivo → Novo mapa...** cria e abre um mapa diretamente no Workspace. **Arquivo → Adicionar pasta de itens...** copia packs SCO/SLI para a biblioteca standalone, preservando a estrutura interna do pack.
 
+**Arquivo → Importar mapa existente...** aceita uma pasta externa com `global.cfg`, valida o mapa pelo Core, copia o projeto para `Workspace\\maps` e o abre em modo standalone. Dependências SCO/SLI externas podem ser adicionadas depois por **Adicionar pasta de itens...**.
+
 **Abrir OMSI** continua disponível no menu, na ribbon desktop e na barra do modo tela cheia. Ele apenas troca a fonte ativa para uma instalação OMSI escolhida pelo usuário; não é requisito de inicialização nem de criação/edição.
 
 A UI mostra explicitamente `WORKSPACE` ou `OMSI` para evitar ambiguidade sobre a fonte ativa. A barra superior foi reorganizada em menu + ribbon de comandos, e o fullscreen possui barra própria com salvar/desfazer/refazer, novo mapa, Assets, Explorer, Inspector, Workspace e Abrir OMSI.

@@ -152,6 +152,98 @@ public sealed class MapStudioWorkspaceBootstrapperTests
     }
 
     [Fact]
+    public async Task ImportMapFolderCopiesAndValidatesExternalMap()
+    {
+        var targetRoot =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-Target-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var sourceRoot =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Workspace-Source-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var bootstrapper =
+                new MapStudioWorkspaceBootstrapper();
+
+            var externalMap =
+                await bootstrapper
+                    .CreateBlankMapAsync(
+                        sourceRoot,
+                        "External_City",
+                        "External City");
+
+            var imported =
+                await bootstrapper
+                    .ImportMapFolderAsync(
+                        targetRoot,
+                        externalMap);
+
+            Assert.NotEqual(
+                Path.GetFullPath(
+                    externalMap),
+                Path.GetFullPath(
+                    imported.MapDirectory));
+
+            Assert.True(
+                imported.CopiedFiles >
+                    0);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        imported.MapDirectory,
+                        "global.cfg")));
+
+            var map =
+                await OmsiMapCatalog
+                    .OpenMapAsync(
+                        imported.MapDirectory);
+
+            Assert.Equal(
+                "External City",
+                map.DisplayName);
+
+            Assert.Single(
+                map.Tiles);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        imported.MapDirectory,
+                        ".mapstudio",
+                        "import.json")));
+        }
+        finally
+        {
+            if (Directory.Exists(
+                    targetRoot))
+            {
+                Directory.Delete(
+                    targetRoot,
+                    recursive:
+                        true);
+            }
+
+            if (Directory.Exists(
+                    sourceRoot))
+            {
+                Directory.Delete(
+                    sourceRoot,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task ImportItemFolderCopiesPackIntoWorkspace()
     {
         var root =

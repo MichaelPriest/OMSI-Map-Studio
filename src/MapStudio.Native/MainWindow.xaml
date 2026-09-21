@@ -176,6 +176,9 @@
                         Text="Novo mapa..."
                         Click="OnCreateStandaloneMapClick" />
                     <MenuFlyoutItem
+                        Text="Importar mapa existente..."
+                        Click="OnImportStandaloneMapClick" />
+                    <MenuFlyoutItem
                         Text="Adicionar pasta de itens..."
                         Click="OnAddAssetFolderClick" />
                     <MenuFlyoutSeparator />
@@ -1313,6 +1316,9 @@
                     <Button Content="Novo"
                             ToolTipService.ToolTip="Novo mapa no Workspace"
                             Click="OnCreateStandaloneMapClick" />
+                    <Button Content="Importar"
+                            ToolTipService.ToolTip="Importar mapa externo para o Workspace"
+                            Click="OnImportStandaloneMapClick" />
                     <Button Content="Assets"
                             Click="OnLibraryModeClick" />
                     <Button Content="Explorer"
