@@ -110,6 +110,13 @@ public sealed class D3D11NativeMapRenderer :
     private bool _splineProfilesVisible =
         true;
 
+    private bool _terrainPaintVisible =
+        true;
+
+    private readonly HashSet<int>
+        _hiddenTerrainLayerIndices =
+            [];
+
     private ID3D11Buffer?
         _terrainTriangleBuffer;
 
@@ -765,6 +772,60 @@ public sealed class D3D11NativeMapRenderer :
             visible;
 
         return true;
+    }
+
+    public bool SetTerrainPaintVisible(
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (
+            _terrainPaintVisible ==
+                visible)
+        {
+            return false;
+        }
+
+        _terrainPaintVisible =
+            visible;
+
+        return true;
+    }
+
+    public bool SetTerrainLayerVisible(
+        int layerIndex,
+        bool visible)
+    {
+        ThrowIfDisposed();
+
+        if (layerIndex <= 0)
+        {
+            return false;
+        }
+
+        return visible
+            ? _hiddenTerrainLayerIndices
+                .Remove(layerIndex)
+            : _hiddenTerrainLayerIndices
+                .Add(layerIndex);
+    }
+
+    public bool ResetTerrainLayerVisibility()
+    {
+        ThrowIfDisposed();
+
+        var changed =
+            !_terrainPaintVisible ||
+            _hiddenTerrainLayerIndices.Count >
+                0;
+
+        _terrainPaintVisible =
+            true;
+
+        _hiddenTerrainLayerIndices
+            .Clear();
+
+        return changed;
     }
 
     public bool SetSceneVisibility(
@@ -1638,7 +1699,8 @@ public sealed class D3D11NativeMapRenderer :
             _terrainTriangleBuffer,
             _terrainTriangleVertexCount,
             _terrainMaterialBatches,
-            forceDoubleSided: true);
+            forceDoubleSided: true,
+            filterTerrainLayers: true);
     }
 
     private void DrawReferenceOverlay(
@@ -1749,7 +1811,8 @@ public sealed class D3D11NativeMapRenderer :
         int vertexCount,
         IReadOnlyList<
             NativeMaterialBatch> batches,
-        bool forceDoubleSided = false)
+        bool forceDoubleSided = false,
+        bool filterTerrainLayers = false)
     {
         if (
             vertexBuffer is null ||
@@ -1816,6 +1879,20 @@ public sealed class D3D11NativeMapRenderer :
             if (
                 batch.VertexCount <=
                     0)
+            {
+                continue;
+            }
+
+            if (
+                filterTerrainLayers &&
+                batch.TerrainLayerIndex is
+                    int terrainLayerIndex &&
+                (
+                    !_terrainPaintVisible ||
+                    _hiddenTerrainLayerIndices
+                        .Contains(
+                            terrainLayerIndex)
+                ))
             {
                 continue;
             }

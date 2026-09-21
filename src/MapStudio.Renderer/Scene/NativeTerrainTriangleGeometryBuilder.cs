@@ -265,7 +265,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                             16) *
                         0.002f,
                     fallbackToHeightColor:
-                        false);
+                        false,
+                    terrainLayerIndex:
+                        mask.LayerIndex);
             }
 
             if (lightMapPath is not null)
@@ -303,7 +305,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         double detailRepeating,
         float heightOffset,
         bool fallbackToHeightColor,
-        bool additiveLightMap = false)
+        bool additiveLightMap = false,
+        int? terrainLayerIndex = null)
     {
         var cellCount =
             terrain.CellCount;
@@ -564,7 +567,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 texturePath,
                 maskTexturePath,
                 detailTexturePath,
-                additiveLightMap);
+                additiveLightMap,
+                terrainLayerIndex);
         }
     }
 
@@ -632,7 +636,8 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         string? texturePath,
         string? maskTexturePath,
         string? detailTexturePath,
-        bool additiveLightMap)
+        bool additiveLightMap,
+        int? terrainLayerIndex)
     {
         if (
             batches.Count > 0)
@@ -657,7 +662,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                     detailTexturePath,
                     StringComparison.OrdinalIgnoreCase) &&
                 previous.AdditiveLightMap ==
-                    additiveLightMap)
+                    additiveLightMap &&
+                previous.TerrainLayerIndex ==
+                    terrainLayerIndex)
             {
                 batches[^1] =
                     previous with
@@ -680,7 +687,9 @@ public sealed class NativeTerrainTriangleGeometryBuilder
                 DetailTexturePath:
                     detailTexturePath,
                 AdditiveLightMap:
-                    additiveLightMap));
+                    additiveLightMap,
+                TerrainLayerIndex:
+                    terrainLayerIndex));
     }
 
     private static void AppendTriangle(

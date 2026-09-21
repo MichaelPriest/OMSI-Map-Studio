@@ -26,7 +26,8 @@ public readonly record struct NativeMaterialBatch(
     double? BumpStrength = null,
     string? EnvironmentTexturePath = null,
     double? EnvironmentStrength = null,
-    bool AdditiveLightMap = false);
+    bool AdditiveLightMap = false,
+    int? TerrainLayerIndex = null);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,

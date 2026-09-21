@@ -347,6 +347,15 @@ public sealed class NativeTerrainTests
             var layerBatch =
                 geometry.MaterialBatches[1];
 
+            Assert.Null(
+                geometry.MaterialBatches[0]
+                    .TerrainLayerIndex);
+
+            Assert.Equal(
+                1,
+                layerBatch
+                    .TerrainLayerIndex);
+
             Assert.Equal(
                 Path.GetFullPath(
                     layerTexture),
