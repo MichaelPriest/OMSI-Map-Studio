@@ -131,6 +131,42 @@ public sealed class OmsiTimetableCatalogReader
                 : Array.Empty<
                     OmsiStationLink>();
 
+        var lineReader =
+            new OmsiTimetableLineReader();
+
+        var lines =
+            new List<
+                OmsiTimetableLine>();
+
+        foreach (
+            var path in Directory
+                .EnumerateFiles(
+                    ttDataPath,
+                    "*.ttl",
+                    SearchOption
+                        .TopDirectoryOnly)
+                .OrderBy(
+                    path => path,
+                    StringComparer.OrdinalIgnoreCase))
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            try
+            {
+                lines.Add(
+                    await lineReader
+                        .ReadAsync(
+                            fullMapDirectory,
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false));
+            }
+            catch (InvalidDataException)
+            {
+            }
+        }
+
         return new OmsiTimetableCatalog(
             tracks,
             trips)
@@ -138,7 +174,9 @@ public sealed class OmsiTimetableCatalogReader
             BusStops =
                 busStops,
             StationLinks =
-                stationLinks
+                stationLinks,
+            Lines =
+                lines
         };
     }
 }

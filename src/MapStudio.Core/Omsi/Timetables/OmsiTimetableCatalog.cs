@@ -12,6 +12,29 @@ public sealed record OmsiTimetableCatalog(
         StationLinks { get; init; } =
             Array.Empty<OmsiStationLink>();
 
+    public IReadOnlyList<OmsiTimetableLine>
+        Lines { get; init; } =
+            Array.Empty<OmsiTimetableLine>();
+
+    public int BrokenLineTripReferenceCount =>
+        Lines
+            .SelectMany(
+                line =>
+                    line.Tours)
+            .SelectMany(
+                tour =>
+                    tour.Trips)
+            .Count(
+                addTrip =>
+                    !Trips.Any(
+                        trip =>
+                            string.Equals(
+                                NormalizeName(
+                                    trip.Name),
+                                NormalizeName(
+                                    addTrip.TripName),
+                                StringComparison.OrdinalIgnoreCase)));
+
     public int BrokenStationLinkStopReferenceCount =>
         StationLinks.Count(
             link =>
@@ -37,14 +60,14 @@ public sealed record OmsiTimetableCatalog(
         string trackName,
         string tripTrackName)
     {
-        static string Normalize(
-            string value) =>
-            Path.GetFileNameWithoutExtension(
-                value.Trim());
-
         return string.Equals(
-            Normalize(trackName),
-            Normalize(tripTrackName),
+            NormalizeName(trackName),
+            NormalizeName(tripTrackName),
             StringComparison.OrdinalIgnoreCase);
     }
+
+    private static string NormalizeName(
+        string value) =>
+        Path.GetFileNameWithoutExtension(
+            value.Trim());
 }

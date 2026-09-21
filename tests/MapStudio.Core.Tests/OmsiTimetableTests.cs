@@ -81,6 +81,29 @@ public sealed class OmsiTimetableTests
                 Encoding.Latin1);
 
             await File.WriteAllTextAsync(
+                Path.Combine(
+                    tt,
+                    "Line_100.ttl"),
+                "-----------------------\r\n" +
+                "Time Table Line File\r\n" +
+                "-----------------------\r\n\r\n" +
+                "Line 100\r\nWeekday\r\n\r\n" +
+                "[userallowed]\r\n\r\n" +
+                "[priority]\r\n2\r\n" +
+                "------------------------------------\r\n\r\n" +
+                "[newtour]\r\n" +
+                "10001\r\n" +
+                "Busses\r\n" +
+                "0\r\n\r\n" +
+                "------------------------------------\r\n\r\n" +
+                "Outbound\r\n" +
+                "[addtrip]\r\n" +
+                "Line_100_A\r\n" +
+                "0\r\n" +
+                "28800\r\n",
+                Encoding.Latin1);
+
+            await File.WriteAllTextAsync(
                 tripPath,
                 "-----------------------\r\n" +
                 "Time Table Trip File\r\n" +
@@ -169,6 +192,40 @@ public sealed class OmsiTimetableTests
 
             Assert.Single(
                 link.Entries);
+
+            var line =
+                Assert.Single(
+                    catalog.Lines);
+
+            Assert.True(
+                line.UserAllowed);
+
+            Assert.Equal(
+                "2",
+                line.Priority);
+
+            var tour =
+                Assert.Single(
+                    line.Tours);
+
+            Assert.Equal(
+                "10001",
+                tour.Name);
+
+            Assert.Equal(
+                "Busses",
+                tour.AiGroupName);
+
+            Assert.Equal(
+                "Line_100_A",
+                Assert.Single(
+                    tour.Trips)
+                    .TripName);
+
+            Assert.Equal(
+                0,
+                catalog
+                    .BrokenLineTripReferenceCount);
         }
         finally
         {
