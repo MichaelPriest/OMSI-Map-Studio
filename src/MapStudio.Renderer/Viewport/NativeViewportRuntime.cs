@@ -1,6 +1,7 @@
 using System.Numerics;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Vegetation;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Timetables;
@@ -276,6 +277,35 @@ public sealed class NativeViewportRuntime : IDisposable
                 graph);
     }
 
+    public NativeOsmVegetationPlacementBuildResult
+        BuildOsmVegetationPlacementRequests(
+            IReadOnlyList<MapStudioProjectedVegetationPoint> points,
+            string sceneryObjectPath,
+            bool randomRotation)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            points);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            sceneryObjectPath);
+
+        if (Scene is null)
+        {
+            return new NativeOsmVegetationPlacementBuildResult(
+                Array.Empty<NativeSceneryPlacementRequest>(),
+                points.Count);
+        }
+
+        return new NativeOsmVegetationPlacementBuilder()
+            .Build(
+                Scene,
+                points,
+                sceneryObjectPath,
+                randomRotation);
+    }
+
     public NativeBuildingFootprintPreviewGeometry
         PreviewBuildingFootprints(
             IReadOnlyList<MapStudioProjectedBuildingFootprint> buildings)
@@ -306,6 +336,49 @@ public sealed class NativeViewportRuntime : IDisposable
     }
 
     public void ClearBuildingFootprintPreview()
+    {
+        ThrowIfDisposed();
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                null);
+
+        RenderInitialFrame();
+    }
+
+    public NativeVegetationPreviewGeometry
+        PreviewVegetationPoints(
+            IReadOnlyList<MapStudioProjectedVegetationPoint> points)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            points);
+
+        if (Scene is null)
+        {
+            return new NativeVegetationPreviewGeometry(
+                [],
+                0,
+                points.Count);
+        }
+
+        var geometry =
+            new NativeVegetationPreviewGeometryBuilder()
+                .Build(
+                    Scene,
+                    points);
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                geometry.Vertices);
+
+        RenderInitialFrame();
+
+        return geometry;
+    }
+
+    public void ClearVegetationPreview()
     {
         ThrowIfDisposed();
 
