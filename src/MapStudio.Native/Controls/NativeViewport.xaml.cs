@@ -652,6 +652,12 @@ public sealed partial class NativeViewport : UserControl
         _runtime?.TrafficPathLineCount ??
         0;
 
+    public NativeAssetTechnicalSnapshot
+        GetAssetTechnicalSnapshot() =>
+        _runtime
+            ?.GetAssetTechnicalSnapshot() ??
+        NativeAssetTechnicalSnapshot.Empty;
+
     public bool SetTrafficPathsVisible(
         bool visible)
     {

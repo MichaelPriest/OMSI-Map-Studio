@@ -423,6 +423,12 @@
                                           HorizontalAlignment="Stretch"
                                           SelectionChanged="OnLibrarySubcategorySelectionChanged" />
 
+                                <ComboBox x:Name="LibraryTechnicalFilterComboBox"
+                                          Header="Filtro técnico"
+                                          SelectedIndex="0"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="OnLibraryTechnicalFilterSelectionChanged" />
+
                                 <ComboBox x:Name="LibraryViewComboBox"
                                           Header="Visualização"
                                           SelectedIndex="0"

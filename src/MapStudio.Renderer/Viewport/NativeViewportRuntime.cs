@@ -1859,6 +1859,118 @@ public sealed class NativeViewportRuntime : IDisposable
         private set;
     }
 
+    public NativeAssetTechnicalSnapshot
+        GetAssetTechnicalSnapshot()
+    {
+        var usedScenery =
+            Scene?.Objects
+                .Select(
+                    item =>
+                        item.Object
+                            .SceneryObjectPath)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase) ??
+            new HashSet<string>(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+        var usedSplines =
+            Scene?.Splines
+                .Select(
+                    item =>
+                        item.Spline
+                            .SplinePath)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase) ??
+            new HashSet<string>(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+        var loadedScenery =
+            _sceneryAssets
+                .Where(
+                    pair =>
+                        pair.Value
+                            .IsLoaded)
+                .Select(
+                    pair =>
+                        pair.Key)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var treeScenery =
+            _sceneryAssets
+                .Where(
+                    pair =>
+                        pair.Value
+                            .IsLoaded &&
+                        pair.Value.Tree is
+                            not null)
+                .Select(
+                    pair =>
+                        pair.Key)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var problemScenery =
+            _sceneryAssets
+                .Where(
+                    pair =>
+                        !pair.Value
+                            .IsLoaded ||
+                        pair.Value
+                            .ErrorCode is
+                            not null)
+                .Select(
+                    pair =>
+                        pair.Key)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var loadedSplines =
+            _splineAssets
+                .Where(
+                    pair =>
+                        pair.Value
+                            .IsLoaded)
+                .Select(
+                    pair =>
+                        pair.Key)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        var problemSplines =
+            _splineAssets
+                .Where(
+                    pair =>
+                        !pair.Value
+                            .IsLoaded ||
+                        pair.Value
+                            .ErrorCode is
+                            not null)
+                .Select(
+                    pair =>
+                        pair.Key)
+                .ToHashSet(
+                    StringComparer
+                        .OrdinalIgnoreCase);
+
+        return new NativeAssetTechnicalSnapshot(
+            usedScenery,
+            loadedScenery,
+            treeScenery,
+            problemScenery,
+            usedSplines,
+            loadedSplines,
+            problemSplines);
+    }
+
     public int LoadedSplineSurfaceCount
     {
         get;

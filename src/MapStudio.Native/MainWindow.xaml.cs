@@ -609,6 +609,16 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void OnLibraryTechnicalFilterSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_libraryMode)
+        {
+            RefreshLibraryFilter();
+        }
+    }
+
     private void OnLibraryViewSelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -1993,6 +2003,68 @@ public sealed partial class MainWindow : Window
             index;
 
         RefreshLibrarySubcategoryOptions();
+        RefreshLibraryTechnicalFilterOptions(
+            kind);
+    }
+
+    private void RefreshLibraryTechnicalFilterOptions(
+        OmsiAssetKind? kind)
+    {
+        var previous =
+            LibraryTechnicalFilterComboBox
+                .SelectedItem
+                ?.ToString() ??
+            "Todos";
+
+        var options =
+            kind switch
+            {
+                OmsiAssetKind.SceneryObject =>
+                    new[]
+                    {
+                        "Todos",
+                        "Usados",
+                        "Árvores",
+                        "Carregados",
+                        "Problemas"
+                    },
+
+                OmsiAssetKind.Spline =>
+                    new[]
+                    {
+                        "Todos",
+                        "Usados",
+                        "Carregados",
+                        "Problemas"
+                    },
+
+                _ =>
+                    new[]
+                    {
+                        "Todos"
+                    }
+            };
+
+        LibraryTechnicalFilterComboBox.ItemsSource =
+            options;
+
+        var index =
+            Array.FindIndex(
+                options,
+                value =>
+                    string.Equals(
+                        value,
+                        previous,
+                        StringComparison.OrdinalIgnoreCase));
+
+        LibraryTechnicalFilterComboBox.SelectedIndex =
+            index >= 0
+                ? index
+                : 0;
+
+        LibraryTechnicalFilterComboBox.IsEnabled =
+            options.Length >
+            1;
     }
 
     private void RefreshLibrarySubcategoryOptions()
@@ -2215,6 +2287,31 @@ public sealed partial class MainWindow : Window
                             StringComparison.OrdinalIgnoreCase));
         }
 
+        var technicalFilter =
+            LibraryTechnicalFilterComboBox
+                .SelectedItem
+                ?.ToString() ??
+            "Todos";
+
+        if (
+            !string.Equals(
+                technicalFilter,
+                "Todos",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var technicalState =
+                Viewport
+                    .GetAssetTechnicalSnapshot();
+
+            items =
+                items.Where(
+                    item =>
+                        MatchesTechnicalFilter(
+                            item,
+                            technicalFilter,
+                            technicalState));
+        }
+
         if (
             !string.IsNullOrWhiteSpace(
                 query))
@@ -2258,8 +2355,14 @@ public sealed partial class MainWindow : Window
                     ?.ToString() ??
                 "Todas";
 
+            var technicalName =
+                LibraryTechnicalFilterComboBox
+                    .SelectedItem
+                    ?.ToString() ??
+                "Todos";
+
             LibraryStatusText.Text =
-                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName} · {subcategoryName}";
+                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName} · {subcategoryName} · {technicalName}";
         }
     }
 
