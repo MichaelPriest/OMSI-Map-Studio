@@ -3303,6 +3303,241 @@ public sealed class OmsiNativeSession
             newSplineId);
     }
 
+    public async Task<NativeTimetableTripUpdateResult>
+        UpdateTimetableTripAsync(
+            OmsiTimetableTrip trip,
+            OmsiTimetableTrip updatedTrip,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            trip);
+
+        ArgumentNullException.ThrowIfNull(
+            updatedTrip);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map.DirectoryPath);
+
+        var target =
+            Path.GetFullPath(
+                trip.FilePath);
+
+        var relative =
+            Path.GetRelativePath(
+                mapRoot,
+                target);
+
+        if (
+            !IsSafeRelativePath(
+                relative) ||
+            !relative.StartsWith(
+                "TTData" +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                Path.GetExtension(
+                    target),
+                ".ttp",
+                StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(
+                target))
+        {
+            throw new InvalidDataException(
+                "invalidTimetableTripPath");
+        }
+
+        var existingText =
+            await File.ReadAllTextAsync(
+                    target,
+                    System.Text.Encoding
+                        .Latin1,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var newLine =
+            existingText.Contains(
+                "\r\n",
+                StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+
+        var normalized =
+            updatedTrip with
+            {
+                FilePath =
+                    trip.FilePath,
+                RelativePath =
+                    trip.RelativePath,
+                Name =
+                    trip.Name
+            };
+
+        var bytes =
+            new OmsiTimetableTripWriter()
+                .Write(
+                    normalized,
+                    newLine);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiTimetableTripReader()
+                .ReadAsync(
+                    snapshot.Map.DirectoryPath,
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeTimetableTripUpdateResult(
+            reloaded,
+            backupPath);
+    }
+
+    public async Task<NativeStationLinkUpdateResult>
+        UpdateStationLinkAsync(
+            int linkIndex,
+            OmsiStationLink updatedLink,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            updatedLink);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var target =
+            Path.GetFullPath(
+                Path.Combine(
+                    snapshot.Map.DirectoryPath,
+                    "TTData",
+                    "StnLinks.cfg"));
+
+        var relative =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        if (
+            !IsSafeRelativePath(
+                relative) ||
+            !File.Exists(
+                target))
+        {
+            throw new InvalidDataException(
+                "invalidStationLinkPath");
+        }
+
+        var reader =
+            new OmsiStationLinkReader();
+
+        var links =
+            (
+                await reader
+                    .ReadAsync(
+                        target,
+                        cancellationToken)
+                    .ConfigureAwait(false)
+            )
+            .ToList();
+
+        if (
+            linkIndex < 0 ||
+            linkIndex >=
+                links.Count)
+        {
+            throw new InvalidDataException(
+                "stationLinkIndexInvalid");
+        }
+
+        links[linkIndex] =
+            updatedLink;
+
+        var existingText =
+            await File.ReadAllTextAsync(
+                    target,
+                    System.Text.Encoding
+                        .Latin1,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var newLine =
+            existingText.Contains(
+                "\r\n",
+                StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+
+        var bytes =
+            new OmsiStationLinkWriter()
+                .Write(
+                    links,
+                    newLine);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await reader
+                .ReadAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeStationLinkUpdateResult(
+            reloaded,
+            linkIndex,
+            backupPath);
+    }
+
     public async Task<NativeTimetableTrackUpdateResult>
         UpdateTimetableTrackAsync(
             OmsiTimetableTrack track,
