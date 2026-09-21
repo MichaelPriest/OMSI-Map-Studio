@@ -741,7 +741,7 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
 - geração procedural de vias com suavização, grafo único, auto-link de continuidade em grau 2, junctions próprios e rollback;
-- importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios e multipolygons externos seguros;
+- importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios, multipolygons externos seguros e pontos de vegetação `natural=tree`/`natural=shrub`;
 - análise de vias da referência Google por IA conectável;
 - Building Studio com O3D/SCO próprios, telhados plano/duas águas/hip/shed e aberturas de fachada;
 - configuração e teste de provedores de IA compatíveis com o contrato neutro do Core;
@@ -763,6 +763,12 @@ O importer reconhece ways com `highway`, resolve seus nodes e preserva quando di
 - classificação `highway`.
 
 As coordenadas WGS84 são projetadas pela mesma âncora de `.mapstudio/georeference.json` usada pelo GeoJSON. Depois disso, OSM, GeoJSON, traçado manual e IA alimentam exatamente o mesmo `MapStudioRoadGraph`, preview D3D11, Road Kit, planner de junctions e persistência transacional.
+
+**Ferramentas → Importar edifícios OSM...** importa footprints `building=*` por way e também relations `type=multipolygon` quando os anéis externos podem ser montados de forma segura. Relações com anéis internos/courtyards continuam recusadas nesta etapa para evitar preencher áreas vazadas incorretamente.
+
+**Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, preservando `species`, `genus`, `leaf_type` e `name` quando presentes. O usuário escolhe um **SCO real** já indexado na categoria Vegetação; o viewport mostra a prévia dos pontos sobre o terreno carregado e a confirmação gera requests alinhados à altura real do terreno. A persistência usa o batch seguro existente, limitado a 256 objetos por operação, com backup do mapa antes da gravação. A rotação variada é opcional e determinística por ID OSM.
+
+Áreas de floresta/bosque, hedges em ways e geração automática de espécies a partir de `species` ainda não são convertidas. Pontos fora do terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
 
 ### Attachments OMSI
 
