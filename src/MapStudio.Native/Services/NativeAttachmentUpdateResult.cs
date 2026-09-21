@@ -1,3 +1,5 @@
+using MapStudio.Core.Omsi.Maps;
+
 namespace MapStudio.Native.Services;
 
 public sealed record NativeAttachmentUpdateResult(
