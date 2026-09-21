@@ -227,6 +227,9 @@
                     <MenuFlyoutItem
                         Text="Building Studio..."
                         Click="OnBuildingStudioClick" />
+                    <MenuFlyoutItem
+                        Text="Instalar/atualizar Road Kit..."
+                        Click="OnInstallRoadKitClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Conta">
                     <MenuFlyoutItem

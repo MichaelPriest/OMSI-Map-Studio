@@ -12980,6 +12980,60 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnInstallRoadKitClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Road Kit"))
+        {
+            return;
+        }
+
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
+        {
+            StatusText.Text =
+                "Road Kit: selecione primeiro a instalação do OMSI.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Road Kit: gerando splines e texturas originais...";
+
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            StatusText.Text =
+                "Road Kit gerado; atualizando biblioteca...";
+
+            await _session
+                .RefreshAssetLibraryAsync();
+
+            await LoadAssetLibraryAsync();
+
+            StatusText.Text =
+                result.BackupDirectory is null
+                    ? $"Road Kit instalado: {result.SplineRelativePaths.Count} spline(s) próprias."
+                    : $"Road Kit atualizado: {result.SplineRelativePaths.Count} spline(s). Backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Road Kit falhou: {exception.Message}";
+        }
+    }
+
     private async void OnBuildingStudioClick(
         object sender,
         RoutedEventArgs e)
