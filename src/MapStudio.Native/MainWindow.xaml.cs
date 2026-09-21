@@ -591,6 +591,17 @@ public sealed partial class MainWindow : Window
     {
         if (_libraryMode)
         {
+            RefreshLibrarySubcategoryOptions();
+            RefreshLibraryFilter();
+        }
+    }
+
+    private void OnLibrarySubcategorySelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (_libraryMode)
+        {
             RefreshLibraryFilter();
         }
     }
@@ -601,10 +612,16 @@ public sealed partial class MainWindow : Window
     {
         if (_libraryMode)
         {
-            LibraryGroupComboBox.IsEnabled =
+            var groupView =
                 LibraryViewComboBox
                     .SelectedIndex ==
                 0;
+
+            LibraryGroupComboBox.IsEnabled =
+                groupView;
+
+            LibrarySubcategoryComboBox.IsEnabled =
+                groupView;
 
             RefreshLibraryFilter();
         }
@@ -1829,6 +1846,26 @@ public sealed partial class MainWindow : Window
             _explorerItems;
 
         if (
+            view == 0 &&
+            LibrarySubcategoryComboBox
+                .SelectedItem is
+                string subcategory &&
+            !string.Equals(
+                subcategory,
+                "Todas",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            items =
+                items.Where(
+                    item =>
+                        string.Equals(
+                            OmsiAssetLibraryClassifier
+                                .GetSubcategory(item),
+                            subcategory,
+                            StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (
             !string.IsNullOrWhiteSpace(
                 query))
         {
@@ -1971,6 +2008,75 @@ public sealed partial class MainWindow : Window
 
         LibraryGroupComboBox.SelectedIndex =
             index;
+
+        RefreshLibrarySubcategoryOptions();
+    }
+
+    private void RefreshLibrarySubcategoryOptions()
+    {
+        var previous =
+            LibrarySubcategoryComboBox
+                .SelectedItem
+                ?.ToString() ??
+            "Todas";
+
+        IEnumerable<
+            OmsiAssetIndexEntry> items =
+            _assetLibraryItems;
+
+        if (
+            LibraryGroupComboBox
+                .SelectedItem is
+                LibraryGroupOption option &&
+            option.Group !=
+                OmsiAssetLibraryGroup.All)
+        {
+            items =
+                items.Where(
+                    item =>
+                        OmsiAssetLibraryClassifier
+                            .Classify(item) ==
+                        option.Group);
+        }
+
+        var values =
+            items
+                .Where(
+                    item =>
+                        item.Kind is
+                            OmsiAssetKind.SceneryObject or
+                            OmsiAssetKind.Spline)
+                .Select(
+                    OmsiAssetLibraryClassifier
+                        .GetSubcategory)
+                .Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(
+                            value))
+                .Distinct(
+                    StringComparer.OrdinalIgnoreCase)
+                .OrderBy(
+                    value => value,
+                    StringComparer.CurrentCultureIgnoreCase)
+                .Prepend("Todas")
+                .ToArray();
+
+        LibrarySubcategoryComboBox.ItemsSource =
+            values;
+
+        var index =
+            Array.FindIndex(
+                values,
+                value =>
+                    string.Equals(
+                        value,
+                        previous,
+                        StringComparison.OrdinalIgnoreCase));
+
+        LibrarySubcategoryComboBox.SelectedIndex =
+            index >= 0
+                ? index
+                : 0;
     }
 
     private OmsiAssetKind?
@@ -2143,8 +2249,14 @@ public sealed partial class MainWindow : Window
                       "Grupos"
                     : "Grupos";
 
+            var subcategoryName =
+                LibrarySubcategoryComboBox
+                    .SelectedItem
+                    ?.ToString() ??
+                "Todas";
+
             LibraryStatusText.Text =
-                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName}";
+                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName} · {subcategoryName}";
         }
     }
 

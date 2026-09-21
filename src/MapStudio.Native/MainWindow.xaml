@@ -411,6 +411,12 @@
                                           DisplayMemberPath="Label"
                                           SelectionChanged="OnLibraryGroupSelectionChanged" />
 
+                                <ComboBox x:Name="LibrarySubcategoryComboBox"
+                                          Header="Subcategoria"
+                                          SelectedIndex="0"
+                                          HorizontalAlignment="Stretch"
+                                          SelectionChanged="OnLibrarySubcategorySelectionChanged" />
+
                                 <ComboBox x:Name="LibraryViewComboBox"
                                           Header="Visualização"
                                           SelectedIndex="0"
