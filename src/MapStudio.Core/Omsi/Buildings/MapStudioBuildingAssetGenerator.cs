@@ -633,6 +633,17 @@ public sealed class MapStudioBuildingAssetGenerator
                 1);
         }
 
+        AddFacadeDetails(
+            normalized,
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials,
+            halfWidth,
+            halfDepth,
+            wallHeight);
+
         var materials =
             new[]
             {
@@ -661,6 +672,32 @@ public sealed class MapStudioBuildingAssetGenerator
                     0,
                     0,
                     8,
+                    null),
+                new OmsiO3dMaterial(
+                    0.16f,
+                    0.32f,
+                    0.42f,
+                    1,
+                    0.08f,
+                    0.12f,
+                    0.16f,
+                    0,
+                    0,
+                    0,
+                    24,
+                    null),
+                new OmsiO3dMaterial(
+                    0.30f,
+                    0.16f,
+                    0.08f,
+                    1,
+                    0.04f,
+                    0.03f,
+                    0.02f,
+                    0,
+                    0,
+                    0,
+                    8,
                     null)
             };
 
@@ -673,6 +710,249 @@ public sealed class MapStudioBuildingAssetGenerator
             indices.ToArray(),
             triangleMaterials.ToArray(),
             materials);
+    }
+
+    private static void AddFacadeDetails(
+        MapStudioBuildingSpec spec,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials,
+        float halfWidth,
+        float halfDepth,
+        float wallHeight)
+    {
+        const ushort windowMaterial =
+            2;
+
+        const ushort doorMaterial =
+            3;
+
+        var frontZ =
+            -halfDepth -
+            0.02f;
+
+        var buildingWidth =
+            halfWidth *
+            2;
+
+        var floorHeight =
+            wallHeight /
+            Math.Max(
+                1,
+                spec.FloorCount);
+
+        var windowWidth =
+            (float)Math.Min(
+                spec.WindowWidthMeters,
+                Math.Max(
+                    0.30,
+                    buildingWidth *
+                    0.40));
+
+        var windowHeight =
+            (float)Math.Min(
+                spec.WindowHeightMeters,
+                Math.Max(
+                    0.30,
+                    floorHeight *
+                    0.75));
+
+        var windowCount =
+            Math.Min(
+                spec.WindowsPerFloor,
+                Math.Max(
+                    0,
+                    (int)Math.Floor(
+                        buildingWidth /
+                        Math.Max(
+                            0.50f,
+                            windowWidth +
+                            0.35f))));
+
+        if (windowCount > 0)
+        {
+            var spacing =
+                buildingWidth /
+                (
+                    windowCount +
+                    1
+                );
+
+            for (
+                var floor = 0;
+                floor <
+                    spec.FloorCount;
+                floor++)
+            {
+                var centerY =
+                    floor *
+                    floorHeight +
+                    floorHeight *
+                    0.55f;
+
+                var bottom =
+                    Math.Clamp(
+                        centerY -
+                        windowHeight /
+                        2,
+                        0.25f,
+                        wallHeight -
+                        windowHeight -
+                        0.10f);
+
+                var top =
+                    bottom +
+                    windowHeight;
+
+                for (
+                    var window = 0;
+                    window <
+                        windowCount;
+                    window++)
+                {
+                    var centerX =
+                        -halfWidth +
+                        spacing *
+                        (
+                            window +
+                            1
+                        );
+
+                    var left =
+                        centerX -
+                        windowWidth /
+                        2;
+
+                    var right =
+                        centerX +
+                        windowWidth /
+                        2;
+
+                    AddQuad(
+                        positions,
+                        normals,
+                        uvs,
+                        indices,
+                        triangleMaterials,
+                        new Vector3(
+                            left,
+                            bottom,
+                            frontZ),
+                        new Vector3(
+                            right,
+                            bottom,
+                            frontZ),
+                        new Vector3(
+                            right,
+                            top,
+                            frontZ),
+                        new Vector3(
+                            left,
+                            top,
+                            frontZ),
+                        Vector3.UnitZ *
+                            -1,
+                        windowMaterial);
+                }
+            }
+        }
+
+        var doorWidth =
+            (float)Math.Min(
+                spec.DoorWidthMeters,
+                Math.Max(
+                    0.50,
+                    buildingWidth *
+                    0.45));
+
+        var doorHeight =
+            (float)Math.Min(
+                spec.DoorHeightMeters,
+                Math.Max(
+                    1.20,
+                    floorHeight *
+                    0.90));
+
+        var doorCount =
+            Math.Min(
+                spec.DoorCount,
+                Math.Max(
+                    0,
+                    (int)Math.Floor(
+                        buildingWidth /
+                        Math.Max(
+                            0.80f,
+                            doorWidth +
+                            0.50f))));
+
+        if (doorCount <= 0)
+        {
+            return;
+        }
+
+        var doorSpacing =
+            buildingWidth /
+            (
+                doorCount +
+                1
+            );
+
+        for (
+            var door = 0;
+            door <
+                doorCount;
+            door++)
+        {
+            var centerX =
+                -halfWidth +
+                doorSpacing *
+                (
+                    door +
+                    1
+                );
+
+            var left =
+                centerX -
+                doorWidth /
+                2;
+
+            var right =
+                centerX +
+                doorWidth /
+                2;
+
+            AddQuad(
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials,
+                new Vector3(
+                    left,
+                    0.02f,
+                    frontZ -
+                    0.01f),
+                new Vector3(
+                    right,
+                    0.02f,
+                    frontZ -
+                    0.01f),
+                new Vector3(
+                    right,
+                    doorHeight,
+                    frontZ -
+                    0.01f),
+                new Vector3(
+                    left,
+                    doorHeight,
+                    frontZ -
+                    0.01f),
+                Vector3.UnitZ *
+                    -1,
+                doorMaterial);
+        }
     }
 
     private static void AddGableRoof(
@@ -996,7 +1276,11 @@ public sealed class MapStudioBuildingAssetGenerator
         $"WallHeight={spec.WallHeightMeters:0.###}\n" +
         $"Floors={spec.FloorCount}\n" +
         $"Roof={spec.RoofType}\n" +
-        $"RoofHeight={spec.RoofHeightMeters:0.###}\n";
+        $"RoofHeight={spec.RoofHeightMeters:0.###}\n" +
+        $"WindowsPerFloor={spec.WindowsPerFloor}\n" +
+        $"Doors={spec.DoorCount}\n" +
+        $"WindowSize={spec.WindowWidthMeters:0.###}x{spec.WindowHeightMeters:0.###}\n" +
+        $"DoorSize={spec.DoorWidthMeters:0.###}x{spec.DoorHeightMeters:0.###}\n";
 
     private static string SanitizeName(
         string value)
