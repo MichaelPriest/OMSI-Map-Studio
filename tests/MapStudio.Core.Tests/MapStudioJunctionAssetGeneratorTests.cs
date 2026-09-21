@@ -35,18 +35,19 @@ public sealed class MapStudioJunctionAssetGeneratorTests
         Assert.True(
             geometry.IsLoaded);
 
-        Assert.Equal(
-            1,
-            geometry.Materials.Count);
+        Assert.Single(
+            geometry.Materials);
 
-        Assert.Equal(
-            24,
-            geometry.TriangleMaterials.Length);
+        Assert.True(
+            geometry
+                .TriangleMaterialIndices
+                .Length ==
+            24);
 
-        Assert.Equal(
+        Assert.True(
+            geometry.Indices.Length ==
             24 *
-                3,
-            geometry.Indices.Length);
+                3);
     }
 
     [Fact]
@@ -114,9 +115,9 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             Assert.Single(
                 metadata.MeshPaths);
 
-            Assert.Equal(
-                12,
-                metadata.Paths.Count);
+            Assert.True(
+                metadata.Paths.Count ==
+                12);
 
             Assert.All(
                 metadata.Paths,
