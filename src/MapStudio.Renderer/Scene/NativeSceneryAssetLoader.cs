@@ -239,13 +239,11 @@ public sealed class NativeSceneryAssetLoader
                                     index))
             {
                 var materialIndex =
-                    materialOverride
-                        .MaterialIndex;
+                    ResolveMaterialIndex(
+                        geometry,
+                        materialOverride);
 
-                if (
-                    materialIndex < 0 ||
-                    materialIndex >=
-                        geometry.Materials.Count)
+                if (materialIndex < 0)
                 {
                     continue;
                 }
@@ -317,6 +315,23 @@ public sealed class NativeSceneryAssetLoader
                     materialNoZCheckFlags));
         }
 
+        string? treeTexturePath =
+            null;
+
+        if (
+            metadata.Tree is
+                { } tree &&
+            OmsiTextureAssetPathResolver
+                .TryResolveSceneryObjectTexture(
+                    omsiRoot,
+                    fullScoPath,
+                    tree.TextureName,
+                    out var resolvedTreeTexture))
+        {
+            treeTexturePath =
+                resolvedTreeTexture;
+        }
+
         return new NativeSceneryAsset(
             sceneryObjectPath,
             fullScoPath,
@@ -326,6 +341,101 @@ public sealed class NativeSceneryAssetLoader
             meshes.Count == 0 &&
             metadata.Tree is null
                 ? "noRenderableMeshes"
-                : null);
+                : null,
+            treeTexturePath);
+    }
+
+    private static int ResolveMaterialIndex(
+        OmsiO3dGeometry geometry,
+        OmsiSceneryMaterialOverride
+            materialOverride)
+    {
+        if (materialOverride.MaterialIndex < 0)
+        {
+            return -1;
+        }
+
+        var matches =
+            geometry.Materials
+                .Select(
+                    (material, index) =>
+                        new
+                        {
+                            material,
+                            index
+                        })
+                .Where(
+                    item =>
+                        MaterialTextureMatches(
+                            item.material
+                                .TextureName,
+                            materialOverride
+                                .TextureName))
+                .Select(
+                    item =>
+                        item.index)
+                .ToArray();
+
+        if (
+            materialOverride.MaterialIndex <
+                matches.Length)
+        {
+            return matches[
+                materialOverride
+                    .MaterialIndex];
+        }
+
+        // Compatibility fallback for unusual legacy assets
+        // whose material has no texture name in the mesh.
+        if (
+            matches.Length == 0 &&
+            materialOverride.MaterialIndex <
+                geometry.Materials.Count)
+        {
+            return materialOverride
+                .MaterialIndex;
+        }
+
+        return -1;
+    }
+
+    private static bool MaterialTextureMatches(
+        string? meshTexture,
+        string overrideTexture)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                meshTexture) ||
+            string.IsNullOrWhiteSpace(
+                overrideTexture))
+        {
+            return false;
+        }
+
+        static string Normalize(
+            string value) =>
+            value
+                .Trim()
+                .Replace(
+                    '/',
+                    '\\');
+
+        var left =
+            Normalize(meshTexture);
+
+        var right =
+            Normalize(overrideTexture);
+
+        return
+            string.Equals(
+                left,
+                right,
+                StringComparison
+                    .OrdinalIgnoreCase) ||
+            string.Equals(
+                Path.GetFileName(left),
+                Path.GetFileName(right),
+                StringComparison
+                    .OrdinalIgnoreCase);
     }
 }

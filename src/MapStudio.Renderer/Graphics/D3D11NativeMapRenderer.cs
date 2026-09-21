@@ -1320,19 +1320,12 @@ public sealed class D3D11NativeMapRenderer :
     private void DrawTerrainGeometry(
         ID3D11DeviceContext context)
     {
-        context
-            .RSSetState(
-                _terrainRasterizerState);
-
         DrawMaterialGeometry(
             context,
             _terrainTriangleBuffer,
             _terrainTriangleVertexCount,
-            _terrainMaterialBatches);
-
-        context
-            .RSSetState(
-                null);
+            _terrainMaterialBatches,
+            forceDoubleSided: true);
     }
 
     private void DrawSplineGeometry(
@@ -1360,7 +1353,8 @@ public sealed class D3D11NativeMapRenderer :
         ID3D11Buffer? vertexBuffer,
         int vertexCount,
         IReadOnlyList<
-            NativeMaterialBatch> batches)
+            NativeMaterialBatch> batches,
+        bool forceDoubleSided = false)
     {
         if (
             vertexBuffer is null ||
@@ -1395,9 +1389,19 @@ public sealed class D3D11NativeMapRenderer :
                 .PSSetShader(
                     _pixelShader);
 
+            context
+                .RSSetState(
+                    forceDoubleSided
+                        ? _terrainRasterizerState
+                        : null);
+
             context.Draw(
                 (uint)vertexCount,
                 0);
+
+            context
+                .RSSetState(
+                    null);
 
             return;
         }
@@ -1420,6 +1424,13 @@ public sealed class D3D11NativeMapRenderer :
             {
                 continue;
             }
+
+            context
+                .RSSetState(
+                    forceDoubleSided ||
+                    batch.DoubleSided
+                        ? _terrainRasterizerState
+                        : null);
 
             if (batch.NoZCheck)
             {
@@ -1660,6 +1671,10 @@ public sealed class D3D11NativeMapRenderer :
 
         context
             .OMSetDepthStencilState(
+                null);
+
+        context
+            .RSSetState(
                 null);
 
         context

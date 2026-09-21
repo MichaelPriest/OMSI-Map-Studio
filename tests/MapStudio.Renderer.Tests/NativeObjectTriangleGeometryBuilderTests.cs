@@ -214,4 +214,134 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                     152.0f);
             });
     }
+    [Fact]
+    public void BuildCreatesNativeTreeCrossBillboard()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var placed =
+            new OmsiPlacedObject(
+                "object",
+                @"Sceneryobjects\Trees_MC\tree_medium_09.sco",
+                5509,
+                X: 150,
+                Y: 150,
+                Z: 2,
+                Rotation: 15,
+                Pitch: 0,
+                Bank: 0,
+                ExtraValues:
+                [
+                    "4",
+                    "Tree_Medium_09.tga",
+                    "12.996",
+                    "1.438"
+                ]);
+
+        var content =
+            new OmsiTileContent(
+                new OmsiTileSummary(
+                    true,
+                    1,
+                    0,
+                    0),
+                [placed],
+                Array.Empty<
+                    OmsiPlacedSpline>());
+
+        var scene =
+            new NativeSceneBuilder()
+                .Build(
+                    [
+                        new NativeSceneTile(
+                            tile,
+                            content)
+                    ],
+                    new PickingRegistry<
+                        object>());
+
+        var asset =
+            new NativeSceneryAsset(
+                placed
+                    .SceneryObjectPath,
+                @"C:\OMSI\Sceneryobjects\Trees_MC\tree_medium_09.sco",
+                Array.Empty<
+                    NativeSceneryMeshAsset>(),
+                new OmsiSceneryTreeDefinition(
+                    "Tree_Medium_09.tga",
+                    12,
+                    18,
+                    1.1,
+                    1.5),
+                false,
+                null,
+                @"C:\OMSI\Sceneryobjects\Trees_MC\Texture\Tree_Medium_09.tga");
+
+        Assert.True(
+            asset.IsLoaded);
+
+        var result =
+            new NativeObjectTriangleGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSceneryAsset>(
+                            StringComparer
+                                .OrdinalIgnoreCase)
+                    {
+                        [
+                            placed
+                                .SceneryObjectPath
+                        ] = asset
+                    });
+
+        Assert.Equal(
+            4,
+            result.TriangleCount);
+
+        Assert.Equal(
+            1,
+            result.LoadedObjectCount);
+
+        var batch =
+            Assert.Single(
+                result.MaterialBatches);
+
+        Assert.Equal(
+            12,
+            batch.VertexCount);
+
+        Assert.Equal(
+            1,
+            batch.AlphaMode);
+
+        Assert.True(
+            batch.DoubleSided);
+
+        Assert.Equal(
+            asset.TreeTexturePath,
+            batch.TexturePath);
+
+        var range =
+            Assert.Single(
+                result.Ranges.Values);
+
+        Assert.Equal(
+            12,
+            range.VertexCount);
+
+        Assert.Contains(
+            result.Vertices,
+            vertex =>
+                Math.Abs(
+                    vertex.Position.Y -
+                    (2.0f + 12.996f)) <
+                0.001f);
+    }
+
 }

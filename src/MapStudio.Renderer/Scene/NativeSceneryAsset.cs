@@ -33,11 +33,19 @@ public sealed record NativeSceneryAsset(
     IReadOnlyList<NativeSceneryMeshAsset> Meshes,
     OmsiSceneryTreeDefinition? Tree,
     bool UsesAbsoluteHeight,
-    string? ErrorCode)
+    string? ErrorCode,
+    string? TreeTexturePath = null)
 {
     public bool IsLoaded =>
         ErrorCode is null &&
-        Meshes.Any(
-            mesh =>
-                mesh.Geometry.IsLoaded);
+        (
+            Meshes.Any(
+                mesh =>
+                    mesh.Geometry.IsLoaded) ||
+            (
+                Tree is not null &&
+                !string.IsNullOrWhiteSpace(
+                    TreeTexturePath)
+            )
+        );
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using MapStudio.Core.Omsi.Models;
 using MapStudio.Core.Omsi.Scenery;
@@ -18,7 +19,8 @@ public readonly record struct NativeMaterialBatch(
     int? AlphaMode = null,
     bool NoZWrite = false,
     bool NoZCheck = false,
-    string? DetailTexturePath = null);
+    string? DetailTexturePath = null,
+    bool DoubleSided = false);
 
 public sealed record NativeObjectTriangleGeometry(
     NativeMapVertex[] Vertices,
@@ -163,6 +165,31 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     before)
                 {
                     loadedMeshes++;
+                    objectContributed =
+                        true;
+                }
+            }
+
+            if (
+                asset.Tree is not null &&
+                !string.IsNullOrWhiteSpace(
+                    asset.TreeTexturePath))
+            {
+                var before =
+                    vertices.Count;
+
+                AppendTree(
+                    entity,
+                    asset,
+                    terrainOffset,
+                    vertices,
+                    pickingVertices,
+                    materialBatches);
+
+                if (
+                    vertices.Count >
+                    before)
+                {
                     objectContributed =
                         true;
                 }
@@ -340,6 +367,17 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     mesh.MaterialNoZCheckFlags,
                     materialIndex);
 
+            var doubleSided =
+                alphaMode is 1 or 2 ||
+                string.Equals(
+                    Path.GetExtension(
+                        mesh.FullPath),
+                    ".x",
+                    StringComparison
+                        .OrdinalIgnoreCase) ||
+                worldTransform
+                    .GetDeterminant() < 0;
+
             var triangleStart =
                 output.Count;
 
@@ -408,7 +446,8 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 lightTexturePath,
                 alphaMode,
                 noZWrite,
-                noZCheck);
+                noZCheck,
+                doubleSided);
         }
     }
 
@@ -421,7 +460,8 @@ public sealed class NativeObjectTriangleGeometryBuilder
         string? lightTexturePath,
         int? alphaMode,
         bool noZWrite,
-        bool noZCheck)
+        bool noZCheck,
+        bool doubleSided)
     {
         if (
             batches.Count > 0)
@@ -450,7 +490,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 previous.NoZWrite ==
                     noZWrite &&
                 previous.NoZCheck ==
-                    noZCheck)
+                    noZCheck &&
+                previous.DoubleSided ==
+                    doubleSided)
             {
                 batches[^1] =
                     previous with
@@ -474,7 +516,9 @@ public sealed class NativeObjectTriangleGeometryBuilder
                 lightTexturePath,
                 alphaMode,
                 noZWrite,
-                noZCheck));
+                noZCheck,
+                null,
+                doubleSided));
     }
 
     private static int?
@@ -570,6 +614,211 @@ public sealed class NativeObjectTriangleGeometryBuilder
         }
 
         return flags[index];
+    }
+
+    private static void AppendTree(
+        NativeObjectEntity entity,
+        NativeSceneryAsset asset,
+        double terrainOffset,
+        List<NativeMapVertex> output,
+        List<NativeMapVertex>
+            pickingOutput,
+        List<NativeMaterialBatch>
+            materialBatches)
+    {
+        if (
+            asset.Tree is not
+                { } tree ||
+            string.IsNullOrWhiteSpace(
+                asset.TreeTexturePath))
+        {
+            return;
+        }
+
+        var height =
+            ResolveTreePlacementValue(
+                entity.Object.ExtraValues,
+                2,
+                tree.MinimumHeight,
+                tree.MaximumHeight);
+
+        var aspect =
+            ResolveTreePlacementValue(
+                entity.Object.ExtraValues,
+                3,
+                tree.MinimumAspect,
+                tree.MaximumAspect);
+
+        if (
+            !double.IsFinite(height) ||
+            !double.IsFinite(aspect) ||
+            height <= 0 ||
+            aspect <= 0)
+        {
+            return;
+        }
+
+        var basePosition =
+            new Vector3(
+                entity.WorldX,
+                entity.WorldY +
+                    (float)terrainOffset,
+                entity.WorldZ);
+
+        var heightVector =
+            Vector3.UnitY *
+            (float)height;
+
+        var halfWidth =
+            (float)(
+                height *
+                aspect *
+                0.5);
+
+        var rotation =
+            Matrix4x4.CreateRotationY(
+                DegreesToRadians(
+                    entity.Object
+                        .Rotation));
+
+        var right =
+            Vector3.TransformNormal(
+                Vector3.UnitX,
+                rotation);
+
+        var forward =
+            Vector3.TransformNormal(
+                Vector3.UnitZ,
+                rotation);
+
+        var pickingColor =
+            EncodePickingColor(
+                entity.PickingId);
+
+        var start =
+            output.Count;
+
+        AppendTreeQuad(
+            basePosition,
+            heightVector,
+            right * halfWidth,
+            output,
+            pickingOutput,
+            pickingColor);
+
+        AppendTreeQuad(
+            basePosition,
+            heightVector,
+            forward * halfWidth,
+            output,
+            pickingOutput,
+            pickingColor);
+
+        AppendMaterialBatch(
+            materialBatches,
+            start,
+            output.Count - start,
+            asset.TreeTexturePath,
+            null,
+            null,
+            1,
+            false,
+            false,
+            true);
+    }
+
+    private static void AppendTreeQuad(
+        Vector3 basePosition,
+        Vector3 heightVector,
+        Vector3 halfWidthVector,
+        List<NativeMapVertex> output,
+        List<NativeMapVertex>
+            pickingOutput,
+        Vector4 pickingColor)
+    {
+        var bottomLeft =
+            basePosition -
+            halfWidthVector;
+
+        var bottomRight =
+            basePosition +
+            halfWidthVector;
+
+        var topLeft =
+            bottomLeft +
+            heightVector;
+
+        var topRight =
+            bottomRight +
+            heightVector;
+
+        NativeMapVertex[] vertices =
+        [
+            new(
+                bottomLeft,
+                Vector4.One,
+                new Vector2(0, 1)),
+            new(
+                topLeft,
+                Vector4.One,
+                new Vector2(0, 0)),
+            new(
+                topRight,
+                Vector4.One,
+                new Vector2(1, 0)),
+            new(
+                bottomLeft,
+                Vector4.One,
+                new Vector2(0, 1)),
+            new(
+                topRight,
+                Vector4.One,
+                new Vector2(1, 0)),
+            new(
+                bottomRight,
+                Vector4.One,
+                new Vector2(1, 1))
+        ];
+
+        output.AddRange(vertices);
+
+        foreach (var vertex in vertices)
+        {
+            pickingOutput.Add(
+                new NativeMapVertex(
+                    vertex.Position,
+                    pickingColor));
+        }
+    }
+
+    private static double
+        ResolveTreePlacementValue(
+            IReadOnlyList<string>
+                extraValues,
+            int extraValueIndex,
+            double minimum,
+            double maximum)
+    {
+        if (
+            extraValueIndex >= 0 &&
+            extraValueIndex <
+                extraValues.Count &&
+            double.TryParse(
+                extraValues[
+                    extraValueIndex],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var parsed) &&
+            double.IsFinite(parsed) &&
+            parsed > 0)
+        {
+            return parsed;
+        }
+
+        return
+            minimum +
+            (maximum - minimum) *
+            0.5;
     }
 
     private static Vector4
