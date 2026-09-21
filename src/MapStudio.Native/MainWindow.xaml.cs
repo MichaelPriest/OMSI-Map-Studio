@@ -15142,6 +15142,221 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnImportProceduralRoadOsmClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Importação OSM"))
+        {
+            return;
+        }
+
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Importação OSM: abra um mapa primeiro.";
+
+            return;
+        }
+
+        if (_proceduralRoadTraceMode)
+        {
+            StatusText.Text =
+                "Finalize ou limpe a linha manual atual antes de importar OSM.";
+
+            return;
+        }
+
+        var georeference =
+            await _session
+                .LoadMapGeoreferenceAsync();
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Importação OSM: o mapa precisa ter .mapstudio/georeference.json.";
+
+            return;
+        }
+
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .DocumentsLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".osm");
+
+        picker.FileTypeFilter.Add(
+            ".xml");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Importando vias OSM...";
+
+            var xml =
+                await File
+                    .ReadAllTextAsync(
+                        file.Path);
+
+            var imported =
+                new MapStudioOsmRoadImporter()
+                    .Parse(
+                        xml);
+
+            var pointCount =
+                imported.Traces.Sum(
+                    trace =>
+                        trace.Points.Count);
+
+            if (
+                imported.Traces.Count >
+                    5_000 ||
+                pointCount >
+                    100_000)
+            {
+                StatusText.Text =
+                    $"OSM recusado por segurança: {imported.Traces.Count} linha(s), {pointCount} ponto(s). Limite: 5.000 linhas / 100.000 pontos.";
+
+                return;
+            }
+
+            var anchorGeo =
+                new MapStudioGeographicAnchor(
+                    georeference.Latitude,
+                    georeference.Longitude,
+                    georeference.AnchorTileX *
+                        300.0 +
+                    georeference.AnchorX,
+                    georeference.AnchorTileY *
+                        300.0 +
+                    georeference.AnchorY);
+
+            var profiles =
+                GetProceduralRoadProfiles();
+
+            var added =
+                0;
+
+            var skipped =
+                imported.IgnoredWayCount;
+
+            foreach (
+                var geoTrace in
+                    imported.Traces)
+            {
+                var points =
+                    new List<
+                        MapStudioRoadPoint>(
+                            geoTrace.Points.Count);
+
+                foreach (
+                    var geoPoint in
+                        geoTrace.Points)
+                {
+                    var projected =
+                        MapStudioGeographicProjection
+                            .Project(
+                                anchorGeo,
+                                geoPoint);
+
+                    if (
+                        points.Count ==
+                            0 ||
+                        points[^1]
+                            .DistanceTo(
+                                projected) >=
+                            0.20)
+                    {
+                        points.Add(
+                            projected);
+                    }
+                }
+
+                if (points.Count < 2)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var profile =
+                    SelectProceduralRoadProfile(
+                        geoTrace,
+                        profiles);
+
+                _proceduralRoadTraces.Add(
+                    new MapStudioRoadTrace(
+                        $"osm-{++_proceduralRoadTraceSequence}-{geoTrace.Id}",
+                        points,
+                        profile.ProfileId,
+                        geoTrace.LaneCount ??
+                            profile.LaneCount,
+                        geoTrace.OneWay ??
+                            profile.OneWay,
+                        geoTrace.WidthMeters ??
+                            profile.WidthMeters));
+
+                added++;
+            }
+
+            if (added == 0)
+            {
+                StatusText.Text =
+                    "OSM não contém ways de via utilizáveis.";
+
+                return;
+            }
+
+            AnalyzeProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            ClearProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            var graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        _proceduralRoadTraces);
+
+            var preview =
+                Viewport
+                    .PreviewProceduralRoadGraph(
+                        graph);
+
+            StatusText.Text =
+                $"OSM importado: {added} via(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s). " +
+                $"Preview D3D11: {preview.RenderedSegmentCount} segmento(s). Ways ignorados: {skipped}. Referências de node ausentes: {imported.MissingNodeReferenceCount}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao importar OSM: {exception.Message}";
+        }
+    }
+
     private async void OnStartProceduralRoadTraceClick(
         object sender,
         RoutedEventArgs e)
