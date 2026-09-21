@@ -244,6 +244,9 @@
                         Text="Aplicar elevação Google no tile ativo..."
                         Click="OnGoogleElevationClick" />
                     <MenuFlyoutItem
+                        Text="Importar grade local de elevação no tile ativo..."
+                        Click="OnImportLocalElevationGridClick" />
+                    <MenuFlyoutItem
                         Text="Carregar referência Google sobre o terreno..."
                         Click="OnGoogleMapReferenceClick" />
                     <MenuFlyoutItem
