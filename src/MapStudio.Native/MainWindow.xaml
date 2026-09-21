@@ -438,8 +438,29 @@
                                     <ComboBoxItem Content="Favoritos" />
                                     <ComboBoxItem Content="Recentes" />
                                     <ComboBoxItem Content="Frequentes" />
-                                    <ComboBoxItem Content="Minha coleção" />
+                                    <ComboBoxItem Content="Coleção" />
                                 </ComboBox>
+
+                                <StackPanel x:Name="LibraryCollectionPanel"
+                                            Visibility="Collapsed"
+                                            Spacing="5">
+                                    <ComboBox x:Name="LibraryCollectionComboBox"
+                                              Header="Coleção ativa"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnLibraryCollectionSelectionChanged" />
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Button Grid.Column="0"
+                                                Content="+ Nova coleção"
+                                                Click="OnCreateLibraryCollectionClick" />
+                                        <Button Grid.Column="1"
+                                                Content="Excluir"
+                                                Click="OnDeleteLibraryCollectionClick" />
+                                    </Grid>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Grid.Row="1"

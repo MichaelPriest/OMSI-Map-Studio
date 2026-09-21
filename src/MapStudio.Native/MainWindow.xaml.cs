@@ -630,14 +630,184 @@ public sealed partial class MainWindow : Window
                     .SelectedIndex ==
                 0;
 
+            var collectionView =
+                LibraryViewComboBox
+                    .SelectedIndex ==
+                4;
+
             LibraryGroupComboBox.IsEnabled =
                 groupView;
 
             LibrarySubcategoryComboBox.IsEnabled =
                 groupView;
 
+            LibraryCollectionPanel.Visibility =
+                collectionView
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+            if (collectionView)
+            {
+                RefreshLibraryCollectionOptions();
+            }
+
             RefreshLibraryFilter();
         }
+    }
+
+    private void OnLibraryCollectionSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (!_libraryMode)
+        {
+            return;
+        }
+
+        UpdateCollectionButtonForSelection();
+
+        if (
+            LibraryViewComboBox
+                .SelectedIndex ==
+            4)
+        {
+            RefreshLibraryFilter();
+        }
+    }
+
+    private async void OnCreateLibraryCollectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome da coleção",
+                PlaceholderText =
+                    "Ex.: Ruas favoritas"
+            };
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Nova coleção",
+                Content =
+                    nameBox,
+                PrimaryButtonText =
+                    "Criar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var name =
+            nameBox.Text
+                .Trim();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                name) ||
+            name.Length >
+                80)
+        {
+            StatusText.Text =
+                "Nome de coleção inválido.";
+
+            return;
+        }
+
+        if (
+            !_assetLibraryState
+                .Collections
+                .ContainsKey(
+                    name))
+        {
+            _assetLibraryState
+                .Collections[
+                    name] =
+                [];
+
+            SaveAssetLibraryState();
+        }
+
+        RefreshLibraryCollectionOptions(
+            name);
+
+        StatusText.Text =
+            $"Coleção “{name}” ativa.";
+    }
+
+    private async void OnDeleteLibraryCollectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var name =
+            GetActiveLibraryCollectionName();
+
+        if (
+            string.Equals(
+                name,
+                "Minha coleção",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText.Text =
+                "A coleção padrão não pode ser excluída.";
+
+            return;
+        }
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Excluir coleção?",
+                Content =
+                    $"A coleção “{name}” será removida. Os arquivos OMSI não serão alterados.",
+                PrimaryButtonText =
+                    "Excluir",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Close
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        _assetLibraryState
+            .Collections
+            .Remove(
+                name);
+
+        SaveAssetLibraryState();
+
+        RefreshLibraryCollectionOptions(
+            "Minha coleção");
+
+        RefreshLibraryFilter();
+
+        StatusText.Text =
+            $"Coleção “{name}” excluída.";
     }
 
 
@@ -675,21 +845,7 @@ public sealed partial class MainWindow : Window
                     ? "★ Favorito"
                     : "☆ Favoritar";
 
-            var inCollection =
-                _assetLibraryState
-                    .Collections
-                    .TryGetValue(
-                        "Minha coleção",
-                        out var collection) &&
-                collection.Contains(
-                    selected.RelativePath,
-                    StringComparer
-                        .OrdinalIgnoreCase);
-
-            CollectionAssetButton.Content =
-                inCollection
-                    ? "− Coleção"
-                    : "+ Coleção";
+            UpdateCollectionButtonForSelection();
 
             RecordRecentAsset(
                 selected.RelativePath);
@@ -961,6 +1117,103 @@ public sealed partial class MainWindow : Window
         RefreshLibraryFilter();
     }
 
+    private string GetActiveLibraryCollectionName() =>
+        LibraryCollectionComboBox
+            .SelectedItem
+            ?.ToString() is
+            { Length: > 0 } name
+            ? name
+            : "Minha coleção";
+
+    private void RefreshLibraryCollectionOptions(
+        string? preferred = null)
+    {
+        if (
+            !_assetLibraryState
+                .Collections
+                .ContainsKey(
+                    "Minha coleção"))
+        {
+            _assetLibraryState
+                .Collections[
+                    "Minha coleção"] =
+                [];
+        }
+
+        var previous =
+            preferred ??
+            LibraryCollectionComboBox
+                .SelectedItem
+                ?.ToString() ??
+            "Minha coleção";
+
+        var names =
+            _assetLibraryState
+                .Collections
+                .Keys
+                .OrderBy(
+                    name =>
+                        string.Equals(
+                            name,
+                            "Minha coleção",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? 0
+                            : 1)
+                .ThenBy(
+                    name => name,
+                    StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
+
+        LibraryCollectionComboBox.ItemsSource =
+            names;
+
+        var index =
+            Array.FindIndex(
+                names,
+                name =>
+                    string.Equals(
+                        name,
+                        previous,
+                        StringComparison.OrdinalIgnoreCase));
+
+        LibraryCollectionComboBox.SelectedIndex =
+            index >= 0
+                ? index
+                : 0;
+    }
+
+    private void UpdateCollectionButtonForSelection()
+    {
+        if (
+            AssetLibraryListView
+                .SelectedItem is not
+                OmsiAssetIndexEntry asset)
+        {
+            CollectionAssetButton.Content =
+                "+ Coleção";
+
+            return;
+        }
+
+        var name =
+            GetActiveLibraryCollectionName();
+
+        var inCollection =
+            _assetLibraryState
+                .Collections
+                .TryGetValue(
+                    name,
+                    out var collection) &&
+            collection.Contains(
+                asset.RelativePath,
+                StringComparer.OrdinalIgnoreCase);
+
+        CollectionAssetButton.Content =
+            inCollection
+                ? "− Coleção"
+                : "+ Coleção";
+    }
+
     private void OnCollectionAssetClick(
         object sender,
         RoutedEventArgs e)
@@ -973,17 +1226,20 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var collectionName =
+            GetActiveLibraryCollectionName();
+
         if (
             !_assetLibraryState
                 .Collections
                 .TryGetValue(
-                    "Minha coleção",
+                    collectionName,
                     out var collection))
         {
             collection = [];
             _assetLibraryState
                 .Collections[
-                    "Minha coleção"] =
+                    collectionName] =
                 collection;
         }
 
@@ -1934,6 +2190,7 @@ public sealed partial class MainWindow : Window
                       $"{stats.SceneryObjects} SCO · {stats.Splines} SLI · " +
                       $"{stats.Models} modelos · {stats.Textures} texturas";
 
+            RefreshLibraryCollectionOptions();
             RefreshLibraryFilter();
         }
         catch (Exception exception)
@@ -2230,11 +2487,14 @@ public sealed partial class MainWindow : Window
         }
         else if (view == 4)
         {
+            var activeCollection =
+                GetActiveLibraryCollectionName();
+
             var collection =
                 _assetLibraryState
                     .Collections
                     .TryGetValue(
-                        "Minha coleção",
+                        activeCollection,
                         out var paths)
                     ? paths.ToHashSet(
                         StringComparer
@@ -2361,8 +2621,16 @@ public sealed partial class MainWindow : Window
                     ?.ToString() ??
                 "Todos";
 
+            var collectionName =
+                view == 4
+                    ? GetActiveLibraryCollectionName()
+                    : string.Empty;
+
             LibraryStatusText.Text =
-                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName} · {subcategoryName} · {technicalName}";
+                $"{filtered.Length} exibido(s) de {_assetLibraryItems.Count} · {viewName} · {groupName} · {subcategoryName} · {technicalName}" +
+                (view == 4
+                    ? $" · {collectionName}"
+                    : string.Empty);
         }
     }
 
