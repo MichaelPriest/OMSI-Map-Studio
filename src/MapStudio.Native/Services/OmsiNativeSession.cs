@@ -37,6 +37,15 @@ public sealed record NativeMapSnapshot(
 
 public sealed class OmsiNativeSession
 {
+    private static readonly HttpClient
+        GoogleMapsHttpClient =
+            new()
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        30)
+            };
+
     private readonly OmsiTileReader _tileReader =
         new();
 
@@ -141,6 +150,467 @@ public sealed class OmsiNativeSession
 
         _pendingTransforms[key] =
             edit;
+    }
+
+    public async Task<NativeGoogleElevationGrid>
+        LoadGoogleElevationGridAsync(
+            string apiKey,
+            int tileX,
+            int tileY,
+            int sampleCount,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey) ||
+            sampleCount is
+                < 3 or > 33)
+        {
+            throw new InvalidDataException(
+                "invalidGoogleElevationRequest");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (
+            !snapshot.Map.Tiles.Any(
+                tile =>
+                    tile.X ==
+                        tileX &&
+                    tile.Y ==
+                        tileY))
+        {
+            throw new InvalidDataException(
+                "unknownTile");
+        }
+
+        var georeference =
+            await LoadMapGeoreferenceAsync(
+                    cancellationToken)
+                .ConfigureAwait(false)
+            ?? throw new InvalidDataException(
+                "mapGeoreferenceRequired");
+
+        ValidateGeoreference(
+            georeference);
+
+        const double earthRadius =
+            6378137.0;
+
+        var anchorWorldX =
+            georeference.AnchorTileX *
+                300.0 +
+            georeference.AnchorX;
+
+        var anchorWorldY =
+            georeference.AnchorTileY *
+                300.0 +
+            georeference.AnchorY;
+
+        var coordinates =
+            new List<(
+                double Latitude,
+                double Longitude)>(
+                    checked(
+                        sampleCount *
+                        sampleCount));
+
+        for (
+            var row = 0;
+            row < sampleCount;
+            row++)
+        {
+            var localY =
+                row *
+                300.0 /
+                (
+                    sampleCount -
+                    1
+                );
+
+            for (
+                var column = 0;
+                column < sampleCount;
+                column++)
+            {
+                var localX =
+                    column *
+                    300.0 /
+                    (
+                        sampleCount -
+                        1
+                    );
+
+                var worldX =
+                    tileX *
+                        300.0 +
+                    localX;
+
+                var worldY =
+                    tileY *
+                        300.0 +
+                    localY;
+
+                var eastMeters =
+                    worldX -
+                    anchorWorldX;
+
+                var northMeters =
+                    -(
+                        worldY -
+                        anchorWorldY
+                    );
+
+                var latitudeDelta =
+                    northMeters /
+                    earthRadius *
+                    180.0 /
+                    Math.PI;
+
+                var longitudeScale =
+                    Math.Cos(
+                        georeference.Latitude *
+                        Math.PI /
+                        180.0);
+
+                if (
+                    Math.Abs(
+                        longitudeScale) <
+                    0.000001)
+                {
+                    throw new InvalidDataException(
+                        "invalidGoogleElevationRequest");
+                }
+
+                var longitudeDelta =
+                    eastMeters /
+                    (
+                        earthRadius *
+                        longitudeScale
+                    ) *
+                    180.0 /
+                    Math.PI;
+
+                coordinates.Add(
+                    (
+                        georeference.Latitude +
+                            latitudeDelta,
+                        georeference.Longitude +
+                            longitudeDelta
+                    ));
+            }
+        }
+
+        var elevations =
+            new List<double>(
+                coordinates.Count);
+
+        const int batchSize =
+            64;
+
+        for (
+            var offset = 0;
+            offset < coordinates.Count;
+            offset += batchSize)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var batch =
+                coordinates
+                    .Skip(offset)
+                    .Take(
+                        Math.Min(
+                            batchSize,
+                            coordinates.Count -
+                            offset))
+                    .Select(
+                        coordinate =>
+                            string.Create(
+                                CultureInfo
+                                    .InvariantCulture,
+                                $"{coordinate.Latitude:G17},{coordinate.Longitude:G17}"))
+                    .ToArray();
+
+            var uri =
+                "https://maps.googleapis.com/maps/api/elevation/json" +
+                "?locations=" +
+                Uri.EscapeDataString(
+                    string.Join(
+                        "|",
+                        batch)) +
+                "&key=" +
+                Uri.EscapeDataString(
+                    apiKey.Trim());
+
+            using var response =
+                await GoogleMapsHttpClient
+                    .GetAsync(
+                        uri,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (!response
+                .IsSuccessStatusCode)
+            {
+                throw new HttpRequestException(
+                    $"googleElevationHttp:{(int)response.StatusCode}");
+            }
+
+            await using var stream =
+                await response.Content
+                    .ReadAsStreamAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            using var document =
+                await JsonDocument
+                    .ParseAsync(
+                        stream,
+                        cancellationToken:
+                            cancellationToken)
+                    .ConfigureAwait(false);
+
+            var root =
+                document.RootElement;
+
+            if (
+                !root.TryGetProperty(
+                    "status",
+                    out var status) ||
+                !string.Equals(
+                    status.GetString(),
+                    "OK",
+                    StringComparison.OrdinalIgnoreCase) ||
+                !root.TryGetProperty(
+                    "results",
+                    out var results) ||
+                results.ValueKind !=
+                    JsonValueKind.Array ||
+                results.GetArrayLength() !=
+                    batch.Length)
+            {
+                throw new InvalidDataException(
+                    status.ValueKind ==
+                        JsonValueKind.String
+                        ? "googleElevation:" +
+                          status.GetString()
+                        : "googleElevationGridError");
+            }
+
+            foreach (
+                var result in
+                    results.EnumerateArray())
+            {
+                if (
+                    !result.TryGetProperty(
+                        "elevation",
+                        out var elevation) ||
+                    !elevation.TryGetDouble(
+                        out var value) ||
+                    !double.IsFinite(
+                        value))
+                {
+                    throw new InvalidDataException(
+                        "googleElevationGridError");
+                }
+
+                elevations.Add(
+                    value);
+            }
+        }
+
+        if (
+            elevations.Count !=
+            coordinates.Count)
+        {
+            throw new InvalidDataException(
+                "googleElevationGridError");
+        }
+
+        return new NativeGoogleElevationGrid(
+            tileX,
+            tileY,
+            sampleCount,
+            sampleCount,
+            elevations,
+            elevations.Min(),
+            elevations.Max(),
+            georeference.Latitude,
+            georeference.Longitude);
+    }
+
+    public async Task<NativeTerrainElevationApplyResult>
+        ApplyTerrainElevationGridAsync(
+            NativeGoogleElevationGrid grid,
+            double verticalOffset,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            grid);
+
+        if (!double.IsFinite(
+                verticalOffset))
+        {
+            throw new InvalidDataException(
+                "invalidElevationGrid");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainEdit");
+        }
+
+        var tile =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.X ==
+                            grid.TileX &&
+                        candidate.Y ==
+                            grid.TileY)
+            ?? throw new InvalidDataException(
+                "unknownTile");
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var tilePath))
+        {
+            throw new InvalidDataException(
+                "terrainTilePathInvalid");
+        }
+
+        var terrainPath =
+            tilePath +
+            ".terrain";
+
+        if (!File.Exists(
+                terrainPath))
+        {
+            throw new InvalidDataException(
+                "terrainFileMissing");
+        }
+
+        var terrain =
+            await new OmsiTerrainReader()
+                .ReadAsync(
+                    terrainPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var result =
+            OmsiTerrainLeveler
+                .ApplyElevationGrid(
+                    terrain,
+                    grid.Rows,
+                    grid.Columns,
+                    grid.Elevations,
+                    verticalOffset);
+
+        if (
+            result.ChangedSamples ==
+            0)
+        {
+            return new NativeTerrainElevationApplyResult(
+                CurrentMap,
+                0,
+                string.Empty);
+        }
+
+        var timestamp =
+            DateTimeOffset.UtcNow
+                .ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture);
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                timestamp +
+                "-elevation-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var relativePath =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                terrainPath);
+
+        if (!IsSafeRelativePath(
+                relativePath))
+        {
+            throw new InvalidDataException(
+                "invalidTerrainPath");
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        terrainPath,
+                        Path.Combine(
+                            backupRoot,
+                            relativePath),
+                        OmsiTerrainWriter
+                            .Write(
+                                result.Terrain))
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (
+            snapshot.Tiles.Any(
+                loaded =>
+                    loaded.Reference.X ==
+                        tile.X &&
+                    loaded.Reference.Y ==
+                        tile.Y))
+        {
+            var refreshed =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            CurrentMap =
+                snapshot with
+                {
+                    Tiles =
+                        snapshot.Tiles
+                            .Select(
+                                loaded =>
+                                    loaded.Reference.X ==
+                                        tile.X &&
+                                    loaded.Reference.Y ==
+                                        tile.Y
+                                        ? new NativeLoadedTile(
+                                            loaded.Reference,
+                                            refreshed)
+                                        : loaded)
+                            .ToArray()
+                };
+        }
+
+        return new NativeTerrainElevationApplyResult(
+            CurrentMap!,
+            result.ChangedSamples,
+            backupRoot);
     }
 
     public async Task<NativeCoordinateMapCreateResult>
