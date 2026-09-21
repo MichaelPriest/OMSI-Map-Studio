@@ -11451,6 +11451,133 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnDeleteActiveMapTileClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        var activeTile =
+            snapshot?.ActiveTile;
+
+        if (
+            snapshot is null ||
+            activeTile is null)
+        {
+            StatusText.Text =
+                "Abra um mapa e selecione um tile antes de excluir.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de excluir um tile.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Cancele a ferramenta de posicionamento antes de excluir um tile.";
+
+            return;
+        }
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Excluir tile {activeTile.X},{activeTile.Y}?",
+                Content =
+                    "Por segurança, o Map Studio só exclui um tile vazio que seja a última entrada [map] e que não esteja referenciado por entrypoints. Todos os arquivos do tile e o global.cfg serão copiados para backup antes da remoção.",
+                PrimaryButtonText =
+                    "Excluir tile",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Close
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Validando e excluindo tile {activeTile.X},{activeTile.Y}...";
+
+            var result =
+                await _session
+                    .DeleteTileSafelyAsync(
+                        activeTile.X,
+                        activeTile.Y);
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile:
+                    true);
+
+            RootText.Text =
+                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+
+            StatusText.Text =
+                $"Tile {result.DeletedTile.X},{result.DeletedTile.Y} excluído com {result.DeletedFiles} arquivo(s) preservados no backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            var message =
+                exception.Message switch
+                {
+                    var value when value.Contains(
+                        "cannotDeleteOnlyMapTile",
+                        StringComparison.Ordinal) =>
+                        "O único tile do mapa não pode ser excluído.",
+
+                    var value when value.Contains(
+                        "tileDeletionWouldShiftMapIndices",
+                        StringComparison.Ordinal) =>
+                        "Esse tile não é a última entrada do global.cfg. A exclusão foi bloqueada para não deslocar índices usados pelo mapa.",
+
+                    var value when value.Contains(
+                        "tileNotEmpty",
+                        StringComparison.Ordinal) =>
+                        "O tile contém objetos ou splines. Remova/mova o conteúdo antes de excluir o tile.",
+
+                    var value when value.Contains(
+                        "tileReferencedByEntrypoint",
+                        StringComparison.Ordinal) =>
+                        "O tile está referenciado por um entrypoint e não pode ser excluído com segurança.",
+
+                    var value when value.Contains(
+                        "globalMapSectionsNotCanonical",
+                        StringComparison.Ordinal) =>
+                        "O global.cfg possui entradas [map] não canônicas; revise o mapa antes da exclusão.",
+
+                    _ =>
+                        exception.Message
+                };
+
+            StatusText.Text =
+                $"Falha ao excluir tile: {message}";
+        }
+    }
+
     private async void OnCreateMapTileClick(
         object sender,
         RoutedEventArgs e)
