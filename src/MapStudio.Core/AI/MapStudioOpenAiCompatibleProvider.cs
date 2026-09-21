@@ -49,6 +49,80 @@ public sealed class MapStudioOpenAiCompatibleProvider
 
     public MapStudioAiProviderDescriptor Descriptor { get; }
 
+    public async Task TestConnectionAsync(
+        CancellationToken cancellationToken =
+            default)
+    {
+        var payload =
+            JsonSerializer.Serialize(
+                new
+                {
+                    model =
+                        _model,
+                    messages =
+                        new[]
+                        {
+                            new
+                            {
+                                role =
+                                    "user",
+                                content =
+                                    "Reply with OK."
+                            }
+                        },
+                    max_tokens =
+                        4
+                });
+
+        using var message =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                _endpoint)
+            {
+                Content =
+                    new StringContent(
+                        payload,
+                        Encoding.UTF8,
+                        "application/json")
+            };
+
+        if (_token is not null)
+        {
+            message.Headers.Authorization =
+                new AuthenticationHeaderValue(
+                    "Bearer",
+                    _token);
+        }
+
+        using var response =
+            await _httpClient
+                .SendAsync(
+                    message,
+                    HttpCompletionOption
+                        .ResponseHeadersRead,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        throw new HttpRequestException(
+            "AI provider returned " +
+            (int)response.StatusCode +
+            ": " +
+            Limit(
+                body,
+                500));
+    }
+
     public async Task<MapStudioBuildingReferenceAnalysis>
         AnalyzeBuildingReferenceAsync(
             MapStudioBuildingReferenceRequest request,
