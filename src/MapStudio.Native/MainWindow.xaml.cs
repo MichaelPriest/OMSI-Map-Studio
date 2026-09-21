@@ -15155,8 +15155,203 @@ public sealed partial class MainWindow : Window
                 Message =
                     activeAiProfile is null
                         ? "Nenhum perfil de IA ativo. O Building Studio continua 100% manual/local."
-                        : $"Perfil configurado: {activeAiProfile.DisplayName} · adapter {activeAiProfile.AdapterId}. " +
-                          "A análise automática será habilitada quando esse adapter tiver conexão/credencial real. A geração O3D/SCO continua local e editável."
+                        : NativeAiProviderFactory.IsImplemented(
+                            activeAiProfile)
+                            ? $"Perfil pronto: {activeAiProfile.DisplayName} · {activeAiProfile.AdapterId}. A IA pode analisar a imagem e apenas preencher os campos abaixo."
+                            : $"Perfil configurado: {activeAiProfile.DisplayName} · adapter {activeAiProfile.AdapterId}. Esse adapter ainda não possui implementação real nesta build."
+            };
+
+        var aiNotesBox =
+            new TextBox
+            {
+                Header =
+                    "Observações para IA",
+                PlaceholderText =
+                    "Opcional · ex.: fachada tem 3 andares, largura conhecida, telhado visto de lado...",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping
+                        .Wrap,
+                MinHeight =
+                    58
+            };
+
+        var analyzeWithAiButton =
+            new Button
+            {
+                Content =
+                    "Analisar imagem com IA",
+                HorizontalAlignment =
+                    HorizontalAlignment
+                        .Stretch,
+                IsEnabled =
+                    activeAiProfile is not
+                        null
+            };
+
+        analyzeWithAiButton.Click +=
+            async (_, _) =>
+            {
+                if (
+                    !EnsureCommercialFeature(
+                        MapStudioEntitlementKeys
+                            .AiAssistance,
+                        "Análise por IA"))
+                {
+                    return;
+                }
+
+                if (activeAiProfile is null)
+                {
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Warning;
+
+                    aiInfo.Message =
+                        "Configure e ative um perfil em IA → Configurar provedores.";
+
+                    return;
+                }
+
+                if (
+                    !NativeAiProviderFactory
+                        .IsImplemented(
+                            activeAiProfile))
+                {
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Warning;
+
+                    aiInfo.Message =
+                        $"O adapter {activeAiProfile.AdapterId} ainda não está implementado nesta build.";
+
+                    return;
+                }
+
+                var imagePath =
+                    facadePathBox.Text;
+
+                if (
+                    string.IsNullOrWhiteSpace(
+                        imagePath) ||
+                    !File.Exists(
+                        imagePath))
+                {
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Warning;
+
+                    aiInfo.Message =
+                        "Escolha primeiro uma imagem de referência/fachada.";
+
+                    return;
+                }
+
+                var mimeType =
+                    GetAiImageMimeType(
+                        imagePath);
+
+                if (mimeType is null)
+                {
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Warning;
+
+                    aiInfo.Message =
+                        "Para análise por IA use PNG, JPG/JPEG ou WEBP. A imagem ainda pode ser usada manualmente como textura.";
+
+                    return;
+                }
+
+                try
+                {
+                    analyzeWithAiButton
+                        .IsEnabled =
+                        false;
+
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Informational;
+
+                    aiInfo.Message =
+                        $"Analisando com {activeAiProfile.DisplayName}...";
+
+                    var bytes =
+                        await File
+                            .ReadAllBytesAsync(
+                                imagePath);
+
+                    var provider =
+                        NativeAiProviderFactory
+                            .Create(
+                                activeAiProfile);
+
+                    var spec =
+                        await new MapStudioAiBuildingSpecService()
+                            .AnalyzeAsync(
+                                provider,
+                                new MapStudioBuildingReferenceRequest(
+                                    [
+                                        new MapStudioAiImageReference(
+                                            bytes,
+                                            mimeType,
+                                            Path.GetFileName(
+                                                imagePath))
+                                    ],
+                                    string.IsNullOrWhiteSpace(
+                                        aiNotesBox.Text)
+                                        ? null
+                                        : aiNotesBox.Text),
+                                nameBox.Text,
+                                imagePath);
+
+                    widthBox.Value =
+                        spec.WidthMeters;
+
+                    depthBox.Value =
+                        spec.DepthMeters;
+
+                    heightBox.Value =
+                        spec.WallHeightMeters;
+
+                    floorsBox.Value =
+                        spec.FloorCount;
+
+                    roofCombo.SelectedIndex =
+                        spec.RoofType ==
+                            MapStudioBuildingRoofType
+                                .Gable
+                            ? 1
+                            : 0;
+
+                    roofHeightBox.Value =
+                        Math.Max(
+                            0.25,
+                            spec.RoofHeightMeters);
+
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Success;
+
+                    aiInfo.Message =
+                        $"Análise concluída por {activeAiProfile.DisplayName}. Revise dimensões, andares e telhado antes de gerar o asset.";
+                }
+                catch (Exception exception)
+                {
+                    aiInfo.Severity =
+                        InfoBarSeverity
+                            .Error;
+
+                    aiInfo.Message =
+                        $"Falha na análise por IA: {exception.Message}";
+                }
+                finally
+                {
+                    analyzeWithAiButton
+                        .IsEnabled =
+                        true;
+                }
             };
 
         var panel =
@@ -15170,6 +15365,12 @@ public sealed partial class MainWindow : Window
 
         panel.Children.Add(
             aiInfo);
+
+        panel.Children.Add(
+            aiNotesBox);
+
+        panel.Children.Add(
+            analyzeWithAiButton);
 
         panel.Children.Add(
             nameBox);
@@ -15516,6 +15717,24 @@ public sealed partial class MainWindow : Window
                 $"Falha ao restaurar backup: {exception.Message}";
         }
     }
+
+    private static string?
+        GetAiImageMimeType(
+            string path) =>
+        Path.GetExtension(
+                path)
+            .ToLowerInvariant() switch
+        {
+            ".png" =>
+                "image/png",
+            ".jpg" or
+            ".jpeg" =>
+                "image/jpeg",
+            ".webp" =>
+                "image/webp",
+            _ =>
+                null
+        };
 
     private async Task<string?>
         PickImageFileAsync()
