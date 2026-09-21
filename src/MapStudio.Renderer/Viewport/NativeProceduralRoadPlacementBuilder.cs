@@ -172,9 +172,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
                     out var node) ||
                 node.IsJunction ||
                 node.Degree !=
-                    2 ||
-                node.TraceIds.Count !=
-                    1)
+                    2)
             {
                 continue;
             }
@@ -185,8 +183,6 @@ public sealed class NativeProceduralRoadPlacementBuilder
                         candidate =>
                             candidate.Id !=
                                 current.Id &&
-                            candidate.TraceId ==
-                                current.TraceId &&
                             candidate.FromNodeId ==
                                 current.ToNodeId);
 
