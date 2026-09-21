@@ -4523,6 +4523,172 @@ public sealed class OmsiNativeSession
             backupRoot);
     }
 
+    public async Task<NativeAttachmentUpdateResult>
+        UpdateAttachmentAsync(
+            OmsiTileReference tile,
+            OmsiAttachmentTransformEdit edit,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            tile);
+
+        ArgumentNullException.ThrowIfNull(
+            edit);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeAttachmentEdit");
+        }
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map
+                        .DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var targetPath))
+        {
+            throw new InvalidDataException(
+                "attachmentTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    targetPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var edited =
+            OmsiTileAttachmentEditor
+                .ApplyTransforms(
+                    document,
+                    [edit]);
+
+        if (edited.AppliedCount != 1)
+        {
+            throw new InvalidDataException(
+                "attachmentEditNotApplied");
+        }
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map
+                    .DirectoryPath,
+                ".mapstudio-backups",
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo
+                            .InvariantCulture) +
+                "-attachment-" +
+                edit.AttachmentId
+                    .ToString(
+                        CultureInfo
+                            .InvariantCulture));
+
+        var relativeTarget =
+            Path.GetRelativePath(
+                snapshot.Map
+                    .DirectoryPath,
+                targetPath);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        targetPath,
+                        Path.Combine(
+                            backupRoot,
+                            relativeTarget),
+                        edited.Bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
+
+        var refreshed =
+            new List<
+                NativeLoadedTile>(
+                    snapshot.Tiles.Count);
+
+        OmsiPlacedAttachment?
+            updatedAttachment =
+                null;
+
+        foreach (var loadedTile in
+            snapshot.Tiles)
+        {
+            if (
+                !string.Equals(
+                    loadedTile.Reference
+                        .RelativeMapPath,
+                    tile.RelativeMapPath,
+                    StringComparison
+                        .OrdinalIgnoreCase))
+            {
+                refreshed.Add(
+                    loadedTile);
+
+                continue;
+            }
+
+            var content =
+                await _tileReader
+                    .ReadContentAsync(
+                        targetPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            refreshed.Add(
+                new NativeLoadedTile(
+                    loadedTile.Reference,
+                    content));
+
+            updatedAttachment =
+                (
+                    content.Attachments ??
+                    Array.Empty<
+                        OmsiPlacedAttachment>()
+                )
+                .FirstOrDefault(
+                    attachment =>
+                        attachment.SourceSectionOrdinal ==
+                            edit.SourceSectionOrdinal &&
+                        attachment.Kind ==
+                            edit.Kind &&
+                        attachment.AttachmentId ==
+                            edit.AttachmentId);
+        }
+
+        if (updatedAttachment is null)
+        {
+            throw new InvalidDataException(
+                "attachmentReloadFailed");
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    refreshed.ToArray()
+            };
+
+        return new NativeAttachmentUpdateResult(
+            CurrentMap,
+            updatedAttachment,
+            backupRoot);
+    }
+
     public async Task<NativeTrafficRulesUpdateResult>
         UpdateTrafficRulesAsync(
             PickingKind ownerKind,
