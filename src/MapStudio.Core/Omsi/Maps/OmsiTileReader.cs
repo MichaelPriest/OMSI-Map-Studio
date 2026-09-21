@@ -8,6 +8,9 @@ public sealed class OmsiTileReader
     private readonly OmsiTerrainReader _terrainReader =
         new();
 
+    private readonly OmsiWaterReader _waterReader =
+        new();
+
     private readonly OmsiTerrainRenderDataReader
         _terrainRenderDataReader =
             new();
@@ -54,6 +57,29 @@ public sealed class OmsiTileReader
                 : Task.FromResult<
                     OmsiTerrainGrid?>(null);
 
+        var waterPath =
+            tilePath +
+            ".water";
+
+        var waterFileExists =
+            File.Exists(
+                waterPath);
+
+        var waterFileSize =
+            waterFileExists
+                ? new FileInfo(
+                    waterPath)
+                    .Length
+                : 0;
+
+        var waterTask =
+            waterFileExists
+                ? ReadWaterSafeAsync(
+                    waterPath,
+                    cancellationToken)
+                : Task.FromResult<
+                    OmsiWaterGrid?>(null);
+
         var terrainRenderDataPath =
             terrainPath + "_0.rdy";
 
@@ -73,9 +99,14 @@ public sealed class OmsiTileReader
             await terrainTask
                 .ConfigureAwait(false);
 
+        var water =
+            await waterTask
+                .ConfigureAwait(false);
+
         return content with
         {
             Terrain = terrain,
+            Water = water,
             TerrainRenderData =
                 terrainRenderData,
             TerrainTextureMasks =
@@ -86,9 +117,32 @@ public sealed class OmsiTileReader
                     TerrainFileExists =
                         terrainFileExists,
                     TerrainFileSize =
-                        terrainFileSize
+                        terrainFileSize,
+                    WaterFileExists =
+                        waterFileExists,
+                    WaterFileSize =
+                        waterFileSize
                 }
         };
+    }
+
+    private async Task<OmsiWaterGrid?>
+        ReadWaterSafeAsync(
+            string waterPath,
+            CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _waterReader
+                .ReadAsync(
+                    waterPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
     }
 
     private async Task<OmsiTerrainGrid?>
@@ -253,7 +307,10 @@ public sealed class OmsiTileReader
                 attachmentCount,
             TerrainMarkerPresent:
                 document.FindFirstSection(
-                    "terrain") is not null);
+                    "terrain") is not null,
+            WaterMarkerPresent:
+                document.FindFirstSection(
+                    "water") is not null);
 
         return new OmsiTileContent(
             summary,
@@ -310,12 +367,31 @@ public sealed class OmsiTileReader
                     .Length
                 : 0;
 
+        var waterPath =
+            tilePath +
+            ".water";
+
+        var waterFileExists =
+            File.Exists(
+                waterPath);
+
+        var waterFileSize =
+            waterFileExists
+                ? new FileInfo(
+                    waterPath)
+                    .Length
+                : 0;
+
         return summary with
         {
             TerrainFileExists =
                 terrainFileExists,
             TerrainFileSize =
-                terrainFileSize
+                terrainFileSize,
+            WaterFileExists =
+                waterFileExists,
+            WaterFileSize =
+                waterFileSize
         };
     }
 
