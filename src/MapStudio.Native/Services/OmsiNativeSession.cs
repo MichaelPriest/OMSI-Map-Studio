@@ -6,6 +6,7 @@ using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
+using System.Text.Json;
 
 namespace MapStudio.Native.Services;
 
@@ -140,6 +141,565 @@ public sealed class OmsiNativeSession
 
         _pendingTransforms[key] =
             edit;
+    }
+
+    public async Task<NativeCoordinateMapCreateResult>
+        CreateCoordinateMapAsync(
+            string directoryName,
+            string displayName,
+            double latitude,
+            double longitude,
+            CancellationToken cancellationToken =
+                default)
+    {
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Selecione primeiro a instalação do OMSI 2.");
+
+        directoryName =
+            directoryName.Trim();
+
+        displayName =
+            displayName.Trim();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                displayName) ||
+            directoryName.Length > 80 ||
+            displayName.Length > 120 ||
+            latitude is < -90 or > 90 ||
+            longitude is < -180 or > 180 ||
+            directoryName is "." or ".." ||
+            !string.Equals(
+                Path.GetFileName(
+                    directoryName),
+                directoryName,
+                StringComparison.Ordinal) ||
+            directoryName.IndexOfAny(
+                Path.GetInvalidFileNameChars()) >=
+            0)
+        {
+            throw new InvalidDataException(
+                "invalidCoordinateMapRequest");
+        }
+
+        var templateRoot =
+            Path.Combine(
+                root,
+                "template");
+
+        var templateDirectory =
+            Path.Combine(
+                templateRoot,
+                "NewMap");
+
+        if (
+            !Directory.Exists(
+                templateDirectory) &&
+            Directory.Exists(
+                templateRoot))
+        {
+            templateDirectory =
+                Directory
+                    .EnumerateDirectories(
+                        templateRoot)
+                    .FirstOrDefault(
+                        candidate =>
+                        {
+                            var name =
+                                Path.GetFileName(
+                                    candidate);
+
+                            return
+                                string.Equals(
+                                    name,
+                                    "NewMap",
+                                    StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(
+                                    name,
+                                    "New Map",
+                                    StringComparison.OrdinalIgnoreCase);
+                        })
+                ?? templateDirectory;
+        }
+
+        if (!Directory.Exists(
+                templateDirectory))
+        {
+            throw new DirectoryNotFoundException(
+                templateDirectory);
+        }
+
+        var mapsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    root,
+                    "maps"));
+
+        var targetDirectory =
+            Path.GetFullPath(
+                Path.Combine(
+                    mapsRoot,
+                    directoryName));
+
+        var requiredPrefix =
+            mapsRoot
+                .TrimEnd(
+                    Path.DirectorySeparatorChar,
+                    Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+
+        if (
+            !targetDirectory.StartsWith(
+                requiredPrefix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidDataException(
+                "invalidCoordinateMapRequest");
+        }
+
+        if (
+            Directory.Exists(
+                targetDirectory) ||
+            File.Exists(
+                targetDirectory))
+        {
+            throw new IOException(
+                "coordinateMapAlreadyExists");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(
+                targetDirectory);
+
+            foreach (
+                var sourceDirectory in
+                    Directory.EnumerateDirectories(
+                        templateDirectory,
+                        "*",
+                        SearchOption.AllDirectories))
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var relative =
+                    Path.GetRelativePath(
+                        templateDirectory,
+                        sourceDirectory);
+
+                if (!IsSafeRelativePath(
+                        relative))
+                {
+                    throw new InvalidDataException(
+                        "invalidTemplatePath");
+                }
+
+                Directory.CreateDirectory(
+                    Path.Combine(
+                        targetDirectory,
+                        relative));
+            }
+
+            foreach (
+                var sourceFile in
+                    Directory.EnumerateFiles(
+                        templateDirectory,
+                        "*",
+                        SearchOption.AllDirectories))
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var relative =
+                    Path.GetRelativePath(
+                        templateDirectory,
+                        sourceFile);
+
+                if (!IsSafeRelativePath(
+                        relative))
+                {
+                    throw new InvalidDataException(
+                        "invalidTemplatePath");
+                }
+
+                var destination =
+                    Path.Combine(
+                        targetDirectory,
+                        relative);
+
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(
+                        destination)!);
+
+                File.Copy(
+                    sourceFile,
+                    destination,
+                    overwrite: false);
+            }
+
+            var globalConfigPath =
+                Path.Combine(
+                    targetDirectory,
+                    "global.cfg");
+
+            if (!File.Exists(
+                    globalConfigPath))
+            {
+                throw new InvalidDataException(
+                    "newMapTemplateInvalid");
+            }
+
+            var globalDocument =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        globalConfigPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var lines =
+                globalDocument
+                    .Lines
+                    .ToList();
+
+            SetSimpleConfigSectionValue(
+                lines,
+                "name",
+                displayName);
+
+            SetSimpleConfigSectionValue(
+                lines,
+                "friendlyname",
+                displayName);
+
+            var patchedGlobal =
+                new OmsiConfigDocument(
+                    lines,
+                    Array.Empty<
+                        OmsiConfigSection>(),
+                    globalDocument.NewLine,
+                    globalDocument
+                        .HasTrailingNewLine,
+                    globalDocument
+                        .TextEncoding,
+                    globalDocument
+                        .HasByteOrderMark);
+
+            await File.WriteAllBytesAsync(
+                    globalConfigPath,
+                    patchedGlobal.ToBytes(),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            var map =
+                await OmsiMapCatalog
+                    .OpenMapAsync(
+                        targetDirectory,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var initialTile =
+                OmsiTileRegionSelector
+                    .FindInitialTile(
+                        map.Tiles);
+
+            var anchorTileX =
+                initialTile?.X ??
+                0;
+
+            var anchorTileY =
+                initialTile?.Y ??
+                0;
+
+            await SaveMapGeoreferenceFileAsync(
+                    map,
+                    new NativeMapGeoreference(
+                        latitude,
+                        longitude,
+                        anchorTileX,
+                        anchorTileY,
+                        150.0,
+                        150.0,
+                        18,
+                        "hybrid",
+                        "Google Maps"),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            Maps =
+                await new OmsiMapCatalog()
+                    .DiscoverAsync(
+                        root,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var snapshot =
+                await OpenMapAsync(
+                        targetDirectory,
+                        loadFullMap: true,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            return new NativeCoordinateMapCreateResult(
+                snapshot,
+                targetDirectory,
+                latitude,
+                longitude);
+        }
+        catch
+        {
+            try
+            {
+                if (Directory.Exists(
+                        targetDirectory))
+                {
+                    Directory.Delete(
+                        targetDirectory,
+                        recursive: true);
+                }
+            }
+            catch
+            {
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<string>
+        SaveMapGeoreferenceAsync(
+            NativeMapGeoreference georeference,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            georeference);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        ValidateGeoreference(
+            georeference);
+
+        return await SaveMapGeoreferenceFileAsync(
+                snapshot.Map,
+                georeference,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<NativeMapGeoreference?>
+        LoadMapGeoreferenceAsync(
+            CancellationToken cancellationToken =
+                default)
+    {
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var path =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio",
+                "georeference.json");
+
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        await using var stream =
+            File.OpenRead(path);
+
+        return await JsonSerializer
+            .DeserializeAsync<
+                NativeMapGeoreference>(
+                    stream,
+                    cancellationToken:
+                        cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<string>
+        SaveMapGeoreferenceFileAsync(
+            OmsiMapDescriptor map,
+            NativeMapGeoreference georeference,
+            CancellationToken cancellationToken)
+    {
+        ValidateGeoreference(
+            georeference);
+
+        var metadataDirectory =
+            Path.Combine(
+                map.DirectoryPath,
+                ".mapstudio");
+
+        Directory.CreateDirectory(
+            metadataDirectory);
+
+        var path =
+            Path.Combine(
+                metadataDirectory,
+                "georeference.json");
+
+        var payload =
+            JsonSerializer.Serialize(
+                new
+                {
+                    version = 1,
+                    provider =
+                        georeference.Provider,
+                    latitude =
+                        georeference.Latitude,
+                    longitude =
+                        georeference.Longitude,
+                    anchorTileX =
+                        georeference.AnchorTileX,
+                    anchorTileY =
+                        georeference.AnchorTileY,
+                    anchorX =
+                        georeference.AnchorX,
+                    anchorY =
+                        georeference.AnchorY,
+                    zoom =
+                        georeference.Zoom,
+                    mapType =
+                        georeference.MapType,
+                    savedAtUtc =
+                        DateTimeOffset.UtcNow
+                },
+                new JsonSerializerOptions(
+                    JsonSerializerDefaults.Web)
+                {
+                    WriteIndented =
+                        true
+                });
+
+        var tempPath =
+            path +
+            "." +
+            Guid.NewGuid()
+                .ToString("N") +
+            ".tmp";
+
+        await File.WriteAllTextAsync(
+                tempPath,
+                payload,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        File.Move(
+            tempPath,
+            path,
+            overwrite: true);
+
+        return path;
+    }
+
+    private static void ValidateGeoreference(
+        NativeMapGeoreference value)
+    {
+        if (
+            value.Latitude is
+                < -90 or > 90 ||
+            value.Longitude is
+                < -180 or > 180 ||
+            value.AnchorX is
+                < 0 or > 300 ||
+            value.AnchorY is
+                < 0 or > 300 ||
+            value.Zoom is
+                < 0 or > 22 ||
+            value.MapType.Trim()
+                .ToLowerInvariant() is not
+                (
+                    "roadmap" or
+                    "satellite" or
+                    "hybrid" or
+                    "terrain"
+                ))
+        {
+            throw new InvalidDataException(
+                "invalidMapGeoreference");
+        }
+    }
+
+    private static void SetSimpleConfigSectionValue(
+        List<string> lines,
+        string keyword,
+        string value)
+    {
+        var marker =
+            "[" +
+            keyword +
+            "]";
+
+        for (
+            var index = 0;
+            index < lines.Count;
+            index++)
+        {
+            if (!string.Equals(
+                    lines[index].Trim(),
+                    marker,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var valueIndex =
+                index + 1;
+
+            while (
+                valueIndex <
+                    lines.Count &&
+                string.IsNullOrWhiteSpace(
+                    lines[valueIndex]))
+            {
+                valueIndex++;
+            }
+
+            if (
+                valueIndex <
+                    lines.Count &&
+                !lines[valueIndex]
+                    .TrimStart()
+                    .StartsWith(
+                        "[",
+                        StringComparison.Ordinal))
+            {
+                lines[valueIndex] =
+                    value;
+                return;
+            }
+
+            lines.Insert(
+                index + 1,
+                value);
+
+            return;
+        }
+
+        if (
+            lines.Count > 0 &&
+            lines[^1].Length !=
+                0)
+        {
+            lines.Add(
+                string.Empty);
+        }
+
+        lines.Add(
+            marker);
+
+        lines.Add(
+            value);
     }
 
     public async Task<NativeAssetReplacementResult>
