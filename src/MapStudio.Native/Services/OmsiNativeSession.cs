@@ -4,6 +4,7 @@ using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
@@ -3300,6 +3301,117 @@ public sealed class OmsiNativeSession
         return new NativeSplineInsertionResult(
             CurrentMap,
             newSplineId);
+    }
+
+    public async Task<NativeTimetableTrackUpdateResult>
+        UpdateTimetableTrackAsync(
+            OmsiTimetableTrack track,
+            IReadOnlyList<
+                OmsiTimetableTrackEntry>
+                entries,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            track);
+
+        ArgumentNullException.ThrowIfNull(
+            entries);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map
+                    .DirectoryPath);
+
+        var target =
+            Path.GetFullPath(
+                track.FilePath);
+
+        var relative =
+            Path.GetRelativePath(
+                mapRoot,
+                target);
+
+        if (
+            !IsSafeRelativePath(
+                relative) ||
+            !relative.StartsWith(
+                "TTData" +
+                Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(
+                Path.GetExtension(
+                    target),
+                ".ttr",
+                StringComparison.OrdinalIgnoreCase) ||
+            !File.Exists(
+                target))
+        {
+            throw new InvalidDataException(
+                "invalidTimetableTrackPath");
+        }
+
+        var existingText =
+            await File.ReadAllTextAsync(
+                    target,
+                    System.Text.Encoding
+                        .Latin1,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var newLine =
+            existingText.Contains(
+                "\r\n",
+                StringComparison.Ordinal)
+                ? "\r\n"
+                : "\n";
+
+        var bytes =
+            new OmsiTimetableTrackWriter()
+                .Write(
+                    track,
+                    entries,
+                    newLine);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map
+                    .DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var updated =
+            await new OmsiTimetableTrackReader()
+                .ReadAsync(
+                    snapshot.Map.DirectoryPath,
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeTimetableTrackUpdateResult(
+            updated,
+            backupPath);
     }
 
     public async Task<NativeMapSnapshot>
