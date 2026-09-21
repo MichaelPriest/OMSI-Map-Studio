@@ -4887,11 +4887,13 @@ public sealed partial class MainWindow : Window
                 3 =>
                     _timetableCatalog.StationLinks
                         .Select(
-                            link =>
+                            (link, index) =>
                                 new TransportExplorerItem(
                                     "StationLink",
-                                    $"{link.StartBusStopId}>{link.EndBusStopId}",
+                                    index.ToString(
+                                        CultureInfo.InvariantCulture),
                                     $"{link.StartBusStopId} → {link.EndBusStopId} · {link.Comment}",
+                                    $"Índice: {index}\n" +
                                     $"Entradas: {link.Entries.Count}\n" +
                                     $"Comprimento/ref: {link.Line1}"))
                         .ToArray(),
@@ -4972,9 +4974,26 @@ public sealed partial class MainWindow : Window
         if (
             _timetableCatalog is null ||
             TransportListView.SelectedItem is not
-                TransportExplorerItem item ||
-            item.Kind !=
-                "Track")
+                TransportExplorerItem item)
+        {
+            return;
+        }
+
+        if (item.Kind == "Trip")
+        {
+            await EditTripAsync(
+                item);
+            return;
+        }
+
+        if (item.Kind == "StationLink")
+        {
+            await EditStationLinkAsync(
+                item);
+            return;
+        }
+
+        if (item.Kind != "Track")
         {
             return;
         }
@@ -5241,6 +5260,722 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async Task EditTripAsync(
+        TransportExplorerItem item)
+    {
+        if (_timetableCatalog is null)
+        {
+            return;
+        }
+
+        var trip =
+            _timetableCatalog.Trips
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (trip is null)
+        {
+            return;
+        }
+
+        var trackBox =
+            new TextBox
+            {
+                Header =
+                    "Track",
+                Text =
+                    trip.TrackName
+            };
+
+        var destinationBox =
+            new TextBox
+            {
+                Header =
+                    "Destino",
+                Text =
+                    trip.Destination
+            };
+
+        var lineBox =
+            new TextBox
+            {
+                Header =
+                    "Linha",
+                Text =
+                    trip.Line
+            };
+
+        var reverseBox =
+            new CheckBox
+            {
+                Content =
+                    "Train reverse",
+                IsChecked =
+                    trip.TrainReverse
+            };
+
+        var stationsBox =
+            new TextBox
+            {
+                Header =
+                    "Stations · T2|id ou T1|id|interval|name|tile|line5|line6|line7|line8",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinHeight =
+                    220,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        trip.Stations.Select(
+                            station =>
+                                station switch
+                                {
+                                    OmsiTimetableTripStationType2
+                                        type2 =>
+                                        $"T2|{type2.Id}",
+
+                                    OmsiTimetableTripStationType1
+                                        type1 =>
+                                        $"T1|{type1.Id}|{type1.Interval}|{type1.Name}|{type1.TileIndex}|{type1.Line5}|{type1.Line6}|{type1.Line7}|{type1.Line8}",
+
+                                    _ =>
+                                        string.Empty
+                                }))
+            };
+
+        var profilesBox =
+            new TextBox
+            {
+                Header =
+                    "Profiles",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinHeight =
+                    180,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        trip.ProfileLines)
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    560
+            };
+
+        panel.Children.Add(
+            trackBox);
+        panel.Children.Add(
+            destinationBox);
+        panel.Children.Add(
+            lineBox);
+        panel.Children.Add(
+            reverseBox);
+        panel.Children.Add(
+            stationsBox);
+        panel.Children.Add(
+            profilesBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar Trip · {trip.Name}",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            650
+                    },
+                PrimaryButtonText =
+                    "Salvar Trip",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var stations =
+            new List<
+                OmsiTimetableTripStation>();
+
+        var stationLineNumber =
+            0;
+
+        foreach (
+            var rawLine in
+                stationsBox.Text
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Split('\n'))
+        {
+            stationLineNumber++;
+
+            var line =
+                rawLine.Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    line))
+            {
+                continue;
+            }
+
+            var parts =
+                line.Split(
+                    '|');
+
+            if (
+                parts.Length ==
+                    2 &&
+                string.Equals(
+                    parts[0],
+                    "T2",
+                    StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(
+                    parts[1],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var type2Id) &&
+                type2Id >= 0)
+            {
+                stations.Add(
+                    new OmsiTimetableTripStationType2(
+                        type2Id));
+                continue;
+            }
+
+            if (
+                parts.Length ==
+                    9 &&
+                string.Equals(
+                    parts[0],
+                    "T1",
+                    StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(
+                    parts[1],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var type1Id) &&
+                type1Id >= 0 &&
+                int.TryParse(
+                    parts[4],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var tileIndex))
+            {
+                stations.Add(
+                    new OmsiTimetableTripStationType1(
+                        type1Id,
+                        parts[2],
+                        parts[3],
+                        tileIndex,
+                        parts[5],
+                        parts[6],
+                        parts[7],
+                        parts[8]));
+                continue;
+            }
+
+            StatusText.Text =
+                $"Trip não salvo: station inválida na linha {stationLineNumber}.";
+            return;
+        }
+
+        if (stations.Count == 0)
+        {
+            StatusText.Text =
+                "Trip não salvo: mantenha pelo menos uma station.";
+            return;
+        }
+
+        var profiles =
+            profilesBox.Text
+                .Replace(
+                    "\r\n",
+                    "\n",
+                    StringComparison.Ordinal)
+                .Split('\n')
+                .Select(
+                    value =>
+                        value.Trim())
+                .Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(
+                            value))
+                .ToArray();
+
+        var updatedTrip =
+            trip with
+            {
+                TrackName =
+                    trackBox.Text.Trim(),
+                Destination =
+                    destinationBox.Text.Trim(),
+                Line =
+                    lineBox.Text.Trim(),
+                TrainReverse =
+                    reverseBox.IsChecked ==
+                    true,
+                Stations =
+                    stations.ToArray(),
+                ProfileLines =
+                    profiles
+            };
+
+        try
+        {
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Trip {trip.Name} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTimetableTripAsync(
+                        trip,
+                        updatedTrip);
+
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        _session.CurrentMap!
+                            .Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            TransportListView.SelectedItem =
+                _transportItems
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Kind ==
+                                "Trip" &&
+                            string.Equals(
+                                candidate.Key,
+                                updated.Trip.Name,
+                                StringComparison.OrdinalIgnoreCase));
+
+            StatusText.Text =
+                $"Trip {updated.Trip.Name} salvo · {updated.Trip.Stations.Count} station(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar Trip: {exception.Message}";
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind is
+                    "Track" or
+                    "Trip" or
+                    "StationLink";
+        }
+    }
+
+    private async Task EditStationLinkAsync(
+        TransportExplorerItem item)
+    {
+        if (
+            _timetableCatalog is null ||
+            !int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var linkIndex) ||
+            linkIndex < 0 ||
+            linkIndex >=
+                _timetableCatalog
+                    .StationLinks.Count)
+        {
+            return;
+        }
+
+        var link =
+            _timetableCatalog
+                .StationLinks[
+                    linkIndex];
+
+        var commentBox =
+            new TextBox
+            {
+                Header =
+                    "Comentário / nome",
+                Text =
+                    link.Comment
+            };
+
+        var startBox =
+            new NumberBox
+            {
+                Header =
+                    "BusStop inicial",
+                Minimum =
+                    0,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    link.StartBusStopId
+            };
+
+        var endBox =
+            new NumberBox
+            {
+                Header =
+                    "BusStop final",
+                Minimum =
+                    0,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    link.EndBusStopId
+            };
+
+        var metadataBox =
+            new TextBox
+            {
+                Header =
+                    "Campos StnLink · 7 linhas: Line1, Line4...Line9",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinHeight =
+                    150,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        new[]
+                        {
+                            link.Line1,
+                            link.Line4,
+                            link.Line5,
+                            link.Line6,
+                            link.Line7,
+                            link.Line8,
+                            link.Line9
+                        })
+            };
+
+        var entriesBox =
+            new TextBox
+            {
+                Header =
+                    "Entradas · id|pathIndex|tile|length|line5|line6|line7|chrono1;chrono2",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinHeight =
+                    260,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        link.Entries
+                            .Select(
+                                entry =>
+                                    $"{entry.Id}|{entry.Line2}|{entry.TileIndex}|{entry.Length?.ToString("G17", CultureInfo.InvariantCulture) ?? "0"}|{entry.Line5}|{entry.Line6}|{entry.Line7}|{string.Join(";", entry.ChronoFiles)}"))
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    580
+            };
+
+        panel.Children.Add(
+            commentBox);
+
+        var stopsGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        stopsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+        stopsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            startBox,
+            0);
+        Grid.SetColumn(
+            endBox,
+            1);
+
+        stopsGrid.Children.Add(
+            startBox);
+        stopsGrid.Children.Add(
+            endBox);
+
+        panel.Children.Add(
+            stopsGrid);
+        panel.Children.Add(
+            metadataBox);
+        panel.Children.Add(
+            entriesBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar StationLink #{linkIndex}",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            650
+                    },
+                PrimaryButtonText =
+                    "Salvar StationLink",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var metadata =
+            metadataBox.Text
+                .Replace(
+                    "\r\n",
+                    "\n",
+                    StringComparison.Ordinal)
+                .Split('\n');
+
+        if (
+            metadata.Length !=
+                7)
+        {
+            StatusText.Text =
+                "StationLink não salvo: os campos StnLink devem ter exatamente 7 linhas.";
+            return;
+        }
+
+        var entries =
+            new List<
+                OmsiStationLinkEntry>();
+
+        var lineNumber =
+            0;
+
+        foreach (
+            var rawLine in
+                entriesBox.Text
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Split('\n'))
+        {
+            lineNumber++;
+
+            var line =
+                rawLine.Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    line))
+            {
+                continue;
+            }
+
+            var parts =
+                line.Split(
+                    '|');
+
+            if (
+                parts.Length is
+                    < 7 or > 8 ||
+                !int.TryParse(
+                    parts[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var id) ||
+                id < 0 ||
+                !int.TryParse(
+                    parts[2],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var tileIndex) ||
+                !double.TryParse(
+                    parts[3],
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var length) ||
+                !double.IsFinite(
+                    length))
+            {
+                StatusText.Text =
+                    $"StationLink não salvo: entrada inválida na linha {lineNumber}.";
+                return;
+            }
+
+            var chrono =
+                parts.Length ==
+                    8 &&
+                !string.IsNullOrWhiteSpace(
+                    parts[7])
+                    ? parts[7]
+                        .Split(
+                            ';',
+                            StringSplitOptions
+                                .RemoveEmptyEntries |
+                            StringSplitOptions
+                                .TrimEntries)
+                    : Array.Empty<string>();
+
+            entries.Add(
+                new OmsiStationLinkEntry(
+                    $"{entries.Count}:",
+                    id,
+                    parts[1].Trim(),
+                    tileIndex,
+                    length,
+                    parts[4].Trim(),
+                    parts[5].Trim(),
+                    parts[6].Trim(),
+                    chrono));
+        }
+
+        if (
+            entries.Count ==
+            0 ||
+            !double.IsFinite(
+                startBox.Value) ||
+            !double.IsFinite(
+                endBox.Value))
+        {
+            StatusText.Text =
+                "StationLink não salvo: mantenha pelo menos uma entrada e stops válidos.";
+            return;
+        }
+
+        var updatedLink =
+            new OmsiStationLink(
+                commentBox.Text.Trim(),
+                metadata[0].Trim(),
+                checked(
+                    (int)Math.Round(
+                        startBox.Value)),
+                checked(
+                    (int)Math.Round(
+                        endBox.Value)),
+                metadata[1].Trim(),
+                metadata[2].Trim(),
+                metadata[3].Trim(),
+                metadata[4].Trim(),
+                metadata[5].Trim(),
+                metadata[6].Trim(),
+                entries.ToArray());
+
+        try
+        {
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando StationLink #{linkIndex} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateStationLinkAsync(
+                        linkIndex,
+                        updatedLink);
+
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        _session.CurrentMap!
+                            .Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            TransportListView.SelectedItem =
+                _transportItems
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Kind ==
+                                "StationLink" &&
+                            candidate.Key ==
+                                linkIndex.ToString(
+                                    CultureInfo.InvariantCulture));
+
+            StatusText.Text =
+                $"StationLink #{linkIndex} salvo · {updated.Links[updated.UpdatedIndex].Entries.Count} entrada(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar StationLink: {exception.Message}";
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind is
+                    "Track" or
+                    "Trip" or
+                    "StationLink";
+        }
+    }
+
     private void OnTransportSelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -5266,15 +6001,30 @@ public sealed partial class MainWindow : Window
         TransportDetailText.Text =
             item.Detail;
 
+        var editable =
+            item.Kind is
+                "Track" or
+                "Trip" or
+                "StationLink";
+
         EditTrackButton.Visibility =
-            item.Kind ==
-                "Track"
+            editable
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         EditTrackButton.IsEnabled =
-            item.Kind ==
-                "Track";
+            editable;
+
+        EditTrackButton.Content =
+            item.Kind switch
+            {
+                "Trip" =>
+                    "Editar Trip",
+                "StationLink" =>
+                    "Editar StationLink",
+                _ =>
+                    "Editar Track"
+            };
 
         if (_timetableCatalog is null)
         {
@@ -5306,28 +6056,31 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        if (item.Kind == "StationLink")
+        if (
+            item.Kind ==
+                "StationLink" &&
+            int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var linkIndex) &&
+            linkIndex >= 0 &&
+            linkIndex <
+                _timetableCatalog
+                    .StationLinks.Count)
         {
             var link =
                 _timetableCatalog
-                    .StationLinks
-                    .FirstOrDefault(
-                        candidate =>
-                            string.Equals(
-                                $"{candidate.StartBusStopId}>{candidate.EndBusStopId}",
-                                item.Key,
-                                StringComparison.OrdinalIgnoreCase));
+                    .StationLinks[
+                        linkIndex];
 
-            if (link is not null)
-            {
-                var resolved =
-                    Viewport
-                        .PreviewStationLink(
-                            link.Entries);
+            var resolved =
+                Viewport
+                    .PreviewStationLink(
+                        link.Entries);
 
-                StatusText.Text =
-                    $"StationLink {item.Key}: {resolved}/{link.Entries.Count} segmento(s) resolvido(s).";
-            }
+            StatusText.Text =
+                $"StationLink #{linkIndex} · {link.StartBusStopId}→{link.EndBusStopId}: {resolved}/{link.Entries.Count} segmento(s) resolvido(s).";
 
             return;
         }
