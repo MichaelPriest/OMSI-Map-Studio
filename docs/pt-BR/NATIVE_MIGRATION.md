@@ -763,7 +763,9 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - brush incremental para elevar/abaixar terreno, nivelamento e pintura real das máscaras DDS;
 - visibilidade individual das camadas `groundtex`;
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
+- preview visual nativo de texturas BMP/PNG/JPG/TGA e DDS compatíveis, incluindo máscaras DDS A8 sem depender de codec WIC;
 - preview 3D nativo também para modelos avulsos `.o3d` e `.x`, sem depender de um SCO wrapper;
+- o Workspace standalone semeia conteúdo original próprio: Road Kit, túnel, Bridge Kit, cruzamento, prédio, árvore e arbusto, sem exigir arquivos do OMSI 2;
 - dock inferior de criação adaptável/rolável, indicação visual da ferramenta ativa e acesso direto ao criador de túneis;
 - posicionamento de objetos com opção de encaixar/alinha à via mais próxima, usando a tangente real de splines retas ou curvas e alcance configurável;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;

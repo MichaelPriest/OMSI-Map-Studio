@@ -763,7 +763,9 @@ In addition to the checkpoints already described, the native host currently incl
 - incremental raise/lower terrain brush, leveling, and real DDS-mask painting;
 - individual `groundtex` layer visibility;
 - persistent geometry thumbnails and visual library cards;
+- native visual previews for BMP/PNG/JPG/TGA and compatible DDS textures, including A8 DDS masks without relying on a WIC codec;
 - native 3D preview for standalone `.o3d` and `.x` model assets without requiring an SCO wrapper;
+- the standalone Workspace seeds its own original content: Road Kit, tunnel, Bridge Kit, junction, building, tree, and shrub, without requiring OMSI 2 files;
 - an adaptive/scrollable bottom creation dock, visible active-tool state, and direct access to the tunnel creator;
 - scenery placement can snap/align to the nearest road using the real tangent of straight or curved splines with a configurable range;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
