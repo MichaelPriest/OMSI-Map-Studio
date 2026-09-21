@@ -4876,11 +4876,13 @@ public sealed partial class MainWindow : Window
                 2 =>
                     _timetableCatalog.BusStops
                         .Select(
-                            stop =>
+                            (stop, index) =>
                                 new TransportExplorerItem(
                                     "Stop",
-                                    stop.Id.ToString(),
+                                    index.ToString(
+                                        CultureInfo.InvariantCulture),
                                     $"{stop.Id} · {stop.Name}",
+                                    $"Índice: {index}\n" +
                                     $"Tile index: {stop.TileIndex}\n" +
                                     $"Subnome: {stop.SubName}"))
                         .ToArray(),
@@ -4989,6 +4991,13 @@ public sealed partial class MainWindow : Window
         if (item.Kind == "Line")
         {
             await EditTimetableLineAsync(
+                item);
+            return;
+        }
+
+        if (item.Kind == "Stop")
+        {
+            await EditBusStopAsync(
                 item);
             return;
         }
@@ -5264,6 +5273,306 @@ public sealed partial class MainWindow : Window
                     TransportExplorerItem selected &&
                 selected.Kind ==
                     "Track";
+        }
+    }
+
+    private async Task EditBusStopAsync(
+        TransportExplorerItem item)
+    {
+        if (
+            _timetableCatalog is null ||
+            !int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var stopIndex) ||
+            stopIndex < 0 ||
+            stopIndex >=
+                _timetableCatalog
+                    .BusStops.Count)
+        {
+            return;
+        }
+
+        var stop =
+            _timetableCatalog
+                .BusStops[
+                    stopIndex];
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome",
+                Text =
+                    stop.Name
+            };
+
+        var subNameBox =
+            new TextBox
+            {
+                Header =
+                    "Subnome",
+                Text =
+                    stop.SubName
+            };
+
+        var idBox =
+            new NumberBox
+            {
+                Header =
+                    "ID",
+                Minimum =
+                    0,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    stop.Id
+            };
+
+        var tileBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile index",
+                Minimum =
+                    -1,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    stop.TileIndex
+            };
+
+        var exitingBox =
+            new NumberBox
+            {
+                Header =
+                    "Passageiros saindo",
+                Minimum =
+                    0,
+                Maximum =
+                    1000000,
+                Value =
+                    stop.ExitingPassengers ??
+                    0,
+                SmallChange =
+                    1
+            };
+
+        var line4Box =
+            new TextBox
+            {
+                Header =
+                    "Line4",
+                Text =
+                    stop.Line4
+            };
+
+        var line5Box =
+            new TextBox
+            {
+                Header =
+                    "Line5",
+                Text =
+                    stop.Line5
+            };
+
+        var idGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        idGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        idGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            idBox,
+            0);
+
+        Grid.SetColumn(
+            tileBox,
+            1);
+
+        idGrid.Children.Add(
+            idBox);
+
+        idGrid.Children.Add(
+            tileBox);
+
+        var rawGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        rawGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        rawGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            line4Box,
+            0);
+
+        Grid.SetColumn(
+            line5Box,
+            1);
+
+        rawGrid.Children.Add(
+            line4Box);
+
+        rawGrid.Children.Add(
+            line5Box);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    460
+            };
+
+        panel.Children.Add(
+            nameBox);
+
+        panel.Children.Add(
+            subNameBox);
+
+        panel.Children.Add(
+            idGrid);
+
+        panel.Children.Add(
+            exitingBox);
+
+        panel.Children.Add(
+            rawGrid);
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Alterar o ID pode afetar StationLinks. IDs duplicados são bloqueados.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar Stop · {stop.Id}",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Salvar Stop",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        if (
+            !double.IsFinite(
+                idBox.Value) ||
+            !double.IsFinite(
+                tileBox.Value) ||
+            !double.IsFinite(
+                exitingBox.Value))
+        {
+            StatusText.Text =
+                "Stop não salvo: valores numéricos inválidos.";
+            return;
+        }
+
+        var updatedStop =
+            new OmsiTimetableBusStop(
+                nameBox.Text.Trim(),
+                checked(
+                    (int)Math.Round(
+                        tileBox.Value)),
+                checked(
+                    (int)Math.Round(
+                        idBox.Value)),
+                exitingBox.Value,
+                line4Box.Text.Trim(),
+                line5Box.Text.Trim(),
+                subNameBox.Text.Trim());
+
+        try
+        {
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Stop {stop.Id} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateBusStopAsync(
+                        stopIndex,
+                        updatedStop);
+
+            _timetableCatalog =
+                await new OmsiTimetableCatalogReader()
+                    .ReadAsync(
+                        _session.CurrentMap!
+                            .Map
+                            .DirectoryPath);
+
+            RefreshTransportItems();
+
+            TransportListView.SelectedItem =
+                _transportItems
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.Kind ==
+                                "Stop" &&
+                            candidate.Key ==
+                                stopIndex.ToString(
+                                    CultureInfo.InvariantCulture));
+
+            var saved =
+                updated.Stops[
+                    updated.UpdatedIndex];
+
+            StatusText.Text =
+                $"Stop {saved.Id} salvo · {saved.Name} · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar Stop: {exception.Message}";
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind is
+                    "Track" or
+                    "Trip" or
+                    "Stop" or
+                    "StationLink" or
+                    "Line";
         }
     }
 
@@ -6334,6 +6643,7 @@ public sealed partial class MainWindow : Window
             item.Kind is
                 "Track" or
                 "Trip" or
+                "Stop" or
                 "StationLink" or
                 "Line";
 
@@ -6350,6 +6660,8 @@ public sealed partial class MainWindow : Window
             {
                 "Trip" =>
                     "Editar Trip",
+                "Stop" =>
+                    "Editar Stop",
                 "StationLink" =>
                     "Editar StationLink",
                 "Line" =>
