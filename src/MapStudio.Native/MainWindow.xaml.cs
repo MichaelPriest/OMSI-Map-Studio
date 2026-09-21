@@ -8,6 +8,7 @@ using MapStudio.Core.Commercial;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Terrain;
+using MapStudio.Core.Generation.Vegetation;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Junctions;
@@ -16619,6 +16620,534 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"IA: não foi possível salvar o perfil: {exception.Message}";
+        }
+    }
+
+    private async void OnImportOsmVegetationClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .CoreEditor,
+                "Importação de vegetação OSM"))
+        {
+            return;
+        }
+
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } root)
+        {
+            StatusText.Text =
+                "Vegetação OSM: abra um mapa e selecione a instalação do OMSI.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de importar vegetação OSM.";
+
+            return;
+        }
+
+        var georeference =
+            await _session
+                .LoadMapGeoreferenceAsync();
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Vegetação OSM: o mapa precisa ter .mapstudio/georeference.json.";
+
+            return;
+        }
+
+        IReadOnlyList<OmsiAssetIndexEntry>
+            sceneryAssets;
+
+        try
+        {
+            sceneryAssets =
+                await _session
+                    .GetAssetLibraryAsync(
+                        OmsiAssetKind
+                            .SceneryObject);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Vegetação OSM: não foi possível abrir a biblioteca de assets: {exception.Message}";
+
+            return;
+        }
+
+        var vegetationAssets =
+            sceneryAssets
+                .Where(
+                    asset =>
+                        OmsiAssetLibraryClassifier
+                            .Classify(
+                                asset) ==
+                        OmsiAssetLibraryGroup
+                            .Vegetation)
+                .OrderBy(
+                    asset =>
+                        asset.RelativePath,
+                    StringComparer
+                        .CurrentCultureIgnoreCase)
+                .ToArray();
+
+        if (vegetationAssets.Length == 0)
+        {
+            StatusText.Text =
+                "Vegetação OSM: nenhum SCO classificado como vegetação foi encontrado. Atualize a biblioteca de assets primeiro.";
+
+            return;
+        }
+
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .DocumentsLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".osm");
+
+        picker.FileTypeFilter.Add(
+            ".xml");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Lendo árvores e arbustos OSM...";
+
+            var xml =
+                await File
+                    .ReadAllTextAsync(
+                        file.Path);
+
+            var imported =
+                new MapStudioOsmVegetationImporter()
+                    .Parse(
+                        xml);
+
+            if (
+                imported.Points.Count >
+                    20_000)
+            {
+                StatusText.Text =
+                    $"OSM de vegetação recusado por segurança: {imported.Points.Count} ponto(s).";
+
+                return;
+            }
+
+            if (imported.Points.Count == 0)
+            {
+                StatusText.Text =
+                    "Nenhum node natural=tree ou natural=shrub foi encontrado no arquivo OSM.";
+
+                return;
+            }
+
+            var anchorGeo =
+                new MapStudioGeographicAnchor(
+                    georeference.Latitude,
+                    georeference.Longitude,
+                    georeference.AnchorTileX *
+                        300.0 +
+                    georeference.AnchorX,
+                    georeference.AnchorTileY *
+                        300.0 +
+                    georeference.AnchorY);
+
+            var projected =
+                new MapStudioOsmVegetationProjector()
+                    .Project(
+                        imported.Points,
+                        anchorGeo);
+
+            var mapTileKeys =
+                snapshot.Map.Tiles
+                    .Select(
+                        tile =>
+                            (
+                                tile.X,
+                                tile.Y
+                            ))
+                    .ToHashSet();
+
+            var candidates =
+                projected
+                    .Where(
+                        point =>
+                            mapTileKeys.Contains(
+                                (
+                                    (int)Math.Floor(
+                                        point.Position.X /
+                                        300.0),
+                                    (int)Math.Floor(
+                                        point.Position.Z /
+                                        300.0)
+                                )))
+                    .ToArray();
+
+            if (candidates.Length == 0)
+            {
+                Viewport
+                    .ClearVegetationPreview();
+
+                StatusText.Text =
+                    "Nenhum ponto de vegetação OSM projetado cai dentro dos tiles deste mapa.";
+
+                return;
+            }
+
+            var maxBatch =
+                Math.Min(
+                    256,
+                    candidates.Length);
+
+            var defaultCount =
+                Math.Min(
+                    64,
+                    maxBatch);
+
+            var countBox =
+                new NumberBox
+                {
+                    Header =
+                        "Quantidade nesta operação",
+                    Minimum =
+                        1,
+                    Maximum =
+                        maxBatch,
+                    Value =
+                        defaultCount,
+                    SmallChange =
+                        1,
+                    SpinButtonPlacementMode =
+                        NumberBoxSpinButtonPlacementMode
+                            .Compact
+                };
+
+            var assetCombo =
+                new ComboBox
+                {
+                    Header =
+                        "Asset real de vegetação (SCO)",
+                    ItemsSource =
+                        vegetationAssets,
+                    DisplayMemberPath =
+                        nameof(
+                            OmsiAssetIndexEntry
+                                .RelativePath),
+                    HorizontalAlignment =
+                        HorizontalAlignment
+                            .Stretch
+                };
+
+            var currentAsset =
+                GetSelectedAssetLibraryEntry();
+
+            var preferredIndex =
+                currentAsset is not null &&
+                currentAsset.Kind ==
+                    OmsiAssetKind
+                        .SceneryObject &&
+                OmsiAssetLibraryClassifier
+                    .Classify(
+                        currentAsset) ==
+                    OmsiAssetLibraryGroup
+                        .Vegetation
+                    ? Array.FindIndex(
+                        vegetationAssets,
+                        asset =>
+                            string.Equals(
+                                asset.RelativePath,
+                                currentAsset
+                                    .RelativePath,
+                                StringComparison
+                                    .OrdinalIgnoreCase))
+                    : -1;
+
+            assetCombo.SelectedIndex =
+                preferredIndex >=
+                    0
+                    ? preferredIndex
+                    : 0;
+
+            var randomRotationCheckBox =
+                new CheckBox
+                {
+                    Content =
+                        "Rotação variada e determinística",
+                    IsChecked =
+                        true
+                };
+
+            var selectedForPreview =
+                candidates
+                    .Take(
+                        defaultCount)
+                    .ToArray();
+
+            var preview =
+                Viewport
+                    .PreviewVegetationPoints(
+                        selectedForPreview);
+
+            var previewText =
+                new TextBlock
+                {
+                    Text =
+                        $"Preview: {preview.RenderedPointCount} ponto(s) no terreno carregado · {preview.SkippedPointCount} sem terreno carregado.",
+                    TextWrapping =
+                        TextWrapping.Wrap
+                };
+
+            var treeCount =
+                imported.Points
+                    .Count(
+                        point =>
+                            point.Kind ==
+                            MapStudioOsmVegetationKind
+                                .Tree);
+
+            var shrubCount =
+                imported.Points
+                    .Count(
+                        point =>
+                            point.Kind ==
+                            MapStudioOsmVegetationKind
+                                .Shrub);
+
+            var details =
+                new TextBlock
+                {
+                    Text =
+                        $"OSM: {imported.Points.Count} ponto(s) de vegetação · {treeCount} árvore(s) · {shrubCount} arbusto(s).\n" +
+                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes OSM ignorados: {imported.IgnoredNodeCount}.",
+                    TextWrapping =
+                        TextWrapping.Wrap
+                };
+
+            var panel =
+                new StackPanel
+                {
+                    Spacing =
+                        8,
+                    MinWidth =
+                        600
+                };
+
+            panel.Children.Add(
+                details);
+
+            panel.Children.Add(
+                assetCombo);
+
+            panel.Children.Add(
+                countBox);
+
+            panel.Children.Add(
+                randomRotationCheckBox);
+
+            panel.Children.Add(
+                previewText);
+
+            panel.Children.Add(
+                new InfoBar
+                {
+                    IsOpen =
+                        true,
+                    IsClosable =
+                        false,
+                    Severity =
+                        InfoBarSeverity
+                            .Informational,
+                    Title =
+                        "Asset real + terreno real",
+                    Message =
+                        "O preview mostra os pontos de colocação. Na confirmação, o Map Studio usa o SCO escolhido da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava em lote com backup. Pontos sem terreno carregado são ignorados com segurança."
+                });
+
+            var dialog =
+                new ContentDialog
+                {
+                    XamlRoot =
+                        MainRoot.XamlRoot,
+                    Title =
+                        "Importar vegetação do OSM",
+                    Content =
+                        panel,
+                    PrimaryButtonText =
+                        $"Inserir até {defaultCount}",
+                    CloseButtonText =
+                        "Cancelar",
+                    DefaultButton =
+                        ContentDialogButton
+                            .Close,
+                    IsPrimaryButtonEnabled =
+                        preview.RenderedPointCount >
+                        0
+                };
+
+            countBox.ValueChanged +=
+                (_, args) =>
+                {
+                    if (
+                        !double.IsFinite(
+                            args.NewValue))
+                    {
+                        return;
+                    }
+
+                    var count =
+                        Math.Clamp(
+                            (int)Math.Round(
+                                args.NewValue),
+                            1,
+                            maxBatch);
+
+                    preview =
+                        Viewport
+                            .PreviewVegetationPoints(
+                                candidates
+                                    .Take(
+                                        count)
+                                    .ToArray());
+
+                    previewText.Text =
+                        $"Preview: {preview.RenderedPointCount} ponto(s) no terreno carregado · {preview.SkippedPointCount} sem terreno carregado.";
+
+                    dialog.PrimaryButtonText =
+                        $"Inserir até {count}";
+
+                    dialog.IsPrimaryButtonEnabled =
+                        preview.RenderedPointCount >
+                        0;
+                };
+
+            var result =
+                await dialog
+                    .ShowAsync();
+
+            if (
+                result !=
+                    ContentDialogResult.Primary)
+            {
+                Viewport
+                    .ClearVegetationPreview();
+
+                return;
+            }
+
+            if (
+                assetCombo.SelectedItem is not
+                    OmsiAssetIndexEntry asset)
+            {
+                Viewport
+                    .ClearVegetationPreview();
+
+                StatusText.Text =
+                    "Vegetação OSM: selecione um asset SCO válido.";
+
+                return;
+            }
+
+            var requestedCount =
+                Math.Clamp(
+                    (int)Math.Round(
+                        countBox.Value),
+                    1,
+                    maxBatch);
+
+            var selected =
+                candidates
+                    .Take(
+                        requestedCount)
+                    .ToArray();
+
+            var placement =
+                Viewport
+                    .BuildOsmVegetationPlacementRequests(
+                        selected,
+                        asset.RelativePath,
+                        randomRotationCheckBox
+                            .IsChecked ==
+                        true);
+
+            Viewport
+                .ClearVegetationPreview();
+
+            if (placement.Requests.Count == 0)
+            {
+                StatusText.Text =
+                    "Vegetação OSM: nenhum ponto selecionado possui terreno carregado para uma colocação segura.";
+
+                return;
+            }
+
+            StatusText.Text =
+                $"Inserindo {placement.Requests.Count} item(ns) de vegetação OSM com backup...";
+
+            var updated =
+                await _session
+                    .InsertSceneryObjectBatchAsync(
+                        placement.Requests);
+
+            RegisterConstructionHistory(
+                "Importar vegetação OSM");
+
+            RecordAssetUsage(
+                asset.RelativePath);
+
+            await ApplyMapSnapshotAsync(
+                updated,
+                focusActiveTile:
+                    false);
+
+            StatusText.Text =
+                $"{placement.Requests.Count} item(ns) de vegetação OSM inseridos" +
+                (
+                    placement.SkippedPointCount >
+                        0
+                        ? $" · {placement.SkippedPointCount} ignorado(s) sem terreno carregado"
+                        : string.Empty
+                ) +
+                $". Backup: {_session.LastBackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            Viewport
+                .ClearVegetationPreview();
+
+            StatusText.Text =
+                $"Falha ao importar vegetação OSM: {exception.Message}";
         }
     }
 
