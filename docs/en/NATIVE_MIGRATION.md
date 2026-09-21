@@ -604,3 +604,81 @@ Rules:
 - production never fabricates provider responses;
 - keys/tokens must not be written into maps, `.sco`, `.o3d`, or generated assets;
 - final output remains real, inspectable OMSI data and does not depend on the AI service that helped create it.
+
+
+## Advanced parity and procedural road generation
+
+Native migration now also covers advanced workflows that previously remained React-only:
+
+- **Easy Road editable preview before save**: start/end coordinates can be adjusted, curve offset updates the preview, and persistence only happens after explicit confirmation;
+- **searchable installed-map catalog**;
+- **library drag-and-drop onto the map**;
+- **real persistent geometry thumbnails** for SCO/SLI assets in Explorer, generated from native geometry;
+- **level selected spline to real terrain height**;
+- native **[spline_h]** creation/copy/template validation;
+- per-layer **terrain paint visibility**.
+
+### Procedural road graph
+
+The procedural generator uses one simulator-independent road graph.
+
+Current inputs:
+
+1. manual tracing by clicking the terrain;
+2. georeferenced GeoJSON (`LineString` and `MultiLineString`);
+3. future structured AI output and other vector providers.
+
+The graph:
+
+- detects X and T intersections;
+- splits roads at intersection nodes;
+- preserves lane/width/one-way metadata;
+- builds a D3D11 preview following real terrain height;
+- plans auto-links only across safe linear nodes;
+- does not try to represent degree 3/4 junctions using only `Previous/Next`.
+
+### Original Road Kit and junctions
+
+Map Studio generates its own Road Kit and procedural junction assets.
+
+Current pipeline:
+
+1. trace → graph;
+2. graph → OMSI placement requests;
+3. D3D11 preview;
+4. Road Kit generation/update;
+5. transactional batch spline persistence;
+6. safe linear auto-links;
+7. topology-based original junction asset generation;
+8. junction placement as scenery objects;
+9. road rollback if junction placement fails.
+
+### GeoJSON import
+
+GeoJSON uses the anchor stored in `.mapstudio/georeference.json`.
+
+Geographic projection lives in Core and is simulator-independent so future adapters can reuse it.
+
+When present, import reads:
+
+- `highway`;
+- `lanes`;
+- `oneway`;
+- `width`;
+- `name`.
+
+Imported data is classified into Road Kit profiles, enters preview first, and is persisted only when the user chooses **Generate roads**.
+
+### AI profiles
+
+**AI → Configure providers...** stores metadata only:
+
+- profile name;
+- adapter ID;
+- endpoint;
+- model;
+- local/offline flag.
+
+No key/token is persisted in this JSON. Credentials must later be resolved by the adapter, Credential Manager, or the commercial backend.
+
+Building Studio shows the configured active profile, but does not claim automatic analysis is available until a real adapter is connected.
