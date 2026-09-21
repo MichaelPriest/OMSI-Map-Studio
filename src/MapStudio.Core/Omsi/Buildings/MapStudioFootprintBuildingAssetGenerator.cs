@@ -302,6 +302,30 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 0);
         }
 
+        var shapedRoof =
+            footprint.Count ==
+                4 &&
+            building.RoofHeightMeters >
+                0.01 &&
+            building.RoofType is
+                MapStudioBuildingRoofType.Gable or
+                MapStudioBuildingRoofType.Hip or
+                MapStudioBuildingRoofType.Shed;
+
+        if (shapedRoof)
+        {
+            AddQuadrilateralRoof(
+                building.RoofType,
+                (float)building.RoofHeightMeters,
+                footprint,
+                height,
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials);
+        }
+
         foreach (
             var triangle in
                 triangles)
@@ -330,26 +354,29 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 );
             }
 
-            AddTriangle(
-                positions,
-                normals,
-                uvs,
-                indices,
-                triangleMaterials,
-                new Vector3(
-                    a.X,
-                    height,
-                    a.Z),
-                new Vector3(
-                    b.X,
-                    height,
-                    b.Z),
-                new Vector3(
-                    c.X,
-                    height,
-                    c.Z),
-                Vector3.UnitY,
-                1);
+            if (!shapedRoof)
+            {
+                AddTriangle(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials,
+                    new Vector3(
+                        a.X,
+                        height,
+                        a.Z),
+                    new Vector3(
+                        b.X,
+                        height,
+                        b.Z),
+                    new Vector3(
+                        c.X,
+                        height,
+                        c.Z),
+                    Vector3.UnitY,
+                    1);
+            }
 
             AddTriangle(
                 positions,
@@ -409,6 +436,398 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     8,
                     null)
             ]);
+    }
+
+    private static void AddQuadrilateralRoof(
+        MapStudioBuildingRoofType roofType,
+        float roofHeight,
+        IReadOnlyList<Vector3> points,
+        float wallHeight,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> materials)
+    {
+        var p =
+            points.ToArray();
+
+        if (
+            roofType ==
+            MapStudioBuildingRoofType.Hip)
+        {
+            var center =
+                new Vector3(
+                    p.Average(
+                        item =>
+                            item.X),
+                    wallHeight +
+                        roofHeight,
+                    p.Average(
+                        item =>
+                            item.Z));
+
+            for (
+                var index = 0;
+                index < 4;
+                index++)
+            {
+                AddAutoNormalTriangle(
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    materials,
+                    new Vector3(
+                        p[index].X,
+                        wallHeight,
+                        p[index].Z),
+                    new Vector3(
+                        p[(index + 1) % 4].X,
+                        wallHeight,
+                        p[(index + 1) % 4].Z),
+                    center,
+                    1,
+                    preferUp:
+                        true);
+            }
+
+            return;
+        }
+
+        if (
+            roofType ==
+            MapStudioBuildingRoofType.Shed)
+        {
+            var low0 =
+                new Vector3(
+                    p[0].X,
+                    wallHeight,
+                    p[0].Z);
+
+            var low1 =
+                new Vector3(
+                    p[1].X,
+                    wallHeight,
+                    p[1].Z);
+
+            var high2 =
+                new Vector3(
+                    p[2].X,
+                    wallHeight +
+                        roofHeight,
+                    p[2].Z);
+
+            var high3 =
+                new Vector3(
+                    p[3].X,
+                    wallHeight +
+                        roofHeight,
+                    p[3].Z);
+
+            AddAutoNormalQuad(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                low0,
+                low1,
+                high2,
+                high3,
+                1,
+                preferUp:
+                    true);
+
+            AddAutoNormalQuad(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                new Vector3(
+                    p[2].X,
+                    wallHeight,
+                    p[2].Z),
+                new Vector3(
+                    p[3].X,
+                    wallHeight,
+                    p[3].Z),
+                high3,
+                high2,
+                0,
+                preferUp:
+                    false);
+
+            AddAutoNormalTriangle(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                new Vector3(
+                    p[1].X,
+                    wallHeight,
+                    p[1].Z),
+                new Vector3(
+                    p[2].X,
+                    wallHeight,
+                    p[2].Z),
+                high2,
+                0,
+                preferUp:
+                    false);
+
+            AddAutoNormalTriangle(
+                positions,
+                normals,
+                uvs,
+                indices,
+                materials,
+                new Vector3(
+                    p[3].X,
+                    wallHeight,
+                    p[3].Z),
+                new Vector3(
+                    p[0].X,
+                    wallHeight,
+                    p[0].Z),
+                high3,
+                0,
+                preferUp:
+                    false);
+
+            return;
+        }
+
+        var edge0 =
+            Vector3.Distance(
+                p[0],
+                p[1]);
+
+        var edge1 =
+            Vector3.Distance(
+                p[1],
+                p[2]);
+
+        if (edge1 > edge0)
+        {
+            p =
+            [
+                p[1],
+                p[2],
+                p[3],
+                p[0]
+            ];
+        }
+
+        var ridgeA =
+            new Vector3(
+                (
+                    p[3].X +
+                    p[0].X
+                ) /
+                2.0f,
+                wallHeight +
+                    roofHeight,
+                (
+                    p[3].Z +
+                    p[0].Z
+                ) /
+                2.0f);
+
+        var ridgeB =
+            new Vector3(
+                (
+                    p[1].X +
+                    p[2].X
+                ) /
+                2.0f,
+                wallHeight +
+                    roofHeight,
+                (
+                    p[1].Z +
+                    p[2].Z
+                ) /
+                2.0f);
+
+        AddAutoNormalQuad(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            new Vector3(
+                p[0].X,
+                wallHeight,
+                p[0].Z),
+            new Vector3(
+                p[1].X,
+                wallHeight,
+                p[1].Z),
+            ridgeB,
+            ridgeA,
+            1,
+            preferUp:
+                true);
+
+        AddAutoNormalQuad(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            new Vector3(
+                p[2].X,
+                wallHeight,
+                p[2].Z),
+            new Vector3(
+                p[3].X,
+                wallHeight,
+                p[3].Z),
+            ridgeA,
+            ridgeB,
+            1,
+            preferUp:
+                true);
+
+        AddAutoNormalTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            new Vector3(
+                p[1].X,
+                wallHeight,
+                p[1].Z),
+            new Vector3(
+                p[2].X,
+                wallHeight,
+                p[2].Z),
+            ridgeB,
+            0,
+            preferUp:
+                false);
+
+        AddAutoNormalTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            new Vector3(
+                p[3].X,
+                wallHeight,
+                p[3].Z),
+            new Vector3(
+                p[0].X,
+                wallHeight,
+                p[0].Z),
+            ridgeA,
+            0,
+            preferUp:
+                false);
+    }
+
+    private static void AddAutoNormalQuad(
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> materials,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d,
+        ushort material,
+        bool preferUp)
+    {
+        var normal =
+            Vector3.Normalize(
+                Vector3.Cross(
+                    b - a,
+                    c - a));
+
+        if (
+            preferUp &&
+            normal.Y <
+                0)
+        {
+            normal =
+                -normal;
+
+            (
+                b,
+                d
+            ) =
+            (
+                d,
+                b
+            );
+        }
+
+        AddQuad(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            a,
+            b,
+            c,
+            d,
+            normal,
+            material);
+    }
+
+    private static void AddAutoNormalTriangle(
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> materials,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        ushort material,
+        bool preferUp)
+    {
+        var normal =
+            Vector3.Normalize(
+                Vector3.Cross(
+                    b - a,
+                    c - a));
+
+        if (
+            preferUp &&
+            normal.Y <
+                0)
+        {
+            normal =
+                -normal;
+
+            (
+                b,
+                c
+            ) =
+            (
+                c,
+                b
+            );
+        }
+
+        AddTriangle(
+            positions,
+            normals,
+            uvs,
+            indices,
+            materials,
+            a,
+            b,
+            c,
+            normal,
+            material);
     }
 
     private static List<Vector3> NormalizeFootprint(
