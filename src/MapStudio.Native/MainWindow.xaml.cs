@@ -4538,6 +4538,19 @@ public sealed partial class MainWindow : Window
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
+        EditTrafficProgramButton.Visibility =
+            rules
+                ? Visibility.Collapsed
+                : TrafficProgramListView.SelectedItem is
+                    NativeTrafficLightProgramInfo
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
+
+        EditTrafficProgramButton.IsEnabled =
+            !rules &&
+            TrafficProgramListView.SelectedItem is
+                NativeTrafficLightProgramInfo;
+
         _trafficPreviewTimer.Stop();
 
         TrafficPlayButton.Content =
@@ -4639,6 +4652,12 @@ public sealed partial class MainWindow : Window
             TrafficDetailText.Text =
                 "Selecione um programa.";
 
+            EditTrafficProgramButton.Visibility =
+                Visibility.Collapsed;
+
+            EditTrafficProgramButton.IsEnabled =
+                false;
+
             return;
         }
 
@@ -4671,9 +4690,323 @@ public sealed partial class MainWindow : Window
         TrafficDetailText.Text =
             $"Objeto #{program.ObjectId} · tile {program.TileX},{program.TileY}\n" +
             $"{program.AssetPath}\n" +
+            $"Controller {program.ControllerIndex} · programa {program.ProgramIndex}\n" +
             $"Programa: {program.ProgramName} · ciclo {duration:F2}s";
 
+        EditTrafficProgramButton.Visibility =
+            Visibility.Visible;
+
+        EditTrafficProgramButton.IsEnabled =
+            true;
+
         UpdateTrafficPhasePreview();
+    }
+
+    private async void OnEditTrafficProgramClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TrafficProgramListView
+                .SelectedItem is not
+                NativeTrafficLightProgramInfo
+                    program ||
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } omsiRoot)
+        {
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do programa",
+                Text =
+                    program.ProgramName
+            };
+
+        var useCycleBox =
+            new CheckBox
+            {
+                Content =
+                    "Gravar [traffic_lights_group] / ciclo declarado",
+                IsChecked =
+                    program
+                        .DeclaredCycleDuration
+                        .HasValue
+            };
+
+        var cycleBox =
+            new NumberBox
+            {
+                Header =
+                    "Duração do ciclo (s)",
+                Minimum =
+                    0,
+                Maximum =
+                    86400,
+                Value =
+                    program
+                        .DeclaredCycleDuration ??
+                    program
+                        .EffectiveCycleDuration,
+                SmallChange =
+                    0.5
+            };
+
+        var phasesBox =
+            new TextBox
+            {
+                Header =
+                    "Fases · signalCode|duração",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinWidth =
+                    500,
+                MinHeight =
+                    260,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        program.Phases
+                            .Select(
+                                phase =>
+                                    $"{phase.SignalCode}|{phase.Duration.ToString("G17", CultureInfo.InvariantCulture)}"))
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Objeto #{program.ObjectId} · {program.AssetPath}\n" +
+                    "Atenção: o programa é salvo no SCO e afeta todas as instâncias desse asset.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.8
+            });
+
+        panel.Children.Add(
+            nameBox);
+
+        panel.Children.Add(
+            useCycleBox);
+
+        panel.Children.Add(
+            cycleBox);
+
+        panel.Children.Add(
+            phasesBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Editar semáforo · {program.ProgramName}",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            620
+                    },
+                PrimaryButtonText =
+                    "Salvar programa",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var name =
+            nameBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                name))
+        {
+            StatusText.Text =
+                "Semáforo não salvo: informe o nome do programa.";
+            return;
+        }
+
+        var phases =
+            new List<
+                OmsiTrafficLightPhase>();
+
+        var lineNumber =
+            0;
+
+        foreach (
+            var rawLine in
+                phasesBox.Text
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Split('\n'))
+        {
+            lineNumber++;
+
+            var line =
+                rawLine.Trim();
+
+            if (string.IsNullOrWhiteSpace(
+                    line))
+            {
+                continue;
+            }
+
+            var parts =
+                line.Split(
+                    '|');
+
+            if (
+                parts.Length !=
+                    2 ||
+                !int.TryParse(
+                    parts[0].Trim(),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var signalCode) ||
+                !double.TryParse(
+                    parts[1].Trim(),
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var duration) ||
+                !double.IsFinite(
+                    duration) ||
+                duration < 0)
+            {
+                StatusText.Text =
+                    $"Semáforo não salvo: fase inválida na linha {lineNumber}.";
+                return;
+            }
+
+            phases.Add(
+                new OmsiTrafficLightPhase(
+                    signalCode,
+                    duration));
+        }
+
+        if (phases.Count == 0)
+        {
+            StatusText.Text =
+                "Semáforo não salvo: mantenha pelo menos uma fase.";
+            return;
+        }
+
+        double? cycleDuration =
+            null;
+
+        if (
+            useCycleBox.IsChecked ==
+                true)
+        {
+            if (
+                !double.IsFinite(
+                    cycleBox.Value) ||
+                cycleBox.Value <
+                    0)
+            {
+                StatusText.Text =
+                    "Semáforo não salvo: ciclo inválido.";
+                return;
+            }
+
+            cycleDuration =
+                cycleBox.Value;
+        }
+
+        try
+        {
+            EditTrafficProgramButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando programa {program.ProgramName} no SCO com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTrafficLightProgramAsync(
+                        program,
+                        name,
+                        cycleDuration,
+                        phases);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    omsiRoot);
+
+            _trafficPrograms =
+                Viewport
+                    .GetTrafficLightPrograms();
+
+            RefreshTrafficFilter();
+
+            var refreshed =
+                _trafficPrograms
+                    .FirstOrDefault(
+                        candidate =>
+                            candidate.ObjectId ==
+                                program.ObjectId &&
+                            candidate.ControllerIndex ==
+                                program.ControllerIndex &&
+                            candidate.ProgramIndex ==
+                                program.ProgramIndex);
+
+            TrafficProgramListView.SelectedItem =
+                refreshed;
+
+            TrafficStatusText.Text =
+                $"{Viewport.TrafficPathLineCount} linhas de path · " +
+                $"{_trafficPrograms.Count} programa(s) de semáforo · " +
+                $"{_trafficRuleItems.Count} regra(s) aplicada(s) · " +
+                $"{_trafficVehicleGroups.Count} grupo(s) de veículo.";
+
+            StatusText.Text =
+                $"Programa {updated.Program.Name} salvo · {updated.Program.Phases.Count} fase(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar semáforo: {exception.Message}";
+        }
+        finally
+        {
+            EditTrafficProgramButton.IsEnabled =
+                TrafficProgramListView.SelectedItem is
+                    NativeTrafficLightProgramInfo &&
+                TrafficViewComboBox.SelectedIndex ==
+                    0;
+        }
     }
 
     private void OnTrafficPreviewTimeChanged(

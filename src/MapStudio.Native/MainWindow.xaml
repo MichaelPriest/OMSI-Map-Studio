@@ -721,6 +721,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0"
@@ -826,6 +827,14 @@
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
+
+                            <Button x:Name="EditTrafficProgramButton"
+                                    Grid.Row="5"
+                                    Content="Editar programa de semáforo"
+                                    Visibility="Collapsed"
+                                    IsEnabled="False"
+                                    HorizontalAlignment="Stretch"
+                                    Click="OnEditTrafficProgramClick" />
                         </Grid>
                     </Grid>
                 </Grid>
