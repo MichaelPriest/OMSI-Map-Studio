@@ -68,6 +68,7 @@ public sealed class NativeViewportRuntime : IDisposable
     private bool _placementUsesAbsoluteHeight;
     private double? _placementZOverride;
     private double _placementRotation;
+    private double _placementBaseRotation;
     private double _placementPitch;
     private double _placementBank;
     private bool _sceneryRoadSnapEnabled;
@@ -1678,6 +1679,9 @@ public sealed class NativeViewportRuntime : IDisposable
         _placementRotation =
             rotation;
 
+        _placementBaseRotation =
+            rotation;
+
         _placementPitch =
             pitch;
 
@@ -1810,6 +1814,9 @@ public sealed class NativeViewportRuntime : IDisposable
                             point.X,
                             point.Z);
         }
+
+        _placementRotation =
+            _placementBaseRotation;
 
         if (
             _sceneryRoadSnapEnabled &&
@@ -2083,6 +2090,9 @@ public sealed class NativeViewportRuntime : IDisposable
             null;
 
         _placementRotation =
+            0;
+
+        _placementBaseRotation =
             0;
 
         _placementPitch =
