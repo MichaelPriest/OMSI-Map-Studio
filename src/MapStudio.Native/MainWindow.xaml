@@ -118,14 +118,50 @@
             <RowDefinition Height="30" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0"
-              Background="#071621">
+        <Grid x:Name="DesktopChromePanel"
+              Grid.Row="0"
+              Background="#06111A">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <MenuBar>
+            <Border Grid.Column="0"
+                    Margin="8,4,10,4"
+                    Padding="12,5"
+                    Background="#0B2230"
+                    BorderBrush="#24485C"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="9">
+                    <Border Width="28"
+                            Height="28"
+                            CornerRadius="7"
+                            Background="#12384C">
+                        <TextBlock Text="M"
+                                   FontSize="16"
+                                   FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Foreground="#B9EDFF" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center"
+                                Spacing="-2">
+                        <TextBlock Text="MAP STUDIO"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#EAF7FC" />
+                        <TextBlock Text="WORLD CREATOR"
+                                   FontSize="9"
+                                   CharacterSpacing="110"
+                                   Foreground="#72B8D6" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <MenuBar Grid.Column="1">
                 <MenuBarItem Title="Arquivo">
                     <MenuFlyoutItem
                         Text="Workspace Map Studio"
@@ -339,7 +375,7 @@
             </MenuBar>
 
             <StackPanel
-                Grid.Column="1"
+                Grid.Column="2"
                 Orientation="Horizontal"
                 Spacing="8"
                 Margin="8,4">
@@ -428,14 +464,14 @@
               Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ExplorerColumn"
-                                  Width="300" />
+                                  Width="310" />
                 <ColumnDefinition x:Name="ExplorerSplitterColumn"
                                   Width="6" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition x:Name="InspectorSplitterColumn"
                                   Width="6" />
                 <ColumnDefinition x:Name="InspectorColumn"
-                                  Width="320" />
+                                  Width="330" />
             </Grid.ColumnDefinitions>
 
             <Border x:Name="ExplorerPanel"
@@ -452,17 +488,25 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0"
-                               Text="Explorer"
-                               FontSize="18"
-                               FontWeight="SemiBold" />
+                    <StackPanel Grid.Row="0"
+                                Spacing="1">
+                        <TextBlock Text="PROJETO &amp; ASSETS"
+                                   FontSize="15"
+                                   FontWeight="SemiBold"
+                                   CharacterSpacing="45" />
+                        <TextBlock Text="Cena, biblioteca e navegação do mapa"
+                                   FontSize="11"
+                                   Foreground="#799AAE" />
+                    </StackPanel>
 
                     <StackPanel Grid.Row="1"
                                 Orientation="Horizontal"
                                 Spacing="6">
                         <Button Content="Cena"
+                                ToolTipService.ToolTip="Elementos presentes no mapa"
                                 Click="OnSceneExplorerModeClick" />
-                        <Button Content="Biblioteca"
+                        <Button Content="Assets"
+                                ToolTipService.ToolTip="Biblioteca de itens do Workspace ou OMSI"
                                 Click="OnLibraryModeClick" />
                         <Button x:Name="RefreshLibraryButton"
                                 Content="Atualizar"
@@ -1176,6 +1220,62 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
+            <Border x:Name="FullscreenEditorBar"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="16,12"
+                    Padding="9,6"
+                    Background="#F2081722"
+                    BorderBrush="#335A70"
+                    BorderThickness="1"
+                    CornerRadius="12"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="70">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="8">
+                    <TextBlock Text="MAP STUDIO"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"
+                               Foreground="#EAF7FC" />
+                    <Border Padding="7,3"
+                            Background="#12384C"
+                            CornerRadius="6">
+                        <TextBlock x:Name="FullscreenRootModeText"
+                                   Text="WORKSPACE"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="#A7E8FF" />
+                    </Border>
+                    <TextBlock x:Name="FullscreenMapTitleText"
+                               Text="Nenhum mapa aberto"
+                               MaxWidth="240"
+                               TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Center"
+                               Foreground="#AFC8D7" />
+                    <Rectangle Width="1"
+                               Height="22"
+                               Fill="#355467" />
+                    <Button Content="Salvar"
+                            IsEnabled="{x:Bind SaveChangesButton.IsEnabled, Mode=OneWay}"
+                            Click="OnSaveChangesClick" />
+                    <Button Content="Desfazer"
+                            IsEnabled="{x:Bind UndoButton.IsEnabled, Mode=OneWay}"
+                            Click="OnUndoClick" />
+                    <Button Content="Refazer"
+                            IsEnabled="{x:Bind RedoButton.IsEnabled, Mode=OneWay}"
+                            Click="OnRedoClick" />
+                    <Button Content="Workspace"
+                            Click="OnOpenWorkspaceClick" />
+                    <Button Content="Abrir OMSI"
+                            Click="OnOpenOmsiClick" />
+                    <Button Content="Sair F11"
+                            Click="OnFullscreenClick" />
+                </StackPanel>
+            </Border>
+
             <Border x:Name="MapToolPalette"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
@@ -1183,10 +1283,10 @@
                     VerticalAlignment="Bottom"
                     Margin="20,20,20,28"
                     Padding="8"
-                    Background="#E60A1B28"
-                    BorderBrush="#355569"
+                    Background="#F0081722"
+                    BorderBrush="#2F566B"
                     BorderThickness="1"
-                    CornerRadius="13"
+                    CornerRadius="12"
                     Canvas.ZIndex="50">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="MapToolPaletteTranslate" />
@@ -1498,9 +1598,15 @@
                 <ScrollViewer
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel Padding="14" Spacing="10">
-                        <TextBlock Text="Inspector"
-                                   FontSize="18"
-                                   FontWeight="SemiBold" />
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="PROPRIEDADES"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       CharacterSpacing="45" />
+                            <TextBlock Text="Transformação e dados do item selecionado"
+                                       FontSize="11"
+                                       Foreground="#799AAE" />
+                        </StackPanel>
                         <TextBlock x:Name="SelectionText"
                                    Text="Sem seleção"
                                    FontSize="14"

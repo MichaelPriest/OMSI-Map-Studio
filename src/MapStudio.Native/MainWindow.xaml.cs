@@ -343,10 +343,10 @@ public sealed partial class MainWindow : Window
     private bool _standaloneWorkspaceInitialized;
 
     private double _explorerPanelWidth =
-        300;
+        310;
 
     private double _inspectorPanelWidth =
-        320;
+        330;
 
     public MainWindow()
     {
@@ -12143,6 +12143,16 @@ public sealed partial class MainWindow : Window
             NumberBox;
     }
 
+    private void SetContentRootModeLabel(
+        string label)
+    {
+        RootModeText.Text =
+            label;
+
+        FullscreenRootModeText.Text =
+            label;
+    }
+
     private bool IsFullscreen() =>
         _appWindow.Presenter?.Kind ==
         AppWindowPresenterKind.FullScreen;
@@ -12158,8 +12168,14 @@ public sealed partial class MainWindow : Window
         _appWindow.SetPresenter(
             AppWindowPresenterKind.FullScreen);
 
+        DesktopChromePanel.Visibility =
+            Visibility.Collapsed;
+
+        FullscreenEditorBar.Visibility =
+            Visibility.Visible;
+
         StatusText.Text =
-            "Tela cheia ativa · F11 ou Esc para sair.";
+            "Modo Criador em tela cheia · F11 ou Esc para sair.";
     }
 
     private void ExitFullscreen()
@@ -12167,8 +12183,14 @@ public sealed partial class MainWindow : Window
         _appWindow.SetPresenter(
             AppWindowPresenterKind.Default);
 
+        DesktopChromePanel.Visibility =
+            Visibility.Visible;
+
+        FullscreenEditorBar.Visibility =
+            Visibility.Collapsed;
+
         StatusText.Text =
-            "Tela cheia desativada.";
+            "Layout desktop restaurado.";
     }
 
     private void OnMoveGizmoClick(
@@ -12227,8 +12249,8 @@ public sealed partial class MainWindow : Window
             var root =
                 _session.OmsiRootPath!;
 
-            RootModeText.Text =
-                "WORKSPACE";
+            SetContentRootModeLabel(
+                "WORKSPACE");
 
             RootText.Text =
                 $"Workspace: {root}\nMapas: {maps.Count}";
@@ -12267,8 +12289,8 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            RootModeText.Text =
-                "WORKSPACE !";
+            SetContentRootModeLabel(
+                "WORKSPACE !");
 
             StatusText.Text =
                 $"Falha ao inicializar Workspace: {exception.Message}";
@@ -12406,8 +12428,8 @@ public sealed partial class MainWindow : Window
                 focusActiveTile:
                     false);
 
-            RootModeText.Text =
-                "WORKSPACE";
+            SetContentRootModeLabel(
+                "WORKSPACE");
 
             RootText.Text =
                 $"Workspace: {_session.OmsiRootPath}\nMapas: {_session.Maps.Count}";
@@ -12488,8 +12510,8 @@ public sealed partial class MainWindow : Window
                     .SelectOmsiRootAsync(
                         root);
 
-            RootModeText.Text =
-                "OMSI";
+            SetContentRootModeLabel(
+                "OMSI");
 
             RootText.Text =
                 $"OMSI opcional: {root}\nMapas encontrados: {maps.Count}";
@@ -12863,6 +12885,9 @@ public sealed partial class MainWindow : Window
             $"Tiles carregados: {snapshot.Tiles.Count} / {snapshot.Map.Tiles.Count}\n" +
             $"Objetos: {snapshot.ObjectCount} · Splines: {snapshot.SplineCount}\n" +
             $"Terrenos: {snapshot.TerrainCount} · Tile ativo: {activeTile}";
+
+        FullscreenMapTitleText.Text =
+            snapshot.Map.DisplayName;
 
         MapLoadModeText.Text =
             _fullMapMode
