@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using MapStudio.Core.AI;
 using MapStudio.Core.Commercial;
+using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Buildings;
@@ -16600,6 +16601,439 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"IA: não foi possível salvar o perfil: {exception.Message}";
+        }
+    }
+
+    private async void OnImportOsmBuildingsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .BuildingStudio,
+                "Importação de edifícios OSM"))
+        {
+            return;
+        }
+
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            _session.OmsiRootPath is not
+                { } root)
+        {
+            StatusText.Text =
+                "Edifícios OSM: abra um mapa e selecione a instalação do OMSI.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de gerar edifícios OSM.";
+
+            return;
+        }
+
+        var georeference =
+            await _session
+                .LoadMapGeoreferenceAsync();
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Edifícios OSM: o mapa precisa ter .mapstudio/georeference.json.";
+
+            return;
+        }
+
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .DocumentsLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".osm");
+
+        picker.FileTypeFilter.Add(
+            ".xml");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Lendo footprints de edifícios OSM...";
+
+            var xml =
+                await File
+                    .ReadAllTextAsync(
+                        file.Path);
+
+            var imported =
+                new MapStudioOsmBuildingImporter()
+                    .Parse(
+                        xml);
+
+            var pointCount =
+                imported.Buildings.Sum(
+                    building =>
+                        building.Points.Count);
+
+            if (
+                imported.Buildings.Count >
+                    10_000 ||
+                pointCount >
+                    250_000)
+            {
+                StatusText.Text =
+                    $"OSM de edifícios recusado por segurança: {imported.Buildings.Count} footprint(s), {pointCount} ponto(s).";
+
+                return;
+            }
+
+            var anchorGeo =
+                new MapStudioGeographicAnchor(
+                    georeference.Latitude,
+                    georeference.Longitude,
+                    georeference.AnchorTileX *
+                        300.0 +
+                    georeference.AnchorX,
+                    georeference.AnchorTileY *
+                        300.0 +
+                    georeference.AnchorY);
+
+            var projected =
+                new MapStudioOsmBuildingProjector()
+                    .Project(
+                        imported.Buildings,
+                        anchorGeo);
+
+            var mapTileKeys =
+                snapshot.Map.Tiles
+                    .Select(
+                        tile =>
+                            (
+                                tile.X,
+                                tile.Y
+                            ))
+                    .ToHashSet();
+
+            var candidates =
+                projected
+                    .Where(
+                        building =>
+                            mapTileKeys.Contains(
+                                (
+                                    (int)Math.Floor(
+                                        building.Center.X /
+                                        300.0),
+                                    (int)Math.Floor(
+                                        building.Center.Z /
+                                        300.0)
+                                )))
+                    .Take(128)
+                    .ToArray();
+
+            if (candidates.Length == 0)
+            {
+                Viewport
+                    .ClearBuildingFootprintPreview();
+
+                StatusText.Text =
+                    "Nenhum footprint OSM projetado cai dentro dos tiles deste mapa.";
+
+                return;
+            }
+
+            var defaultCount =
+                Math.Min(
+                    32,
+                    candidates.Length);
+
+            var countBox =
+                new NumberBox
+                {
+                    Header =
+                        "Quantidade para gerar nesta operação",
+                    Minimum =
+                        1,
+                    Maximum =
+                        candidates.Length,
+                    Value =
+                        defaultCount,
+                    SmallChange =
+                        1,
+                    SpinButtonPlacementMode =
+                        NumberBoxSpinButtonPlacementMode
+                            .Compact
+                };
+
+            NativeBuildingFootprintPreviewGeometry
+                preview =
+                    Viewport
+                        .PreviewBuildingFootprints(
+                            candidates
+                                .Take(
+                                    defaultCount)
+                                .ToArray());
+
+            var previewText =
+                new TextBlock
+                {
+                    Text =
+                        $"Preview: {preview.RenderedBuildingCount} visível(is) · {preview.SkippedBuildingCount} fora dos tiles carregados.",
+                    TextWrapping =
+                        TextWrapping.Wrap
+                };
+
+            var details =
+                new TextBlock
+                {
+                    Text =
+                        $"Encontrados: {imported.Buildings.Count} footprint(s) · projetados: {projected.Count} · dentro do catálogo do mapa: {candidates.Length}.\n" +
+                        $"Ways ignorados: {imported.IgnoredWayCount} · node refs ausentes: {imported.MissingNodeReferenceCount} · relations multipolygon ainda não geradas: {imported.IgnoredRelationCount}.",
+                    TextWrapping =
+                        TextWrapping.Wrap
+                };
+
+            var panel =
+                new StackPanel
+                {
+                    Spacing =
+                        8,
+                    MinWidth =
+                        560
+                };
+
+            panel.Children.Add(
+                details);
+
+            panel.Children.Add(
+                countBox);
+
+            panel.Children.Add(
+                previewText);
+
+            panel.Children.Add(
+                new InfoBar
+                {
+                    IsOpen =
+                        true,
+                    IsClosable =
+                        false,
+                    Severity =
+                        InfoBarSeverity
+                            .Informational,
+                    Title =
+                        "Footprint real",
+                    Message =
+                        "O O3D preserva o contorno do way OSM e a altura/andares quando disponíveis. Nesta primeira versão do footprint irregular, o topo é extrudado plano; os metadados de roof:shape/roof:height permanecem preservados para evolução do telhado procedural."
+                });
+
+            var dialog =
+                new ContentDialog
+                {
+                    XamlRoot =
+                        MainRoot.XamlRoot,
+                    Title =
+                        "Gerar edifícios a partir do OSM",
+                    Content =
+                        panel,
+                    PrimaryButtonText =
+                        $"Gerar {defaultCount}",
+                    CloseButtonText =
+                        "Cancelar",
+                    DefaultButton =
+                        ContentDialogButton
+                            .Close
+                };
+
+            countBox.ValueChanged +=
+                (_, args) =>
+                {
+                    if (
+                        !double.IsFinite(
+                            args.NewValue))
+                    {
+                        return;
+                    }
+
+                    var count =
+                        Math.Clamp(
+                            (int)Math.Round(
+                                args.NewValue),
+                            1,
+                            candidates.Length);
+
+                    preview =
+                        Viewport
+                            .PreviewBuildingFootprints(
+                                candidates
+                                    .Take(
+                                        count)
+                                    .ToArray());
+
+                    previewText.Text =
+                        $"Preview: {preview.RenderedBuildingCount} visível(is) · {preview.SkippedBuildingCount} fora dos tiles carregados.";
+
+                    dialog.PrimaryButtonText =
+                        $"Gerar {count}";
+                };
+
+            if (
+                await dialog.ShowAsync() !=
+                    ContentDialogResult.Primary)
+            {
+                Viewport
+                    .ClearBuildingFootprintPreview();
+
+                return;
+            }
+
+            var generateCount =
+                Math.Clamp(
+                    (int)Math.Round(
+                        countBox.Value),
+                    1,
+                    candidates.Length);
+
+            var selected =
+                candidates
+                    .Take(
+                        generateCount)
+                    .ToArray();
+
+            var generator =
+                new MapStudioFootprintBuildingAssetGenerator();
+
+            var groups =
+                new List<
+                    NativeSceneryPlacementBatchGroup>(
+                        selected.Length);
+
+            var generated =
+                0;
+
+            foreach (
+                var building in selected)
+            {
+                StatusText.Text =
+                    $"Gerando edifício OSM {generated + 1}/{selected.Length}: {building.Name ?? building.Id}...";
+
+                var asset =
+                    await generator
+                        .GenerateAsync(
+                            root,
+                            building);
+
+                var relativePath =
+                    Path.GetRelativePath(
+                            root,
+                            asset.SceneryObjectPath)
+                        .Replace(
+                            Path.DirectorySeparatorChar,
+                            '\\')
+                        .Replace(
+                            Path.AltDirectorySeparatorChar,
+                            '\\');
+
+                var tileX =
+                    (int)Math.Floor(
+                        building.Center.X /
+                        300.0);
+
+                var tileY =
+                    (int)Math.Floor(
+                        building.Center.Z /
+                        300.0);
+
+                var tile =
+                    snapshot.Map.Tiles
+                        .First(
+                            item =>
+                                item.X ==
+                                    tileX &&
+                                item.Y ==
+                                    tileY);
+
+                var request =
+                    new NativeSceneryPlacementRequest(
+                        tile,
+                        relativePath,
+                        building.Center.X -
+                            tileX *
+                            300.0,
+                        building.Center.Z -
+                            tileY *
+                            300.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        new Vector3(
+                            (float)building.Center.X,
+                            0,
+                            (float)building.Center.Z),
+                        false);
+
+                groups.Add(
+                    new NativeSceneryPlacementBatchGroup(
+                        relativePath,
+                        [request]));
+
+                generated++;
+            }
+
+            StatusText.Text =
+                $"Inserindo {groups.Count} edifício(s) OSM no mapa em batch...";
+
+            var updated =
+                await _session
+                    .InsertSceneryObjectMultiBatchAsync(
+                        groups);
+
+            RegisterConstructionHistory(
+                "Gerar edifícios OSM");
+
+            await ApplyMapSnapshotAsync(
+                updated,
+                focusActiveTile:
+                    false);
+
+            Viewport
+                .ClearBuildingFootprintPreview();
+
+            await _session
+                .RefreshAssetLibraryAsync();
+
+            await LoadAssetLibraryAsync();
+
+            StatusText.Text =
+                $"{generated} edifício(s) OSM gerados e inseridos. Backup do mapa: {_session.LastBackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao gerar edifícios OSM: {exception.Message}";
         }
     }
 
