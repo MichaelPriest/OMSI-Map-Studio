@@ -16743,7 +16743,7 @@ public sealed partial class MainWindow : Window
         try
         {
             StatusText.Text =
-                "Lendo árvores e arbustos OSM...";
+                "Lendo árvores, arbustos, tree rows e hedges OSM...";
 
             var xml =
                 await File
@@ -16755,20 +16755,29 @@ public sealed partial class MainWindow : Window
                     .Parse(
                         xml);
 
+            var linearImported =
+                new MapStudioOsmVegetationLineImporter()
+                    .Parse(
+                        xml);
+
             if (
                 imported.Points.Count >
-                    20_000)
+                    20_000 ||
+                linearImported.Lines.Count >
+                    5_000)
             {
                 StatusText.Text =
-                    $"OSM de vegetação recusado por segurança: {imported.Points.Count} ponto(s).";
+                    $"OSM de vegetação recusado por segurança: {imported.Points.Count} ponto(s), {linearImported.Lines.Count} linha(s).";
 
                 return;
             }
 
-            if (imported.Points.Count == 0)
+            if (
+                imported.Points.Count == 0 &&
+                linearImported.Lines.Count == 0)
             {
                 StatusText.Text =
-                    "Nenhum node natural=tree ou natural=shrub foi encontrado no arquivo OSM.";
+                    "Nenhuma vegetação suportada foi encontrada. São aceitos natural=tree, natural=shrub, natural=tree_row e barrier=hedge.";
 
                 return;
             }
@@ -16784,11 +16793,30 @@ public sealed partial class MainWindow : Window
                         300.0 +
                     georeference.AnchorY);
 
-            var projected =
+            var projectedPoints =
                 new MapStudioOsmVegetationProjector()
                     .Project(
                         imported.Points,
                         anchorGeo);
+
+            const double linearSpacingMeters =
+                4.0;
+
+            var linearPoints =
+                new MapStudioVegetationLineSampler()
+                    .ProjectAndSample(
+                        linearImported.Lines,
+                        anchorGeo,
+                        spacingMeters:
+                            linearSpacingMeters,
+                        maxPoints:
+                            10_000);
+
+            var projected =
+                projectedPoints
+                    .Concat(
+                        linearPoints)
+                    .ToArray();
 
             var mapTileKeys =
                 snapshot.Map.Tiles
@@ -16854,11 +16882,27 @@ public sealed partial class MainWindow : Window
                             .Compact
                 };
 
-            var assetCombo =
+            var treeAssetCombo =
                 new ComboBox
                 {
                     Header =
-                        "Asset real de vegetação (SCO)",
+                        "Asset para árvores / tree rows (SCO)",
+                    ItemsSource =
+                        vegetationAssets,
+                    DisplayMemberPath =
+                        nameof(
+                            OmsiAssetIndexEntry
+                                .RelativePath),
+                    HorizontalAlignment =
+                        HorizontalAlignment
+                            .Stretch
+                };
+
+            var shrubAssetCombo =
+                new ComboBox
+                {
+                    Header =
+                        "Asset para arbustos / hedges (SCO)",
                     ItemsSource =
                         vegetationAssets,
                     DisplayMemberPath =
@@ -16873,7 +16917,7 @@ public sealed partial class MainWindow : Window
             var currentAsset =
                 GetSelectedAssetLibraryEntry();
 
-            var preferredIndex =
+            var currentIndex =
                 currentAsset is not null &&
                 currentAsset.Kind ==
                     OmsiAssetKind
@@ -16894,11 +16938,78 @@ public sealed partial class MainWindow : Window
                                     .OrdinalIgnoreCase))
                     : -1;
 
-            assetCombo.SelectedIndex =
-                preferredIndex >=
-                    0
-                    ? preferredIndex
-                    : 0;
+            var treePreferredIndex =
+                Array.FindIndex(
+                    vegetationAssets,
+                    asset =>
+                        asset.RelativePath
+                            .Contains(
+                                "tree",
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        asset.RelativePath
+                            .Contains(
+                                "baum",
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        asset.RelativePath
+                            .Contains(
+                                "arvore",
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+
+            var shrubPreferredIndex =
+                Array.FindIndex(
+                    vegetationAssets,
+                    asset =>
+                        asset.RelativePath
+                            .Contains(
+                                "shrub",
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        asset.RelativePath
+                            .Contains(
+                                "bush",
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        asset.RelativePath
+                            .Contains(
+                                "hedge",
+                                StringComparison
+                                    .OrdinalIgnoreCase) ||
+                        asset.RelativePath
+                            .Contains(
+                                "arbusto",
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+
+            treeAssetCombo.SelectedIndex =
+                currentIndex >=
+                    0 &&
+                candidates.Any(
+                    point =>
+                        point.Kind ==
+                        MapStudioOsmVegetationKind
+                            .Tree)
+                    ? currentIndex
+                    : treePreferredIndex >=
+                        0
+                        ? treePreferredIndex
+                        : 0;
+
+            shrubAssetCombo.SelectedIndex =
+                currentIndex >=
+                    0 &&
+                candidates.All(
+                    point =>
+                        point.Kind ==
+                        MapStudioOsmVegetationKind
+                            .Shrub)
+                    ? currentIndex
+                    : shrubPreferredIndex >=
+                        0
+                        ? shrubPreferredIndex
+                        : 0;
 
             var randomRotationCheckBox =
                 new CheckBox
@@ -16930,7 +17041,7 @@ public sealed partial class MainWindow : Window
                 };
 
             var treeCount =
-                imported.Points
+                projected
                     .Count(
                         point =>
                             point.Kind ==
@@ -16938,19 +17049,36 @@ public sealed partial class MainWindow : Window
                                 .Tree);
 
             var shrubCount =
-                imported.Points
+                projected
                     .Count(
                         point =>
                             point.Kind ==
                             MapStudioOsmVegetationKind
                                 .Shrub);
 
+            var treeRowCount =
+                linearImported.Lines
+                    .Count(
+                        line =>
+                            line.Kind ==
+                            MapStudioOsmVegetationLineKind
+                                .TreeRow);
+
+            var hedgeCount =
+                linearImported.Lines
+                    .Count(
+                        line =>
+                            line.Kind ==
+                            MapStudioOsmVegetationLineKind
+                                .Hedge);
+
             var details =
                 new TextBlock
                 {
                     Text =
-                        $"OSM: {imported.Points.Count} ponto(s) de vegetação · {treeCount} árvore(s) · {shrubCount} arbusto(s).\n" +
-                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes OSM ignorados: {imported.IgnoredNodeCount}.",
+                        $"OSM: {imported.Points.Count} node(s) individual(is) + {linearImported.Lines.Count} linha(s).\n" +
+                        $"Após amostragem: {treeCount} ponto(s) de árvore · {shrubCount} ponto(s) de arbusto/hedge · tree rows: {treeRowCount} · hedges: {hedgeCount}.\n" +
+                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes ignorados: {imported.IgnoredNodeCount} · ways ignorados: {linearImported.IgnoredWayCount} · refs ausentes: {linearImported.MissingNodeReferenceCount}.",
                     TextWrapping =
                         TextWrapping.Wrap
                 };
@@ -16961,14 +17089,17 @@ public sealed partial class MainWindow : Window
                     Spacing =
                         8,
                     MinWidth =
-                        600
+                        620
                 };
 
             panel.Children.Add(
                 details);
 
             panel.Children.Add(
-                assetCombo);
+                treeAssetCombo);
+
+            panel.Children.Add(
+                shrubAssetCombo);
 
             panel.Children.Add(
                 countBox);
@@ -16990,9 +17121,9 @@ public sealed partial class MainWindow : Window
                         InfoBarSeverity
                             .Informational,
                     Title =
-                        "Asset real + terreno real",
+                        "Assets reais + terreno real",
                     Message =
-                        "O preview mostra os pontos de colocação. Na confirmação, o Map Studio usa o SCO escolhido da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava em lote com backup. Pontos sem terreno carregado são ignorados com segurança."
+                        $"Tree rows e hedges são amostrados a cada {linearSpacingMeters:F0} m nesta etapa. O preview mostra os pontos de colocação; na confirmação o Map Studio usa os SCOs escolhidos da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava tudo em uma única transação com backup."
                 });
 
             var dialog =
@@ -17067,14 +17198,16 @@ public sealed partial class MainWindow : Window
             }
 
             if (
-                assetCombo.SelectedItem is not
-                    OmsiAssetIndexEntry asset)
+                treeAssetCombo.SelectedItem is not
+                    OmsiAssetIndexEntry treeAsset ||
+                shrubAssetCombo.SelectedItem is not
+                    OmsiAssetIndexEntry shrubAsset)
             {
                 Viewport
                     .ClearVegetationPreview();
 
                 StatusText.Text =
-                    "Vegetação OSM: selecione um asset SCO válido.";
+                    "Vegetação OSM: selecione assets SCO válidos para árvores e arbustos.";
 
                 return;
             }
@@ -17092,19 +17225,98 @@ public sealed partial class MainWindow : Window
                         requestedCount)
                     .ToArray();
 
-            var placement =
-                Viewport
-                    .BuildOsmVegetationPlacementRequests(
-                        selected,
-                        asset.RelativePath,
-                        randomRotationCheckBox
-                            .IsChecked ==
-                        true);
+            var treePoints =
+                selected
+                    .Where(
+                        point =>
+                            point.Kind ==
+                            MapStudioOsmVegetationKind
+                                .Tree)
+                    .ToArray();
+
+            var shrubPoints =
+                selected
+                    .Where(
+                        point =>
+                            point.Kind ==
+                            MapStudioOsmVegetationKind
+                                .Shrub)
+                    .ToArray();
+
+            var groupedPlacements =
+                new List<
+                    (
+                        string Path,
+                        IReadOnlyList<
+                            NativeSceneryPlacementRequest>
+                            Requests,
+                        int Skipped
+                    )>();
+
+            if (treePoints.Length > 0)
+            {
+                var treePlacement =
+                    Viewport
+                        .BuildOsmVegetationPlacementRequests(
+                            treePoints,
+                            treeAsset.RelativePath,
+                            randomRotationCheckBox
+                                .IsChecked ==
+                            true);
+
+                groupedPlacements.Add(
+                    (
+                        treeAsset.RelativePath,
+                        treePlacement.Requests,
+                        treePlacement.SkippedPointCount
+                    ));
+            }
+
+            if (shrubPoints.Length > 0)
+            {
+                var shrubPlacement =
+                    Viewport
+                        .BuildOsmVegetationPlacementRequests(
+                            shrubPoints,
+                            shrubAsset.RelativePath,
+                            randomRotationCheckBox
+                                .IsChecked ==
+                            true);
+
+                groupedPlacements.Add(
+                    (
+                        shrubAsset.RelativePath,
+                        shrubPlacement.Requests,
+                        shrubPlacement.SkippedPointCount
+                    ));
+            }
 
             Viewport
                 .ClearVegetationPreview();
 
-            if (placement.Requests.Count == 0)
+            var groups =
+                groupedPlacements
+                    .Where(
+                        item =>
+                            item.Requests.Count >
+                            0)
+                    .GroupBy(
+                        item =>
+                            item.Path,
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .Select(
+                        group =>
+                            new NativeSceneryPlacementBatchGroup(
+                                group.Key,
+                                group
+                                    .SelectMany(
+                                        item =>
+                                            item.Requests)
+                                    .ToArray()))
+                    .ToArray();
+
+            if (groups.Length == 0)
             {
                 StatusText.Text =
                     "Vegetação OSM: nenhum ponto selecionado possui terreno carregado para uma colocação segura.";
@@ -17112,19 +17324,33 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
+            var insertionCount =
+                groups.Sum(
+                    group =>
+                        group.Placements.Count);
+
+            var skippedCount =
+                groupedPlacements.Sum(
+                    item =>
+                        item.Skipped);
+
             StatusText.Text =
-                $"Inserindo {placement.Requests.Count} item(ns) de vegetação OSM com backup...";
+                $"Inserindo {insertionCount} item(ns) de vegetação OSM com backup...";
 
             var updated =
                 await _session
-                    .InsertSceneryObjectBatchAsync(
-                        placement.Requests);
+                    .InsertSceneryObjectMultiBatchAsync(
+                        groups);
 
             RegisterConstructionHistory(
                 "Importar vegetação OSM");
 
-            RecordAssetUsage(
-                asset.RelativePath);
+            foreach (
+                var group in groups)
+            {
+                RecordAssetUsage(
+                    group.SceneryObjectPath);
+            }
 
             await ApplyMapSnapshotAsync(
                 updated,
@@ -17132,11 +17358,11 @@ public sealed partial class MainWindow : Window
                     false);
 
             StatusText.Text =
-                $"{placement.Requests.Count} item(ns) de vegetação OSM inseridos" +
+                $"{insertionCount} item(ns) de vegetação OSM inseridos" +
                 (
-                    placement.SkippedPointCount >
+                    skippedCount >
                         0
-                        ? $" · {placement.SkippedPointCount} ignorado(s) sem terreno carregado"
+                        ? $" · {skippedCount} ignorado(s) sem terreno carregado"
                         : string.Empty
                 ) +
                 $". Backup: {_session.LastBackupDirectory}";
