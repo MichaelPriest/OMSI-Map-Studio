@@ -201,7 +201,7 @@ public sealed class MapStudioVegetationAreaScatterer
             false;
 
         for (
-            var current = 0,
+            int current = 0,
                 previous =
                     polygon.Count -
                     1;
