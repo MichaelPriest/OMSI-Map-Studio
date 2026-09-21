@@ -10674,10 +10674,11 @@ public sealed partial class MainWindow : Window
             Viewport.CancelSceneryPlacement();
             Viewport.CancelSplinePlacement();
 
+            var selectedAsset =
+                GetSelectedAssetLibraryEntry();
+
             PlaceAssetButton.Content =
-                AssetLibraryListView.SelectedItem is
-                    OmsiAssetIndexEntry asset &&
-                asset.Kind ==
+                selectedAsset?.Kind ==
                     OmsiAssetKind.Spline
                     ? "Construir spline"
                     : "Posicionar no mapa";
@@ -10807,6 +10808,9 @@ public sealed partial class MainWindow : Window
                 true;
 
             OpenMapMenuItem.IsEnabled =
+                true;
+
+            RefreshMapCatalogMenuItem.IsEnabled =
                 true;
 
             RefreshLibraryButton.IsEnabled =
@@ -12165,6 +12169,52 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Falha ao salvar georreferência: {exception.Message}";
+        }
+    }
+
+    private async void OnRefreshMapCatalogClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
+        {
+            StatusText.Text =
+                "Selecione primeiro a instalação do OMSI.";
+
+            return;
+        }
+
+        try
+        {
+            RefreshMapCatalogMenuItem.IsEnabled =
+                false;
+
+            StatusText.Text =
+                "Atualizando catálogo de mapas instalados...";
+
+            var maps =
+                await _session
+                    .RefreshMapCatalogAsync();
+
+            RootText.Text =
+                $"OMSI: {root}\nMapas encontrados: {maps.Count}";
+
+            StatusText.Text =
+                $"Catálogo atualizado: {maps.Count} mapa(s) encontrado(s). O mapa aberto foi preservado.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao atualizar catálogo: {exception.Message}";
+        }
+        finally
+        {
+            RefreshMapCatalogMenuItem.IsEnabled =
+                _session.OmsiRootPath is not
+                    null;
         }
     }
 
