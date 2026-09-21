@@ -5,6 +5,7 @@ using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Props;
 using MapStudio.Core.Omsi.Splines;
 
 namespace MapStudio.Core.Workspace;
@@ -903,6 +904,17 @@ public sealed class MapStudioWorkspaceBootstrapper
         created =
             created ||
             vegetationCreated;
+
+        var propsCreated =
+            await new MapStudioStarterPropGenerator()
+                .EnsureAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        created =
+            created ||
+            propsCreated;
 
         var buildingDirectory =
             Path.Combine(
