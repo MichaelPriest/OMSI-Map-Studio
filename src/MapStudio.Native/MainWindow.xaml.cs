@@ -13389,6 +13389,279 @@ public sealed partial class MainWindow : Window
                 3.0)
         ];
 
+    private static RoadProfileOption
+        SelectProceduralRoadProfile(
+            MapStudioGeoRoadTrace road,
+            IReadOnlyList<RoadProfileOption> profiles)
+    {
+        var highway =
+            road.Highway
+                ?.Trim()
+                .ToLowerInvariant();
+
+        if (
+            highway is
+                "footway" or
+                "pedestrian" or
+                "path" or
+                "steps" or
+                "cycleway")
+        {
+            return profiles[5];
+        }
+
+        if (road.OneWay == true)
+        {
+            return profiles[0];
+        }
+
+        if (
+            highway is
+                "motorway" or
+                "trunk" or
+                "motorway_link" or
+                "trunk_link")
+        {
+            return profiles[4];
+        }
+
+        if (
+            road.LaneCount is >= 4 ||
+            highway is
+                "primary" or
+                "primary_link")
+        {
+            return profiles[3];
+        }
+
+        if (
+            highway is
+                "service")
+        {
+            return profiles[1];
+        }
+
+        return profiles[2];
+    }
+
+    private async void OnImportProceduralRoadGeoJsonClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Importação GeoJSON"))
+        {
+            return;
+        }
+
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Importação GeoJSON: abra um mapa primeiro.";
+
+            return;
+        }
+
+        if (_proceduralRoadTraceMode)
+        {
+            StatusText.Text =
+                "Finalize ou limpe a linha manual atual antes de importar GeoJSON.";
+
+            return;
+        }
+
+        var georeference =
+            await _session
+                .LoadMapGeoreferenceAsync();
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Importação GeoJSON: o mapa precisa ter .mapstudio/georeference.json.";
+
+            return;
+        }
+
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .DocumentsLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".geojson");
+
+        picker.FileTypeFilter.Add(
+            ".json");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        if (file is null)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Importando vias GeoJSON...";
+
+            var json =
+                await File
+                    .ReadAllTextAsync(
+                        file.Path);
+
+            var imported =
+                new MapStudioGeoJsonRoadImporter()
+                    .Parse(
+                        json);
+
+            var pointCount =
+                imported.Traces.Sum(
+                    trace =>
+                        trace.Points.Count);
+
+            if (
+                imported.Traces.Count >
+                    5_000 ||
+                pointCount >
+                    100_000)
+            {
+                StatusText.Text =
+                    $"GeoJSON recusado por segurança: {imported.Traces.Count} linha(s), {pointCount} ponto(s). Limite: 5.000 linhas / 100.000 pontos.";
+
+                return;
+            }
+
+            var anchor =
+                new MapStudioGeographicAnchor(
+                    georeference.Latitude,
+                    georeference.Longitude,
+                    georeference.AnchorTileX *
+                        300.0 +
+                    georeference.AnchorX,
+                    georeference.AnchorTileY *
+                        300.0 +
+                    georeference.AnchorY);
+
+            var profiles =
+                GetProceduralRoadProfiles();
+
+            var added =
+                0;
+
+            var skipped =
+                imported.IgnoredFeatureCount;
+
+            foreach (
+                var geoTrace in
+                    imported.Traces)
+            {
+                var points =
+                    new List<
+                        MapStudioRoadPoint>(
+                            geoTrace.Points.Count);
+
+                foreach (
+                    var geoPoint in
+                        geoTrace.Points)
+                {
+                    var projected =
+                        MapStudioGeographicProjection
+                            .Project(
+                                anchor,
+                                geoPoint);
+
+                    if (
+                        points.Count ==
+                            0 ||
+                        points[^1]
+                            .DistanceTo(
+                                projected) >=
+                            0.20)
+                    {
+                        points.Add(
+                            projected);
+                    }
+                }
+
+                if (points.Count < 2)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var profile =
+                    SelectProceduralRoadProfile(
+                        geoTrace,
+                        profiles);
+
+                var traceId =
+                    $"geo-{++_proceduralRoadTraceSequence}-{geoTrace.Id}";
+
+                _proceduralRoadTraces.Add(
+                    new MapStudioRoadTrace(
+                        traceId,
+                        points,
+                        profile.ProfileId,
+                        geoTrace.LaneCount ??
+                            profile.LaneCount,
+                        geoTrace.OneWay ??
+                            profile.OneWay,
+                        geoTrace.WidthMeters ??
+                            profile.WidthMeters));
+
+                added++;
+            }
+
+            if (added == 0)
+            {
+                StatusText.Text =
+                    "GeoJSON não contém linhas de via válidas.";
+
+                return;
+            }
+
+            AnalyzeProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            ClearProceduralRoadGraphMenuItem
+                .IsEnabled =
+                true;
+
+            var graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        _proceduralRoadTraces);
+
+            var preview =
+                Viewport
+                    .PreviewProceduralRoadGraph(
+                        graph);
+
+            StatusText.Text =
+                $"GeoJSON importado: {added} linha(s), {graph.Segments.Count} segmento(s), {graph.Junctions.Count} cruzamento(s). " +
+                $"Preview D3D11: {preview.RenderedSegmentCount} segmento(s). Ignorados: {skipped}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao importar GeoJSON: {exception.Message}";
+        }
+    }
+
     private async void OnStartProceduralRoadTraceClick(
         object sender,
         RoutedEventArgs e)
