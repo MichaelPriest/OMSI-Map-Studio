@@ -658,12 +658,62 @@ public static class OmsiAssetLibraryClassifier
 
     private static bool ContainsAny(
         string text,
-        params string[] terms) =>
-        terms.Any(
+        params string[] terms)
+    {
+        var normalizedText =
+            Normalize(
+                text);
+
+        var tokens =
+            normalizedText
+                .Split(
+                    [
+                        '/',
+                        '\\',
+                        '_',
+                        '-',
+                        '.',
+                        ' ',
+                        '(',
+                        ')',
+                        '[',
+                        ']'
+                    ],
+                    StringSplitOptions
+                        .RemoveEmptyEntries);
+
+        return terms.Any(
             term =>
-                text.Contains(
-                    Normalize(term),
-                    StringComparison.Ordinal));
+            {
+                var normalizedTerm =
+                    Normalize(
+                        term);
+
+                if (
+                    normalizedTerm.IndexOfAny(
+                        [
+                            ' ',
+                            '/',
+                            '\\',
+                            '_',
+                            '-'
+                        ]) >=
+                    0)
+                {
+                    return normalizedText
+                        .Contains(
+                            normalizedTerm,
+                            StringComparison.Ordinal);
+                }
+
+                return tokens.Any(
+                    token =>
+                        string.Equals(
+                            token,
+                            normalizedTerm,
+                            StringComparison.Ordinal));
+            });
+    }
 
     private static string Normalize(
         string value)

@@ -1068,6 +1068,7 @@ public sealed class OmsiSceneryObjectReader
                             values.ElementAtOrDefault(17),
                             values.ElementAtOrDefault(18),
                             values.ElementAtOrDefault(19),
+                            values.ElementAtOrDefault(24) ??
                             values.ElementAtOrDefault(23),
                             values));
                 }
