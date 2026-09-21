@@ -766,9 +766,11 @@ As coordenadas WGS84 são projetadas pela mesma âncora de `.mapstudio/georefere
 
 **Ferramentas → Importar edifícios OSM...** importa footprints `building=*` por way e também relations `type=multipolygon` quando os anéis externos podem ser montados de forma segura. Relações com anéis internos/courtyards continuam recusadas nesta etapa para evitar preencher áreas vazadas incorretamente.
 
-**Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, preservando `species`, `genus`, `leaf_type` e `name` quando presentes. O usuário escolhe um **SCO real** já indexado na categoria Vegetação; o viewport mostra a prévia dos pontos sobre o terreno carregado e a confirmação gera requests alinhados à altura real do terreno. A persistência usa o batch seguro existente, limitado a 256 objetos por operação, com backup do mapa antes da gravação. A rotação variada é opcional e determinística por ID OSM.
+**Ferramentas → Importar vegetação OSM...** importa nodes individuais `natural=tree` e `natural=shrub`, além de ways `natural=tree_row` e `barrier=hedge`. `species`, `genus`, `leaf_type` e `name` são preservados quando presentes.
 
-Áreas de floresta/bosque, hedges em ways e geração automática de espécies a partir de `species` ainda não são convertidas. Pontos fora do terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
+Tree rows e hedges são projetados pela mesma âncora geográfica e amostrados em pontos regulares de 4 m nesta etapa. O diálogo permite escolher **dois SCOs reais** já indexados na categoria Vegetação: um para árvores/tree rows e outro para arbustos/hedges. O viewport mostra a prévia sobre o terreno carregado; a confirmação alinha cada item à altura real do terreno e grava os grupos em uma única transação multi-batch com backup. O limite operacional permanece 256 pontos selecionados por execução e a rotação variada continua opcional e determinística por ID/amostra.
+
+Áreas de floresta/bosque e geração automática de espécies a partir de `species` ainda não são convertidas. Pontos sem terreno atualmente carregado também não são inseridos, evitando alturas inventadas.
 
 ### Attachments OMSI
 
