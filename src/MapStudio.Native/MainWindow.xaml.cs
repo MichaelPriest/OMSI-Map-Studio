@@ -695,6 +695,9 @@ public sealed partial class MainWindow : Window
             _assetLibraryState
                 .ToolPaletteOffsetY;
 
+        SetActiveMapTool(
+            ToolSelectionButton);
+
         Activated +=
             OnMainWindowActivatedInitializeWorkspace;
     }
@@ -5939,10 +5942,85 @@ public sealed partial class MainWindow : Window
             Viewport.CanRedo;
     }
 
+    private void SetActiveMapTool(
+        Button activeButton)
+    {
+        var defaultBackground =
+            (Microsoft.UI.Xaml.Media.Brush)
+                MainRoot.Resources[
+                    "MapToolDefaultBackgroundBrush"];
+
+        var defaultBorder =
+            (Microsoft.UI.Xaml.Media.Brush)
+                MainRoot.Resources[
+                    "MapToolDefaultBorderBrush"];
+
+        var activeBackground =
+            (Microsoft.UI.Xaml.Media.Brush)
+                MainRoot.Resources[
+                    "MapToolActiveBackgroundBrush"];
+
+        var activeBorder =
+            (Microsoft.UI.Xaml.Media.Brush)
+                MainRoot.Resources[
+                    "MapToolActiveBorderBrush"];
+
+        var buttons =
+            new[]
+            {
+                ToolSelectionButton,
+                ToolObjectsButton,
+                ToolSplinesButton,
+                ToolBridgesButton,
+                ToolTunnelsButton,
+                ToolBuildingsButton,
+                ToolVegetationButton,
+                ToolTransitAssetsButton,
+                ToolStreetFurnitureButton,
+                ToolUtilitiesButton,
+                ToolCrossingsButton,
+                ToolTerrainButton,
+                ToolWaterButton,
+                ToolTrafficButton,
+                ToolTransportButton,
+                ToolValidationButton
+            };
+
+        foreach (var button in buttons)
+        {
+            button.Background =
+                defaultBackground;
+
+            button.BorderBrush =
+                defaultBorder;
+
+            button.BorderThickness =
+                new Thickness(1);
+
+            button.Opacity =
+                0.88;
+        }
+
+        activeButton.Background =
+            activeBackground;
+
+        activeButton.BorderBrush =
+            activeBorder;
+
+        activeButton.BorderThickness =
+            new Thickness(2);
+
+        activeButton.Opacity =
+            1;
+    }
+
     private void OnToolSelectionClick(
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolSelectionButton);
+
         OnSceneExplorerModeClick(
             sender,
             e);
@@ -5958,6 +6036,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolObjectsButton);
+
         _junctionPlacementTarget =
             null;
 
@@ -6152,6 +6233,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolSplinesButton);
+
         _junctionPlacementTarget =
             null;
 
@@ -6198,6 +6282,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolBridgesButton);
+
         SplineElevationOffsetBox.Value =
             5;
 
@@ -6241,6 +6328,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolBuildingsButton);
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -6254,6 +6344,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolVegetationButton);
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -6267,6 +6360,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolTransitAssetsButton);
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -6280,6 +6376,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolStreetFurnitureButton);
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -6293,6 +6392,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolUtilitiesButton);
+
         SetSelectionModeFromShortcut(
             1);
 
@@ -6306,6 +6408,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolCrossingsButton);
+
         if (_session.CurrentMap is null)
         {
             StatusText.Text =
@@ -6414,6 +6519,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolTerrainButton);
+
         _junctionPlacementTarget =
             null;
 
@@ -6428,6 +6536,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolWaterButton);
+
         _junctionPlacementTarget =
             null;
 
@@ -6850,10 +6961,13 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolTrafficButton);
+
         if (_session.CurrentMap is null)
         {
             StatusText.Text =
-                "Tráfego: abra um mapa OMSI primeiro.";
+                "Tráfego: abra um mapa primeiro.";
 
             return;
         }
@@ -8166,11 +8280,14 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolTransportButton);
+
         if (_session.CurrentMap is
             not { } snapshot)
         {
             StatusText.Text =
-                "Transporte: abra um mapa OMSI primeiro.";
+                "Transporte: abra um mapa primeiro.";
 
             return;
         }
@@ -10139,6 +10256,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolValidationButton);
+
         if (
             _session.CurrentMap is not
                 { } snapshot ||
@@ -10146,7 +10266,7 @@ public sealed partial class MainWindow : Window
                 { } omsiRoot)
         {
             StatusText.Text =
-                "Validação: abra um mapa OMSI primeiro.";
+                "Validação: abra um mapa primeiro.";
 
             return;
         }
@@ -12145,6 +12265,31 @@ public sealed partial class MainWindow : Window
             NumberBox;
     }
 
+    private void UpdateContentRootSummary(
+        int? mapCount = null)
+    {
+        var root =
+            _session.OmsiRootPath;
+
+        if (string.IsNullOrWhiteSpace(
+                root))
+        {
+            RootText.Text =
+                "Nenhuma fonte de conteúdo ativa.";
+
+            return;
+        }
+
+        var count =
+            mapCount ??
+            _session.Maps.Count;
+
+        RootText.Text =
+            _session.IsStandaloneWorkspace
+                ? $"Workspace: {root}\nMapas: {count}"
+                : $"OMSI opcional: {root}\nMapas encontrados: {count}";
+    }
+
     private void SetContentRootModeLabel(
         string label)
     {
@@ -12254,8 +12399,8 @@ public sealed partial class MainWindow : Window
             SetContentRootModeLabel(
                 "WORKSPACE");
 
-            RootText.Text =
-                $"Workspace: {root}\nMapas: {maps.Count}";
+            UpdateContentRootSummary(
+                maps.Count);
 
             OpenMapButton.IsEnabled =
                 true;
@@ -12433,8 +12578,7 @@ public sealed partial class MainWindow : Window
             SetContentRootModeLabel(
                 "WORKSPACE");
 
-            RootText.Text =
-                $"Workspace: {_session.OmsiRootPath}\nMapas: {_session.Maps.Count}";
+            UpdateContentRootSummary();
 
             StatusText.Text =
                 $"Mapa “{snapshot.Map.DisplayName}” criado e aberto sem depender do OMSI.";
@@ -12485,8 +12629,7 @@ public sealed partial class MainWindow : Window
             SetContentRootModeLabel(
                 "WORKSPACE");
 
-            RootText.Text =
-                $"Workspace: {_session.OmsiRootPath}\nMapas: {_session.Maps.Count}";
+            UpdateContentRootSummary();
 
             await ApplyMapSnapshotAsync(
                 snapshot,
@@ -12582,8 +12725,8 @@ public sealed partial class MainWindow : Window
             SetContentRootModeLabel(
                 "OMSI");
 
-            RootText.Text =
-                $"OMSI opcional: {root}\nMapas encontrados: {maps.Count}";
+            UpdateContentRootSummary(
+                maps.Count);
 
             OpenMapButton.IsEnabled =
                 true;
@@ -13232,8 +13375,7 @@ public sealed partial class MainWindow : Window
                 focusActiveTile:
                     true);
 
-            RootText.Text =
-                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+            UpdateContentRootSummary();
 
             StatusText.Text =
                 $"Tile {result.DeletedTile.X},{result.DeletedTile.Y} excluído com {result.DeletedFiles} arquivo(s) preservados no backup: {result.BackupDirectory}";
@@ -13478,7 +13620,7 @@ public sealed partial class MainWindow : Window
         try
         {
             StatusText.Text =
-                $"Criando tile {tileX},{tileY} a partir do template oficial...";
+                $"Criando tile {tileX},{tileY} a partir do template da fonte ativa...";
 
             var result =
                 await _session
@@ -13491,8 +13633,7 @@ public sealed partial class MainWindow : Window
                 focusActiveTile:
                     true);
 
-            RootText.Text =
-                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+            UpdateContentRootSummary();
 
             StatusText.Text =
                 $"Tile {result.Tile.X},{result.Tile.Y} criado com {result.CreatedFiles.Count} arquivo(s). Backup: {result.BackupDirectory}";
@@ -13511,7 +13652,7 @@ public sealed partial class MainWindow : Window
         if (_session.OmsiRootPath is null)
         {
             StatusText.Text =
-                "Selecione primeiro a instalação do OMSI para criar um mapa.";
+                "Ative o Workspace Map Studio ou selecione uma instalação do OMSI para criar um mapa.";
 
             return;
         }
@@ -13651,7 +13792,7 @@ public sealed partial class MainWindow : Window
         try
         {
             StatusText.Text =
-                "Criando mapa a partir do template OMSI...";
+                "Criando mapa a partir do template da fonte ativa...";
 
             var created =
                 await _session
@@ -13668,8 +13809,7 @@ public sealed partial class MainWindow : Window
                 created.Snapshot,
                 focusActiveTile: false);
 
-            RootText.Text =
-                $"OMSI: {_session.OmsiRootPath}\nMapas encontrados: {_session.Maps.Count}";
+            UpdateContentRootSummary();
 
             StatusText.Text =
                 $"Mapa {created.Snapshot.Map.DisplayName} criado em {created.DirectoryPath} · âncora {created.Latitude:F6}, {created.Longitude:F6}.";
@@ -14719,8 +14859,8 @@ public sealed partial class MainWindow : Window
                 await _session
                     .RefreshMapCatalogAsync();
 
-            RootText.Text =
-                $"OMSI: {root}\nMapas encontrados: {maps.Count}";
+            UpdateContentRootSummary(
+                maps.Count);
 
             StatusText.Text =
                 $"Catálogo atualizado: {maps.Count} mapa(s) encontrado(s). O mapa aberto foi preservado.";
@@ -17483,6 +17623,9 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        SetActiveMapTool(
+            ToolTunnelsButton);
+
         if (
             !EnsureCommercialFeature(
                 MapStudioEntitlementKeys
@@ -17498,7 +17641,7 @@ public sealed partial class MainWindow : Window
         if (root is null)
         {
             StatusText.Text =
-                "Criador de túneis: selecione primeiro a instalação do OMSI.";
+                "Criador de túneis: ative o Workspace Map Studio ou selecione uma instalação do OMSI.";
 
             return;
         }
@@ -17774,7 +17917,7 @@ public sealed partial class MainWindow : Window
         if (root is null)
         {
             StatusText.Text =
-                "Road Kit: selecione primeiro a instalação do OMSI.";
+                "Road Kit: ative o Workspace Map Studio ou selecione uma instalação do OMSI.";
 
             return;
         }
@@ -18412,7 +18555,7 @@ public sealed partial class MainWindow : Window
                 { } root)
         {
             StatusText.Text =
-                "Vegetação OSM: abra um mapa e selecione a instalação do OMSI.";
+                "Vegetação OSM: abra um mapa no Workspace ou na fonte OMSI.";
 
             return;
         }
@@ -19221,7 +19364,7 @@ public sealed partial class MainWindow : Window
                 { } root)
         {
             StatusText.Text =
-                "Edifícios OSM: abra um mapa e selecione a instalação do OMSI.";
+                "Edifícios OSM: abra um mapa no Workspace ou na fonte OMSI.";
 
             return;
         }
@@ -19653,7 +19796,7 @@ public sealed partial class MainWindow : Window
         if (root is null)
         {
             StatusText.Text =
-                "Building Studio: selecione primeiro a instalação do OMSI.";
+                "Building Studio: ative o Workspace Map Studio ou selecione uma instalação do OMSI.";
 
             return;
         }
