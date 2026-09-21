@@ -763,6 +763,9 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - brush incremental para elevar/abaixar terreno, nivelamento e pintura real das máscaras DDS;
 - visibilidade individual das camadas `groundtex`;
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
+- preview 3D nativo também para modelos avulsos `.o3d` e `.x`, sem depender de um SCO wrapper;
+- dock inferior de criação adaptável/rolável, indicação visual da ferramenta ativa e acesso direto ao criador de túneis;
+- posicionamento de objetos com opção de encaixar/alinha à via mais próxima, usando a tangente real de splines retas ou curvas e alcance configurável;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
 - geração procedural de vias com suavização, grafo único, auto-link de continuidade em grau 2, junctions próprios e rollback;
 - importação georreferenciada de GeoJSON e **OSM XML**, incluindo vias, footprints de edifícios, multipolygons externos seguros e vegetação por pontos, linhas, áreas e multipolygons externos seguros;

@@ -763,6 +763,9 @@ In addition to the checkpoints already described, the native host currently incl
 - incremental raise/lower terrain brush, leveling, and real DDS-mask painting;
 - individual `groundtex` layer visibility;
 - persistent geometry thumbnails and visual library cards;
+- native 3D preview for standalone `.o3d` and `.x` model assets without requiring an SCO wrapper;
+- an adaptive/scrollable bottom creation dock, visible active-tool state, and direct access to the tunnel creator;
+- scenery placement can snap/align to the nearest road using the real tangent of straight or curved splines with a configurable range;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
 - procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
 - georeferenced GeoJSON and **OSM XML** import, including roads, building footprints, safe outer multipolygons, and vegetation from points, lines, areas, and safe outer multipolygons;
