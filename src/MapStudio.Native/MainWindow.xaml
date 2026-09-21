@@ -897,6 +897,114 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="ToolBridgesButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Pontes, viadutos e túneis"
+                            Click="OnToolBridgesClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="26"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 2,19 L 2,13 C 6,6 18,6 22,13 L 22,19 M 2,15 L 22,15 M 6,15 L 6,21 M 18,15 L 18,21" />
+                            <TextBlock Text="Pontes"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ToolBuildingsButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Casas e prédios"
+                            Click="OnToolBuildingsClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="24"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 3,21 L 3,8 L 12,2 L 21,8 L 21,21 Z M 8,21 L 8,13 L 13,13 L 13,21 M 7,9 L 10,9 M 15,9 L 18,9" />
+                            <TextBlock Text="Prédios"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ToolVegetationButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Árvores e vegetação"
+                            Click="OnToolVegetationClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="24"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 12,2 C 7,2 5,7 7,10 C 3,12 5,18 10,17 L 10,22 M 12,2 C 17,2 19,7 17,10 C 21,12 19,18 14,17 L 14,22 M 8,22 L 16,22" />
+                            <TextBlock Text="Vegetação"
+                                       FontSize="10"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ToolTransitAssetsButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Pontos, terminais, abrigos e garagens"
+                            Click="OnToolTransitAssetsClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="26"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 4,3 L 20,3 L 20,18 L 4,18 Z M 7,6 L 17,6 L 17,12 L 7,12 Z M 7,18 L 7,22 M 17,18 L 17,22" />
+                            <TextBlock Text="Paradas"
+                                       FontSize="10"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ToolStreetFurnitureButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Postes, placas, bancos e mobiliário"
+                            Click="OnToolStreetFurnitureClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="24"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 12,2 L 12,22 M 12,5 L 19,5 L 19,10 L 12,10 M 5,17 L 19,17 M 7,17 L 7,21 M 17,17 L 17,21" />
+                            <TextBlock Text="Mobiliário"
+                                       FontSize="9.5"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="ToolUtilitiesButton"
+                            Style="{StaticResource MapToolButtonStyle}"
+                            ToolTipService.ToolTip="Energia, água e infraestrutura"
+                            Click="OnToolUtilitiesClick">
+                        <StackPanel Spacing="3"
+                                    HorizontalAlignment="Center">
+                            <Path Width="24"
+                                  Height="23"
+                                  Stretch="Uniform"
+                                  Stroke="#DDF4FF"
+                                  StrokeThickness="1.8"
+                                  Data="M 12,2 L 8,10 L 12,10 L 9,21 L 17,9 L 13,9 Z M 3,21 L 21,21" />
+                            <TextBlock Text="Infra"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
                     <Button x:Name="ToolCrossingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Cruzamentos"

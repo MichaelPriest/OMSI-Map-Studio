@@ -3994,6 +3994,84 @@ public sealed partial class MainWindow : Window
             "Ruas/Splines: escolha uma SLI e use o construtor reto ou curvo.");
     }
 
+    private async void OnToolBridgesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            2);
+
+        await ActivateLibraryGroupToolAsync(
+            2,
+            OmsiAssetLibraryGroup.Bridges,
+            "Pontes: splines de ponte, viaduto, túnel e elevado filtradas na biblioteca.");
+    }
+
+    private async void OnToolBuildingsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Buildings,
+            "Prédios: casas, comércio, indústria e equipamentos públicos.");
+    }
+
+    private async void OnToolVegetationClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Vegetation,
+            "Vegetação: árvores, arbustos e grama.");
+    }
+
+    private async void OnToolTransitAssetsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Transit,
+            "Assets de transporte: pontos, abrigos, terminais, garagens e estações.");
+    }
+
+    private async void OnToolStreetFurnitureClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.StreetFurniture,
+            "Mobiliário: postes, iluminação, placas, bancos, cercas e sinalização.");
+    }
+
+    private async void OnToolUtilitiesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Utilities,
+            "Infraestrutura: energia, água, saneamento e utilidades.");
+    }
+
     private void OnToolCrossingsClick(
         object sender,
         RoutedEventArgs e)
@@ -5422,6 +5500,58 @@ public sealed partial class MainWindow : Window
         }
 
         return result;
+    }
+
+    private async Task ActivateLibraryGroupToolAsync(
+        int kindIndex,
+        OmsiAssetLibraryGroup group,
+        string status)
+    {
+        _junctionPlacementTarget =
+            null;
+
+        _dependencyRepairKind =
+            null;
+
+        _dependencyRepairOldPath =
+            null;
+
+        RepairDependencyButton.Visibility =
+            Visibility.Collapsed;
+
+        await ActivateLibraryToolAsync(
+            kindIndex,
+            null,
+            status);
+
+        LibraryViewComboBox.SelectedIndex =
+            0;
+
+        var groupIndex =
+            _libraryGroupOptions
+                .Select(
+                    (option, index) =>
+                        (
+                            option,
+                            index
+                        ))
+                .FirstOrDefault(
+                    pair =>
+                        pair.option.Group ==
+                            group)
+                .index;
+
+        if (
+            groupIndex >= 0 &&
+            groupIndex <
+                _libraryGroupOptions.Count)
+        {
+            LibraryGroupComboBox.SelectedIndex =
+                groupIndex;
+        }
+
+        RefreshLibrarySubcategoryOptions();
+        RefreshLibraryFilter();
     }
 
     private async Task ActivateLibraryToolAsync(
