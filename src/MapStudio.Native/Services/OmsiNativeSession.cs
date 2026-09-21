@@ -3350,6 +3350,312 @@ public sealed class OmsiNativeSession
             newSplineId);
     }
 
+    public async Task<NativeSplineBatchInsertionResult>
+        InsertSplineBatchAsync(
+            IReadOnlyList<NativeSplinePlacementRequest> requests,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(requests);
+
+        if (requests.Count == 0 || requests.Count > 5_000)
+        {
+            throw new ArgumentOutOfRangeException(nameof(requests));
+        }
+
+        if (requests.Any(request =>
+                request.PreviousSplineId >= 0 ||
+                request.NextSplineId >= 0))
+        {
+            throw new InvalidDataException(
+                "batchSplineLinksUnsupported");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplineBatchInsertion");
+        }
+
+        var loadedByPath =
+            snapshot.Tiles.ToDictionary(
+                tile => tile.Reference.RelativeMapPath,
+                tile => tile.Content,
+                StringComparer.OrdinalIgnoreCase);
+
+        var mapContents =
+            new List<(OmsiTileReference Reference, OmsiTileContent Content)>(
+                snapshot.Map.Tiles.Count);
+
+        foreach (var tile in snapshot.Map.Tiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (loadedByPath.TryGetValue(
+                    tile.RelativeMapPath,
+                    out var loaded))
+            {
+                mapContents.Add((tile, loaded));
+                continue;
+            }
+
+            if (!OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    tile.RelativeMapPath,
+                    out var path))
+            {
+                continue;
+            }
+
+            mapContents.Add(
+                (
+                    tile,
+                    await _tileReader
+                        .ReadContentAsync(path, cancellationToken)
+                        .ConfigureAwait(false)
+                ));
+        }
+
+        var contents =
+            mapContents
+                .Select(item => item.Content)
+                .ToArray();
+
+        var maxUsedId =
+            contents
+                .SelectMany(content =>
+                    content.Objects
+                        .Select(item => item.ObjectId)
+                        .Concat(
+                            content.Splines
+                                .Select(item => item.SplineId)))
+                .DefaultIfEmpty(0)
+                .Max();
+
+        if (maxUsedId > int.MaxValue - requests.Count)
+        {
+            throw new InvalidDataException(
+                "splineIdExhausted");
+        }
+
+        var grouped =
+            new Dictionary<
+                string,
+                (OmsiTileReference Tile, List<NativeSplinePlacementRequest> Requests)>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        foreach (var request in requests)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    request.Tile.RelativeMapPath,
+                    out var targetPath))
+            {
+                throw new InvalidDataException(
+                    "splinePlacementTilePathInvalid");
+            }
+
+            if (!grouped.TryGetValue(
+                    targetPath,
+                    out var group))
+            {
+                group =
+                    (
+                        request.Tile,
+                        new List<NativeSplinePlacementRequest>()
+                    );
+
+                grouped[targetPath] =
+                    group;
+            }
+
+            group.Requests.Add(request);
+        }
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                DateTimeOffset.UtcNow.ToString(
+                    "yyyyMMdd-HHmmssfff'Z'",
+                    CultureInfo.InvariantCulture) +
+                "-procedural-roads-" +
+                Guid.NewGuid().ToString("N"));
+
+        var writes =
+            new List<PendingFileWrite>(
+                grouped.Count);
+
+        var affectedPaths =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        var insertedIds =
+            new List<int>(
+                requests.Count);
+
+        foreach (var pair in grouped)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var document =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        pair.Key,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            byte[]? finalBytes =
+                null;
+
+            foreach (var request in pair.Value.Requests)
+            {
+                var template =
+                    contents
+                        .SelectMany(content => content.Splines)
+                        .FirstOrDefault(item =>
+                            item.IsHeightSpline ==
+                                request.IsHeightSpline &&
+                            string.Equals(
+                                item.SplinePath,
+                                request.SplinePath,
+                                StringComparison.OrdinalIgnoreCase))
+                    ?? OmsiSplinePlacementTemplateAnalyzer
+                        .FindNeutralTemplate(
+                            contents,
+                            request.IsHeightSpline);
+
+                if (request.IsHeightSpline &&
+                    template is null)
+                {
+                    throw new InvalidDataException(
+                        "splineInsertTemplateUnavailable");
+                }
+
+                var newSplineId =
+                    checked(++maxUsedId);
+
+                var insertion =
+                    OmsiTileSplineInserter.Append(
+                        document,
+                        new OmsiNewPlacedSpline(
+                            template?.HeaderValue ?? "0",
+                            request.SplinePath,
+                            newSplineId,
+                            -1,
+                            -1,
+                            request.X,
+                            request.Z,
+                            request.Y,
+                            request.Rotation,
+                            request.Length,
+                            request.Radius,
+                            request.GradientStart,
+                            request.GradientEnd,
+                            request.IsHeightSpline,
+                            template?.ExtraValues ??
+                                Array.Empty<string>()));
+
+                finalBytes =
+                    insertion.Bytes;
+
+                document =
+                    OmsiConfigParser.ParseBytes(
+                        finalBytes);
+
+                insertedIds.Add(
+                    newSplineId);
+            }
+
+            if (finalBytes is null)
+            {
+                continue;
+            }
+
+            var relativeTarget =
+                Path.GetRelativePath(
+                    snapshot.Map.DirectoryPath,
+                    pair.Key);
+
+            writes.Add(
+                new PendingFileWrite(
+                    pair.Key,
+                    Path.Combine(
+                        backupRoot,
+                        relativeTarget),
+                    finalBytes));
+
+            affectedPaths.Add(
+                pair.Value.Tile.RelativeMapPath);
+        }
+
+        if (writes.Count == 0 ||
+            insertedIds.Count != requests.Count)
+        {
+            throw new InvalidDataException(
+                "proceduralRoadBatchEmpty");
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
+
+        var refreshed =
+            new List<NativeLoadedTile>(
+                snapshot.Tiles.Count);
+
+        foreach (var tile in snapshot.Tiles)
+        {
+            if (!affectedPaths.Contains(
+                    tile.Reference.RelativeMapPath))
+            {
+                refreshed.Add(tile);
+                continue;
+            }
+
+            if (!OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    tile.Reference.RelativeMapPath,
+                    out var path))
+            {
+                throw new InvalidDataException(
+                    "splineReloadTilePathInvalid");
+            }
+
+            refreshed.Add(
+                new NativeLoadedTile(
+                    tile.Reference,
+                    await _tileReader
+                        .ReadContentAsync(
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false)));
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    refreshed.ToArray()
+            };
+
+        return new NativeSplineBatchInsertionResult(
+            CurrentMap,
+            insertedIds,
+            backupRoot);
+    }
+
     public async Task<NativeTrafficRulesUpdateResult>
         UpdateTrafficRulesAsync(
             PickingKind ownerKind,
