@@ -73,6 +73,8 @@ public sealed class NativeViewportRuntime : IDisposable
 
     private bool _splinePlacementActive;
     private bool _splinePlacementCurved;
+    private bool _splineEasyRoadEnabled;
+    private double _splineEasyRoadCurveOffset;
     private string? _placementSplinePath;
     private NativeSplineAsset? _placementSplineAsset;
     private Vector3? _splineStartWorld;
@@ -422,6 +424,84 @@ public sealed class NativeViewportRuntime : IDisposable
                 300.0);
     }
 
+    public void SetSplineEasyRoadOptions(
+        bool enabled,
+        double curveOffset)
+    {
+        ThrowIfDisposed();
+
+        _splineEasyRoadEnabled =
+            enabled;
+
+        _splineEasyRoadCurveOffset =
+            Math.Clamp(
+                double.IsFinite(
+                    curveOffset)
+                    ? curveOffset
+                    : 0.0,
+                -500.0,
+                500.0);
+
+        if (
+            !_splinePlacementActive ||
+            Scene is null ||
+            _placementSplineAsset is null ||
+            _splinePlacementStage !=
+                NativeSplinePlacementStage.AwaitingEnd ||
+            _splineStartWorld is not { } start ||
+            _splinePointerWorld is not { } end)
+        {
+            return;
+        }
+
+        NativeSplinePlacementShape? shape;
+
+        var valid =
+            _splineEasyRoadEnabled
+                ? NativeSplinePlacementMath
+                    .TryCreateArcFromOffset(
+                        start,
+                        end,
+                        _splineEasyRoadCurveOffset,
+                        out shape)
+                : NativeSplinePlacementMath
+                    .TryCreateStraight(
+                        start,
+                        end,
+                        out shape);
+
+        _splinePlacementShape =
+            valid
+                ? shape
+                : null;
+
+        if (
+            _splinePlacementShape is
+                not { } previewShape)
+        {
+            MapRenderer.SetPlacementPreview(
+                null,
+                Matrix4x4.Identity);
+
+            RenderInitialFrame();
+            return;
+        }
+
+        var geometry =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    _placementSplineAsset,
+                    previewShape);
+
+        MapRenderer.SetPlacementPreview(
+            geometry.IsRenderable
+                ? geometry
+                : null,
+            Matrix4x4.Identity);
+
+        RenderInitialFrame();
+    }
+
     public bool SeedSplinePlacementStart(
         Vector3 start,
         int previousSplineId =
@@ -586,10 +666,23 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeSplinePlacementStage.AwaitingEnd &&
             _splineStartWorld is { } start)
         {
-            NativeSplinePlacementMath.TryCreateStraight(
-                start,
-                point,
-                out shape);
+            if (_splineEasyRoadEnabled)
+            {
+                NativeSplinePlacementMath
+                    .TryCreateArcFromOffset(
+                        start,
+                        point,
+                        _splineEasyRoadCurveOffset,
+                        out shape);
+            }
+            else
+            {
+                NativeSplinePlacementMath
+                    .TryCreateStraight(
+                        start,
+                        point,
+                        out shape);
+            }
         }
         else if (
             _splinePlacementStage ==
@@ -709,9 +802,11 @@ public sealed class NativeViewportRuntime : IDisposable
                               ? "Previous será conectado automaticamente."
                               : "Auto-link desativado."
                       )
-                    : _splinePlacementCurved
-                        ? "Início definido. Clique no ponto final; depois ajuste a curva."
-                        : "Início definido. Clique no ponto final para criar a spline.";
+                    : _splineEasyRoadEnabled
+                        ? "Início definido. Clique no ponto final para criar a via pelo modo Estrada fácil."
+                        : _splinePlacementCurved
+                            ? "Início definido. Clique no ponto final; depois ajuste a curva."
+                            : "Início definido. Clique no ponto final para criar a spline.";
 
             MapRenderer.SetPlacementPreview(
                 null,
@@ -753,15 +848,51 @@ public sealed class NativeViewportRuntime : IDisposable
                     : -1;
 
             if (
-                _splineStartWorld is not { } start ||
-                !NativeSplinePlacementMath.TryCreateStraight(
-                    start,
-                    point,
-                    out var straight) ||
-                straight is null)
+                _splineStartWorld is not { } start)
+            {
+                status = "Ponto inicial inválido.";
+                return false;
+            }
+
+            NativeSplinePlacementShape?
+                endShape;
+
+            var endShapeValid =
+                _splineEasyRoadEnabled
+                    ? NativeSplinePlacementMath
+                        .TryCreateArcFromOffset(
+                            start,
+                            point,
+                            _splineEasyRoadCurveOffset,
+                            out endShape)
+                    : NativeSplinePlacementMath
+                        .TryCreateStraight(
+                            start,
+                            point,
+                            out endShape);
+
+            if (
+                !endShapeValid ||
+                endShape is null)
             {
                 status = "Ponto final inválido.";
                 return false;
+            }
+
+            if (_splineEasyRoadEnabled)
+            {
+                request =
+                    CreateSplinePlacementRequest(
+                        endShape);
+
+                CancelSplinePlacement();
+
+                status =
+                    endShape.IsCurved
+                        ? $"Via curva pronta · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m."
+                        : "Via reta pronta pelo modo Estrada fácil.";
+
+                return request is not null;
             }
 
             if (_splinePlacementCurved)
@@ -769,7 +900,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 _splineEndWorld = point;
                 _splinePlacementStage =
                     NativeSplinePlacementStage.AwaitingCurve;
-                _splinePlacementShape = straight;
+                _splinePlacementShape = endShape;
 
                 status =
                     endSnap is not null
@@ -781,7 +912,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
             request =
                 CreateSplinePlacementRequest(
-                    straight);
+                    endShape);
 
             CancelSplinePlacement();
             status =
