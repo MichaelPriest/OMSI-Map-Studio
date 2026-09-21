@@ -17651,6 +17651,201 @@ public sealed partial class MainWindow : Window
             "Traçado procedural limpo.";
     }
 
+    private async void OnCreateBridgeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetActiveMapTool(
+            ToolBridgesButton);
+
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Criador de pontes"))
+        {
+            return;
+        }
+
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
+        {
+            StatusText.Text =
+                "Criador de pontes: ative o Workspace Map Studio ou selecione uma instalação do OMSI.";
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header = "Nome",
+                Text = "Ponte 2 faixas",
+                PlaceholderText = "Ex.: Ponte central"
+            };
+
+        var lanesBox =
+            new NumberBox
+            {
+                Header = "Número de faixas",
+                Minimum = 1,
+                Maximum = 8,
+                Value = 2,
+                SmallChange = 1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Inline
+            };
+
+        var laneWidthBox =
+            new NumberBox
+            {
+                Header = "Largura de cada faixa (m)",
+                Minimum = 2.5,
+                Maximum = 6,
+                Value = 3.5,
+                SmallChange = 0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Inline
+            };
+
+        var sidewalkBox =
+            new NumberBox
+            {
+                Header = "Calçada lateral (m)",
+                Minimum = 0,
+                Maximum = 5,
+                Value = 1.5,
+                SmallChange = 0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Inline
+            };
+
+        var deckBox =
+            new NumberBox
+            {
+                Header = "Espessura do tabuleiro (m)",
+                Minimum = 0.2,
+                Maximum = 2,
+                Value = 0.55,
+                SmallChange = 0.05,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Inline
+            };
+
+        var oneWayCheckBox =
+            new CheckBox
+            {
+                Content = "Mão única"
+            };
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "A ponte é gerada como uma SLI própria do Map Studio, com tabuleiro, pista, calçadas, marcações e paths de tráfego. Depois ela pode ser desenhada reta ou curva pela Estrada fácil e elevada pelo controle de elevação.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity = 0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing = 10
+            };
+
+        panel.Children.Add(nameBox);
+        panel.Children.Add(lanesBox);
+        panel.Children.Add(laneWidthBox);
+        panel.Children.Add(sidewalkBox);
+        panel.Children.Add(deckBox);
+        panel.Children.Add(oneWayCheckBox);
+        panel.Children.Add(note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Criador de pontes",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Gerar ponte",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Criador de pontes: gerando spline e texturas...";
+
+            var result =
+                await new MapStudioBridgeSplineGenerator()
+                    .GenerateAsync(
+                        root,
+                        new MapStudioBridgeSpec(
+                            nameBox.Text,
+                            (int)Math.Round(
+                                lanesBox.Value),
+                            laneWidthBox.Value,
+                            sidewalkBox.Value,
+                            deckBox.Value,
+                            oneWayCheckBox
+                                .IsChecked ==
+                            true));
+
+            StatusText.Text =
+                "Ponte gerada; atualizando biblioteca...";
+
+            await _session
+                .RefreshAssetLibraryAsync();
+
+            await LoadAssetLibraryAsync();
+
+            SplineElevationOffsetBox.Value = 5;
+            SplineHeightCheckBox.IsChecked = false;
+            SplineEasyRoadCheckBox.IsEnabled = true;
+            SplineContinuousCheckBox.IsEnabled = true;
+            SplineEndpointSnapCheckBox.IsEnabled = true;
+            SplineEndpointSnapDistanceBox.IsEnabled = true;
+            SplineAutoConnectCheckBox.IsEnabled = true;
+            SplineEasyRoadCheckBox.IsChecked = true;
+            SplineCurveOffsetBox.Value = 0;
+            SplineCurveCheckBox.IsChecked = false;
+
+            SetSelectionModeFromShortcut(
+                2);
+
+            await ActivateLibraryGroupToolAsync(
+                2,
+                OmsiAssetLibraryGroup.Bridges,
+                $"Ponte criada: {result.RelativeSplinePath}. Estrada fácil ativa com +5 m; ajuste elevação e curva conforme necessário." +
+                (
+                    result.BackupDirectory is null
+                        ? string.Empty
+                        : $" Backup da versão anterior: {result.BackupDirectory}"
+                ));
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Criador de pontes falhou: {exception.Message}";
+        }
+    }
+
     private async void OnCreateTunnelClick(
         object sender,
         RoutedEventArgs e)

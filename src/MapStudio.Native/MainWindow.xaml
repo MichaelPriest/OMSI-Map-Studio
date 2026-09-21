@@ -344,6 +344,9 @@
                         Text="Instalar/atualizar Road Kit..."
                         Click="OnInstallRoadKitClick" />
                     <MenuFlyoutItem
+                        Text="Criador de pontes..."
+                        Click="OnCreateBridgeClick" />
+                    <MenuFlyoutItem
                         Text="Criador de túneis..."
                         Click="OnCreateTunnelClick" />
                     <MenuFlyoutSubItem

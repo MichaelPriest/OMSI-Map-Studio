@@ -60,6 +60,7 @@ public sealed record MapStudioBridgeSplineResult(
     string PackDirectory,
     string SplinePath,
     string RelativeSplinePath,
+    string? BackupDirectory,
     IReadOnlyList<string> TexturePaths);
 
 public sealed class MapStudioBridgeSplineGenerator
@@ -118,6 +119,67 @@ public sealed class MapStudioBridgeSplineGenerator
                 packDirectory,
                 fileName);
 
+        var manifestPath =
+            Path.Combine(
+                packDirectory,
+                Path.GetFileNameWithoutExtension(
+                    fileName) +
+                ".mapstudio.txt");
+
+        string? backupDirectory =
+            null;
+
+        if (
+            File.Exists(
+                splinePath) ||
+            File.Exists(
+                manifestPath))
+        {
+            backupDirectory =
+                Path.Combine(
+                    root,
+                    ".mapstudio",
+                    "backups",
+                    "bridges",
+                    DateTime.UtcNow
+                        .ToString(
+                            "yyyyMMdd-HHmmss",
+                            CultureInfo
+                                .InvariantCulture) +
+                    "-" +
+                    Guid.NewGuid()
+                        .ToString("N")[..8]);
+
+            Directory.CreateDirectory(
+                backupDirectory);
+
+            if (File.Exists(
+                    splinePath))
+            {
+                File.Copy(
+                    splinePath,
+                    Path.Combine(
+                        backupDirectory,
+                        Path.GetFileName(
+                            splinePath)),
+                    overwrite:
+                        true);
+            }
+
+            if (File.Exists(
+                    manifestPath))
+            {
+                File.Copy(
+                    manifestPath,
+                    Path.Combine(
+                        backupDirectory,
+                        Path.GetFileName(
+                            manifestPath)),
+                    overwrite:
+                        true);
+            }
+        }
+
         var temporaryPath =
             splinePath +
             ".tmp-" +
@@ -141,11 +203,7 @@ public sealed class MapStudioBridgeSplineGenerator
                     true);
 
             await File.WriteAllTextAsync(
-                    Path.Combine(
-                        packDirectory,
-                        Path.GetFileNameWithoutExtension(
-                            fileName) +
-                        ".mapstudio.txt"),
+                    manifestPath,
                     BuildManifest(
                         normalized),
                     Encoding.UTF8,
@@ -169,6 +227,7 @@ public sealed class MapStudioBridgeSplineGenerator
             PackFolderName +
             @"\" +
             fileName,
+            backupDirectory,
             textures);
     }
 

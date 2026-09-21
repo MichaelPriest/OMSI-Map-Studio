@@ -96,6 +96,79 @@ public sealed class MapStudioBridgeSplineGeneratorTests
         }
     }
 
+    [Fact]
+    public async Task GenerateBacksUpExistingBridgeBeforeOverwrite()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Bridge-Backup-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var generator =
+                new MapStudioBridgeSplineGenerator();
+
+            var first =
+                await generator
+                    .GenerateAsync(
+                        root,
+                        new MapStudioBridgeSpec(
+                            "Same Bridge",
+                            2,
+                            3.5,
+                            1.5,
+                            0.55));
+
+            await File.AppendAllTextAsync(
+                first.SplinePath,
+                "\r\n; previous version\r\n");
+
+            var second =
+                await generator
+                    .GenerateAsync(
+                        root,
+                        new MapStudioBridgeSpec(
+                            "Same Bridge",
+                            4,
+                            3.25,
+                            1.2,
+                            0.70));
+
+            Assert.NotNull(
+                second.BackupDirectory);
+
+            var backupSpline =
+                Path.Combine(
+                    second.BackupDirectory!,
+                    Path.GetFileName(
+                        second.SplinePath));
+
+            Assert.True(
+                File.Exists(
+                    backupSpline));
+
+            Assert.Contains(
+                "; previous version",
+                await File.ReadAllTextAsync(
+                    backupSpline),
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
     private static int CountOccurrences(
         string value,
         string term)
