@@ -1,5 +1,7 @@
 using System.Numerics;
 using System.Globalization;
+using MapStudio.Core.AI;
+using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
@@ -12874,6 +12876,340 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnBuildingStudioClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
+        {
+            StatusText.Text =
+                "Building Studio: selecione primeiro a instalação do OMSI.";
+
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do asset",
+                Text =
+                    "Nova construção"
+            };
+
+        var widthBox =
+            new NumberBox
+            {
+                Header =
+                    "Largura (m)",
+                Minimum =
+                    1,
+                Maximum =
+                    500,
+                Value =
+                    10,
+                SmallChange =
+                    0.5,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var depthBox =
+            new NumberBox
+            {
+                Header =
+                    "Profundidade (m)",
+                Minimum =
+                    1,
+                Maximum =
+                    500,
+                Value =
+                    10,
+                SmallChange =
+                    0.5,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var heightBox =
+            new NumberBox
+            {
+                Header =
+                    "Altura das paredes (m)",
+                Minimum =
+                    1,
+                Maximum =
+                    500,
+                Value =
+                    6,
+                SmallChange =
+                    0.5,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var floorsBox =
+            new NumberBox
+            {
+                Header =
+                    "Andares",
+                Minimum =
+                    1,
+                Maximum =
+                    300,
+                Value =
+                    2,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var roofCombo =
+            new ComboBox
+            {
+                Header =
+                    "Telhado",
+                HorizontalAlignment =
+                    HorizontalAlignment
+                        .Stretch,
+                SelectedIndex =
+                    0
+            };
+
+        roofCombo.Items.Add(
+            "Plano");
+
+        roofCombo.Items.Add(
+            "Duas águas");
+
+        var roofHeightBox =
+            new NumberBox
+            {
+                Header =
+                    "Altura do telhado (m)",
+                Minimum =
+                    0.25,
+                Maximum =
+                    100,
+                Value =
+                    2,
+                SmallChange =
+                    0.25,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact,
+                IsEnabled =
+                    false
+            };
+
+        roofCombo.SelectionChanged +=
+            (_, _) =>
+            {
+                roofHeightBox.IsEnabled =
+                    roofCombo.SelectedIndex ==
+                    1;
+            };
+
+        var facadePathBox =
+            new TextBox
+            {
+                Header =
+                    "Imagem de fachada / referência",
+                IsReadOnly =
+                    true,
+                PlaceholderText =
+                    "Opcional"
+            };
+
+        var facadeButton =
+            new Button
+            {
+                Content =
+                    "Escolher imagem..."
+            };
+
+        facadeButton.Click +=
+            async (_, _) =>
+            {
+                var image =
+                    await PickImageFileAsync();
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        image))
+                {
+                    facadePathBox.Text =
+                        image;
+                }
+            };
+
+        var aiInfo =
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "IA opcional",
+                Message =
+                    "A análise por IA usará provedores conectáveis e preencherá estes mesmos campos. A geração O3D/SCO continua local e editável."
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    520
+            };
+
+        panel.Children.Add(
+            aiInfo);
+
+        panel.Children.Add(
+            nameBox);
+
+        var sizeGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    8
+            };
+
+        sizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        sizeGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            widthBox,
+            0);
+
+        Grid.SetColumn(
+            depthBox,
+            1);
+
+        sizeGrid.Children.Add(
+            widthBox);
+
+        sizeGrid.Children.Add(
+            depthBox);
+
+        panel.Children.Add(
+            sizeGrid);
+
+        panel.Children.Add(
+            heightBox);
+
+        panel.Children.Add(
+            floorsBox);
+
+        panel.Children.Add(
+            roofCombo);
+
+        panel.Children.Add(
+            roofHeightBox);
+
+        panel.Children.Add(
+            facadePathBox);
+
+        panel.Children.Add(
+            facadeButton);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Building Studio",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Gerar asset OMSI",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Building Studio: gerando SCO/O3D...";
+
+            var roofType =
+                roofCombo.SelectedIndex ==
+                    1
+                    ? MapStudioBuildingRoofType
+                        .Gable
+                    : MapStudioBuildingRoofType
+                        .Flat;
+
+            var spec =
+                new MapStudioBuildingSpec(
+                    nameBox.Text,
+                    widthBox.Value,
+                    depthBox.Value,
+                    heightBox.Value,
+                    (int)Math.Round(
+                        floorsBox.Value),
+                    roofType,
+                    roofHeightBox.Value,
+                    string.IsNullOrWhiteSpace(
+                        facadePathBox.Text)
+                        ? null
+                        : facadePathBox.Text);
+
+            var result =
+                await new MapStudioBuildingAssetGenerator()
+                    .GenerateAsync(
+                        root,
+                        spec);
+
+            StatusText.Text =
+                "Building Studio: asset gerado; atualizando biblioteca...";
+
+            await _session
+                .RefreshAssetLibraryAsync();
+
+            await LoadAssetLibraryAsync();
+
+            StatusText.Text =
+                result.BackupDirectory is null
+                    ? $"Building Studio: {Path.GetFileName(result.SceneryObjectPath)} criado."
+                    : $"Building Studio: asset atualizado. Backup: {result.BackupDirectory}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Building Studio falhou: {exception.Message}";
+        }
+    }
+
     private async void OnRestoreBackupClick(
         object sender,
         RoutedEventArgs e)
@@ -12998,6 +13334,43 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Falha ao restaurar backup: {exception.Message}";
         }
+    }
+
+    private async Task<string?>
+        PickImageFileAsync()
+    {
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .PicturesLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".png");
+        picker.FileTypeFilter.Add(
+            ".jpg");
+        picker.FileTypeFilter.Add(
+            ".jpeg");
+        picker.FileTypeFilter.Add(
+            ".bmp");
+        picker.FileTypeFilter.Add(
+            ".tga");
+        picker.FileTypeFilter.Add(
+            ".webp");
+        picker.FileTypeFilter.Add(
+            ".dds");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        return file?.Path;
     }
 
     private async Task<string?>

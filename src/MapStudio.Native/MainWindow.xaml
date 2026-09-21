@@ -223,6 +223,10 @@
                     <MenuFlyoutItem
                         Text="Construction Sets..."
                         Click="OnConstructionSetsClick" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
+                        Text="Building Studio..."
+                        Click="OnBuildingStudioClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Ajuda" />
             </MenuBar>
