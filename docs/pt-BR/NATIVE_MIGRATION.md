@@ -765,7 +765,9 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
 - preview visual nativo de texturas BMP/PNG/JPG/TGA e DDS compatíveis, incluindo máscaras DDS A8 sem depender de codec WIC;
 - preview 3D nativo também para modelos avulsos `.o3d` e `.x`, sem depender de um SCO wrapper;
-- o Workspace standalone semeia conteúdo original próprio: Road Kit, túnel, Bridge Kit, cruzamento, prédio, árvore e arbusto, sem exigir arquivos do OMSI 2;
+- o Workspace standalone semeia conteúdo original próprio: Road Kit, túnel, Bridge Kit, cruzamento, prédio, árvore, arbusto, poste com `light_enh`, banco, placa de ponto de ônibus e semáforo editável, sem exigir arquivos do OMSI 2;
+- o Criador de Pontes nativo gera SLI/texturas próprias, cria backup ao sobrescrever uma ponte existente e abre o resultado diretamente no fluxo de Estrada fácil;
+- o semáforo inicial inclui programa de 60 s com fases OMSI reais e path ligado por `use_traffic_light`, portanto aparece no editor nativo de programas depois de colocado no mapa;
 - dock inferior de criação adaptável/rolável, indicação visual da ferramenta ativa e acesso direto ao criador de túneis;
 - posicionamento de objetos com opção de encaixar/alinha à via mais próxima, usando a tangente real de splines retas ou curvas e alcance configurável;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
@@ -778,6 +780,12 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - edição preservativa dos campos numéricos validados desses attachments, com backup e round-trip;
 - camada comercial/entitlements em modo Development Preview, ainda sem enforcement;
 - fronteira formal para adapters de simuladores; OMSI 2 permanece o único adapter operacional neste momento.
+
+### Limitação preservada: mapas `[worldcoordinates]`
+
+Inserção/cópia de objetos e splines continua bloqueada em mapas que usam `[worldcoordinates]`. Essa restrição já existia no editor React anterior e não representa regressão da migração nativa.
+
+O renderer atual ainda constrói o espaço de edição a partir de tile × 300 m + coordenada local. Liberar escrita em `[worldcoordinates]` sem uma conversão formal e testada poderia persistir coordenadas incorretas. A restrição só deve ser removida quando leitura, visualização, picking, placement e round-trip de gravação estiverem cobertos por testes específicos.
 
 ### Importação OSM
 
