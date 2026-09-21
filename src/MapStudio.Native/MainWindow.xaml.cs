@@ -16743,7 +16743,7 @@ public sealed partial class MainWindow : Window
         try
         {
             StatusText.Text =
-                "Lendo árvores, arbustos, tree rows e hedges OSM...";
+                "Lendo árvores, arbustos, tree rows, hedges e áreas de vegetação OSM...";
 
             var xml =
                 await File
@@ -16760,24 +16760,32 @@ public sealed partial class MainWindow : Window
                     .Parse(
                         xml);
 
+            var areaImported =
+                new MapStudioOsmVegetationAreaImporter()
+                    .Parse(
+                        xml);
+
             if (
                 imported.Points.Count >
                     20_000 ||
                 linearImported.Lines.Count >
-                    5_000)
+                    5_000 ||
+                areaImported.Areas.Count >
+                    2_500)
             {
                 StatusText.Text =
-                    $"OSM de vegetação recusado por segurança: {imported.Points.Count} ponto(s), {linearImported.Lines.Count} linha(s).";
+                    $"OSM de vegetação recusado por segurança: {imported.Points.Count} ponto(s), {linearImported.Lines.Count} linha(s), {areaImported.Areas.Count} área(s).";
 
                 return;
             }
 
             if (
                 imported.Points.Count == 0 &&
-                linearImported.Lines.Count == 0)
+                linearImported.Lines.Count == 0 &&
+                areaImported.Areas.Count == 0)
             {
                 StatusText.Text =
-                    "Nenhuma vegetação suportada foi encontrada. São aceitos natural=tree, natural=shrub, natural=tree_row e barrier=hedge.";
+                    "Nenhuma vegetação suportada foi encontrada. São aceitos natural=tree, natural=shrub, natural=tree_row, barrier=hedge, natural=wood, landuse=forest e natural=scrub.";
 
                 return;
             }
@@ -16812,10 +16820,30 @@ public sealed partial class MainWindow : Window
                         maxPoints:
                             10_000);
 
+            const double forestSpacingMeters =
+                14.0;
+
+            const double scrubSpacingMeters =
+                7.0;
+
+            var areaPoints =
+                new MapStudioVegetationAreaScatterer()
+                    .ProjectAndScatter(
+                        areaImported.Areas,
+                        anchorGeo,
+                        forestSpacingMeters:
+                            forestSpacingMeters,
+                        scrubSpacingMeters:
+                            scrubSpacingMeters,
+                        maxPoints:
+                            10_000);
+
             var projected =
                 projectedPoints
                     .Concat(
                         linearPoints)
+                    .Concat(
+                        areaPoints)
                     .ToArray();
 
             var mapTileKeys =
@@ -17072,13 +17100,29 @@ public sealed partial class MainWindow : Window
                             MapStudioOsmVegetationLineKind
                                 .Hedge);
 
+            var forestAreaCount =
+                areaImported.Areas
+                    .Count(
+                        area =>
+                            area.Kind ==
+                            MapStudioOsmVegetationAreaKind
+                                .Forest);
+
+            var scrubAreaCount =
+                areaImported.Areas
+                    .Count(
+                        area =>
+                            area.Kind ==
+                            MapStudioOsmVegetationAreaKind
+                                .Scrub);
+
             var details =
                 new TextBlock
                 {
                     Text =
-                        $"OSM: {imported.Points.Count} node(s) individual(is) + {linearImported.Lines.Count} linha(s).\n" +
-                        $"Após amostragem: {treeCount} ponto(s) de árvore · {shrubCount} ponto(s) de arbusto/hedge · tree rows: {treeRowCount} · hedges: {hedgeCount}.\n" +
-                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes ignorados: {imported.IgnoredNodeCount} · ways ignorados: {linearImported.IgnoredWayCount} · refs ausentes: {linearImported.MissingNodeReferenceCount}.",
+                        $"OSM: {imported.Points.Count} node(s) individual(is) + {linearImported.Lines.Count} linha(s) + {areaImported.Areas.Count} área(s).\n" +
+                        $"Após amostragem/dispersão: {treeCount} ponto(s) de árvore · {shrubCount} ponto(s) de arbusto/hedge · tree rows: {treeRowCount} · hedges: {hedgeCount} · floresta/bosque: {forestAreaCount} · scrub: {scrubAreaCount}.\n" +
+                        $"Dentro do catálogo do mapa: {candidates.Length} · nodes ignorados: {imported.IgnoredNodeCount} · ways lineares ignorados: {linearImported.IgnoredWayCount} · refs lineares ausentes: {linearImported.MissingNodeReferenceCount} · áreas ignoradas: {areaImported.IgnoredWayCount} · refs de área ausentes: {areaImported.MissingNodeReferenceCount}.",
                     TextWrapping =
                         TextWrapping.Wrap
                 };
@@ -17123,7 +17167,7 @@ public sealed partial class MainWindow : Window
                     Title =
                         "Assets reais + terreno real",
                     Message =
-                        $"Tree rows e hedges são amostrados a cada {linearSpacingMeters:F0} m nesta etapa. O preview mostra os pontos de colocação; na confirmação o Map Studio usa os SCOs escolhidos da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava tudo em uma única transação com backup."
+                        $"Tree rows e hedges são amostrados a cada {linearSpacingMeters:F0} m. Áreas de floresta/bosque usam dispersão determinística de aproximadamente {forestSpacingMeters:F0} m e scrub de {scrubSpacingMeters:F0} m, sempre dentro do polígono OSM. O preview mostra os pontos de colocação; na confirmação o Map Studio usa os SCOs escolhidos da instalação do OMSI, encaixa cada item na altura real do terreno carregado e grava tudo em uma única transação com backup."
                 });
 
             var dialog =
