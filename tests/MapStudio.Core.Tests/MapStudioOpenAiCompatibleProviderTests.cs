@@ -89,6 +89,68 @@ public sealed class MapStudioOpenAiCompatibleProviderTests
                                 [])));
     }
 
+    [Fact]
+    public async Task RoadAnalysisParsesNormalizedCenterlines()
+    {
+        var handler =
+            new FakeHandler(
+                "{\"choices\":[{\"message\":{\"content\":\"{\\\"roads\\\":[{\\\"kind\\\":\\\"primary\\\",\\\"laneCount\\\":4,\\\"oneWay\\\":false,\\\"widthMeters\\\":14,\\\"points\\\":[{\\\"x\\\":-0.1,\\\"y\\\":0.25},{\\\"x\\\":1.2,\\\"y\\\":0.75}]}],\\\"notes\\\":\\\"main avenue\\\",\\\"confidence\\\":0.82}\"}}]}");
+
+        using var client =
+            new HttpClient(
+                handler);
+
+        var provider =
+            new MapStudioOpenAiCompatibleProvider(
+                client,
+                "https://example.test/v1",
+                "vision");
+
+        var result =
+            await provider
+                .AnalyzeRoadReferenceAsync(
+                    new MapStudioRoadReferenceRequest(
+                        [
+                            new MapStudioAiImageReference(
+                                new byte[] { 9, 8, 7 },
+                                "image/png",
+                                "map.png")
+                        ]));
+
+        var road =
+            Assert.Single(
+                result.Roads);
+
+        Assert.Equal(
+            "primary",
+            road.Kind);
+
+        Assert.Equal(
+            4,
+            road.LaneCount);
+
+        Assert.False(
+            road.OneWay);
+
+        Assert.Equal(
+            0,
+            road.Points[0].X);
+
+        Assert.Equal(
+            1,
+            road.Points[1].X);
+
+        Assert.Equal(
+            MapStudioRoadReferenceCoordinateSpace
+                .NormalizedImage,
+            result.CoordinateSpace);
+
+        Assert.Equal(
+            0.82,
+            result.Confidence,
+            2);
+    }
+
     private sealed class FakeHandler(
         string response)
         : HttpMessageHandler
