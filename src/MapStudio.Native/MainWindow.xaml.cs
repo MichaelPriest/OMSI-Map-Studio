@@ -6,6 +6,7 @@ using System.Text;
 using MapStudio.Core.AI;
 using MapStudio.Core.Commercial;
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Junctions;
@@ -12367,6 +12368,207 @@ public sealed partial class MainWindow : Window
 
         _activeGoogleMapReference =
             null;
+    }
+
+    private async void OnImportLocalElevationGridClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot ||
+            snapshot.ActiveTile is not
+                { } active)
+        {
+            StatusText.Text =
+                "Elevação local: abra um mapa e mantenha um tile ativo.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de importar elevação.";
+
+            return;
+        }
+
+        var picker =
+            new FileOpenPicker
+            {
+                SuggestedStartLocation =
+                    PickerLocationId
+                        .DocumentsLibrary
+            };
+
+        picker.FileTypeFilter.Add(
+            ".csv");
+        picker.FileTypeFilter.Add(
+            ".txt");
+        picker.FileTypeFilter.Add(
+            ".asc");
+
+        InitializeWithWindow.Initialize(
+            picker,
+            _windowHandle);
+
+        var file =
+            await picker
+                .PickSingleFileAsync();
+
+        if (file is null)
+        {
+            return;
+        }
+
+        MapStudioElevationGrid grid;
+
+        try
+        {
+            StatusText.Text =
+                "Lendo grade local de elevação...";
+
+            grid =
+                await new MapStudioElevationGridReader()
+                    .ReadAsync(
+                        file.Path);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao ler elevação local: {exception.Message}";
+
+            return;
+        }
+
+        var offsetBox =
+            new NumberBox
+            {
+                Header =
+                    "Offset vertical (m)",
+                Minimum =
+                    -10000,
+                Maximum =
+                    10000,
+                Value =
+                    0,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode
+                        .Compact
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    450
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Arquivo: {file.Name}\n" +
+                    $"Formato: {grid.SourceFormat}\n" +
+                    $"Grade: {grid.Rows} × {grid.Columns} ({grid.SampleCount:N0} amostras)\n" +
+                    $"Elevação: {grid.MinimumElevation:F2} m → {grid.MaximumElevation:F2} m\n" +
+                    $"Destino: tile {active.X},{active.Y}",
+                TextWrapping =
+                    TextWrapping
+                        .Wrap
+            });
+
+        panel.Children.Add(
+            new InfoBar
+            {
+                IsOpen =
+                    true,
+                IsClosable =
+                    false,
+                Severity =
+                    InfoBarSeverity
+                        .Informational,
+                Title =
+                    "Interpolação para o terreno OMSI",
+                Message =
+                    "A grade será redimensionada/interpolada para a malha .terrain do tile ativo usando o mesmo pipeline seguro da elevação Google. CSV/TXT representam diretamente a área de 300 × 300 m do tile; arquivos ESRI ASCII têm os valores de altura lidos, mas CRS/georreferência externa ainda não são aplicados nesta versão."
+            });
+
+        panel.Children.Add(
+            offsetBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Importar grade local de elevação",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Aplicar ao tile",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult
+                    .Primary)
+        {
+            return;
+        }
+
+        if (
+            !double.IsFinite(
+                offsetBox.Value))
+        {
+            StatusText.Text =
+                "Offset de elevação inválido.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Aplicando grade {grid.Rows}×{grid.Columns} ao tile {active.X},{active.Y}...";
+
+            var result =
+                await _session
+                    .ApplyLocalTerrainElevationGridAsync(
+                        active.X,
+                        active.Y,
+                        grid,
+                        offsetBox.Value);
+
+            await ApplyMapSnapshotAsync(
+                result.Snapshot,
+                focusActiveTile:
+                    false);
+
+            StatusText.Text =
+                result.ChangedSamples >
+                    0
+                    ? $"Elevação local aplicada: {result.ChangedSamples:N0} amostra(s) alteradas. Backup: {result.BackupDirectory}"
+                    : "A grade local não alterou nenhuma amostra do terreno.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao aplicar elevação local: {exception.Message}";
+        }
     }
 
     private async void OnGoogleElevationClick(
