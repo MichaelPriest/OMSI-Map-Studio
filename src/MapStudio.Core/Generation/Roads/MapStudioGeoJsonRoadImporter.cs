@@ -47,55 +47,6 @@ public sealed class MapStudioGeoJsonRoadImporter
 
         if (
             root.ValueKind ==
-                JsonValueKind.FeatureCollection &&
-            root.TryGetProperty(
-                "features",
-                out var features) &&
-            features.ValueKind ==
-                JsonValueKind.Array)
-        {
-            var index =
-                0;
-
-            foreach (
-                var feature in
-                    features.EnumerateArray())
-            {
-                if (
-                    !TryReadFeature(
-                        feature,
-                        index++,
-                        traces))
-                {
-                    ignored++;
-                }
-            }
-
-            return new MapStudioGeoJsonRoadImportResult(
-                traces,
-                ignored);
-        }
-
-        if (
-            root.ValueKind ==
-                JsonValueKind.Feature)
-        {
-            if (
-                !TryReadFeature(
-                    root,
-                    0,
-                    traces))
-            {
-                ignored++;
-            }
-
-            return new MapStudioGeoJsonRoadImportResult(
-                traces,
-                ignored);
-        }
-
-        if (
-            root.ValueKind ==
                 JsonValueKind.Object &&
             root.TryGetProperty(
                 "type",
@@ -103,8 +54,64 @@ public sealed class MapStudioGeoJsonRoadImporter
             type.ValueKind ==
                 JsonValueKind.String)
         {
-            var geometryType =
+            var rootType =
                 type.GetString();
+
+            if (
+                string.Equals(
+                    rootType,
+                    "FeatureCollection",
+                    StringComparison.OrdinalIgnoreCase) &&
+                root.TryGetProperty(
+                    "features",
+                    out var features) &&
+                features.ValueKind ==
+                    JsonValueKind.Array)
+            {
+                var index =
+                    0;
+
+                foreach (
+                    var feature in
+                        features.EnumerateArray())
+                {
+                    if (
+                        !TryReadFeature(
+                            feature,
+                            index++,
+                            traces))
+                    {
+                        ignored++;
+                    }
+                }
+
+                return new MapStudioGeoJsonRoadImportResult(
+                    traces,
+                    ignored);
+            }
+
+            if (
+                string.Equals(
+                    rootType,
+                    "Feature",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (
+                    !TryReadFeature(
+                        root,
+                        0,
+                        traces))
+                {
+                    ignored++;
+                }
+
+                return new MapStudioGeoJsonRoadImportResult(
+                    traces,
+                    ignored);
+            }
+
+            var geometryType =
+                rootType;
 
             if (
                 string.Equals(
