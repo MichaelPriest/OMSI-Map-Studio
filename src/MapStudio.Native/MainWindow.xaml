@@ -226,6 +226,9 @@
                         Click="OnPerformanceMapModeClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
+                        Text="Criar tile..."
+                        Click="OnCreateMapTileClick" />
+                    <MenuFlyoutItem
                         Text="Criar mapa real por coordenadas..."
                         Click="OnCreateCoordinateMapClick" />
                     <MenuFlyoutItem
