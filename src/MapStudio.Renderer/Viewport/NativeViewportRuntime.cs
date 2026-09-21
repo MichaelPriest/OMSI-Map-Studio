@@ -2167,6 +2167,67 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public IReadOnlyList<
+        NativeJunctionSuggestion>
+        GetJunctionSuggestions()
+    {
+        if (Scene is null)
+        {
+            return Array.Empty<
+                NativeJunctionSuggestion>();
+        }
+
+        return new NativeJunctionSuggestionBuilder()
+            .Build(
+                Scene);
+    }
+
+    public bool FocusWorldPoint(
+        Vector3 point,
+        float span = 45.0f)
+    {
+        ThrowIfDisposed();
+
+        if (
+            Scene is null ||
+            !float.IsFinite(point.X) ||
+            !float.IsFinite(point.Y) ||
+            !float.IsFinite(point.Z))
+        {
+            return false;
+        }
+
+        var half =
+            Math.Clamp(
+                span,
+                8.0f,
+                300.0f) *
+            0.5f;
+
+        Navigation.FitToBounds(
+            point -
+                new Vector3(
+                    half,
+                    MathF.Max(
+                        4.0f,
+                        half *
+                        0.2f),
+                    half),
+            point +
+                new Vector3(
+                    half,
+                    MathF.Max(
+                        4.0f,
+                        half *
+                        0.2f),
+                    half));
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public bool SetSceneVisibility(
         NativeSceneVisibility visibility)
     {

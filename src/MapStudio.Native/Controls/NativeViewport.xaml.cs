@@ -513,6 +513,35 @@ public sealed partial class NativeViewport : UserControl
         return fitted;
     }
 
+    public IReadOnlyList<
+        NativeJunctionSuggestion>
+        GetJunctionSuggestions() =>
+        _runtime
+            ?.GetJunctionSuggestions() ??
+        Array.Empty<
+            NativeJunctionSuggestion>();
+
+    public bool FocusWorldPoint(
+        Vector3 point,
+        float span = 45.0f)
+    {
+        var focused =
+            _runtime
+                ?.FocusWorldPoint(
+                    point,
+                    span) ??
+            false;
+
+        if (focused)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Ponto focado · {point.X:F1}, {point.Z:F1}.");
+        }
+
+        return focused;
+    }
+
     public bool FocusSelection()
     {
         var focused =
