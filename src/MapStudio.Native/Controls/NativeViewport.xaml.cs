@@ -1,5 +1,6 @@
 using System.Numerics;
 using System.Runtime.InteropServices;
+using MapStudio.Core.Generation.Roads;
 using MapStudio.Native.Interop;
 using MapStudio.Native.Services;
 using MapStudio.Core.Omsi.Indexing;
@@ -70,6 +71,21 @@ public sealed partial class NativeViewport : UserControl
     public event Action<
         NativeTerrainEditPoint>?
         TerrainPointSelected;
+
+    public NativeProceduralRoadPreviewGeometry
+        PreviewProceduralRoadGraph(
+            MapStudioRoadGraph graph) =>
+        _runtime
+            ?.PreviewProceduralRoadGraph(
+                graph) ??
+        new NativeProceduralRoadPreviewGeometry(
+            [],
+            0,
+            0);
+
+    public void ClearProceduralRoadPreview() =>
+        _runtime
+            ?.ClearProceduralRoadPreview();
 
     public int PreviewTimetableTrack(
         IReadOnlyList<

@@ -1,4 +1,5 @@
 using System.Numerics;
+using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Timetables;
@@ -225,6 +226,49 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public NativeSelectionFilter SelectionFilter =>
         _selectionFilter;
+
+    public NativeProceduralRoadPreviewGeometry
+        PreviewProceduralRoadGraph(
+            MapStudioRoadGraph graph)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            graph);
+
+        if (Scene is null)
+        {
+            return new NativeProceduralRoadPreviewGeometry(
+                [],
+                0,
+                0);
+        }
+
+        var geometry =
+            new NativeProceduralRoadPreviewGeometryBuilder()
+                .Build(
+                    Scene,
+                    graph);
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                geometry.Vertices);
+
+        RenderInitialFrame();
+
+        return geometry;
+    }
+
+    public void ClearProceduralRoadPreview()
+    {
+        ThrowIfDisposed();
+
+        MapRenderer
+            .SetTimetableRoutePreview(
+                null);
+
+        RenderInitialFrame();
+    }
 
     public int PreviewTimetableTrack(
         IReadOnlyList<

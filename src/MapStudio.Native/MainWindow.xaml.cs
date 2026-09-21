@@ -13274,6 +13274,11 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var preview =
+            Viewport
+                .PreviewProceduralRoadGraph(
+                    graph);
+
         var details =
             graph.Junctions.Count ==
                 0
@@ -13304,7 +13309,8 @@ public sealed partial class MainWindow : Window
             {
                 Text =
                     $"{_proceduralRoadTraces.Count} linha(s) · {graph.Nodes.Count} nós · " +
-                    $"{graph.Segments.Count} segmentos · {graph.Junctions.Count} cruzamento(s)",
+                    $"{graph.Segments.Count} segmentos · {graph.Junctions.Count} cruzamento(s)\n" +
+                    $"Preview D3D11: {preview.RenderedSegmentCount} segmento(s) · {preview.RenderedJunctionCount} marcador(es).",
                 FontSize =
                     16,
                 FontWeight =
@@ -13374,6 +13380,9 @@ public sealed partial class MainWindow : Window
 
         Viewport
             .CancelTerrainPointPick();
+
+        Viewport
+            .ClearProceduralRoadPreview();
 
         FinishProceduralRoadTraceMenuItem
             .IsEnabled =
