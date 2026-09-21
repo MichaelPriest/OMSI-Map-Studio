@@ -68,6 +68,22 @@
                         Text="Vista superior"
                         Click="OnTopViewClick" />
                     <MenuFlyoutSeparator />
+                    <ToggleMenuFlyoutItem
+                        x:Name="ShowTerrainMenuItem"
+                        Text="Terreno"
+                        IsChecked="True"
+                        Click="OnSceneVisibilityClick" />
+                    <ToggleMenuFlyoutItem
+                        x:Name="ShowObjectsMenuItem"
+                        Text="Objetos"
+                        IsChecked="True"
+                        Click="OnSceneVisibilityClick" />
+                    <ToggleMenuFlyoutItem
+                        x:Name="ShowSplinesMenuItem"
+                        Text="Splines"
+                        IsChecked="True"
+                        Click="OnSceneVisibilityClick" />
+                    <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Alternar Explorer"
                         Click="OnToggleExplorerClick" />

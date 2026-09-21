@@ -140,6 +140,11 @@ public sealed class D3D11NativeMapRenderer :
             Array.Empty<
                 NativeMapVertex>();
 
+    private NativeMapVertex[]
+        _objectPickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
     private IReadOnlyDictionary<
         PickingId,
         NativeTriangleRange>
@@ -156,6 +161,11 @@ public sealed class D3D11NativeMapRenderer :
 
     private NativeMapVertex[]
         _splineVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+    private NativeMapVertex[]
+        _splinePickingVertices =
             Array.Empty<
                 NativeMapVertex>();
 
@@ -202,6 +212,10 @@ public sealed class D3D11NativeMapRenderer :
 
     private readonly D3D11PickingSurface
         _pickingSurface;
+
+    private NativeSceneVisibility
+        _visibility =
+            NativeSceneVisibility.All;
 
     private bool _disposed;
 
@@ -509,6 +523,47 @@ public sealed class D3D11NativeMapRenderer :
     public bool NightPreviewEnabled =>
         _nightPreviewEnabled;
 
+    public NativeSceneVisibility SceneVisibility =>
+        _visibility;
+
+    public bool SetSceneVisibility(
+        NativeSceneVisibility visibility)
+    {
+        ThrowIfDisposed();
+
+        if (_visibility == visibility)
+        {
+            return false;
+        }
+
+        _visibility =
+            visibility;
+
+        if (
+            !_visibility.IsPickingKindVisible(
+                _hoverPickingId.Kind))
+        {
+            _hoverPickingId =
+                PickingId.None;
+
+            RebuildHover();
+        }
+
+        if (
+            !_visibility.IsPickingKindVisible(
+                _selectionPickingId.Kind))
+        {
+            _selectionPickingId =
+                PickingId.None;
+
+            RebuildSelection();
+        }
+
+        RebuildScenePickingVertices();
+
+        return true;
+    }
+
     public void SetNightPreview(
         bool enabled)
     {
@@ -672,12 +727,20 @@ public sealed class D3D11NativeMapRenderer :
             Array.Empty<
                 NativeMapVertex>();
 
+        _objectPickingVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
         _objectRanges =
             new Dictionary<
                 PickingId,
                 NativeTriangleRange>();
 
         _splineVertices =
+            Array.Empty<
+                NativeMapVertex>();
+
+        _splinePickingVertices =
             Array.Empty<
                 NativeMapVertex>();
 
@@ -764,6 +827,10 @@ public sealed class D3D11NativeMapRenderer :
                 objectGeometry
                     .Vertices;
 
+            _objectPickingVertices =
+                objectGeometry
+                    .PickingVertices;
+
             _objectRanges =
                 objectGeometry
                     .Ranges;
@@ -795,6 +862,10 @@ public sealed class D3D11NativeMapRenderer :
                 splineGeometry
                     .Vertices;
 
+            _splinePickingVertices =
+                splineGeometry
+                    .PickingVertices;
+
             _splineRanges =
                 splineGeometry
                     .Ranges;
@@ -812,21 +883,7 @@ public sealed class D3D11NativeMapRenderer :
                     _objectMaterialBatches)
                 .ToArray());
 
-        _scenePickingVertices =
-            _proxyVertices
-                .Concat(
-                    objectGeometry
-                        ?.PickingVertices ??
-                    Array.Empty<
-                        NativeMapVertex>())
-                .Concat(
-                    splineGeometry
-                        ?.PickingVertices ??
-                    Array.Empty<
-                        NativeMapVertex>())
-                .ToArray();
-
-        RebuildPickingBuffer();
+        RebuildScenePickingVertices();
     }
 
     public void Render(
@@ -856,14 +913,23 @@ public sealed class D3D11NativeMapRenderer :
                     .PSSetShader(
                         _pixelShader);
 
-                DrawTerrainGeometry(
-                    context);
+                if (_visibility.TerrainVisible)
+                {
+                    DrawTerrainGeometry(
+                        context);
+                }
 
-                DrawSplineGeometry(
-                    context);
+                if (_visibility.SplinesVisible)
+                {
+                    DrawSplineGeometry(
+                        context);
+                }
 
-                DrawObjectGeometry(
-                    context);
+                if (_visibility.ObjectsVisible)
+                {
+                    DrawObjectGeometry(
+                        context);
+                }
 
                 if (
                     _vertexBuffer is
@@ -1718,6 +1784,56 @@ public sealed class D3D11NativeMapRenderer :
         RebuildSelection();
     }
 
+    private void RebuildScenePickingVertices()
+    {
+        var vertices =
+            new List<NativeMapVertex>(
+                _proxyVertices.Length +
+                _objectPickingVertices.Length +
+                _splinePickingVertices.Length);
+
+        foreach (
+            var pair in _proxyRanges
+                .OrderBy(
+                    item =>
+                        item.Value.StartVertex))
+        {
+            if (
+                !_visibility.IsPickingKindVisible(
+                    pair.Key.Kind) ||
+                !IsValidRange(
+                    _proxyVertices,
+                    pair.Value))
+            {
+                continue;
+            }
+
+            vertices.AddRange(
+                _proxyVertices
+                    .AsSpan(
+                        pair.Value.StartVertex,
+                        pair.Value.VertexCount)
+                    .ToArray());
+        }
+
+        if (_visibility.ObjectsVisible)
+        {
+            vertices.AddRange(
+                _objectPickingVertices);
+        }
+
+        if (_visibility.SplinesVisible)
+        {
+            vertices.AddRange(
+                _splinePickingVertices);
+        }
+
+        _scenePickingVertices =
+            vertices.ToArray();
+
+        RebuildPickingBuffer();
+    }
+
     private void RebuildPickingBuffer()
     {
         _pickingTriangleBuffer
@@ -1752,6 +1868,14 @@ public sealed class D3D11NativeMapRenderer :
         PickingId pickingId)
     {
         if (
+            !pickingId.IsNone &&
+            !_visibility.IsPickingKindVisible(
+                pickingId.Kind))
+        {
+            pickingId =
+                PickingId.None;
+        }
+        if (
             pickingId ==
             _selectionPickingId)
         {
@@ -1777,6 +1901,14 @@ public sealed class D3D11NativeMapRenderer :
     public bool SetSelection(
         PickingId pickingId)
     {
+        if (
+            !pickingId.IsNone &&
+            !_visibility.IsPickingKindVisible(
+                pickingId.Kind))
+        {
+            pickingId =
+                PickingId.None;
+        }
         if (
             pickingId ==
             _selectionPickingId)
@@ -1928,6 +2060,20 @@ public sealed class D3D11NativeMapRenderer :
         out NativeMapVertex[] sourceVertices,
         out NativeTriangleRange range)
     {
+        if (
+            !_visibility.IsPickingKindVisible(
+                pickingId.Kind))
+        {
+            sourceVertices =
+                Array.Empty<
+                    NativeMapVertex>();
+
+            range =
+                default;
+
+            return false;
+        }
+
         if (
             _objectRanges.TryGetValue(
                 pickingId,

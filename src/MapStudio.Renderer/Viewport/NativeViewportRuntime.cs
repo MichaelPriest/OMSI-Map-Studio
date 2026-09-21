@@ -87,6 +87,10 @@ public sealed class NativeViewportRuntime : IDisposable
     private string? _omsiRoot;
     private bool _nightPreviewEnabled;
 
+    private NativeSceneVisibility
+        _sceneVisibility =
+            NativeSceneVisibility.All;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -161,6 +165,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
+
+    public NativeSceneVisibility SceneVisibility =>
+        _sceneVisibility;
 
     public bool SeedSplinePlacementStart(
         Vector3 start,
@@ -1063,7 +1070,10 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         if (
             Scene is null ||
-            _selectedPickingId.IsNone)
+            _selectedPickingId.IsNone ||
+            !_sceneVisibility
+                .IsPickingKindVisible(
+                    _selectedPickingId.Kind))
         {
             return null;
         }
@@ -1364,7 +1374,10 @@ public sealed class NativeViewportRuntime : IDisposable
                 (
                     PickingKind.Object or
                     PickingKind.Spline
-                ))
+                ) ||
+            !_sceneVisibility
+                .IsPickingKindVisible(
+                    pickingId.Kind))
         {
             return null;
         }
@@ -1783,6 +1796,51 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public bool SetSceneVisibility(
+        NativeSceneVisibility visibility)
+    {
+        ThrowIfDisposed();
+
+        if (_sceneVisibility == visibility)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+
+        _sceneVisibility =
+            visibility;
+
+        var selectionHidden =
+            !_selectedPickingId.IsNone &&
+            !_sceneVisibility
+                .IsPickingKindVisible(
+                    _selectedPickingId.Kind);
+
+        if (selectionHidden)
+        {
+            _selectedPickingId =
+                PickingId.None;
+
+            MapRenderer.SetSelection(
+                PickingId.None);
+
+            MapRenderer
+                .SetSelectionPreviewTransform(
+                    Matrix4x4.Identity);
+
+            MapRenderer.SetGizmoGeometry(
+                null);
+        }
+
+        MapRenderer.SetSceneVisibility(
+            visibility);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
     public bool TryPick(
         uint pixelX,
         uint pixelY,
@@ -1810,9 +1868,14 @@ public sealed class NativeViewportRuntime : IDisposable
                 pixelY);
 
         var selectable =
-            pickingId.Kind is
-                PickingKind.Object or
-                PickingKind.Spline;
+            (
+                pickingId.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline
+            ) &&
+            _sceneVisibility
+                .IsPickingKindVisible(
+                    pickingId.Kind);
 
         var resolved =
             selectable &&
@@ -1858,7 +1921,10 @@ public sealed class NativeViewportRuntime : IDisposable
             _splinePlacementActive ||
             Surface is null ||
             Scene is null ||
-            _selectedPickingId.IsNone)
+            _selectedPickingId.IsNone ||
+            !_sceneVisibility
+                .IsPickingKindVisible(
+                    _selectedPickingId.Kind))
         {
             return false;
         }
@@ -2195,9 +2261,14 @@ public sealed class NativeViewportRuntime : IDisposable
                 pixelY);
 
         var selectable =
-            pickingId.Kind is
-                PickingKind.Object or
-                PickingKind.Spline;
+            (
+                pickingId.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline
+            ) &&
+            _sceneVisibility
+                .IsPickingKindVisible(
+                    pickingId.Kind);
 
         var resolved =
             selectable &&

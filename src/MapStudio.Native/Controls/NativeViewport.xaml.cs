@@ -480,6 +480,32 @@ public sealed partial class NativeViewport : UserControl
             "Câmera: perspectiva.");
     }
 
+    public bool SetSceneVisibility(
+        NativeSceneVisibility visibility)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime.SetSceneVisibility(
+                visibility);
+
+        if (changed)
+        {
+            PublishSelectionInfo();
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                $"Visibilidade · terreno {(visibility.TerrainVisible ? "on" : "off")} · " +
+                $"objetos {(visibility.ObjectsVisible ? "on" : "off")} · " +
+                $"splines {(visibility.SplinesVisible ? "on" : "off")}");
+        }
+
+        return changed;
+    }
+
     public void SetGizmoMode(
         NativeGizmoMode mode)
     {

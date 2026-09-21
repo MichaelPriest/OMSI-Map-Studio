@@ -470,3 +470,20 @@ A alternância de câmera existente na versão React foi migrada para o menu **V
 
 Os dois modos reutilizam a mesma câmera, o mesmo ID Buffer e os mesmos raycasts; não existe viewport paralelo ou estado React oculto.
 
+### Checkpoint N3.26 — visibilidade real de Terreno, Objetos e Splines
+
+Os controles de visibilidade da versão React foram migrados para o menu **Visualizar** do host WinUI.
+
+**Terreno**, **Objetos** e **Splines** podem ser mostrados ou ocultados de forma independente sem descarregar o mapa nem reconstruir o snapshot do Core.
+
+A visibilidade também passa a controlar o ID Buffer. Quando Objetos ou Splines são ocultados:
+- a geometria correspondente deixa de ser desenhada;
+- proxies e triângulos reais daquela categoria deixam de entrar no picking buffer;
+- hover e seleção da categoria são removidos;
+- gizmos deixam de permanecer ativos sobre uma entidade invisível;
+- seleção via Explorer é recusada enquanto a categoria estiver oculta.
+
+Isso evita o problema de uma entidade invisível continuar bloqueando o clique em algo visível atrás dela.
+
+O terreno não participa do ID Buffer de objetos/splines; ocultá-lo altera apenas a renderização. As ferramentas de edição de terreno continuam usando o raycast matemático contra a malha real carregada.
+

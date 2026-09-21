@@ -2174,6 +2174,30 @@ public sealed partial class MainWindow : Window
             "Câmera em vista superior.";
     }
 
+    private void OnSceneVisibilityClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var visibility =
+            new NativeSceneVisibility(
+                TerrainVisible:
+                    ShowTerrainMenuItem.IsChecked,
+                ObjectsVisible:
+                    ShowObjectsMenuItem.IsChecked,
+                SplinesVisible:
+                    ShowSplinesMenuItem.IsChecked);
+
+        if (
+            Viewport.SetSceneVisibility(
+                visibility))
+        {
+            StatusText.Text =
+                $"Visibilidade: terreno {(visibility.TerrainVisible ? "on" : "off")} · " +
+                $"objetos {(visibility.ObjectsVisible ? "on" : "off")} · " +
+                $"splines {(visibility.SplinesVisible ? "on" : "off")}.";
+        }
+    }
+
     private void OnToggleExplorerClick(
         object sender,
         RoutedEventArgs e) =>

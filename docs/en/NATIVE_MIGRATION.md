@@ -470,3 +470,20 @@ The camera mode switch already present in the React editor has been migrated int
 
 Both modes reuse the same camera, ID Buffer, and raycasts; there is no parallel viewport or hidden React state.
 
+### Checkpoint N3.26 — real Terrain, Objects, and Splines visibility
+
+The React editor's scene visibility controls have been migrated into the WinUI host's **View** menu.
+
+**Terrain**, **Objects**, and **Splines** can now be shown or hidden independently without unloading the map or rebuilding the Core snapshot.
+
+Visibility also controls the ID Buffer. When Objects or Splines are hidden:
+- their geometry is no longer drawn;
+- proxies and real triangles from that category are removed from the picking buffer;
+- hover and selection for that category are cleared;
+- gizmos do not remain active on an invisible entity;
+- Explorer selection is rejected while the category is hidden.
+
+This prevents an invisible entity from still blocking clicks on visible geometry behind it.
+
+Terrain does not participate in the object/spline ID Buffer; hiding it affects rendering only. Terrain editing tools continue to use mathematical raycasts against the real loaded terrain mesh.
+
