@@ -1,0 +1,212 @@
+using MapStudio.Core.Omsi.Timetables;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Windows.Graphics;
+using WinRT.Interop;
+
+namespace MapStudio.Native;
+
+public sealed partial class TimetableWindow
+    : Window
+{
+    private sealed record TimetableScheduleRow(
+        string TourName,
+        string AiGroupName,
+        string TripName,
+        string DepartureText,
+        string DestinationText,
+        string RouteText);
+
+    private OmsiTimetableCatalog
+        _catalog;
+
+    public TimetableWindow(
+        OmsiTimetableCatalog catalog)
+    {
+        _catalog =
+            catalog ??
+            throw new ArgumentNullException(
+                nameof(
+                    catalog));
+
+        InitializeComponent();
+
+        ResizeWindow();
+
+        SetCatalog(
+            catalog);
+    }
+
+    public void SetCatalog(
+        OmsiTimetableCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(
+            catalog);
+
+        var previous =
+            LineComboBox
+                .SelectedItem is
+                OmsiTimetableLine selected
+                ? selected.Name
+                : null;
+
+        _catalog =
+            catalog;
+
+        LineComboBox.ItemsSource =
+            _catalog.Lines;
+
+        if (_catalog.Lines.Count == 0)
+        {
+            LineComboBox.SelectedIndex =
+                -1;
+
+            ScheduleListView.ItemsSource =
+                Array.Empty<
+                    TimetableScheduleRow>();
+
+            LineSummaryText.Text =
+                "Nenhuma Line (.ttl) carregada.";
+
+            return;
+        }
+
+        var index =
+            string.IsNullOrWhiteSpace(
+                previous)
+                ? 0
+                : _catalog.Lines
+                    .Select(
+                        (line, lineIndex) =>
+                            (
+                                line,
+                                lineIndex
+                            ))
+                    .FirstOrDefault(
+                        pair =>
+                            string.Equals(
+                                pair.line.Name,
+                                previous,
+                                StringComparison.OrdinalIgnoreCase))
+                    .lineIndex;
+
+        if (
+            index < 0 ||
+            index >=
+                _catalog.Lines.Count)
+        {
+            index =
+                0;
+        }
+
+        LineComboBox.SelectedIndex =
+            index;
+
+        RefreshSchedule();
+    }
+
+    private void OnLineSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e) =>
+        RefreshSchedule();
+
+    private void RefreshSchedule()
+    {
+        if (
+            LineComboBox.SelectedItem is not
+                OmsiTimetableLine line)
+        {
+            ScheduleListView.ItemsSource =
+                Array.Empty<
+                    TimetableScheduleRow>();
+
+            LineSummaryText.Text =
+                "Selecione uma Line.";
+
+            return;
+        }
+
+        var rows =
+            new List<
+                TimetableScheduleRow>();
+
+        foreach (
+            var tour in
+                line.Tours)
+        {
+            foreach (
+                var scheduledTrip in
+                    tour.Trips)
+            {
+                var trip =
+                    _catalog.Trips
+                        .FirstOrDefault(
+                            candidate =>
+                                string.Equals(
+                                    candidate.Name,
+                                    scheduledTrip.TripName,
+                                    StringComparison.OrdinalIgnoreCase));
+
+                var destination =
+                    trip is null
+                        ? "Trip não encontrado"
+                        : string.IsNullOrWhiteSpace(
+                            trip.EffectiveLine)
+                            ? trip.EffectiveDestination
+                            : $"{trip.EffectiveLine} · {trip.EffectiveDestination}";
+
+                var route =
+                    trip is null
+                        ? "—"
+                        : trip.UsesStationLinks
+                            ? "StationLinks"
+                            : string.IsNullOrWhiteSpace(
+                                trip.EffectiveTrackName)
+                                ? "Track não informado"
+                                : $"Track {trip.EffectiveTrackName}";
+
+                rows.Add(
+                    new TimetableScheduleRow(
+                        tour.Name,
+                        tour.AiGroupName,
+                        scheduledTrip.TripName,
+                        OmsiTimetableDepartureTime
+                            .FormatEditorValue(
+                                scheduledTrip.DepartureTime),
+                        destination,
+                        route));
+            }
+        }
+
+        ScheduleListView.ItemsSource =
+            rows;
+
+        LineSummaryText.Text =
+            $"{line.Name} · {line.Tours.Count} tour(s) · {rows.Count} saída(s) · " +
+            $"priority {line.Priority} · jogador {(line.UserAllowed ? "permitido" : "bloqueado")}";
+    }
+
+    private void ResizeWindow()
+    {
+        var handle =
+            WindowNative
+                .GetWindowHandle(
+                    this);
+
+        var windowId =
+            Microsoft.UI.Win32Interop
+                .GetWindowIdFromWindow(
+                    handle);
+
+        var appWindow =
+            AppWindow
+                .GetFromWindowId(
+                    windowId);
+
+        appWindow.Resize(
+            new SizeInt32(
+                1120,
+                720));
+    }
+}
