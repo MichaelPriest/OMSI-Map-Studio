@@ -298,7 +298,10 @@ internal sealed class TimetableLineEditor : ContentControl
 
         void AddRow(
             OmsiTimetableLineTableRow?
-                source)
+                source,
+            int?
+                insertIndex =
+                    null)
         {
             var last =
                 rowEditors
@@ -451,6 +454,11 @@ internal sealed class TimetableLineEditor : ContentControl
                     "↓",
                     "Mover esta saída para baixo");
 
+            var duplicateButton =
+                CreateRowActionButton(
+                    "Dup",
+                    "Duplicar esta saída");
+
             var removeButton =
                 CreateRowActionButton(
                     "✕",
@@ -470,6 +478,9 @@ internal sealed class TimetableLineEditor : ContentControl
 
             actionsPanel.Children.Add(
                 moveDownButton);
+
+            actionsPanel.Children.Add(
+                duplicateButton);
 
             actionsPanel.Children.Add(
                 removeButton);
@@ -512,10 +523,21 @@ internal sealed class TimetableLineEditor : ContentControl
                     tripLine2Box,
                     departureBox);
 
-            rowEditors.Add(
+            var targetIndex =
+                insertIndex is
+                    int requested
+                    ? Math.Clamp(
+                        requested,
+                        0,
+                        rowEditors.Count)
+                    : rowEditors.Count;
+
+            rowEditors.Insert(
+                targetIndex,
                 editor);
 
-            rowsPanel.Children.Add(
+            rowsPanel.Children.Insert(
+                targetIndex + 1,
                 row);
 
             moveUpButton.Click +=
@@ -552,6 +574,51 @@ internal sealed class TimetableLineEditor : ContentControl
                             target,
                             1);
                     }
+                };
+
+            duplicateButton.Click +=
+                (
+                    sender,
+                    _
+                ) =>
+                {
+                    if (
+                        sender is not
+                            Button button ||
+                        button.Tag is not
+                            Grid target)
+                    {
+                        return;
+                    }
+
+                    var currentIndex =
+                        rowEditors.FindIndex(
+                            candidate =>
+                                ReferenceEquals(
+                                    candidate.Row,
+                                    target));
+
+                    if (currentIndex < 0)
+                    {
+                        return;
+                    }
+
+                    var sourceEditor =
+                        rowEditors[
+                            currentIndex];
+
+                    AddRow(
+                        new OmsiTimetableLineTableRow(
+                            sourceEditor.Tour.Text,
+                            sourceEditor.AiGroup.Text,
+                            sourceEditor.Line3.Text,
+                            sourceEditor.Comment.Text,
+                            sourceEditor.Trip.SelectedItem
+                                ?.ToString() ??
+                                string.Empty,
+                            sourceEditor.TripLine2.Text,
+                            sourceEditor.Departure.Text),
+                        currentIndex + 1);
                 };
 
             removeButton.Click +=
@@ -623,6 +690,155 @@ internal sealed class TimetableLineEditor : ContentControl
                 AddRow(
                     null);
 
+        var sortRowsButton =
+            new Button
+            {
+                Content =
+                    "Ordenar por horário",
+                HorizontalAlignment =
+                    HorizontalAlignment.Left
+            };
+
+        var tableStatusText =
+            new TextBlock
+            {
+                FontSize =
+                    11,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        sortRowsButton.Click +=
+            (
+                _,
+                _
+            ) =>
+            {
+                var tourOrder =
+                    new Dictionary<
+                        string,
+                        int>(
+                            StringComparer
+                                .OrdinalIgnoreCase);
+
+                var sortable =
+                    new List<(
+                        RowEditor Editor,
+                        int TourOrder,
+                        double Departure,
+                        int OriginalIndex
+                    )>();
+
+                for (
+                    var index = 0;
+                    index <
+                        rowEditors.Count;
+                    index++)
+                {
+                    var editor =
+                        rowEditors[
+                            index];
+
+                    var tourName =
+                        editor.Tour.Text
+                            .Trim();
+
+                    if (
+                        !tourOrder.TryGetValue(
+                            tourName,
+                            out var order))
+                    {
+                        order =
+                            tourOrder.Count;
+
+                        tourOrder[
+                            tourName] =
+                            order;
+                    }
+
+                    if (
+                        !OmsiTimetableDepartureTime
+                            .TryParseEditorValue(
+                                editor.Departure.Text,
+                                out var departure))
+                    {
+                        tableStatusText.Text =
+                            $"Não foi possível ordenar: horário inválido na linha {index + 1}.";
+
+                        return;
+                    }
+
+                    sortable.Add(
+                        (
+                            editor,
+                            order,
+                            departure,
+                            index
+                        ));
+                }
+
+                var sorted =
+                    sortable
+                        .OrderBy(
+                            value =>
+                                value.TourOrder)
+                        .ThenBy(
+                            value =>
+                                value.Departure)
+                        .ThenBy(
+                            value =>
+                                value.OriginalIndex)
+                        .Select(
+                            value =>
+                                value.Editor)
+                        .ToArray();
+
+                foreach (
+                    var editor in
+                        rowEditors)
+                {
+                    rowsPanel.Children.Remove(
+                        editor.Row);
+                }
+
+                rowEditors.Clear();
+                rowEditors.AddRange(
+                    sorted);
+
+                for (
+                    var index = 0;
+                    index <
+                        rowEditors.Count;
+                    index++)
+                {
+                    rowsPanel.Children.Insert(
+                        index + 1,
+                        rowEditors[
+                            index]
+                            .Row);
+                }
+
+                tableStatusText.Text =
+                    $"{rowEditors.Count} saída(s) ordenada(s) por horário dentro de cada Tour.";
+            };
+
+        var tableActions =
+            new StackPanel
+            {
+                Orientation =
+                    Orientation.Horizontal,
+                Spacing =
+                    6
+            };
+
+        tableActions.Children.Add(
+            addRowButton);
+
+        tableActions.Children.Add(
+            sortRowsButton);
+
         var tableScroll =
             new ScrollViewer
             {
@@ -656,7 +872,7 @@ internal sealed class TimetableLineEditor : ContentControl
             new TextBlock
             {
                 Text =
-                    "Tabela de horários · cada linha representa um [addtrip]. Tours com o mesmo nome são agrupados no arquivo .ttl. Use ↑/↓ para definir a ordem gravada das saídas.",
+                    "Tabela de horários · cada linha representa um [addtrip]. Tours com o mesmo nome são agrupados no arquivo .ttl. Use ↑/↓ para definir a ordem gravada, Dup para copiar uma saída ou Ordenar por horário para organizar cada Tour.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
@@ -664,7 +880,10 @@ internal sealed class TimetableLineEditor : ContentControl
             });
 
         panel.Children.Add(
-            addRowButton);
+            tableActions);
+
+        panel.Children.Add(
+            tableStatusText);
 
         panel.Children.Add(
             tableScroll);
