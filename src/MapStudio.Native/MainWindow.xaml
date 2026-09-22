@@ -1065,6 +1065,12 @@
                                                 IsEnabled="False"
                                                 HorizontalAlignment="Stretch"
                                                 Click="OnRepairDependencyClick" />
+
+                                        <Button x:Name="AssetPlacementOptionsToggleButton"
+                                                Content="Opções avançadas ▾"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnAssetPlacementOptionsToggleClick" />
                                     </StackPanel>
                                 </Border>
 
