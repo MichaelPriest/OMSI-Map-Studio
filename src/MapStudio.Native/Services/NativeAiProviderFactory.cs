@@ -35,6 +35,14 @@ public static class NativeAiProviderFactory
                 CreateOpenAiCompatible(
                     normalized,
                     secretOverride),
+            "anthropic" =>
+                CreateAnthropic(
+                    normalized,
+                    secretOverride),
+            "gemini" =>
+                CreateGemini(
+                    normalized,
+                    secretOverride),
             _ =>
                 throw new NotSupportedException(
                     "aiAdapterNotImplemented:" +
@@ -53,22 +61,37 @@ public static class NativeAiProviderFactory
                 profile,
                 secretOverride);
 
-        if (
-            provider is
-                MapStudioOpenAiCompatibleProvider
-                    compatible)
+        switch (provider)
         {
-            await compatible
-                .TestConnectionAsync(
-                    cancellationToken)
-                .ConfigureAwait(false);
+            case MapStudioOpenAiCompatibleProvider
+                compatible:
+                await compatible
+                    .TestConnectionAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return;
 
-            return;
+            case MapStudioAnthropicProvider
+                anthropic:
+                await anthropic
+                    .TestConnectionAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+
+            case MapStudioGeminiProvider
+                gemini:
+                await gemini
+                    .TestConnectionAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+
+            default:
+                throw new NotSupportedException(
+                    "aiAdapterConnectionProbeUnsupported:" +
+                    profile.AdapterId);
         }
-
-        throw new NotSupportedException(
-            "aiAdapterConnectionProbeUnsupported:" +
-            profile.AdapterId);
     }
 
     public static bool IsImplemented(
@@ -85,7 +108,91 @@ public static class NativeAiProviderFactory
         return adapter is
             "openai-compatible" or
             "lmstudio" or
-            "ollama";
+            "ollama" or
+            "anthropic" or
+            "gemini";
+    }
+
+    private static IMapStudioAiProvider
+        CreateAnthropic(
+            MapStudioAiConnectionProfile profile,
+            string? secretOverride)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                profile.Model))
+        {
+            throw new InvalidDataException(
+                "aiAnthropicModelRequired");
+        }
+
+        var secret =
+            ResolveSecret(
+                profile,
+                secretOverride,
+                "aiAnthropicCredentialRequired");
+
+        return new MapStudioAnthropicProvider(
+            HttpClient,
+            profile.Model,
+            secret,
+            profile.Endpoint ??
+                "https://api.anthropic.com/v1/messages",
+            profile.AdapterId,
+            profile.DisplayName);
+    }
+
+    private static IMapStudioAiProvider
+        CreateGemini(
+            MapStudioAiConnectionProfile profile,
+            string? secretOverride)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                profile.Model))
+        {
+            throw new InvalidDataException(
+                "aiGeminiModelRequired");
+        }
+
+        var secret =
+            ResolveSecret(
+                profile,
+                secretOverride,
+                "aiGeminiCredentialRequired");
+
+        return new MapStudioGeminiProvider(
+            HttpClient,
+            profile.Model,
+            secret,
+            profile.Endpoint ??
+                "https://generativelanguage.googleapis.com/v1beta",
+            profile.AdapterId,
+            profile.DisplayName);
+    }
+
+    private static string ResolveSecret(
+        MapStudioAiConnectionProfile profile,
+        string? secretOverride,
+        string errorCode)
+    {
+        var secret =
+            string.IsNullOrWhiteSpace(
+                secretOverride)
+                ? NativeAiCredentialStore
+                    .TryGetSecret(
+                        profile.Id)
+                : secretOverride;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                secret))
+        {
+            throw new InvalidDataException(
+                errorCode);
+        }
+
+        return secret.Trim();
     }
 
     private static IMapStudioAiProvider

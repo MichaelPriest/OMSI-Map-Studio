@@ -43,6 +43,7 @@ public sealed class MapStudioOpenAiCompatibleProvider
             displayName,
             MapStudioAiCapability.ImageUnderstanding |
             MapStudioAiCapability.BuildingReferenceAnalysis |
+            MapStudioAiCapability.RoadReferenceAnalysis |
             MapStudioAiCapability.StructuredOutput,
             isLocal);
     }
@@ -163,26 +164,9 @@ public sealed class MapStudioOpenAiCompatibleProvider
                 cancellationToken)
             .ConfigureAwait(false);
 
-        using var analysisDocument =
-            JsonDocument.Parse(
+        return MapStudioAiStructuredAnalysis
+            .ParseBuilding(
                 analysisJson);
-
-        var root = analysisDocument.RootElement;
-
-        return new MapStudioBuildingReferenceAnalysis(
-            GetDouble(root, "widthMeters"),
-            GetDouble(root, "heightMeters"),
-            GetDouble(root, "depthMeters"),
-            GetInt(root, "floorCount"),
-            ParseRoofType(GetString(root, "roofType")),
-            GetDouble(root, "roofHeightMeters"),
-            BuildOpenings(root),
-            GetString(root, "facadeMaterial"),
-            GetString(root, "roofMaterial"),
-            GetString(root, "architecturalStyle"),
-            GetString(root, "notes"),
-            GetDouble(root, "confidence") ?? 0)
-            .Normalize();
     }
 
     public async Task<MapStudioRoadReferenceAnalysis>
@@ -225,144 +209,9 @@ public sealed class MapStudioOpenAiCompatibleProvider
                 cancellationToken)
             .ConfigureAwait(false);
 
-        using var document =
-            JsonDocument.Parse(json);
-
-        var root =
-            document.RootElement;
-
-        var roads =
-            new List<
-                MapStudioRoadReferencePolyline>();
-
-        if (
-            root.TryGetProperty(
-                "roads",
-                out var roadArray) &&
-            roadArray.ValueKind ==
-                JsonValueKind.Array)
-        {
-            foreach (var road in roadArray.EnumerateArray())
-            {
-                if (
-                    !road.TryGetProperty(
-                        "points",
-                        out var pointsElement) ||
-                    pointsElement.ValueKind !=
-                        JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                var points =
-                    new List<
-                        MapStudioRoadPolylinePoint>();
-
-                foreach (
-                    var point in
-                        pointsElement.EnumerateArray())
-                {
-                    var x =
-                        GetDouble(
-                            point,
-                            "x");
-
-                    var y =
-                        GetDouble(
-                            point,
-                            "y");
-
-                    if (
-                        x is null ||
-                        y is null)
-                    {
-                        continue;
-                    }
-
-                    points.Add(
-                        new MapStudioRoadPolylinePoint(
-                            Math.Clamp(
-                                x.Value,
-                                0,
-                                1),
-                            Math.Clamp(
-                                y.Value,
-                                0,
-                                1)));
-                }
-
-                if (points.Count < 2)
-                {
-                    continue;
-                }
-
-                var laneCount =
-                    GetInt(
-                        road,
-                        "laneCount");
-
-                var width =
-                    GetDouble(
-                        road,
-                        "widthMeters");
-
-                bool? oneWay =
-                    null;
-
-                if (
-                    road.TryGetProperty(
-                        "oneWay",
-                        out var oneWayElement))
-                {
-                    if (
-                        oneWayElement.ValueKind ==
-                            JsonValueKind.True)
-                    {
-                        oneWay =
-                            true;
-                    }
-                    else if (
-                        oneWayElement.ValueKind ==
-                            JsonValueKind.False)
-                    {
-                        oneWay =
-                            false;
-                    }
-                }
-
-                roads.Add(
-                    new MapStudioRoadReferencePolyline(
-                        GetString(
-                            road,
-                            "kind") ??
-                        "road",
-                        points,
-                        laneCount is > 0
-                            ? laneCount
-                            : null,
-                        oneWay,
-                        width is > 0 &&
-                        double.IsFinite(
-                            width.Value)
-                            ? width
-                            : null));
-            }
-        }
-
-        return new MapStudioRoadReferenceAnalysis(
-            roads,
-            GetString(
-                root,
-                "notes"),
-            Math.Clamp(
-                GetDouble(
-                    root,
-                    "confidence") ??
-                0,
-                0,
-                1),
-            MapStudioRoadReferenceCoordinateSpace
-                .NormalizedImage);
+        return MapStudioAiStructuredAnalysis
+            .ParseRoads(
+                json);
     }
 
     private async Task<string>
