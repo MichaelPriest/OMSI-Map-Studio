@@ -14170,133 +14170,41 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var tourOrder =
-            new List<string>();
+        IReadOnlyList<
+            OmsiTimetableTour>
+            tours;
 
-        var tourData =
-            new Dictionary<
-                string,
-                (
-                    string AiGroup,
-                    string Line3,
-                    List<OmsiTimetableAddTrip>
-                        Trips
-                )>(
-                    StringComparer.OrdinalIgnoreCase);
-
-        for (
-            var rowIndex = 0;
-            rowIndex <
-                rowEditors.Count;
-            rowIndex++)
+        try
         {
-            var editor =
-                rowEditors[
-                    rowIndex];
+            var tableRows =
+                rowEditors
+                    .Select(
+                        editor =>
+                            new OmsiTimetableLineTableRow(
+                                editor.Tour.Text,
+                                editor.AiGroup.Text,
+                                editor.Line3.Text,
+                                editor.Comment.Text,
+                                editor.Trip.SelectedItem
+                                    ?.ToString() ??
+                                string.Empty,
+                                editor.TripLine2.Text,
+                                editor.Departure.Text))
+                    .ToArray();
 
-            var tourName =
-                editor.Tour.Text
-                    .Trim();
-
-            var aiGroup =
-                editor.AiGroup.Text
-                    .Trim();
-
-            var line3 =
-                editor.Line3.Text
-                    .Trim();
-
-            var tripName =
-                editor.Trip.SelectedItem
-                    ?.ToString()
-                    ?.Trim() ??
-                string.Empty;
-
-            if (
-                string.IsNullOrWhiteSpace(
-                    tourName) ||
-                string.IsNullOrWhiteSpace(
-                    tripName) ||
-                !OmsiTimetableDepartureTime
-                    .TryParseEditorValue(
-                        editor.Departure.Text,
-                        out var departure))
-            {
-                StatusText.Text =
-                    $"Line não salva: linha {rowIndex + 1} da tabela possui Tour, Trip ou horário inválido.";
-
-                return;
-            }
-
-            if (
-                !tourData.TryGetValue(
-                    tourName,
-                    out var current))
-            {
-                current =
-                    (
-                        aiGroup,
-                        line3,
-                        []
-                    );
-
-                tourData[
-                    tourName] =
-                    current;
-
-                tourOrder.Add(
-                    tourName);
-            }
-            else if (
-                !string.Equals(
-                    current.AiGroup,
-                    aiGroup,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    current.Line3,
-                    line3,
-                    StringComparison.Ordinal))
-            {
-                StatusText.Text =
-                    $"Line não salva: o Tour {tourName} precisa usar o mesmo AI Group e Line3 em todas as saídas.";
-
-                return;
-            }
-
-            current.Trips.Add(
-                new OmsiTimetableAddTrip(
-                    editor.Comment.Text.Trim(),
-                    tripName,
-                    editor.TripLine2.Text.Trim(),
-                    OmsiTimetableDepartureTime
-                        .FormatOmsiSeconds(
-                            departure)));
+            tours =
+                OmsiTimetableLineTableEditor
+                    .BuildTours(
+                        tableRows,
+                        tripNames);
         }
-
-        if (tourOrder.Count == 0)
+        catch (InvalidDataException exception)
         {
             StatusText.Text =
-                "Line não salva: mantenha pelo menos uma saída.";
+                $"Line não salva: tabela inválida · {exception.Message}";
 
             return;
         }
-
-        var tours =
-            tourOrder
-                .Select(
-                    name =>
-                    {
-                        var data =
-                            tourData[name];
-
-                        return new OmsiTimetableTour(
-                            name,
-                            data.AiGroup,
-                            data.Line3,
-                            data.Trips
-                                .ToArray());
-                    })
-                .ToArray();
 
         var updatedLine =
             line with
