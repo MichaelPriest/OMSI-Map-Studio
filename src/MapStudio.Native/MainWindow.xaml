@@ -2016,279 +2016,374 @@
                     CornerRadius="8">
                 <ScrollViewer
                     VerticalScrollBarVisibility="Auto">
-                    <StackPanel Padding="14" Spacing="10">
-                        <StackPanel Spacing="1">
-                            <TextBlock Text="PROPRIEDADES"
-                                       FontSize="15"
-                                       FontWeight="SemiBold"
-                                       CharacterSpacing="45" />
-                            <TextBlock Text="Transformação e dados do item selecionado"
-                                       FontSize="11"
-                                       Foreground="#799AAE" />
-                        </StackPanel>
-                        <TextBlock x:Name="SelectionText"
-                                   Text="Sem seleção"
-                                   FontSize="14"
-                                   Foreground="#9FB5C5" />
-                        <TextBlock x:Name="InspectorTypeText"
-                                   Text="Tipo: —"
-                                   FontWeight="SemiBold" />
-                        <TextBlock x:Name="InspectorAssetText"
-                                   Text="Arquivo: —"
-                                   FontSize="13"
-                                   TextWrapping="Wrap"
-                                   Foreground="#B9CAD6" />
-                        <TextBlock x:Name="InspectorTileText"
-                                   Text="Tile: —"
-                                   FontSize="13"
-                                   Foreground="#B9CAD6" />
-
+                    <StackPanel Padding="12" Spacing="9">
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-
-                            <NumberBox x:Name="InspectorXBox"
-                                       Grid.Column="0"
-                                       Header="X"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.25" />
-                            <NumberBox x:Name="InspectorYBox"
-                                       Grid.Column="1"
-                                       Header="Y"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.25" />
-                            <NumberBox x:Name="InspectorZBox"
-                                       Grid.Column="2"
-                                       Header="Z"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.25" />
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="INSPECTOR"
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           CharacterSpacing="45" />
+                                <TextBlock x:Name="InspectorContextSubtitleText"
+                                           Text="Selecione um item ou escolha uma ferramenta"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="#799AAE" />
+                            </StackPanel>
+                            <Border Grid.Column="1"
+                                    Padding="7,3"
+                                    Background="#12384C"
+                                    CornerRadius="6"
+                                    VerticalAlignment="Top">
+                                <TextBlock x:Name="InspectorContextBadgeText"
+                                           Text="GERAL"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Foreground="#A7E8FF" />
+                            </Border>
                         </Grid>
 
-                        <NumberBox x:Name="InspectorRotationBox"
-                                   Header="Rotação"
-                                   SpinButtonPlacementMode="Compact"
-                                   SmallChange="5" />
+                        <Border Background="#0A1A25"
+                                BorderBrush="#24465A"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10">
+                            <StackPanel Spacing="4">
+                                <TextBlock x:Name="SelectionText"
+                                           Text="Sem seleção"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="#D9EDF7" />
+                                <TextBlock x:Name="InspectorTypeText"
+                                           Text="Tipo: —"
+                                           FontSize="12"
+                                           Foreground="#AFC7D5" />
+                                <TextBlock x:Name="InspectorAssetText"
+                                           Text="Arquivo: —"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Foreground="#8EABB9" />
+                                <TextBlock x:Name="InspectorTileText"
+                                           Text="Tile: —"
+                                           FontSize="11"
+                                           Foreground="#8EABB9" />
+                            </StackPanel>
+                        </Border>
 
-                        <StackPanel x:Name="InspectorObjectFields"
-                                    Spacing="8"
-                                    Visibility="Collapsed">
-                            <NumberBox x:Name="InspectorPitchBox"
-                                       Header="Pitch"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="5" />
-                            <NumberBox x:Name="InspectorBankBox"
-                                       Header="Bank"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="5" />
-                        </StackPanel>
+                        <Border x:Name="InspectorTransformCard"
+                                Visibility="Collapsed"
+                                Background="#0D2330"
+                                BorderBrush="#294A5D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Transformação"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#DDF4FF" />
 
-                        <StackPanel x:Name="InspectorSplineFields"
-                                    Spacing="8"
-                                    Visibility="Collapsed">
-                            <NumberBox x:Name="InspectorLengthBox"
-                                       Header="Comprimento"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.25"
-                                       Minimum="0" />
-                            <NumberBox x:Name="InspectorRadiusBox"
-                                       Header="Raio"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.25" />
-                            <NumberBox x:Name="InspectorGradientStartBox"
-                                       Header="Gradiente inicial (%)"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.1" />
-                            <NumberBox x:Name="InspectorGradientEndBox"
-                                       Header="Gradiente final (%)"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="0.1" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="InspectorXBox"
+                                               Grid.Column="0"
+                                               Header="X"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.25" />
+                                    <NumberBox x:Name="InspectorYBox"
+                                               Grid.Column="1"
+                                               Header="Y"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.25" />
+                                    <NumberBox x:Name="InspectorZBox"
+                                               Grid.Column="2"
+                                               Header="Z"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.25" />
+                                </Grid>
 
-                            <TextBlock Text="Vínculos da cadeia"
-                                       Margin="0,6,0,0"
-                                       FontWeight="SemiBold" />
-
-                            <Grid ColumnSpacing="8">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-
-                                <NumberBox x:Name="InspectorPreviousSplineIdBox"
-                                           Grid.Column="0"
-                                           Header="Anterior ID"
+                                <NumberBox x:Name="InspectorRotationBox"
+                                           Header="Rotação"
                                            SpinButtonPlacementMode="Compact"
-                                           SmallChange="1" />
+                                           SmallChange="5" />
 
-                                <NumberBox x:Name="InspectorNextSplineIdBox"
-                                           Grid.Column="1"
-                                           Header="Próxima ID"
+                                <StackPanel x:Name="InspectorObjectFields"
+                                            Spacing="8"
+                                            Visibility="Collapsed">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <NumberBox x:Name="InspectorPitchBox"
+                                                   Grid.Column="0"
+                                                   Header="Pitch"
+                                                   SpinButtonPlacementMode="Compact"
+                                                   SmallChange="5" />
+                                        <NumberBox x:Name="InspectorBankBox"
+                                                   Grid.Column="1"
+                                                   Header="Bank"
+                                                   SpinButtonPlacementMode="Compact"
+                                                   SmallChange="5" />
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="InspectorSplineFields"
+                                Visibility="Collapsed"
+                                Background="#0D2330"
+                                BorderBrush="#294A5D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Geometria e vínculos da via"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#DDF4FF" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="InspectorLengthBox"
+                                               Grid.Column="0"
+                                               Header="Comprimento"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.25"
+                                               Minimum="0" />
+                                    <NumberBox x:Name="InspectorRadiusBox"
+                                               Grid.Column="1"
+                                               Header="Raio"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.25" />
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="InspectorGradientStartBox"
+                                               Grid.Column="0"
+                                               Header="Inclinação inicial (%)"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.1" />
+                                    <NumberBox x:Name="InspectorGradientEndBox"
+                                               Grid.Column="1"
+                                               Header="Inclinação final (%)"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.1" />
+                                </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="InspectorPreviousSplineIdBox"
+                                               Grid.Column="0"
+                                               Header="Anterior ID"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                    <NumberBox x:Name="InspectorNextSplineIdBox"
+                                               Grid.Column="1"
+                                               Header="Próxima ID"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                </Grid>
+                                <Button x:Name="LevelSplineToTerrainButton"
+                                        Content="Ajustar ao terreno"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnLevelSelectedSplineToTerrainClick" />
+                                <Button x:Name="SaveSplineLinksButton"
+                                        Content="Salvar vínculos"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnSaveSplineLinksClick" />
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="EditSplineAdvancedButton"
+                                            Grid.Column="0"
+                                            Content="Cant / Mirror..."
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnEditSplineAdvancedClick" />
+                                    <Button x:Name="CompleteToSplineButton"
+                                            Grid.Column="1"
+                                            Content="Complete to..."
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnCompleteToSplineClick" />
+                                </Grid>
+                                <Button x:Name="ExportSplineXButton"
+                                        Content="Spline Export (.x)..."
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnExportSplineXClick" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="InspectorSelectionActionsCard"
+                                Visibility="Collapsed"
+                                Background="#0D2330"
+                                BorderBrush="#294A5D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10">
+                            <StackPanel Spacing="7">
+                                <TextBlock Text="Ações"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#DDF4FF" />
+                                <Button x:Name="ApplyInspectorButton"
+                                        Content="Aplicar valores"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnApplyInspectorClick" />
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="DuplicateSelectionButton"
+                                            Grid.Column="0"
+                                            Content="Colocar cópia"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnDuplicateSelectionClick" />
+                                    <Button x:Name="DeleteSelectionButton"
+                                            Grid.Column="1"
+                                            Content="Excluir"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnDeleteSelectionClick" />
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border x:Name="InspectorTerrainFields"
+                                Visibility="Collapsed"
+                                Background="#0D2330"
+                                BorderBrush="#294A5D"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="10">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Terreno"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#DDF4FF" />
+                                <Button x:Name="PickTerrainPointButton"
+                                        Content="Escolher ponto no mapa"
+                                        HorizontalAlignment="Stretch"
+                                        Click="OnPickTerrainPointClick" />
+                                <TextBlock x:Name="TerrainPointText"
+                                           Text="Nenhum ponto selecionado."
+                                           TextWrapping="Wrap"
+                                           FontSize="11"
+                                           Foreground="#9FB5C5" />
+                                <NumberBox x:Name="TerrainTargetHeightBox"
+                                           Header="Altura alvo (m)"
                                            SpinButtonPlacementMode="Compact"
-                                           SmallChange="1" />
-                            </Grid>
+                                           SmallChange="0.25" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="TerrainBrushRadiusBox"
+                                               Grid.Column="0"
+                                               Header="Raio (m)"
+                                               Value="20"
+                                               Minimum="0.25"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                    <NumberBox x:Name="TerrainBrushFeatherBox"
+                                               Grid.Column="1"
+                                               Header="Suavização (0–1)"
+                                               Value="0.25"
+                                               Minimum="0"
+                                               Maximum="1"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="0.05" />
+                                </Grid>
+                                <Button x:Name="ApplyTerrainLevelButton"
+                                        Content="Aplicar nivelamento"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnApplyTerrainLevelClick" />
+                                <NumberBox x:Name="TerrainBrushDeltaBox"
+                                           Header="Força elevar/abaixar (m)"
+                                           Value="1"
+                                           Minimum="0.05"
+                                           Maximum="100"
+                                           SpinButtonPlacementMode="Compact"
+                                           SmallChange="0.25" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="RaiseTerrainButton"
+                                            Grid.Column="0"
+                                            Content="Elevar"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnRaiseTerrainClick" />
+                                    <Button x:Name="LowerTerrainButton"
+                                            Grid.Column="1"
+                                            Content="Abaixar"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnLowerTerrainClick" />
+                                </Grid>
+                                <TextBlock Text="Textura / material"
+                                           Margin="0,5,0,0"
+                                           FontWeight="SemiBold" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="TerrainPaintLayerBox"
+                                               Grid.Column="0"
+                                               Header="Groundtex"
+                                               Value="1"
+                                               Minimum="1"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="1" />
+                                    <NumberBox x:Name="TerrainPaintAlphaBox"
+                                               Grid.Column="1"
+                                               Header="Alpha 0–255"
+                                               Value="255"
+                                               Minimum="0"
+                                               Maximum="255"
+                                               SpinButtonPlacementMode="Compact"
+                                               SmallChange="16" />
+                                </Grid>
+                                <Button x:Name="ApplyTerrainPaintButton"
+                                        Content="Pintar textura no ponto"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnApplyTerrainPaintClick" />
+                            </StackPanel>
+                        </Border>
 
-                            <Button x:Name="LevelSplineToTerrainButton"
-                                    Content="Nivelar spline pela altura do terreno"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnLevelSelectedSplineToTerrainClick" />
-
-                            <Button x:Name="SaveSplineLinksButton"
-                                    Content="Salvar vínculos"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnSaveSplineLinksClick" />
-
-                            <Button x:Name="EditSplineAdvancedButton"
-                                    Content="Cant / Mirror..."
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnEditSplineAdvancedClick" />
-
-                            <Button x:Name="CompleteToSplineButton"
-                                    Content="Complete to..."
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnCompleteToSplineClick" />
-
-                            <Button x:Name="ExportSplineXButton"
-                                    Content="Spline Export (.x)..."
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnExportSplineXClick" />
-                        </StackPanel>
-
-                        <Button x:Name="ApplyInspectorButton"
-                                Content="Aplicar valores"
-                                HorizontalAlignment="Stretch"
-                                IsEnabled="False"
-                                Click="OnApplyInspectorClick" />
-
-                        <Button x:Name="DuplicateSelectionButton"
-                                Content="Colocar cópia"
-                                HorizontalAlignment="Stretch"
-                                IsEnabled="False"
-                                Click="OnDuplicateSelectionClick" />
-
-                        <Button x:Name="DeleteSelectionButton"
-                                Content="Excluir selecionado"
-                                HorizontalAlignment="Stretch"
-                                IsEnabled="False"
-                                Click="OnDeleteSelectionClick" />
-
-                        <Border Height="1"
-                                Margin="0,8,0,4"
-                                Background="#173347" />
-
-                        <TextBlock Text="Terreno"
-                                   FontSize="16"
-                                   FontWeight="SemiBold" />
-
-                        <Button x:Name="PickTerrainPointButton"
-                                Content="Escolher ponto no mapa"
-                                HorizontalAlignment="Stretch"
-                                Click="OnPickTerrainPointClick" />
-
-                        <TextBlock x:Name="TerrainPointText"
-                                   Text="Nenhum ponto selecionado."
+                        <TextBlock Text="Seleção e edição compartilham o estado nativo do viewport e do ID Buffer."
                                    TextWrapping="Wrap"
-                                   FontSize="12"
-                                   Foreground="#9FB5C5" />
-
-                        <NumberBox x:Name="TerrainTargetHeightBox"
-                                   Header="Altura alvo (m)"
-                                   SpinButtonPlacementMode="Compact"
-                                   SmallChange="0.25" />
-
-                        <NumberBox x:Name="TerrainBrushRadiusBox"
-                                   Header="Raio do pincel (m)"
-                                   Value="20"
-                                   Minimum="0.25"
-                                   SpinButtonPlacementMode="Compact"
-                                   SmallChange="1" />
-
-                        <NumberBox x:Name="TerrainBrushFeatherBox"
-                                   Header="Feather (0–1)"
-                                   Value="0.25"
-                                   Minimum="0"
-                                   Maximum="1"
-                                   SpinButtonPlacementMode="Compact"
-                                   SmallChange="0.05" />
-
-                        <Button x:Name="ApplyTerrainLevelButton"
-                                Content="Aplicar nivelamento"
-                                HorizontalAlignment="Stretch"
-                                IsEnabled="False"
-                                Click="OnApplyTerrainLevelClick" />
-
-                        <NumberBox x:Name="TerrainBrushDeltaBox"
-                                   Header="Incremento elevar/abaixar (m)"
-                                   Value="1"
-                                   Minimum="0.05"
-                                   Maximum="100"
-                                   SpinButtonPlacementMode="Compact"
-                                   SmallChange="0.25" />
-
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <Button x:Name="RaiseTerrainButton"
-                                    Grid.Column="0"
-                                    Content="Elevar"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnRaiseTerrainClick" />
-
-                            <Button x:Name="LowerTerrainButton"
-                                    Grid.Column="1"
-                                    Content="Abaixar"
-                                    HorizontalAlignment="Stretch"
-                                    IsEnabled="False"
-                                    Click="OnLowerTerrainClick" />
-                        </Grid>
-
-                        <TextBlock Text="Pintura de textura"
-                                   Margin="0,8,0,0"
-                                   FontWeight="SemiBold" />
-
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <NumberBox x:Name="TerrainPaintLayerBox"
-                                       Grid.Column="0"
-                                       Header="Camada groundtex"
-                                       Value="1"
-                                       Minimum="1"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="1" />
-
-                            <NumberBox x:Name="TerrainPaintAlphaBox"
-                                       Grid.Column="1"
-                                       Header="Alpha 0–255"
-                                       Value="255"
-                                       Minimum="0"
-                                       Maximum="255"
-                                       SpinButtonPlacementMode="Compact"
-                                       SmallChange="16" />
-                        </Grid>
-
-                        <Button x:Name="ApplyTerrainPaintButton"
-                                Content="Pintar textura no ponto"
-                                HorizontalAlignment="Stretch"
-                                IsEnabled="False"
-                                Click="OnApplyTerrainPaintClick" />
-
-                        <TextBlock Text="Seleção e edição usam o mesmo estado nativo do viewport e do ID Buffer."
-                                   TextWrapping="Wrap"
-                                   Foreground="#7FA6BF" />
+                                   FontSize="10"
+                                   Foreground="#66899D" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>

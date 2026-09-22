@@ -604,6 +604,12 @@ public sealed partial class MainWindow : Window
                     InspectorSplineFields.Visibility =
                         Visibility.Collapsed;
 
+                    InspectorTransformCard.Visibility =
+                        Visibility.Collapsed;
+
+                    InspectorSelectionActionsCard.Visibility =
+                        Visibility.Collapsed;
+
                     InspectorPreviousSplineIdBox.Value =
                         double.NaN;
 
@@ -647,6 +653,22 @@ public sealed partial class MainWindow : Window
                     isObject
                         ? Visibility.Collapsed
                         : Visibility.Visible;
+
+                InspectorTransformCard.Visibility =
+                    Visibility.Visible;
+
+                InspectorSelectionActionsCard.Visibility =
+                    Visibility.Visible;
+
+                InspectorContextBadgeText.Text =
+                    isObject
+                        ? "OBJETO"
+                        : "RUA";
+
+                InspectorContextSubtitleText.Text =
+                    isObject
+                        ? "Transformação, modelo e ações do objeto selecionado"
+                        : "Geometria, inclinação, vínculos e ações da via selecionada";
 
                 if (isObject)
                 {
@@ -3140,6 +3162,18 @@ public sealed partial class MainWindow : Window
 
         InspectorSplineFields.Visibility =
             Visibility.Collapsed;
+
+        InspectorTransformCard.Visibility =
+            Visibility.Collapsed;
+
+        InspectorSelectionActionsCard.Visibility =
+            Visibility.Collapsed;
+
+        InspectorContextBadgeText.Text =
+            "GERAL";
+
+        InspectorContextSubtitleText.Text =
+            "Selecione um item ou escolha uma ferramenta";
     }
 
     private void RefreshExplorer()
@@ -6235,6 +6269,35 @@ public sealed partial class MainWindow : Window
 
         targetPanel.Visibility =
             Visibility.Visible;
+
+        InspectorContextBadgeText.Text =
+            title.ToUpperInvariant();
+
+        InspectorContextSubtitleText.Text =
+            ReferenceEquals(
+                activeButton,
+                ToolTerrainButton)
+                ? "Nivelamento, pincel, suavização e textura do terreno"
+                : ReferenceEquals(
+                    activeButton,
+                    ToolSplinesButton)
+                    ? "Geometria, inclinação, links e snap da via selecionada"
+                    : ReferenceEquals(
+                        activeButton,
+                        ToolTrafficButton)
+                        ? "Controladores, regras e sinalização do mapa"
+                        : ReferenceEquals(
+                            activeButton,
+                            ToolTransportButton)
+                            ? "Tracks, Trips, Stops, StationLinks e Lines/Tours"
+                            : "Transformação e dados do item selecionado";
+
+        InspectorTerrainFields.Visibility =
+            ReferenceEquals(
+                activeButton,
+                ToolTerrainButton)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void OnToolSelectionClick(
