@@ -817,6 +817,32 @@
                                         Tag="1,0"
                                         Click="OnTileNavigateClick" />
                             </Grid>
+
+                            <Grid ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="Novo"
+                                        ToolTipService.ToolTip="Criar um novo mapa no Workspace"
+                                        Click="OnCreateStandaloneMapClick" />
+                                <Button Grid.Column="1"
+                                        Content="Abrir"
+                                        ToolTipService.ToolTip="Abrir um mapa do catálogo"
+                                        IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}"
+                                        Click="OnOpenMapCatalogClick" />
+                                <Button Grid.Column="2"
+                                        Content="Importar"
+                                        ToolTipService.ToolTip="Importar mapa existente para o Workspace"
+                                        Click="OnImportStandaloneMapClick" />
+                                <Button Grid.Column="3"
+                                        Content="+ Assets"
+                                        ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
+                                        Click="OnAddAssetFolderClick" />
+                            </Grid>
                         </StackPanel>
                     </Border>
 
