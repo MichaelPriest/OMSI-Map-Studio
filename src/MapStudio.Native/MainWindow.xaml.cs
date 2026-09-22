@@ -10764,13 +10764,17 @@ public sealed partial class MainWindow : Window
         if (
             TransportListView.SelectedItem is not
                 TransportExplorerItem item ||
-            item.Kind != "Track")
+            item.Kind is not
+                (
+                    "Track" or
+                    "StationLink"
+                ))
         {
             SetTransportTrackRecordMode(
                 false);
 
             StatusText.Text =
-                "Gravar caminho: selecione um Track.";
+                "Gravar caminho: selecione um Track ou StationLink.";
             return;
         }
 
@@ -10779,8 +10783,8 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             _transportTrackRecordMode
-                ? $"Gravação de caminho ativa em {item.Key}: clique as splines/objetos na ordem da rota."
-                : $"Gravação de caminho encerrada em {item.Key}.";
+                ? $"Gravação de caminho ativa em {item.Kind} {item.Key}: clique as splines/objetos na ordem da rota."
+                : $"Gravação de caminho encerrada em {item.Kind} {item.Key}.";
     }
 
     private void SetTransportTrackRecordMode(
@@ -10797,8 +10801,9 @@ public sealed partial class MainWindow : Window
         TransportRecordButton.IsEnabled =
             TransportListView.SelectedItem is
                 TransportExplorerItem item &&
-            item.Kind ==
-                "Track";
+            item.Kind is
+                "Track" or
+                "StationLink";
 
         TransportPathIndexBox.IsEnabled =
             !enabled;
@@ -10819,21 +10824,11 @@ public sealed partial class MainWindow : Window
             _timetableCatalog is null ||
             TransportListView.SelectedItem is not
                 TransportExplorerItem item ||
-            item.Kind != "Track")
-        {
-            return;
-        }
-
-        var track =
-            _timetableCatalog.Tracks
-                .FirstOrDefault(
-                    candidate =>
-                        string.Equals(
-                            candidate.Name,
-                            item.Key,
-                            StringComparison.OrdinalIgnoreCase));
-
-        if (track is null)
+            item.Kind is not
+                (
+                    "Track" or
+                    "StationLink"
+                ))
         {
             return;
         }
@@ -10845,61 +10840,164 @@ public sealed partial class MainWindow : Window
                         0,
                         TransportPathIndexBox.Value)));
 
-        if (
-            track.Entries.Count >
-                0 &&
-            track.Entries[^1].Id ==
-                info.EntityId &&
-            string.Equals(
-                track.Entries[^1].Line2,
-                pathIndex.ToString(
-                    CultureInfo.InvariantCulture),
-                StringComparison.Ordinal))
-        {
-            StatusText.Text =
-                $"Gravar caminho: #{info.EntityId}:{pathIndex} já é o último segmento.";
-            return;
-        }
+        var pathIndexText =
+            pathIndex.ToString(
+                CultureInfo.InvariantCulture);
 
         _transportTrackRecordBusy =
             true;
 
         try
         {
-            var entries =
-                track.Entries
+            if (item.Kind == "Track")
+            {
+                var track =
+                    _timetableCatalog.Tracks
+                        .FirstOrDefault(
+                            candidate =>
+                                string.Equals(
+                                    candidate.Name,
+                                    item.Key,
+                                    StringComparison.OrdinalIgnoreCase));
+
+                if (track is null)
+                {
+                    return;
+                }
+
+                if (
+                    track.Entries.Count >
+                        0 &&
+                    track.Entries[^1].Id ==
+                        info.EntityId &&
+                    string.Equals(
+                        track.Entries[^1].Line2,
+                        pathIndexText,
+                        StringComparison.Ordinal))
+                {
+                    StatusText.Text =
+                        $"Gravar caminho: #{info.EntityId}:{pathIndex} já é o último segmento.";
+                    return;
+                }
+
+                var entries =
+                    track.Entries
+                        .ToList();
+
+                entries.Add(
+                    new OmsiTimetableTrackEntry(
+                        $"{entries.Count}:",
+                        info.EntityId,
+                        pathIndexText,
+                        -1,
+                        string.Empty,
+                        null,
+                        string.Empty,
+                        null));
+
+                await _session
+                    .UpdateTimetableTrackAsync(
+                        track,
+                        entries);
+
+                await ReloadTransportCatalogAsync(
+                    "Track",
+                    track.Name);
+
+                TransportRouteStepsListView.SelectedIndex =
+                    entries.Count -
+                    1;
+
+                SetTransportTrackRecordMode(
+                    true);
+
+                StatusText.Text =
+                    $"Gravar caminho · Track {track.Name}: #{info.EntityId}:{pathIndex} adicionado · {entries.Count} segmento(s).";
+
+                return;
+            }
+
+            if (
+                !int.TryParse(
+                    item.Key,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var linkIndex) ||
+                linkIndex < 0 ||
+                linkIndex >=
+                    _timetableCatalog
+                        .StationLinks.Count)
+            {
+                return;
+            }
+
+            var link =
+                _timetableCatalog
+                    .StationLinks[
+                        linkIndex];
+
+            if (
+                link.Entries.Count >
+                    0 &&
+                link.Entries[^1].Id ==
+                    info.EntityId &&
+                string.Equals(
+                    link.Entries[^1].Line2,
+                    pathIndexText,
+                    StringComparison.Ordinal))
+            {
+                StatusText.Text =
+                    $"Gravar caminho: #{info.EntityId}:{pathIndex} já é o último segmento do StationLink.";
+                return;
+            }
+
+            if (
+                !TryCreateStationLinkEntryFromKnownMetadata(
+                    info.EntityId,
+                    pathIndexText,
+                    out var template))
+            {
+                StatusText.Text =
+                    $"Gravar StationLink: #{info.EntityId}:{pathIndex} não tem metadados TTData seguros conhecidos; trecho ignorado.";
+                return;
+            }
+
+            var linkEntries =
+                link.Entries
                     .ToList();
 
-            entries.Add(
-                new OmsiTimetableTrackEntry(
-                    $"{entries.Count}:",
-                    info.EntityId,
-                    pathIndex.ToString(
-                        CultureInfo.InvariantCulture),
-                    -1,
-                    string.Empty,
-                    null,
-                    string.Empty,
-                    null));
+            linkEntries.Add(
+                template with
+                {
+                    Comment =
+                        $"{linkEntries.Count}:",
+                    ChronoFiles =
+                        Array.Empty<string>()
+                });
 
             await _session
-                .UpdateTimetableTrackAsync(
-                    track,
-                    entries);
+                .UpdateStationLinkAsync(
+                    linkIndex,
+                    link with
+                    {
+                        Entries =
+                            linkEntries
+                    });
 
             await ReloadTransportCatalogAsync(
-                "Track",
-                track.Name);
+                "StationLink",
+                linkIndex.ToString(
+                    CultureInfo.InvariantCulture));
 
             TransportRouteStepsListView.SelectedIndex =
-                entries.Count -
-                1;
+                linkEntries.Count -
+                    1;
 
             SetTransportTrackRecordMode(
                 true);
 
             StatusText.Text =
-                $"Gravar caminho · {track.Name}: #{info.EntityId}:{pathIndex} adicionado · {entries.Count} segmento(s).";
+                $"Gravar caminho · StationLink {link.StartBusStopId} → {link.EndBusStopId}: #{info.EntityId}:{pathIndex} adicionado · {linkEntries.Count} segmento(s).";
         }
         catch (Exception exception)
         {
@@ -13972,9 +14070,16 @@ public sealed partial class MainWindow : Window
             editable;
 
         TransportRecordButton.IsEnabled =
-            item.Kind == "Track";
+            item.Kind is
+                "Track" or
+                "StationLink";
 
-        if (item.Kind != "Track")
+        if (
+            item.Kind is not
+                (
+                    "Track" or
+                    "StationLink"
+                ))
         {
             SetTransportTrackRecordMode(
                 false);
