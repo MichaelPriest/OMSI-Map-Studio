@@ -996,6 +996,17 @@
                                                   SelectionChanged="OnLibrarySubcategorySelectionChanged" />
                                     </Grid>
 
+                                    <Border Background="#071722"
+                                            BorderBrush="#24485C"
+                                            BorderThickness="1"
+                                            CornerRadius="7"
+                                            Padding="4">
+                                        <TreeView x:Name="LibraryCategoryTreeView"
+                                                  MaxHeight="170"
+                                                  SelectionMode="Single"
+                                                  SelectionChanged="OnLibraryCategoryTreeSelectionChanged" />
+                                    </Border>
+
                                     <ComboBox x:Name="LibraryTechnicalFilterComboBox"
                                               Header="Filtro técnico"
                                               SelectedIndex="0"
