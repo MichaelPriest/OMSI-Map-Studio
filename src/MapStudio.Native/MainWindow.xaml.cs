@@ -13859,13 +13859,12 @@ public sealed partial class MainWindow : Window
                         FormatDeparture(
                             trip),
                     PlaceholderText =
-                        "08:00:00",
-                    ToolTipService =
-                    {
-                        ToolTip =
-                            "Aceita HH:mm, HH:mm:ss ou segundos OMSI."
-                    }
+                        "08:00:00"
                 };
+
+            ToolTipService.SetToolTip(
+                departureBox,
+                "Aceita HH:mm, HH:mm:ss ou segundos OMSI.");
 
             var removeButton =
                 new Button
@@ -13878,14 +13877,13 @@ public sealed partial class MainWindow : Window
                             5,
                             9,
                             5),
-                    ToolTipService =
-                    {
-                        ToolTip =
-                            "Remover esta saída"
-                    },
                     Tag =
                         row
                 };
+
+            ToolTipService.SetToolTip(
+                removeButton,
+                "Remover esta saída");
 
             FrameworkElement[]
                 controls =
