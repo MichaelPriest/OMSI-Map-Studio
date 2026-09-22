@@ -42,10 +42,16 @@ public sealed partial class MainWindow : Window
         string DisplayText,
         string Detail);
 
+    private sealed record TransportTripRouteOption(
+        bool UsesStationLinks,
+        string Label,
+        string TrackName);
+
     private sealed record TransportRouteStepItem(
         int Sequence,
         int EntityId,
         string PathIndex,
+        double? Length,
         string SourceLabel,
         string DisplayText);
 
@@ -9081,8 +9087,12 @@ public sealed partial class MainWindow : Window
                                 new TransportExplorerItem(
                                     "Trip",
                                     trip.Name,
-                                    $"{trip.Name} · linha {trip.Line} → {trip.Destination}",
-                                    $"Track: {trip.TrackName}\n" +
+                                    $"{trip.Name} · linha {trip.EffectiveLine} → {trip.EffectiveDestination}",
+                                    (
+                                        trip.UsesStationLinks
+                                            ? "Rota: StationLinks (tipo 2)\n"
+                                            : $"Track: {trip.EffectiveTrackName}\n"
+                                    ) +
                                     $"Estações: {trip.Stations.Count}\n" +
                                     $"Train reverse: {(trip.TrainReverse ? "sim" : "não")}\n" +
                                     $"Arquivo: {trip.RelativePath}"))
@@ -9192,7 +9202,7 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e) =>
         SelectTransportWorkspace(
             1,
-            "Trips: associe Track, destino/letreiro e sequência oficial de paradas.");
+            "Trips: use Track (tipo 1) ou sequência de StationLinks entre paradas (tipo 2).");
 
     private void OnTransportStepProfilesClick(
         object sender,
@@ -9851,15 +9861,51 @@ public sealed partial class MainWindow : Window
 
     private async Task CreateTransportTripAsync()
     {
-        if (
-            _timetableCatalog is null ||
-            _timetableCatalog.Tracks.Count ==
-                0)
+        if (_timetableCatalog is null)
         {
-            StatusText.Text =
-                "Novo Trip: crie pelo menos um Track primeiro.";
             return;
         }
+
+        var canCreateType1 =
+            _timetableCatalog.Tracks.Count >
+                0;
+
+        var canCreateType2 =
+            _timetableCatalog.BusStops.Count >=
+                2 &&
+            _timetableCatalog.StationLinks.Count >
+                0;
+
+        if (
+            !canCreateType1 &&
+            !canCreateType2)
+        {
+            StatusText.Text =
+                "Novo Trip: crie um Track (tipo 1) ou ao menos 2 stops conectados por StationLinks (tipo 2).";
+            return;
+        }
+
+        var routeOptions =
+            new List<
+                TransportTripRouteOption>();
+
+        if (canCreateType2)
+        {
+            routeOptions.Add(
+                new TransportTripRouteOption(
+                    true,
+                    "Tipo 2 · StationLinks entre paradas · sem Track",
+                    string.Empty));
+        }
+
+        routeOptions.AddRange(
+            _timetableCatalog.Tracks
+                .Select(
+                    track =>
+                        new TransportTripRouteOption(
+                            false,
+                            $"Tipo 1 · Track {track.Name}",
+                            track.Name)));
 
         var nameBox =
             new TextBox
@@ -9870,17 +9916,16 @@ public sealed partial class MainWindow : Window
                     $"Trip_{DateTime.Now:HHmmss}"
             };
 
-        var trackBox =
+        var routeBox =
             new ComboBox
             {
                 Header =
-                    "Track",
+                    "Tipo de rota",
                 ItemsSource =
-                    _timetableCatalog.Tracks
-                        .Select(
-                            track =>
-                                track.Name)
-                        .ToArray(),
+                    routeOptions,
+                DisplayMemberPath =
+                    nameof(
+                        TransportTripRouteOption.Label),
                 SelectedIndex =
                     0,
                 HorizontalAlignment =
@@ -9891,7 +9936,7 @@ public sealed partial class MainWindow : Window
             new TextBox
             {
                 Header =
-                    "Destino"
+                    "Destino / letreiro"
             };
 
         var lineBox =
@@ -9955,11 +10000,22 @@ public sealed partial class MainWindow : Window
                 Spacing =
                     8,
                 MinWidth =
-                    500
+                    520
             };
 
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Tipo 1 usa um Track completo. Tipo 2 não usa Track: o Map Studio resolve cada par de stops pela cadeia de StationLinks.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
+
         panel.Children.Add(nameBox);
-        panel.Children.Add(trackBox);
+        panel.Children.Add(routeBox);
         panel.Children.Add(destinationBox);
         panel.Children.Add(lineBox);
         panel.Children.Add(stationIdsBox);
@@ -9992,8 +10048,8 @@ public sealed partial class MainWindow : Window
         if (
             await dialog.ShowAsync() !=
                 ContentDialogResult.Primary ||
-            trackBox.SelectedItem is not
-                string trackName)
+            routeBox.SelectedItem is not
+                TransportTripRouteOption route)
         {
             return;
         }
@@ -10032,6 +10088,16 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (
+            !route.UsesStationLinks &&
+            string.IsNullOrWhiteSpace(
+                lineBox.Text))
+        {
+            StatusText.Text =
+                "Novo Trip tipo 1: informe a linha para manter a rota associada ao Track.";
+            return;
+        }
+
         var stations =
             stationIds
                 .Select(
@@ -10040,6 +10106,17 @@ public sealed partial class MainWindow : Window
                             new OmsiTimetableTripStationType2(
                                 id))
                 .ToArray();
+
+        if (
+            route.UsesStationLinks &&
+            !TryValidateStationLinkTrip(
+                stations,
+                out var stationLinkError))
+        {
+            StatusText.Text =
+                $"Novo Trip tipo 2: {stationLinkError}";
+            return;
+        }
 
         var profiles =
             profileBox.Text
@@ -10054,13 +10131,28 @@ public sealed partial class MainWindow : Window
                     StringSplitOptions
                         .TrimEntries);
 
+        var rawTripField1 =
+            route.UsesStationLinks
+                ? destinationBox.Text
+                : route.TrackName;
+
+        var rawTripField2 =
+            route.UsesStationLinks
+                ? lineBox.Text
+                : destinationBox.Text;
+
+        var rawTripField3 =
+            route.UsesStationLinks
+                ? string.Empty
+                : lineBox.Text;
+
         var created =
             await _session
                 .CreateTimetableTripAsync(
                     nameBox.Text,
-                    trackName,
-                    destinationBox.Text,
-                    lineBox.Text,
+                    rawTripField1,
+                    rawTripField2,
+                    rawTripField3,
                     reverseBox.IsChecked ==
                         true,
                     stations,
@@ -10071,7 +10163,97 @@ public sealed partial class MainWindow : Window
             created.Name);
 
         StatusText.Text =
-            $"Trip {created.Name} criado · Track {created.TrackName} · {created.Stations.Count} stop(s).";
+            created.UsesStationLinks
+                ? $"Trip {created.Name} criado · tipo 2 StationLinks · linha {created.EffectiveLine} · {created.Stations.Count} stop(s)."
+                : $"Trip {created.Name} criado · Track {created.EffectiveTrackName} · {created.Stations.Count} stop(s).";
+    }
+
+    private bool TryValidateStationLinkTrip(
+        IReadOnlyList<
+            OmsiTimetableTripStation> stations,
+        out string error)
+    {
+        error =
+            string.Empty;
+
+        if (_timetableCatalog is null)
+        {
+            error =
+                "TTData não está carregado.";
+            return false;
+        }
+
+        var type2 =
+            stations
+                .OfType<
+                    OmsiTimetableTripStationType2>()
+                .ToArray();
+
+        if (
+            type2.Length !=
+                stations.Count ||
+            type2.Length <
+                2)
+        {
+            error =
+                "use pelo menos dois stops do tipo 2.";
+            return false;
+        }
+
+        var knownStops =
+            _timetableCatalog.BusStops
+                .Select(
+                    stop =>
+                        stop.Id)
+                .ToHashSet();
+
+        var missingStop =
+            type2
+                .Select(
+                    station =>
+                        station.Id)
+                .FirstOrDefault(
+                    id =>
+                        !knownStops.Contains(
+                            id),
+                    -1);
+
+        if (missingStop >= 0)
+        {
+            error =
+                $"o stop #{missingStop} não existe em Busstops.cfg.";
+            return false;
+        }
+
+        for (
+            var index = 0;
+            index <
+                type2.Length - 1;
+            index++)
+        {
+            var start =
+                type2[index].Id;
+
+            var end =
+                type2[index + 1].Id;
+
+            if (
+                !_timetableCatalog
+                    .StationLinks
+                    .Any(
+                        link =>
+                            link.StartBusStopId ==
+                                start &&
+                            link.EndBusStopId ==
+                                end))
+            {
+                error =
+                    $"não existe StationLink {start} → {end}.";
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task CreateTransportStopAsync()
@@ -12690,11 +12872,16 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var stationLinkTrip =
+            trip.UsesStationLinks;
+
         var trackBox =
             new TextBox
             {
                 Header =
-                    "Track",
+                    stationLinkTrip
+                        ? "Destino / letreiro · campo 1 OMSI do tipo 2"
+                        : "Track",
                 Text =
                     trip.TrackName
             };
@@ -12703,7 +12890,9 @@ public sealed partial class MainWindow : Window
             new TextBox
             {
                 Header =
-                    "Destino",
+                    stationLinkTrip
+                        ? "Linha · campo 2 OMSI do tipo 2"
+                        : "Destino",
                 Text =
                     trip.Destination
             };
@@ -12712,7 +12901,9 @@ public sealed partial class MainWindow : Window
             new TextBox
             {
                 Header =
-                    "Linha",
+                    stationLinkTrip
+                        ? "Campo 3 OMSI · deve permanecer vazio no tipo 2"
+                        : "Linha",
                 Text =
                     trip.Line
             };
@@ -12788,6 +12979,19 @@ public sealed partial class MainWindow : Window
                 MinWidth =
                     560
             };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    stationLinkTrip
+                        ? "Trip tipo 2: o caminho é resolvido pela sequência de StationLinks entre os stops; não existe Track associado."
+                        : "Trip tipo 1: o caminho físico vem do Track associado.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
 
         panel.Children.Add(
             trackBox);
@@ -12927,6 +13131,27 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (
+            stationLinkTrip &&
+            !string.IsNullOrWhiteSpace(
+                lineBox.Text))
+        {
+            StatusText.Text =
+                "Trip tipo 2 não salvo: o terceiro campo [trip] deve permanecer vazio.";
+            return;
+        }
+
+        if (
+            stationLinkTrip &&
+            !TryValidateStationLinkTrip(
+                stations,
+                out var stationLinkError))
+        {
+            StatusText.Text =
+                $"Trip tipo 2 não salvo: {stationLinkError}";
+            return;
+        }
+
         var profiles =
             profilesBox.Text
                 .Replace(
@@ -12996,7 +13221,9 @@ public sealed partial class MainWindow : Window
                                 StringComparison.OrdinalIgnoreCase));
 
             StatusText.Text =
-                $"Trip {updated.Trip.Name} salvo · {updated.Trip.Stations.Count} station(s) · backup {updated.BackupPath}.";
+                updated.Trip.UsesStationLinks
+                    ? $"Trip {updated.Trip.Name} salvo · tipo 2 StationLinks · {updated.Trip.Stations.Count} stop(s) · backup {updated.BackupPath}."
+                    : $"Trip {updated.Trip.Name} salvo · Track {updated.Trip.EffectiveTrackName} · {updated.Trip.Stations.Count} station(s) · backup {updated.BackupPath}.";
         }
         catch (Exception exception)
         {
@@ -13571,6 +13798,7 @@ public sealed partial class MainWindow : Window
                         sequence,
                         entry.Id,
                         entry.Line2,
+                        entry.Length,
                         sourceLabel,
                         $"{sequence:000} · ID {entry.Id} · path {entry.Line2} · {sourceLabel}"));
             }
@@ -13592,8 +13820,73 @@ public sealed partial class MainWindow : Window
                         sequence,
                         entry.Id,
                         entry.Line2,
+                        entry.Length,
                         sourceLabel,
                         $"{sequence:000} · ID {entry.Id} · path {entry.Line2} · {sourceLabel}"));
+            }
+        }
+
+        void AddTripEntries(
+            OmsiTimetableTrip trip,
+            string sourcePrefix)
+        {
+            if (trip.UsesStationLinks)
+            {
+                var stations =
+                    trip.Stations
+                        .OfType<
+                            OmsiTimetableTripStationType2>()
+                        .ToArray();
+
+                for (
+                    var index = 0;
+                    index <
+                        stations.Length - 1;
+                    index++)
+                {
+                    var start =
+                        stations[index].Id;
+
+                    var end =
+                        stations[index + 1].Id;
+
+                    var link =
+                        _timetableCatalog
+                            .StationLinks
+                            .FirstOrDefault(
+                                candidate =>
+                                    candidate.StartBusStopId ==
+                                        start &&
+                                    candidate.EndBusStopId ==
+                                        end);
+
+                    if (link is null)
+                    {
+                        continue;
+                    }
+
+                    AddStationLinkEntries(
+                        link.Entries,
+                        $"{sourcePrefix} · StationLink {start}→{end}");
+                }
+
+                return;
+            }
+
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                trip.EffectiveTrackName,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (track is not null)
+            {
+                AddTrackEntries(
+                    track.Entries,
+                    $"{sourcePrefix} → Track {track.Name}");
             }
         }
 
@@ -13629,24 +13922,11 @@ public sealed partial class MainWindow : Window
                                 item.Key,
                                 StringComparison.OrdinalIgnoreCase));
 
-            var track =
-                trip is null
-                    ? null
-                    : _timetableCatalog.Tracks
-                        .FirstOrDefault(
-                            candidate =>
-                                string.Equals(
-                                    candidate.Name,
-                                    trip.TrackName,
-                                    StringComparison.OrdinalIgnoreCase));
-
-            if (
-                trip is not null &&
-                track is not null)
+            if (trip is not null)
             {
-                AddTrackEntries(
-                    track.Entries,
-                    $"Trip {trip.Name} → Track {track.Name}");
+                AddTripEntries(
+                    trip,
+                    $"Trip {trip.Name}");
             }
 
             return result;
@@ -13709,27 +13989,14 @@ public sealed partial class MainWindow : Window
                                             .TripName,
                                         StringComparison.OrdinalIgnoreCase));
 
-                    var track =
-                        trip is null
-                            ? null
-                            : _timetableCatalog.Tracks
-                                .FirstOrDefault(
-                                    candidate =>
-                                        string.Equals(
-                                            candidate.Name,
-                                            trip.TrackName,
-                                            StringComparison.OrdinalIgnoreCase));
-
-                    if (
-                        trip is null ||
-                        track is null)
+                    if (trip is null)
                     {
                         continue;
                     }
 
-                    AddTrackEntries(
-                        track.Entries,
-                        $"{tour.Name} · {trip.Name} · {track.Name}");
+                    AddTripEntries(
+                        trip,
+                        $"{tour.Name} · {trip.Name}");
                 }
             }
         }
@@ -13740,143 +14007,36 @@ public sealed partial class MainWindow : Window
     private int PreviewTransportItem(
         TransportExplorerItem item)
     {
-        if (_timetableCatalog is null)
+        var steps =
+            BuildTransportRouteSteps(
+                item);
+
+        if (steps.Count == 0)
         {
+            Viewport
+                .ClearTimetableRoutePreview();
+
             return 0;
         }
 
-        if (item.Kind == "Track")
-        {
-            var track =
-                _timetableCatalog.Tracks
-                    .FirstOrDefault(
-                        candidate =>
-                            string.Equals(
-                                candidate.Name,
-                                item.Key,
-                                StringComparison.OrdinalIgnoreCase));
+        var entries =
+            steps
+                .Select(
+                    (step, index) =>
+                        new OmsiTimetableTrackEntry(
+                            $"{index}:",
+                            step.EntityId,
+                            step.PathIndex,
+                            -1,
+                            string.Empty,
+                            step.Length,
+                            string.Empty,
+                            null))
+                .ToArray();
 
-            return track is null
-                ? 0
-                : Viewport
-                    .PreviewTimetableTrack(
-                        track.Entries);
-        }
-
-        if (item.Kind == "Trip")
-        {
-            var trip =
-                _timetableCatalog.Trips
-                    .FirstOrDefault(
-                        candidate =>
-                            string.Equals(
-                                candidate.Name,
-                                item.Key,
-                                StringComparison.OrdinalIgnoreCase));
-
-            var track =
-                trip is null
-                    ? null
-                    : _timetableCatalog.Tracks
-                        .FirstOrDefault(
-                            candidate =>
-                                string.Equals(
-                                    candidate.Name,
-                                    trip.TrackName,
-                                    StringComparison.OrdinalIgnoreCase));
-
-            return track is null
-                ? 0
-                : Viewport
-                    .PreviewTimetableTrack(
-                        track.Entries);
-        }
-
-        if (
-            item.Kind ==
-                "StationLink" &&
-            int.TryParse(
-                item.Key,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out var linkIndex) &&
-            linkIndex >= 0 &&
-            linkIndex <
-                _timetableCatalog
-                    .StationLinks.Count)
-        {
-            return Viewport
-                .PreviewStationLink(
-                    _timetableCatalog
-                        .StationLinks[
-                            linkIndex]
-                        .Entries);
-        }
-
-        if (item.Kind == "Line")
-        {
-            var line =
-                _timetableCatalog.Lines
-                    .FirstOrDefault(
-                        candidate =>
-                            string.Equals(
-                                candidate.Name,
-                                item.Key,
-                                StringComparison.OrdinalIgnoreCase));
-
-            if (line is null)
-            {
-                return 0;
-            }
-
-            var entries =
-                new List<
-                    OmsiTimetableTrackEntry>();
-
-            foreach (var tour in line.Tours)
-            {
-                foreach (
-                    var scheduledTrip in
-                        tour.Trips)
-                {
-                    var trip =
-                        _timetableCatalog.Trips
-                            .FirstOrDefault(
-                                candidate =>
-                                    string.Equals(
-                                        candidate.Name,
-                                        scheduledTrip
-                                            .TripName,
-                                        StringComparison.OrdinalIgnoreCase));
-
-                    var track =
-                        trip is null
-                            ? null
-                            : _timetableCatalog.Tracks
-                                .FirstOrDefault(
-                                    candidate =>
-                                        string.Equals(
-                                            candidate.Name,
-                                            trip.TrackName,
-                                            StringComparison.OrdinalIgnoreCase));
-
-                    if (track is not null)
-                    {
-                        entries.AddRange(
-                            track.Entries);
-                    }
-                }
-            }
-
-            return Viewport
-                .PreviewTimetableTrack(
-                    entries);
-        }
-
-        Viewport
-            .ClearTimetableRoutePreview();
-
-        return 0;
+        return Viewport
+            .PreviewTimetableTrack(
+                entries);
     }
 
     private int PreviewTransportStep(
@@ -13892,7 +14052,7 @@ public sealed partial class MainWindow : Window
                 step.PathIndex,
                 -1,
                 string.Empty,
-                null,
+                step.Length,
                 string.Empty,
                 null);
 
