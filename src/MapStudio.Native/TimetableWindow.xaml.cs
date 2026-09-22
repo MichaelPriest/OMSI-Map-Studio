@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Timetables;
+using MapStudio.Native.Dialogs;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -18,8 +19,10 @@ public sealed partial class TimetableWindow
         string DestinationText,
         string RouteText);
 
-    public event Action<string>?
-        EditLineRequested;
+    public event Action<
+        OmsiTimetableLine,
+        OmsiTimetableLine>?
+        LineSaveRequested;
 
     public event Action<string>?
         TripRouteRequested;
@@ -200,7 +203,7 @@ public sealed partial class TimetableWindow
                 row.TripName);
     }
 
-    private void OnEditLineClick(
+    private async void OnEditLineClick(
         object sender,
         RoutedEventArgs e)
     {
@@ -211,9 +214,26 @@ public sealed partial class TimetableWindow
             return;
         }
 
-        EditLineRequested
+        var updatedLine =
+            await TimetableLineEditorDialog
+                .ShowAsync(
+                    RootGrid.XamlRoot,
+                    line,
+                    _catalog.Trips
+                        .Select(
+                            trip =>
+                                trip.Name)
+                        .ToArray());
+
+        if (updatedLine is null)
+        {
+            return;
+        }
+
+        LineSaveRequested
             ?.Invoke(
-                line.Name);
+                line,
+                updatedLine);
     }
 
     private void RefreshSchedule()
