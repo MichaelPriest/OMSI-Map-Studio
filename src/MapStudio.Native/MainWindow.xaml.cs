@@ -6213,6 +6213,26 @@ public sealed partial class MainWindow : Window
             "Estrada fácil: não foi possível aplicar os pontos; mantenha início e fim sobre terreno carregado.";
     }
 
+    private void OnAdjustEasyRoadCurveOnMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            Viewport
+                .TryBeginEasyRoadCurveControl(
+                    out var status))
+        {
+            SplineCurveOffsetBox.Value =
+                Viewport
+                    .SplinePlacementControlState
+                    ?.CurveOffset ??
+                SplineCurveOffsetBox.Value;
+        }
+
+        StatusText.Text =
+            status;
+    }
+
     private async void OnConfirmEasyRoadClick(
         object sender,
         RoutedEventArgs e)

@@ -408,6 +408,11 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public NativeSplinePlacementControlState?
+        SplinePlacementControlState =>
+        _runtime
+            ?.GetSplinePlacementControlState();
+
     public void SetSplinePlacementElevationOffset(
         double offset) =>
         _runtime
@@ -427,6 +432,29 @@ public sealed partial class NativeViewport : UserControl
             ?.SetSplineEasyRoadOptions(
                 enabled,
                 curveOffset);
+
+    public bool TryBeginEasyRoadCurveControl(
+        out string status)
+    {
+        status =
+            "Estrada fácil indisponível.";
+
+        if (
+            _runtime is null ||
+            !_runtime
+                .TryBeginEasyRoadCurveControl(
+                    out status))
+        {
+            return false;
+        }
+
+        SplinePlacementControlStateChanged
+            ?.Invoke(
+                _runtime
+                    .GetSplinePlacementControlState());
+
+        return true;
+    }
 
     public bool TryApplyEasyRoadControlPoints(
         double startX,
@@ -1841,6 +1869,8 @@ public sealed partial class NativeViewport : UserControl
                             "Spline: clique no ponto final.",
                         NativeSplinePlacementStage.AwaitingCurve =>
                             "Spline: ajuste a curva e clique para confirmar.",
+                        NativeSplinePlacementStage.AwaitingEasyRoadCurveControl =>
+                            "Estrada fácil: mova o cursor lateralmente e clique para fixar a curva.",
                         NativeSplinePlacementStage.AwaitingEasyRoadConfirm =>
                             "Estrada fácil: ajuste os pontos/curva no painel e confirme.",
                         _ =>

@@ -90,6 +90,70 @@ public sealed class
     }
 
     [Fact]
+    public void VisualCurveControlUsesOnlyLateralDistance()
+    {
+        var start =
+            new Vector3(
+                0,
+                0,
+                0);
+
+        var end =
+            new Vector3(
+                40,
+                0,
+                0);
+
+        Assert.True(
+            NativeSplinePlacementMath
+                .TryGetCurveOffsetFromControlPoint(
+                    start,
+                    end,
+                    new Vector3(
+                        20,
+                        0,
+                        -8),
+                    out var first));
+
+        Assert.True(
+            NativeSplinePlacementMath
+                .TryGetCurveOffsetFromControlPoint(
+                    start,
+                    end,
+                    new Vector3(
+                        35,
+                        0,
+                        -8),
+                    out var second));
+
+        Assert.Equal(
+            8,
+            first,
+            6);
+
+        Assert.Equal(
+            first,
+            second,
+            6);
+
+        Assert.True(
+            NativeSplinePlacementMath
+                .TryGetCurveOffsetFromControlPoint(
+                    start,
+                    end,
+                    new Vector3(
+                        20,
+                        0,
+                        8),
+                    out var opposite));
+
+        Assert.Equal(
+            -8,
+            opposite,
+            6);
+    }
+
+    [Fact]
     public void CurveOffsetCreatesTwoPointEasyRoadArc()
     {
         var ok =

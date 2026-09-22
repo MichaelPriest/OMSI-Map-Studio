@@ -211,9 +211,11 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         var end =
-            _splinePlacementStage ==
+            _splinePlacementStage is
                 NativeSplinePlacementStage
-                    .AwaitingEasyRoadConfirm
+                    .AwaitingEasyRoadConfirm or
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadCurveControl
                 ? _splineEndWorld
                 : _splinePointerWorld;
 
@@ -1088,6 +1090,32 @@ public sealed class NativeViewportRuntime : IDisposable
         }
         else if (
             _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadCurveControl &&
+            _splineStartWorld is { } easyStart &&
+            _splineEndWorld is { } easyEnd &&
+            NativeSplinePlacementMath
+                .TryGetCurveOffsetFromControlPoint(
+                    easyStart,
+                    easyEnd,
+                    point,
+                    out var visualCurveOffset))
+        {
+            _splineEasyRoadCurveOffset =
+                Math.Clamp(
+                    visualCurveOffset,
+                    -500.0,
+                    500.0);
+
+            NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    easyStart,
+                    easyEnd,
+                    _splineEasyRoadCurveOffset,
+                    out shape);
+        }
+        else if (
+            _splinePlacementStage ==
                 NativeSplinePlacementStage.AwaitingCurve &&
             _splineStartWorld is { } curveStart &&
             _splineEndWorld is { } curveEnd)
@@ -1354,6 +1382,67 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadCurveControl &&
+            _splineStartWorld is { } easyCurveStart &&
+            _splineEndWorld is { } easyCurveEnd &&
+            NativeSplinePlacementMath
+                .TryGetCurveOffsetFromControlPoint(
+                    easyCurveStart,
+                    easyCurveEnd,
+                    point,
+                    out var easyCurveOffset) &&
+            NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    easyCurveStart,
+                    easyCurveEnd,
+                    Math.Clamp(
+                        easyCurveOffset,
+                        -500.0,
+                        500.0),
+                    out var easyCurvedShape) &&
+            easyCurvedShape is not null)
+        {
+            _splineEasyRoadCurveOffset =
+                Math.Clamp(
+                    easyCurveOffset,
+                    -500.0,
+                    500.0);
+
+            _splinePlacementShape =
+                easyCurvedShape;
+
+            _splinePointerWorld =
+                point;
+
+            _splinePlacementStage =
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm;
+
+            var previewGeometry =
+                new NativeSplinePlacementGeometryBuilder()
+                    .Build(
+                        _placementSplineAsset!,
+                        easyCurvedShape);
+
+            MapRenderer.SetPlacementPreview(
+                previewGeometry.IsRenderable
+                    ? previewGeometry
+                    : null,
+                Matrix4x4.Identity);
+
+            RenderInitialFrame();
+
+            status =
+                easyCurvedShape.IsCurved
+                    ? $"Curva visual definida · offset {_splineEasyRoadCurveOffset:+0.0;-0.0;0.0} m. Confirme ou ajuste novamente."
+                    : "Controle centralizado: via reta. Confirme ou ajuste novamente.";
+
+            return true;
+        }
+
+        if (
+            _splinePlacementStage ==
                 NativeSplinePlacementStage.AwaitingCurve &&
             _splineStartWorld is { } curveStart &&
             _splineEndWorld is { } curveEnd &&
@@ -1391,6 +1480,61 @@ public sealed class NativeViewportRuntime : IDisposable
 
         status = "Curva inválida.";
         return false;
+    }
+
+    public bool TryBeginEasyRoadCurveControl(
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            !_splinePlacementActive ||
+            !_splineEasyRoadEnabled ||
+            _splinePlacementStage !=
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm ||
+            _splineStartWorld is not { } start ||
+            _splineEndWorld is not { } end ||
+            Scene is null ||
+            _placementSplineAsset is null)
+        {
+            status =
+                "Estrada fácil: defina início e fim antes de ajustar a curva no mapa.";
+
+            return false;
+        }
+
+        _splinePlacementStage =
+            NativeSplinePlacementStage
+                .AwaitingEasyRoadCurveControl;
+
+        _splinePointerWorld =
+            new Vector3(
+                (
+                    start.X +
+                    end.X
+                ) *
+                0.5f,
+                (
+                    start.Y +
+                    end.Y
+                ) *
+                0.5f,
+                (
+                    start.Z +
+                    end.Z
+                ) *
+                0.5f);
+
+        status =
+            "Curva visual ativa: mova o cursor para um dos lados da via e clique para fixar a curvatura.";
+
+        RenderInitialFrame();
+
+        return true;
     }
 
     public bool TrySetEasyRoadControlPoints(

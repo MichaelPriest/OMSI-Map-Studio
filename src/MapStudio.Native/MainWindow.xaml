@@ -837,6 +837,7 @@
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
 
                                         <NumberBox x:Name="PlacementSpacingBox"
@@ -997,8 +998,15 @@
                                                 Content="Confirmar via"
                                                 HorizontalAlignment="Stretch"
                                                 Click="OnConfirmEasyRoadClick" />
+                                        <Button Grid.Row="3"
+                                                Grid.Column="0"
+                                                Grid.ColumnSpan="2"
+                                                Content="Ajustar curva no mapa"
+                                                HorizontalAlignment="Stretch"
+                                                ToolTipService.ToolTip="Use o cursor como alça lateral da via; clique para fixar a curvatura."
+                                                Click="OnAdjustEasyRoadCurveOnMapClick" />
                                     </Grid>
-                                    <TextBlock Text="Estrada fácil: marque início e fim, ajuste os pontos/offset na prévia e só então confirme. Offset 0 = reta."
+                                    <TextBlock Text="Estrada fácil: marque início e fim; use Ajustar curva no mapa para mover a alça visual, ou ajuste o offset numericamente; depois confirme. Offset 0 = reta."
                                                FontSize="11"
                                                TextWrapping="Wrap"
                                                Foreground="#7895AD" />

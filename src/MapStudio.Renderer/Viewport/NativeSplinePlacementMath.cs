@@ -273,6 +273,78 @@ public static class NativeSplinePlacementMath
         return true;
     }
 
+    public static bool TryGetCurveOffsetFromControlPoint(
+        Vector3 start,
+        Vector3 end,
+        Vector3 control,
+        out double curveOffset)
+    {
+        curveOffset =
+            0;
+
+        var dx =
+            (double)end.X -
+            start.X;
+
+        var dz =
+            (double)end.Z -
+            start.Z;
+
+        var chordLength =
+            Math.Sqrt(
+                dx * dx +
+                dz * dz);
+
+        if (
+            !double.IsFinite(
+                chordLength) ||
+            chordLength <
+                Epsilon)
+        {
+            return false;
+        }
+
+        var midX =
+            (
+                start.X +
+                end.X
+            ) *
+            0.5;
+
+        var midZ =
+            (
+                start.Z +
+                end.Z
+            ) *
+            0.5;
+
+        // Unit normal in the X/Z plane. The cursor only controls
+        // lateral sagitta; movement along the chord is intentionally
+        // ignored so the handle behaves predictably.
+        var normalX =
+            dz /
+            chordLength;
+
+        var normalZ =
+            -dx /
+            chordLength;
+
+        curveOffset =
+            (
+                control.X -
+                midX
+            ) *
+            normalX +
+            (
+                control.Z -
+                midZ
+            ) *
+            normalZ;
+
+        return double.IsFinite(
+            curveOffset);
+    }
+
     public static bool TryCreateArcFromOffset(
         Vector3 start,
         Vector3 end,
