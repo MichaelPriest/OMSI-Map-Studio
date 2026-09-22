@@ -69,9 +69,11 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                     0, 0, 1
                 ],
                 [
-                    0, 0,
-                    1, 0,
-                    0.5f, 1
+                    // Core preserves O3D geometry but stores V in its
+                    // editor-normalized convention (1 - source V).
+                    0, 1,
+                    1, 1,
+                    0.5f, 0
                 ],
                 [0u, 1u, 2u],
                 [0],
