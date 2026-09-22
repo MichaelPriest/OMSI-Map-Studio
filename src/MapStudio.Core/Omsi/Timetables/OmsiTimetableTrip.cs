@@ -11,4 +11,27 @@ public sealed record OmsiTimetableTrip(
     string Line,
     bool TrainReverse,
     IReadOnlyList<OmsiTimetableTripStation> Stations,
-    IReadOnlyList<string> ProfileLines);
+    IReadOnlyList<string> ProfileLines)
+{
+    public bool UsesStationLinks =>
+        Stations.Count >= 2 &&
+        Stations.All(
+            station =>
+                station is
+                    OmsiTimetableTripStationType2);
+
+    public string EffectiveTrackName =>
+        UsesStationLinks
+            ? string.Empty
+            : TrackName;
+
+    public string EffectiveDestination =>
+        UsesStationLinks
+            ? TrackName
+            : Destination;
+
+    public string EffectiveLine =>
+        UsesStationLinks
+            ? Destination
+            : Line;
+}
