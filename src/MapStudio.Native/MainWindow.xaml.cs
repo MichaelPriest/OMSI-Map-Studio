@@ -279,6 +279,7 @@ public sealed partial class MainWindow : Window
             ];
 
     private bool _libraryMode;
+    private bool _assetPlacementOptionsExpanded;
     private bool _transportMode;
     private bool _transportPathsVisible;
     private bool _transportTrackRecordMode;
@@ -1322,6 +1323,41 @@ public sealed partial class MainWindow : Window
     }
 
 
+    private void OnAssetPlacementOptionsToggleClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _assetPlacementOptionsExpanded =
+            !_assetPlacementOptionsExpanded;
+
+        AssetPlacementOptionsToggleButton.Content =
+            _assetPlacementOptionsExpanded
+                ? "Opções avançadas ▴"
+                : "Opções avançadas ▾";
+
+        UpdateAssetPlacementOptionsVisibility(
+            GetSelectedAssetLibraryEntry()
+                ?.Kind);
+    }
+
+    private void UpdateAssetPlacementOptionsVisibility(
+        OmsiAssetKind? kind)
+    {
+        ObjectPlacementOptionsPanel.Visibility =
+            _assetPlacementOptionsExpanded &&
+            kind ==
+                OmsiAssetKind.SceneryObject
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SplinePlacementOptionsPanel.Visibility =
+            _assetPlacementOptionsExpanded &&
+            kind ==
+                OmsiAssetKind.Spline
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
     private async void OnAssetLibrarySelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -1378,20 +1414,14 @@ public sealed partial class MainWindow : Window
                 ? "Construir spline"
                 : "Posicionar no mapa";
 
-        ObjectPlacementOptionsPanel.Visibility =
-            selected?.Kind ==
-                OmsiAssetKind.SceneryObject
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+        AssetPlacementOptionsToggleButton.IsEnabled =
+            placeable;
+
+        UpdateAssetPlacementOptionsVisibility(
+            selected?.Kind);
 
         _patternLineStart =
             null;
-
-        SplinePlacementOptionsPanel.Visibility =
-            selected?.Kind ==
-                OmsiAssetKind.Spline
-                ? Visibility.Visible
-                : Visibility.Collapsed;
 
         if (
             !_libraryMode ||
