@@ -219,6 +219,10 @@ public sealed partial class MainWindow : Window
     private RoadProfileOption?
         _activeRoadProfile;
 
+    private readonly NativeLicenseService
+        _licenseService =
+            new();
+
     private MapStudioCommercialState
         _commercialState =
             MapStudioCommercialState
@@ -233,6 +237,9 @@ public sealed partial class MainWindow : Window
 
     private bool
         _updateCheckStarted;
+
+    private bool
+        _licenseRefreshStarted;
 
     private MapStudioAiConnectionSettings
         _aiConnectionSettings =
@@ -451,6 +458,12 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        ApplyCommercialState(
+            _licenseService
+                .LoadCachedSnapshot(),
+            announce:
+                false);
 
         _trafficPreviewTimer.Interval =
             TimeSpan.FromMilliseconds(
@@ -18576,6 +18589,15 @@ public sealed partial class MainWindow : Window
                 announceIfCurrent:
                     false);
         }
+
+        if (!_licenseRefreshStarted)
+        {
+            _licenseRefreshStarted =
+                true;
+
+            _ =
+                RefreshCommercialLicenseAsync();
+        }
     }
 
     private async Task
@@ -27569,68 +27591,92 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        var mode =
-            _commercialState
-                .EnforcementEnabled
-                ? "Cobrança/licença ativa"
-                : "Pré-lançamento · cobrança ainda não aplicada";
-
-        var status =
-            _commercialState
-                .Status
-                .ToString();
-
-        var content =
-            new StackPanel
-            {
-                Spacing =
-                    8,
-                MinWidth =
-                    480
-            };
-
-        content.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    mode,
-                FontSize =
-                    18,
-                FontWeight =
-                    Microsoft.UI.Text
-                        .FontWeights
-                        .SemiBold
-            });
-
-        content.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    $"Estado: {status}\n" +
-                    "Billing planejado: Stripe via backend seguro.\n" +
-                    "O desktop não armazenará chave secreta da Stripe.\n" +
-                    "Checkout, portal do cliente, webhooks e entitlement serão validados no servidor.\n\n" +
-                    "Nesta fase de desenvolvimento todas as funções permanecem liberadas.",
-                TextWrapping =
-                    TextWrapping
-                        .Wrap
-            });
-
-        var dialog =
-            new ContentDialog
-            {
-                XamlRoot =
+        var snapshot =
+            await NativeLicenseDialog
+                .ShowAsync(
                     MainRoot.XamlRoot,
-                Title =
-                    "Assinatura e licença",
-                Content =
-                    content,
-                CloseButtonText =
-                    "Fechar"
-            };
+                    _licenseService);
 
-        await dialog
-            .ShowAsync();
+        ApplyCommercialState(
+            snapshot,
+            announce:
+                true);
+    }
+
+    private async Task RefreshCommercialLicenseAsync()
+    {
+        try
+        {
+            var snapshot =
+                await _licenseService
+                    .RefreshCachedAsync();
+
+            DispatcherQueue.TryEnqueue(
+                () =>
+                {
+                    ApplyCommercialState(
+                        snapshot,
+                        announce:
+                            false);
+                });
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"License refresh failed: {exception}");
+
+            DispatcherQueue.TryEnqueue(
+                () =>
+                {
+                    ApplyCommercialState(
+                        _licenseService
+                            .LoadCachedSnapshot(),
+                        announce:
+                            false);
+                });
+        }
+    }
+
+    private void ApplyCommercialState(
+        NativeLicenseSnapshot snapshot,
+        bool announce)
+    {
+        ArgumentNullException.ThrowIfNull(
+            snapshot);
+
+        _commercialState =
+            snapshot.State;
+
+        var coreGate =
+            MapStudioFeatureGate
+                .Evaluate(
+                    _commercialState,
+                    MapStudioEntitlementKeys
+                        .CoreEditor);
+
+        WorkspaceGrid.IsEnabled =
+            coreGate.Allowed;
+
+        if (!coreGate.Allowed)
+        {
+            StatusText.Text =
+                "OMSI Map Studio: licença necessária. Use Conta → Assinatura e licença para ativar este computador.";
+
+            return;
+        }
+
+        if (
+            announce &&
+            _commercialState
+                .EnforcementEnabled)
+        {
+            StatusText.Text =
+                _commercialState.Status ==
+                    MapStudioLicenseStatus
+                        .GracePeriod
+                    ? $"Licença offline válida até {snapshot.OfflineUntil?.ToLocalTime():g}."
+                    : "Licença verificada. Editor liberado.";
+        }
     }
 
     private bool EnsureCommercialFeature(
