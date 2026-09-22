@@ -463,17 +463,12 @@ public sealed class NativeAssetPreviewGeometryBuilder
                 corner < 3;
                 corner++)
             {
-                var sourceCorner =
-                    NativeOmsiModelSpace
-                        .SourceCornerForRendererCorner(
-                            corner);
-
                 var sourceIndex =
                     checked(
                         (int)
                             geometry.Indices[
                                 baseIndex +
-                                sourceCorner]);
+                                corner]);
 
                 var positionOffset =
                     sourceIndex *
@@ -488,23 +483,18 @@ public sealed class NativeAssetPreviewGeometryBuilder
                     break;
                 }
 
-                var sourcePosition =
-                    new Vector3(
-                        geometry.Positions[
-                            positionOffset],
-                        geometry.Positions[
-                            positionOffset +
-                            1],
-                        geometry.Positions[
-                            positionOffset +
-                            2]);
-
                 triangleVertices[
                     corner] =
                     Vector3.Transform(
-                        NativeOmsiModelSpace
-                            .ToRendererPosition(
-                                sourcePosition),
+                        new Vector3(
+                            geometry.Positions[
+                                positionOffset],
+                            geometry.Positions[
+                                positionOffset +
+                                1],
+                            geometry.Positions[
+                                positionOffset +
+                                2]),
                         transform);
             }
 
@@ -533,9 +523,7 @@ public sealed class NativeAssetPreviewGeometryBuilder
     private static Matrix4x4
         CreateMeshTransform(
             OmsiSceneryMeshTransform
-                transform)
-    {
-        var sourceTransform =
+                transform) =>
             Matrix4x4.CreateScale(
                 (float)
                     transform.ScaleX,
@@ -565,11 +553,6 @@ public sealed class NativeAssetPreviewGeometryBuilder
                     (float)
                         transform
                             .PositionZ);
-
-        return NativeOmsiModelSpace
-            .ToRendererTransform(
-                sourceTransform);
-    }
 
     private static float
         DegreesToRadians(
