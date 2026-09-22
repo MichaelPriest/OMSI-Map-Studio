@@ -1273,13 +1273,19 @@
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
 
-                            <Button x:Name="EditTrafficProgramButton"
-                                    Grid.Row="5"
-                                    Content="Editar programa de semáforo"
-                                    Visibility="Collapsed"
-                                    IsEnabled="False"
-                                    HorizontalAlignment="Stretch"
-                                    Click="OnEditTrafficProgramClick" />
+                            <StackPanel Grid.Row="5"
+                                        Spacing="5">
+                                <Button x:Name="AddTrafficSignalButton"
+                                        Content="Adicionar semáforo..."
+                                        HorizontalAlignment="Stretch"
+                                        Click="OnAddTrafficSignalClick" />
+                                <Button x:Name="EditTrafficProgramButton"
+                                        Content="Editar programa de semáforo"
+                                        Visibility="Collapsed"
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        Click="OnEditTrafficProgramClick" />
+                            </StackPanel>
                         </Grid>
                     </Grid>
                 </Grid>

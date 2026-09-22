@@ -72,6 +72,19 @@ public sealed class MapStudioStarterPropGenerator
                 cancellationToken) ||
             created;
 
+        created =
+            await EnsureAssetAsync(
+                propRoot,
+                "Starter_UtilityBox",
+                "starter_utilitybox",
+                "Map Studio Starter Utility Box",
+                "Utilities",
+                BuildUtilityBoxGeometry(),
+                includeLampLight:
+                    false,
+                cancellationToken) ||
+            created;
+
         return created;
     }
 
@@ -380,6 +393,49 @@ public sealed class MapStudioStarterPropGenerator
             Materials);
     }
 
+    private static OmsiO3dGeometry
+        BuildUtilityBoxGeometry()
+    {
+        var builder =
+            new GeometryBuilder();
+
+        builder.AddBox(
+            new Vector3(
+                0,
+                0.72f,
+                0),
+            new Vector3(
+                0.82f,
+                1.44f,
+                0.48f),
+            4);
+
+        builder.AddBox(
+            new Vector3(
+                0,
+                1.47f,
+                0),
+            new Vector3(
+                0.92f,
+                0.08f,
+                0.56f),
+            0);
+
+        builder.AddBox(
+            new Vector3(
+                0,
+                0.74f,
+                -0.255f),
+            new Vector3(
+                0.60f,
+                0.86f,
+                0.035f),
+            0);
+
+        return builder.Build(
+            Materials);
+    }
+
     private static readonly
         IReadOnlyList<OmsiO3dMaterial>
         Materials =
@@ -435,6 +491,19 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 20,
+                null),
+            new OmsiO3dMaterial(
+                0.34f,
+                0.43f,
+                0.32f,
+                1,
+                0.06f,
+                0.08f,
+                0.05f,
+                0,
+                0,
+                0,
+                18,
                 null)
         ];
 

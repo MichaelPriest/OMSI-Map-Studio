@@ -15,6 +15,15 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Sceneryobjects\Street\Lamp_Post.sco",
         OmsiAssetLibraryGroup.StreetFurniture)]
+    [InlineData(
+        @"Sceneryobjects\MapStudio_Props\Starter_BusStop\starter_busstop.sco",
+        OmsiAssetLibraryGroup.Transit)]
+    [InlineData(
+        @"Sceneryobjects\MapStudio_Props\Starter_UtilityBox\starter_utilitybox.sco",
+        OmsiAssetLibraryGroup.Utilities)]
+    [InlineData(
+        @"Sceneryobjects\MapStudio_Traffic\Starter_TrafficLight\starter_trafficlight.sco",
+        OmsiAssetLibraryGroup.StreetFurniture)]
     public void ClassifiesSceneryObjects(
         string path,
         OmsiAssetLibraryGroup expected)
@@ -89,6 +98,12 @@ public sealed class OmsiAssetLibraryClassifierTests
     [InlineData(
         @"Sceneryobjects\Street\traffic_light.sco",
         "Sinalização")]
+    [InlineData(
+        @"Sceneryobjects\MapStudio_Traffic\Starter_TrafficLight\starter_trafficlight.sco",
+        "Sinalização")]
+    [InlineData(
+        @"Sceneryobjects\MapStudio_Props\Starter_UtilityBox\starter_utilitybox.sco",
+        "Infraestrutura")]
     [InlineData(
         @"Splines\Roads\avenue_4lane.sli",
         "Avenidas")]

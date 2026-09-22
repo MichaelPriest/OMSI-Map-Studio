@@ -7092,6 +7092,25 @@ public sealed partial class MainWindow : Window
             "Tráfego: paths reais e preview de semáforos ativos.";
     }
 
+    private async void OnAddTrafficSignalClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup
+                .StreetFurniture,
+            "Sinalização: escolha um semáforo e coloque-o no mapa.");
+
+        ExplorerSearchBox.Text =
+            "traffic";
+
+        RefreshLibraryFilter();
+    }
+
     private void RefreshTrafficFilter()
     {
         var query =

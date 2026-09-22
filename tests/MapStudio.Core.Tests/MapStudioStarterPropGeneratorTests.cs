@@ -52,6 +52,12 @@ public sealed class MapStudioStarterPropGeneratorTests
                     "Starter_BusStop",
                     "starter_busstop.sco");
 
+            var utilityBoxSco =
+                Path.Combine(
+                    propRoot,
+                    "Starter_UtilityBox",
+                    "starter_utilitybox.sco");
+
             Assert.True(
                 File.Exists(
                     lampSco));
@@ -63,6 +69,10 @@ public sealed class MapStudioStarterPropGeneratorTests
             Assert.True(
                 File.Exists(
                     busStopSco));
+
+            Assert.True(
+                File.Exists(
+                    utilityBoxSco));
 
             var lamp =
                 await new OmsiSceneryObjectReader()
