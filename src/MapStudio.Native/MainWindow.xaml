@@ -1174,6 +1174,9 @@
                                     <Button x:Name="TransportPathsButton"
                                             Content="Paths OMSI"
                                             Click="OnTransportPathsClick" />
+                                    <Button Content="Validar"
+                                            ToolTipService.ToolTip="Validar referências Track/Trip/Stop/StationLink/Line e segmentos carregados"
+                                            Click="OnTransportValidateClick" />
                                     <Button x:Name="TransportFocusStepButton"
                                             Content="Focar segmento"
                                             IsEnabled="False"
