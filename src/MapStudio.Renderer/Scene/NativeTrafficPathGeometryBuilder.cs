@@ -6,6 +6,7 @@ namespace MapStudio.Renderer.Scene;
 
 public sealed record NativeTrafficPathGeometry(
     NativeMapVertex[] Vertices,
+    NativeMapVertex[] TriangleVertices,
     int PathCount,
     int VehiclePathCount = 0,
     int PedestrianPathCount = 0,
@@ -14,21 +15,36 @@ public sealed record NativeTrafficPathGeometry(
 {
     public int LineCount =>
         Vertices.Length / 2;
+
+    public int TriangleCount =>
+        TriangleVertices.Length / 3;
 }
 
 public sealed class NativeTrafficPathGeometryBuilder
 {
+    // High-contrast editor palette inspired by the OMSI path overlay.
+    // Vehicle paths use the familiar red strip; pedestrian paths stay
+    // nearly white so they remain readable on asphalt and grass.
     private static readonly Vector4 RoadColor =
-        new(0.92f, 0.58f, 0.16f, 1.0f);
+        new(0.96f, 0.08f, 0.06f, 1.0f);
 
     private static readonly Vector4 PedestrianColor =
-        new(0.30f, 0.92f, 0.42f, 1.0f);
+        new(0.94f, 0.95f, 0.96f, 1.0f);
 
     private static readonly Vector4 RailColor =
-        new(0.24f, 0.82f, 1.0f, 1.0f);
+        new(0.12f, 0.76f, 1.0f, 1.0f);
 
     private static readonly Vector4 AirColor =
-        new(0.80f, 0.46f, 1.0f, 1.0f);
+        new(0.74f, 0.34f, 1.0f, 1.0f);
+
+    private static readonly Vector4 DarkMarkerColor =
+        new(0.035f, 0.045f, 0.055f, 1.0f);
+
+    private static readonly Vector4 LightMarkerColor =
+        new(0.96f, 0.98f, 1.0f, 1.0f);
+
+    private static readonly Vector4 FocusMarkerColor =
+        new(1.0f, 0.92f, 0.12f, 1.0f);
 
     public NativeTrafficPathGeometry Build(
         NativeSceneSnapshot scene,
@@ -60,6 +76,13 @@ public sealed class NativeTrafficPathGeometryBuilder
                     256,
                     scene.Splines.Count *
                         32));
+
+        var triangleVertices =
+            new List<NativeMapVertex>(
+                Math.Max(
+                    384,
+                    scene.Splines.Count *
+                        48));
 
         var pathCount = 0;
         var vehiclePathCount = 0;
@@ -147,7 +170,11 @@ public sealed class NativeTrafficPathGeometryBuilder
                     entity,
                     path,
                     options,
-                    vertices);
+                    vertices,
+                    triangleVertices,
+                    focusedPathIndex.HasValue &&
+                    pathIndex ==
+                        focusedPathIndex.Value);
 
                 CountPath(
                     path.Type);
@@ -206,7 +233,11 @@ public sealed class NativeTrafficPathGeometryBuilder
                         path,
                         terrainOffset,
                         options,
-                        vertices);
+                        vertices,
+                        triangleVertices,
+                        focusedPathIndex.HasValue &&
+                        pathIndex ==
+                            focusedPathIndex.Value);
 
                     CountPath(
                         path.Type);
@@ -216,6 +247,7 @@ public sealed class NativeTrafficPathGeometryBuilder
 
         return new NativeTrafficPathGeometry(
             vertices.ToArray(),
+            triangleVertices.ToArray(),
             pathCount,
             vehiclePathCount,
             pedestrianPathCount,
@@ -228,7 +260,9 @@ public sealed class NativeTrafficPathGeometryBuilder
         OmsiSplinePathDefinition path,
         NativeTrafficPathDisplayOptions
             options,
-        List<NativeMapVertex> output)
+        List<NativeMapVertex> lineOutput,
+        List<NativeMapVertex> triangleOutput,
+        bool focused)
     {
         var length =
             entity.Spline.Length;
@@ -237,27 +271,61 @@ public sealed class NativeTrafficPathGeometryBuilder
             Math.Clamp(
                 (int)Math.Ceiling(
                     length /
-                    5.0),
+                    3.0),
                 2,
-                128);
+                192);
 
         var color =
-            path.Type switch
-            {
-                0 => RoadColor,
-                1 => PedestrianColor,
-                2 => RailColor,
-                3 => AirColor,
-                _ => RoadColor
-            };
+            GetBaseColor(
+                path.Type);
 
+        var markerColor =
+            focused
+                ? FocusMarkerColor
+                : GetMarkerColor(
+                    path.Type);
+
+        var ribbonHalfWidth =
+            GetRibbonHalfWidth(
+                path.Type,
+                path.Width,
+                focused);
+
+        AppendSplineRibbon(
+            entity,
+            path,
+            segmentCount,
+            ribbonHalfWidth,
+            GetRibbonColor(
+                color,
+                focused),
+            triangleOutput);
+
+        // A thin center line and dark/light border make the path readable
+        // over both bright pavement and dark terrain textures.
         AppendPathStrip(
             entity,
             path,
             0,
             segmentCount,
-            color,
-            output);
+            markerColor,
+            lineOutput);
+
+        AppendPathStrip(
+            entity,
+            path,
+            -ribbonHalfWidth,
+            segmentCount,
+            markerColor,
+            lineOutput);
+
+        AppendPathStrip(
+            entity,
+            path,
+            ribbonHalfWidth,
+            segmentCount,
+            markerColor,
+            lineOutput);
 
         if (
             options.ShowWidthEdges &&
@@ -273,7 +341,7 @@ public sealed class NativeTrafficPathGeometryBuilder
                 -halfWidth,
                 segmentCount,
                 color,
-                output);
+                lineOutput);
 
             AppendPathStrip(
                 entity,
@@ -281,33 +349,155 @@ public sealed class NativeTrafficPathGeometryBuilder
                 halfWidth,
                 segmentCount,
                 color,
-                output);
+                lineOutput);
         }
 
-        if (
-            options.ShowDirectionArrows &&
-            path.Direction is 0 or 2)
+        if (options.ShowDirectionArrows)
         {
-            AppendDirectionArrow(
+            AppendRepeatedDirectionArrows(
                 entity,
                 path,
-                length * 0.62,
-                true,
-                color,
-                output);
+                length,
+                markerColor,
+                lineOutput);
+        }
+    }
+
+    private static void AppendSplineRibbon(
+        NativeSplineEntity entity,
+        OmsiSplinePathDefinition path,
+        int segmentCount,
+        double halfWidth,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var length =
+            entity.Spline.Length;
+
+        var startFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0);
+
+        var previousLeft =
+            GetPathPoint(
+                startFrame,
+                path,
+                -halfWidth);
+
+        var previousRight =
+            GetPathPoint(
+                startFrame,
+                path,
+                halfWidth);
+
+        for (
+            var index = 1;
+            index <= segmentCount;
+            index++)
+        {
+            var frame =
+                NativeSplinePathMath
+                    .GetFrame(
+                        entity,
+                        length *
+                        index /
+                        segmentCount);
+
+            var currentLeft =
+                GetPathPoint(
+                    frame,
+                    path,
+                    -halfWidth);
+
+            var currentRight =
+                GetPathPoint(
+                    frame,
+                    path,
+                    halfWidth);
+
+            AddQuad(
+                output,
+                previousLeft,
+                previousRight,
+                currentRight,
+                currentLeft,
+                color);
+
+            previousLeft =
+                currentLeft;
+
+            previousRight =
+                currentRight;
+        }
+    }
+
+    private static void AppendRepeatedDirectionArrows(
+        NativeSplineEntity entity,
+        OmsiSplinePathDefinition path,
+        double length,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        if (length <= 0.5)
+        {
+            return;
         }
 
-        if (
-            options.ShowDirectionArrows &&
-            path.Direction is 1 or 2)
+        var spacing =
+            path.Type switch
+            {
+                1 => 4.5,
+                2 => 7.0,
+                3 => 9.0,
+                _ => 6.0
+            };
+
+        var first =
+            Math.Min(
+                length * 0.5,
+                spacing * 0.55);
+
+        var count = 0;
+
+        for (
+            var distance = first;
+            distance <
+                length - 0.25 &&
+            count < 48;
+            distance += spacing,
+            count++)
         {
-            AppendDirectionArrow(
-                entity,
-                path,
-                length * 0.38,
-                false,
-                color,
-                output);
+            if (path.Direction is 0 or 2)
+            {
+                AppendDirectionArrow(
+                    entity,
+                    path,
+                    distance,
+                    true,
+                    color,
+                    output);
+            }
+
+            if (path.Direction is 1 or 2)
+            {
+                var reverseDistance =
+                    path.Direction == 2
+                        ? Math.Min(
+                            length - 0.25,
+                            distance +
+                            spacing * 0.35)
+                        : distance;
+
+                AppendDirectionArrow(
+                    entity,
+                    path,
+                    reverseDistance,
+                    false,
+                    color,
+                    output);
+            }
         }
     }
 
@@ -431,36 +621,38 @@ public sealed class NativeTrafficPathGeometryBuilder
         double terrainOffset,
         NativeTrafficPathDisplayOptions
             options,
-        List<NativeMapVertex> output)
+        List<NativeMapVertex> lineOutput,
+        List<NativeMapVertex> triangleOutput,
+        bool focused)
     {
         if (path.Length <= 0.01)
         {
             return;
         }
 
-        var color =
+        var baseColor =
             options.HighlightSignalControlled &&
             path.TrafficLightIndex.HasValue
                 ? new Vector4(
                     1.0f,
-                    0.25f,
-                    0.12f,
+                    0.42f,
+                    0.06f,
                     1.0f)
-                : path.Type switch
-                {
-                    0 => RoadColor,
-                    1 => PedestrianColor,
-                    2 => RailColor,
-                    3 => AirColor,
-                    _ => RoadColor
-                };
+                : GetBaseColor(
+                    path.Type);
+
+        var markerColor =
+            focused
+                ? FocusMarkerColor
+                : GetMarkerColor(
+                    path.Type);
 
         var segmentCount =
             Math.Clamp(
                 (int)Math.Ceiling(
-                    path.Length / 3.0),
+                    path.Length / 2.5),
                 2,
-                128);
+                192);
 
         var objectTransform =
             Matrix4x4.CreateFromYawPitchRoll(
@@ -476,13 +668,45 @@ public sealed class NativeTrafficPathGeometryBuilder
                     (float)terrainOffset,
                 entity.WorldZ);
 
+        var ribbonHalfWidth =
+            GetRibbonHalfWidth(
+                path.Type,
+                path.Width,
+                focused);
+
+        AppendSceneryRibbon(
+            path,
+            segmentCount,
+            ribbonHalfWidth,
+            objectTransform,
+            GetRibbonColor(
+                baseColor,
+                focused),
+            triangleOutput);
+
         AppendSceneryPathStrip(
             path,
             0,
             segmentCount,
             objectTransform,
-            color,
-            output);
+            markerColor,
+            lineOutput);
+
+        AppendSceneryPathStrip(
+            path,
+            -ribbonHalfWidth,
+            segmentCount,
+            objectTransform,
+            markerColor,
+            lineOutput);
+
+        AppendSceneryPathStrip(
+            path,
+            ribbonHalfWidth,
+            segmentCount,
+            objectTransform,
+            markerColor,
+            lineOutput);
 
         if (
             options.ShowWidthEdges &&
@@ -496,42 +720,149 @@ public sealed class NativeTrafficPathGeometryBuilder
                 -halfWidth,
                 segmentCount,
                 objectTransform,
-                color,
-                output);
+                baseColor,
+                lineOutput);
 
             AppendSceneryPathStrip(
                 path,
                 halfWidth,
                 segmentCount,
                 objectTransform,
-                color,
-                output);
+                baseColor,
+                lineOutput);
         }
 
-        if (
-            options.ShowDirectionArrows &&
-            path.Direction is 0 or 2)
+        if (options.ShowDirectionArrows)
         {
-            AppendSceneryDirectionArrow(
+            AppendRepeatedSceneryDirectionArrows(
                 path,
-                path.Length * 0.62,
-                true,
                 objectTransform,
-                color,
-                output);
+                markerColor,
+                lineOutput);
         }
+    }
 
-        if (
-            options.ShowDirectionArrows &&
-            path.Direction is 1 or 2)
-        {
-            AppendSceneryDirectionArrow(
+    private static void AppendSceneryRibbon(
+        OmsiSceneryPathDefinition path,
+        int segmentCount,
+        double halfWidth,
+        Matrix4x4 objectTransform,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var previousLeft =
+            GetSceneryPathPoint(
                 path,
-                path.Length * 0.38,
-                false,
-                objectTransform,
-                color,
-                output);
+                0,
+                -halfWidth,
+                objectTransform);
+
+        var previousRight =
+            GetSceneryPathPoint(
+                path,
+                0,
+                halfWidth,
+                objectTransform);
+
+        for (
+            var index = 1;
+            index <= segmentCount;
+            index++)
+        {
+            var distance =
+                path.Length *
+                index /
+                segmentCount;
+
+            var currentLeft =
+                GetSceneryPathPoint(
+                    path,
+                    distance,
+                    -halfWidth,
+                    objectTransform);
+
+            var currentRight =
+                GetSceneryPathPoint(
+                    path,
+                    distance,
+                    halfWidth,
+                    objectTransform);
+
+            AddQuad(
+                output,
+                previousLeft,
+                previousRight,
+                currentRight,
+                currentLeft,
+                color);
+
+            previousLeft =
+                currentLeft;
+
+            previousRight =
+                currentRight;
+        }
+    }
+
+    private static void AppendRepeatedSceneryDirectionArrows(
+        OmsiSceneryPathDefinition path,
+        Matrix4x4 objectTransform,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var spacing =
+            path.Type switch
+            {
+                1 => 4.5,
+                2 => 7.0,
+                3 => 9.0,
+                _ => 6.0
+            };
+
+        var first =
+            Math.Min(
+                path.Length * 0.5,
+                spacing * 0.55);
+
+        var count = 0;
+
+        for (
+            var distance = first;
+            distance <
+                path.Length - 0.25 &&
+            count < 48;
+            distance += spacing,
+            count++)
+        {
+            if (path.Direction is 0 or 2)
+            {
+                AppendSceneryDirectionArrow(
+                    path,
+                    distance,
+                    true,
+                    objectTransform,
+                    color,
+                    output);
+            }
+
+            if (path.Direction is 1 or 2)
+            {
+                var reverseDistance =
+                    path.Direction == 2
+                        ? Math.Min(
+                            path.Length - 0.25,
+                            distance +
+                            spacing * 0.35)
+                        : distance;
+
+                AppendSceneryDirectionArrow(
+                    path,
+                    reverseDistance,
+                    false,
+                    objectTransform,
+                    color,
+                    output);
+            }
         }
     }
 
@@ -763,6 +1094,116 @@ public sealed class NativeTrafficPathGeometryBuilder
                 lateral *
                 0.55f,
             color);
+    }
+
+    private static Vector4 GetBaseColor(
+        int type) =>
+        type switch
+        {
+            1 => PedestrianColor,
+            2 => RailColor,
+            3 => AirColor,
+            _ => RoadColor
+        };
+
+    private static Vector4 GetMarkerColor(
+        int type) =>
+        type switch
+        {
+            2 or 3 =>
+                LightMarkerColor,
+            _ =>
+                DarkMarkerColor
+        };
+
+    private static Vector4 GetRibbonColor(
+        Vector4 color,
+        bool focused) =>
+        new(
+            color.X,
+            color.Y,
+            color.Z,
+            focused
+                ? 0.88f
+                : 0.68f);
+
+    private static double GetRibbonHalfWidth(
+        int type,
+        double declaredWidth,
+        bool focused)
+    {
+        var width =
+            Math.Max(
+                0,
+                declaredWidth);
+
+        var halfWidth =
+            type switch
+            {
+                1 =>
+                    Math.Clamp(
+                        width * 0.28,
+                        0.34,
+                        0.62),
+                2 =>
+                    Math.Clamp(
+                        width * 0.22,
+                        0.38,
+                        0.66),
+                3 =>
+                    Math.Clamp(
+                        width * 0.20,
+                        0.34,
+                        0.60),
+                _ =>
+                    Math.Clamp(
+                        width * 0.20,
+                        0.46,
+                        0.76)
+            };
+
+        return focused
+            ? halfWidth * 1.22
+            : halfWidth;
+    }
+
+    private static void AddQuad(
+        List<NativeMapVertex> output,
+        Vector3 a,
+        Vector3 b,
+        Vector3 c,
+        Vector3 d,
+        Vector4 color)
+    {
+        output.Add(
+            new NativeMapVertex(
+                a,
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                b,
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                c,
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                a,
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                c,
+                color));
+
+        output.Add(
+            new NativeMapVertex(
+                d,
+                color));
     }
 
     private static double GetOverlayHeight(
