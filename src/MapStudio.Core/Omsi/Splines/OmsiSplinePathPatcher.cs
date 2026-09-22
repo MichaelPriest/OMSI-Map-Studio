@@ -48,9 +48,31 @@ public sealed class OmsiSplinePathPatcher
                 sourcePathOrdinal];
 
         var sectionIndex =
-            document.Sections
-                .IndexOf(
-                    target);
+            -1;
+
+        for (
+            var index = 0;
+            index <
+                document.Sections.Count;
+            index++)
+        {
+            if (
+                ReferenceEquals(
+                    document.Sections[
+                        index],
+                    target))
+            {
+                sectionIndex =
+                    index;
+                break;
+            }
+        }
+
+        if (sectionIndex < 0)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
 
         var bodyEnd =
             sectionIndex + 1 <
