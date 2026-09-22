@@ -23,6 +23,13 @@ public static class NativeOmsiModelSpace
             source.Z,
             source.Y);
 
+    public static Vector2 ToRendererUv(
+        Vector2 coreUv) =>
+        new(
+            coreUv.X,
+            1.0f -
+            coreUv.Y);
+
     public static Vector3 ToRendererNormal(
         Vector3 source)
     {
