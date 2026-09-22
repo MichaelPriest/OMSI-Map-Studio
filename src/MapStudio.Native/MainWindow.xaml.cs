@@ -571,6 +571,10 @@ public sealed partial class MainWindow : Window
 
                 if (_transportMode)
                 {
+                    Viewport
+                        .SetTrafficPathFocusedIndex(
+                            null);
+
                     RefreshTransportPathChoices();
                 }
 
@@ -9583,6 +9587,15 @@ public sealed partial class MainWindow : Window
         TransportPathIndexBox.Value =
             choice.Index;
 
+        if (
+            _transportMode &&
+            Viewport.TrafficPathSelectedOnly)
+        {
+            Viewport
+                .SetTrafficPathFocusedIndex(
+                    choice.Index);
+        }
+
         TransportPathChoiceHintText.Text =
             $"Path {choice.Index} · {choice.KindLabel} · direção {choice.DirectionLabel} · largura {choice.Width:F2} m.";
     }
@@ -14077,6 +14090,10 @@ public sealed partial class MainWindow : Window
 
         TransportPathIndexBox.Value =
             pathIndex;
+
+        Viewport
+            .SetTrafficPathFocusedIndex(
+                pathIndex);
 
         var matchingChoice =
             TransportPathChoiceComboBox.Items
