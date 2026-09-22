@@ -17,9 +17,9 @@ public sealed class
                 true,
                 null,
                 [
-                    -2, 0, -1,
-                    3, 0, -1,
-                    0, 4, 2
+                    -2, -1, 0,
+                    3, -1, 0,
+                    0, 2, 4
                 ],
                 Array.Empty<float>(),
                 Array.Empty<float>(),
@@ -115,9 +115,9 @@ public sealed class
                 true,
                 null,
                 [
-                    -3, 0, -2,
-                     4, 0, -2,
-                     0, 5, 3
+                    -3, -2, 0,
+                     4, -2, 0,
+                     0, 3, 5
                 ],
                 Array.Empty<float>(),
                 Array.Empty<float>(),
