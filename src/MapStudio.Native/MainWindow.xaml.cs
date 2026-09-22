@@ -283,6 +283,8 @@ public sealed partial class MainWindow : Window
     private bool _transportPathsVisible;
     private bool _transportTrackRecordMode;
     private bool _transportTrackRecordBusy;
+    private bool _syncingTrafficPathControls;
+    private bool _syncingTransportPathChoice;
     private bool _trafficMode;
     private bool _validationMode;
     private bool _junctionMode;
@@ -565,6 +567,11 @@ public sealed partial class MainWindow : Window
             {
                 _selectionInfo =
                     info;
+
+                if (_transportMode)
+                {
+                    RefreshTransportPathChoices();
+                }
 
                 if (
                     _transportTrackRecordMode &&
@@ -8998,6 +9005,421 @@ public sealed partial class MainWindow : Window
 
         TransportListView.ItemsSource =
             items.ToArray();
+    }
+
+    private void OnTransportStepTracksClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SelectTransportWorkspace(
+            0,
+            "Tracks: monte o caminho físico clicando as faixas no mapa.");
+
+    private void OnTransportStepStationLinksClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SelectTransportWorkspace(
+            3,
+            "Station Links: crie trechos reutilizáveis entre duas paradas.");
+
+    private void OnTransportStepTripsClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SelectTransportWorkspace(
+            1,
+            "Trips: associe Track, destino/letreiro e sequência oficial de paradas.");
+
+    private void OnTransportStepProfilesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SelectTransportWorkspace(
+            1,
+            "Perfis: selecione um Trip e use Editar perfil de tempo.");
+
+        TransportProfilesButton.IsEnabled =
+            TransportListView.SelectedItem is
+                TransportExplorerItem item &&
+            item.Kind == "Trip";
+    }
+
+    private void OnTransportStepTimetableClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SelectTransportWorkspace(
+            4,
+            "Horários: Lines/Tours, partidas, AI Group, prioridade e permissão do jogador.");
+
+    private void OnTransportStepStopsClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SelectTransportWorkspace(
+            2,
+            "Paradas: cadastre e edite os Bus Stops usados por Trips e Station Links.");
+
+    private void SelectTransportWorkspace(
+        int selectedIndex,
+        string message)
+    {
+        if (
+            TransportKindComboBox.SelectedIndex !=
+                selectedIndex)
+        {
+            TransportKindComboBox.SelectedIndex =
+                selectedIndex;
+        }
+        else
+        {
+            RefreshTransportItems();
+        }
+
+        TransportRouteStatusText.Text =
+            message;
+    }
+
+    private void OnTransportPathFilterChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_syncingTrafficPathControls)
+        {
+            return;
+        }
+
+        var options =
+            new NativeTrafficPathDisplayOptions(
+                Vehicles:
+                    TransportPathsVehiclesCheckBox.IsChecked ==
+                    true,
+                Pedestrians:
+                    TransportPathsPedestriansCheckBox.IsChecked ==
+                    true,
+                Rails:
+                    TransportPathsRailsCheckBox.IsChecked ==
+                    true,
+                Air:
+                    TransportPathsAirCheckBox.IsChecked ==
+                    true,
+                ShowWidthEdges:
+                    TransportPathsWidthCheckBox.IsChecked ==
+                    true,
+                ShowDirectionArrows:
+                    TransportPathsArrowsCheckBox.IsChecked ==
+                    true,
+                HighlightSignalControlled:
+                    TransportPathsSignalsCheckBox.IsChecked ==
+                    true);
+
+        ApplyTrafficPathDisplayOptions(
+            options,
+            fromTransport: true);
+    }
+
+    private void OnTrafficPathModeChanged(
+        object sender,
+        object e)
+    {
+        if (
+            _syncingTrafficPathControls ||
+            TrafficPathModeComboBox is null)
+        {
+            return;
+        }
+
+        var mode =
+            TrafficPathModeComboBox.SelectedIndex;
+
+        var options =
+            new NativeTrafficPathDisplayOptions(
+                Vehicles:
+                    mode is 0 or 3,
+                Pedestrians:
+                    mode is 1 or 3,
+                Rails:
+                    mode is 2 or 3,
+                Air:
+                    mode == 3,
+                ShowWidthEdges:
+                    TrafficPathWidthCheckBox.IsChecked ==
+                    true,
+                ShowDirectionArrows:
+                    TrafficPathArrowsCheckBox.IsChecked ==
+                    true,
+                HighlightSignalControlled:
+                    TrafficPathSignalsCheckBox.IsChecked ==
+                    true);
+
+        ApplyTrafficPathDisplayOptions(
+            options,
+            fromTransport: false);
+    }
+
+    private void ApplyTrafficPathDisplayOptions(
+        NativeTrafficPathDisplayOptions
+            options,
+        bool fromTransport)
+    {
+        Viewport
+            .SetTrafficPathDisplayOptions(
+                options);
+
+        SynchronizeTrafficPathControls(
+            options,
+            fromTransport);
+
+        UpdateTrafficPathStatusText();
+    }
+
+    private void SynchronizeTrafficPathControls(
+        NativeTrafficPathDisplayOptions
+            options,
+        bool fromTransport)
+    {
+        _syncingTrafficPathControls =
+            true;
+
+        try
+        {
+            if (!fromTransport)
+            {
+                TransportPathsVehiclesCheckBox.IsChecked =
+                    options.Vehicles;
+
+                TransportPathsPedestriansCheckBox.IsChecked =
+                    options.Pedestrians;
+
+                TransportPathsRailsCheckBox.IsChecked =
+                    options.Rails;
+
+                TransportPathsAirCheckBox.IsChecked =
+                    options.Air;
+
+                TransportPathsWidthCheckBox.IsChecked =
+                    options.ShowWidthEdges;
+
+                TransportPathsArrowsCheckBox.IsChecked =
+                    options.ShowDirectionArrows;
+
+                TransportPathsSignalsCheckBox.IsChecked =
+                    options.HighlightSignalControlled;
+            }
+
+            if (
+                options.Vehicles &&
+                !options.Pedestrians &&
+                !options.Rails &&
+                !options.Air)
+            {
+                TrafficPathModeComboBox.SelectedIndex =
+                    0;
+            }
+            else if (
+                !options.Vehicles &&
+                options.Pedestrians &&
+                !options.Rails &&
+                !options.Air)
+            {
+                TrafficPathModeComboBox.SelectedIndex =
+                    1;
+            }
+            else if (
+                !options.Vehicles &&
+                !options.Pedestrians &&
+                options.Rails &&
+                !options.Air)
+            {
+                TrafficPathModeComboBox.SelectedIndex =
+                    2;
+            }
+            else
+            {
+                TrafficPathModeComboBox.SelectedIndex =
+                    3;
+            }
+
+            TrafficPathWidthCheckBox.IsChecked =
+                options.ShowWidthEdges;
+
+            TrafficPathArrowsCheckBox.IsChecked =
+                options.ShowDirectionArrows;
+
+            TrafficPathSignalsCheckBox.IsChecked =
+                options.HighlightSignalControlled;
+        }
+        finally
+        {
+            _syncingTrafficPathControls =
+                false;
+        }
+    }
+
+    private void UpdateTrafficPathStatusText()
+    {
+        var geometry =
+            Viewport
+                .TrafficPathGeometry;
+
+        if (geometry is null)
+        {
+            return;
+        }
+
+        var summary =
+            $"{geometry.PathCount} paths · " +
+            $"{geometry.VehiclePathCount} veículos · " +
+            $"{geometry.PedestrianPathCount} pedestres · " +
+            $"{geometry.RailPathCount} trilhos · " +
+            $"{geometry.AirPathCount} aéreo · " +
+            $"{geometry.LineCount} linhas.";
+
+        if (_trafficMode)
+        {
+            TrafficStatusText.Text =
+                summary +
+                $" {_trafficPrograms.Count} programa(s) de semáforo · " +
+                $"{_trafficRuleItems.Count} regra(s).";
+        }
+
+        if (_transportMode)
+        {
+            TransportRouteStatusText.Text =
+                $"Visualização: {summary}";
+        }
+    }
+
+    private void RefreshTransportPathChoices()
+    {
+        if (
+            TransportPathChoiceComboBox is null ||
+            TransportPathIndexBox is null ||
+            TransportPathChoiceHintText is null)
+        {
+            return;
+        }
+
+        var choices =
+            Viewport
+                .GetTrafficPathChoicesForSelection();
+
+        _syncingTransportPathChoice =
+            true;
+
+        try
+        {
+            var previous =
+                double.IsFinite(
+                    TransportPathIndexBox.Value)
+                    ? checked(
+                        (int)Math.Round(
+                            TransportPathIndexBox.Value))
+                    : 0;
+
+            TransportPathChoiceComboBox.ItemsSource =
+                choices;
+
+            var selectedIndex =
+                choices
+                    .Select(
+                        (choice, index) =>
+                            new
+                            {
+                                choice.Index,
+                                ListIndex =
+                                    index
+                            })
+                    .FirstOrDefault(
+                        item =>
+                            item.Index ==
+                                previous)
+                    ?.ListIndex ??
+                0;
+
+            TransportPathChoiceComboBox.SelectedIndex =
+                choices.Count > 0
+                    ? selectedIndex
+                    : -1;
+
+            if (
+                choices.Count > 0 &&
+                TransportPathChoiceComboBox.SelectedItem is
+                    NativeTrafficPathChoice choice)
+            {
+                TransportPathIndexBox.Value =
+                    choice.Index;
+
+                TransportPathChoiceHintText.Text =
+                    $"{choices.Count} path(s) disponíveis neste item · {choice.KindLabel} {choice.DirectionLabel}.";
+            }
+            else
+            {
+                TransportPathChoiceHintText.Text =
+                    "Este item não possui paths OMSI ou nenhuma spline/objeto está selecionado.";
+            }
+        }
+        finally
+        {
+            _syncingTransportPathChoice =
+                false;
+        }
+    }
+
+    private void OnTransportPathChoiceSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            _syncingTransportPathChoice ||
+            TransportPathChoiceComboBox.SelectedItem is not
+                NativeTrafficPathChoice choice)
+        {
+            return;
+        }
+
+        TransportPathIndexBox.Value =
+            choice.Index;
+
+        TransportPathChoiceHintText.Text =
+            $"Path {choice.Index} · {choice.KindLabel} · direção {choice.DirectionLabel} · largura {choice.Width:F2} m.";
+    }
+
+    private void OnTransportPreviousLaneClick(
+        object sender,
+        RoutedEventArgs e) =>
+        StepTransportPathChoice(
+            -1);
+
+    private void OnTransportNextLaneClick(
+        object sender,
+        RoutedEventArgs e) =>
+        StepTransportPathChoice(
+            1);
+
+    private void StepTransportPathChoice(
+        int delta)
+    {
+        if (
+            TransportPathChoiceComboBox.Items.Count ==
+                0)
+        {
+            StatusText.Text =
+                "Faixas: selecione uma spline/objeto que possua paths OMSI.";
+            return;
+        }
+
+        var current =
+            Math.Max(
+                0,
+                TransportPathChoiceComboBox.SelectedIndex);
+
+        var next =
+            Math.Clamp(
+                current +
+                    delta,
+                0,
+                TransportPathChoiceComboBox.Items.Count -
+                    1);
+
+        TransportPathChoiceComboBox.SelectedIndex =
+            next;
     }
 
     private void OnTransportKindSelectionChanged(
