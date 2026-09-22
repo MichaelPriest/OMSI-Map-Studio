@@ -536,9 +536,31 @@ public sealed partial class TimetableWindow
                 : "Salve ou descarte a edição antes de fechar a janela.";
         };
 
+        var displayArea =
+            DisplayArea.GetFromWindowId(
+                windowId,
+                DisplayAreaFallback.Primary);
+
+        var workArea =
+            displayArea.WorkArea;
+
+        var targetWidth =
+            Math.Min(
+                1180,
+                Math.Max(
+                    320,
+                    workArea.Width - 32));
+
+        var targetHeight =
+            Math.Min(
+                780,
+                Math.Max(
+                    300,
+                    workArea.Height - 48));
+
         appWindow.Resize(
             new SizeInt32(
-                1120,
-                720));
+                targetWidth,
+                targetHeight));
     }
 }
