@@ -219,4 +219,142 @@ public sealed class NativeTrafficPathGeometryBuilderTests
                     19.8f);
     }
 
+
+    [Fact]
+    public void BuildCanFilterKindsAndHideWidthEdges()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var spline =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\Roads\mixed.sli",
+                20,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                30,
+                0,
+                0,
+                0,
+                false,
+                []);
+
+        var scene =
+            new NativeSceneBuilder()
+                .Build(
+                    [
+                        new NativeSceneTile(
+                            tile,
+                            new OmsiTileContent(
+                                new OmsiTileSummary(
+                                    true,
+                                    0,
+                                    1,
+                                    0),
+                                [],
+                                [spline]))
+                    ],
+                    new PickingRegistry<object>());
+
+        var definition =
+            new OmsiSplineDefinition(
+                true,
+                [],
+                [])
+            {
+                Paths =
+                    [
+                        new OmsiSplinePathDefinition(
+                            0,
+                            -1.5,
+                            0,
+                            3.0,
+                            0),
+                        new OmsiSplinePathDefinition(
+                            1,
+                            2.0,
+                            0,
+                            1.5,
+                            0),
+                        new OmsiSplinePathDefinition(
+                            2,
+                            0,
+                            0,
+                            1.0,
+                            2)
+                    ]
+            };
+
+        var asset =
+            new NativeSplineAsset(
+                spline.SplinePath,
+                @"C:\OMSI\Splines\Roads\mixed.sli",
+                definition,
+                [],
+                "noRenderableProfile");
+
+        var clean =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSplineAsset>(
+                            StringComparer.OrdinalIgnoreCase)
+                    {
+                        [spline.SplinePath] =
+                            asset
+                    },
+                    displayOptions:
+                        NativeTrafficPathDisplayOptions
+                            .CleanVehicles);
+
+        var detailed =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSplineAsset>(
+                            StringComparer.OrdinalIgnoreCase)
+                    {
+                        [spline.SplinePath] =
+                            asset
+                    },
+                    displayOptions:
+                        NativeTrafficPathDisplayOptions
+                            .AllDetailed);
+
+        Assert.Equal(
+            1,
+            clean.PathCount);
+
+        Assert.Equal(
+            1,
+            clean.VehiclePathCount);
+
+        Assert.Equal(
+            0,
+            clean.PedestrianPathCount);
+
+        Assert.Equal(
+            0,
+            clean.RailPathCount);
+
+        Assert.Equal(
+            3,
+            detailed.PathCount);
+
+        Assert.True(
+            clean.LineCount <
+                detailed.LineCount);
+    }
 }
