@@ -408,6 +408,17 @@ public sealed class NativeTrafficPathGeometryBuilderTests
             clean.PathCount,
             cleanWithoutMarkers.PathCount);
 
+        Assert.Equal(
+            2,
+            clean.Nodes.Count);
+
+        Assert.Empty(
+            cleanWithoutMarkers.Nodes);
+
+        Assert.Equal(
+            6,
+            detailed.Nodes.Count);
+
         Assert.True(
             clean.LineCount >
                 cleanWithoutMarkers.LineCount);
@@ -552,6 +563,17 @@ public sealed class NativeTrafficPathGeometryBuilderTests
         Assert.Equal(
             1,
             result.VehiclePathCount);
+
+        Assert.Equal(
+            2,
+            result.Nodes.Count);
+
+        Assert.All(
+            result.Nodes,
+            node =>
+                Assert.Equal(
+                    1,
+                    node.PathIndex));
 
         Assert.True(
             result.TriangleCount >
