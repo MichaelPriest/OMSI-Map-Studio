@@ -132,6 +132,40 @@ public sealed class OmsiSplinePathPatcherTests
     }
 
     [Fact]
+    public void AppendNewCreatesFirstSplinePath()
+    {
+        const string source =
+            "[profile]\n0\n";
+
+        var created =
+            new OmsiSplinePathDefinition(
+                1,
+                1.5,
+                0.1,
+                2.5,
+                2);
+
+        var bytes =
+            new OmsiSplinePathPatcher()
+                .AppendNew(
+                    OmsiConfigParser.Parse(
+                        source),
+                    created);
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        Assert.Equal(
+            created,
+            Assert.Single(
+                definition.Paths));
+    }
+
+    [Fact]
     public void RemoveDeletesSelectedSplinePathAndKeepsFollowingProfile()
     {
         const string source =

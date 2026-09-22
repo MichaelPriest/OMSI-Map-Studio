@@ -288,6 +288,59 @@ public sealed class OmsiSplinePathPatcher
             .ToBytes();
     }
 
+    public byte[] AppendNew(
+        OmsiConfigDocument document,
+        OmsiSplinePathDefinition path)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        ArgumentNullException.ThrowIfNull(
+            path);
+
+        ValidatePath(
+            path);
+
+        var lines =
+            document.Lines
+                .ToList();
+
+        if (
+            lines.Count >
+                0 &&
+            lines[^1].Length !=
+                0)
+        {
+            lines.Add(
+                string.Empty);
+        }
+
+        lines.AddRange(
+            [
+                "[path]",
+                path.Type.ToString(
+                    CultureInfo.InvariantCulture),
+                FormatDouble(
+                    path.X),
+                FormatDouble(
+                    path.Z),
+                FormatDouble(
+                    path.Width),
+                path.Direction.ToString(
+                    CultureInfo.InvariantCulture)
+            ]);
+
+        return new OmsiConfigDocument(
+            lines,
+            Array.Empty<
+                OmsiConfigSection>(),
+            document.NewLine,
+            document.HasTrailingNewLine,
+            document.TextEncoding,
+            document.HasByteOrderMark)
+            .ToBytes();
+    }
+
     public byte[] Remove(
         OmsiConfigDocument document,
         int sourcePathOrdinal)

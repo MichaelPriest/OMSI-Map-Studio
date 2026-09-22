@@ -1901,6 +1901,12 @@
                                         HorizontalAlignment="Stretch"
                                         ToolTipService.ToolTip="Edita os [path] internos do SCO ou SLI selecionado; a alteração vale para todas as instâncias que usam o mesmo asset"
                                         Click="OnEditSceneryPathClick" />
+                                <Button x:Name="AddAssetPathButton"
+                                        Content="+ Novo path"
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Cria um novo path no SCO/SLI selecionado, inclusive quando o asset ainda não possui nenhuma faixa"
+                                        Click="OnAddAssetPathClick" />
                                 <Button x:Name="DuplicateAssetPathButton"
                                         Content="Duplicar path atual"
                                         IsEnabled="False"

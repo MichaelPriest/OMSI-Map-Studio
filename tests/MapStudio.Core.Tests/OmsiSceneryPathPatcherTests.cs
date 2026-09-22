@@ -244,6 +244,51 @@ public sealed class OmsiSceneryPathPatcherTests
     }
 
     [Fact]
+    public void AppendNewCreatesFirstSceneryPath()
+    {
+        const string source =
+            "[friendlyname]\nEmpty Path Object\n\n" +
+            "[mesh]\nmodel.o3d\n";
+
+        var created =
+            new OmsiSceneryPathDefinition(
+                0,
+                0,
+                0,
+                0,
+                0,
+                12,
+                0,
+                0,
+                0,
+                3,
+                0,
+                0,
+                null,
+                null,
+                false);
+
+        var bytes =
+            new OmsiSceneryPathPatcher()
+                .AppendNew(
+                    OmsiConfigParser.Parse(
+                        source),
+                    created);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        Assert.Equal(
+            created,
+            Assert.Single(
+                metadata.Paths));
+    }
+
+    [Fact]
     public void RemoveDeletesSelectedPathGroupAndKeepsFollowingSections()
     {
         const string source =

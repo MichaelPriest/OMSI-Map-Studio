@@ -647,6 +647,11 @@ public sealed partial class MainWindow : Window
                         PickingKind.Object or
                         PickingKind.Spline;
 
+                AddAssetPathButton.IsEnabled =
+                    info?.Kind is
+                        PickingKind.Object or
+                        PickingKind.Spline;
+
                 DuplicateAssetPathButton.IsEnabled =
                     info?.Kind is
                         PickingKind.Object or
@@ -8120,6 +8125,434 @@ public sealed partial class MainWindow : Window
         finally
         {
             EditSceneryPathButton.IsEnabled =
+                _selectionInfo?.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline;
+        }
+    }
+
+    private async void OnAddAssetPathClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo is not
+                { } selection ||
+            selection.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ) ||
+            _session.OmsiRootPath is not
+                { } root ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Novo path: selecione um objeto ou uma spline.";
+            return;
+        }
+
+        var suggestedType =
+            TrafficPathModeComboBox
+                .SelectedIndex switch
+            {
+                1 => 1,
+                2 => 2,
+                _ => 0
+            };
+
+        var typeBox =
+            new ComboBox
+            {
+                Header =
+                    "Tipo",
+                ItemsSource =
+                    new[]
+                    {
+                        "Veículo",
+                        "Pedestre",
+                        "Trilho",
+                        "Aéreo"
+                    },
+                SelectedIndex =
+                    suggestedType,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var widthBox =
+            new NumberBox
+            {
+                Header =
+                    "Largura (m)",
+                Minimum =
+                    0,
+                Maximum =
+                    1000000,
+                Value =
+                    3,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+        var directionBox =
+            new ComboBox
+            {
+                Header =
+                    "Direção",
+                ItemsSource =
+                    new[]
+                    {
+                        "0 · →",
+                        "1 · ←",
+                        "2 · ↔"
+                    },
+                SelectedIndex =
+                    0,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var xBox =
+            new NumberBox
+            {
+                Header =
+                    selection.Kind ==
+                        PickingKind.Spline
+                        ? "Offset X"
+                        : "X",
+                Minimum =
+                    -1000000,
+                Maximum =
+                    1000000,
+                Value =
+                    0,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+        var zBox =
+            new NumberBox
+            {
+                Header =
+                    selection.Kind ==
+                        PickingKind.Spline
+                        ? "Offset Z"
+                        : "Z",
+                Minimum =
+                    -1000000,
+                Maximum =
+                    1000000,
+                Value =
+                    0,
+                SmallChange =
+                    0.1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    420
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "O novo path é gravado diretamente no asset compartilhado. Depois você pode usar Editar paths do item para ajustar todos os parâmetros avançados.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
+
+        panel.Children.Add(
+            typeBox);
+        panel.Children.Add(
+            widthBox);
+        panel.Children.Add(
+            directionBox);
+        panel.Children.Add(
+            xBox);
+        panel.Children.Add(
+            zBox);
+
+        var lengthBox =
+            new NumberBox
+            {
+                Header =
+                    "Comprimento (m)",
+                Minimum =
+                    0,
+                Maximum =
+                    1000000,
+                Value =
+                    10,
+                SmallChange =
+                    0.25,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+        var rotationBox =
+            new NumberBox
+            {
+                Header =
+                    "Rotação",
+                Minimum =
+                    -1000000,
+                Maximum =
+                    1000000,
+                Value =
+                    0,
+                SmallChange =
+                    1,
+                SpinButtonPlacementMode =
+                    NumberBoxSpinButtonPlacementMode.Compact
+            };
+
+        if (
+            selection.Kind ==
+                PickingKind.Object)
+        {
+            panel.Children.Add(
+                lengthBox);
+            panel.Children.Add(
+                rotationBox);
+        }
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    selection.Kind ==
+                        PickingKind.Object
+                        ? "Novo path SCO"
+                        : "Novo path SLI",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar path",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        if (
+            typeBox.SelectedIndex is
+                < 0 or
+                > 3 ||
+            directionBox.SelectedIndex is
+                < 0 or
+                > 2 ||
+            !double.IsFinite(
+                widthBox.Value) ||
+            !double.IsFinite(
+                xBox.Value) ||
+            !double.IsFinite(
+                zBox.Value) ||
+            widthBox.Value <
+                0)
+        {
+            StatusText.Text =
+                "Novo path: parâmetros inválidos.";
+            return;
+        }
+
+        if (
+            selection.Kind ==
+                PickingKind.Object &&
+            (
+                !double.IsFinite(
+                    lengthBox.Value) ||
+                !double.IsFinite(
+                    rotationBox.Value) ||
+                lengthBox.Value <
+                    0
+            ))
+        {
+            StatusText.Text =
+                "Novo path SCO: comprimento/rotação inválidos.";
+            return;
+        }
+
+        try
+        {
+            AddAssetPathButton.IsEnabled =
+                false;
+
+            var previousCount =
+                0;
+
+            string updatedAssetPath;
+            string backupPath;
+
+            if (
+                selection.Kind ==
+                    PickingKind.Object)
+            {
+                if (
+                    !OmsiSceneryObjectPathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Novo path SCO: asset não encontrado.";
+                    return;
+                }
+
+                previousCount =
+                    (
+                        await new OmsiSceneryObjectReader()
+                            .ReadMetadataAsync(
+                                target)
+                    ).Paths.Count;
+
+                var updated =
+                    await _session
+                        .AddSceneryPathAsync(
+                            selection.AssetPath,
+                            new OmsiSceneryPathDefinition(
+                                xBox.Value,
+                                0,
+                                zBox.Value,
+                                rotationBox.Value,
+                                0,
+                                lengthBox.Value,
+                                0,
+                                0,
+                                typeBox.SelectedIndex,
+                                widthBox.Value,
+                                directionBox.SelectedIndex,
+                                0,
+                                null,
+                                null,
+                                false));
+
+                updatedAssetPath =
+                    updated.AssetPath;
+                backupPath =
+                    updated.BackupPath;
+            }
+            else
+            {
+                if (
+                    !OmsiSplinePathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Novo path SLI: asset não encontrado.";
+                    return;
+                }
+
+                previousCount =
+                    (
+                        await new OmsiSplineDefinitionReader()
+                            .ReadAsync(
+                                target)
+                    ).Paths.Count;
+
+                var updated =
+                    await _session
+                        .AddSplinePathAsync(
+                            selection.AssetPath,
+                            new OmsiSplinePathDefinition(
+                                typeBox.SelectedIndex,
+                                xBox.Value,
+                                zBox.Value,
+                                widthBox.Value,
+                                directionBox.SelectedIndex));
+
+                updatedAssetPath =
+                    updated.AssetPath;
+                backupPath =
+                    updated.BackupPath;
+            }
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            var owner =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                selection.Kind &&
+                            item.EntityId ==
+                                selection.EntityId &&
+                            item.TileX ==
+                                selection.TileX &&
+                            item.TileY ==
+                                selection.TileY &&
+                            string.Equals(
+                                item.AssetPath,
+                                selection.AssetPath,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (owner is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    owner,
+                    focus:
+                        false);
+
+                Viewport
+                    .SetTrafficPathFocusedIndex(
+                        previousCount);
+
+                if (
+                    Viewport
+                        .TrafficPathSelectedOnly)
+                {
+                    Viewport
+                        .RefreshTrafficPathDisplay();
+                }
+            }
+
+            UpdateTrafficPathStatusText();
+
+            StatusText.Text =
+                $"Novo path criado como índice {previousCount} · {Path.GetFileName(updatedAssetPath)} · backup {backupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar path: {exception.Message}";
+        }
+        finally
+        {
+            AddAssetPathButton.IsEnabled =
                 _selectionInfo?.Kind is
                     PickingKind.Object or
                     PickingKind.Spline;
