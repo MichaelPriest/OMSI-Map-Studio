@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.4: Map tab freeze guard validates latest UI-thread isolation fix.
+# Test 10.6: resizable Project panel + HUMAN path visibility.
 
 on:
   push:
@@ -9,8 +9,8 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.5-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.5-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.6-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.6-native.md"
   workflow_dispatch:
 
 permissions:
@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.5-native
-  TAG: v0.2.0-alpha.5-test.10.5-native
+  VERSION: 0.2.0-alpha.5-test.10.6-native
+  TAG: v0.2.0-alpha.5-test.10.6-native
 
 jobs:
   build-native-preview:
@@ -135,6 +135,53 @@ jobs:
 
           Write-Host "Verified ContentDialog detach/re-parent order and map catalog exception guard."
 
+      - name: Verify Project resize and HUMAN paths
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $options = Get-Content src/MapStudio.Renderer/Scene/NativeTrafficPathDisplayOptions.cs -Raw
+          $geometry = Get-Content src/MapStudio.Renderer/Scene/NativeTrafficPathGeometryBuilder.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          if ($xaml -notmatch 'x:Name="ExplorerResizeGrip"') {
+            throw "Project panel resize grip is missing."
+          }
+
+          if ($xaml -notmatch 'PointerMoved="OnExplorerResizeGripMoved"') {
+            throw "Project panel resize grip is not wired."
+          }
+
+          if ($main -notmatch 'private void OnExplorerResizeGripMoved') {
+            throw "Project panel resize handler is missing."
+          }
+
+          if ($xaml -notmatch 'MaxHeight="340"[sS]{0,250}VerticalScrollMode="Auto"') {
+            throw "Asset Library filter area must keep internal vertical scrolling."
+          }
+
+          if ($options -notmatch 'TransportOverview[sS]{0,350}Pedestrians:s*true') {
+            throw "TransportOverview must include HUMAN/pedestrian paths."
+          }
+
+          if ($runtime -notmatch '_trafficPathDisplayOptions[sS]{0,180}TransportOverview') {
+            throw "Viewport runtime must default to the transport overview."
+          }
+
+          if ($main -notmatch 'trafficPathOptions[sS]{0,180}TransportOverview') {
+            throw "Traffic tool must show HUMAN paths by default."
+          }
+
+          if ($main -notmatch 'transportPathOptions[sS]{0,180}TransportOverview') {
+            throw "Transport tool must show HUMAN paths by default."
+          }
+
+          if ($geometry -notmatch 'PedestrianColor[sS]{0,80}1.0f,s*0.82f,s*0.08f') {
+            throw "HUMAN path high-contrast color is missing."
+          }
+
+          Write-Host "Verified resizable Project panel, library scroll and HUMAN path visibility."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -213,11 +260,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.5-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.6-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.5-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.6-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
