@@ -1,12 +1,21 @@
 using System.Numerics;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Scenery;
+using MapStudio.Renderer.Picking;
 
 namespace MapStudio.Renderer.Scene;
+
+public sealed record NativeTrafficPathNode(
+    Vector3 Position,
+    PickingId OwnerPickingId,
+    int PathIndex,
+    bool IsStart,
+    int Type);
 
 public sealed record NativeTrafficPathGeometry(
     NativeMapVertex[] Vertices,
     NativeMapVertex[] TriangleVertices,
+    IReadOnlyList<NativeTrafficPathNode> Nodes,
     int PathCount,
     int VehiclePathCount = 0,
     int PedestrianPathCount = 0,
@@ -89,6 +98,13 @@ public sealed class NativeTrafficPathGeometryBuilder
                     384,
                     scene.Splines.Count *
                         48));
+
+        var pathNodes =
+            new List<NativeTrafficPathNode>(
+                Math.Max(
+                    16,
+                    scene.Splines.Count *
+                        4));
 
         var pathCount = 0;
         var vehiclePathCount = 0;
@@ -175,9 +191,11 @@ public sealed class NativeTrafficPathGeometryBuilder
                 AppendPath(
                     entity,
                     path,
+                    pathIndex,
                     options,
                     vertices,
                     triangleVertices,
+                    pathNodes,
                     focusedPathIndex.HasValue &&
                     pathIndex ==
                         focusedPathIndex.Value);
@@ -237,10 +255,12 @@ public sealed class NativeTrafficPathGeometryBuilder
                     AppendSceneryPath(
                         entity,
                         path,
+                        pathIndex,
                         terrainOffset,
                         options,
                         vertices,
                         triangleVertices,
+                        pathNodes,
                         focusedPathIndex.HasValue &&
                         pathIndex ==
                             focusedPathIndex.Value);
@@ -254,6 +274,7 @@ public sealed class NativeTrafficPathGeometryBuilder
         return new NativeTrafficPathGeometry(
             vertices.ToArray(),
             triangleVertices.ToArray(),
+            pathNodes.ToArray(),
             pathCount,
             vehiclePathCount,
             pedestrianPathCount,
@@ -264,10 +285,12 @@ public sealed class NativeTrafficPathGeometryBuilder
     private static void AppendPath(
         NativeSplineEntity entity,
         OmsiSplinePathDefinition path,
+        int pathIndex,
         NativeTrafficPathDisplayOptions
             options,
         List<NativeMapVertex> lineOutput,
         List<NativeMapVertex> triangleOutput,
+        List<NativeTrafficPathNode> nodeOutput,
         bool focused)
     {
         var length =
@@ -373,10 +396,12 @@ public sealed class NativeTrafficPathGeometryBuilder
             AppendSplineEndpointMarkers(
                 entity,
                 path,
+                pathIndex,
                 length,
                 focused,
                 lineOutput,
-                triangleOutput);
+                triangleOutput,
+                nodeOutput);
         }
 
         if (options.ShowTypeLabels)
@@ -646,11 +671,13 @@ public sealed class NativeTrafficPathGeometryBuilder
     private static void AppendSceneryPath(
         NativeObjectEntity entity,
         OmsiSceneryPathDefinition path,
+        int pathIndex,
         double terrainOffset,
         NativeTrafficPathDisplayOptions
             options,
         List<NativeMapVertex> lineOutput,
         List<NativeMapVertex> triangleOutput,
+        List<NativeTrafficPathNode> nodeOutput,
         bool focused)
     {
         if (path.Length <= 0.01)
@@ -772,11 +799,14 @@ public sealed class NativeTrafficPathGeometryBuilder
         if (options.ShowNodes)
         {
             AppendSceneryEndpointMarkers(
+                entity.PickingId,
                 path,
+                pathIndex,
                 objectTransform,
                 focused,
                 lineOutput,
-                triangleOutput);
+                triangleOutput,
+                nodeOutput);
         }
 
         if (options.ShowTypeLabels)
@@ -1147,10 +1177,12 @@ public sealed class NativeTrafficPathGeometryBuilder
     private static void AppendSplineEndpointMarkers(
         NativeSplineEntity entity,
         OmsiSplinePathDefinition path,
+        int pathIndex,
         double length,
         bool focused,
         List<NativeMapVertex> lineOutput,
-        List<NativeMapVertex> triangleOutput)
+        List<NativeMapVertex> triangleOutput,
+        List<NativeTrafficPathNode> nodeOutput)
     {
         var size =
             focused
@@ -1169,11 +1201,20 @@ public sealed class NativeTrafficPathGeometryBuilder
                     entity,
                     length);
 
-        AppendNodeMarker(
+        var startPoint =
             GetPathPoint(
                 startFrame,
                 path,
-                0),
+                0);
+
+        var endPoint =
+            GetPathPoint(
+                endFrame,
+                path,
+                0);
+
+        AppendNodeMarker(
+            startPoint,
             startFrame.Forward,
             startFrame.Lateral,
             size,
@@ -1182,24 +1223,40 @@ public sealed class NativeTrafficPathGeometryBuilder
             triangleOutput);
 
         AppendNodeMarker(
-            GetPathPoint(
-                endFrame,
-                path,
-                0),
+            endPoint,
             endFrame.Forward,
             endFrame.Lateral,
             size,
             EndNodeColor,
             lineOutput,
             triangleOutput);
+
+        nodeOutput.Add(
+            new NativeTrafficPathNode(
+                startPoint,
+                entity.PickingId,
+                pathIndex,
+                true,
+                path.Type));
+
+        nodeOutput.Add(
+            new NativeTrafficPathNode(
+                endPoint,
+                entity.PickingId,
+                pathIndex,
+                false,
+                path.Type));
     }
 
     private static void AppendSceneryEndpointMarkers(
+        PickingId ownerPickingId,
         OmsiSceneryPathDefinition path,
+        int pathIndex,
         Matrix4x4 objectTransform,
         bool focused,
         List<NativeMapVertex> lineOutput,
-        List<NativeMapVertex> triangleOutput)
+        List<NativeMapVertex> triangleOutput,
+        List<NativeTrafficPathNode> nodeOutput)
     {
         var size =
             focused
@@ -1267,6 +1324,22 @@ public sealed class NativeTrafficPathGeometryBuilder
             EndNodeColor,
             lineOutput,
             triangleOutput);
+
+        nodeOutput.Add(
+            new NativeTrafficPathNode(
+                start,
+                ownerPickingId,
+                pathIndex,
+                true,
+                path.Type));
+
+        nodeOutput.Add(
+            new NativeTrafficPathNode(
+                end,
+                ownerPickingId,
+                pathIndex,
+                false,
+                path.Type));
     }
 
     private static void AppendNodeMarker(
