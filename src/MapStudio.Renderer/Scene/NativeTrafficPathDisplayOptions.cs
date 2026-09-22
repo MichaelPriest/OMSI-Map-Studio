@@ -7,7 +7,9 @@ public sealed record NativeTrafficPathDisplayOptions(
     bool Air,
     bool ShowWidthEdges,
     bool ShowDirectionArrows,
-    bool HighlightSignalControlled)
+    bool HighlightSignalControlled,
+    bool ShowNodes = true,
+    bool ShowTypeLabels = true)
 {
     public static NativeTrafficPathDisplayOptions CleanVehicles =>
         new(
@@ -17,7 +19,9 @@ public sealed record NativeTrafficPathDisplayOptions(
             Air: false,
             ShowWidthEdges: false,
             ShowDirectionArrows: true,
-            HighlightSignalControlled: false);
+            HighlightSignalControlled: false,
+            ShowNodes: true,
+            ShowTypeLabels: true);
 
     public static NativeTrafficPathDisplayOptions AllDetailed =>
         new(
@@ -27,7 +31,9 @@ public sealed record NativeTrafficPathDisplayOptions(
             Air: true,
             ShowWidthEdges: true,
             ShowDirectionArrows: true,
-            HighlightSignalControlled: true);
+            HighlightSignalControlled: true,
+            ShowNodes: true,
+            ShowTypeLabels: true);
 
     public bool IncludesType(
         int type) =>
