@@ -830,103 +830,163 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <StackPanel Grid.Row="0"
-                                        Spacing="6">
-                                <ComboBox x:Name="LibraryKindComboBox"
-                                          SelectedIndex="0"
-                                          HorizontalAlignment="Stretch"
-                                          SelectionChanged="OnLibraryKindSelectionChanged">
-                                    <ComboBoxItem Content="Todos" />
-                                    <ComboBoxItem Content="Objetos SCO" />
-                                    <ComboBoxItem Content="Splines SLI" />
-                                    <ComboBoxItem Content="Modelos" />
-                                    <ComboBoxItem Content="Texturas" />
-                                </ComboBox>
+                            <Border Grid.Row="0"
+                                    Background="#0A1B27"
+                                    BorderBrush="#24485C"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="8">
+                                <StackPanel Spacing="7">
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="BIBLIOTECA DE ASSETS"
+                                                       FontSize="11"
+                                                       FontWeight="SemiBold"
+                                                       CharacterSpacing="40"
+                                                       Foreground="#DDF4FF" />
+                                            <TextBlock Text="Filtre, visualize e posicione itens no mapa"
+                                                       FontSize="10"
+                                                       Foreground="#7895AD" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1"
+                                                Width="28"
+                                                Height="28"
+                                                Padding="0"
+                                                Content="↻"
+                                                ToolTipService.ToolTip="Reindexar biblioteca"
+                                                Click="OnRefreshLibraryClick" />
+                                    </Grid>
 
-                                <ComboBox x:Name="LibraryGroupComboBox"
-                                          Header="Categoria"
-                                          SelectedIndex="0"
-                                          HorizontalAlignment="Stretch"
-                                          DisplayMemberPath="Label"
-                                          SelectionChanged="OnLibraryGroupSelectionChanged" />
-
-                                <ComboBox x:Name="LibrarySubcategoryComboBox"
-                                          Header="Subcategoria"
-                                          SelectedIndex="0"
-                                          HorizontalAlignment="Stretch"
-                                          SelectionChanged="OnLibrarySubcategorySelectionChanged" />
-
-                                <ComboBox x:Name="LibraryTechnicalFilterComboBox"
-                                          Header="Filtro técnico"
-                                          SelectedIndex="0"
-                                          HorizontalAlignment="Stretch"
-                                          SelectionChanged="OnLibraryTechnicalFilterSelectionChanged" />
-
-                                <ComboBox x:Name="LibraryViewComboBox"
-                                          Header="Visualização"
-                                          SelectedIndex="0"
-                                          HorizontalAlignment="Stretch"
-                                          SelectionChanged="OnLibraryViewSelectionChanged">
-                                    <ComboBoxItem Content="Grupos" />
-                                    <ComboBoxItem Content="Favoritos" />
-                                    <ComboBoxItem Content="Recentes" />
-                                    <ComboBoxItem Content="Frequentes" />
-                                    <ComboBoxItem Content="Coleção" />
-                                </ComboBox>
-
-                                <StackPanel x:Name="LibraryCollectionPanel"
-                                            Visibility="Collapsed"
-                                            Spacing="5">
-                                    <ComboBox x:Name="LibraryCollectionComboBox"
-                                              Header="Coleção ativa"
-                                              HorizontalAlignment="Stretch"
-                                              SelectionChanged="OnLibraryCollectionSelectionChanged" />
                                     <Grid ColumnSpacing="6">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <Button Grid.Column="0"
-                                                Content="+ Nova coleção"
-                                                Click="OnCreateLibraryCollectionClick" />
-                                        <Button Grid.Column="1"
-                                                Content="Excluir"
-                                                Click="OnDeleteLibraryCollectionClick" />
+
+                                        <ComboBox x:Name="LibraryKindComboBox"
+                                                  Grid.Column="0"
+                                                  Header="Tipo"
+                                                  SelectedIndex="0"
+                                                  HorizontalAlignment="Stretch"
+                                                  SelectionChanged="OnLibraryKindSelectionChanged">
+                                            <ComboBoxItem Content="Todos" />
+                                            <ComboBoxItem Content="Objetos SCO" />
+                                            <ComboBoxItem Content="Splines SLI" />
+                                            <ComboBoxItem Content="Modelos" />
+                                            <ComboBoxItem Content="Texturas" />
+                                        </ComboBox>
+
+                                        <ComboBox x:Name="LibraryViewComboBox"
+                                                  Grid.Column="1"
+                                                  Header="Visão"
+                                                  SelectedIndex="0"
+                                                  HorizontalAlignment="Stretch"
+                                                  SelectionChanged="OnLibraryViewSelectionChanged">
+                                            <ComboBoxItem Content="Grupos" />
+                                            <ComboBoxItem Content="Favoritos" />
+                                            <ComboBoxItem Content="Recentes" />
+                                            <ComboBoxItem Content="Frequentes" />
+                                            <ComboBoxItem Content="Coleção" />
+                                        </ComboBox>
                                     </Grid>
+
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ComboBox x:Name="LibraryGroupComboBox"
+                                                  Grid.Column="0"
+                                                  Header="Categoria"
+                                                  SelectedIndex="0"
+                                                  HorizontalAlignment="Stretch"
+                                                  DisplayMemberPath="Label"
+                                                  SelectionChanged="OnLibraryGroupSelectionChanged" />
+
+                                        <ComboBox x:Name="LibrarySubcategoryComboBox"
+                                                  Grid.Column="1"
+                                                  Header="Subcategoria"
+                                                  SelectedIndex="0"
+                                                  HorizontalAlignment="Stretch"
+                                                  SelectionChanged="OnLibrarySubcategorySelectionChanged" />
+                                    </Grid>
+
+                                    <ComboBox x:Name="LibraryTechnicalFilterComboBox"
+                                              Header="Filtro técnico"
+                                              SelectedIndex="0"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnLibraryTechnicalFilterSelectionChanged" />
+
+                                    <StackPanel x:Name="LibraryCollectionPanel"
+                                                Visibility="Collapsed"
+                                                Spacing="5">
+                                        <ComboBox x:Name="LibraryCollectionComboBox"
+                                                  Header="Coleção ativa"
+                                                  HorizontalAlignment="Stretch"
+                                                  SelectionChanged="OnLibraryCollectionSelectionChanged" />
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button Grid.Column="0"
+                                                    Content="+ Nova coleção"
+                                                    Click="OnCreateLibraryCollectionClick" />
+                                            <Button Grid.Column="1"
+                                                    Content="Excluir"
+                                                    Click="OnDeleteLibraryCollectionClick" />
+                                        </Grid>
+                                    </StackPanel>
                                 </StackPanel>
-                            </StackPanel>
+                            </Border>
 
                             <StackPanel Grid.Row="1"
                                         Spacing="6">
-                                <Button x:Name="PlaceAssetButton"
-                                        Content="Posicionar no mapa"
-                                        IsEnabled="False"
-                                        HorizontalAlignment="Stretch"
-                                        Click="OnPlaceAssetClick" />
+                                <Border Background="#102A39"
+                                        BorderBrush="#315064"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="7">
+                                    <StackPanel Spacing="6">
+                                        <Button x:Name="PlaceAssetButton"
+                                                Content="＋ Posicionar no mapa"
+                                                IsEnabled="False"
+                                                MinHeight="36"
+                                                Background="#185B78"
+                                                BorderBrush="#75D9FF"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnPlaceAssetClick" />
 
-                                <Grid ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <Button x:Name="FavoriteAssetButton"
-                                            Grid.Column="0"
-                                            Content="☆ Favoritar"
-                                            IsEnabled="False"
-                                            Click="OnFavoriteAssetClick" />
-                                    <Button x:Name="CollectionAssetButton"
-                                            Grid.Column="1"
-                                            Content="+ Coleção"
-                                            IsEnabled="False"
-                                            Click="OnCollectionAssetClick" />
-                                </Grid>
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="FavoriteAssetButton"
+                                                    Grid.Column="0"
+                                                    Content="☆ Favoritar"
+                                                    IsEnabled="False"
+                                                    Click="OnFavoriteAssetClick" />
+                                            <Button x:Name="CollectionAssetButton"
+                                                    Grid.Column="1"
+                                                    Content="+ Coleção"
+                                                    IsEnabled="False"
+                                                    Click="OnCollectionAssetClick" />
+                                        </Grid>
 
-                                <Button x:Name="RepairDependencyButton"
-                                        Content="Usar como substituição"
-                                        Visibility="Collapsed"
-                                        IsEnabled="False"
-                                        HorizontalAlignment="Stretch"
-                                        Click="OnRepairDependencyClick" />
+                                        <Button x:Name="RepairDependencyButton"
+                                                Content="Usar como substituição"
+                                                Visibility="Collapsed"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Stretch"
+                                                Click="OnRepairDependencyClick" />
+                                    </StackPanel>
+                                </Border>
 
                                 <StackPanel x:Name="ObjectPlacementOptionsPanel"
                                             Visibility="Collapsed"
@@ -1197,47 +1257,56 @@
                                       DoubleTapped="OnAssetLibraryDoubleTapped">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Grid MinHeight="78"
-                                              ColumnSpacing="8"
-                                              Padding="4">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="76" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <Border Grid.Column="0"
-                                                    Width="76"
-                                                    Height="68"
-                                                    Background="#071621"
-                                                    BorderBrush="#315064"
-                                                    BorderThickness="1"
-                                                    CornerRadius="5">
-                                                <Grid>
-                                                    <TextBlock Text="{Binding KindLabel}"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center"
-                                                               FontSize="11"
-                                                               Foreground="#7895AD" />
-                                                    <Image Source="{Binding ThumbnailSource}"
-                                                           Stretch="Uniform"
-                                                           Margin="2" />
-                                                </Grid>
-                                            </Border>
-                                            <StackPanel Grid.Column="1"
-                                                        VerticalAlignment="Center"
-                                                        Spacing="2">
-                                                <TextBlock Text="{Binding DisplayName}"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Detail}"
-                                                           FontSize="11"
-                                                           Foreground="#9FB5C5"
-                                                           TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding RelativePath}"
-                                                           FontSize="10"
-                                                           Foreground="#7895AD"
-                                                           TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </Grid>
+                                        <Border Margin="0,2"
+                                                Padding="6"
+                                                MinHeight="82"
+                                                Background="#0A1B27"
+                                                BorderBrush="#24485C"
+                                                BorderThickness="1"
+                                                CornerRadius="7">
+                                            <Grid ColumnSpacing="9">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="72" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0"
+                                                        Width="72"
+                                                        Height="68"
+                                                        Background="#06131C"
+                                                        BorderBrush="#315064"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6">
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding KindLabel}"
+                                                                   HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Bottom"
+                                                                   Margin="4"
+                                                                   FontSize="9"
+                                                                   Foreground="#8FB7CA" />
+                                                        <Image Source="{Binding ThumbnailSource}"
+                                                               Stretch="Uniform"
+                                                               Margin="3,3,3,16" />
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="3">
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               FontSize="12"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Foreground="#EAF7FC" />
+                                                    <TextBlock Text="{Binding Detail}"
+                                                               FontSize="10.5"
+                                                               Foreground="#9FB5C5"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding RelativePath}"
+                                                               FontSize="9.5"
+                                                               Foreground="#66899D"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
                             </ListView>
