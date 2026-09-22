@@ -778,6 +778,9 @@ In addition to the checkpoints already described, the native host currently incl
 - AI analysis of the Google reference for road extraction;
 - Building Studio with original O3D/SCO output, flat/gable/hip/shed roofs, and facade openings;
 - provider-neutral AI configuration and connection probing;
+- real vision adapters for **OpenAI-compatible**, **Ollama**, **LM Studio**, the **Anthropic Messages API**, and **Google Gemini generateContent**, all converging on the same structured building/road parser;
+- the native provider dialog identifies operational adapters, suggests safe default endpoints for known services, and keeps API keys in Windows Credential Manager;
+- the standalone Workspace generates its own day/night sky plus original base/detail terrain textures; new maps start with a functional `[groundtex]` layer without OMSI content;
 - reading of `attachObj`, `splineAttachment/splineAttachement`, and repeater variants;
 - preservative editing of validated numeric attachment fields with backup and round-trip checks;
 - commercial/entitlement architecture running in Development Preview without enforcement;

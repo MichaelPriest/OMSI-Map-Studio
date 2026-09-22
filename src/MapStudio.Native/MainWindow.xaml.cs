@@ -18446,7 +18446,7 @@ public sealed partial class MainWindow : Window
             adapterBox.Text =
                 profile
                     ?.AdapterId ??
-                "custom";
+                "openai-compatible";
 
             endpointBox.Text =
                 profile
