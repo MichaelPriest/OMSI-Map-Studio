@@ -701,7 +701,7 @@ internal static class SceneryPathEditorDialog
             };
 
         return
-            await dialog.ShowAsync() ==
+            await dialog.ShowAdaptiveAsync() ==
                 ContentDialogResult.Primary
                 ? result
                 : null;
