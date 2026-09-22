@@ -135,6 +135,9 @@ public sealed class NativeViewportRuntime : IDisposable
     private bool
         _trafficPathSelectedOnly;
 
+    private int?
+        _trafficPathFocusedIndex;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -754,6 +757,42 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool TrafficPathSelectedOnly =>
         _trafficPathSelectedOnly;
+
+    public int? TrafficPathFocusedIndex =>
+        _trafficPathFocusedIndex;
+
+    public bool SetTrafficPathFocusedIndex(
+        int? pathIndex)
+    {
+        ThrowIfDisposed();
+
+        if (
+            pathIndex is <
+                0)
+        {
+            pathIndex =
+                null;
+        }
+
+        if (
+            _trafficPathFocusedIndex ==
+                pathIndex)
+        {
+            return false;
+        }
+
+        _trafficPathFocusedIndex =
+            pathIndex;
+
+        if (
+            Scene is not null &&
+            _trafficPathSelectedOnly)
+        {
+            RebuildTrafficPathGeometry();
+        }
+
+        return true;
+    }
 
     public bool SetTrafficPathSelectedOnly(
         bool selectedOnly)
@@ -4492,7 +4531,10 @@ public sealed class NativeViewportRuntime : IDisposable
                     trafficScene,
                     _splineAssets,
                     _sceneryAssets,
-                    _trafficPathDisplayOptions);
+                    _trafficPathDisplayOptions,
+                    _trafficPathSelectedOnly
+                        ? _trafficPathFocusedIndex
+                        : null);
 
         MapRenderer
             .SetTrafficPathGeometry(
@@ -4570,7 +4612,10 @@ public sealed class NativeViewportRuntime : IDisposable
                     trafficScene,
                     _splineAssets,
                     _sceneryAssets,
-                    _trafficPathDisplayOptions);
+                    _trafficPathDisplayOptions,
+                    _trafficPathSelectedOnly
+                        ? _trafficPathFocusedIndex
+                        : null);
 
         _trafficPathGeometry =
             trafficPathGeometry;
