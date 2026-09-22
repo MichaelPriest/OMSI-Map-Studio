@@ -14034,8 +14034,78 @@ public sealed partial class MainWindow : Window
 
         TransportRouteStatusText.Text =
             resolved > 0
-                ? $"Trecho {step.Sequence:000} isolado no mapa · ID {step.EntityId} · path {step.PathIndex} · {step.SourceLabel}. Use Visualizar rota para restaurar o caminho completo."
+                ? $"Trecho {step.Sequence:000} isolado no mapa · ID {step.EntityId} · path {step.PathIndex} · {step.SourceLabel}. Use Rota completa para restaurar o caminho."
                 : $"Trecho {step.Sequence:000} · ID {step.EntityId} · path {step.PathIndex} não pôde ser resolvido no viewport atual.";
+
+        SynchronizeTransportStepSelectionOnMap(
+            step);
+    }
+
+    private void SynchronizeTransportStepSelectionOnMap(
+        TransportRouteStepItem step)
+    {
+        if (_transportTrackRecordMode)
+        {
+            return;
+        }
+
+        var target =
+            Viewport
+                .GetExplorerItems()
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.EntityId ==
+                            step.EntityId);
+
+        if (target is not null)
+        {
+            Viewport
+                .SelectExplorerItem(
+                    target,
+                    focus: false);
+        }
+
+        if (
+            !int.TryParse(
+                step.PathIndex,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var pathIndex))
+        {
+            return;
+        }
+
+        TransportPathIndexBox.Value =
+            pathIndex;
+
+        var matchingChoice =
+            TransportPathChoiceComboBox.Items
+                .OfType<
+                    NativeTrafficPathChoice>()
+                .Select(
+                    (choice, index) =>
+                        new
+                        {
+                            Choice =
+                                choice,
+                            Index =
+                                index
+                        })
+                .FirstOrDefault(
+                    item =>
+                        item.Choice.Index ==
+                            pathIndex);
+
+        if (matchingChoice is not null)
+        {
+            TransportPathChoiceComboBox.SelectedIndex =
+                matchingChoice.Index;
+        }
+        else
+        {
+            TransportPathChoiceHintText.Text =
+                $"Path {pathIndex} usado pela rota não está disponível no item carregado.";
+        }
     }
 
     private void OnTransportFocusStepClick(
