@@ -9573,7 +9573,7 @@ public sealed partial class MainWindow : Window
                     choice.Index;
 
                 TransportPathChoiceHintText.Text =
-                    $"{choices.Count} path(s) disponíveis neste item · {choice.KindLabel} {choice.DirectionLabel}.";
+                    $"{choices.Count} path(s) disponíveis neste item · {choice.KindLabel} {choice.DirectionLabel} · {GetTransportPathMetadataHint(choice)}.";
             }
             else
             {
@@ -9586,6 +9586,25 @@ public sealed partial class MainWindow : Window
             _syncingTransportPathChoice =
                 false;
         }
+    }
+
+    private string GetTransportPathMetadataHint(
+        NativeTrafficPathChoice choice)
+    {
+        if (
+            _timetableCatalog is null ||
+            _selectionInfo is null)
+        {
+            return "metadata TTData ainda não verificada";
+        }
+
+        return TryCreateStationLinkEntryFromKnownMetadata(
+                _selectionInfo.EntityId,
+                choice.Index.ToString(
+                    CultureInfo.InvariantCulture),
+                out _)
+            ? "pronto para StationLink"
+            : "sem metadata segura para StationLink";
     }
 
     private void OnTransportPathChoiceSelectionChanged(
@@ -9613,7 +9632,7 @@ public sealed partial class MainWindow : Window
         }
 
         TransportPathChoiceHintText.Text =
-            $"Path {choice.Index} · {choice.KindLabel} · direção {choice.DirectionLabel} · largura {choice.Width:F2} m.";
+            $"Path {choice.Index} · {choice.KindLabel} · direção {choice.DirectionLabel} · largura {choice.Width:F2} m · {GetTransportPathMetadataHint(choice)}.";
     }
 
     private void OnTransportPreviousLaneClick(
