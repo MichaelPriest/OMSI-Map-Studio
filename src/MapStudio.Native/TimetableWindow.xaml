@@ -11,42 +11,7 @@
           RowSpacing="10">
         <Grid.Resources>
             <ResourceDictionary>
-                <ResourceDictionary.ThemeDictionaries>
-                    <ResourceDictionary x:Key="Light">
-                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#F4F7FA" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#F0F4F7" />
-                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#C9D6E0" />
-                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#A9BECC" />
-                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#17242D" />
-                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#3F5B6D" />
-                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#647B8B" />
-                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#005A9E" />
-                    </ResourceDictionary>
-                    <ResourceDictionary x:Key="Dark">
-                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#08131D" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#071722" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#0B202D" />
-                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#24485C" />
-                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#315064" />
-                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EAF7FC" />
-                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#9FB5C5" />
-                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#7895AD" />
-                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#9EDCF4" />
-                    </ResourceDictionary>
-                    <ResourceDictionary x:Key="HighContrast">
-                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#000000" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#000000" />
-                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#000000" />
-                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#FFFFFF" />
-                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#FFFF00" />
-                    </ResourceDictionary>
-                </ResourceDictionary.ThemeDictionaries>
-            </ResourceDictionary>
+                </ResourceDictionary>
         </Grid.Resources>
 
         <Grid.RowDefinitions>
