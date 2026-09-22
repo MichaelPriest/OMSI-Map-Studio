@@ -923,7 +923,7 @@ internal static class TimetableProfileEditorDialog
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return null;
