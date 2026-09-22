@@ -1334,68 +1334,84 @@
                                        Stretch="Uniform" />
                             </Border>
 
-                            <ListView x:Name="AssetLibraryListView"
+                            <GridView x:Name="AssetLibraryListView"
                                       Grid.Row="4"
                                       SelectionMode="Single"
                                       CanDragItems="True"
                                       DragItemsStarting="OnAssetLibraryDragItemsStarting"
                                       SelectionChanged="OnAssetLibrarySelectionChanged"
                                       DoubleTapped="OnAssetLibraryDoubleTapped">
-                                <ListView.ItemTemplate>
+                                <GridView.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <ItemsWrapGrid Orientation="Horizontal"
+                                                       ItemWidth="156"
+                                                       ItemHeight="164" />
+                                    </ItemsPanelTemplate>
+                                </GridView.ItemsPanel>
+                                <GridView.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Margin="0,2"
+                                        <Border Margin="3"
+                                                Width="148"
+                                                Height="156"
                                                 Padding="6"
-                                                MinHeight="82"
                                                 Background="#0A1B27"
                                                 BorderBrush="#24485C"
                                                 BorderThickness="1"
-                                                CornerRadius="7">
-                                            <Grid ColumnSpacing="9">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="72" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Border Grid.Column="0"
-                                                        Width="72"
-                                                        Height="68"
+                                                CornerRadius="8">
+                                            <Grid RowSpacing="4">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="86" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+
+                                                <Border Grid.Row="0"
                                                         Background="#06131C"
                                                         BorderBrush="#315064"
                                                         BorderThickness="1"
                                                         CornerRadius="6">
                                                     <Grid>
-                                                        <TextBlock Text="{Binding KindLabel}"
-                                                                   HorizontalAlignment="Center"
-                                                                   VerticalAlignment="Bottom"
-                                                                   Margin="4"
-                                                                   FontSize="9"
-                                                                   Foreground="#8FB7CA" />
                                                         <Image Source="{Binding ThumbnailSource}"
                                                                Stretch="Uniform"
-                                                               Margin="3,3,3,16" />
+                                                               Margin="4,4,4,18" />
+                                                        <Border HorizontalAlignment="Left"
+                                                                VerticalAlignment="Bottom"
+                                                                Margin="5"
+                                                                Padding="5,2"
+                                                                Background="#CC102A39"
+                                                                CornerRadius="4">
+                                                            <TextBlock Text="{Binding KindLabel}"
+                                                                       FontSize="9"
+                                                                       Foreground="#9EDCF4" />
+                                                        </Border>
                                                     </Grid>
                                                 </Border>
-                                                <StackPanel Grid.Column="1"
-                                                            VerticalAlignment="Center"
-                                                            Spacing="3">
-                                                    <TextBlock Text="{Binding DisplayName}"
-                                                               FontSize="12"
-                                                               FontWeight="SemiBold"
-                                                               TextTrimming="CharacterEllipsis"
-                                                               Foreground="#EAF7FC" />
-                                                    <TextBlock Text="{Binding Detail}"
-                                                               FontSize="10.5"
-                                                               Foreground="#9FB5C5"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding RelativePath}"
-                                                               FontSize="9.5"
-                                                               Foreground="#66899D"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
+
+                                                <TextBlock Grid.Row="1"
+                                                           Text="{Binding DisplayName}"
+                                                           FontSize="11.5"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="#EAF7FC" />
+
+                                                <TextBlock Grid.Row="2"
+                                                           Text="{Binding Detail}"
+                                                           FontSize="9.5"
+                                                           Foreground="#9FB5C5"
+                                                           TextTrimming="CharacterEllipsis" />
+
+                                                <TextBlock Grid.Row="3"
+                                                           Text="{Binding RelativePath}"
+                                                           FontSize="8.5"
+                                                           Foreground="#66899D"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           TextWrapping="NoWrap" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
+                                </GridView.ItemTemplate>
+                            </GridView>
                         </Grid>
 
                         <Grid x:Name="TransportPanel"
