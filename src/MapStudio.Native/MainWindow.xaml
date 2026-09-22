@@ -37,6 +37,42 @@
                 <Setter Property="VerticalContentAlignment"
                         Value="Center" />
             </Style>
+            <Style x:Key="EditorToolbarButtonStyle"
+                   TargetType="Button">
+                <Setter Property="MinHeight"
+                        Value="30" />
+                <Setter Property="Padding"
+                        Value="10,4" />
+                <Setter Property="FontSize"
+                        Value="11" />
+                <Setter Property="Background"
+                        Value="#102A39" />
+                <Setter Property="BorderBrush"
+                        Value="#315064" />
+                <Setter Property="BorderThickness"
+                        Value="1" />
+                <Setter Property="CornerRadius"
+                        Value="6" />
+            </Style>
+            <Style x:Key="MapToolGroupBadgeStyle"
+                   TargetType="Border">
+                <Setter Property="Width"
+                        Value="48" />
+                <Setter Property="Height"
+                        Value="64" />
+                <Setter Property="Margin"
+                        Value="3,0" />
+                <Setter Property="Padding"
+                        Value="5" />
+                <Setter Property="Background"
+                        Value="#0D2330" />
+                <Setter Property="BorderBrush"
+                        Value="#294A5D" />
+                <Setter Property="BorderThickness"
+                        Value="1" />
+                <Setter Property="CornerRadius"
+                        Value="8" />
+            </Style>
         </Grid.Resources>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="F11"
@@ -1346,41 +1382,53 @@
                     <Rectangle Width="1"
                                Height="22"
                                Fill="#355467" />
-                    <Button Content="Salvar"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Salvar"
                             IsEnabled="{x:Bind SaveChangesButton.IsEnabled, Mode=OneWay}"
                             Click="OnSaveChangesClick" />
-                    <Button Content="Desfazer"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Desfazer"
                             IsEnabled="{x:Bind UndoButton.IsEnabled, Mode=OneWay}"
                             Click="OnUndoClick" />
-                    <Button Content="Refazer"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Refazer"
                             IsEnabled="{x:Bind RedoButton.IsEnabled, Mode=OneWay}"
                             Click="OnRedoClick" />
                     <Rectangle Width="1"
                                Height="22"
                                Fill="#355467" />
-                    <Button Content="Novo"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Novo"
                             ToolTipService.ToolTip="Novo mapa no Workspace"
                             Click="OnCreateStandaloneMapClick" />
-                    <Button Content="Importar"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Importar"
                             ToolTipService.ToolTip="Importar mapa externo para o Workspace"
                             Click="OnImportStandaloneMapClick" />
-                    <Button Content="Adicionar itens"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Adicionar itens"
                             ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
                             Click="OnAddAssetFolderClick" />
-                    <Button Content="Assets"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Assets"
                             Click="OnLibraryModeClick" />
-                    <Button Content="Explorer"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Explorer"
                             Click="OnToggleExplorerClick" />
-                    <Button Content="Inspector"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Inspector"
                             Click="OnToggleInspectorClick" />
                     <Rectangle Width="1"
                                Height="22"
                                Fill="#355467" />
-                    <Button Content="Workspace"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Workspace"
                             Click="OnOpenWorkspaceClick" />
-                    <Button Content="Abrir OMSI"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Abrir OMSI"
                             Click="OnOpenOmsiClick" />
-                    <Button Content="Sair F11"
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Sair F11"
                             Click="OnFullscreenClick" />
                 </StackPanel>
             </Border>
@@ -1423,6 +1471,20 @@
                                    VerticalAlignment="Center"
                                    Foreground="#9FCBE2" />
                     </Border>
+                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
+                        <StackPanel VerticalAlignment="Center"
+                                    Spacing="1">
+                            <TextBlock Text="EDITAR"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       Foreground="#8FC8E0" />
+                            <TextBlock Text="1"
+                                       FontSize="11"
+                                       TextAlignment="Center"
+                                       Foreground="#DDF4FF" />
+                        </StackPanel>
+                    </Border>
                     <Button x:Name="ToolSelectionButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Seleção e edição"
@@ -1440,6 +1502,21 @@
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Button>
+
+                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
+                        <StackPanel VerticalAlignment="Center"
+                                    Spacing="1">
+                            <TextBlock Text="CRIAR"
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       Foreground="#8FC8E0" />
+                            <TextBlock Text="+"
+                                       FontSize="16"
+                                       TextAlignment="Center"
+                                       Foreground="#DDF4FF" />
+                        </StackPanel>
+                    </Border>
 
                     <Button x:Name="ToolObjectsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -1550,6 +1627,21 @@
                         </StackPanel>
                     </Button>
 
+                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
+                        <StackPanel VerticalAlignment="Center"
+                                    Spacing="1">
+                            <TextBlock Text="CENÁRIO"
+                                       FontSize="8.5"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       Foreground="#8FC8E0" />
+                            <TextBlock Text="◆"
+                                       FontSize="12"
+                                       TextAlignment="Center"
+                                       Foreground="#DDF4FF" />
+                        </StackPanel>
+                    </Border>
+
                     <Button x:Name="ToolTransitAssetsButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Pontos, terminais, abrigos e garagens"
@@ -1603,6 +1695,21 @@
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Button>
+
+                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
+                        <StackPanel VerticalAlignment="Center"
+                                    Spacing="1">
+                            <TextBlock Text="SIST."
+                                       FontSize="9"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       Foreground="#8FC8E0" />
+                            <TextBlock Text="⚙"
+                                       FontSize="14"
+                                       TextAlignment="Center"
+                                       Foreground="#DDF4FF" />
+                        </StackPanel>
+                    </Border>
 
                     <Button x:Name="ToolCrossingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
