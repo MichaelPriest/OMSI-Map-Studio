@@ -19,16 +19,18 @@ public sealed class OmsiTimetableTripValidatorTests
                         "A",
                         0,
                         100,
+                        null,
                         "0",
                         "0",
-                        "0"),
+                        string.Empty),
                     new OmsiTimetableBusStop(
                         "B",
                         0,
                         200,
+                        null,
                         "0",
                         "0",
-                        "0")
+                        string.Empty)
                 ],
                 StationLinks =
                 [
@@ -80,9 +82,10 @@ public sealed class OmsiTimetableTripValidatorTests
                         "A",
                         0,
                         100,
+                        null,
                         "0",
                         "0",
-                        "0")
+                        string.Empty)
                 ]
             };
 
@@ -123,16 +126,18 @@ public sealed class OmsiTimetableTripValidatorTests
                         "A",
                         0,
                         100,
+                        null,
                         "0",
                         "0",
-                        "0"),
+                        string.Empty),
                     new OmsiTimetableBusStop(
                         "B",
                         0,
                         200,
+                        null,
                         "0",
                         "0",
-                        "0")
+                        string.Empty)
                 ]
             };
 
