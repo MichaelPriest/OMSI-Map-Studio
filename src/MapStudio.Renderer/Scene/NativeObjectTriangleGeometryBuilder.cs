@@ -606,11 +606,13 @@ public sealed class NativeObjectTriangleGeometryBuilder
         int vertexIndex,
         bool hasUvs) =>
         hasUvs
-            ? new Vector2(
-                geometry.Uvs[
-                    vertexIndex * 2],
-                geometry.Uvs[
-                    vertexIndex * 2 + 1])
+            ? NativeOmsiModelSpace
+                .ToRendererUv(
+                    new Vector2(
+                        geometry.Uvs[
+                            vertexIndex * 2],
+                        geometry.Uvs[
+                            vertexIndex * 2 + 1]))
             : Vector2.Zero;
 
     private static Vector3
