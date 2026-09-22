@@ -6,7 +6,11 @@ namespace MapStudio.Renderer.Scene;
 
 public sealed record NativeTrafficPathGeometry(
     NativeMapVertex[] Vertices,
-    int PathCount)
+    int PathCount,
+    int VehiclePathCount = 0,
+    int PedestrianPathCount = 0,
+    int RailPathCount = 0,
+    int AirPathCount = 0)
 {
     public int LineCount =>
         Vertices.Length / 2;
@@ -34,13 +38,20 @@ public sealed class NativeTrafficPathGeometryBuilder
         IReadOnlyDictionary<
             string,
             NativeSceneryAsset>? sceneryAssets =
-                null)
+                null,
+        NativeTrafficPathDisplayOptions?
+            displayOptions = null)
     {
         ArgumentNullException.ThrowIfNull(
             scene);
 
         ArgumentNullException.ThrowIfNull(
             assets);
+
+        var options =
+            displayOptions ??
+            NativeTrafficPathDisplayOptions
+                .AllDetailed;
 
         var vertices =
             new List<NativeMapVertex>(
@@ -50,6 +61,35 @@ public sealed class NativeTrafficPathGeometryBuilder
                         32));
 
         var pathCount = 0;
+        var vehiclePathCount = 0;
+        var pedestrianPathCount = 0;
+        var railPathCount = 0;
+        var airPathCount = 0;
+
+        void CountPath(
+            int type)
+        {
+            pathCount++;
+
+            switch (type)
+            {
+                case 1:
+                    pedestrianPathCount++;
+                    break;
+
+                case 2:
+                    railPathCount++;
+                    break;
+
+                case 3:
+                    airPathCount++;
+                    break;
+
+                default:
+                    vehiclePathCount++;
+                    break;
+            }
+        }
 
         foreach (
             var entity in
@@ -82,12 +122,20 @@ public sealed class NativeTrafficPathGeometryBuilder
                     asset.Definition
                         .Paths)
             {
+                if (!options.IncludesType(
+                        path.Type))
+                {
+                    continue;
+                }
+
                 AppendPath(
                     entity,
                     path,
+                    options,
                     vertices);
 
-                pathCount++;
+                CountPath(
+                    path.Type);
             }
         }
 
@@ -119,25 +167,39 @@ public sealed class NativeTrafficPathGeometryBuilder
                     var path in
                         asset.Paths)
                 {
+                    if (!options.IncludesType(
+                            path.Type))
+                    {
+                        continue;
+                    }
+
                     AppendSceneryPath(
                         entity,
                         path,
                         terrainOffset,
+                        options,
                         vertices);
 
-                    pathCount++;
+                    CountPath(
+                        path.Type);
                 }
             }
         }
 
         return new NativeTrafficPathGeometry(
             vertices.ToArray(),
-            pathCount);
+            pathCount,
+            vehiclePathCount,
+            pedestrianPathCount,
+            railPathCount,
+            airPathCount);
     }
 
     private static void AppendPath(
         NativeSplineEntity entity,
         OmsiSplinePathDefinition path,
+        NativeTrafficPathDisplayOptions
+            options,
         List<NativeMapVertex> output)
     {
         var length =
@@ -169,7 +231,9 @@ public sealed class NativeTrafficPathGeometryBuilder
             color,
             output);
 
-        if (path.Width > 0.05)
+        if (
+            options.ShowWidthEdges &&
+            path.Width > 0.05)
         {
             var halfWidth =
                 path.Width /
@@ -192,7 +256,9 @@ public sealed class NativeTrafficPathGeometryBuilder
                 output);
         }
 
-        if (path.Direction is 0 or 2)
+        if (
+            options.ShowDirectionArrows &&
+            path.Direction is 0 or 2)
         {
             AppendDirectionArrow(
                 entity,
@@ -203,7 +269,9 @@ public sealed class NativeTrafficPathGeometryBuilder
                 output);
         }
 
-        if (path.Direction is 1 or 2)
+        if (
+            options.ShowDirectionArrows &&
+            path.Direction is 1 or 2)
         {
             AppendDirectionArrow(
                 entity,
@@ -326,12 +394,15 @@ public sealed class NativeTrafficPathGeometryBuilder
         Vector3.UnitY *
             (float)(
                 path.Z +
-                0.08);
+                GetOverlayHeight(
+                    path.Type));
 
     private static void AppendSceneryPath(
         NativeObjectEntity entity,
         OmsiSceneryPathDefinition path,
         double terrainOffset,
+        NativeTrafficPathDisplayOptions
+            options,
         List<NativeMapVertex> output)
     {
         if (path.Length <= 0.01)
@@ -340,6 +411,7 @@ public sealed class NativeTrafficPathGeometryBuilder
         }
 
         var color =
+            options.HighlightSignalControlled &&
             path.TrafficLightIndex.HasValue
                 ? new Vector4(
                     1.0f,
@@ -384,7 +456,9 @@ public sealed class NativeTrafficPathGeometryBuilder
             color,
             output);
 
-        if (path.Width > 0.05)
+        if (
+            options.ShowWidthEdges &&
+            path.Width > 0.05)
         {
             var halfWidth =
                 path.Width / 2.0;
@@ -406,7 +480,9 @@ public sealed class NativeTrafficPathGeometryBuilder
                 output);
         }
 
-        if (path.Direction is 0 or 2)
+        if (
+            options.ShowDirectionArrows &&
+            path.Direction is 0 or 2)
         {
             AppendSceneryDirectionArrow(
                 path,
@@ -417,7 +493,9 @@ public sealed class NativeTrafficPathGeometryBuilder
                 output);
         }
 
-        if (path.Direction is 1 or 2)
+        if (
+            options.ShowDirectionArrows &&
+            path.Direction is 1 or 2)
         {
             AppendSceneryDirectionArrow(
                 path,
@@ -565,7 +643,8 @@ public sealed class NativeTrafficPathGeometryBuilder
                 (float)(
                     path.Z +
                     rise +
-                    0.10),
+                    GetOverlayHeight(
+                        path.Type)),
                 (float)(
                     path.Y +
                     forwardY +
@@ -657,6 +736,16 @@ public sealed class NativeTrafficPathGeometryBuilder
                 0.55f,
             color);
     }
+
+    private static double GetOverlayHeight(
+        int type) =>
+        type switch
+        {
+            1 => 0.16,
+            2 => 0.20,
+            3 => 0.24,
+            _ => 0.12
+        };
 
     private static double GetGradientRise(
         double start,
