@@ -8,8 +8,8 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.1-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.1-native.md"
   workflow_dispatch:
 
 permissions:
@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10-native
-  TAG: v0.2.0-alpha.5-test.10-native
+  VERSION: 0.2.0-alpha.5-test.10.1-native
+  TAG: v0.2.0-alpha.5-test.10.1-native
 
 jobs:
   build-native-preview:
@@ -151,11 +151,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.1-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.1-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
