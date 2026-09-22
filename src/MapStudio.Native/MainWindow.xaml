@@ -1370,6 +1370,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
@@ -1395,7 +1396,43 @@
                                 <ComboBoxItem Content="Traffic Rules" />
                             </ComboBox>
 
-                            <Grid Grid.Row="3">
+                            <Border Grid.Row="3"
+                                    Background="#0D2330"
+                                    BorderBrush="#294A5D"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="7">
+                                <StackPanel Spacing="5">
+                                    <TextBlock Text="Paths no mapa"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="#DDF4FF" />
+                                    <ComboBox x:Name="TrafficPathModeComboBox"
+                                              SelectedIndex="0"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnTrafficPathModeChanged">
+                                        <ComboBoxItem Content="Veículos · visão limpa" />
+                                        <ComboBoxItem Content="Pedestres" />
+                                        <ComboBoxItem Content="Trilhos" />
+                                        <ComboBoxItem Content="Todos os tipos" />
+                                    </ComboBox>
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="10">
+                                        <CheckBox x:Name="TrafficPathWidthCheckBox"
+                                                  Content="Largura"
+                                                  Click="OnTrafficPathModeChanged" />
+                                        <CheckBox x:Name="TrafficPathArrowsCheckBox"
+                                                  Content="Setas"
+                                                  IsChecked="True"
+                                                  Click="OnTrafficPathModeChanged" />
+                                        <CheckBox x:Name="TrafficPathSignalsCheckBox"
+                                                  Content="Semáforos em vermelho"
+                                                  Click="OnTrafficPathModeChanged" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <Grid Grid.Row="4">
                                 <Grid x:Name="TrafficSignalsPanel"
                                       RowSpacing="6">
                                     <Grid.RowDefinitions>
@@ -1512,13 +1549,13 @@
                             </Grid>
 
                             <TextBlock x:Name="TrafficDetailText"
-                                       Grid.Row="4"
+                                       Grid.Row="5"
                                        Text="Selecione um programa ou Traffic Rule."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
 
-                            <StackPanel Grid.Row="5"
+                            <StackPanel Grid.Row="6"
                                         Spacing="5">
                                 <Button x:Name="AddTrafficSignalButton"
                                         Content="Adicionar semáforo..."
