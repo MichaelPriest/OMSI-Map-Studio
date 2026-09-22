@@ -9361,34 +9361,15 @@ public sealed partial class MainWindow : Window
                         null!);
                 };
 
-            _timetableWindow.EditLineRequested +=
-                async lineName =>
+            _timetableWindow.LineSaveRequested +=
+                async (
+                    sourceLine,
+                    updatedLine
+                ) =>
                 {
-                    SelectTransportWorkspace(
-                        4,
-                        $"Line {lineName}: edição aberta pela janela Timetable.");
-
-                    var selected =
-                        _transportItems
-                            .FirstOrDefault(
-                                candidate =>
-                                    candidate.Kind ==
-                                        "Line" &&
-                                    string.Equals(
-                                        candidate.Key,
-                                        lineName,
-                                        StringComparison.OrdinalIgnoreCase));
-
-                    if (selected is null)
-                    {
-                        return;
-                    }
-
-                    TransportListView.SelectedItem =
-                        selected;
-
-                    await EditTimetableLineAsync(
-                        selected);
+                    await SaveTimetableLineAsync(
+                        sourceLine,
+                        updatedLine);
                 };
 
             _timetableWindow.Closed +=
