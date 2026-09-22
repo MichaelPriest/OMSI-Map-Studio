@@ -314,6 +314,7 @@ public sealed partial class MainWindow : Window
             ];
 
     private bool _libraryMode;
+    private bool _mapMode;
     private bool _assetPlacementOptionsExpanded;
     private bool _transportMode;
     private bool _transportPathsVisible;
@@ -975,6 +976,7 @@ public sealed partial class MainWindow : Window
                 {
                     SceneExplorerModeButton,
                     LibraryExplorerModeButton,
+                    MapExplorerModeButton,
                     TransportExplorerModeButton
                 })
         {
@@ -1000,6 +1002,16 @@ public sealed partial class MainWindow : Window
                         ? 1.5
                         : 1);
         }
+
+        _mapMode =
+            ReferenceEquals(
+                activeButton,
+                MapExplorerModeButton);
+
+        MapExplorerPanel.Visibility =
+            _mapMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void OnExplorerSearchTextChanged(
@@ -1021,6 +1033,10 @@ public sealed partial class MainWindow : Window
         else if (_transportMode)
         {
             RefreshTransportFilter();
+        }
+        else if (_mapMode)
+        {
+            RefreshMapExplorer();
         }
         else if (_libraryMode)
         {
@@ -1117,6 +1133,235 @@ public sealed partial class MainWindow : Window
             "Cena e conteúdo do mapa");
 
         RefreshExplorerFilter();
+    }
+
+    private void OnMapExplorerModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _assetPreviewCancellation
+            ?.Cancel();
+
+        _libraryFilterDebounceTimer.Stop();
+        _trafficPreviewTimer.Stop();
+
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.ClearTimetableRoutePreview();
+        Viewport.RestoreSceneView();
+
+        _libraryMode =
+            false;
+
+        _transportMode =
+            false;
+
+        _trafficMode =
+            false;
+
+        _validationMode =
+            false;
+
+        _junctionMode =
+            false;
+
+        _junctionPlacementTarget =
+            null;
+
+        TrafficControlPanel.Visibility =
+            Visibility.Collapsed;
+
+        ExplorerListView.Visibility =
+            Visibility.Collapsed;
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Collapsed;
+
+        TransportPanel.Visibility =
+            Visibility.Collapsed;
+
+        ExplorerSearchBox.PlaceholderText =
+            "Buscar tile por coordenada...";
+
+        UpdateExplorerModeVisual(
+            MapExplorerModeButton,
+            "Tiles, coordenadas e estrutura do mapa");
+
+        RefreshMapExplorer();
+
+        StatusText.Text =
+            _session.CurrentMap is null
+                ? "Mapa: abra ou crie um mapa para visualizar os tiles."
+                : "Mapa: tiles exibidos diretamente no painel Projeto.";
+    }
+
+    private void RefreshMapExplorer()
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (snapshot is null)
+        {
+            MapTileListView.ItemsSource =
+                Array.Empty<TileManagerViewItem>();
+
+            MapExplorerStatusText.Text =
+                "Abra ou crie um mapa para visualizar os tiles.";
+
+            return;
+        }
+
+        var loadedCoordinates =
+            snapshot.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.Reference.X,
+                            tile.Reference.Y
+                        ))
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group.First());
+
+        var query =
+            ExplorerSearchBox.Text
+                .Trim();
+
+        var groups =
+            snapshot.Map.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.X,
+                            tile.Y
+                        ))
+                .OrderBy(
+                    group =>
+                        group.Key.Y)
+                .ThenBy(
+                    group =>
+                        group.Key.X);
+
+        if (!string.IsNullOrWhiteSpace(
+                query))
+        {
+            groups =
+                groups
+                    .Where(
+                        group =>
+                            $"{group.Key.X},{group.Key.Y}"
+                                .Contains(
+                                    query,
+                                    StringComparison.OrdinalIgnoreCase) ||
+                            group.Key.X
+                                .ToString(
+                                    CultureInfo.InvariantCulture)
+                                .Contains(
+                                    query,
+                                    StringComparison.OrdinalIgnoreCase) ||
+                            group.Key.Y
+                                .ToString(
+                                    CultureInfo.InvariantCulture)
+                                .Contains(
+                                    query,
+                                    StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(
+                        group =>
+                            group.Key.Y)
+                    .ThenBy(
+                        group =>
+                            group.Key.X);
+        }
+
+        var items =
+            groups
+                .Select(
+                    group =>
+                    {
+                        var tile =
+                            group.First();
+
+                        var isActive =
+                            snapshot.ActiveTile?.X ==
+                                tile.X &&
+                            snapshot.ActiveTile?.Y ==
+                                tile.Y;
+
+                        var isLoaded =
+                            loadedCoordinates
+                                .TryGetValue(
+                                    (
+                                        tile.X,
+                                        tile.Y
+                                    ),
+                                    out var loaded);
+
+                        var detail =
+                            isLoaded &&
+                            loaded is not null
+                                ? $"objetos {loaded.Content.Objects.Count} · splines {loaded.Content.Splines.Count}"
+                                : "fora da região carregada";
+
+                        if (group.Count() > 1)
+                        {
+                            detail +=
+                                $" · {group.Count()} refs";
+                        }
+
+                        return new TileManagerViewItem(
+                            tile.X,
+                            tile.Y,
+                            $"{(isActive ? "●" : "○")} Tile {tile.X},{tile.Y} · {detail}",
+                            isActive,
+                            isLoaded);
+                    })
+                .ToArray();
+
+        MapTileListView.ItemsSource =
+            items;
+
+        MapTileListView.SelectedItem =
+            items.FirstOrDefault(
+                item =>
+                    item.IsActive);
+
+        MapExplorerStatusText.Text =
+            $"{snapshot.Map.Tiles.Count} tile(s) no mapa · {snapshot.Tiles.Count} carregado(s) no viewport · {items.Length} exibido(s).";
+    }
+
+    private async void OnMapTileFocusClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await FocusSelectedMapTileAsync();
+    }
+
+    private async void OnMapTileListDoubleTapped(
+        object sender,
+        DoubleTappedRoutedEventArgs e)
+    {
+        await FocusSelectedMapTileAsync();
+    }
+
+    private async Task FocusSelectedMapTileAsync()
+    {
+        if (
+            MapTileListView.SelectedItem is not
+                TileManagerViewItem selected)
+        {
+            StatusText.Text =
+                "Mapa: selecione um tile primeiro.";
+
+            return;
+        }
+
+        await NavigateToTileAsync(
+            selected.X,
+            selected.Y);
+
+        RefreshMapExplorer();
     }
 
     private async void OnLibraryModeClick(
@@ -6661,6 +6906,15 @@ public sealed partial class MainWindow : Window
     private void SetActiveMapTool(
         Button activeButton)
     {
+        _mapMode =
+            false;
+
+        if (MapExplorerPanel is not null)
+        {
+            MapExplorerPanel.Visibility =
+                Visibility.Collapsed;
+        }
+
         var defaultBackground =
             (Microsoft.UI.Xaml.Media.Brush)
                 MainRoot.Resources[
@@ -18834,6 +19088,11 @@ public sealed partial class MainWindow : Window
 
             TileNavigatorYBox.Value =
                 active.Y;
+        }
+
+        if (_mapMode)
+        {
+            RefreshMapExplorer();
         }
     }
 
