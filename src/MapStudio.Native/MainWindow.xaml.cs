@@ -10409,15 +10409,39 @@ public sealed partial class MainWindow : Window
                                 id))
                 .ToArray();
 
-        if (
-            route.UsesStationLinks &&
-            !TryValidateStationLinkTrip(
-                stations,
-                out var stationLinkError))
+        if (route.UsesStationLinks)
         {
-            StatusText.Text =
-                $"Novo Trip tipo 2: {stationLinkError}";
-            return;
+            var validation =
+                OmsiTimetableTripValidator
+                    .ValidateType2StationLinks(
+                        _timetableCatalog,
+                        stations);
+
+            if (!validation.IsValid)
+            {
+                var message =
+                    validation.Failure switch
+                    {
+                        OmsiTimetableType2TripValidationFailure
+                            .InvalidStationSequence =>
+                            "use pelo menos dois stops do tipo 2.",
+
+                        OmsiTimetableType2TripValidationFailure
+                            .UnknownStop =>
+                            $"o stop #{validation.StopId} não existe em Busstops.cfg.",
+
+                        OmsiTimetableType2TripValidationFailure
+                            .MissingStationLink =>
+                            $"não existe StationLink {validation.StartStopId} → {validation.EndStopId}.",
+
+                        _ =>
+                            "sequência de StationLinks inválida."
+                    };
+
+                StatusText.Text =
+                    $"Novo Trip tipo 2: {message}";
+                return;
+            }
         }
 
         var profiles =
@@ -10470,93 +10494,6 @@ public sealed partial class MainWindow : Window
                 : $"Trip {created.Name} criado · Track {created.EffectiveTrackName} · {created.Stations.Count} stop(s).";
     }
 
-    private bool TryValidateStationLinkTrip(
-        IReadOnlyList<
-            OmsiTimetableTripStation> stations,
-        out string error)
-    {
-        error =
-            string.Empty;
-
-        if (_timetableCatalog is null)
-        {
-            error =
-                "TTData não está carregado.";
-            return false;
-        }
-
-        var type2 =
-            stations
-                .OfType<
-                    OmsiTimetableTripStationType2>()
-                .ToArray();
-
-        if (
-            type2.Length !=
-                stations.Count ||
-            type2.Length <
-                2)
-        {
-            error =
-                "use pelo menos dois stops do tipo 2.";
-            return false;
-        }
-
-        var knownStops =
-            _timetableCatalog.BusStops
-                .Select(
-                    stop =>
-                        stop.Id)
-                .ToHashSet();
-
-        var missingStop =
-            type2
-                .Select(
-                    station =>
-                        station.Id)
-                .FirstOrDefault(
-                    id =>
-                        !knownStops.Contains(
-                            id),
-                    -1);
-
-        if (missingStop >= 0)
-        {
-            error =
-                $"o stop #{missingStop} não existe em Busstops.cfg.";
-            return false;
-        }
-
-        for (
-            var index = 0;
-            index <
-                type2.Length - 1;
-            index++)
-        {
-            var start =
-                type2[index].Id;
-
-            var end =
-                type2[index + 1].Id;
-
-            if (
-                !_timetableCatalog
-                    .StationLinks
-                    .Any(
-                        link =>
-                            link.StartBusStopId ==
-                                start &&
-                            link.EndBusStopId ==
-                                end))
-            {
-                error =
-                    $"não existe StationLink {start} → {end}.";
-                return false;
-            }
-        }
-
-        return true;
-    }
 
     private async Task CreateTransportStopAsync()
     {
