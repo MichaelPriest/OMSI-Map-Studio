@@ -127,7 +127,7 @@ public sealed class NativeViewportRuntime : IDisposable
     private NativeTrafficPathDisplayOptions
         _trafficPathDisplayOptions =
             NativeTrafficPathDisplayOptions
-                .CleanVehicles;
+                .TransportOverview;
 
     private NativeTrafficPathGeometry?
         _trafficPathGeometry;
