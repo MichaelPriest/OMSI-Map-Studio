@@ -1151,6 +1151,35 @@ public sealed partial class NativeViewport : UserControl
             .TrafficPathSelectedOnly ??
         false;
 
+    public int? TrafficPathFocusedIndex =>
+        _runtime?
+            .TrafficPathFocusedIndex;
+
+    public bool SetTrafficPathFocusedIndex(
+        int? pathIndex)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime
+                .SetTrafficPathFocusedIndex(
+                    pathIndex);
+
+        if (changed)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                pathIndex.HasValue
+                    ? $"Paths OMSI: faixa {pathIndex.Value} isolada no item selecionado."
+                    : "Paths OMSI: todas as faixas do item selecionado disponíveis.");
+        }
+
+        return changed;
+    }
+
     public bool SetTrafficPathSelectedOnly(
         bool selectedOnly)
     {
