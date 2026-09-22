@@ -21078,6 +21078,8 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        try
+        {
         if (_session.OmsiRootPath is null)
         {
             StatusText.Text =
@@ -21237,6 +21239,19 @@ public sealed partial class MainWindow : Window
 
         await OpenMapDirectoryAsync(
             selected.Map.DirectoryPath);
+    
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"Open map catalog failure type={exception.GetType().FullName} hresult=0x{exception.HResult:X8} message={exception.Message}");
+
+            NativeStartupDiagnostics.Write(
+                exception.ToString());
+
+            StatusText.Text =
+                $"Falha ao abrir catálogo de mapas: {exception.Message}";
+        }
     }
 
     private async Task OpenMapDirectoryAsync(
