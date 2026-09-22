@@ -7476,9 +7476,24 @@ public sealed partial class MainWindow : Window
         SetSelectionModeFromShortcut(
             0);
 
+        var trafficPathOptions =
+            NativeTrafficPathDisplayOptions
+                .CleanVehicles;
+
+        Viewport
+            .SetTrafficPathDisplayOptions(
+                trafficPathOptions);
+
+        SynchronizeTrafficPathControls(
+            trafficPathOptions,
+            fromTransport: false);
+
         Viewport
             .SetTrafficPathsVisible(
                 true);
+
+        _transportPathsVisible =
+            true;
 
         _libraryMode =
             false;
@@ -7539,11 +7554,10 @@ public sealed partial class MainWindow : Window
 
         RefreshTrafficFilter();
 
-        TrafficStatusText.Text =
-            $"{Viewport.TrafficPathLineCount} linhas de path · " +
-            $"{_trafficPrograms.Count} programa(s) de semáforo · " +
-            $"{_trafficRuleItems.Count} regra(s) aplicada(s) · " +
-            $"{_trafficVehicleGroups.Count} grupo(s) de veículo.";
+        UpdateTrafficPathStatusText();
+
+        TrafficStatusText.Text +=
+            $" {_trafficVehicleGroups.Count} grupo(s) de veículo.";
 
         TrafficProgramListView.SelectedIndex =
             _trafficPrograms.Count > 0
@@ -8847,8 +8861,20 @@ public sealed partial class MainWindow : Window
         _transportPathsVisible =
             false;
 
+        var transportPathOptions =
+            NativeTrafficPathDisplayOptions
+                .CleanVehicles;
+
+        Viewport
+            .SetTrafficPathDisplayOptions(
+                transportPathOptions);
+
+        SynchronizeTrafficPathControls(
+            transportPathOptions,
+            fromTransport: false);
+
         TransportPathsButton.Content =
-            "Paths OMSI";
+            "Mostrar Paths";
 
         Viewport
             .SetTrafficPathsVisible(
@@ -9116,7 +9142,15 @@ public sealed partial class MainWindow : Window
 
     private void OnTrafficPathModeChanged(
         object sender,
-        object e)
+        SelectionChangedEventArgs e) =>
+        ApplyTrafficPathModeFromTrafficControls();
+
+    private void OnTrafficPathModeChanged(
+        object sender,
+        RoutedEventArgs e) =>
+        ApplyTrafficPathModeFromTrafficControls();
+
+    private void ApplyTrafficPathModeFromTrafficControls()
     {
         if (
             _syncingTrafficPathControls ||
@@ -13089,7 +13123,7 @@ public sealed partial class MainWindow : Window
         TransportPathsButton.Content =
             _transportPathsVisible
                 ? "Ocultar Paths"
-                : "Paths OMSI";
+                : "Mostrar Paths";
 
         StatusText.Text =
             _transportPathsVisible
