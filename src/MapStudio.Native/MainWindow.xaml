@@ -1766,8 +1766,13 @@
                                         Orientation="Horizontal"
                                         Spacing="6">
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="TTData"
+                                        Content="Route Studio"
+                                        ToolTipService.ToolTip="Tracks, Trips, StationLinks, Lines/Tours e preview visual de rotas"
                                         Click="OnToolTransportClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Paths OMSI"
+                                        ToolTipService.ToolTip="Mostrar ou ocultar os paths reais usados pelo tráfego e pelas rotas"
+                                        Click="OnTransportPathsClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Paradas e terminais"
                                         Click="OnToolTransitAssetsClick" />
