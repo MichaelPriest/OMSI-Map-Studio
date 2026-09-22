@@ -42,6 +42,13 @@ public sealed partial class MainWindow : Window
         string DisplayText,
         string Detail);
 
+    private sealed record TransportRouteStepItem(
+        int Sequence,
+        int EntityId,
+        string PathIndex,
+        string SourceLabel,
+        string DisplayText);
+
     private sealed record ConstructionHistoryEntry(
         string Label,
         string MapDirectory,
@@ -273,6 +280,7 @@ public sealed partial class MainWindow : Window
 
     private bool _libraryMode;
     private bool _transportMode;
+    private bool _transportPathsVisible;
     private bool _trafficMode;
     private bool _validationMode;
     private bool _junctionMode;
@@ -8809,6 +8817,22 @@ public sealed partial class MainWindow : Window
         TransportStatusText.Text =
             "Lendo TTData...";
 
+        _transportPathsVisible =
+            false;
+
+        TransportPathsButton.Content =
+            "Paths OMSI";
+
+        Viewport
+            .SetTrafficPathsVisible(
+                false);
+
+        TransportRouteStepsListView.ItemsSource =
+            null;
+
+        TransportRouteStatusText.Text =
+            "Selecione Track, Trip, StationLink ou Line para inspecionar o caminho.";
+
         try
         {
             _timetableCatalog =
@@ -10624,6 +10648,19 @@ public sealed partial class MainWindow : Window
 
             EditTrackButton.IsEnabled =
                 false;
+
+            TransportPreviewButton.IsEnabled =
+                false;
+
+            TransportFocusStepButton.IsEnabled =
+                false;
+
+            TransportRouteStepsListView.ItemsSource =
+                null;
+
+            TransportRouteStatusText.Text =
+                "Selecione Track, Trip, StationLink ou Line para inspecionar o caminho.";
+
             TransportDetailText.Text =
                 "Selecione um item para ver detalhes.";
 
@@ -10656,20 +10693,124 @@ public sealed partial class MainWindow : Window
             item.Kind switch
             {
                 "Trip" =>
-                    "Editar Trip",
+                    "Editar Trip / rota",
                 "Stop" =>
-                    "Editar Stop",
+                    "Editar Stop / parada",
                 "StationLink" =>
                     "Editar StationLink",
                 "Line" =>
-                    "Editar Line/Tours",
+                    "Editar Line / Tours",
                 _ =>
-                    "Editar Track"
+                    "Editar Track / caminho"
             };
 
+        RefreshTransportRouteWorkbench(
+            item,
+            preview: true);
+    }
+
+    private void RefreshTransportRouteWorkbench(
+        TransportExplorerItem item,
+        bool preview)
+    {
+        var steps =
+            BuildTransportRouteSteps(
+                item);
+
+        TransportRouteStepsListView.ItemsSource =
+            steps;
+
+        TransportRouteStepsListView.SelectedIndex =
+            steps.Count > 0
+                ? 0
+                : -1;
+
+        TransportPreviewButton.IsEnabled =
+            steps.Count > 0;
+
+        TransportFocusStepButton.IsEnabled =
+            steps.Count > 0;
+
+        if (steps.Count == 0)
+        {
+            Viewport
+                .ClearTimetableRoutePreview();
+
+            TransportRouteStatusText.Text =
+                item.Kind == "Stop"
+                    ? "Parada selecionada. Edite identificação, tile e dados de passageiros; StationLinks e Trips definem o caminho."
+                    : "Nenhum segmento de path resolvido para este item.";
+
+            return;
+        }
+
+        var resolved =
+            preview
+                ? PreviewTransportItem(
+                    item)
+                : 0;
+
+        TransportRouteStatusText.Text =
+            preview
+                ? $"{item.Kind}: {resolved}/{steps.Count} segmento(s) desenhado(s) no mapa · selecione um segmento para focar."
+                : $"{item.Kind}: {steps.Count} segmento(s) no caminho.";
+    }
+
+    private IReadOnlyList<
+        TransportRouteStepItem>
+        BuildTransportRouteSteps(
+            TransportExplorerItem item)
+    {
         if (_timetableCatalog is null)
         {
-            return;
+            return Array.Empty<
+                TransportRouteStepItem>();
+        }
+
+        var result =
+            new List<
+                TransportRouteStepItem>();
+
+        void AddTrackEntries(
+            IEnumerable<
+                OmsiTimetableTrackEntry> entries,
+            string sourceLabel)
+        {
+            foreach (var entry in entries)
+            {
+                var sequence =
+                    result.Count +
+                    1;
+
+                result.Add(
+                    new TransportRouteStepItem(
+                        sequence,
+                        entry.Id,
+                        entry.Line2,
+                        sourceLabel,
+                        $"{sequence:000} · ID {entry.Id} · path {entry.Line2} · {sourceLabel}"));
+            }
+        }
+
+        void AddStationLinkEntries(
+            IEnumerable<
+                OmsiStationLinkEntry> entries,
+            string sourceLabel)
+        {
+            foreach (var entry in entries)
+            {
+                var sequence =
+                    result.Count +
+                    1;
+
+                result.Add(
+                    new TransportRouteStepItem(
+                        sequence,
+                        entry.Id,
+                        entry.Line2,
+                        sourceLabel,
+                        $"{sequence:000} · ID {entry.Id} · path {entry.Line2} · {sourceLabel}"));
+            }
         }
 
         if (item.Kind == "Track")
@@ -10685,16 +10826,46 @@ public sealed partial class MainWindow : Window
 
             if (track is not null)
             {
-                var resolved =
-                    Viewport
-                        .PreviewTimetableTrack(
-                            track.Entries);
-
-                StatusText.Text =
-                    $"Track {track.Name}: {resolved}/{track.Entries.Count} segmento(s) resolvido(s) no mapa carregado.";
+                AddTrackEntries(
+                    track.Entries,
+                    $"Track {track.Name}");
             }
 
-            return;
+            return result;
+        }
+
+        if (item.Kind == "Trip")
+        {
+            var trip =
+                _timetableCatalog.Trips
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            var track =
+                trip is null
+                    ? null
+                    : _timetableCatalog.Tracks
+                        .FirstOrDefault(
+                            candidate =>
+                                string.Equals(
+                                    candidate.Name,
+                                    trip.TrackName,
+                                    StringComparison.OrdinalIgnoreCase));
+
+            if (
+                trip is not null &&
+                track is not null)
+            {
+                AddTrackEntries(
+                    track.Entries,
+                    $"Trip {trip.Name} → Track {track.Name}");
+            }
+
+            return result;
         }
 
         if (
@@ -10715,19 +10886,312 @@ public sealed partial class MainWindow : Window
                     .StationLinks[
                         linkIndex];
 
-            var resolved =
-                Viewport
-                    .PreviewStationLink(
-                        link.Entries);
+            AddStationLinkEntries(
+                link.Entries,
+                $"StationLink {link.StartBusStopId}→{link.EndBusStopId}");
 
-            StatusText.Text =
-                $"StationLink #{linkIndex} · {link.StartBusStopId}→{link.EndBusStopId}: {resolved}/{link.Entries.Count} segmento(s) resolvido(s).";
+            return result;
+        }
 
-            return;
+        if (item.Kind == "Line")
+        {
+            var line =
+                _timetableCatalog.Lines
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (line is null)
+            {
+                return result;
+            }
+
+            foreach (var tour in line.Tours)
+            {
+                foreach (
+                    var scheduledTrip in
+                        tour.Trips)
+                {
+                    var trip =
+                        _timetableCatalog.Trips
+                            .FirstOrDefault(
+                                candidate =>
+                                    string.Equals(
+                                        candidate.Name,
+                                        scheduledTrip
+                                            .TripName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    var track =
+                        trip is null
+                            ? null
+                            : _timetableCatalog.Tracks
+                                .FirstOrDefault(
+                                    candidate =>
+                                        string.Equals(
+                                            candidate.Name,
+                                            trip.TrackName,
+                                            StringComparison.OrdinalIgnoreCase));
+
+                    if (
+                        trip is null ||
+                        track is null)
+                    {
+                        continue;
+                    }
+
+                    AddTrackEntries(
+                        track.Entries,
+                        $"{tour.Name} · {trip.Name} · {track.Name}");
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private int PreviewTransportItem(
+        TransportExplorerItem item)
+    {
+        if (_timetableCatalog is null)
+        {
+            return 0;
+        }
+
+        if (item.Kind == "Track")
+        {
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            return track is null
+                ? 0
+                : Viewport
+                    .PreviewTimetableTrack(
+                        track.Entries);
+        }
+
+        if (item.Kind == "Trip")
+        {
+            var trip =
+                _timetableCatalog.Trips
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            var track =
+                trip is null
+                    ? null
+                    : _timetableCatalog.Tracks
+                        .FirstOrDefault(
+                            candidate =>
+                                string.Equals(
+                                    candidate.Name,
+                                    trip.TrackName,
+                                    StringComparison.OrdinalIgnoreCase));
+
+            return track is null
+                ? 0
+                : Viewport
+                    .PreviewTimetableTrack(
+                        track.Entries);
+        }
+
+        if (
+            item.Kind ==
+                "StationLink" &&
+            int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var linkIndex) &&
+            linkIndex >= 0 &&
+            linkIndex <
+                _timetableCatalog
+                    .StationLinks.Count)
+        {
+            return Viewport
+                .PreviewStationLink(
+                    _timetableCatalog
+                        .StationLinks[
+                            linkIndex]
+                        .Entries);
+        }
+
+        if (item.Kind == "Line")
+        {
+            var line =
+                _timetableCatalog.Lines
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (line is null)
+            {
+                return 0;
+            }
+
+            var entries =
+                new List<
+                    OmsiTimetableTrackEntry>();
+
+            foreach (var tour in line.Tours)
+            {
+                foreach (
+                    var scheduledTrip in
+                        tour.Trips)
+                {
+                    var trip =
+                        _timetableCatalog.Trips
+                            .FirstOrDefault(
+                                candidate =>
+                                    string.Equals(
+                                        candidate.Name,
+                                        scheduledTrip
+                                            .TripName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    var track =
+                        trip is null
+                            ? null
+                            : _timetableCatalog.Tracks
+                                .FirstOrDefault(
+                                    candidate =>
+                                        string.Equals(
+                                            candidate.Name,
+                                            trip.TrackName,
+                                            StringComparison.OrdinalIgnoreCase));
+
+                    if (track is not null)
+                    {
+                        entries.AddRange(
+                            track.Entries);
+                    }
+                }
+            }
+
+            return Viewport
+                .PreviewTimetableTrack(
+                    entries);
         }
 
         Viewport
             .ClearTimetableRoutePreview();
+
+        return 0;
+    }
+
+    private void OnTransportPreviewClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TransportListView.SelectedItem is
+                TransportExplorerItem item)
+        {
+            RefreshTransportRouteWorkbench(
+                item,
+                preview: true);
+        }
+    }
+
+    private void OnTransportPathsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _transportPathsVisible =
+            !_transportPathsVisible;
+
+        Viewport
+            .SetTrafficPathsVisible(
+                _transportPathsVisible);
+
+        TransportPathsButton.Content =
+            _transportPathsVisible
+                ? "Ocultar Paths"
+                : "Paths OMSI";
+
+        StatusText.Text =
+            _transportPathsVisible
+                ? $"Transporte: {Viewport.TrafficPathLineCount} linhas de path OMSI visíveis."
+                : "Transporte: paths auxiliares ocultos; preview da rota permanece disponível.";
+    }
+
+    private void OnTransportClearPreviewClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        Viewport
+            .ClearTimetableRoutePreview();
+
+        TransportRouteStatusText.Text =
+            "Preview da rota limpo. Os dados continuam carregados para edição.";
+
+        StatusText.Text =
+            "Preview de transporte limpo.";
+    }
+
+    private void OnTransportRouteStepSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        TransportFocusStepButton.IsEnabled =
+            TransportRouteStepsListView.SelectedItem is
+                TransportRouteStepItem;
+    }
+
+    private void OnTransportFocusStepClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TransportRouteStepsListView.SelectedItem is not
+                TransportRouteStepItem step)
+        {
+            return;
+        }
+
+        var target =
+            Viewport
+                .GetExplorerItems()
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.EntityId ==
+                            step.EntityId);
+
+        if (target is null)
+        {
+            StatusText.Text =
+                $"Segmento {step.Sequence}: ID {step.EntityId} não está carregado no viewport atual.";
+            return;
+        }
+
+        if (
+            !Viewport.SelectExplorerItem(
+                target,
+                focus: true))
+        {
+            StatusText.Text =
+                $"Não foi possível focar o ID {step.EntityId}.";
+            return;
+        }
+
+        StatusText.Text =
+            $"Rota · segmento {step.Sequence} · ID {step.EntityId} · path {step.PathIndex} · {step.SourceLabel}.";
     }
 
     private async void OnToolValidationClick(
