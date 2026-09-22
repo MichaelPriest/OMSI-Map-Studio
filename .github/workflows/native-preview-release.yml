@@ -45,7 +45,33 @@ jobs:
           if ($appXaml -notmatch "XamlControlsResources") {
             throw "App.xaml does not load XamlControlsResources. WinUI control theme resources would fail at startup."
           }
-          Write-Host "Verified XamlControlsResources is loaded by App.xaml."
+
+          $requiredThemeKeys = @(
+            "MapStudioWindowBackgroundBrush",
+            "MapStudioSurfaceBrush",
+            "MapStudioSurfaceAltBrush",
+            "MapStudioSurfaceRaisedBrush",
+            "MapStudioBorderBrush",
+            "MapStudioBorderStrongBrush",
+            "MapStudioTextPrimaryBrush",
+            "MapStudioTextSecondaryBrush",
+            "MapStudioTextMutedBrush",
+            "MapStudioAccentBrush",
+            "MapStudioAccentSurfaceBrush",
+            "MapStudioAccentTextBrush",
+            "MapStudioSuccessBrush",
+            "MapStudioTranslucentSurfaceBrush",
+            "MapStudioTranslucentRaisedBrush",
+            "MapStudioPanelBackgroundBrush"
+          )
+
+          foreach ($key in $requiredThemeKeys) {
+            if ($appXaml -notmatch ('x:Key="' + [regex]::Escape($key) + '"')) {
+              throw "App.xaml is missing global theme resource '$key'. MainWindow/Timetable can fail during startup."
+            }
+          }
+
+          Write-Host "Verified XamlControlsResources and required global Map Studio theme resources in App.xaml."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
