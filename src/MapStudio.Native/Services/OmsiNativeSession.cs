@@ -5517,6 +5517,122 @@ public sealed class OmsiNativeSession
             backupPath);
     }
 
+    public async Task<NativeSceneryPathUpdateResult>
+        DuplicateSceneryPathAsync(
+            string assetPath,
+            int sourcePathOrdinal,
+            OmsiSceneryPathDefinition path,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            assetPath);
+
+        ArgumentNullException.ThrowIfNull(
+            path);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Nenhuma fonte de conteúdo ativa.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSceneryPathEdit");
+        }
+
+        if (
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    root,
+                    assetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            throw new FileNotFoundException(
+                "sceneryPathAssetMissing",
+                assetPath);
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    document);
+
+        if (
+            sourcePathOrdinal < 0 ||
+            sourcePathOrdinal >=
+                metadata.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var bytes =
+            new OmsiSceneryPathPatcher()
+                .InsertAfter(
+                    document,
+                    sourcePathOrdinal,
+                    path);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiSceneryObjectReader()
+                .ReadMetadataAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var duplicatedOrdinal =
+            sourcePathOrdinal +
+                1;
+
+        if (
+            duplicatedOrdinal >=
+                reloaded.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "sceneryPathReloadFailed");
+        }
+
+        return new NativeSceneryPathUpdateResult(
+            reloaded.Paths[
+                duplicatedOrdinal],
+            target,
+            backupPath);
+    }
+
     public async Task<NativeSplinePathUpdateResult>
         UpdateSplinePathAsync(
             string assetPath,
@@ -5625,6 +5741,122 @@ public sealed class OmsiNativeSession
         return new NativeSplinePathUpdateResult(
             reloaded.Paths[
                 pathOrdinal],
+            target,
+            backupPath);
+    }
+
+    public async Task<NativeSplinePathUpdateResult>
+        DuplicateSplinePathAsync(
+            string assetPath,
+            int sourcePathOrdinal,
+            OmsiSplinePathDefinition path,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            assetPath);
+
+        ArgumentNullException.ThrowIfNull(
+            path);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Nenhuma fonte de conteúdo ativa.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplinePathEdit");
+        }
+
+        if (
+            !OmsiSplinePathResolver
+                .TryResolve(
+                    root,
+                    assetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            throw new FileNotFoundException(
+                "splinePathAssetMissing",
+                assetPath);
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    document);
+
+        if (
+            sourcePathOrdinal < 0 ||
+            sourcePathOrdinal >=
+                definition.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var bytes =
+            new OmsiSplinePathPatcher()
+                .InsertAfter(
+                    document,
+                    sourcePathOrdinal,
+                    path);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiSplineDefinitionReader()
+                .ReadAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var duplicatedOrdinal =
+            sourcePathOrdinal +
+                1;
+
+        if (
+            duplicatedOrdinal >=
+                reloaded.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "splinePathReloadFailed");
+        }
+
+        return new NativeSplinePathUpdateResult(
+            reloaded.Paths[
+                duplicatedOrdinal],
             target,
             backupPath);
     }
