@@ -1269,7 +1269,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -1350,7 +1350,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -1756,7 +1756,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await confirm.ShowAsync() !=
+            await confirm.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -5133,7 +5133,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -5379,7 +5379,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -5626,7 +5626,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -5951,7 +5951,7 @@ public sealed partial class MainWindow : Window
             };
 
         var result =
-            await dialog.ShowAsync();
+            await dialog.ShowAdaptiveAsync();
 
         if (
             result !=
@@ -8352,7 +8352,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -8876,7 +8876,7 @@ public sealed partial class MainWindow : Window
                 };
 
             if (
-                await confirm.ShowAsync() !=
+                await confirm.ShowAdaptiveAsync() !=
                     ContentDialogResult.Primary)
             {
                 return;
@@ -9955,7 +9955,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -11157,7 +11157,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -11381,7 +11381,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary ||
             routeBox.SelectedItem is not
                 TransportTripRouteOption route)
@@ -11629,7 +11629,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -11849,7 +11849,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary ||
             sourceBox.SelectedItem is not
                 TransportStationLinkSourceOption source)
@@ -12152,7 +12152,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary ||
             tripBox.SelectedItem is not
                 string tripName)
@@ -13285,7 +13285,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -13671,7 +13671,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -14110,7 +14110,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -17837,7 +17837,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -18659,7 +18659,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary ||
             list.SelectedItem is not
@@ -18732,7 +18732,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -18952,7 +18952,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -19559,7 +19559,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -20411,7 +20411,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary ||
             list.SelectedItem is not
                 MapCatalogViewItem selected)
@@ -21796,7 +21796,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -22465,7 +22465,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary ||
             combo.SelectedItem is not
@@ -22694,7 +22694,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -23141,7 +23141,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
@@ -23395,7 +23395,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -25347,7 +25347,7 @@ public sealed partial class MainWindow : Window
                 };
 
             if (
-                await dialog.ShowAsync() !=
+                await dialog.ShowAdaptiveAsync() !=
                     ContentDialogResult.Primary)
             {
                 Viewport
@@ -26278,7 +26278,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult
                     .Primary)
         {
@@ -26581,7 +26581,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary ||
             list.SelectedItem is not
                 AttachmentInspectorItem selected)
@@ -26792,7 +26792,7 @@ public sealed partial class MainWindow : Window
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return;
