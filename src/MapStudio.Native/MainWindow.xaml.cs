@@ -10789,6 +10789,12 @@ public sealed partial class MainWindow : Window
                     true,
                 HighlightSignalControlled:
                     TransportPathsSignalsCheckBox.IsChecked ==
+                    true,
+                ShowNodes:
+                    TransportPathsNodesCheckBox.IsChecked ==
+                    true,
+                ShowTypeLabels:
+                    TransportPathsLabelsCheckBox.IsChecked ==
                     true);
 
         ApplyTrafficPathDisplayOptions(
@@ -10814,6 +10820,8 @@ public sealed partial class MainWindow : Window
             TrafficPathWidthCheckBox is null ||
             TrafficPathArrowsCheckBox is null ||
             TrafficPathSignalsCheckBox is null ||
+            TrafficPathNodesCheckBox is null ||
+            TrafficPathLabelsCheckBox is null ||
             Viewport is null)
         {
             return;
@@ -10840,6 +10848,12 @@ public sealed partial class MainWindow : Window
                     true,
                 HighlightSignalControlled:
                     TrafficPathSignalsCheckBox.IsChecked ==
+                    true,
+                ShowNodes:
+                    TrafficPathNodesCheckBox.IsChecked ==
+                    true,
+                ShowTypeLabels:
+                    TrafficPathLabelsCheckBox.IsChecked ==
                     true);
 
         ApplyTrafficPathDisplayOptions(
@@ -10893,6 +10907,12 @@ public sealed partial class MainWindow : Window
                 TransportPathsArrowsCheckBox.IsChecked =
                     options.ShowDirectionArrows;
 
+                TransportPathsNodesCheckBox.IsChecked =
+                    options.ShowNodes;
+
+                TransportPathsLabelsCheckBox.IsChecked =
+                    options.ShowTypeLabels;
+
                 TransportPathsSignalsCheckBox.IsChecked =
                     options.HighlightSignalControlled;
             }
@@ -10935,6 +10955,12 @@ public sealed partial class MainWindow : Window
 
             TrafficPathArrowsCheckBox.IsChecked =
                 options.ShowDirectionArrows;
+
+            TrafficPathNodesCheckBox.IsChecked =
+                options.ShowNodes;
+
+            TrafficPathLabelsCheckBox.IsChecked =
+                options.ShowTypeLabels;
 
             TrafficPathSignalsCheckBox.IsChecked =
                 options.HighlightSignalControlled;
