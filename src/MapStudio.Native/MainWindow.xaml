@@ -1569,6 +1569,11 @@
                                 <ListView x:Name="TransportRouteStepsListView"
                                           SelectionMode="Single"
                                           DisplayMemberPath="DisplayText"
+                                          CanDragItems="True"
+                                          CanReorderItems="True"
+                                          AllowDrop="True"
+                                          ToolTipService.ToolTip="Arraste os trechos para reordenar Track ou StationLink"
+                                          DragItemsCompleted="OnTransportRouteDragItemsCompleted"
                                           SelectionChanged="OnTransportRouteStepSelectionChanged" />
                             </Border>
 
@@ -2962,6 +2967,34 @@
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="0.05" />
                                 </Grid>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0"
+                                                Spacing="2">
+                                        <TextBlock Text="Raio do pincel"
+                                                   FontSize="10"
+                                                   Foreground="#7895AD" />
+                                        <Slider x:Name="TerrainBrushRadiusSlider"
+                                                Minimum="0.25"
+                                                Maximum="250"
+                                                StepFrequency="0.25"
+                                                Value="{Binding Value, ElementName=TerrainBrushRadiusBox, Mode=TwoWay}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1"
+                                                Spacing="2">
+                                        <TextBlock Text="Suavização"
+                                                   FontSize="10"
+                                                   Foreground="#7895AD" />
+                                        <Slider x:Name="TerrainBrushFeatherSlider"
+                                                Minimum="0"
+                                                Maximum="1"
+                                                StepFrequency="0.01"
+                                                Value="{Binding Value, ElementName=TerrainBrushFeatherBox, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </Grid>
                                 <Button x:Name="ApplyTerrainLevelButton"
                                         Content="Aplicar nivelamento"
                                         HorizontalAlignment="Stretch"
@@ -2974,6 +3007,16 @@
                                            Maximum="100"
                                            SpinButtonPlacementMode="Compact"
                                            SmallChange="0.25" />
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Intensidade do pincel"
+                                               FontSize="10"
+                                               Foreground="#7895AD" />
+                                    <Slider x:Name="TerrainBrushDeltaSlider"
+                                            Minimum="0.05"
+                                            Maximum="100"
+                                            StepFrequency="0.05"
+                                            Value="{Binding Value, ElementName=TerrainBrushDeltaBox, Mode=TwoWay}" />
+                                </StackPanel>
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -3016,6 +3059,16 @@
                                                SpinButtonPlacementMode="Compact"
                                                SmallChange="16" />
                                 </Grid>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Mistura da textura"
+                                               FontSize="10"
+                                               Foreground="#7895AD" />
+                                    <Slider x:Name="TerrainPaintAlphaSlider"
+                                            Minimum="0"
+                                            Maximum="255"
+                                            StepFrequency="1"
+                                            Value="{Binding Value, ElementName=TerrainPaintAlphaBox, Mode=TwoWay}" />
+                                </StackPanel>
                                 <Button x:Name="ApplyTerrainPaintButton"
                                         Content="Pintar textura no ponto"
                                         HorizontalAlignment="Stretch"
