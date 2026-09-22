@@ -331,19 +331,23 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         geometry.Indices[
                             baseIndex]);
 
+            // OMSI O3D triangle indices use the opposite winding
+            // from the native D3D11 front-face convention. Keep the O3D
+            // Y-up axes unchanged and reverse only the triangle winding so
+            // the visible front face agrees with the stored vertex normals.
             var index1 =
                 checked(
                     (int)
                         geometry.Indices[
                             baseIndex +
-                            1]);
+                            2]);
 
             var index2 =
                 checked(
                     (int)
                         geometry.Indices[
                             baseIndex +
-                            2]);
+                            1]);
 
             if (
                 index0 < 0 ||
