@@ -99,6 +99,25 @@ public sealed class NativeTrafficPathGeometryBuilderTests
             result.LineCount >
                 6);
 
+        Assert.True(
+            result.TriangleCount >
+                0);
+
+        Assert.Equal(
+            0,
+            result.TriangleVertices.Length %
+                3);
+
+        Assert.Contains(
+            result.TriangleVertices,
+            vertex =>
+                vertex.Color.X >
+                    0.90f &&
+                vertex.Color.Y <
+                    0.20f &&
+                vertex.Color.W <
+                    1.0f);
+
         Assert.Contains(
             result.Vertices,
             vertex =>
@@ -356,6 +375,32 @@ public sealed class NativeTrafficPathGeometryBuilderTests
         Assert.True(
             clean.LineCount <
                 detailed.LineCount);
+
+        Assert.True(
+            clean.TriangleCount >
+                0);
+
+        Assert.True(
+            detailed.TriangleCount >
+                clean.TriangleCount);
+
+        Assert.Contains(
+            detailed.TriangleVertices,
+            vertex =>
+                vertex.Color.X >
+                    0.90f &&
+                vertex.Color.Y >
+                    0.90f &&
+                vertex.Color.Z >
+                    0.90f);
+
+        Assert.Contains(
+            detailed.TriangleVertices,
+            vertex =>
+                vertex.Color.Z >
+                    0.90f &&
+                vertex.Color.X <
+                    0.30f);
     }
     [Fact]
     public void BuildCanFocusOnePathIndex()
@@ -457,6 +502,17 @@ public sealed class NativeTrafficPathGeometryBuilderTests
         Assert.Equal(
             1,
             result.VehiclePathCount);
+
+        Assert.True(
+            result.TriangleCount >
+                0);
+
+        Assert.All(
+            result.TriangleVertices,
+            vertex =>
+                Assert.True(
+                    vertex.Color.W >
+                        0.80f));
 
         Assert.Contains(
             result.Vertices,
