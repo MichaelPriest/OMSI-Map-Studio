@@ -46,6 +46,12 @@ public sealed class NativeTrafficPathGeometryBuilder
     private static readonly Vector4 FocusMarkerColor =
         new(1.0f, 0.92f, 0.12f, 1.0f);
 
+    private static readonly Vector4 StartNodeColor =
+        new(0.10f, 0.95f, 0.28f, 0.96f);
+
+    private static readonly Vector4 EndNodeColor =
+        new(1.0f, 0.46f, 0.08f, 0.96f);
+
     public NativeTrafficPathGeometry Build(
         NativeSceneSnapshot scene,
         IReadOnlyDictionary<
@@ -358,6 +364,28 @@ public sealed class NativeTrafficPathGeometryBuilder
                 entity,
                 path,
                 length,
+                markerColor,
+                lineOutput);
+        }
+
+        if (options.ShowNodes)
+        {
+            AppendSplineEndpointMarkers(
+                entity,
+                path,
+                length,
+                focused,
+                lineOutput,
+                triangleOutput);
+        }
+
+        if (options.ShowTypeLabels)
+        {
+            AppendSplineTypeLabels(
+                entity,
+                path,
+                length,
+                focused,
                 markerColor,
                 lineOutput);
         }
@@ -740,6 +768,26 @@ public sealed class NativeTrafficPathGeometryBuilder
                 markerColor,
                 lineOutput);
         }
+
+        if (options.ShowNodes)
+        {
+            AppendSceneryEndpointMarkers(
+                path,
+                objectTransform,
+                focused,
+                lineOutput,
+                triangleOutput);
+        }
+
+        if (options.ShowTypeLabels)
+        {
+            AppendSceneryTypeLabels(
+                path,
+                objectTransform,
+                focused,
+                markerColor,
+                lineOutput);
+        }
     }
 
     private static void AppendSceneryRibbon(
@@ -1094,6 +1142,567 @@ public sealed class NativeTrafficPathGeometryBuilder
                 lateral *
                 0.55f,
             color);
+    }
+
+    private static void AppendSplineEndpointMarkers(
+        NativeSplineEntity entity,
+        OmsiSplinePathDefinition path,
+        double length,
+        bool focused,
+        List<NativeMapVertex> lineOutput,
+        List<NativeMapVertex> triangleOutput)
+    {
+        var size =
+            focused
+                ? 0.62f
+                : 0.42f;
+
+        var startFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0);
+
+        var endFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    length);
+
+        AppendNodeMarker(
+            GetPathPoint(
+                startFrame,
+                path,
+                0),
+            startFrame.Forward,
+            startFrame.Lateral,
+            size,
+            StartNodeColor,
+            lineOutput,
+            triangleOutput);
+
+        AppendNodeMarker(
+            GetPathPoint(
+                endFrame,
+                path,
+                0),
+            endFrame.Forward,
+            endFrame.Lateral,
+            size,
+            EndNodeColor,
+            lineOutput,
+            triangleOutput);
+    }
+
+    private static void AppendSceneryEndpointMarkers(
+        OmsiSceneryPathDefinition path,
+        Matrix4x4 objectTransform,
+        bool focused,
+        List<NativeMapVertex> lineOutput,
+        List<NativeMapVertex> triangleOutput)
+    {
+        var size =
+            focused
+                ? 0.62f
+                : 0.42f;
+
+        var start =
+            GetSceneryPathPoint(
+                path,
+                0,
+                0,
+                objectTransform);
+
+        var startNear =
+            GetSceneryPathPoint(
+                path,
+                Math.Min(
+                    path.Length,
+                    0.5),
+                0,
+                objectTransform);
+
+        var end =
+            GetSceneryPathPoint(
+                path,
+                path.Length,
+                0,
+                objectTransform);
+
+        var endNear =
+            GetSceneryPathPoint(
+                path,
+                Math.Max(
+                    0,
+                    path.Length - 0.5),
+                0,
+                objectTransform);
+
+        var startForward =
+            SafeDirection(
+                startNear - start,
+                Vector3.UnitZ);
+
+        var endForward =
+            SafeDirection(
+                end - endNear,
+                startForward);
+
+        AppendNodeMarker(
+            start,
+            startForward,
+            SafeLateral(
+                startForward),
+            size,
+            StartNodeColor,
+            lineOutput,
+            triangleOutput);
+
+        AppendNodeMarker(
+            end,
+            endForward,
+            SafeLateral(
+                endForward),
+            size,
+            EndNodeColor,
+            lineOutput,
+            triangleOutput);
+    }
+
+    private static void AppendNodeMarker(
+        Vector3 center,
+        Vector3 forward,
+        Vector3 lateral,
+        float size,
+        Vector4 fillColor,
+        List<NativeMapVertex> lineOutput,
+        List<NativeMapVertex> triangleOutput)
+    {
+        forward =
+            SafeDirection(
+                forward,
+                Vector3.UnitZ);
+
+        lateral =
+            SafeDirection(
+                lateral,
+                Vector3.UnitX);
+
+        var lift =
+            Vector3.UnitY *
+            0.018f;
+
+        center +=
+            lift;
+
+        var front =
+            center +
+            forward *
+            size;
+
+        var right =
+            center +
+            lateral *
+            size;
+
+        var back =
+            center -
+            forward *
+            size;
+
+        var left =
+            center -
+            lateral *
+            size;
+
+        AddQuad(
+            triangleOutput,
+            front,
+            right,
+            back,
+            left,
+            fillColor);
+
+        var outline =
+            DarkMarkerColor;
+
+        AddLine(
+            lineOutput,
+            front,
+            right,
+            outline);
+
+        AddLine(
+            lineOutput,
+            right,
+            back,
+            outline);
+
+        AddLine(
+            lineOutput,
+            back,
+            left,
+            outline);
+
+        AddLine(
+            lineOutput,
+            left,
+            front,
+            outline);
+
+        AddLine(
+            lineOutput,
+            center -
+                forward *
+                size *
+                0.45f,
+            center +
+                forward *
+                size *
+                0.45f,
+            outline);
+
+        AddLine(
+            lineOutput,
+            center -
+                lateral *
+                size *
+                0.45f,
+            center +
+                lateral *
+                size *
+                0.45f,
+            outline);
+    }
+
+    private static void AppendSplineTypeLabels(
+        NativeSplineEntity entity,
+        OmsiSplinePathDefinition path,
+        double length,
+        bool focused,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var label =
+            GetPathLabel(
+                path.Type);
+
+        var spacing =
+            focused
+                ? 8.0
+                : 13.0;
+
+        var first =
+            Math.Min(
+                length * 0.5,
+                spacing * 0.55);
+
+        var count = 0;
+
+        for (
+            var distance = first;
+            distance <
+                length - 0.4 &&
+            count < 24;
+            distance += spacing,
+            count++)
+        {
+            var frame =
+                NativeSplinePathMath
+                    .GetFrame(
+                        entity,
+                        distance);
+
+            AppendStrokeWord(
+                GetPathPoint(
+                    frame,
+                    path,
+                    0) +
+                Vector3.UnitY *
+                    0.026f,
+                frame.Forward,
+                frame.Lateral,
+                label,
+                focused
+                    ? 0.54f
+                    : 0.42f,
+                color,
+                output);
+        }
+    }
+
+    private static void AppendSceneryTypeLabels(
+        OmsiSceneryPathDefinition path,
+        Matrix4x4 objectTransform,
+        bool focused,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        var label =
+            GetPathLabel(
+                path.Type);
+
+        var spacing =
+            focused
+                ? 8.0
+                : 13.0;
+
+        var first =
+            Math.Min(
+                path.Length * 0.5,
+                spacing * 0.55);
+
+        var count = 0;
+
+        for (
+            var distance = first;
+            distance <
+                path.Length - 0.4 &&
+            count < 24;
+            distance += spacing,
+            count++)
+        {
+            var center =
+                GetSceneryPathPoint(
+                    path,
+                    distance,
+                    0,
+                    objectTransform);
+
+            var near =
+                GetSceneryPathPoint(
+                    path,
+                    Math.Min(
+                        path.Length,
+                        distance + 0.45),
+                    0,
+                    objectTransform);
+
+            var forward =
+                SafeDirection(
+                    near - center,
+                    Vector3.UnitZ);
+
+            AppendStrokeWord(
+                center +
+                Vector3.UnitY *
+                    0.026f,
+                forward,
+                SafeLateral(
+                    forward),
+                label,
+                focused
+                    ? 0.54f
+                    : 0.42f,
+                color,
+                output);
+        }
+    }
+
+    private static string GetPathLabel(
+        int type) =>
+        type switch
+        {
+            1 => "HUM",
+            2 => "RAIL",
+            3 => "AIR",
+            _ => "CAR"
+        };
+
+    private static void AppendStrokeWord(
+        Vector3 center,
+        Vector3 forward,
+        Vector3 lateral,
+        string text,
+        float scale,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        forward =
+            SafeDirection(
+                forward,
+                Vector3.UnitZ);
+
+        lateral =
+            SafeDirection(
+                lateral,
+                Vector3.UnitX);
+
+        var advance =
+            scale *
+            1.18f;
+
+        var startOffset =
+            -(
+                text.Length -
+                1
+            ) *
+            advance *
+            0.5f;
+
+        for (
+            var index = 0;
+            index < text.Length;
+            index++)
+        {
+            var glyphCenter =
+                center +
+                forward *
+                (
+                    startOffset +
+                    index *
+                    advance
+                );
+
+            AppendStrokeGlyph(
+                glyphCenter,
+                forward,
+                lateral,
+                text[index],
+                scale,
+                color,
+                output);
+        }
+    }
+
+    private static void AppendStrokeGlyph(
+        Vector3 center,
+        Vector3 forward,
+        Vector3 lateral,
+        char glyph,
+        float scale,
+        Vector4 color,
+        List<NativeMapVertex> output)
+    {
+        void Segment(
+            float x1,
+            float y1,
+            float x2,
+            float y2)
+        {
+            var from =
+                center +
+                lateral *
+                    (
+                        (x1 - 0.5f) *
+                        scale
+                    ) +
+                forward *
+                    (
+                        (y1 - 0.5f) *
+                        scale
+                    );
+
+            var to =
+                center +
+                lateral *
+                    (
+                        (x2 - 0.5f) *
+                        scale
+                    ) +
+                forward *
+                    (
+                        (y2 - 0.5f) *
+                        scale
+                    );
+
+            AddLine(
+                output,
+                from,
+                to,
+                color);
+        }
+
+        switch (
+            char.ToUpperInvariant(
+                glyph))
+        {
+            case 'A':
+                Segment(0, 0, 0.5f, 1);
+                Segment(1, 0, 0.5f, 1);
+                Segment(0.22f, 0.48f, 0.78f, 0.48f);
+                break;
+
+            case 'C':
+                Segment(1, 0, 0, 0);
+                Segment(0, 0, 0, 1);
+                Segment(0, 1, 1, 1);
+                break;
+
+            case 'H':
+                Segment(0, 0, 0, 1);
+                Segment(1, 0, 1, 1);
+                Segment(0, 0.5f, 1, 0.5f);
+                break;
+
+            case 'I':
+                Segment(0, 1, 1, 1);
+                Segment(0.5f, 1, 0.5f, 0);
+                Segment(0, 0, 1, 0);
+                break;
+
+            case 'L':
+                Segment(0, 1, 0, 0);
+                Segment(0, 0, 1, 0);
+                break;
+
+            case 'M':
+                Segment(0, 0, 0, 1);
+                Segment(0, 1, 0.5f, 0.42f);
+                Segment(0.5f, 0.42f, 1, 1);
+                Segment(1, 1, 1, 0);
+                break;
+
+            case 'R':
+                Segment(0, 0, 0, 1);
+                Segment(0, 1, 0.82f, 1);
+                Segment(0.82f, 1, 0.82f, 0.52f);
+                Segment(0.82f, 0.52f, 0, 0.52f);
+                Segment(0.46f, 0.52f, 1, 0);
+                break;
+
+            case 'U':
+                Segment(0, 1, 0, 0.2f);
+                Segment(0, 0.2f, 0.25f, 0);
+                Segment(0.25f, 0, 0.75f, 0);
+                Segment(0.75f, 0, 1, 0.2f);
+                Segment(1, 0.2f, 1, 1);
+                break;
+        }
+    }
+
+    private static Vector3 SafeDirection(
+        Vector3 value,
+        Vector3 fallback)
+    {
+        if (
+            value.LengthSquared() <
+                0.000001f ||
+            !float.IsFinite(
+                value.X) ||
+            !float.IsFinite(
+                value.Y) ||
+            !float.IsFinite(
+                value.Z))
+        {
+            return fallback;
+        }
+
+        return Vector3.Normalize(
+            value);
+    }
+
+    private static Vector3 SafeLateral(
+        Vector3 forward)
+    {
+        var lateral =
+            Vector3.Cross(
+                Vector3.UnitY,
+                forward);
+
+        return SafeDirection(
+            lateral,
+            Vector3.UnitX);
     }
 
     private static Vector4 GetBaseColor(
