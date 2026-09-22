@@ -224,6 +224,16 @@ public sealed partial class MainWindow : Window
             MapStudioCommercialState
                 .DevelopmentPreview();
 
+    private readonly NativeUpdateService
+        _updateService =
+            new();
+
+    private NativeUpdateCheckResult?
+        _availableUpdate;
+
+    private bool
+        _updateCheckStarted;
+
     private MapStudioAiConnectionSettings
         _aiConnectionSettings =
             NativeAiConnectionSettingsStore
@@ -18556,6 +18566,16 @@ public sealed partial class MainWindow : Window
         await ActivateStandaloneWorkspaceAsync(
             announce:
                 false);
+
+        if (!_updateCheckStarted)
+        {
+            _updateCheckStarted =
+                true;
+
+            await CheckForUpdatesAsync(
+                announceIfCurrent:
+                    false);
+        }
     }
 
     private async Task
@@ -27378,6 +27398,171 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Building Studio falhou: {exception.Message}";
         }
+    }
+
+    private async void OnCheckForUpdatesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CheckForUpdatesAsync(
+            announceIfCurrent:
+                true);
+    }
+
+    private async Task CheckForUpdatesAsync(
+        bool announceIfCurrent)
+    {
+        var apiBaseUri =
+            NativeCommerceEndpoint
+                .ResolveApiBaseUri();
+
+        if (apiBaseUri is null)
+        {
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    "Atualizações: servidor ainda não configurado nesta build.";
+            }
+
+            return;
+        }
+
+        try
+        {
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    "Verificando atualizações...";
+            }
+
+            var result =
+                await _updateService
+                    .CheckAsync(
+                        apiBaseUri,
+                        NativeCommerceEndpoint
+                            .ResolveUpdateChannel());
+
+            if (result is null)
+            {
+                if (announceIfCurrent)
+                {
+                    StatusText.Text =
+                        "Não foi possível consultar o servidor de atualizações.";
+                }
+
+                return;
+            }
+
+            if (
+                !result.IsUpdateAvailable ||
+                result.Update is null)
+            {
+                _availableUpdate =
+                    null;
+
+                UpdateBanner.Visibility =
+                    Visibility.Collapsed;
+
+                if (announceIfCurrent)
+                {
+                    StatusText.Text =
+                        $"OMSI Map Studio {result.CurrentVersion}: você já está na versão mais recente do canal {result.Channel}.";
+                }
+
+                return;
+            }
+
+            _availableUpdate =
+                result;
+
+            UpdateBannerTitleText.Text =
+                result.Update.Mandatory
+                    ? $"Atualização obrigatória · {result.Update.Version}"
+                    : $"Nova versão disponível · {result.Update.Version}";
+
+            var notes =
+                result.Update.Notes
+                    .Replace(
+                        "\r",
+                        " ")
+                    .Replace(
+                        "\n",
+                        " ")
+                    .Trim();
+
+            if (notes.Length > 220)
+            {
+                notes =
+                    notes[..220] +
+                    "…";
+            }
+
+            UpdateBannerDetailText.Text =
+                string.IsNullOrWhiteSpace(
+                    notes)
+                    ? $"Versão instalada: {result.CurrentVersion}."
+                    : notes;
+
+            UpdateBanner.Visibility =
+                Visibility.Visible;
+
+            StatusText.Text =
+                $"Atualização {result.Update.Version} disponível.";
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"Update check failure type={exception.GetType().FullName} hresult=0x{exception.HResult:X8} message={exception.Message}");
+
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    $"Falha ao verificar atualização: {exception.Message}";
+            }
+        }
+    }
+
+    private async void OnOpenAvailableUpdateClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var downloadUri =
+            _availableUpdate
+                ?.DownloadUri;
+
+        if (downloadUri is null)
+        {
+            StatusText.Text =
+                "Atualização: link de download indisponível.";
+            return;
+        }
+
+        try
+        {
+            var launched =
+                await Windows.System
+                    .Launcher
+                    .LaunchUriAsync(
+                        downloadUri);
+
+            StatusText.Text =
+                launched
+                    ? "Abrindo download da atualização no navegador..."
+                    : "Não foi possível abrir o download da atualização.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao abrir atualização: {exception.Message}";
+        }
+    }
+
+    private void OnDismissUpdateBannerClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        UpdateBanner.Visibility =
+            Visibility.Collapsed;
     }
 
     private async void OnCommercialStatusClick(
