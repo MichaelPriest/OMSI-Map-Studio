@@ -264,7 +264,7 @@ Legend:
 | Stops/stations | ✅ |
 | StationLinks | ✅ |
 | Time profiles | ⬜ |
-| Timetable editor | 🟡 — Tracks/Trips/Stops/StationLinks/Lines/Tours are editable; advanced profiles/workflows still evolve |
+| Timetable editor | 🟡 — native Route Studio edits Tracks/Trips/Stops/StationLinks/Lines/Tours, draws Track/Trip/StationLink/Line routes on the map, lists each real ID/pathIndex step, and can focus the segment; time profiles, complete visual creation, and advanced workflows still evolve |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -378,6 +378,8 @@ Implement:
 Create a visual line editor:
 
     path → track → stops → trip → profile → timetable
+
+Current Route Studio state: visual Track, Trip, StationLink, and Line/Tours previews; navigable real `ID:pathIndex` segment list; viewport segment focus; optional OMSI Paths overlay; and preservation-safe editing of existing TTData files.
 
 Completion criteria:
 
