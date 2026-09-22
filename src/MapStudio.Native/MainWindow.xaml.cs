@@ -88,6 +88,15 @@ public sealed partial class MainWindow : Window
         OmsiAssetLibraryGroup Group,
         string Label);
 
+    private sealed record LibraryCategoryTreeItem(
+        OmsiAssetLibraryGroup Group,
+        string? Subcategory,
+        string Label)
+    {
+        public override string ToString() =>
+            Label;
+    }
+
     private sealed record MapCatalogViewItem(
         OmsiMapDescriptor Map,
         string DisplayText);
@@ -1166,6 +1175,9 @@ public sealed partial class MainWindow : Window
                 groupView;
 
             LibrarySubcategoryComboBox.IsEnabled =
+                groupView;
+
+            LibraryCategoryTreeView.IsEnabled =
                 groupView;
 
             LibraryCollectionPanel.Visibility =
@@ -3711,8 +3723,179 @@ public sealed partial class MainWindow : Window
             index;
 
         RefreshLibrarySubcategoryOptions();
+        RefreshLibraryCategoryTree();
         RefreshLibraryTechnicalFilterOptions(
             kind);
+    }
+
+    private void RefreshLibraryCategoryTree()
+    {
+        LibraryCategoryTreeView
+            .RootNodes
+            .Clear();
+
+        var root =
+            new TreeViewNode
+            {
+                Content =
+                    new LibraryCategoryTreeItem(
+                        OmsiAssetLibraryGroup.All,
+                        null,
+                        "Todas as categorias"),
+                IsExpanded =
+                    true
+            };
+
+        foreach (
+            var option in
+                _libraryGroupOptions
+                    .Where(
+                        item =>
+                            item.Group !=
+                                OmsiAssetLibraryGroup.All))
+        {
+            var groupNode =
+                new TreeViewNode
+                {
+                    Content =
+                        new LibraryCategoryTreeItem(
+                            option.Group,
+                            null,
+                            option.Label)
+                };
+
+            var subcategories =
+                _assetLibraryItems
+                    .Where(
+                        item =>
+                            item.Kind is
+                                OmsiAssetKind.SceneryObject or
+                                OmsiAssetKind.Spline &&
+                            OmsiAssetLibraryClassifier
+                                .Classify(
+                                    item) ==
+                                option.Group)
+                    .Select(
+                        OmsiAssetLibraryClassifier
+                            .GetSubcategory)
+                    .Where(
+                        value =>
+                            !string.IsNullOrWhiteSpace(
+                                value))
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(
+                        value => value,
+                        StringComparer.CurrentCultureIgnoreCase);
+
+            foreach (
+                var subcategory in
+                    subcategories)
+            {
+                groupNode.Children.Add(
+                    new TreeViewNode
+                    {
+                        Content =
+                            new LibraryCategoryTreeItem(
+                                option.Group,
+                                subcategory,
+                                subcategory)
+                    });
+            }
+
+            root.Children.Add(
+                groupNode);
+        }
+
+        LibraryCategoryTreeView
+            .RootNodes
+            .Add(
+                root);
+    }
+
+    private void OnLibraryCategoryTreeSelectionChanged(
+        TreeView sender,
+        TreeViewSelectionChangedEventArgs args)
+    {
+        if (
+            !_libraryMode ||
+            sender.SelectedNode?.Content is not
+                LibraryCategoryTreeItem selected)
+        {
+            return;
+        }
+
+        var groupIndex =
+            _libraryGroupOptions
+                .Select(
+                    (item, index) =>
+                        (
+                            item,
+                            index
+                        ))
+                .FirstOrDefault(
+                    pair =>
+                        pair.item.Group ==
+                            selected.Group)
+                .index;
+
+        if (
+            groupIndex >= 0 &&
+            groupIndex <
+                _libraryGroupOptions.Count &&
+            LibraryGroupComboBox.SelectedIndex !=
+                groupIndex)
+        {
+            LibraryGroupComboBox.SelectedIndex =
+                groupIndex;
+        }
+
+        var subcategory =
+            selected.Subcategory;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                subcategory))
+        {
+            LibrarySubcategoryComboBox.SelectedIndex =
+                0;
+
+            RefreshLibraryFilter();
+            return;
+        }
+
+        var subcategoryIndex =
+            -1;
+
+        for (
+            var index = 0;
+            index <
+                LibrarySubcategoryComboBox
+                    .Items.Count;
+            index++)
+        {
+            if (
+                string.Equals(
+                    LibrarySubcategoryComboBox
+                        .Items[index]
+                        ?.ToString(),
+                    subcategory,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                subcategoryIndex =
+                    index;
+
+                break;
+            }
+        }
+
+        if (subcategoryIndex >= 0)
+        {
+            LibrarySubcategoryComboBox.SelectedIndex =
+                subcategoryIndex;
+        }
+
+        RefreshLibraryFilter();
     }
 
     private void RefreshLibraryTechnicalFilterOptions(
