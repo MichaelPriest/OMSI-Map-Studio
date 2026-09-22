@@ -17,6 +17,7 @@ using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
+using MapStudio.Core.Workspace;
 using MapStudio.Native.Services;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
@@ -12742,6 +12743,66 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Falha ao adicionar pasta de itens: {exception.Message}";
+        }
+    }
+
+    private async void OnExportWorkspaceOmsiPackageClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !_session.IsStandaloneWorkspace ||
+            _session.OmsiRootPath is not
+                { } workspaceRoot ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Exportar pacote OMSI: abra um mapa do Workspace Map Studio primeiro.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as alterações pendentes antes de exportar o pacote OMSI.";
+
+            return;
+        }
+
+        var destination =
+            await PickFolderAsync();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                destination))
+        {
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Exportando mapa e assets do Workspace para um pacote OMSI seguro...";
+
+            var result =
+                await new MapStudioWorkspaceOmsiPackageExporter()
+                    .ExportAsync(
+                        workspaceRoot,
+                        snapshot.Map,
+                        destination);
+
+            StatusText.Text =
+                $"Pacote OMSI exportado: {result.CopiedFiles} arquivo(s) · {result.PackageRoot}. " +
+                "O OMSI original não foi alterado.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Exportar pacote OMSI falhou: {exception.Message}";
         }
     }
 

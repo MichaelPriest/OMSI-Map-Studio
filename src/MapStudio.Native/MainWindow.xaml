@@ -225,6 +225,9 @@
                     <MenuFlyoutItem
                         Text="Adicionar pasta de itens..."
                         Click="OnAddAssetFolderClick" />
+                    <MenuFlyoutItem
+                        Text="Exportar mapa como pacote OMSI..."
+                        Click="OnExportWorkspaceOmsiPackageClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Abrir OMSI..."
@@ -1409,6 +1412,10 @@
                             Content="Adicionar itens"
                             ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
                             Click="OnAddAssetFolderClick" />
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Exportar"
+                            ToolTipService.ToolTip="Exportar mapa atual como pacote OMSI"
+                            Click="OnExportWorkspaceOmsiPackageClick" />
                     <Button Style="{StaticResource EditorToolbarButtonStyle}"
                             Content="Assets"
                             Click="OnLibraryModeClick" />
