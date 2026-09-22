@@ -40,7 +40,8 @@ public sealed class NativeTrafficPathGeometryBuilder
             NativeSceneryAsset>? sceneryAssets =
                 null,
         NativeTrafficPathDisplayOptions?
-            displayOptions = null)
+            displayOptions = null,
+        int? focusedPathIndex = null)
     {
         ArgumentNullException.ThrowIfNull(
             scene);
@@ -117,11 +118,25 @@ public sealed class NativeTrafficPathGeometryBuilder
                 continue;
             }
 
-            foreach (
-                var path in
+            for (
+                var pathIndex = 0;
+                pathIndex <
                     asset.Definition
-                        .Paths)
+                        .Paths.Count;
+                pathIndex++)
             {
+                if (
+                    focusedPathIndex.HasValue &&
+                    pathIndex !=
+                        focusedPathIndex.Value)
+                {
+                    continue;
+                }
+
+                var path =
+                    asset.Definition
+                        .Paths[pathIndex];
+
                 if (!options.IncludesType(
                         path.Type))
                 {
@@ -163,10 +178,23 @@ public sealed class NativeTrafficPathGeometryBuilder
                                 scene,
                                 entity);
 
-                foreach (
-                    var path in
-                        asset.Paths)
+                for (
+                    var pathIndex = 0;
+                    pathIndex <
+                        asset.Paths.Count;
+                    pathIndex++)
                 {
+                    if (
+                        focusedPathIndex.HasValue &&
+                        pathIndex !=
+                            focusedPathIndex.Value)
+                    {
+                        continue;
+                    }
+
+                    var path =
+                        asset.Paths[pathIndex];
+
                     if (!options.IncludesType(
                             path.Type))
                     {
