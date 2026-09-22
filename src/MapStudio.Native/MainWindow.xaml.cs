@@ -9327,57 +9327,11 @@ public sealed partial class MainWindow : Window
                     }
                 };
 
-            _timetableWindow.EditTripAsync =
-                async tripName =>
-                {
-                    SelectTransportWorkspace(
-                        1,
-                        $"Trip {tripName}: edição solicitada pela janela Timetable.");
+            _timetableWindow.SaveTripAsync =
+                SaveTimetableTripAsync;
 
-                    var selected =
-                        _transportItems
-                            .FirstOrDefault(
-                                candidate =>
-                                    candidate.Kind ==
-                                        "Trip" &&
-                                    string.Equals(
-                                        candidate.Key,
-                                        tripName,
-                                        StringComparison.OrdinalIgnoreCase));
-
-                    if (selected is null)
-                    {
-                        StatusText.Text =
-                            $"Timetable: Trip {tripName} não foi encontrado no catálogo atual.";
-                        return;
-                    }
-
-                    TransportListView.SelectedItem =
-                        selected;
-
-                    RefreshTransportRouteWorkbench(
-                        selected,
-                        preview:
-                            true);
-
-                    Activate();
-
-                    await EditTripAsync(
-                        selected);
-                };
-
-            _timetableWindow.TripSaveRequested +=
-                async (
-                    sourceTrip,
-                    updatedTrip
-                ) =>
-                {
-                    await SaveTimetableTripProfilesAsync(
-                        sourceTrip,
-                        updatedTrip);
-                };
-
-            _timetableWindow.SaveLineAsync = SaveTimetableLineAsync;
+            _timetableWindow.SaveLineAsync =
+                SaveTimetableLineAsync;
 
             _timetableWindow.Closed +=
                 (
@@ -12013,24 +11967,72 @@ public sealed partial class MainWindow : Window
         OmsiTimetableTrip sourceTrip,
         OmsiTimetableTrip updatedTrip)
     {
+        if (
+            await SaveTimetableTripAsync(
+                sourceTrip,
+                updatedTrip))
+        {
+            StatusText.Text =
+                $"Trip {updatedTrip.Name}: {OmsiTimetableProfileEditor.ReadProfiles(updatedTrip.ProfileLines).Count} perfil(is) de tempo salvo(s).";
+        }
+    }
+
+    private async Task<bool> SaveTimetableTripAsync(
+        OmsiTimetableTrip sourceTrip,
+        OmsiTimetableTrip updatedTrip)
+    {
         try
         {
-            await _session
-                .UpdateTimetableTripAsync(
-                    sourceTrip,
-                    updatedTrip);
+            EditTrackButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Salvando Trip {sourceTrip.Name} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateTimetableTripAsync(
+                        sourceTrip,
+                        updatedTrip);
 
             await ReloadTransportCatalogAsync(
                 "Trip",
-                updatedTrip.Name);
+                updated.Trip.Name);
+
+            if (
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected)
+            {
+                RefreshTransportRouteWorkbench(
+                    selected,
+                    preview:
+                        true);
+            }
 
             StatusText.Text =
-                $"Trip {updatedTrip.Name}: {OmsiTimetableProfileEditor.ReadProfiles(updatedTrip.ProfileLines).Count} perfil(is) de tempo salvo(s).";
+                updated.Trip.UsesStationLinks
+                    ? $"Trip {updated.Trip.Name} salvo · tipo 2 StationLinks · {updated.Trip.Stations.Count} stop(s) · backup {updated.BackupPath}."
+                    : $"Trip {updated.Trip.Name} salvo · Track {updated.Trip.EffectiveTrackName} · {updated.Trip.Stations.Count} station(s) · backup {updated.BackupPath}.";
+
+            return true;
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao salvar perfis: {exception.Message}";
+                $"Falha ao salvar Trip: {exception.Message}";
+            return false;
+        }
+        finally
+        {
+            EditTrackButton.IsEnabled =
+                TransportListView.SelectedItem is
+                    TransportExplorerItem selected &&
+                selected.Kind is
+                    "Track" or
+                    "Trip" or
+                    "Stop" or
+                    "StationLink" or
+                    "Line";
         }
     }
 
@@ -12824,375 +12826,21 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var stationLinkTrip =
-            trip.UsesStationLinks;
-
-        var trackBox =
-            new TextBox
-            {
-                Header =
-                    stationLinkTrip
-                        ? "Destino / letreiro · campo 1 OMSI do tipo 2"
-                        : "Track",
-                Text =
-                    trip.TrackName
-            };
-
-        var destinationBox =
-            new TextBox
-            {
-                Header =
-                    stationLinkTrip
-                        ? "Linha · campo 2 OMSI do tipo 2"
-                        : "Destino",
-                Text =
-                    trip.Destination
-            };
-
-        var lineBox =
-            new TextBox
-            {
-                Header =
-                    stationLinkTrip
-                        ? "Campo 3 OMSI · deve permanecer vazio no tipo 2"
-                        : "Linha",
-                Text =
-                    trip.Line
-            };
-
-        var reverseBox =
-            new CheckBox
-            {
-                Content =
-                    "Train reverse",
-                IsChecked =
-                    trip.TrainReverse
-            };
-
-        var stationsBox =
-            new TextBox
-            {
-                Header =
-                    "Stations · T2|id ou T1|id|interval|name|tile|line5|line6|line7|line8",
-                AcceptsReturn =
-                    true,
-                TextWrapping =
-                    TextWrapping.NoWrap,
-                MinHeight =
-                    220,
-                FontFamily =
-                    new Microsoft.UI.Xaml.Media.FontFamily(
-                        "Consolas"),
-                Text =
-                    string.Join(
-                        Environment.NewLine,
-                        trip.Stations.Select(
-                            station =>
-                                station switch
-                                {
-                                    OmsiTimetableTripStationType2
-                                        type2 =>
-                                        $"T2|{type2.Id}",
-
-                                    OmsiTimetableTripStationType1
-                                        type1 =>
-                                        $"T1|{type1.Id}|{type1.Interval}|{type1.Name}|{type1.TileIndex}|{type1.Line5}|{type1.Line6}|{type1.Line7}|{type1.Line8}",
-
-                                    _ =>
-                                        string.Empty
-                                }))
-            };
-
-        var profilesBox =
-            new TextBox
-            {
-                Header =
-                    "Profiles",
-                AcceptsReturn =
-                    true,
-                TextWrapping =
-                    TextWrapping.NoWrap,
-                MinHeight =
-                    180,
-                FontFamily =
-                    new Microsoft.UI.Xaml.Media.FontFamily(
-                        "Consolas"),
-                Text =
-                    string.Join(
-                        Environment.NewLine,
-                        trip.ProfileLines)
-            };
-
-        var panel =
-            new StackPanel
-            {
-                Spacing =
-                    8,
-                MinWidth =
-                    560
-            };
-
-        panel.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    stationLinkTrip
-                        ? "Trip tipo 2: o caminho é resolvido pela sequência de StationLinks entre os stops; não existe Track associado."
-                        : "Trip tipo 1: o caminho físico vem do Track associado.",
-                TextWrapping =
-                    TextWrapping.Wrap,
-                Opacity =
-                    0.78
-            });
-
-        panel.Children.Add(
-            trackBox);
-        panel.Children.Add(
-            destinationBox);
-        panel.Children.Add(
-            lineBox);
-        panel.Children.Add(
-            reverseBox);
-        panel.Children.Add(
-            stationsBox);
-        panel.Children.Add(
-            profilesBox);
-
-        var dialog =
-            new ContentDialog
-            {
-                XamlRoot =
-                    MainRoot.XamlRoot,
-                Title =
-                    $"Editar Trip · {trip.Name}",
-                Content =
-                    new ScrollViewer
-                    {
-                        Content =
-                            panel,
-                        MaxHeight =
-                            650
-                    },
-                PrimaryButtonText =
-                    "Salvar Trip",
-                CloseButtonText =
-                    "Cancelar",
-                DefaultButton =
-                    ContentDialogButton.Primary
-            };
-
-        if (
-            await dialog.ShowAsync() !=
-                ContentDialogResult.Primary)
-        {
-            return;
-        }
-
-        var stations =
-            new List<
-                OmsiTimetableTripStation>();
-
-        var stationLineNumber =
-            0;
-
-        foreach (
-            var rawLine in
-                stationsBox.Text
-                    .Replace(
-                        "\r\n",
-                        "\n",
-                        StringComparison.Ordinal)
-                    .Split('\n'))
-        {
-            stationLineNumber++;
-
-            var line =
-                rawLine.Trim();
-
-            if (string.IsNullOrWhiteSpace(
-                    line))
-            {
-                continue;
-            }
-
-            var parts =
-                line.Split(
-                    '|');
-
-            if (
-                parts.Length ==
-                    2 &&
-                string.Equals(
-                    parts[0],
-                    "T2",
-                    StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(
-                    parts[1],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var type2Id) &&
-                type2Id >= 0)
-            {
-                stations.Add(
-                    new OmsiTimetableTripStationType2(
-                        type2Id));
-                continue;
-            }
-
-            if (
-                parts.Length ==
-                    9 &&
-                string.Equals(
-                    parts[0],
-                    "T1",
-                    StringComparison.OrdinalIgnoreCase) &&
-                int.TryParse(
-                    parts[1],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var type1Id) &&
-                type1Id >= 0 &&
-                int.TryParse(
-                    parts[4],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var tileIndex))
-            {
-                stations.Add(
-                    new OmsiTimetableTripStationType1(
-                        type1Id,
-                        parts[2],
-                        parts[3],
-                        tileIndex,
-                        parts[5],
-                        parts[6],
-                        parts[7],
-                        parts[8]));
-                continue;
-            }
-
-            StatusText.Text =
-                $"Trip não salvo: station inválida na linha {stationLineNumber}.";
-            return;
-        }
-
-        if (stations.Count == 0)
-        {
-            StatusText.Text =
-                "Trip não salvo: mantenha pelo menos uma station.";
-            return;
-        }
-
-        if (
-            stationLinkTrip &&
-            !string.IsNullOrWhiteSpace(
-                lineBox.Text))
-        {
-            StatusText.Text =
-                "Trip tipo 2 não salvo: o terceiro campo [trip] deve permanecer vazio.";
-            return;
-        }
-
-        if (
-            stationLinkTrip &&
-            !TryValidateStationLinkTrip(
-                stations,
-                out var stationLinkError))
-        {
-            StatusText.Text =
-                $"Trip tipo 2 não salvo: {stationLinkError}";
-            return;
-        }
-
-        var profiles =
-            profilesBox.Text
-                .Replace(
-                    "\r\n",
-                    "\n",
-                    StringComparison.Ordinal)
-                .Split('\n')
-                .Select(
-                    value =>
-                        value.Trim())
-                .Where(
-                    value =>
-                        !string.IsNullOrWhiteSpace(
-                            value))
-                .ToArray();
-
         var updatedTrip =
-            trip with
-            {
-                TrackName =
-                    trackBox.Text.Trim(),
-                Destination =
-                    destinationBox.Text.Trim(),
-                Line =
-                    lineBox.Text.Trim(),
-                TrainReverse =
-                    reverseBox.IsChecked ==
-                    true,
-                Stations =
-                    stations.ToArray(),
-                ProfileLines =
-                    profiles
-            };
+            await TimetableTripEditorDialog
+                .ShowAsync(
+                    MainRoot.XamlRoot,
+                    trip,
+                    _timetableCatalog);
 
-        try
+        if (updatedTrip is null)
         {
-            EditTrackButton.IsEnabled =
-                false;
-
-            StatusText.Text =
-                $"Salvando Trip {trip.Name} com backup...";
-
-            var updated =
-                await _session
-                    .UpdateTimetableTripAsync(
-                        trip,
-                        updatedTrip);
-
-            _timetableCatalog =
-                await new OmsiTimetableCatalogReader()
-                    .ReadAsync(
-                        _session.CurrentMap!
-                            .Map
-                            .DirectoryPath);
-
-            RefreshTransportItems();
-
-            TransportListView.SelectedItem =
-                _transportItems
-                    .FirstOrDefault(
-                        candidate =>
-                            candidate.Kind ==
-                                "Trip" &&
-                            string.Equals(
-                                candidate.Key,
-                                updated.Trip.Name,
-                                StringComparison.OrdinalIgnoreCase));
-
-            StatusText.Text =
-                updated.Trip.UsesStationLinks
-                    ? $"Trip {updated.Trip.Name} salvo · tipo 2 StationLinks · {updated.Trip.Stations.Count} stop(s) · backup {updated.BackupPath}."
-                    : $"Trip {updated.Trip.Name} salvo · Track {updated.Trip.EffectiveTrackName} · {updated.Trip.Stations.Count} station(s) · backup {updated.BackupPath}.";
+            return;
         }
-        catch (Exception exception)
-        {
-            StatusText.Text =
-                $"Falha ao salvar Trip: {exception.Message}";
-        }
-        finally
-        {
-            EditTrackButton.IsEnabled =
-                TransportListView.SelectedItem is
-                    TransportExplorerItem selected &&
-                selected.Kind is
-                    "Track" or
-                    "Trip" or
-                    "StationLink" or
-                    "Line";
-        }
+
+        await SaveTimetableTripAsync(
+            trip,
+            updatedTrip);
     }
 
     private async Task EditStationLinkAsync(

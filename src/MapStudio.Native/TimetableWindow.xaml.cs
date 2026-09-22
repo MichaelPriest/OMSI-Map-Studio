@@ -21,19 +21,15 @@ public sealed partial class TimetableWindow
 
     public Func<OmsiTimetableLine, OmsiTimetableLine, Task<bool>>? SaveLineAsync { get; set; }
 
-    public Func<string, Task>? EditTripAsync { get; set; }
+    public Func<OmsiTimetableTrip, OmsiTimetableTrip, Task<bool>>? SaveTripAsync { get; set; }
 
     private TimetableLineEditor? _lineEditor;
     private OmsiTimetableLine? _editingLine;
     private bool _savingLine;
+    private bool _savingTrip;
 
     public event Action<string>?
         TripRouteRequested;
-
-    public event Action<
-        OmsiTimetableTrip,
-        OmsiTimetableTrip>?
-        TripSaveRequested;
 
     private OmsiTimetableCatalog
         _catalog;
@@ -166,6 +162,7 @@ public sealed partial class TimetableWindow
         SelectionChangedEventArgs e)
     {
         var selected =
+            !_savingTrip &&
             ScheduleListView.SelectedItem is
                 TimetableScheduleRow;
 
@@ -201,26 +198,42 @@ public sealed partial class TimetableWindow
         if (
             ScheduleListView.SelectedItem is not
                 TimetableScheduleRow row ||
-            EditTripAsync is null)
+            _savingTrip)
         {
             return;
         }
 
-        EditTripButton.IsEnabled =
-            false;
+        var trip =
+            _catalog.Trips
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            row.TripName,
+                            StringComparison.OrdinalIgnoreCase));
 
-        try
+        if (trip is null)
         {
-            await EditTripAsync(
-                row.TripName);
+            LineSummaryText.Text =
+                $"Trip {row.TripName} não foi encontrado no catálogo atual.";
+            return;
         }
-        finally
+
+        var updatedTrip =
+            await TimetableTripEditorDialog
+                .ShowAsync(
+                    RootGrid.XamlRoot,
+                    trip,
+                    _catalog);
+
+        if (updatedTrip is null)
         {
-            EditTripButton.IsEnabled =
-                _lineEditor is null &&
-                ScheduleListView.SelectedItem is
-                    TimetableScheduleRow;
+            return;
         }
+
+        await SaveTripFromWindowAsync(
+            trip,
+            updatedTrip);
     }
 
     private async void OnEditProfileClick(
@@ -260,10 +273,65 @@ public sealed partial class TimetableWindow
             return;
         }
 
-        TripSaveRequested
-            ?.Invoke(
-                trip,
-                updatedTrip);
+        await SaveTripFromWindowAsync(
+            trip,
+            updatedTrip);
+    }
+
+    private async Task SaveTripFromWindowAsync(
+        OmsiTimetableTrip sourceTrip,
+        OmsiTimetableTrip updatedTrip)
+    {
+        if (
+            _savingTrip ||
+            SaveTripAsync is null)
+        {
+            return;
+        }
+
+        _savingTrip =
+            true;
+
+        FocusTripButton.IsEnabled =
+            false;
+        EditTripButton.IsEnabled =
+            false;
+        EditProfileButton.IsEnabled =
+            false;
+
+        try
+        {
+            if (
+                !await SaveTripAsync(
+                    sourceTrip,
+                    updatedTrip))
+            {
+                LineSummaryText.Text =
+                    $"Trip {sourceTrip.Name}: salvamento não concluído. Consulte o status da janela principal.";
+            }
+        }
+        catch (Exception exception)
+        {
+            LineSummaryText.Text =
+                $"Trip {sourceTrip.Name}: falha ao salvar · {exception.Message}";
+        }
+        finally
+        {
+            _savingTrip =
+                false;
+
+            var selected =
+                _lineEditor is null &&
+                ScheduleListView.SelectedItem is
+                    TimetableScheduleRow;
+
+            FocusTripButton.IsEnabled =
+                selected;
+            EditTripButton.IsEnabled =
+                selected;
+            EditProfileButton.IsEnabled =
+                selected;
+        }
     }
 
     private void RequestSelectedTripRoute()
