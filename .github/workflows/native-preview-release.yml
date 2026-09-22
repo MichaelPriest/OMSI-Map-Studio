@@ -1,4 +1,5 @@
 name: Native Preview Release
+# Test 10.4: Map tab freeze guard validates latest UI-thread isolation fix.
 
 on:
   push:
