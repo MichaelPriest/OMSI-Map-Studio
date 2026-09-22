@@ -8984,10 +8984,1299 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (_transportMode)
+        if (!_transportMode)
         {
-            RefreshTransportItems();
+            return;
         }
+
+        Viewport
+            .ClearTimetableRoutePreview();
+
+        TransportRouteStepsListView.ItemsSource =
+            null;
+
+        TransportRouteStatusText.Text =
+            "Selecione um item para inspecionar o caminho.";
+
+        TransportRemoveStepButton.IsEnabled =
+            false;
+
+        TransportMoveStepUpButton.IsEnabled =
+            false;
+
+        TransportMoveStepDownButton.IsEnabled =
+            false;
+
+        TransportProfilesButton.IsEnabled =
+            false;
+
+        RefreshTransportItems();
+
+        TransportNewButton.Content =
+            TransportKindComboBox.SelectedIndex switch
+            {
+                1 => "+ Novo Trip",
+                2 => "+ Nova parada",
+                3 => "+ Novo StationLink",
+                4 => "+ Nova Line",
+                _ => "+ Novo Track"
+            };
+    }
+
+    private async void OnTransportNewClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_timetableCatalog is null)
+        {
+            StatusText.Text =
+                "Transporte: TTData ainda não foi carregado.";
+            return;
+        }
+
+        try
+        {
+            switch (
+                TransportKindComboBox
+                    .SelectedIndex)
+            {
+                case 1:
+                    await CreateTransportTripAsync();
+                    break;
+
+                case 2:
+                    await CreateTransportStopAsync();
+                    break;
+
+                case 3:
+                    await CreateTransportStationLinkAsync();
+                    break;
+
+                case 4:
+                    await CreateTransportLineAsync();
+                    break;
+
+                default:
+                    await CreateTransportTrackAsync();
+                    break;
+            }
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar item de transporte: {exception.Message}";
+        }
+    }
+
+    private async Task CreateTransportTrackAsync()
+    {
+        if (
+            _selectionInfo is null ||
+            _selectionInfo.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ))
+        {
+            StatusText.Text =
+                "Novo Track: selecione primeiro uma spline ou objeto com path no mapa.";
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do Track (.ttr)",
+                Text =
+                    $"Track_{DateTime.Now:HHmmss}"
+            };
+
+        var pathBox =
+            new NumberBox
+            {
+                Header =
+                    "Path index do segmento selecionado",
+                Minimum =
+                    0,
+                Maximum =
+                    100000,
+                Value =
+                    Math.Max(
+                        0,
+                        TransportPathIndexBox.Value)
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    420
+            };
+
+        panel.Children.Add(
+            nameBox);
+
+        panel.Children.Add(
+            pathBox);
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Segmento inicial: {_selectionInfo.Kind} #{_selectionInfo.EntityId}. Depois use + seleção para montar o restante do caminho visualmente.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.75
+            });
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Novo Track / caminho",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar Track",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var pathIndex =
+            checked(
+                (int)Math.Round(
+                    pathBox.Value));
+
+        var entry =
+            new OmsiTimetableTrackEntry(
+                "0:",
+                _selectionInfo.EntityId,
+                pathIndex.ToString(
+                    CultureInfo.InvariantCulture),
+                -1,
+                string.Empty,
+                null,
+                string.Empty,
+                null);
+
+        var created =
+            await _session
+                .CreateTimetableTrackAsync(
+                    nameBox.Text,
+                    [entry]);
+
+        await ReloadTransportCatalogAsync(
+            "Track",
+            created.Name);
+
+        StatusText.Text =
+            $"Track {created.Name} criado com o segmento #{entry.Id}:{entry.Line2}.";
+    }
+
+    private async Task CreateTransportTripAsync()
+    {
+        if (
+            _timetableCatalog is null ||
+            _timetableCatalog.Tracks.Count ==
+                0)
+        {
+            StatusText.Text =
+                "Novo Trip: crie pelo menos um Track primeiro.";
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do Trip (.ttp)",
+                Text =
+                    $"Trip_{DateTime.Now:HHmmss}"
+            };
+
+        var trackBox =
+            new ComboBox
+            {
+                Header =
+                    "Track",
+                ItemsSource =
+                    _timetableCatalog.Tracks
+                        .Select(
+                            track =>
+                                track.Name)
+                        .ToArray(),
+                SelectedIndex =
+                    0,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var destinationBox =
+            new TextBox
+            {
+                Header =
+                    "Destino"
+            };
+
+        var lineBox =
+            new TextBox
+            {
+                Header =
+                    "Linha"
+            };
+
+        var stationIdsBox =
+            new TextBox
+            {
+                Header =
+                    "Stops em sequência · um ID por linha",
+                AcceptsReturn =
+                    true,
+                MinHeight =
+                    140,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        _timetableCatalog.BusStops
+                            .Take(2)
+                            .Select(
+                                stop =>
+                                    stop.Id.ToString(
+                                        CultureInfo.InvariantCulture)))
+            };
+
+        var profileBox =
+            new TextBox
+            {
+                Header =
+                    "Perfil de tempo OMSI · linhas de Profiles",
+                AcceptsReturn =
+                    true,
+                MinHeight =
+                    120,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    "[profile]" +
+                    Environment.NewLine +
+                    "standard"
+            };
+
+        var reverseBox =
+            new CheckBox
+            {
+                Content =
+                    "Train reverse"
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    500
+            };
+
+        panel.Children.Add(nameBox);
+        panel.Children.Add(trackBox);
+        panel.Children.Add(destinationBox);
+        panel.Children.Add(lineBox);
+        panel.Children.Add(stationIdsBox);
+        panel.Children.Add(profileBox);
+        panel.Children.Add(reverseBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Novo Trip / rota",
+                Content =
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            650
+                    },
+                PrimaryButtonText =
+                    "Criar Trip",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary ||
+            trackBox.SelectedItem is not
+                string trackName)
+        {
+            return;
+        }
+
+        var stationIds =
+            stationIdsBox.Text
+                .Replace(
+                    "
+",
+                    "
+",
+                    StringComparison.Ordinal)
+                .Split(
+                    '
+',
+                    StringSplitOptions
+                        .RemoveEmptyEntries |
+                    StringSplitOptions
+                        .TrimEntries)
+                .Select(
+                    value =>
+                        int.TryParse(
+                            value,
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out var id)
+                            ? id
+                            : -1)
+                .ToArray();
+
+        if (
+            stationIds.Length == 0 ||
+            stationIds.Any(
+                id =>
+                    id < 0))
+        {
+            StatusText.Text =
+                "Novo Trip: informe IDs de stops válidos.";
+            return;
+        }
+
+        var stations =
+            stationIds
+                .Select(
+                    id =>
+                        (OmsiTimetableTripStation)
+                            new OmsiTimetableTripStationType2(
+                                id))
+                .ToArray();
+
+        var profiles =
+            profileBox.Text
+                .Replace(
+                    "
+",
+                    "
+",
+                    StringComparison.Ordinal)
+                .Split(
+                    '
+',
+                    StringSplitOptions
+                        .RemoveEmptyEntries |
+                    StringSplitOptions
+                        .TrimEntries);
+
+        var created =
+            await _session
+                .CreateTimetableTripAsync(
+                    nameBox.Text,
+                    trackName,
+                    destinationBox.Text,
+                    lineBox.Text,
+                    reverseBox.IsChecked ==
+                        true,
+                    stations,
+                    profiles);
+
+        await ReloadTransportCatalogAsync(
+            "Trip",
+            created.Name);
+
+        StatusText.Text =
+            $"Trip {created.Name} criado · Track {created.TrackName} · {created.Stations.Count} stop(s).";
+    }
+
+    private async Task CreateTransportStopAsync()
+    {
+        var defaultId =
+            _timetableCatalog?.BusStops
+                .Select(
+                    stop =>
+                        stop.Id)
+                .DefaultIfEmpty(
+                    0)
+                .Max() +
+            1 ??
+            1;
+
+        var idBox =
+            new NumberBox
+            {
+                Header =
+                    "ID da parada",
+                Minimum =
+                    0,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    defaultId
+            };
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome",
+                Text =
+                    $"Parada {defaultId}"
+            };
+
+        var subNameBox =
+            new TextBox
+            {
+                Header =
+                    "Subnome"
+            };
+
+        var tileBox =
+            new NumberBox
+            {
+                Header =
+                    "Tile index OMSI",
+                Minimum =
+                    -1,
+                Maximum =
+                    int.MaxValue,
+                Value =
+                    -1
+            };
+
+        var passengersBox =
+            new NumberBox
+            {
+                Header =
+                    "Passageiros saindo",
+                Minimum =
+                    0,
+                Maximum =
+                    100000,
+                Value =
+                    0
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    420
+            };
+
+        panel.Children.Add(idBox);
+        panel.Children.Add(nameBox);
+        panel.Children.Add(subNameBox);
+        panel.Children.Add(tileBox);
+        panel.Children.Add(passengersBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Nova parada",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar parada",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var stop =
+            new OmsiTimetableBusStop(
+                nameBox.Text.Trim(),
+                checked(
+                    (int)Math.Round(
+                        tileBox.Value)),
+                checked(
+                    (int)Math.Round(
+                        idBox.Value)),
+                passengersBox.Value,
+                "0",
+                "0",
+                subNameBox.Text.Trim());
+
+        await _session
+            .AddBusStopAsync(
+                stop);
+
+        await ReloadTransportCatalogAsync(
+            "Stop",
+            stop.Id.ToString(
+                CultureInfo.InvariantCulture));
+
+        StatusText.Text =
+            $"Parada #{stop.Id} · {stop.Name} criada.";
+    }
+
+    private async Task CreateTransportStationLinkAsync()
+    {
+        if (
+            _timetableCatalog is null ||
+            _timetableCatalog.BusStops.Count <
+                2 ||
+            _timetableCatalog.Tracks.Count ==
+                0)
+        {
+            StatusText.Text =
+                "Novo StationLink: são necessários ao menos 2 stops e 1 Track.";
+            return;
+        }
+
+        var stopOptions =
+            _timetableCatalog.BusStops
+                .Select(
+                    stop =>
+                        $"{stop.Id} · {stop.Name}")
+                .ToArray();
+
+        var startBox =
+            new ComboBox
+            {
+                Header =
+                    "Stop inicial",
+                ItemsSource =
+                    stopOptions,
+                SelectedIndex =
+                    0,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var endBox =
+            new ComboBox
+            {
+                Header =
+                    "Stop final",
+                ItemsSource =
+                    stopOptions,
+                SelectedIndex =
+                    Math.Min(
+                        1,
+                        stopOptions.Length -
+                        1),
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var trackBox =
+            new ComboBox
+            {
+                Header =
+                    "Usar caminho do Track",
+                ItemsSource =
+                    _timetableCatalog.Tracks
+                        .Select(
+                            track =>
+                                track.Name)
+                        .ToArray(),
+                SelectedIndex =
+                    0,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var commentBox =
+            new TextBox
+            {
+                Header =
+                    "Nome / comentário",
+                Text =
+                    "StationLink Map Studio"
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    460
+            };
+
+        panel.Children.Add(startBox);
+        panel.Children.Add(endBox);
+        panel.Children.Add(trackBox);
+        panel.Children.Add(commentBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Novo StationLink",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar StationLink",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary ||
+            trackBox.SelectedItem is not
+                string trackName)
+        {
+            return;
+        }
+
+        var startIndex =
+            startBox.SelectedIndex;
+
+        var endIndex =
+            endBox.SelectedIndex;
+
+        if (
+            startIndex < 0 ||
+            endIndex < 0 ||
+            startIndex == endIndex)
+        {
+            StatusText.Text =
+                "StationLink: escolha stops inicial e final diferentes.";
+            return;
+        }
+
+        var startStop =
+            _timetableCatalog.BusStops[
+                startIndex];
+
+        var endStop =
+            _timetableCatalog.BusStops[
+                endIndex];
+
+        var track =
+            _timetableCatalog.Tracks
+                .First(
+                    candidate =>
+                        candidate.Name ==
+                        trackName);
+
+        var entries =
+            track.Entries
+                .Select(
+                    (entry, index) =>
+                        new OmsiStationLinkEntry(
+                            $"{index}:",
+                            entry.Id,
+                            entry.Line2,
+                            entry.TileIndex,
+                            entry.Length,
+                            entry.Line4,
+                            entry.Line6,
+                            entry.Line7 ??
+                                string.Empty,
+                            Array.Empty<string>()))
+                .ToArray();
+
+        var link =
+            new OmsiStationLink(
+                commentBox.Text.Trim(),
+                "0",
+                startStop.Id,
+                endStop.Id,
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                entries);
+
+        var links =
+            await _session
+                .AddStationLinkAsync(
+                    link);
+
+        await ReloadTransportCatalogAsync(
+            "StationLink",
+            (links.Count - 1)
+                .ToString(
+                    CultureInfo.InvariantCulture));
+
+        StatusText.Text =
+            $"StationLink {startStop.Name} → {endStop.Name} criado com {entries.Length} segmento(s).";
+    }
+
+    private async Task CreateTransportLineAsync()
+    {
+        if (
+            _timetableCatalog is null ||
+            _timetableCatalog.Trips.Count ==
+                0)
+        {
+            StatusText.Text =
+                "Nova Line: crie pelo menos um Trip primeiro.";
+            return;
+        }
+
+        var nameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome da Line (.ttl)",
+                Text =
+                    $"Line_{DateTime.Now:HHmmss}"
+            };
+
+        var tripBox =
+            new ComboBox
+            {
+                Header =
+                    "Trip inicial",
+                ItemsSource =
+                    _timetableCatalog.Trips
+                        .Select(
+                            trip =>
+                                trip.Name)
+                        .ToArray(),
+                SelectedIndex =
+                    0,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var tourBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do Tour",
+                Text =
+                    "Tour 1"
+            };
+
+        var aiGroupBox =
+            new TextBox
+            {
+                Header =
+                    "AI Group",
+                Text =
+                    "Busses"
+            };
+
+        var departureBox =
+            new TextBox
+            {
+                Header =
+                    "Departure time OMSI (segundos)",
+                Text =
+                    "28800"
+            };
+
+        var priorityBox =
+            new TextBox
+            {
+                Header =
+                    "Priority",
+                Text =
+                    "2"
+            };
+
+        var userAllowed =
+            new CheckBox
+            {
+                Content =
+                    "User allowed",
+                IsChecked =
+                    true
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    460
+            };
+
+        panel.Children.Add(nameBox);
+        panel.Children.Add(tripBox);
+        panel.Children.Add(tourBox);
+        panel.Children.Add(aiGroupBox);
+        panel.Children.Add(departureBox);
+        panel.Children.Add(priorityBox);
+        panel.Children.Add(userAllowed);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Nova Line / Tour",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Criar Line",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary ||
+            tripBox.SelectedItem is not
+                string tripName)
+        {
+            return;
+        }
+
+        if (
+            !double.TryParse(
+                departureBox.Text,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var departure) ||
+            !double.IsFinite(
+                departure) ||
+            departure < 0)
+        {
+            StatusText.Text =
+                "Nova Line: departure time inválido.";
+            return;
+        }
+
+        var tour =
+            new OmsiTimetableTour(
+                tourBox.Text.Trim(),
+                aiGroupBox.Text.Trim(),
+                "0",
+                [
+                    new OmsiTimetableAddTrip(
+                        "Created with OMSI Map Studio",
+                        tripName,
+                        "0",
+                        departure.ToString(
+                            "G17",
+                            CultureInfo.InvariantCulture))
+                ]);
+
+        var created =
+            await _session
+                .CreateTimetableLineAsync(
+                    nameBox.Text,
+                    priorityBox.Text,
+                    userAllowed.IsChecked ==
+                        true,
+                    [tour]);
+
+        await ReloadTransportCatalogAsync(
+            "Line",
+            created.Name);
+
+        StatusText.Text =
+            $"Line {created.Name} criada · Tour {tour.Name} · Trip {tripName}.";
+    }
+
+    private async void OnTransportAddSelectionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _timetableCatalog is null ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind != "Track" ||
+            _selectionInfo is null ||
+            _selectionInfo.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ))
+        {
+            StatusText.Text =
+                "Route Studio: selecione um Track e uma spline/objeto no mapa.";
+            return;
+        }
+
+        var track =
+            _timetableCatalog.Tracks
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (track is null)
+        {
+            return;
+        }
+
+        var pathIndex =
+            checked(
+                (int)Math.Round(
+                    TransportPathIndexBox.Value));
+
+        var entries =
+            track.Entries
+                .ToList();
+
+        entries.Add(
+            new OmsiTimetableTrackEntry(
+                $"{entries.Count}:",
+                _selectionInfo.EntityId,
+                pathIndex.ToString(
+                    CultureInfo.InvariantCulture),
+                -1,
+                string.Empty,
+                null,
+                string.Empty,
+                null));
+
+        try
+        {
+            await _session
+                .UpdateTimetableTrackAsync(
+                    track,
+                    entries);
+
+            await ReloadTransportCatalogAsync(
+                "Track",
+                track.Name);
+
+            TransportRouteStepsListView.SelectedIndex =
+                entries.Count -
+                1;
+
+            StatusText.Text =
+                $"Track {track.Name}: segmento #{_selectionInfo.EntityId}:{pathIndex} adicionado.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao adicionar segmento ao Track: {exception.Message}";
+        }
+    }
+
+    private async void OnTransportRemoveStepClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await MutateSelectedTrackStepAsync(
+            moveDelta: 0,
+            remove: true);
+
+    private async void OnTransportMoveStepUpClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await MutateSelectedTrackStepAsync(
+            moveDelta: -1,
+            remove: false);
+
+    private async void OnTransportMoveStepDownClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await MutateSelectedTrackStepAsync(
+            moveDelta: 1,
+            remove: false);
+
+    private async Task MutateSelectedTrackStepAsync(
+        int moveDelta,
+        bool remove)
+    {
+        if (
+            _timetableCatalog is null ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind != "Track" ||
+            TransportRouteStepsListView.SelectedItem is not
+                TransportRouteStepItem step)
+        {
+            return;
+        }
+
+        var track =
+            _timetableCatalog.Tracks
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (track is null)
+        {
+            return;
+        }
+
+        var entries =
+            track.Entries
+                .ToList();
+
+        var index =
+            step.Sequence -
+            1;
+
+        if (
+            index < 0 ||
+            index >= entries.Count)
+        {
+            return;
+        }
+
+        var nextSelection =
+            index;
+
+        if (remove)
+        {
+            if (entries.Count <= 1)
+            {
+                StatusText.Text =
+                    "Track precisa manter ao menos um segmento.";
+                return;
+            }
+
+            entries.RemoveAt(
+                index);
+
+            nextSelection =
+                Math.Min(
+                    index,
+                    entries.Count -
+                    1);
+        }
+        else
+        {
+            var target =
+                index +
+                moveDelta;
+
+            if (
+                target < 0 ||
+                target >= entries.Count)
+            {
+                return;
+            }
+
+            (entries[index], entries[target]) =
+                (entries[target], entries[index]);
+
+            nextSelection =
+                target;
+        }
+
+        try
+        {
+            await _session
+                .UpdateTimetableTrackAsync(
+                    track,
+                    entries);
+
+            await ReloadTransportCatalogAsync(
+                "Track",
+                track.Name);
+
+            TransportRouteStepsListView.SelectedIndex =
+                nextSelection;
+
+            StatusText.Text =
+                remove
+                    ? $"Track {track.Name}: segmento removido."
+                    : $"Track {track.Name}: ordem dos segmentos atualizada.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao alterar Track: {exception.Message}";
+        }
+    }
+
+    private async void OnTransportProfilesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _timetableCatalog is null ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind != "Trip")
+        {
+            return;
+        }
+
+        var trip =
+            _timetableCatalog.Trips
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (trip is null)
+        {
+            return;
+        }
+
+        var editor =
+            new TextBox
+            {
+                Header =
+                    "Profiles OMSI",
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.NoWrap,
+                MinWidth =
+                    560,
+                MinHeight =
+                    360,
+                FontFamily =
+                    new Microsoft.UI.Xaml.Media.FontFamily(
+                        "Consolas"),
+                Text =
+                    string.Join(
+                        Environment.NewLine,
+                        trip.ProfileLines)
+            };
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    $"Perfis de tempo · {trip.Name}",
+                Content =
+                    editor,
+                PrimaryButtonText =
+                    "Salvar perfis",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var lines =
+            editor.Text
+                .Replace(
+                    "
+",
+                    "
+",
+                    StringComparison.Ordinal)
+                .Split('
+')
+                .Select(
+                    value =>
+                        value.Trim())
+                .Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(
+                            value))
+                .ToArray();
+
+        try
+        {
+            await _session
+                .UpdateTimetableTripAsync(
+                    trip,
+                    trip with
+                    {
+                        ProfileLines =
+                            lines
+                    });
+
+            await ReloadTransportCatalogAsync(
+                "Trip",
+                trip.Name);
+
+            StatusText.Text =
+                $"Trip {trip.Name}: perfis de tempo salvos.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar perfis: {exception.Message}";
+        }
+    }
+
+    private async Task ReloadTransportCatalogAsync(
+        string kind,
+        string key)
+    {
+        if (_session.CurrentMap is null)
+        {
+            return;
+        }
+
+        _timetableCatalog =
+            await new OmsiTimetableCatalogReader()
+                .ReadAsync(
+                    _session.CurrentMap
+                        .Map
+                        .DirectoryPath);
+
+        RefreshTransportItems();
+
+        TransportListView.SelectedItem =
+            _transportItems
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Kind ==
+                            kind &&
+                        string.Equals(
+                            candidate.Key,
+                            key,
+                            StringComparison.OrdinalIgnoreCase));
     }
 
     private async void OnEditTrackClick(
@@ -10655,6 +11944,21 @@ public sealed partial class MainWindow : Window
             TransportFocusStepButton.IsEnabled =
                 false;
 
+            TransportAddSelectionButton.IsEnabled =
+                false;
+
+            TransportRemoveStepButton.IsEnabled =
+                false;
+
+            TransportMoveStepUpButton.IsEnabled =
+                false;
+
+            TransportMoveStepDownButton.IsEnabled =
+                false;
+
+            TransportProfilesButton.IsEnabled =
+                false;
+
             TransportRouteStepsListView.ItemsSource =
                 null;
 
@@ -10688,6 +11992,12 @@ public sealed partial class MainWindow : Window
 
         EditTrackButton.IsEnabled =
             editable;
+
+        TransportAddSelectionButton.IsEnabled =
+            item.Kind == "Track";
+
+        TransportProfilesButton.IsEnabled =
+            item.Kind == "Trip";
 
         EditTrackButton.Content =
             item.Kind switch
@@ -11149,9 +12459,34 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        TransportFocusStepButton.IsEnabled =
+        var selectedStep =
             TransportRouteStepsListView.SelectedItem is
                 TransportRouteStepItem;
+
+        TransportFocusStepButton.IsEnabled =
+            selectedStep;
+
+        var editableTrack =
+            selectedStep &&
+            TransportListView.SelectedItem is
+                TransportExplorerItem item &&
+            item.Kind == "Track";
+
+        TransportRemoveStepButton.IsEnabled =
+            editableTrack;
+
+        TransportMoveStepUpButton.IsEnabled =
+            editableTrack &&
+            TransportRouteStepsListView.SelectedIndex >
+                0;
+
+        TransportMoveStepDownButton.IsEnabled =
+            editableTrack &&
+            TransportRouteStepsListView.SelectedIndex >=
+                0 &&
+            TransportRouteStepsListView.SelectedIndex <
+                TransportRouteStepsListView.Items.Count -
+                1;
     }
 
     private void OnTransportFocusStepClick(
