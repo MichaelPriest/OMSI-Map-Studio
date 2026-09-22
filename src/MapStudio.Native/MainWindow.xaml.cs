@@ -281,6 +281,8 @@ public sealed partial class MainWindow : Window
     private bool _libraryMode;
     private bool _transportMode;
     private bool _transportPathsVisible;
+    private bool _transportTrackRecordMode;
+    private bool _transportTrackRecordBusy;
     private bool _trafficMode;
     private bool _validationMode;
     private bool _junctionMode;
@@ -564,6 +566,21 @@ public sealed partial class MainWindow : Window
                 _selectionInfo =
                     info;
 
+                if (
+                    _transportTrackRecordMode &&
+                    !_transportTrackRecordBusy &&
+                    info is
+                    {
+                        Kind:
+                            PickingKind.Object or
+                            PickingKind.Spline
+                    })
+                {
+                    _ =
+                        AppendTransportSelectionToTrackAsync(
+                            info);
+                }
+
                 ApplyInspectorButton.IsEnabled =
                     info is not null;
 
@@ -798,6 +815,9 @@ public sealed partial class MainWindow : Window
 
         _assetPreviewCancellation =
             null;
+
+        SetTransportTrackRecordMode(
+            false);
 
         Viewport.CancelSceneryPlacement();
         Viewport.CancelSplinePlacement();
@@ -9919,10 +9939,172 @@ public sealed partial class MainWindow : Window
             $"Line {created.Name} criada · Tour {tour.Name} · Trip {tripName}.";
     }
 
+    private void OnTransportRecordClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind != "Track")
+        {
+            SetTransportTrackRecordMode(
+                false);
+
+            StatusText.Text =
+                "Gravar caminho: selecione um Track.";
+            return;
+        }
+
+        SetTransportTrackRecordMode(
+            !_transportTrackRecordMode);
+
+        StatusText.Text =
+            _transportTrackRecordMode
+                ? $"Gravação de caminho ativa em {item.Key}: clique as splines/objetos na ordem da rota."
+                : $"Gravação de caminho encerrada em {item.Key}.";
+    }
+
+    private void SetTransportTrackRecordMode(
+        bool enabled)
+    {
+        _transportTrackRecordMode =
+            enabled;
+
+        TransportRecordButton.Content =
+            enabled
+                ? "■ Encerrar gravação"
+                : "Gravar caminho";
+
+        TransportRecordButton.IsEnabled =
+            TransportListView.SelectedItem is
+                TransportExplorerItem item &&
+            item.Kind ==
+                "Track";
+
+        TransportPathIndexBox.IsEnabled =
+            !enabled;
+
+        if (!enabled)
+        {
+            _transportTrackRecordBusy =
+                false;
+        }
+    }
+
+    private async Task AppendTransportSelectionToTrackAsync(
+        NativeSelectionInfo info)
+    {
+        if (
+            !_transportTrackRecordMode ||
+            _transportTrackRecordBusy ||
+            _timetableCatalog is null ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind != "Track")
+        {
+            return;
+        }
+
+        var track =
+            _timetableCatalog.Tracks
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            item.Key,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (track is null)
+        {
+            return;
+        }
+
+        var pathIndex =
+            checked(
+                (int)Math.Round(
+                    Math.Max(
+                        0,
+                        TransportPathIndexBox.Value)));
+
+        if (
+            track.Entries.Count >
+                0 &&
+            track.Entries[^1].Id ==
+                info.EntityId &&
+            string.Equals(
+                track.Entries[^1].Line2,
+                pathIndex.ToString(
+                    CultureInfo.InvariantCulture),
+                StringComparison.Ordinal))
+        {
+            StatusText.Text =
+                $"Gravar caminho: #{info.EntityId}:{pathIndex} já é o último segmento.";
+            return;
+        }
+
+        _transportTrackRecordBusy =
+            true;
+
+        try
+        {
+            var entries =
+                track.Entries
+                    .ToList();
+
+            entries.Add(
+                new OmsiTimetableTrackEntry(
+                    $"{entries.Count}:",
+                    info.EntityId,
+                    pathIndex.ToString(
+                        CultureInfo.InvariantCulture),
+                    -1,
+                    string.Empty,
+                    null,
+                    string.Empty,
+                    null));
+
+            await _session
+                .UpdateTimetableTrackAsync(
+                    track,
+                    entries);
+
+            await ReloadTransportCatalogAsync(
+                "Track",
+                track.Name);
+
+            TransportRouteStepsListView.SelectedIndex =
+                entries.Count -
+                1;
+
+            SetTransportTrackRecordMode(
+                true);
+
+            StatusText.Text =
+                $"Gravar caminho · {track.Name}: #{info.EntityId}:{pathIndex} adicionado · {entries.Count} segmento(s).";
+        }
+        catch (Exception exception)
+        {
+            SetTransportTrackRecordMode(
+                false);
+
+            StatusText.Text =
+                $"Gravação de caminho interrompida: {exception.Message}";
+        }
+        finally
+        {
+            _transportTrackRecordBusy =
+                false;
+        }
+    }
+
     private async void OnTransportAddSelectionClick(
         object sender,
         RoutedEventArgs e)
     {
+        SetTransportTrackRecordMode(
+            false);
+
         if (
             _timetableCatalog is null ||
             TransportListView.SelectedItem is not
@@ -11944,6 +12126,9 @@ public sealed partial class MainWindow : Window
             TransportFocusStepButton.IsEnabled =
                 false;
 
+            TransportRecordButton.IsEnabled =
+                false;
+
             TransportAddSelectionButton.IsEnabled =
                 false;
 
@@ -11992,6 +12177,15 @@ public sealed partial class MainWindow : Window
 
         EditTrackButton.IsEnabled =
             editable;
+
+        TransportRecordButton.IsEnabled =
+            item.Kind == "Track";
+
+        if (item.Kind != "Track")
+        {
+            SetTransportTrackRecordMode(
+                false);
+        }
 
         TransportAddSelectionButton.IsEnabled =
             item.Kind == "Track";
