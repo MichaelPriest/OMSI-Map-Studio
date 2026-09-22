@@ -1516,7 +1516,7 @@
                                             Content="+ Novo"
                                             Click="OnTransportNewClick" />
                                     <Button x:Name="TransportPreviewButton"
-                                            Content="Visualizar rota"
+                                            Content="Rota completa"
                                             IsEnabled="False"
                                             Click="OnTransportPreviewClick" />
                                     <Button x:Name="TransportPathsButton"
@@ -1526,10 +1526,10 @@
                                             ToolTipService.ToolTip="Validar referências Track/Trip/Stop/StationLink/Line e segmentos carregados"
                                             Click="OnTransportValidateClick" />
                                     <Button x:Name="TransportFocusStepButton"
-                                            Content="Focar trecho"
+                                            Content="Focar selecionado"
                                             IsEnabled="False"
                                             Click="OnTransportFocusStepClick" />
-                                    <Button Content="Limpar"
+                                    <Button Content="Limpar preview"
                                             Click="OnTransportClearPreviewClick" />
                                 </StackPanel>
                             </ScrollViewer>
@@ -1540,18 +1540,37 @@
                                       DisplayMemberPath="DisplayText"
                                       SelectionChanged="OnTransportSelectionChanged" />
 
-                            <TextBlock x:Name="TransportRouteStatusText"
-                                       Grid.Row="5"
-                                       Text="Fluxo: Track → Station Links → Trip → Perfil → Horário."
-                                       FontSize="11"
-                                       TextWrapping="Wrap"
-                                       Foreground="#7FC6E8" />
+                            <Border Grid.Row="5"
+                                    Background="#0B202D"
+                                    BorderBrush="#2C5367"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="8,6">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="ROUTE STUDIO"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               CharacterSpacing="90"
+                                               Foreground="#9EDCF4" />
+                                    <TextBlock x:Name="TransportRouteStatusText"
+                                               Text="Fluxo: Track → Station Links → Trip → Perfil → Horário."
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Foreground="#7FC6E8" />
+                                </StackPanel>
+                            </Border>
 
-                            <ListView x:Name="TransportRouteStepsListView"
-                                      Grid.Row="6"
-                                      SelectionMode="Single"
-                                      DisplayMemberPath="DisplayText"
-                                      SelectionChanged="OnTransportRouteStepSelectionChanged" />
+                            <Border Grid.Row="6"
+                                    Background="#071722"
+                                    BorderBrush="#24485C"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    Padding="3">
+                                <ListView x:Name="TransportRouteStepsListView"
+                                          SelectionMode="Single"
+                                          DisplayMemberPath="DisplayText"
+                                          SelectionChanged="OnTransportRouteStepSelectionChanged" />
+                            </Border>
 
                             <Grid Grid.Row="7"
                                   ColumnSpacing="5">
