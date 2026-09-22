@@ -27682,8 +27682,13 @@ public sealed partial class MainWindow : Window
     private void SetCoreEditorCommandsEnabled(
         bool enabled)
     {
-        WorkspaceGrid.IsEnabled =
+        WorkspaceGrid.IsHitTestVisible =
             enabled;
+
+        WorkspaceGrid.Opacity =
+            enabled
+                ? 1
+                : 0.58;
 
         EditorToolbarScrollViewer.IsEnabled =
             enabled;
