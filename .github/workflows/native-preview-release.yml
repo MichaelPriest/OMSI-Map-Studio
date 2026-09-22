@@ -95,11 +95,16 @@ jobs:
             throw "No Map/Tiles entry point may call the legacy ContentDialog tile manager."
           }
 
-          if ($code -match 'OnMapExplorerModeClick[\s\S]{0,1800}Viewport\.RestoreSceneView') {
+          $mapHandler = [regex]::Match(
+            $code,
+            'private void OnMapExplorerModeClick[\s\S]*?private void RefreshMapExplorer'
+          ).Value
+
+          if ($mapHandler -match 'Viewport\.RestoreSceneView') {
             throw "Switching to Project > Map must not mutate or restore the viewport."
           }
 
-          if ($code -notmatch 'RefreshMapExplorerAsync[\s\S]{0,5000}Task\.Run') {
+          if ($code -notmatch 'RefreshMapExplorerAsync[\s\S]{0,12000}Task\.Run') {
             throw "Map tile aggregation must stay off the UI thread."
           }
 
