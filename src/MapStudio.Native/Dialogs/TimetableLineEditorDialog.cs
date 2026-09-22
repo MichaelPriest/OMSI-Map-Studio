@@ -41,6 +41,6 @@ internal static class TimetableLineEditorDialog
 
             error.Text = string.Empty;
         };
-        return await dialog.ShowAsync() == ContentDialogResult.Primary ? result : null;
+        return await dialog.ShowAdaptiveAsync() == ContentDialogResult.Primary ? result : null;
     }
 }
