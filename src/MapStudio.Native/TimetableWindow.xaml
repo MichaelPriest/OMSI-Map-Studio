@@ -43,6 +43,8 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="360" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <ComboBox x:Name="LineComboBox"
@@ -58,6 +60,21 @@
                        Margin="0,0,0,7"
                        TextWrapping="Wrap"
                        Foreground="#9FB5C5" />
+
+            <Button x:Name="FocusTripButton"
+                    Grid.Column="2"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,4"
+                    Content="Focar Trip no mapa"
+                    IsEnabled="False"
+                    Click="OnFocusTripClick" />
+
+            <Button x:Name="EditLineButton"
+                    Grid.Column="3"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,4"
+                    Content="Editar Line"
+                    Click="OnEditLineClick" />
         </Grid>
 
         <Border Grid.Row="2"
@@ -105,7 +122,9 @@
 
         <ListView x:Name="ScheduleListView"
                   Grid.Row="3"
-                  SelectionMode="Single">
+                  SelectionMode="Single"
+                  SelectionChanged="OnScheduleSelectionChanged"
+                  DoubleTapped="OnScheduleDoubleTapped">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Border Margin="0,2"
