@@ -132,6 +132,9 @@ public sealed class NativeViewportRuntime : IDisposable
     private NativeTrafficPathGeometry?
         _trafficPathGeometry;
 
+    private bool
+        _trafficPathSelectedOnly;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -749,6 +752,39 @@ public sealed class NativeViewportRuntime : IDisposable
         TrafficPathGeometry =>
             _trafficPathGeometry;
 
+    public bool TrafficPathSelectedOnly =>
+        _trafficPathSelectedOnly;
+
+    public bool SetTrafficPathSelectedOnly(
+        bool selectedOnly)
+    {
+        ThrowIfDisposed();
+
+        var changed =
+            _trafficPathSelectedOnly !=
+                selectedOnly;
+
+        _trafficPathSelectedOnly =
+            selectedOnly;
+
+        if (Scene is not null)
+        {
+            RebuildTrafficPathGeometry();
+        }
+
+        return changed;
+    }
+
+    public void RefreshTrafficPathDisplay()
+    {
+        ThrowIfDisposed();
+
+        if (Scene is not null)
+        {
+            RebuildTrafficPathGeometry();
+        }
+    }
+
     public bool SetTrafficPathDisplayOptions(
         NativeTrafficPathDisplayOptions
             options)
@@ -773,19 +809,7 @@ public sealed class NativeViewportRuntime : IDisposable
             return true;
         }
 
-        _trafficPathGeometry =
-            new NativeTrafficPathGeometryBuilder()
-                .Build(
-                    Scene,
-                    _splineAssets,
-                    _sceneryAssets,
-                    _trafficPathDisplayOptions);
-
-        MapRenderer
-            .SetTrafficPathGeometry(
-                _trafficPathGeometry);
-
-        RenderInitialFrame();
+        RebuildTrafficPathGeometry();
 
         return true;
     }
@@ -4410,6 +4434,73 @@ public sealed class NativeViewportRuntime : IDisposable
             Surface);
     }
 
+    private void RebuildTrafficPathGeometry()
+    {
+        if (Scene is null)
+        {
+            _trafficPathGeometry =
+                null;
+
+            MapRenderer
+                .SetTrafficPathGeometry(
+                    null);
+
+            RenderInitialFrame();
+            return;
+        }
+
+        var trafficScene =
+            Scene;
+
+        if (_trafficPathSelectedOnly)
+        {
+            var objects =
+                _selectedPickingId.Kind ==
+                    PickingKind.Object
+                    ? Scene.Objects
+                        .Where(
+                            item =>
+                                item.PickingId ==
+                                    _selectedPickingId)
+                        .ToArray()
+                    : Array.Empty<
+                        NativeObjectEntity>();
+
+            var splines =
+                _selectedPickingId.Kind ==
+                    PickingKind.Spline
+                    ? Scene.Splines
+                        .Where(
+                            item =>
+                                item.PickingId ==
+                                    _selectedPickingId)
+                        .ToArray()
+                    : Array.Empty<
+                        NativeSplineEntity>();
+
+            trafficScene =
+                new NativeSceneSnapshot(
+                    Scene.Tiles,
+                    objects,
+                    splines,
+                    Scene.Terrain);
+        }
+
+        _trafficPathGeometry =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    trafficScene,
+                    _splineAssets,
+                    _sceneryAssets,
+                    _trafficPathDisplayOptions);
+
+        MapRenderer
+            .SetTrafficPathGeometry(
+                _trafficPathGeometry);
+
+        RenderInitialFrame();
+    }
+
     private void UploadSceneGeometry()
     {
         if (Scene is null)
@@ -4446,10 +4537,37 @@ public sealed class NativeViewportRuntime : IDisposable
                         throw new InvalidOperationException(
                             "OMSI root is not loaded."));
 
+        var trafficScene =
+            _trafficPathSelectedOnly
+                ? new NativeSceneSnapshot(
+                    Scene.Tiles,
+                    _selectedPickingId.Kind ==
+                        PickingKind.Object
+                        ? Scene.Objects
+                            .Where(
+                                item =>
+                                    item.PickingId ==
+                                        _selectedPickingId)
+                            .ToArray()
+                        : Array.Empty<
+                            NativeObjectEntity>(),
+                    _selectedPickingId.Kind ==
+                        PickingKind.Spline
+                        ? Scene.Splines
+                            .Where(
+                                item =>
+                                    item.PickingId ==
+                                        _selectedPickingId)
+                            .ToArray()
+                        : Array.Empty<
+                            NativeSplineEntity>(),
+                    Scene.Terrain)
+                : Scene;
+
         var trafficPathGeometry =
             new NativeTrafficPathGeometryBuilder()
                 .Build(
-                    Scene,
+                    trafficScene,
                     _splineAssets,
                     _sceneryAssets,
                     _trafficPathDisplayOptions);
