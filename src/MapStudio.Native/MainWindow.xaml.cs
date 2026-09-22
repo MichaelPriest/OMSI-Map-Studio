@@ -47,6 +47,11 @@ public sealed partial class MainWindow : Window
         string Label,
         string TrackName);
 
+    private sealed record TransportStationLinkSourceOption(
+        string Kind,
+        string Key,
+        string Label);
+
     private sealed record TransportRouteStepItem(
         int Sequence,
         int EntityId,
@@ -10396,12 +10401,54 @@ public sealed partial class MainWindow : Window
         if (
             _timetableCatalog is null ||
             _timetableCatalog.BusStops.Count <
-                2 ||
-            _timetableCatalog.Tracks.Count ==
-                0)
+                2)
         {
             StatusText.Text =
-                "Novo StationLink: são necessários ao menos 2 stops e 1 Track.";
+                "Novo StationLink: são necessários ao menos 2 stops.";
+            return;
+        }
+
+        var sourceOptions =
+            new List<
+                TransportStationLinkSourceOption>();
+
+        sourceOptions.AddRange(
+            _timetableCatalog.Tracks
+                .Where(
+                    track =>
+                        track.Entries.Count >
+                            0)
+                .Select(
+                    track =>
+                        new TransportStationLinkSourceOption(
+                            "Track",
+                            track.Name,
+                            $"Track · {track.Name} · {track.Entries.Count} segmento(s)")));
+
+        sourceOptions.AddRange(
+            _timetableCatalog.StationLinks
+                .Select(
+                    (link, index) =>
+                        (
+                            Link: link,
+                            Index: index
+                        ))
+                .Where(
+                    item =>
+                        item.Link.Entries.Count >
+                            0)
+                .Select(
+                    item =>
+                        new TransportStationLinkSourceOption(
+                            "StationLink",
+                            item.Index.ToString(
+                                CultureInfo.InvariantCulture),
+                            $"StationLink · {item.Link.StartBusStopId} → {item.Link.EndBusStopId} · #{item.Index} · {item.Link.Entries.Count} segmento(s)")));
+
+        if (sourceOptions.Count == 0)
+        {
+            StatusText.Text =
+                "Novo StationLink: não há Track nem StationLink existente com metadata TTData segura para usar como caminho inicial.";
             return;
         }
 
@@ -10436,22 +10483,21 @@ public sealed partial class MainWindow : Window
                     Math.Min(
                         1,
                         stopOptions.Length -
-                        1),
+                            1),
                 HorizontalAlignment =
                     HorizontalAlignment.Stretch
             };
 
-        var trackBox =
+        var sourceBox =
             new ComboBox
             {
                 Header =
-                    "Usar caminho do Track",
+                    "Fonte inicial do caminho",
                 ItemsSource =
-                    _timetableCatalog.Tracks
-                        .Select(
-                            track =>
-                                track.Name)
-                        .ToArray(),
+                    sourceOptions,
+                DisplayMemberPath =
+                    nameof(
+                        TransportStationLinkSourceOption.Label),
                 SelectedIndex =
                     0,
                 HorizontalAlignment =
@@ -10473,12 +10519,23 @@ public sealed partial class MainWindow : Window
                 Spacing =
                     8,
                 MinWidth =
-                    460
+                    500
             };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "O caminho inicial reutiliza metadata real já existente em TTData. Depois você pode refinar a sequência no Route Studio com + seleção, Gravar caminho, mover e remover.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
 
         panel.Children.Add(startBox);
         panel.Children.Add(endBox);
-        panel.Children.Add(trackBox);
+        panel.Children.Add(sourceBox);
         panel.Children.Add(commentBox);
 
         var dialog =
@@ -10501,8 +10558,8 @@ public sealed partial class MainWindow : Window
         if (
             await dialog.ShowAsync() !=
                 ContentDialogResult.Primary ||
-            trackBox.SelectedItem is not
-                string trackName)
+            sourceBox.SelectedItem is not
+                TransportStationLinkSourceOption source)
         {
             return;
         }
@@ -10531,29 +10588,85 @@ public sealed partial class MainWindow : Window
             _timetableCatalog.BusStops[
                 endIndex];
 
-        var track =
-            _timetableCatalog.Tracks
-                .First(
-                    candidate =>
-                        candidate.Name ==
-                        trackName);
+        OmsiStationLinkEntry[] entries;
 
-        var entries =
-            track.Entries
-                .Select(
-                    (entry, index) =>
-                        new OmsiStationLinkEntry(
-                            $"{index}:",
-                            entry.Id,
-                            entry.Line2,
-                            entry.TileIndex,
-                            entry.Length,
-                            entry.Line4,
-                            entry.Line6,
-                            entry.Line7 ??
-                                string.Empty,
-                            Array.Empty<string>()))
-                .ToArray();
+        if (source.Kind == "Track")
+        {
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                source.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (track is null)
+            {
+                StatusText.Text =
+                    "StationLink: o Track usado como fonte não está mais disponível.";
+                return;
+            }
+
+            entries =
+                track.Entries
+                    .Select(
+                        (entry, index) =>
+                            new OmsiStationLinkEntry(
+                                $"{index}:",
+                                entry.Id,
+                                entry.Line2,
+                                entry.TileIndex,
+                                entry.Length,
+                                entry.Line4,
+                                entry.Line6,
+                                entry.Line7 ??
+                                    string.Empty,
+                                Array.Empty<string>()))
+                    .ToArray();
+        }
+        else if (
+            source.Kind ==
+                "StationLink" &&
+            int.TryParse(
+                source.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var sourceLinkIndex) &&
+            sourceLinkIndex >= 0 &&
+            sourceLinkIndex <
+                _timetableCatalog
+                    .StationLinks.Count)
+        {
+            entries =
+                _timetableCatalog
+                    .StationLinks[
+                        sourceLinkIndex]
+                    .Entries
+                    .Select(
+                        (entry, index) =>
+                            entry with
+                            {
+                                Comment =
+                                    $"{index}:",
+                                ChronoFiles =
+                                    Array.Empty<string>()
+                            })
+                    .ToArray();
+        }
+        else
+        {
+            StatusText.Text =
+                "StationLink: fonte inicial inválida.";
+            return;
+        }
+
+        if (entries.Length == 0)
+        {
+            StatusText.Text =
+                "StationLink: a fonte escolhida não possui segmentos.";
+            return;
+        }
 
         var link =
             new OmsiStationLink(
@@ -10581,7 +10694,7 @@ public sealed partial class MainWindow : Window
                     CultureInfo.InvariantCulture));
 
         StatusText.Text =
-            $"StationLink {startStop.Name} → {endStop.Name} criado com {entries.Length} segmento(s).";
+            $"StationLink {startStop.Name} → {endStop.Name} criado com {entries.Length} segmento(s) · fonte {source.Label}.";
     }
 
     private async Task CreateTransportLineAsync()
@@ -11438,10 +11551,10 @@ public sealed partial class MainWindow : Window
 
         if (remove)
         {
-            if (linkEntries.Count <= 2)
+            if (linkEntries.Count <= 1)
             {
                 StatusText.Text =
-                    "StationLink precisa manter pelo menos 2 segmentos para o fluxo tipo 2.";
+                    "StationLink precisa manter pelo menos 1 segmento.";
                 return;
             }
 
