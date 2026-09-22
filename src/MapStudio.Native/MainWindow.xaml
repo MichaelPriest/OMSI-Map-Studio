@@ -1489,6 +1489,10 @@
                                                 <CheckBox x:Name="TransportPathsSignalsCheckBox"
                                                           Content="Destacar semáforo"
                                                           Click="OnTransportPathFilterChanged" />
+                                                <CheckBox x:Name="TransportPathsSelectedOnlyCheckBox"
+                                                          Content="Só selecionado"
+                                                          IsChecked="True"
+                                                          Click="OnTrafficPathIsolationChanged" />
                                             </StackPanel>
                                         </ScrollViewer>
                                     </StackPanel>
@@ -1697,6 +1701,9 @@
                                         <CheckBox x:Name="TrafficPathSignalsCheckBox"
                                                   Content="Semáforos em vermelho"
                                                   Click="OnTrafficPathModeChanged" />
+                                        <CheckBox x:Name="TrafficPathSelectedOnlyCheckBox"
+                                                  Content="Só selecionado"
+                                                  Click="OnTrafficPathIsolationChanged" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
