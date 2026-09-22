@@ -647,6 +647,11 @@ public sealed partial class MainWindow : Window
                         PickingKind.Object or
                         PickingKind.Spline;
 
+                DuplicateAssetPathButton.IsEnabled =
+                    info?.Kind is
+                        PickingKind.Object or
+                        PickingKind.Spline;
+
                 CompleteToSplineButton.IsEnabled =
                     info?.Kind ==
                         PickingKind.Spline &&
@@ -8110,6 +8115,204 @@ public sealed partial class MainWindow : Window
         finally
         {
             EditSceneryPathButton.IsEnabled =
+                _selectionInfo?.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline;
+        }
+    }
+
+    private async void OnDuplicateAssetPathClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo is not
+                { } selection ||
+            selection.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ) ||
+            _session.OmsiRootPath is not
+                { } root ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Duplicar path: selecione um objeto ou uma spline.";
+            return;
+        }
+
+        var sourceOrdinal =
+            Math.Max(
+                0,
+                Viewport
+                    .TrafficPathFocusedIndex ??
+                0);
+
+        try
+        {
+            DuplicateAssetPathButton.IsEnabled =
+                false;
+
+            string updatedAssetPath;
+            string backupPath;
+            int duplicatedOrdinal;
+
+            if (
+                selection.Kind ==
+                    PickingKind.Object)
+            {
+                if (
+                    !OmsiSceneryObjectPathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Duplicar path SCO: asset não encontrado.";
+                    return;
+                }
+
+                var metadata =
+                    await new OmsiSceneryObjectReader()
+                        .ReadMetadataAsync(
+                            target);
+
+                if (
+                    sourceOrdinal >=
+                        metadata.Paths.Count)
+                {
+                    StatusText.Text =
+                        $"Duplicar path SCO: índice {sourceOrdinal} não existe.";
+                    return;
+                }
+
+                var updated =
+                    await _session
+                        .DuplicateSceneryPathAsync(
+                            selection.AssetPath,
+                            sourceOrdinal,
+                            metadata.Paths[
+                                sourceOrdinal]);
+
+                duplicatedOrdinal =
+                    sourceOrdinal +
+                    1;
+
+                updatedAssetPath =
+                    updated.AssetPath;
+
+                backupPath =
+                    updated.BackupPath;
+            }
+            else
+            {
+                if (
+                    !OmsiSplinePathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Duplicar path SLI: asset não encontrado.";
+                    return;
+                }
+
+                var definition =
+                    await new OmsiSplineDefinitionReader()
+                        .ReadAsync(
+                            target);
+
+                if (
+                    sourceOrdinal >=
+                        definition.Paths.Count)
+                {
+                    StatusText.Text =
+                        $"Duplicar path SLI: índice {sourceOrdinal} não existe.";
+                    return;
+                }
+
+                var updated =
+                    await _session
+                        .DuplicateSplinePathAsync(
+                            selection.AssetPath,
+                            sourceOrdinal,
+                            definition.Paths[
+                                sourceOrdinal]);
+
+                duplicatedOrdinal =
+                    sourceOrdinal +
+                    1;
+
+                updatedAssetPath =
+                    updated.AssetPath;
+
+                backupPath =
+                    updated.BackupPath;
+            }
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            var owner =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                selection.Kind &&
+                            item.EntityId ==
+                                selection.EntityId &&
+                            item.TileX ==
+                                selection.TileX &&
+                            item.TileY ==
+                                selection.TileY &&
+                            string.Equals(
+                                item.AssetPath,
+                                selection.AssetPath,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (owner is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    owner,
+                    focus:
+                        false);
+
+                Viewport
+                    .SetTrafficPathFocusedIndex(
+                        duplicatedOrdinal);
+
+                if (
+                    Viewport
+                        .TrafficPathSelectedOnly)
+                {
+                    Viewport
+                        .RefreshTrafficPathDisplay();
+                }
+            }
+
+            UpdateTrafficPathStatusText();
+
+            StatusText.Text =
+                $"Path duplicado como índice {duplicatedOrdinal} · {Path.GetFileName(updatedAssetPath)} · backup {backupPath}. Use Editar paths do item para ajustar a nova faixa.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao duplicar path: {exception.Message}";
+        }
+        finally
+        {
+            DuplicateAssetPathButton.IsEnabled =
                 _selectionInfo?.Kind is
                     PickingKind.Object or
                     PickingKind.Spline;
