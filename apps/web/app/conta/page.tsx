@@ -25,7 +25,12 @@ export default async function AccountPage(){
       <section className="card">
         <h3>Assinatura</h3>
         <p className={active?"":"danger"}>{subscription?.status??"Sem assinatura ativa"}</p>
-        <a className="btn primary" href="/api/download/latest?channel=alpha">Baixar versão Alpha</a>
+        <div className="actions" style={{justifyContent:"flex-start",marginTop:12}}>
+          <a className="btn primary" href="/api/download/latest?channel=alpha">Baixar versão Alpha</a>
+          <form action="/api/billing/portal" method="post">
+            <button className="btn" type="submit">Gerenciar cobrança</button>
+          </form>
+        </div>
       </section>
 
       <section className="card">
@@ -46,13 +51,21 @@ export default async function AccountPage(){
     <section className="card">
       <h3>Computadores ativados</h3>
       <table className="table">
-        <thead><tr><th>Dispositivo</th><th>ID</th><th>Último acesso</th></tr></thead>
+        <thead><tr><th>Dispositivo</th><th>ID</th><th>Último acesso</th><th></th></tr></thead>
         <tbody>
           {(devices??[]).map(device=>
             <tr key={device.device_id}>
               <td>{device.device_name}</td>
               <td className="serial">{device.device_id}</td>
               <td>{device.last_seen_at?new Date(device.last_seen_at).toLocaleString("pt-BR"):"—"}</td>
+              <td>
+                {!device.revoked_at&&
+                  <form action="/api/license/revoke-device" method="post">
+                    <input type="hidden" name="device_id" value={device.device_id}/>
+                    <button className="btn" type="submit">Revogar</button>
+                  </form>
+                }
+              </td>
             </tr>
           )}
         </tbody>
