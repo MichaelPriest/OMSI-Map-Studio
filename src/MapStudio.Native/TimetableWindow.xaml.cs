@@ -21,6 +21,8 @@ public sealed partial class TimetableWindow
 
     public Func<OmsiTimetableLine, OmsiTimetableLine, Task<bool>>? SaveLineAsync { get; set; }
 
+    public Func<string, Task>? EditTripAsync { get; set; }
+
     private TimetableLineEditor? _lineEditor;
     private OmsiTimetableLine? _editingLine;
     private bool _savingLine;
@@ -91,6 +93,9 @@ public sealed partial class TimetableWindow
             FocusTripButton.IsEnabled =
                 false;
 
+            EditTripButton.IsEnabled =
+                false;
+
             EditProfileButton.IsEnabled =
                 false;
 
@@ -147,6 +152,9 @@ public sealed partial class TimetableWindow
         FocusTripButton.IsEnabled =
             false;
 
+        EditTripButton.IsEnabled =
+            false;
+
         EditProfileButton.IsEnabled =
             false;
 
@@ -162,6 +170,9 @@ public sealed partial class TimetableWindow
                 TimetableScheduleRow;
 
         FocusTripButton.IsEnabled =
+            selected;
+
+        EditTripButton.IsEnabled =
             selected;
 
         EditProfileButton.IsEnabled =
@@ -182,6 +193,35 @@ public sealed partial class TimetableWindow
         object sender,
         RoutedEventArgs e) =>
         RequestSelectedTripRoute();
+
+    private async void OnEditTripClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            ScheduleListView.SelectedItem is not
+                TimetableScheduleRow row ||
+            EditTripAsync is null)
+        {
+            return;
+        }
+
+        EditTripButton.IsEnabled =
+            false;
+
+        try
+        {
+            await EditTripAsync(
+                row.TripName);
+        }
+        finally
+        {
+            EditTripButton.IsEnabled =
+                _lineEditor is null &&
+                ScheduleListView.SelectedItem is
+                    TimetableScheduleRow;
+        }
+    }
 
     private async void OnEditProfileClick(
         object sender,
@@ -254,6 +294,7 @@ public sealed partial class TimetableWindow
         ScheduleHeader.Visibility = Visibility.Collapsed;
         LineComboBox.IsEnabled = false;
         EditLineButton.IsEnabled = false;
+        EditTripButton.IsEnabled = false;
         EditProfileButton.IsEnabled = false;
         FocusTripButton.IsEnabled = false;
         EditorStatusText.Text = "Edite a tabela e salve, ou descarte para voltar.";

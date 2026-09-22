@@ -9327,6 +9327,45 @@ public sealed partial class MainWindow : Window
                     }
                 };
 
+            _timetableWindow.EditTripAsync =
+                async tripName =>
+                {
+                    SelectTransportWorkspace(
+                        1,
+                        $"Trip {tripName}: edição solicitada pela janela Timetable.");
+
+                    var selected =
+                        _transportItems
+                            .FirstOrDefault(
+                                candidate =>
+                                    candidate.Kind ==
+                                        "Trip" &&
+                                    string.Equals(
+                                        candidate.Key,
+                                        tripName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    if (selected is null)
+                    {
+                        StatusText.Text =
+                            $"Timetable: Trip {tripName} não foi encontrado no catálogo atual.";
+                        return;
+                    }
+
+                    TransportListView.SelectedItem =
+                        selected;
+
+                    RefreshTransportRouteWorkbench(
+                        selected,
+                        preview:
+                            true);
+
+                    Activate();
+
+                    await EditTripAsync(
+                        selected);
+                };
+
             _timetableWindow.TripSaveRequested +=
                 async (
                     sourceTrip,

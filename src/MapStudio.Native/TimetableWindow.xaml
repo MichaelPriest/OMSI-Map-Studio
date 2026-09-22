@@ -47,6 +47,7 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <ComboBox x:Name="LineComboBox"
@@ -71,8 +72,16 @@
                     IsEnabled="False"
                     Click="OnFocusTripClick" />
 
-            <Button x:Name="EditProfileButton"
+            <Button x:Name="EditTripButton"
                     Grid.Column="3"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,0,4"
+                    Content="Editar Trip"
+                    IsEnabled="False"
+                    Click="OnEditTripClick" />
+
+            <Button x:Name="EditProfileButton"
+                    Grid.Column="4"
                     VerticalAlignment="Bottom"
                     Margin="0,0,0,4"
                     Content="Editar perfil"
@@ -80,7 +89,7 @@
                     Click="OnEditProfileClick" />
 
             <Button x:Name="EditLineButton"
-                    Grid.Column="4"
+                    Grid.Column="5"
                     VerticalAlignment="Bottom"
                     Margin="0,0,0,4"
                     Content="Editar Line"
