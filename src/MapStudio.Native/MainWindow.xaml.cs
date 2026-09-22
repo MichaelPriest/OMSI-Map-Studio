@@ -10927,7 +10927,11 @@ public sealed partial class MainWindow : Window
             _timetableCatalog is null ||
             TransportListView.SelectedItem is not
                 TransportExplorerItem item ||
-            item.Kind != "Track" ||
+            item.Kind is not
+                (
+                    "Track" or
+                    "StationLink"
+                ) ||
             _selectionInfo is null ||
             _selectionInfo.Kind is not
                 (
@@ -10936,21 +10940,7 @@ public sealed partial class MainWindow : Window
                 ))
         {
             StatusText.Text =
-                "Route Studio: selecione um Track e uma spline/objeto no mapa.";
-            return;
-        }
-
-        var track =
-            _timetableCatalog.Tracks
-                .FirstOrDefault(
-                    candidate =>
-                        string.Equals(
-                            candidate.Name,
-                            item.Key,
-                            StringComparison.OrdinalIgnoreCase));
-
-        if (track is null)
-        {
+                "Route Studio: selecione um Track/StationLink e uma spline/objeto no mapa.";
             return;
         }
 
@@ -10959,45 +10949,215 @@ public sealed partial class MainWindow : Window
                 (int)Math.Round(
                     TransportPathIndexBox.Value));
 
-        var entries =
-            track.Entries
+        var pathIndexText =
+            pathIndex.ToString(
+                CultureInfo.InvariantCulture);
+
+        if (item.Kind == "Track")
+        {
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (track is null)
+            {
+                return;
+            }
+
+            var entries =
+                track.Entries
+                    .ToList();
+
+            entries.Add(
+                new OmsiTimetableTrackEntry(
+                    $"{entries.Count}:",
+                    _selectionInfo.EntityId,
+                    pathIndexText,
+                    -1,
+                    string.Empty,
+                    null,
+                    string.Empty,
+                    null));
+
+            try
+            {
+                await _session
+                    .UpdateTimetableTrackAsync(
+                        track,
+                        entries);
+
+                await ReloadTransportCatalogAsync(
+                    "Track",
+                    track.Name);
+
+                TransportRouteStepsListView.SelectedIndex =
+                    entries.Count -
+                    1;
+
+                StatusText.Text =
+                    $"Track {track.Name}: segmento #{_selectionInfo.EntityId}:{pathIndex} adicionado.";
+            }
+            catch (Exception exception)
+            {
+                StatusText.Text =
+                    $"Falha ao adicionar segmento ao Track: {exception.Message}";
+            }
+
+            return;
+        }
+
+        if (
+            !int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var linkIndex) ||
+            linkIndex < 0 ||
+            linkIndex >=
+                _timetableCatalog
+                    .StationLinks.Count)
+        {
+            return;
+        }
+
+        if (
+            !TryCreateStationLinkEntryFromKnownMetadata(
+                _selectionInfo.EntityId,
+                pathIndexText,
+                out var template))
+        {
+            StatusText.Text =
+                $"StationLink: #{_selectionInfo.EntityId}:{pathIndex} não possui tile/length/metadados seguros em Tracks ou StationLinks carregados; nada foi gravado.";
+            return;
+        }
+
+        var link =
+            _timetableCatalog
+                .StationLinks[
+                    linkIndex];
+
+        var linkEntries =
+            link.Entries
                 .ToList();
 
-        entries.Add(
-            new OmsiTimetableTrackEntry(
-                $"{entries.Count}:",
-                _selectionInfo.EntityId,
-                pathIndex.ToString(
-                    CultureInfo.InvariantCulture),
-                -1,
-                string.Empty,
-                null,
-                string.Empty,
-                null));
+        linkEntries.Add(
+            template with
+            {
+                Comment =
+                    $"{linkEntries.Count}:",
+                ChronoFiles =
+                    Array.Empty<string>()
+            });
 
         try
         {
             await _session
-                .UpdateTimetableTrackAsync(
-                    track,
-                    entries);
+                .UpdateStationLinkAsync(
+                    linkIndex,
+                    link with
+                    {
+                        Entries =
+                            linkEntries
+                    });
 
             await ReloadTransportCatalogAsync(
-                "Track",
-                track.Name);
+                "StationLink",
+                linkIndex.ToString(
+                    CultureInfo.InvariantCulture));
 
             TransportRouteStepsListView.SelectedIndex =
-                entries.Count -
-                1;
+                linkEntries.Count -
+                    1;
 
             StatusText.Text =
-                $"Track {track.Name}: segmento #{_selectionInfo.EntityId}:{pathIndex} adicionado.";
+                $"StationLink {link.StartBusStopId} → {link.EndBusStopId}: segmento #{_selectionInfo.EntityId}:{pathIndex} adicionado com metadados TTData existentes.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao adicionar segmento ao Track: {exception.Message}";
+                $"Falha ao adicionar segmento ao StationLink: {exception.Message}";
         }
+    }
+
+    private bool TryCreateStationLinkEntryFromKnownMetadata(
+        int entityId,
+        string pathIndex,
+        out OmsiStationLinkEntry entry)
+    {
+        entry =
+            null!;
+
+        if (_timetableCatalog is null)
+        {
+            return false;
+        }
+
+        var stationLinkTemplate =
+            _timetableCatalog
+                .StationLinks
+                .SelectMany(
+                    link =>
+                        link.Entries)
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Id ==
+                            entityId &&
+                        string.Equals(
+                            candidate.Line2,
+                            pathIndex,
+                            StringComparison.Ordinal));
+
+        if (stationLinkTemplate is not null)
+        {
+            entry =
+                stationLinkTemplate with
+                {
+                    ChronoFiles =
+                        Array.Empty<string>()
+                };
+
+            return true;
+        }
+
+        var trackTemplate =
+            _timetableCatalog
+                .Tracks
+                .SelectMany(
+                    track =>
+                        track.Entries)
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.Id ==
+                            entityId &&
+                        string.Equals(
+                            candidate.Line2,
+                            pathIndex,
+                            StringComparison.Ordinal));
+
+        if (trackTemplate is null)
+        {
+            return false;
+        }
+
+        entry =
+            new OmsiStationLinkEntry(
+                string.Empty,
+                trackTemplate.Id,
+                trackTemplate.Line2,
+                trackTemplate.TileIndex,
+                trackTemplate.Length,
+                trackTemplate.Line4,
+                trackTemplate.Line6,
+                trackTemplate.Line7 ??
+                    string.Empty,
+                Array.Empty<string>());
+
+        return true;
     }
 
     private async void OnTransportRemoveStepClick(
@@ -13821,7 +13981,9 @@ public sealed partial class MainWindow : Window
         }
 
         TransportAddSelectionButton.IsEnabled =
-            item.Kind == "Track";
+            item.Kind is
+                "Track" or
+                "StationLink";
 
         TransportProfilesButton.IsEnabled =
             item.Kind == "Trip";
