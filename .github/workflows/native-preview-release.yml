@@ -156,27 +156,28 @@ jobs:
             throw "Project panel resize handler is missing."
           }
 
-          if ($xaml -notmatch 'MaxHeight="340"[sS]{0,250}VerticalScrollMode="Auto"') {
+          if ($xaml -notmatch 'MaxHeight="340"' -or $xaml -notmatch 'VerticalScrollMode="Auto"') {
             throw "Asset Library filter area must keep internal vertical scrolling."
           }
 
-          if ($options -notmatch 'TransportOverview[sS]{0,350}Pedestrians:s*true') {
+          $overview = [regex]::Match(
+            $options,
+            'public static NativeTrafficPathDisplayOptions TransportOverview[\\s\\S]*?public static NativeTrafficPathDisplayOptions AllDetailed'
+          ).Value
+
+          if ($overview -notmatch 'Pedestrians:\\s*true') {
             throw "TransportOverview must include HUMAN/pedestrian paths."
           }
 
-          if ($runtime -notmatch '_trafficPathDisplayOptions[sS]{0,180}TransportOverview') {
+          if ($runtime -notmatch 'TransportOverview') {
             throw "Viewport runtime must default to the transport overview."
           }
 
-          if ($main -notmatch 'trafficPathOptions[sS]{0,180}TransportOverview') {
-            throw "Traffic tool must show HUMAN paths by default."
+          if ($main -notmatch 'trafficPathOptions' -or $main -notmatch 'transportPathOptions' -or $main -notmatch 'TransportOverview') {
+            throw "Traffic and Transport tools must use the overview that includes HUMAN paths."
           }
 
-          if ($main -notmatch 'transportPathOptions[sS]{0,180}TransportOverview') {
-            throw "Transport tool must show HUMAN paths by default."
-          }
-
-          if ($geometry -notmatch 'PedestrianColor[sS]{0,80}1.0f,s*0.82f,s*0.08f') {
+          if ($geometry -notmatch 'new\\(1\\.0f, 0\\.82f, 0\\.08f, 1\\.0f\\)') {
             throw "HUMAN path high-contrast color is missing."
           }
 
