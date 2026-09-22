@@ -1135,6 +1135,7 @@
                                 <RowDefinition Height="150" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <ComboBox x:Name="TransportKindComboBox"
@@ -1163,6 +1164,9 @@
                                           VerticalScrollBarVisibility="Disabled">
                                 <StackPanel Orientation="Horizontal"
                                             Spacing="5">
+                                    <Button x:Name="TransportNewButton"
+                                            Content="+ Novo"
+                                            Click="OnTransportNewClick" />
                                     <Button x:Name="TransportPreviewButton"
                                             Content="Visualizar rota"
                                             IsEnabled="False"
@@ -1198,15 +1202,60 @@
                                       DisplayMemberPath="DisplayText"
                                       SelectionChanged="OnTransportRouteStepSelectionChanged" />
 
+                            <Grid Grid.Row="6"
+                                  ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <NumberBox x:Name="TransportPathIndexBox"
+                                           Grid.Column="0"
+                                           Header="Path"
+                                           Minimum="0"
+                                           Maximum="100000"
+                                           Value="0"
+                                           SmallChange="1" />
+                                <ScrollViewer Grid.Column="1"
+                                              HorizontalScrollMode="Enabled"
+                                              HorizontalScrollBarVisibility="Hidden"
+                                              VerticalScrollMode="Disabled"
+                                              VerticalScrollBarVisibility="Disabled"
+                                              VerticalAlignment="Bottom">
+                                    <StackPanel Orientation="Horizontal"
+                                                Spacing="5">
+                                        <Button x:Name="TransportAddSelectionButton"
+                                                Content="+ seleção"
+                                                ToolTipService.ToolTip="Adicionar o objeto/spline atualmente selecionado ao Track usando o path index informado"
+                                                Click="OnTransportAddSelectionClick" />
+                                        <Button x:Name="TransportRemoveStepButton"
+                                                Content="Remover"
+                                                IsEnabled="False"
+                                                Click="OnTransportRemoveStepClick" />
+                                        <Button x:Name="TransportMoveStepUpButton"
+                                                Content="↑"
+                                                IsEnabled="False"
+                                                Click="OnTransportMoveStepUpClick" />
+                                        <Button x:Name="TransportMoveStepDownButton"
+                                                Content="↓"
+                                                IsEnabled="False"
+                                                Click="OnTransportMoveStepDownClick" />
+                                        <Button x:Name="TransportProfilesButton"
+                                                Content="Perfis de tempo"
+                                                IsEnabled="False"
+                                                Click="OnTransportProfilesClick" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+
                             <TextBlock x:Name="TransportDetailText"
-                                       Grid.Row="6"
+                                       Grid.Row="7"
                                        Text="Selecione um item para ver detalhes."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
 
                             <Button x:Name="EditTrackButton"
-                                    Grid.Row="7"
+                                    Grid.Row="8"
                                     Content="Editar Track"
                                     Visibility="Collapsed"
                                     IsEnabled="False"
