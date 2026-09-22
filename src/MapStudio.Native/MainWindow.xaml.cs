@@ -451,10 +451,32 @@ public sealed partial class MainWindow : Window
             AppWindow.GetFromWindowId(
                 windowId);
 
+        var displayArea =
+            DisplayArea.GetFromWindowId(
+                windowId,
+                DisplayAreaFallback.Primary);
+
+        var workArea =
+            displayArea.WorkArea;
+
+        var initialWidth =
+            Math.Min(
+                1440,
+                Math.Max(
+                    960,
+                    workArea.Width - 32));
+
+        var initialHeight =
+            Math.Min(
+                900,
+                Math.Max(
+                    640,
+                    workArea.Height - 48));
+
         _appWindow.Resize(
             new SizeInt32(
-                1440,
-                900));
+                initialWidth,
+                initialHeight));
 
         Viewport.PointerStatusChanged +=
             (_, message) =>
