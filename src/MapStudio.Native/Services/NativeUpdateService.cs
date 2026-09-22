@@ -205,11 +205,23 @@ internal static class NativeCommerceEndpoint
             !Uri.TryCreate(
                 configured,
                 UriKind.Absolute,
-                out var uri) ||
-            (
-                uri.Scheme != Uri.UriSchemeHttps &&
-                uri.Scheme != Uri.UriSchemeHttp
-            ))
+                out var uri))
+        {
+            return null;
+        }
+
+        var secure =
+            uri.Scheme ==
+                Uri.UriSchemeHttps;
+
+        var localDevelopment =
+            uri.Scheme ==
+                Uri.UriSchemeHttp &&
+            uri.IsLoopback;
+
+        if (
+            !secure &&
+            !localDevelopment)
         {
             return null;
         }

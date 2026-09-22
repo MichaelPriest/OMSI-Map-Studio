@@ -580,13 +580,18 @@ internal sealed class NativeLicenseService
                         "past_due" =>
                             MapStudioLicenseStatus
                                 .PastDue,
-                        "active" or
-                        "trialing" =>
+                        "active" =>
                             isOffline
                                 ? MapStudioLicenseStatus
                                     .GracePeriod
                                 : MapStudioLicenseStatus
                                     .Active,
+                        "trialing" =>
+                            isOffline
+                                ? MapStudioLicenseStatus
+                                    .GracePeriod
+                                : MapStudioLicenseStatus
+                                    .Trial,
                         _ =>
                             MapStudioLicenseStatus
                                 .Unavailable
