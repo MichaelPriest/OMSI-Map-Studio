@@ -200,6 +200,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -462,7 +463,11 @@
                         Text="Assinatura e licença..."
                         Click="OnCommercialStatusClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ajuda" />
+                <MenuBarItem Title="Ajuda">
+                    <MenuFlyoutItem
+                        Text="Verificar atualizações..."
+                        Click="OnCheckForUpdatesClick" />
+                </MenuBarItem>
             </MenuBar>
 
             <ScrollViewer
@@ -604,6 +609,53 @@
                     </Grid>
                 </Border>
             </ScrollViewer>
+
+            <Border x:Name="UpdateBanner"
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    Margin="8,0,8,6"
+                    Padding="10,7"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0"
+                                Spacing="1">
+                        <TextBlock x:Name="UpdateBannerTitleText"
+                                   Text="Nova versão disponível"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                        <TextBlock x:Name="UpdateBannerDetailText"
+                                   Text="Uma nova versão do OMSI Map Studio está disponível."
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="Atualizar"
+                            VerticalAlignment="Center"
+                            Click="OnOpenAvailableUpdateClick" />
+
+                    <Button Grid.Column="2"
+                            Width="30"
+                            Height="30"
+                            Padding="0"
+                            Content="×"
+                            ToolTipService.ToolTip="Fechar aviso"
+                            VerticalAlignment="Center"
+                            Click="OnDismissUpdateBannerClick" />
+                </Grid>
+            </Border>
         </Grid>
 
         <Grid x:Name="WorkspaceGrid"
