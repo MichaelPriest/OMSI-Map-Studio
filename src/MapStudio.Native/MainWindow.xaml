@@ -1365,6 +1365,48 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
+            <Grid x:Name="LoadingOverlay"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="5"
+                  Background="#A608131D"
+                  Visibility="Collapsed"
+                  Canvas.ZIndex="120">
+                <Border Width="360"
+                        MaxWidth="480"
+                        Padding="24,20"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Background="#F20B1E2B"
+                        BorderBrush="#3A6A82"
+                        BorderThickness="1"
+                        CornerRadius="14">
+                    <StackPanel Spacing="10"
+                                HorizontalAlignment="Stretch">
+                        <ProgressRing x:Name="LoadingProgressRing"
+                                      Width="48"
+                                      Height="48"
+                                      IsActive="False"
+                                      HorizontalAlignment="Center" />
+                        <TextBlock x:Name="LoadingTitleText"
+                                   Text="Carregando..."
+                                   FontSize="17"
+                                   FontWeight="SemiBold"
+                                   TextAlignment="Center"
+                                   Foreground="#EAF7FC" />
+                        <TextBlock x:Name="LoadingDetailText"
+                                   Text="Preparando o editor nativo"
+                                   FontSize="12"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   Foreground="#9FBACA" />
+                        <ProgressBar x:Name="LoadingProgressBar"
+                                     Height="3"
+                                     Margin="0,4,0,0"
+                                     IsIndeterminate="True" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
             <Grid x:Name="FullscreenEditorBar"
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
