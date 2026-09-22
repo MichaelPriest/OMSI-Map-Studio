@@ -352,6 +352,26 @@ public sealed class NativeTrafficPathGeometryBuilderTests
                         NativeTrafficPathDisplayOptions
                             .AllDetailed);
 
+        var cleanWithoutMarkers =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSplineAsset>(
+                            StringComparer.OrdinalIgnoreCase)
+                    {
+                        [spline.SplinePath] =
+                            asset
+                    },
+                    displayOptions:
+                        NativeTrafficPathDisplayOptions
+                            .CleanVehicles with
+                        {
+                            ShowNodes = false,
+                            ShowTypeLabels = false
+                        });
+
         Assert.Equal(
             1,
             clean.PathCount);
@@ -383,6 +403,36 @@ public sealed class NativeTrafficPathGeometryBuilderTests
         Assert.True(
             detailed.TriangleCount >
                 clean.TriangleCount);
+
+        Assert.Equal(
+            clean.PathCount,
+            cleanWithoutMarkers.PathCount);
+
+        Assert.True(
+            clean.LineCount >
+                cleanWithoutMarkers.LineCount);
+
+        Assert.True(
+            clean.TriangleCount >
+                cleanWithoutMarkers.TriangleCount);
+
+        Assert.Contains(
+            clean.TriangleVertices,
+            vertex =>
+                vertex.Color.Y >
+                    0.90f &&
+                vertex.Color.X <
+                    0.20f);
+
+        Assert.Contains(
+            clean.TriangleVertices,
+            vertex =>
+                vertex.Color.X >
+                    0.90f &&
+                vertex.Color.Y >
+                    0.35f &&
+                vertex.Color.Y <
+                    0.60f);
 
         Assert.Contains(
             detailed.TriangleVertices,
