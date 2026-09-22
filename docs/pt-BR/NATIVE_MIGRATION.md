@@ -837,3 +837,34 @@ Continuam somente leitura nesta etapa:
 - campos desconhecidos/extra.
 
 A persistência passa por `SafeFileTransaction`, cria backup e relê o tile antes de atualizar o snapshot.
+
+### Transporte OMSI: Tracks, StationLinks e Trips tipo 2
+
+A área nativa de **Transporte** trabalha diretamente com os arquivos reais de `TTData` e mantém duas formas de rota separadas:
+
+- **Trip tipo 1**: referencia um `.ttr`/Track completo;
+- **Trip tipo 2**: não depende de Track e resolve o caminho pela sequência de `[station_typ2]`; cada par de stops consecutivos precisa ter um StationLink correspondente em `StnLinks.cfg`.
+
+Para Trips tipo 2, o modelo preserva os três campos brutos de `[trip]` e expõe a interpretação efetiva usada pelo editor: destino, linha e ausência de Track. O writer continua gravando o formato OMSI existente, sem introduzir um formato próprio.
+
+O **Route Studio** agora:
+
+- monta o preview de Trips tipo 1 pelo Track;
+- monta Trips tipo 2 concatenando os StationLinks de cada par de stops;
+- faz o mesmo para Lines/Tours que referenciam esses Trips;
+- preserva `entityId`, `pathIndex` e comprimento dos segmentos no preview;
+- permite isolar um único trecho no mapa;
+- sincroniza o trecho selecionado com a spline/objeto e a faixa OMSI correspondente;
+- quando a visualização auxiliar está em "só selecionado", pode mostrar somente o `pathIndex` exato em edição.
+
+O criador de Trip oferece explicitamente **Tipo 1 · Track** e **Tipo 2 · StationLinks**. No tipo 2, o salvamento é bloqueado se houver menos de dois stops, stop inexistente ou qualquer par consecutivo sem StationLink.
+
+A validação de `TTData` diferencia:
+
+- Trip → Track quebrado;
+- Trip tipo 2 → StationLink ausente;
+- StationLink → Stop quebrado;
+- Line → Trip quebrado.
+
+Nesta etapa, quando houver múltiplos StationLinks-base para o mesmo par de stops, o preview usa a primeira correspondência válida do catálogo carregado. Resolução específica por Chrono permanece para uma etapa posterior.
+
