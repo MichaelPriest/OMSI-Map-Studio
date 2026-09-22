@@ -6,24 +6,100 @@
     Title="OMSI Map Studio — World Creator">
 
     <Grid x:Name="MainRoot"
-          Background="#08131D">
+          RequestedTheme="Default"
+          Background="{ThemeResource MapStudioWindowBackgroundBrush}">
         <Grid.Resources>
+            <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#E6EEF4</Color>
+                    <Color x:Key="MapStudioBorderColor">#C9D6E0</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#A9BECC</Color>
+                    <Color x:Key="MapStudioAccentColor">#0067C0</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#D9ECFA</Color>
+
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#F4F7FA" />
+                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#F0F4F7" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#E6EEF4" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#C9D6E0" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#A9BECC" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#17242D" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#3F5B6D" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#647B8B" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#0067C0" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#D9ECFA" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#005A9E" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#107C41" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E6EEF4FA" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#132A39</Color>
+                    <Color x:Key="MapStudioBorderColor">#24485C</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#315064</Color>
+                    <Color x:Key="MapStudioAccentColor">#2CB7F5</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#185B78</Color>
+
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#08131D" />
+                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#06111A" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#071722" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#0B202D" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="{ThemeResource MapStudioSurfaceRaisedColor}" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#24485C" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="{ThemeResource MapStudioBorderStrongColor}" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EAF7FC" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#9FB5C5" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#7895AD" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#2CB7F5" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="{ThemeResource MapStudioAccentSurfaceColor}" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#9EDCF4" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#55D96B" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2081722" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#CC102A39" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#000000</Color>
+                    <Color x:Key="MapStudioBorderColor">#FFFFFF</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#FFFFFF</Color>
+                    <Color x:Key="MapStudioAccentColor">#FFFF00</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#000000</Color>
+
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#FFFF00" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#000000" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#FFFF00" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#00FF00" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#FF000000" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#FF000000" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
             <SolidColorBrush x:Key="MapToolDefaultBackgroundBrush"
-                             Color="#132A39" />
+                             Color="{ThemeResource MapStudioSurfaceRaisedColor}" />
             <SolidColorBrush x:Key="MapToolDefaultBorderBrush"
-                             Color="#315064" />
+                             Color="{ThemeResource MapStudioBorderStrongColor}" />
             <SolidColorBrush x:Key="MapToolActiveBackgroundBrush"
-                             Color="#185B78" />
+                             Color="{ThemeResource MapStudioAccentSurfaceColor}" />
             <SolidColorBrush x:Key="MapToolActiveBorderBrush"
-                             Color="#75D9FF" />
+                             Color="{ThemeResource MapStudioAccentColor}" />
             <SolidColorBrush x:Key="ExplorerModeDefaultBackgroundBrush"
-                             Color="#102633" />
+                             Color="{ThemeResource MapStudioSurfaceRaisedColor}" />
             <SolidColorBrush x:Key="ExplorerModeDefaultBorderBrush"
-                             Color="#27495A" />
+                             Color="{ThemeResource MapStudioBorderColor}" />
             <SolidColorBrush x:Key="ExplorerModeActiveBackgroundBrush"
-                             Color="#185B78" />
+                             Color="{ThemeResource MapStudioAccentSurfaceColor}" />
             <SolidColorBrush x:Key="ExplorerModeActiveBorderBrush"
-                             Color="#75D9FF" />
+                             Color="{ThemeResource MapStudioAccentColor}" />
             <Style x:Key="MapToolButtonStyle"
                    TargetType="Button">
                 <Setter Property="Width"
@@ -54,9 +130,9 @@
                 <Setter Property="FontSize"
                         Value="11" />
                 <Setter Property="Background"
-                        Value="#102A39" />
+                        Value="{ThemeResource MapStudioSurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush"
-                        Value="#315064" />
+                        Value="{ThemeResource MapStudioBorderStrongBrush}" />
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
@@ -102,6 +178,7 @@
                 <Setter Property="CornerRadius"
                         Value="8" />
             </Style>
+            </ResourceDictionary>
         </Grid.Resources>
         <Grid.KeyboardAccelerators>
             <KeyboardAccelerator Key="F11"
@@ -193,7 +270,7 @@
 
         <Grid x:Name="DesktopChromePanel"
               Grid.Row="0"
-              Background="#06111A">
+              Background="{ThemeResource MapStudioChromeBackgroundBrush}">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -208,8 +285,8 @@
                     Grid.Column="0"
                     Margin="8,4,10,4"
                     Padding="12,5"
-                    Background="#0B2230"
-                    BorderBrush="#24485C"
+                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
                 <StackPanel Orientation="Horizontal"
@@ -217,24 +294,24 @@
                     <Border Width="28"
                             Height="28"
                             CornerRadius="7"
-                            Background="#12384C">
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}">
                         <TextBlock Text="M"
                                    FontSize="16"
                                    FontWeight="Bold"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   Foreground="#B9EDFF" />
+                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                     </Border>
                     <StackPanel VerticalAlignment="Center"
                                 Spacing="-2">
                         <TextBlock Text="MAP STUDIO"
                                    FontSize="13"
                                    FontWeight="SemiBold"
-                                   Foreground="#EAF7FC" />
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         <TextBlock Text="WORLD CREATOR"
                                    FontSize="9"
                                    CharacterSpacing="110"
-                                   Foreground="#72B8D6" />
+                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -472,8 +549,8 @@
                 VerticalScrollBarVisibility="Disabled">
                 <Border Margin="8,2,8,6"
                         Padding="8,6"
-                        Background="#091B27"
-                        BorderBrush="#1E4053"
+                        Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
                         BorderThickness="1"
                         CornerRadius="9">
                     <Grid ColumnSpacing="14">
@@ -504,7 +581,7 @@
                                     Click="OnRedoClick" />
                             <Rectangle Width="1"
                                        Height="24"
-                                       Fill="#28495B"
+                                       Fill="{ThemeResource MapStudioBorderBrush}"
                                        VerticalAlignment="Center" />
                             <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                     Content="F11"
@@ -514,25 +591,25 @@
 
                         <Border Grid.Column="1"
                                 Padding="10,4"
-                                Background="#102C3E"
-                                BorderBrush="#315064"
+                                Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8">
                             <StackPanel Orientation="Horizontal"
                                         Spacing="7">
                                 <Ellipse Width="8"
                                          Height="8"
-                                         Fill="#55D96B"
+                                         Fill="{ThemeResource MapStudioSuccessBrush}"
                                          VerticalAlignment="Center" />
                                 <TextBlock x:Name="RootModeText"
                                            Text="WORKSPACE"
                                            FontSize="11"
                                            FontWeight="SemiBold"
-                                           Foreground="#9FE4FF"
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Text="Map Studio"
                                            FontSize="11"
-                                           Foreground="#B6CBD8"
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}"
                                            VerticalAlignment="Center" />
                             </StackPanel>
                         </Border>
@@ -582,8 +659,8 @@
             <Border x:Name="ExplorerPanel"
                     Grid.Column="0"
                     Margin="8"
-                    Background="#0C2130"
-                    BorderBrush="#24485C"
+                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
                 <Border.RenderTransform>
@@ -614,7 +691,7 @@
                             <TextBlock x:Name="ExplorerModeSubtitleText"
                                        Text="Cena e conteúdo do mapa"
                                        FontSize="11"
-                                       Foreground="#799AAE" />
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="1"
@@ -630,7 +707,7 @@
                                     Click="OnRefreshLibraryClick" />
                             <Border Width="28"
                                     Height="28"
-                                    Background="#132D3D"
+                                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
                                     ToolTipService.ToolTip="Arraste para mover no F11"
                                     PointerPressed="OnExplorerFloatingDragPressed"
@@ -641,7 +718,7 @@
                                            FontSize="14"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Foreground="#9FCBE2" />
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
                         </StackPanel>
                     </Grid>
@@ -733,8 +810,8 @@
                     </Grid>
 
                     <Border Grid.Row="3"
-                            Background="#0A1B27"
-                            BorderBrush="#24485C"
+                            Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="9">
@@ -751,24 +828,24 @@
                                                FontWeight="SemiBold"
                                                TextWrapping="Wrap"
                                                TextTrimming="CharacterEllipsis"
-                                               Foreground="#D9EDF7" />
+                                               Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                     <TextBlock x:Name="RootText"
                                                Text="Inicializando Workspace Map Studio..."
                                                FontSize="10"
                                                TextWrapping="Wrap"
                                                TextTrimming="CharacterEllipsis"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                 </StackPanel>
 
                                 <Border Grid.Column="1"
                                         Padding="7,3"
-                                        Background="#12384C"
+                                        Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                         CornerRadius="6"
                                         VerticalAlignment="Top">
                                     <TextBlock x:Name="MapLoadModeText"
                                                Text="mapa completo"
                                                FontSize="10"
-                                               Foreground="#A7E8FF" />
+                                               Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                 </Border>
                             </Grid>
 
@@ -855,8 +932,8 @@
                                 <DataTemplate>
                                     <Border Margin="0,2"
                                             Padding="8"
-                                            Background="#0A1B27"
-                                            BorderBrush="#24485C"
+                                            Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="7">
                                         <Grid ColumnSpacing="8">
@@ -869,13 +946,13 @@
                                                     MinWidth="48"
                                                     Padding="6,4"
                                                     VerticalAlignment="Top"
-                                                    Background="#12384C"
+                                                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                                     CornerRadius="5">
                                                 <TextBlock Text="{Binding KindLabel}"
                                                            FontSize="9"
                                                            FontWeight="SemiBold"
                                                            HorizontalAlignment="Center"
-                                                           Foreground="#A7E8FF" />
+                                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                             </Border>
 
                                             <StackPanel Grid.Column="1"
@@ -884,13 +961,13 @@
                                                            FontSize="12"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"
-                                                           Foreground="#EAF7FC" />
+                                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                                 <TextBlock Text="{Binding DetailText}"
                                                            FontSize="10"
-                                                           Foreground="#9FB5C5" />
+                                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                                                 <TextBlock Text="{Binding AssetPath}"
                                                            FontSize="9.5"
-                                                           Foreground="#66899D"
+                                                           Foreground="{ThemeResource MapStudioTextMutedBrush}"
                                                            TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                         </Grid>
@@ -911,8 +988,8 @@
                             </Grid.RowDefinitions>
 
                             <Border Grid.Row="0"
-                                    Background="#0A1B27"
-                                    BorderBrush="#24485C"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8"
                                     Padding="8">
@@ -927,10 +1004,10 @@
                                                        FontSize="11"
                                                        FontWeight="SemiBold"
                                                        CharacterSpacing="40"
-                                                       Foreground="#DDF4FF" />
+                                                       Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                             <TextBlock Text="Filtre, visualize e posicione itens no mapa"
                                                        FontSize="10"
-                                                       Foreground="#7895AD" />
+                                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                         </StackPanel>
                                         <Button Grid.Column="1"
                                                 Width="28"
@@ -996,8 +1073,8 @@
                                                   SelectionChanged="OnLibrarySubcategorySelectionChanged" />
                                     </Grid>
 
-                                    <Border Background="#071722"
-                                            BorderBrush="#24485C"
+                                    <Border Background="{ThemeResource MapStudioSurfaceBrush}"
+                                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                             BorderThickness="1"
                                             CornerRadius="7"
                                             Padding="4">
@@ -1038,8 +1115,8 @@
 
                             <StackPanel Grid.Row="1"
                                         Spacing="6">
-                                <Border Background="#102A39"
-                                        BorderBrush="#315064"
+                                <Border Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                         BorderThickness="1"
                                         CornerRadius="8"
                                         Padding="7">
@@ -1048,8 +1125,8 @@
                                                 Content="＋ Posicionar no mapa"
                                                 IsEnabled="False"
                                                 MinHeight="36"
-                                                Background="#185B78"
-                                                BorderBrush="#75D9FF"
+                                                Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                                                BorderBrush="{ThemeResource MapStudioAccentBrush}"
                                                 HorizontalAlignment="Stretch"
                                                 Click="OnPlaceAssetClick" />
 
@@ -1222,7 +1299,7 @@
                                     <TextBlock Text="Linha/Lotes: clique o início e depois o fim. Área, matriz e círculo usam o clique como centro."
                                                FontSize="11"
                                                TextWrapping="Wrap"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                 </StackPanel>
 
                                 <StackPanel x:Name="SplinePlacementOptionsPanel"
@@ -1296,7 +1373,7 @@
                                     <TextBlock Text="Estrada fácil: marque início e fim; use Ajustar curva no mapa para mover a alça visual, ou ajuste o offset numericamente; depois confirme. Offset 0 = reta."
                                                FontSize="11"
                                                TextWrapping="Wrap"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                     <CheckBox x:Name="SplineCurveCheckBox"
                                               Content="Curva manual (3 cliques)" />
                                     <CheckBox x:Name="SplineContinuousCheckBox"
@@ -1330,14 +1407,14 @@
                                        Text="Índice de assets não carregado."
                                        FontSize="12"
                                        TextWrapping="Wrap"
-                                       Foreground="#9FB5C5" />
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
                             <Border x:Name="LibraryThumbnailBorder"
                                     Grid.Row="3"
                                     Height="128"
                                     Visibility="Collapsed"
-                                    Background="#071621"
-                                    BorderBrush="#315064"
+                                    Background="{ThemeResource MapStudioSurfaceBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                     BorderThickness="1"
                                     CornerRadius="6"
                                     Padding="4">
@@ -1365,8 +1442,8 @@
                                                 Width="148"
                                                 Height="156"
                                                 Padding="6"
-                                                Background="#0A1B27"
-                                                BorderBrush="#24485C"
+                                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                                 BorderThickness="1"
                                                 CornerRadius="8">
                                             <Grid RowSpacing="4">
@@ -1378,8 +1455,8 @@
                                                 </Grid.RowDefinitions>
 
                                                 <Border Grid.Row="0"
-                                                        Background="#06131C"
-                                                        BorderBrush="#315064"
+                                                        Background="{ThemeResource MapStudioChromeBackgroundBrush}"
+                                                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                                         BorderThickness="1"
                                                         CornerRadius="6">
                                                     <Grid>
@@ -1390,11 +1467,11 @@
                                                                 VerticalAlignment="Bottom"
                                                                 Margin="5"
                                                                 Padding="5,2"
-                                                                Background="#CC102A39"
+                                                                Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
                                                                 CornerRadius="4">
                                                             <TextBlock Text="{Binding KindLabel}"
                                                                        FontSize="9"
-                                                                       Foreground="#9EDCF4" />
+                                                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                                         </Border>
                                                     </Grid>
                                                 </Border>
@@ -1404,18 +1481,18 @@
                                                            FontSize="11.5"
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis"
-                                                           Foreground="#EAF7FC" />
+                                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
 
                                                 <TextBlock Grid.Row="2"
                                                            Text="{Binding Detail}"
                                                            FontSize="9.5"
-                                                           Foreground="#9FB5C5"
+                                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}"
                                                            TextTrimming="CharacterEllipsis" />
 
                                                 <TextBlock Grid.Row="3"
                                                            Text="{Binding RelativePath}"
                                                            FontSize="8.5"
-                                                           Foreground="#66899D"
+                                                           Foreground="{ThemeResource MapStudioTextMutedBrush}"
                                                            TextTrimming="CharacterEllipsis"
                                                            TextWrapping="NoWrap" />
                                             </Grid>
@@ -1481,10 +1558,10 @@
                                            Text="Nenhum TTData carregado."
                                            FontSize="12"
                                            TextWrapping="Wrap"
-                                           Foreground="#9FB5C5" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
-                                <Border Background="#0D2330"
-                                        BorderBrush="#294A5D"
+                                <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="7"
                                         Padding="7">
@@ -1492,7 +1569,7 @@
                                         <TextBlock Text="Visualização de paths"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
-                                                   Foreground="#DDF4FF" />
+                                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                         <ScrollViewer HorizontalScrollMode="Enabled"
                                                       HorizontalScrollBarVisibility="Hidden"
                                                       VerticalScrollMode="Disabled"
@@ -1571,8 +1648,8 @@
                                       SelectionChanged="OnTransportSelectionChanged" />
 
                             <Border Grid.Row="5"
-                                    Background="#0B202D"
-                                    BorderBrush="#2C5367"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                                     BorderThickness="1"
                                     CornerRadius="7"
                                     Padding="8,6">
@@ -1581,18 +1658,18 @@
                                                FontSize="10"
                                                FontWeight="SemiBold"
                                                CharacterSpacing="90"
-                                               Foreground="#9EDCF4" />
+                                               Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                     <TextBlock x:Name="TransportRouteStatusText"
                                                Text="Fluxo: Track → Station Links → Trip → Perfil → Horário."
                                                FontSize="11"
                                                TextWrapping="Wrap"
-                                               Foreground="#7FC6E8" />
+                                               Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                 </StackPanel>
                             </Border>
 
                             <Border Grid.Row="6"
-                                    Background="#071722"
-                                    BorderBrush="#24485C"
+                                    Background="{ThemeResource MapStudioSurfaceBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="7"
                                     Padding="3">
@@ -1625,7 +1702,7 @@
                                                Text="Selecione uma spline/objeto no mapa para listar as faixas disponíveis."
                                                FontSize="10"
                                                TextWrapping="Wrap"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
 
                                     <NumberBox x:Name="TransportPathIndexBox"
                                                Visibility="Collapsed"
@@ -1688,7 +1765,7 @@
                                            Text="Selecione um item para ver detalhes."
                                            FontSize="12"
                                            TextWrapping="Wrap"
-                                           Foreground="#B7CEDC" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                                 <Button x:Name="EditTrackButton"
                                         Content="Editar"
                                         Visibility="Collapsed"
@@ -1721,7 +1798,7 @@
                                        Text="Nenhum dado de tráfego carregado."
                                        FontSize="12"
                                        TextWrapping="Wrap"
-                                       Foreground="#9FB5C5" />
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
                             <ComboBox x:Name="TrafficViewComboBox"
                                       Grid.Row="2"
@@ -1732,8 +1809,8 @@
                             </ComboBox>
 
                             <Border Grid.Row="3"
-                                    Background="#0D2330"
-                                    BorderBrush="#294A5D"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="7"
                                     Padding="7">
@@ -1741,7 +1818,7 @@
                                     <TextBlock Text="Paths no mapa"
                                                FontSize="11"
                                                FontWeight="SemiBold"
-                                               Foreground="#DDF4FF" />
+                                               Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                     <ComboBox x:Name="TrafficPathModeComboBox"
                                               SelectedIndex="0"
                                               HorizontalAlignment="Stretch"
@@ -1891,7 +1968,7 @@
                                        Text="Selecione um programa ou Traffic Rule."
                                        FontSize="12"
                                        TextWrapping="Wrap"
-                                       Foreground="#B7CEDC" />
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
                             <StackPanel Grid.Row="6"
                                         Spacing="5">
@@ -1938,7 +2015,7 @@
             <Border x:Name="ExplorerSplitter"
                     Grid.Column="1"
                     Margin="1,8"
-                    Background="#173347"
+                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                     CornerRadius="3"
                     PointerPressed="OnPanelSplitterPointerPressed"
                     PointerMoved="OnPanelSplitterPointerMoved"
@@ -1955,7 +2032,7 @@
             <Grid x:Name="LoadingOverlay"
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
-                  Background="#A608131D"
+                  Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
                   Visibility="Collapsed"
                   Canvas.ZIndex="120">
                 <Border Width="360"
@@ -1963,8 +2040,8 @@
                         Padding="24,20"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center"
-                        Background="#F20B1E2B"
-                        BorderBrush="#3A6A82"
+                        Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
+                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                         BorderThickness="1"
                         CornerRadius="14">
                     <StackPanel Spacing="10"
@@ -1979,13 +2056,13 @@
                                    FontSize="17"
                                    FontWeight="SemiBold"
                                    TextAlignment="Center"
-                                   Foreground="#EAF7FC" />
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         <TextBlock x:Name="LoadingDetailText"
                                    Text="Preparando o editor nativo"
                                    FontSize="12"
                                    TextAlignment="Center"
                                    TextWrapping="Wrap"
-                                   Foreground="#9FBACA" />
+                                   Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                         <ProgressBar x:Name="LoadingProgressBar"
                                      Height="3"
                                      Margin="0,4,0,0"
@@ -2012,8 +2089,8 @@
                         VerticalAlignment="Top"
                         HorizontalAlignment="Left"
                         Padding="10,6"
-                        Background="#F2081722"
-                        BorderBrush="#335A70"
+                        Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                         BorderThickness="1"
                         CornerRadius="10">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -2021,24 +2098,24 @@
                                    FontSize="12"
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"
-                                   Foreground="#EAF7FC" />
-                        <Rectangle Width="1" Height="20" Fill="#355467" />
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                        <Rectangle Width="1" Height="20" Fill="{ThemeResource MapStudioBorderStrongBrush}" />
                         <TextBlock x:Name="FullscreenMapTitleText"
                                    Text="Nenhum mapa aberto"
                                    MaxWidth="250"
                                    TextTrimming="CharacterEllipsis"
                                    VerticalAlignment="Center"
-                                   Foreground="#AFC8D7" />
+                                   Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                         <Border Padding="7,3"
-                                Background="#12384C"
+                                Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                 CornerRadius="6">
                             <StackPanel Orientation="Horizontal" Spacing="5">
-                                <Ellipse Width="7" Height="7" Fill="#55D96B" VerticalAlignment="Center" />
+                                <Ellipse Width="7" Height="7" Fill="{ThemeResource MapStudioSuccessBrush}" VerticalAlignment="Center" />
                                 <TextBlock x:Name="FullscreenRootModeText"
                                            Text="WORKSPACE"
                                            FontSize="10"
                                            FontWeight="SemiBold"
-                                           Foreground="#A7E8FF" />
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -2048,8 +2125,8 @@
                         VerticalAlignment="Top"
                         HorizontalAlignment="Center"
                         Padding="8,6"
-                        Background="#F2081722"
-                        BorderBrush="#335A70"
+                        Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                         BorderThickness="1"
                         CornerRadius="10">
                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -2072,8 +2149,8 @@
                         VerticalAlignment="Top"
                         HorizontalAlignment="Right"
                         Padding="8,6"
-                        Background="#F2081722"
-                        BorderBrush="#335A70"
+                        Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                        BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                         BorderThickness="1"
                         CornerRadius="10">
                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -2113,8 +2190,8 @@
                     VerticalAlignment="Bottom"
                     Margin="20,20,20,104"
                     Padding="9,7"
-                    Background="#F00B1C28"
-                    BorderBrush="#31566B"
+                    Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
                     CornerRadius="11"
                     Canvas.ZIndex="48">
@@ -2127,7 +2204,7 @@
 
                     <Border Grid.Column="0"
                             Width="5"
-                            Background="#2CB7F5"
+                            Background="{ThemeResource MapStudioAccentBrush}"
                             CornerRadius="3" />
 
                     <StackPanel Grid.Column="1"
@@ -2138,10 +2215,10 @@
                                    Text="Seleção"
                                    FontSize="13"
                                    FontWeight="SemiBold"
-                                   Foreground="#EAF7FC" />
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                         <TextBlock Text="Ferramentas contextuais"
                                    FontSize="10"
-                                   Foreground="#7799AC" />
+                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                     </StackPanel>
 
                     <ScrollViewer Grid.Column="2"
@@ -2332,7 +2409,7 @@
                                         Spacing="6">
                                 <TextBlock Text="Use o Inspector e a Biblioteca para configurar esta ferramenta."
                                            VerticalAlignment="Center"
-                                           Foreground="#9EB7C6" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             </StackPanel>
                         </Grid>
                     </ScrollViewer>
@@ -2347,8 +2424,8 @@
                     VerticalAlignment="Bottom"
                     Margin="20,20,20,28"
                     Padding="8"
-                    Background="#F0081722"
-                    BorderBrush="#2F566B"
+                    Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
                     CornerRadius="12"
                     Canvas.ZIndex="50">
@@ -2364,7 +2441,7 @@
                     <Border x:Name="MapToolPaletteDragGrip"
                             Width="20"
                             MinHeight="48"
-                            Background="#142D3E"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                             CornerRadius="7"
                             ToolTipService.ToolTip="Arraste para mover a barra"
                             PointerPressed="OnMapToolPaletteDragPressed"
@@ -2375,9 +2452,9 @@
                                    FontSize="16"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
-                                   Foreground="#9FCBE2" />
+                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                     </Border>
-                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="{ThemeResource MapStudioBorderStrongBrush}" Opacity="0.65" VerticalAlignment="Center" />
                     <Button x:Name="ToolSelectionButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Seleção e edição"
@@ -2387,7 +2464,7 @@
                             <Path Width="23"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,2 L 20,10 L 12,12 L 16,20 L 12,22 L 8,14 L 3,19 Z" />
                             <TextBlock Text="Seleção"
@@ -2396,7 +2473,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="{ThemeResource MapStudioBorderStrongBrush}" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolObjectsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -2407,7 +2484,7 @@
                             <Path Width="25"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.7"
                                   Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
                             <TextBlock Text="Objetos"
@@ -2425,7 +2502,7 @@
                             <Path Width="25"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
                             <TextBlock Text="Ruas"
@@ -2443,7 +2520,7 @@
                             <Path Width="26"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,19 L 2,13 C 6,6 18,6 22,13 L 22,19 M 2,15 L 22,15 M 6,15 L 6,21 M 18,15 L 18,21" />
                             <TextBlock Text="Pontes/Túneis"
@@ -2463,7 +2540,7 @@
                             <Path Width="26"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,21 L 2,14 C 2,6 7,2 12,2 C 17,2 22,6 22,14 L 22,21 M 6,21 L 6,14 C 6,9 8.5,6 12,6 C 15.5,6 18,9 18,14 L 18,21 M 1,21 L 23,21" />
                             <TextBlock Text="Túneis"
@@ -2481,7 +2558,7 @@
                             <Path Width="24"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 3,21 L 3,8 L 12,2 L 21,8 L 21,21 Z M 8,21 L 8,13 L 13,13 L 13,21 M 7,9 L 10,9 M 15,9 L 18,9" />
                             <TextBlock Text="Prédios"
@@ -2499,7 +2576,7 @@
                             <Path Width="24"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 12,2 C 7,2 5,7 7,10 C 3,12 5,18 10,17 L 10,22 M 12,2 C 17,2 19,7 17,10 C 21,12 19,18 14,17 L 14,22 M 8,22 L 16,22" />
                             <TextBlock Text="Vegetação"
@@ -2508,7 +2585,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="{ThemeResource MapStudioBorderStrongBrush}" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolTransitAssetsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -2520,7 +2597,7 @@
                             <Path Width="26"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 4,3 L 20,3 L 20,18 L 4,18 Z M 7,6 L 17,6 L 17,12 L 7,12 Z M 7,18 L 7,22 M 17,18 L 17,22" />
                             <TextBlock Text="Paradas"
@@ -2538,7 +2615,7 @@
                             <Path Width="24"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 12,2 L 12,22 M 12,5 L 19,5 L 19,10 L 12,10 M 5,17 L 19,17 M 7,17 L 7,21 M 17,17 L 17,21" />
                             <TextBlock Text="Sinalização"
@@ -2557,7 +2634,7 @@
                             <Path Width="24"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 12,2 L 8,10 L 12,10 L 9,21 L 17,9 L 13,9 Z M 3,21 L 21,21" />
                             <TextBlock Text="Infra"
@@ -2566,7 +2643,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="{ThemeResource MapStudioBorderStrongBrush}" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolCrossingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -2577,7 +2654,7 @@
                             <Path Width="24"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 9,2 L 15,2 L 15,9 L 22,9 L 22,15 L 15,15 L 15,22 L 9,22 L 9,15 L 2,15 L 2,9 L 9,9 Z M 12,4 L 12,20 M 4,12 L 20,12" />
                             <TextBlock Text="Cruzamentos"
@@ -2595,7 +2672,7 @@
                             <Path Width="27"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,20 L 8,10 L 12,15 L 16,6 L 23,20 Z M 5,20 L 20,20" />
                             <TextBlock Text="Terreno"
@@ -2613,7 +2690,7 @@
                             <Path Width="27"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,8 C 5,5 8,11 11,8 C 14,5 17,11 22,8 M 2,14 C 5,11 8,17 11,14 C 14,11 17,17 22,14 M 2,20 C 5,17 8,23 11,20 C 14,17 17,23 22,20" />
                             <TextBlock Text="Água"
@@ -2631,7 +2708,7 @@
                             <Path Width="22"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
                             <TextBlock Text="Tráfego"
@@ -2649,7 +2726,7 @@
                             <Path Width="27"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22 M 7,22 L 9,22 M 17,22 L 19,22" />
                             <TextBlock Text="Transporte"
@@ -2668,7 +2745,7 @@
                             <Path Width="25"
                                   Height="23"
                                   Stretch="Uniform"
-                                  Stroke="#DDF4FF"
+                                  Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 12,2 A 10,10 0 1 1 11.9,2 M 7,12 L 10.5,16 L 18,8" />
                             <TextBlock Text="Validar"
@@ -2683,7 +2760,7 @@
             <Border x:Name="InspectorSplitter"
                     Grid.Column="3"
                     Margin="1,8"
-                    Background="#173347"
+                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                     CornerRadius="3"
                     PointerPressed="OnPanelSplitterPointerPressed"
                     PointerMoved="OnPanelSplitterPointerMoved"
@@ -2692,8 +2769,8 @@
             <Border x:Name="InspectorPanel"
                     Grid.Column="4"
                     Margin="8"
-                    Background="#0C2130"
-                    BorderBrush="#24485C"
+                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
                 <Border.RenderTransform>
@@ -2718,23 +2795,23 @@
                                            Text="Selecione um item ou escolha uma ferramenta"
                                            FontSize="11"
                                            TextWrapping="Wrap"
-                                           Foreground="#799AAE" />
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
                             <Border Grid.Column="1"
                                     Padding="7,3"
-                                    Background="#12384C"
+                                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
                                     VerticalAlignment="Top">
                                 <TextBlock x:Name="InspectorContextBadgeText"
                                            Text="GERAL"
                                            FontSize="9"
                                            FontWeight="SemiBold"
-                                           Foreground="#A7E8FF" />
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
                             <Border Grid.Column="2"
                                     Width="28"
                                     Height="28"
-                                    Background="#132D3D"
+                                    Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
                                     ToolTipService.ToolTip="Arraste para mover no F11"
                                     PointerPressed="OnInspectorFloatingDragPressed"
@@ -2745,12 +2822,12 @@
                                            FontSize="14"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
-                                           Foreground="#9FCBE2" />
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
                         </Grid>
 
-                        <Border Background="#0A1A25"
-                                BorderBrush="#24465A"
+                        <Border Background="{ThemeResource MapStudioSurfaceBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10">
@@ -2759,27 +2836,27 @@
                                            Text="Sem seleção"
                                            FontSize="14"
                                            FontWeight="SemiBold"
-                                           Foreground="#D9EDF7" />
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                 <TextBlock x:Name="InspectorTypeText"
                                            Text="Tipo: —"
                                            FontSize="12"
-                                           Foreground="#AFC7D5" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                                 <TextBlock x:Name="InspectorAssetText"
                                            Text="Arquivo: —"
                                            FontSize="11"
                                            TextWrapping="Wrap"
-                                           Foreground="#8EABB9" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                                 <TextBlock x:Name="InspectorTileText"
                                            Text="Tile: —"
                                            FontSize="11"
-                                           Foreground="#8EABB9" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             </StackPanel>
                         </Border>
 
                         <Border x:Name="InspectorTransformCard"
                                 Visibility="Collapsed"
-                                Background="#0D2330"
-                                BorderBrush="#294A5D"
+                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10">
@@ -2787,7 +2864,7 @@
                                 <TextBlock Text="Transformação"
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="#DDF4FF" />
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
 
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
@@ -2842,8 +2919,8 @@
 
                         <Border x:Name="InspectorSplineFields"
                                 Visibility="Collapsed"
-                                Background="#0D2330"
-                                BorderBrush="#294A5D"
+                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10">
@@ -2851,7 +2928,7 @@
                                 <TextBlock Text="Geometria e vínculos da via"
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="#DDF4FF" />
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -2939,8 +3016,8 @@
 
                         <Border x:Name="InspectorSelectionActionsCard"
                                 Visibility="Collapsed"
-                                Background="#0D2330"
-                                BorderBrush="#294A5D"
+                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10">
@@ -2948,7 +3025,7 @@
                                 <TextBlock Text="Ações"
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="#DDF4FF" />
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                 <Button x:Name="ApplyInspectorButton"
                                         Content="Aplicar valores"
                                         HorizontalAlignment="Stretch"
@@ -2977,8 +3054,8 @@
 
                         <Border x:Name="InspectorTerrainFields"
                                 Visibility="Collapsed"
-                                Background="#0D2330"
-                                BorderBrush="#294A5D"
+                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="10">
@@ -2986,7 +3063,7 @@
                                 <TextBlock Text="Terreno"
                                            FontSize="13"
                                            FontWeight="SemiBold"
-                                           Foreground="#DDF4FF" />
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                 <Button x:Name="PickTerrainPointButton"
                                         Content="Escolher ponto no mapa"
                                         HorizontalAlignment="Stretch"
@@ -2995,7 +3072,7 @@
                                            Text="Nenhum ponto selecionado."
                                            TextWrapping="Wrap"
                                            FontSize="11"
-                                           Foreground="#9FB5C5" />
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                                 <NumberBox x:Name="TerrainTargetHeightBox"
                                            Header="Altura alvo (m)"
                                            SpinButtonPlacementMode="Compact"
@@ -3030,7 +3107,7 @@
                                                 Spacing="2">
                                         <TextBlock Text="Raio do pincel"
                                                    FontSize="10"
-                                                   Foreground="#7895AD" />
+                                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                         <Slider x:Name="TerrainBrushRadiusSlider"
                                                 Minimum="0.25"
                                                 Maximum="250"
@@ -3041,7 +3118,7 @@
                                                 Spacing="2">
                                         <TextBlock Text="Suavização"
                                                    FontSize="10"
-                                                   Foreground="#7895AD" />
+                                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                         <Slider x:Name="TerrainBrushFeatherSlider"
                                                 Minimum="0"
                                                 Maximum="1"
@@ -3064,7 +3141,7 @@
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Intensidade do pincel"
                                                FontSize="10"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                     <Slider x:Name="TerrainBrushDeltaSlider"
                                             Minimum="0.05"
                                             Maximum="100"
@@ -3116,7 +3193,7 @@
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Mistura da textura"
                                                FontSize="10"
-                                               Foreground="#7895AD" />
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                     <Slider x:Name="TerrainPaintAlphaSlider"
                                             Minimum="0"
                                             Maximum="255"
@@ -3134,14 +3211,14 @@
                         <TextBlock Text="Seleção e edição compartilham o estado nativo do viewport e do ID Buffer."
                                    TextWrapping="Wrap"
                                    FontSize="10"
-                                   Foreground="#66899D" />
+                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>
         </Grid>
 
         <Grid Grid.Row="2"
-              Background="#061018"
+              Background="{ThemeResource MapStudioChromeBackgroundBrush}"
               Padding="10,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -3155,7 +3232,7 @@
             <TextBlock Grid.Column="1"
                        VerticalAlignment="Center"
                        Text="WinUI 3 · Direct3D 11 · .NET 10"
-                       Foreground="#7FA6BF" />
+                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
         </Grid>
     </Grid>
 </Window>
