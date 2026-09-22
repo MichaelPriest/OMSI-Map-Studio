@@ -18,6 +18,12 @@ public sealed partial class TimetableWindow
         string DestinationText,
         string RouteText);
 
+    public event Action<string>?
+        EditLineRequested;
+
+    public event Action<string>?
+        TripRouteRequested;
+
     private OmsiTimetableCatalog
         _catalog;
 
@@ -66,6 +72,12 @@ public sealed partial class TimetableWindow
                 Array.Empty<
                     TimetableScheduleRow>();
 
+            FocusTripButton.IsEnabled =
+                false;
+
+            EditLineButton.IsEnabled =
+                false;
+
             LineSummaryText.Text =
                 "Nenhuma Line (.ttl) carregada.";
 
@@ -103,13 +115,75 @@ public sealed partial class TimetableWindow
         LineComboBox.SelectedIndex =
             index;
 
+        EditLineButton.IsEnabled =
+            true;
+
         RefreshSchedule();
     }
 
     private void OnLineSelectionChanged(
         object sender,
-        SelectionChangedEventArgs e) =>
+        SelectionChangedEventArgs e)
+    {
+        FocusTripButton.IsEnabled =
+            false;
+
         RefreshSchedule();
+    }
+
+    private void OnScheduleSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        FocusTripButton.IsEnabled =
+            ScheduleListView.SelectedItem is
+                TimetableScheduleRow;
+    }
+
+    private void OnScheduleDoubleTapped(
+        object sender,
+        Microsoft.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+    {
+        RequestSelectedTripRoute();
+
+        e.Handled =
+            true;
+    }
+
+    private void OnFocusTripClick(
+        object sender,
+        RoutedEventArgs e) =>
+        RequestSelectedTripRoute();
+
+    private void RequestSelectedTripRoute()
+    {
+        if (
+            ScheduleListView.SelectedItem is not
+                TimetableScheduleRow row)
+        {
+            return;
+        }
+
+        TripRouteRequested
+            ?.Invoke(
+                row.TripName);
+    }
+
+    private void OnEditLineClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            LineComboBox.SelectedItem is not
+                OmsiTimetableLine line)
+        {
+            return;
+        }
+
+        EditLineRequested
+            ?.Invoke(
+                line.Name);
+    }
 
     private void RefreshSchedule()
     {
