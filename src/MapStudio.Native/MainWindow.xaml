@@ -245,7 +245,7 @@
 
             <MenuBar Grid.Row="0"
                      Grid.Column="1">
-                <MenuBarItem Title="Arquivo">
+                <MenuBarItem x:Name="FileMenuBarItem" Title="Arquivo">
                     <MenuFlyoutItem
                         Text="Workspace Map Studio"
                         Click="OnOpenWorkspaceClick" />
@@ -279,7 +279,7 @@
                         Text="Abrir pasta de mapa..."
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Editar">
+                <MenuBarItem x:Name="EditMenuBarItem" Title="Editar">
                     <MenuFlyoutItem
                         x:Name="UndoConstructionMenuItem"
                         Text="Desfazer construção"
@@ -291,7 +291,7 @@
                         IsEnabled="False"
                         Click="OnRedoConstructionClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Visualizar">
+                <MenuBarItem x:Name="ViewMenuBarItem" Title="Visualizar">
                     <MenuFlyoutItem
                         Text="Tela cheia (F11)"
                         Click="OnFullscreenClick" />
@@ -350,7 +350,7 @@
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Mapa">
+                <MenuBarItem x:Name="MapMenuBarItem" Title="Mapa">
                     <MenuFlyoutItem
                         x:Name="FullMapModeMenuItem"
                         Text="Mapa completo"
@@ -388,7 +388,7 @@
                         Text="Remover referência Google"
                         Click="OnClearGoogleMapReferenceClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ferramentas">
+                <MenuBarItem x:Name="ToolsMenuBarItem" Title="Ferramentas">
                     <MenuFlyoutItem
                         Text="Substituir dependência SCO/SLI..."
                         Click="OnReplaceDependencyClick" />
@@ -453,7 +453,7 @@
                             Click="OnClearProceduralRoadGraphClick" />
                     </MenuFlyoutSubItem>
                 </MenuBarItem>
-                <MenuBarItem Title="IA">
+                <MenuBarItem x:Name="AiMenuBarItem" Title="IA">
                     <MenuFlyoutItem
                         Text="Configurar provedores..."
                         Click="OnAiProvidersClick" />
@@ -470,7 +470,7 @@
                 </MenuBarItem>
             </MenuBar>
 
-            <ScrollViewer
+            <ScrollViewer x:Name="EditorToolbarScrollViewer"
                 Grid.Row="1"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"

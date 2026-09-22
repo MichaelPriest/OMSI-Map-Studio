@@ -27654,8 +27654,8 @@ public sealed partial class MainWindow : Window
                     MapStudioEntitlementKeys
                         .CoreEditor);
 
-        WorkspaceGrid.IsEnabled =
-            coreGate.Allowed;
+        SetCoreEditorCommandsEnabled(
+            coreGate.Allowed);
 
         if (!coreGate.Allowed)
         {
@@ -27676,6 +27676,42 @@ public sealed partial class MainWindow : Window
                         .GracePeriod
                     ? $"Licença offline válida até {snapshot.OfflineUntil?.ToLocalTime():g}."
                     : "Licença verificada. Editor liberado.";
+        }
+    }
+
+    private void SetCoreEditorCommandsEnabled(
+        bool enabled)
+    {
+        WorkspaceGrid.IsEnabled =
+            enabled;
+
+        EditorToolbarScrollViewer.IsEnabled =
+            enabled;
+
+        FileMenuBarItem.IsEnabled =
+            enabled;
+
+        EditMenuBarItem.IsEnabled =
+            enabled;
+
+        ViewMenuBarItem.IsEnabled =
+            enabled;
+
+        MapMenuBarItem.IsEnabled =
+            enabled;
+
+        ToolsMenuBarItem.IsEnabled =
+            enabled;
+
+        AiMenuBarItem.IsEnabled =
+            enabled;
+
+        foreach (
+            var accelerator in
+                MainRoot.KeyboardAccelerators)
+        {
+            accelerator.IsEnabled =
+                enabled;
         }
     }
 
