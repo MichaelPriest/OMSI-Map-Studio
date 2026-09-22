@@ -16,6 +16,14 @@
                              Color="#185B78" />
             <SolidColorBrush x:Key="MapToolActiveBorderBrush"
                              Color="#75D9FF" />
+            <SolidColorBrush x:Key="ExplorerModeDefaultBackgroundBrush"
+                             Color="#102633" />
+            <SolidColorBrush x:Key="ExplorerModeDefaultBorderBrush"
+                             Color="#27495A" />
+            <SolidColorBrush x:Key="ExplorerModeActiveBackgroundBrush"
+                             Color="#185B78" />
+            <SolidColorBrush x:Key="ExplorerModeActiveBorderBrush"
+                             Color="#75D9FF" />
             <Style x:Key="MapToolButtonStyle"
                    TargetType="Button">
                 <Setter Property="Width"
@@ -63,9 +71,9 @@
                 <Setter Property="FontSize"
                         Value="10.5" />
                 <Setter Property="Background"
-                        Value="#102633" />
+                        Value="{StaticResource ExplorerModeDefaultBackgroundBrush}" />
                 <Setter Property="BorderBrush"
-                        Value="#27495A" />
+                        Value="{StaticResource ExplorerModeDefaultBorderBrush}" />
                 <Setter Property="BorderThickness"
                         Value="1" />
                 <Setter Property="CornerRadius"
@@ -561,7 +569,7 @@
               Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ExplorerColumn"
-                                  Width="310" />
+                                  Width="340" />
                 <ColumnDefinition x:Name="ExplorerSplitterColumn"
                                   Width="6" />
                 <ColumnDefinition Width="*" />
