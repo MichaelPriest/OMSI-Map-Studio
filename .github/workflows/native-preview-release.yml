@@ -9,8 +9,8 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.4-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.4-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.5-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.5-native.md"
   workflow_dispatch:
 
 permissions:
@@ -21,8 +21,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.4-native
-  TAG: v0.2.0-alpha.5-test.10.4-native
+  VERSION: 0.2.0-alpha.5-test.10.5-native
+  TAG: v0.2.0-alpha.5-test.10.5-native
 
 jobs:
   build-native-preview:
@@ -119,6 +119,22 @@ jobs:
 
           Write-Host "Verified inline Map/Tiles project mode and global tile navigation wiring."
 
+      - name: Verify adaptive dialog reparent safety
+        shell: pwsh
+        run: |
+          $helper = Get-Content src/MapStudio.Native/Dialogs/AdaptiveContentDialogExtensions.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          if ($helper -notmatch 'dialog\.Content\s*=\s*null;[\s\S]{0,1600}scroll\.Content\s*=\s*content;') {
+            throw "Adaptive ContentDialog must detach FrameworkElement content before re-parenting it into ScrollViewer."
+          }
+
+          if ($main -notmatch 'OnOpenMapCatalogClick[\s\S]{0,12000}Open map catalog failure type=') {
+            throw "Map catalog handler must catch and log dialog/runtime failures instead of terminating the app."
+          }
+
+          Write-Host "Verified ContentDialog detach/re-parent order and map catalog exception guard."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -197,11 +213,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.4-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.5-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.4-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.5-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
