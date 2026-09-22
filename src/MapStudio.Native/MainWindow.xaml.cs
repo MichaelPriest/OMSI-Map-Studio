@@ -11003,25 +11003,25 @@ public sealed partial class MainWindow : Window
     private async void OnTransportRemoveStepClick(
         object sender,
         RoutedEventArgs e) =>
-        await MutateSelectedTrackStepAsync(
+        await MutateSelectedRouteStepAsync(
             moveDelta: 0,
             remove: true);
 
     private async void OnTransportMoveStepUpClick(
         object sender,
         RoutedEventArgs e) =>
-        await MutateSelectedTrackStepAsync(
+        await MutateSelectedRouteStepAsync(
             moveDelta: -1,
             remove: false);
 
     private async void OnTransportMoveStepDownClick(
         object sender,
         RoutedEventArgs e) =>
-        await MutateSelectedTrackStepAsync(
+        await MutateSelectedRouteStepAsync(
             moveDelta: 1,
             remove: false);
 
-    private async Task MutateSelectedTrackStepAsync(
+    private async Task MutateSelectedRouteStepAsync(
         int moveDelta,
         bool remove)
     {
@@ -11029,106 +11029,231 @@ public sealed partial class MainWindow : Window
             _timetableCatalog is null ||
             TransportListView.SelectedItem is not
                 TransportExplorerItem item ||
-            item.Kind != "Track" ||
+            item.Kind is not
+                (
+                    "Track" or
+                    "StationLink"
+                ) ||
             TransportRouteStepsListView.SelectedItem is not
                 TransportRouteStepItem step)
         {
             return;
         }
 
-        var track =
-            _timetableCatalog.Tracks
-                .FirstOrDefault(
-                    candidate =>
-                        string.Equals(
-                            candidate.Name,
-                            item.Key,
-                            StringComparison.OrdinalIgnoreCase));
+        if (item.Kind == "Track")
+        {
+            var track =
+                _timetableCatalog.Tracks
+                    .FirstOrDefault(
+                        candidate =>
+                            string.Equals(
+                                candidate.Name,
+                                item.Key,
+                                StringComparison.OrdinalIgnoreCase));
 
-        if (track is null)
+            if (track is null)
+            {
+                return;
+            }
+
+            var entries =
+                track.Entries
+                    .ToList();
+
+            var index =
+                step.Sequence -
+                1;
+
+            if (
+                index < 0 ||
+                index >= entries.Count)
+            {
+                return;
+            }
+
+            var nextSelection =
+                index;
+
+            if (remove)
+            {
+                if (entries.Count <= 1)
+                {
+                    StatusText.Text =
+                        "Track precisa manter ao menos um segmento.";
+                    return;
+                }
+
+                entries.RemoveAt(
+                    index);
+
+                nextSelection =
+                    Math.Min(
+                        index,
+                        entries.Count -
+                            1);
+            }
+            else
+            {
+                var target =
+                    index +
+                    moveDelta;
+
+                if (
+                    target < 0 ||
+                    target >= entries.Count)
+                {
+                    return;
+                }
+
+                (entries[index], entries[target]) =
+                    (entries[target], entries[index]);
+
+                nextSelection =
+                    target;
+            }
+
+            try
+            {
+                await _session
+                    .UpdateTimetableTrackAsync(
+                        track,
+                        entries);
+
+                await ReloadTransportCatalogAsync(
+                    "Track",
+                    track.Name);
+
+                TransportRouteStepsListView.SelectedIndex =
+                    nextSelection;
+
+                StatusText.Text =
+                    remove
+                        ? $"Track {track.Name}: segmento removido."
+                        : $"Track {track.Name}: ordem dos segmentos atualizada.";
+            }
+            catch (Exception exception)
+            {
+                StatusText.Text =
+                    $"Falha ao alterar Track: {exception.Message}";
+            }
+
+            return;
+        }
+
+        if (
+            !int.TryParse(
+                item.Key,
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var linkIndex) ||
+            linkIndex < 0 ||
+            linkIndex >=
+                _timetableCatalog
+                    .StationLinks.Count)
         {
             return;
         }
 
-        var entries =
-            track.Entries
+        var link =
+            _timetableCatalog
+                .StationLinks[
+                    linkIndex];
+
+        var linkEntries =
+            link.Entries
                 .ToList();
 
-        var index =
+        var linkEntryIndex =
             step.Sequence -
             1;
 
         if (
-            index < 0 ||
-            index >= entries.Count)
+            linkEntryIndex < 0 ||
+            linkEntryIndex >=
+                linkEntries.Count)
         {
             return;
         }
 
-        var nextSelection =
-            index;
+        var nextLinkSelection =
+            linkEntryIndex;
 
         if (remove)
         {
-            if (entries.Count <= 1)
+            if (linkEntries.Count <= 2)
             {
                 StatusText.Text =
-                    "Track precisa manter ao menos um segmento.";
+                    "StationLink precisa manter pelo menos 2 segmentos para o fluxo tipo 2.";
                 return;
             }
 
-            entries.RemoveAt(
-                index);
+            linkEntries.RemoveAt(
+                linkEntryIndex);
 
-            nextSelection =
+            nextLinkSelection =
                 Math.Min(
-                    index,
-                    entries.Count -
-                    1);
+                    linkEntryIndex,
+                    linkEntries.Count -
+                        1);
         }
         else
         {
             var target =
-                index +
+                linkEntryIndex +
                 moveDelta;
 
             if (
                 target < 0 ||
-                target >= entries.Count)
+                target >=
+                    linkEntries.Count)
             {
                 return;
             }
 
-            (entries[index], entries[target]) =
-                (entries[target], entries[index]);
+            (
+                linkEntries[linkEntryIndex],
+                linkEntries[target]
+            ) =
+                (
+                    linkEntries[target],
+                    linkEntries[linkEntryIndex]
+                );
 
-            nextSelection =
+            nextLinkSelection =
                 target;
         }
 
         try
         {
+            var updated =
+                link with
+                {
+                    Entries =
+                        linkEntries
+                };
+
             await _session
-                .UpdateTimetableTrackAsync(
-                    track,
-                    entries);
+                .UpdateStationLinkAsync(
+                    linkIndex,
+                    updated);
 
             await ReloadTransportCatalogAsync(
-                "Track",
-                track.Name);
+                "StationLink",
+                linkIndex.ToString(
+                    CultureInfo.InvariantCulture));
 
             TransportRouteStepsListView.SelectedIndex =
-                nextSelection;
+                nextLinkSelection;
 
             StatusText.Text =
                 remove
-                    ? $"Track {track.Name}: segmento removido."
-                    : $"Track {track.Name}: ordem dos segmentos atualizada.";
+                    ? $"StationLink {link.StartBusStopId} → {link.EndBusStopId}: segmento removido."
+                    : $"StationLink {link.StartBusStopId} → {link.EndBusStopId}: ordem dos segmentos atualizada.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao alterar Track: {exception.Message}";
+                $"Falha ao alterar StationLink: {exception.Message}";
         }
     }
 
@@ -14187,22 +14312,24 @@ public sealed partial class MainWindow : Window
         TransportFocusStepButton.IsEnabled =
             selectedStep;
 
-        var editableTrack =
+        var editableRoute =
             selectedStep &&
             TransportListView.SelectedItem is
                 TransportExplorerItem item &&
-            item.Kind == "Track";
+            item.Kind is
+                "Track" or
+                "StationLink";
 
         TransportRemoveStepButton.IsEnabled =
-            editableTrack;
+            editableRoute;
 
         TransportMoveStepUpButton.IsEnabled =
-            editableTrack &&
+            editableRoute &&
             TransportRouteStepsListView.SelectedIndex >
                 0;
 
         TransportMoveStepDownButton.IsEnabled =
-            editableTrack &&
+            editableRoute &&
             TransportRouteStepsListView.SelectedIndex >=
                 0 &&
             TransportRouteStepsListView.SelectedIndex <
