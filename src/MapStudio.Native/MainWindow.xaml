@@ -1434,6 +1434,7 @@
 
                             <GridView x:Name="AssetLibraryListView"
                                       Grid.Row="4"
+                                      ContainerContentChanging="OnAssetLibraryContainerContentChanging"
                                       SelectionMode="Single"
                                       CanDragItems="True"
                                       DragItemsStarting="OnAssetLibraryDragItemsStarting"
