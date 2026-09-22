@@ -202,9 +202,23 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
 
         Assert.Equal(
             new System.Numerics.Vector2(
-                1,
-                0),
+                0.5f,
+                1),
             result.Vertices[1].TexCoord);
+
+        var faceNormal =
+            System.Numerics.Vector3.Normalize(
+                System.Numerics.Vector3.Cross(
+                    result.Vertices[1].Position -
+                        result.Vertices[0].Position,
+                    result.Vertices[2].Position -
+                        result.Vertices[0].Position));
+
+        Assert.True(
+            System.Numerics.Vector3.Dot(
+                faceNormal,
+                result.Vertices[0].Normal) >
+            0.99f);
 
         Assert.All(
             result.Vertices,
