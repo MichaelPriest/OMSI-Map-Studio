@@ -1552,6 +1552,9 @@
                                     <Button Content="Validar"
                                             ToolTipService.ToolTip="Validar referências Track/Trip/Stop/StationLink/Line e segmentos carregados"
                                             Click="OnTransportValidateClick" />
+                                    <Button Content="Abrir Timetable ↗"
+                                            ToolTipService.ToolTip="Abrir Lines/Tours/Trips em uma janela nativa separada"
+                                            Click="OnOpenTimetableWindowClick" />
                                     <Button x:Name="TransportFocusStepButton"
                                             Content="Focar selecionado"
                                             IsEnabled="False"
