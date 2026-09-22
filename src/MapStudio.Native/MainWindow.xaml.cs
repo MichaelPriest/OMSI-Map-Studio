@@ -574,6 +574,15 @@ public sealed partial class MainWindow : Window
                 }
 
                 if (
+                    Viewport.TrafficPathSelectedOnly)
+                {
+                    Viewport
+                        .RefreshTrafficPathDisplay();
+
+                    UpdateTrafficPathStatusText();
+                }
+
+                if (
                     _transportTrackRecordMode &&
                     !_transportTrackRecordBusy &&
                     info is
@@ -7557,6 +7566,16 @@ public sealed partial class MainWindow : Window
             .SetTrafficPathDisplayOptions(
                 trafficPathOptions);
 
+        Viewport
+            .SetTrafficPathSelectedOnly(
+                false);
+
+        TransportPathsSelectedOnlyCheckBox.IsChecked =
+            false;
+
+        TrafficPathSelectedOnlyCheckBox.IsChecked =
+            false;
+
         SynchronizeTrafficPathControls(
             trafficPathOptions,
             fromTransport: false);
@@ -8946,6 +8965,16 @@ public sealed partial class MainWindow : Window
             .SetTrafficPathDisplayOptions(
                 transportPathOptions);
 
+        Viewport
+            .SetTrafficPathSelectedOnly(
+                true);
+
+        TransportPathsSelectedOnlyCheckBox.IsChecked =
+            true;
+
+        TrafficPathSelectedOnlyCheckBox.IsChecked =
+            true;
+
         SynchronizeTrafficPathControls(
             transportPathOptions,
             fromTransport: false);
@@ -9177,6 +9206,38 @@ public sealed partial class MainWindow : Window
 
         TransportRouteStatusText.Text =
             message;
+    }
+
+    private void OnTrafficPathIsolationChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            sender is not CheckBox source)
+        {
+            return;
+        }
+
+        var selectedOnly =
+            source.IsChecked ==
+            true;
+
+        TransportPathsSelectedOnlyCheckBox.IsChecked =
+            selectedOnly;
+
+        TrafficPathSelectedOnlyCheckBox.IsChecked =
+            selectedOnly;
+
+        Viewport
+            .SetTrafficPathSelectedOnly(
+                selectedOnly);
+
+        UpdateTrafficPathStatusText();
+
+        StatusText.Text =
+            selectedOnly
+                ? "Paths OMSI: mostrando somente as faixas do objeto/spline selecionado."
+                : "Paths OMSI: mostrando as faixas de todos os itens carregados.";
     }
 
     private void OnTransportPathFilterChanged(
