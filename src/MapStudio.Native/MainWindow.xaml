@@ -557,11 +557,44 @@
                                     Content="Abrir OMSI"
                                     ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
                                     Click="OnOpenOmsiClick" />
-                            <Button x:Name="GlobalTilesButton"
-                                    Style="{StaticResource EditorToolbarButtonStyle}"
-                                    Content="Tiles"
-                                    ToolTipService.ToolTip="Abrir Gerenciador de Tiles"
-                                    Click="OnTileManagerClick" />
+                            <Border Padding="4,2"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="7"
+                                    ToolTipService.ToolTip="Navegação rápida entre tiles">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="2">
+                                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                            MinWidth="30"
+                                            Padding="6,3"
+                                            Content="←"
+                                            Tag="-1,0"
+                                            ToolTipService.ToolTip="Tile à esquerda"
+                                            Click="OnTileNavigateClick" />
+                                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                            MinWidth="30"
+                                            Padding="6,3"
+                                            Content="↑"
+                                            Tag="0,-1"
+                                            ToolTipService.ToolTip="Tile acima"
+                                            Click="OnTileNavigateClick" />
+                                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                            MinWidth="30"
+                                            Padding="6,3"
+                                            Content="↓"
+                                            Tag="0,1"
+                                            ToolTipService.ToolTip="Tile abaixo"
+                                            Click="OnTileNavigateClick" />
+                                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                            MinWidth="30"
+                                            Padding="6,3"
+                                            Content="→"
+                                            Tag="1,0"
+                                            ToolTipService.ToolTip="Tile à direita"
+                                            Click="OnTileNavigateClick" />
+                                </StackPanel>
+                            </Border>
                             <Button x:Name="OpenMapButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
                                     Content="Mapas"
@@ -698,8 +731,22 @@
                             </StackPanel>
                         </Button>
 
-                        <Button x:Name="TransportExplorerModeButton"
+                        <Button x:Name="MapExplorerModeButton"
                                 Grid.Column="2"
+                                Style="{StaticResource ExplorerModeButtonStyle}"
+                                ToolTipService.ToolTip="Tiles, coordenadas e estrutura do mapa"
+                                Click="OnMapExplorerModeClick">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="⌖"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Mapa"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="TransportExplorerModeButton"
+                                Grid.Column="3"
                                 Style="{StaticResource ExplorerModeButtonStyle}"
                                 ToolTipService.ToolTip="Tracks, Trips, Stops, StationLinks e Lines/Tours"
                                 Click="OnToolTransportClick">
@@ -794,31 +841,6 @@
                                         Click="OnTileNavigatorGoClick" />
                             </Grid>
 
-                            <Grid ColumnSpacing="4">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <Button Grid.Column="0"
-                                        Content="←"
-                                        Tag="-1,0"
-                                        Click="OnTileNavigateClick" />
-                                <Button Grid.Column="1"
-                                        Content="↑"
-                                        Tag="0,-1"
-                                        Click="OnTileNavigateClick" />
-                                <Button Grid.Column="2"
-                                        Content="↓"
-                                        Tag="0,1"
-                                        Click="OnTileNavigateClick" />
-                                <Button Grid.Column="3"
-                                        Content="→"
-                                        Tag="1,0"
-                                        Click="OnTileNavigateClick" />
-                            </Grid>
-
                             <Grid ColumnSpacing="5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -899,6 +921,60 @@
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+
+                        <Grid x:Name="MapExplorerPanel"
+                              Visibility="Collapsed"
+                              RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0"
+                                    Padding="9"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8">
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="MAPA / TILES"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               CharacterSpacing="40"
+                                               Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                                    <TextBlock x:Name="MapExplorerStatusText"
+                                               Text="Abra um mapa para visualizar os tiles."
+                                               FontSize="10"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                </StackPanel>
+                            </Border>
+
+                            <ListView x:Name="MapTileListView"
+                                      Grid.Row="1"
+                                      SelectionMode="Single"
+                                      DisplayMemberPath="DisplayText"
+                                      DoubleTapped="OnMapTileListDoubleTapped" />
+
+                            <Grid Grid.Row="2"
+                                  ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="Focar"
+                                        Click="OnMapTileFocusClick" />
+                                <Button Grid.Column="1"
+                                        Content="Criar tile"
+                                        Click="OnCreateMapTileClick" />
+                                <Button Grid.Column="2"
+                                        Content="Excluir tile"
+                                        Click="OnDeleteActiveMapTileClick" />
+                            </Grid>
+                        </Grid>
 
                         <Grid x:Name="AssetLibraryPanel"
                               Visibility="Collapsed"
