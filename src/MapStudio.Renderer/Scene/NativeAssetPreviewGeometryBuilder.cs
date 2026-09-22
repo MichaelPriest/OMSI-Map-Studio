@@ -463,12 +463,21 @@ public sealed class NativeAssetPreviewGeometryBuilder
                 corner < 3;
                 corner++)
             {
+                var sourceCorner =
+                    corner switch
+                    {
+                        0 => 0,
+                        1 => 2,
+                        2 => 1,
+                        _ => corner
+                    };
+
                 var sourceIndex =
                     checked(
                         (int)
                             geometry.Indices[
                                 baseIndex +
-                                corner]);
+                                sourceCorner]);
 
                 var positionOffset =
                     sourceIndex *
