@@ -1079,6 +1079,11 @@ public sealed partial class MainWindow : Window
         SetTransportTrackRecordMode(
             false);
 
+        Viewport.CancelSceneryPlacement();
+        Viewport.CancelSplinePlacement();
+        Viewport.ClearTimetableRoutePreview();
+        Viewport.RestoreSceneView();
+
         PlaceAssetButton.Content =
             "Posicionar no mapa";
 
@@ -1147,11 +1152,6 @@ public sealed partial class MainWindow : Window
 
         _libraryFilterDebounceTimer.Stop();
         _trafficPreviewTimer.Stop();
-
-        Viewport.CancelSceneryPlacement();
-        Viewport.CancelSplinePlacement();
-        Viewport.ClearTimetableRoutePreview();
-        Viewport.RestoreSceneView();
 
         _libraryMode =
             false;
