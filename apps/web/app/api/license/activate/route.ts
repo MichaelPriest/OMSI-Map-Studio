@@ -42,6 +42,20 @@ export async function POST(request:Request){
     return NextResponse.json({error:"Assinatura inativa."},{status:403});
   }
 
+  const {data:knownDevice}=await admin
+    .from("devices")
+    .select("id,revoked_at")
+    .eq("license_id",license.id)
+    .eq("device_id",deviceId)
+    .maybeSingle();
+
+  if(knownDevice?.revoked_at){
+    return NextResponse.json(
+      {error:"Este dispositivo foi revogado. Reative-o na área do assinante antes de usar o serial novamente."},
+      {status:403}
+    );
+  }
+
   const {data:activeDevices}=await admin
     .from("devices")
     .select("id,device_id")
@@ -60,8 +74,7 @@ export async function POST(request:Request){
       license_id:license.id,
       device_id:deviceId,
       device_name:body?.deviceName?.slice(0,120)||"Windows PC",
-      last_seen_at:new Date().toISOString(),
-      revoked_at:null
+      last_seen_at:new Date().toISOString()
     },{onConflict:"license_id,device_id"});
 
   if(deviceError){
@@ -81,6 +94,10 @@ export async function POST(request:Request){
     Math.min(subscriptionExpiry,now+offlineDays*86400000)
   ).toISOString();
 
+  const deviceCount=existing
+    ? activeDevices?.length??1
+    : (activeDevices?.length??0)+1;
+
   const payload={
     issuer:"omsi-map-studio",
     licenseId:license.id,
@@ -89,7 +106,10 @@ export async function POST(request:Request){
     subscriptionStatus:subscription.status,
     subscriptionExpiresAt:subscription.current_period_end,
     offlineUntil,
-    issuedAt:new Date(now).toISOString()
+    issuedAt:new Date(now).toISOString(),
+    planId:process.env.PUBLIC_ALPHA_PLAN_ID?.trim()||"founders-alpha",
+    deviceCount,
+    maxDevices:license.max_devices
   };
 
   return NextResponse.json({

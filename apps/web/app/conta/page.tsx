@@ -59,11 +59,15 @@ export default async function AccountPage(){
               <td className="serial">{device.device_id}</td>
               <td>{device.last_seen_at?new Date(device.last_seen_at).toLocaleString("pt-BR"):"—"}</td>
               <td>
-                {!device.revoked_at&&
-                  <form action="/api/license/revoke-device" method="post">
-                    <input type="hidden" name="device_id" value={device.device_id}/>
-                    <button className="btn" type="submit">Revogar</button>
-                  </form>
+                {!device.revoked_at
+                  ? <form action="/api/license/revoke-device" method="post">
+                      <input type="hidden" name="device_id" value={device.device_id}/>
+                      <button className="btn" type="submit">Revogar</button>
+                    </form>
+                  : <form action="/api/license/reactivate-device" method="post">
+                      <input type="hidden" name="device_id" value={device.device_id}/>
+                      <button className="btn" type="submit">Reativar</button>
+                    </form>
                 }
               </td>
             </tr>
