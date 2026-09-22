@@ -59,14 +59,14 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                 true,
                 null,
                 [
-                    -2, -2, 0,
-                    2, -2, 0,
-                    0, 2, 0
+                    -2, 0, -2,
+                    2, 0, -2,
+                    0, 0, 2
                 ],
                 [
-                    0, 0, 1,
-                    0, 0, 1,
-                    0, 0, 1
+                    0, 1, 0,
+                    0, 1, 0,
+                    0, 1, 0
                 ],
                 [
                     // Core preserves O3D geometry but stores V in its
@@ -202,8 +202,8 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
 
         Assert.Equal(
             new System.Numerics.Vector2(
-                0.5f,
-                1),
+                1,
+                0),
             result.Vertices[1].TexCoord);
 
         Assert.All(
@@ -311,12 +311,12 @@ public sealed class NativeObjectTriangleGeometryBuilderTests
                 [
                     0, 0, 0,
                     1, 0, 0,
-                    0, 1, 0
+                    0, 0, 1
                 ],
                 [
-                    0, 0, 1,
-                    0, 0, 1,
-                    0, 0, 1
+                    0, 1, 0,
+                    0, 1, 0,
+                    0, 1, 0
                 ],
                 [],
                 [0u, 1u, 2u],
