@@ -420,4 +420,103 @@ public sealed class OmsiTimetableTests
         }
     }
 
+    [Fact]
+    public void CatalogValidatesType2TripThroughStationLinks()
+    {
+        var trip =
+            new OmsiTimetableTrip(
+                "Route.ttp",
+                "TTData/Route.ttp",
+                "Route",
+                string.Empty,
+                string.Empty,
+                "Terminal",
+                "76",
+                string.Empty,
+                false,
+                [
+                    new OmsiTimetableTripStationType2(
+                        100),
+                    new OmsiTimetableTripStationType2(
+                        200),
+                    new OmsiTimetableTripStationType2(
+                        300)
+                ],
+                []);
+
+        var firstLink =
+            new OmsiStationLink(
+                "100 -> 200",
+                "0",
+                100,
+                200,
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                []);
+
+        var complete =
+            new OmsiTimetableCatalog(
+                [],
+                [trip])
+            {
+                StationLinks =
+                    [
+                        firstLink,
+                        new OmsiStationLink(
+                            "200 -> 300",
+                            "0",
+                            200,
+                            300,
+                            "0",
+                            "0",
+                            "0",
+                            "0",
+                            "0",
+                            "0",
+                            [])
+                    ]
+            };
+
+        Assert.True(
+            trip.UsesStationLinks);
+
+        Assert.Equal(
+            string.Empty,
+            trip.EffectiveTrackName);
+
+        Assert.Equal(
+            "Terminal",
+            trip.EffectiveDestination);
+
+        Assert.Equal(
+            "76",
+            trip.EffectiveLine);
+
+        Assert.Equal(
+            0,
+            complete
+                .BrokenTripTrackReferenceCount);
+
+        Assert.Equal(
+            0,
+            complete
+                .BrokenTripStationLinkReferenceCount);
+
+        var missingSecondLink =
+            complete with
+            {
+                StationLinks =
+                    [firstLink]
+            };
+
+        Assert.Equal(
+            1,
+            missingSecondLink
+                .BrokenTripStationLinkReferenceCount);
+    }
+
 }
