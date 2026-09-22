@@ -416,6 +416,7 @@ public sealed partial class MainWindow : Window
 
     private bool _fullMapMode = true;
     private bool _mapLoadModeChanging;
+    private bool _tileManagerDialogOpen;
     private bool _standaloneWorkspaceInitialized;
     private int _loadingOperationDepth;
 
@@ -18840,6 +18841,41 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (_tileManagerDialogOpen)
+        {
+            StatusText.Text =
+                "Gerenciador de tiles já está aberto.";
+
+            return;
+        }
+
+        _tileManagerDialogOpen =
+            true;
+
+        try
+        {
+            await ShowTileManagerAsync();
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"Tile manager failure type={exception.GetType().FullName} hresult=0x{exception.HResult:X8} message={exception.Message}");
+
+            NativeStartupDiagnostics.Write(
+                exception.ToString());
+
+            StatusText.Text =
+                $"Falha ao abrir o Gerenciador de tiles: {exception.Message}";
+        }
+        finally
+        {
+            _tileManagerDialogOpen =
+                false;
+        }
+    }
+
+    private async Task ShowTileManagerAsync()
+    {
         var snapshot =
             _session.CurrentMap;
 
@@ -18851,25 +18887,64 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var loadedGroups =
+            snapshot.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.Reference.X,
+                            tile.Reference.Y
+                        ))
+                .ToArray();
+
         var loadedByCoordinate =
-            snapshot.Tiles.ToDictionary(
-                tile =>
-                    (
-                        tile.Reference.X,
-                        tile.Reference.Y
-                    ));
+            loadedGroups
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group.First());
+
+        var duplicateLoadedCoordinates =
+            loadedGroups
+                .Sum(
+                    group =>
+                        Math.Max(
+                            0,
+                            group.Count() - 1));
+
+        var mapGroups =
+            snapshot.Map.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.X,
+                            tile.Y
+                        ))
+                .OrderBy(
+                    group =>
+                        group.Key.Y)
+                .ThenBy(
+                    group =>
+                        group.Key.X)
+                .ToArray();
+
+        var duplicateMapCoordinates =
+            mapGroups
+                .Sum(
+                    group =>
+                        Math.Max(
+                            0,
+                            group.Count() - 1));
 
         var items =
-            snapshot.Map.Tiles
-                .OrderBy(
-                    tile =>
-                        tile.Y)
-                .ThenBy(
-                    tile =>
-                        tile.X)
+            mapGroups
                 .Select(
-                    tile =>
+                    group =>
                     {
+                        var tile =
+                            group.First();
+
                         var isActive =
                             snapshot.ActiveTile?.X ==
                                 tile.X &&
@@ -18890,6 +18965,12 @@ public sealed partial class MainWindow : Window
                             loaded is not null
                                 ? $"objetos {loaded.Content.Objects.Count} · splines {loaded.Content.Splines.Count}"
                                 : "fora da região carregada";
+
+                        if (group.Count() > 1)
+                        {
+                            detail +=
+                                $" · {group.Count()} referências no global.cfg";
+                        }
 
                         return new TileManagerViewItem(
                             tile.X,
@@ -18951,6 +19032,12 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(
             list);
 
+        var duplicateMessage =
+            duplicateMapCoordinates > 0 ||
+            duplicateLoadedCoordinates > 0
+                ? $" Foram detectadas {duplicateMapCoordinates} referência(s) duplicada(s) no catálogo e {duplicateLoadedCoordinates} tile(s) carregado(s) com coordenada repetida; o gerenciador consolidou essas entradas para evitar falha."
+                : string.Empty;
+
         panel.Children.Add(
             new InfoBar
             {
@@ -18959,19 +19046,37 @@ public sealed partial class MainWindow : Window
                 IsClosable =
                     false,
                 Severity =
-                    InfoBarSeverity
-                        .Informational,
+                    duplicateMessage.Length > 0
+                        ? InfoBarSeverity.Warning
+                        : InfoBarSeverity.Informational,
                 Title =
-                    "Gerenciamento seguro",
+                    duplicateMessage.Length > 0
+                        ? "Mapa contém coordenadas de tile repetidas"
+                        : "Gerenciamento seguro",
                 Message =
-                    "Use Criar tile para expandir o mapa. Excluir tile continua restrito a tiles vazios e seguros para evitar deslocar índices usados por entrypoints ou dados operacionais."
+                    "Use Criar tile para expandir o mapa. Excluir tile continua restrito a tiles vazios e seguros para evitar deslocar índices usados por entrypoints ou dados operacionais." +
+                    duplicateMessage
             });
+
+        var xamlRoot =
+            MainRoot.XamlRoot;
+
+        if (xamlRoot is null)
+        {
+            StatusText.Text =
+                "Gerenciador de tiles indisponível: a janela ainda não terminou de carregar.";
+
+            NativeStartupDiagnostics.Write(
+                "Tile manager aborted because MainRoot.XamlRoot is null.");
+
+            return;
+        }
 
         var dialog =
             new ContentDialog
             {
                 XamlRoot =
-                    MainRoot.XamlRoot,
+                    xamlRoot,
                 Title =
                     "Gerenciador de tiles",
                 Content =
