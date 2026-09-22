@@ -463,14 +463,14 @@ public sealed partial class MainWindow : Window
             Math.Min(
                 1440,
                 Math.Max(
-                    960,
+                    320,
                     workArea.Width - 32));
 
         var initialHeight =
             Math.Min(
                 900,
                 Math.Max(
-                    640,
+                    300,
                     workArea.Height - 48));
 
         _appWindow.Resize(
