@@ -24,6 +24,9 @@ public sealed partial class TimetableWindow
     public event Action<string>?
         TripRouteRequested;
 
+    public event Action<string>?
+        TripProfileRequested;
+
     private OmsiTimetableCatalog
         _catalog;
 
@@ -73,6 +76,9 @@ public sealed partial class TimetableWindow
                     TimetableScheduleRow>();
 
             FocusTripButton.IsEnabled =
+                false;
+
+            EditProfileButton.IsEnabled =
                 false;
 
             EditLineButton.IsEnabled =
@@ -128,6 +134,9 @@ public sealed partial class TimetableWindow
         FocusTripButton.IsEnabled =
             false;
 
+        EditProfileButton.IsEnabled =
+            false;
+
         RefreshSchedule();
     }
 
@@ -135,9 +144,15 @@ public sealed partial class TimetableWindow
         object sender,
         SelectionChangedEventArgs e)
     {
-        FocusTripButton.IsEnabled =
+        var selected =
             ScheduleListView.SelectedItem is
                 TimetableScheduleRow;
+
+        FocusTripButton.IsEnabled =
+            selected;
+
+        EditProfileButton.IsEnabled =
+            selected;
     }
 
     private void OnScheduleDoubleTapped(
@@ -154,6 +169,22 @@ public sealed partial class TimetableWindow
         object sender,
         RoutedEventArgs e) =>
         RequestSelectedTripRoute();
+
+    private void OnEditProfileClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            ScheduleListView.SelectedItem is not
+                TimetableScheduleRow row)
+        {
+            return;
+        }
+
+        TripProfileRequested
+            ?.Invoke(
+                row.TripName);
+    }
 
     private void RequestSelectedTripRoute()
     {
