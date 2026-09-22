@@ -235,7 +235,11 @@ public sealed class NativeSplineTriangleGeometryBuilder
                         surfaceVertexCount,
                         ResolveTexturePath(
                             asset,
-                            surface.TextureIndex)));
+                            surface.TextureIndex),
+                        AlphaMode:
+                            surface.AlphaMode,
+                        DoubleSided:
+                            true));
             }
 
             if (vertices.Count > start)
