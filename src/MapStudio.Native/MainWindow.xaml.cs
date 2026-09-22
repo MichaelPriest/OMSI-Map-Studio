@@ -11513,6 +11513,49 @@ public sealed partial class MainWindow : Window
         return true;
     }
 
+    private async void OnTransportRouteDragItemsCompleted(
+        ListViewBase sender,
+        DragItemsCompletedEventArgs args)
+    {
+        if (
+            args.Items.FirstOrDefault() is not
+                TransportRouteStepItem step ||
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item ||
+            item.Kind is not
+                ("Track" or "StationLink"))
+        {
+            return;
+        }
+
+        var oldIndex =
+            step.Sequence -
+            1;
+
+        var newIndex =
+            sender.Items.IndexOf(
+                step);
+
+        if (
+            newIndex < 0 ||
+            newIndex == oldIndex)
+        {
+            return;
+        }
+
+        sender.SelectedItem =
+            step;
+
+        await MutateSelectedRouteStepAsync(
+            moveDelta:
+                newIndex -
+                oldIndex,
+            remove: false);
+
+        StatusText.Text =
+            $"{item.Kind}: trecho movido de {oldIndex + 1} para {newIndex + 1}.";
+    }
+
     private async void OnTransportRemoveStepClick(
         object sender,
         RoutedEventArgs e) =>
@@ -11618,8 +11661,15 @@ public sealed partial class MainWindow : Window
                     return;
                 }
 
-                (entries[index], entries[target]) =
-                    (entries[target], entries[index]);
+                var movedEntry =
+                    entries[index];
+
+                entries.RemoveAt(
+                    index);
+
+                entries.Insert(
+                    target,
+                    movedEntry);
 
                 nextSelection =
                     target;
@@ -11723,14 +11773,16 @@ public sealed partial class MainWindow : Window
                 return;
             }
 
-            (
-                linkEntries[linkEntryIndex],
-                linkEntries[target]
-            ) =
-                (
-                    linkEntries[target],
-                    linkEntries[linkEntryIndex]
-                );
+            var movedEntry =
+                linkEntries[
+                    linkEntryIndex];
+
+            linkEntries.RemoveAt(
+                linkEntryIndex);
+
+            linkEntries.Insert(
+                target,
+                movedEntry);
 
             nextLinkSelection =
                 target;
@@ -14374,7 +14426,9 @@ public sealed partial class MainWindow : Window
                 item);
 
         TransportRouteStepsListView.ItemsSource =
-            steps;
+            new System.Collections.ObjectModel.ObservableCollection<
+                TransportRouteStepItem>(
+                steps);
 
         TransportRouteStepsListView.SelectedIndex =
             steps.Count > 0
