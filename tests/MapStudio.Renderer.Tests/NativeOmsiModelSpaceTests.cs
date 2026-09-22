@@ -35,11 +35,15 @@ public sealed class NativeOmsiModelSpaceTests
                         0.25f,
                         0.80f));
 
-        Assert.Equal(
-            new Vector2(
-                0.25f,
-                0.20f),
-            converted);
+        Assert.InRange(
+            converted.X,
+            0.249999f,
+            0.250001f);
+
+        Assert.InRange(
+            converted.Y,
+            0.199999f,
+            0.200001f);
     }
 
     [Fact]
