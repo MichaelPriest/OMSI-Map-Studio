@@ -1892,11 +1892,16 @@ public sealed class D3D11NativeMapRenderer :
     private void DrawSplineGeometry(
         ID3D11DeviceContext context)
     {
+        // OMSI .sli profiles are cross-sections and may contain road,
+        // rail, curb, wall and vertical faces with either winding.
+        // Render spline surfaces double-sided so valid road/track
+        // profiles do not disappear because of D3D11 back-face culling.
         DrawMaterialGeometry(
             context,
             _splineTriangleBuffer,
             _splineTriangleVertexCount,
-            _splineMaterialBatches);
+            _splineMaterialBatches,
+            forceDoubleSided: true);
     }
 
     private void DrawObjectGeometry(
@@ -2607,10 +2612,20 @@ public sealed class D3D11NativeMapRenderer :
                     .PSSetShader(
                         _pixelShader);
 
+                // Picking must match visible OMSI spline surfaces,
+                // including rails and vertical profile faces.
+                context
+                    .RSSetState(
+                        _terrainRasterizerState);
+
                 context.Draw(
                     (uint)
                         _pickingTriangleVertexCount,
                     0);
+
+                context
+                    .RSSetState(
+                        null);
             });
     }
 
