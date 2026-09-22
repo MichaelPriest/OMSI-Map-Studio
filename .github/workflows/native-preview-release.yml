@@ -8,8 +8,8 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.2-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.2-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.3-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.3-native.md"
   workflow_dispatch:
 
 permissions:
@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.2-native
-  TAG: v0.2.0-alpha.5-test.2-native
+  VERSION: 0.2.0-alpha.5-test.3-native
+  TAG: v0.2.0-alpha.5-test.3-native
 
 jobs:
   build-native-preview:
@@ -46,6 +46,9 @@ jobs:
             throw "App.xaml does not load XamlControlsResources. WinUI control theme resources would fail at startup."
           }
           Write-Host "Verified XamlControlsResources is loaded by App.xaml."
+
+      - name: Test OMSI core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
       - name: Test native renderer
         run: dotnet test tests/MapStudio.Renderer.Tests/MapStudio.Renderer.Tests.csproj --configuration Release --arch x64
@@ -122,11 +125,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.2-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.3-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.2-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.3-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
