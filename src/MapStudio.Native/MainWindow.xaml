@@ -849,9 +849,55 @@
                     <Grid Grid.Row="4">
                         <ListView x:Name="ExplorerListView"
                                   SelectionMode="Single"
-                                  DisplayMemberPath="DisplayText"
                                   SelectionChanged="OnExplorerSelectionChanged"
-                                  DoubleTapped="OnExplorerDoubleTapped" />
+                                  DoubleTapped="OnExplorerDoubleTapped">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,2"
+                                            Padding="8"
+                                            Background="#0A1B27"
+                                            BorderBrush="#24485C"
+                                            BorderThickness="1"
+                                            CornerRadius="7">
+                                        <Grid ColumnSpacing="8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0"
+                                                    MinWidth="48"
+                                                    Padding="6,4"
+                                                    VerticalAlignment="Top"
+                                                    Background="#12384C"
+                                                    CornerRadius="5">
+                                                <TextBlock Text="{Binding KindLabel}"
+                                                           FontSize="9"
+                                                           FontWeight="SemiBold"
+                                                           HorizontalAlignment="Center"
+                                                           Foreground="#A7E8FF" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1"
+                                                        Spacing="2">
+                                                <TextBlock Text="{Binding AssetName}"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           Foreground="#EAF7FC" />
+                                                <TextBlock Text="{Binding DetailText}"
+                                                           FontSize="10"
+                                                           Foreground="#9FB5C5" />
+                                                <TextBlock Text="{Binding AssetPath}"
+                                                           FontSize="9.5"
+                                                           Foreground="#66899D"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
 
                         <Grid x:Name="AssetLibraryPanel"
                               Visibility="Collapsed"
