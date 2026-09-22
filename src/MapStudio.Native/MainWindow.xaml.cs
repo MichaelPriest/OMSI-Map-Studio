@@ -18255,7 +18255,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Adapter ID",
                 PlaceholderText =
-                    "Ex.: openai-compatible, ollama, anthropic, gemini, custom"
+                    "openai-compatible, ollama, lmstudio, anthropic ou gemini"
             };
 
         var endpointBox =
@@ -18273,7 +18273,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Modelo",
                 PlaceholderText =
-                    "Opcional"
+                    "Obrigatório para os adapters operacionais"
             };
 
         var tokenBox =
@@ -18282,7 +18282,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Token / API key",
                 PlaceholderText =
-                    "Opcional",
+                    "Anthropic/Gemini exigem credencial; local pode dispensar",
                 PasswordRevealMode =
                     PasswordRevealMode
                         .Peek
@@ -18327,6 +18327,104 @@ public sealed partial class MainWindow : Window
                 Content =
                     "Usar como perfil ativo"
             };
+
+        var adapterSupportText =
+            new TextBlock
+            {
+                FontSize =
+                    11,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Foreground =
+                    new Microsoft.UI.Xaml.Media
+                        .SolidColorBrush(
+                            Windows.UI.Color
+                                .FromArgb(
+                                    255,
+                                    132,
+                                    181,
+                                    205))
+            };
+
+        void UpdateAdapterHelp(
+            bool applyDefaults)
+        {
+            var adapter =
+                adapterBox.Text
+                    .Trim()
+                    .ToLowerInvariant();
+
+            string? defaultEndpoint =
+                null;
+
+            var forceLocal =
+                false;
+
+            adapterSupportText.Text =
+                adapter switch
+                {
+                    "openai-compatible" =>
+                        "Operacional · API de chat/completions compatível com OpenAI. Endpoint e modelo são obrigatórios; token depende do servidor.",
+                    "ollama" =>
+                        "Operacional · servidor local via API compatível com OpenAI. Endpoint padrão: http://localhost:11434/v1.",
+                    "lmstudio" =>
+                        "Operacional · servidor local via API compatível com OpenAI. Endpoint padrão: http://localhost:1234/v1.",
+                    "anthropic" =>
+                        "Operacional · Anthropic Messages API com imagem/base64 e resposta estruturada. Modelo e API key são obrigatórios.",
+                    "gemini" =>
+                        "Operacional · Google Gemini generateContent com inline_data. Modelo e API key são obrigatórios.",
+                    "" =>
+                        "Informe um adapter. Adapters operacionais: openai-compatible, ollama, lmstudio, anthropic e gemini.",
+                    _ =>
+                        "Adapter ainda não implementado diretamente. Para serviços com API compatível, use openai-compatible."
+                };
+
+            switch (adapter)
+            {
+                case "ollama":
+                    defaultEndpoint =
+                        "http://localhost:11434/v1";
+                    forceLocal =
+                        true;
+                    break;
+
+                case "lmstudio":
+                    defaultEndpoint =
+                        "http://localhost:1234/v1";
+                    forceLocal =
+                        true;
+                    break;
+
+                case "anthropic":
+                    defaultEndpoint =
+                        "https://api.anthropic.com/v1/messages";
+                    break;
+
+                case "gemini":
+                    defaultEndpoint =
+                        "https://generativelanguage.googleapis.com/v1beta";
+                    break;
+            }
+
+            if (
+                applyDefaults &&
+                string.IsNullOrWhiteSpace(
+                    endpointBox.Text) &&
+                defaultEndpoint is not
+                    null)
+            {
+                endpointBox.Text =
+                    defaultEndpoint;
+            }
+
+            if (
+                applyDefaults &&
+                forceLocal)
+            {
+                localCheckBox.IsChecked =
+                    true;
+            }
+        }
 
         void LoadOption(
             AiProfileOption? option)
@@ -18391,7 +18489,26 @@ public sealed partial class MainWindow : Window
                     profile.Id,
                     StringComparison
                         .OrdinalIgnoreCase);
+
+            UpdateAdapterHelp(
+                applyDefaults:
+                    profile is null);
         }
+
+        adapterBox.TextChanged +=
+            (_, _) =>
+            {
+                var selectedProfile =
+                    (profileCombo
+                        .SelectedItem as
+                        AiProfileOption)
+                    ?.Profile;
+
+                UpdateAdapterHelp(
+                    applyDefaults:
+                        selectedProfile is
+                            null);
+            };
 
         profileCombo.SelectionChanged +=
             (_, _) =>
@@ -18569,6 +18686,9 @@ public sealed partial class MainWindow : Window
 
         panel.Children.Add(
             adapterBox);
+
+        panel.Children.Add(
+            adapterSupportText);
 
         panel.Children.Add(
             endpointBox);
