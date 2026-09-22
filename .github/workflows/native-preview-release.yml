@@ -8,8 +8,8 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.3-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.3-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.4-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.4-native.md"
   workflow_dispatch:
 
 permissions:
@@ -20,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.3-native
-  TAG: v0.2.0-alpha.5-test.10.3-native
+  VERSION: 0.2.0-alpha.5-test.10.4-native
+  TAG: v0.2.0-alpha.5-test.10.4-native
 
 jobs:
   build-native-preview:
@@ -89,6 +89,18 @@ jobs:
 
           if ($xaml -match 'x:Name="GlobalTilesButton"') {
             throw "Tiles must stay in Project; GlobalTilesButton must not be restored."
+          }
+
+          if ($xaml -match 'Click="OnTileManagerClick"') {
+            throw "No Map/Tiles entry point may call the legacy ContentDialog tile manager."
+          }
+
+          if ($code -match 'OnMapExplorerModeClick[\s\S]{0,1800}Viewport\.RestoreSceneView') {
+            throw "Switching to Project > Map must not mutate or restore the viewport."
+          }
+
+          if ($code -notmatch 'RefreshMapExplorerAsync[\s\S]{0,5000}Task\.Run') {
+            throw "Map tile aggregation must stay off the UI thread."
           }
 
           if ($xaml -notmatch 'x:Name="MapExplorerPanel"') {
@@ -179,11 +191,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.3-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.4-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.3-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.4-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
