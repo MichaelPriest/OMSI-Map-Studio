@@ -11617,6 +11617,54 @@ public sealed partial class MainWindow : Window
                     out entry);
     }
 
+    private bool TryValidateStationLinkTrip(
+        IReadOnlyList<
+            OmsiTimetableTripStation> stations,
+        out string error)
+    {
+        error =
+            string.Empty;
+
+        if (_timetableCatalog is null)
+        {
+            error =
+                "TTData não está carregado.";
+            return false;
+        }
+
+        var validation =
+            OmsiTimetableTripValidator
+                .ValidateType2StationLinks(
+                    _timetableCatalog,
+                    stations);
+
+        if (validation.IsValid)
+        {
+            return true;
+        }
+
+        error =
+            validation.Failure switch
+            {
+                OmsiTimetableType2TripValidationFailure
+                    .InvalidStationSequence =>
+                    "use pelo menos dois stops do tipo 2.",
+
+                OmsiTimetableType2TripValidationFailure
+                    .UnknownStop =>
+                    $"o stop #{validation.StopId} não existe em Busstops.cfg.",
+
+                OmsiTimetableType2TripValidationFailure
+                    .MissingStationLink =>
+                    $"não existe StationLink {validation.StartStopId} → {validation.EndStopId}.",
+
+                _ =>
+                    "sequência de StationLinks inválida."
+            };
+
+        return false;
+    }
+
     private async void OnTransportRouteDragItemsCompleted(
         ListViewBase sender,
         DragItemsCompletedEventArgs args)
