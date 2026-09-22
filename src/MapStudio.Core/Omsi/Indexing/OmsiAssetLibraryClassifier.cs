@@ -258,6 +258,8 @@ public static class OmsiAssetLibraryClassifier
                 text,
                 "power",
                 "utility",
+                "utilitybox",
+                "cabinet",
                 "substation",
                 "transformer",
                 "water",
