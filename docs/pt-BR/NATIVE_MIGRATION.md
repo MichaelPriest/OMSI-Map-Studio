@@ -868,3 +868,16 @@ A validação de `TTData` diferencia:
 
 Nesta etapa, quando houver múltiplos StationLinks-base para o mesmo par de stops, o preview usa a primeira correspondência válida do catálogo carregado. Resolução específica por Chrono permanece para uma etapa posterior.
 
+#### Edição visual de StationLinks
+
+O Route Studio também trata StationLinks como sequências editáveis de paths reais. Um StationLink selecionado pode:
+
+- isolar e focar um `pathIndex`;
+- reordenar entradas;
+- remover entradas mantendo ao menos uma entrada;
+- adicionar o path atualmente selecionado com **+ trecho selecionado**;
+- usar **Gravar caminho** para acrescentar vários paths consecutivos.
+
+Para preservar compatibilidade, o editor não inventa os campos menos documentados de `[StnLink_entry]`. A adição visual só é habilitada quando `ID + pathIndex` já possuem metadata reutilizável em um Track ou StationLink carregado. A dica da faixa mostra **pronto para StationLink** ou **sem metadata segura para StationLink**.
+
+O criador de StationLink não exige mais obrigatoriamente um Track. A fonte inicial pode ser um Track existente, outro StationLink existente ou o path atualmente selecionado quando ele já possui metadata segura conhecida. Chrono files não são copiados automaticamente para novos links.

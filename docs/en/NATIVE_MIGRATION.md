@@ -868,3 +868,16 @@ The Trip creator explicitly offers **Type 1 · Track** and **Type 2 · StationLi
 
 At this stage, when multiple base StationLinks exist for the same stop pair, the preview uses the first valid match in the loaded catalog. Chrono-specific StationLink resolution remains a later migration step.
 
+#### Visual StationLink editing
+
+Route Studio also treats StationLinks as editable sequences of real OMSI paths. A selected StationLink can:
+
+- isolate and focus a `pathIndex`;
+- reorder entries;
+- remove entries while keeping at least one entry;
+- append the currently selected path with **+ selected segment**;
+- use **Record path** to append several consecutive paths.
+
+To preserve compatibility, the editor does not invent the less-documented `[StnLink_entry]` fields. Visual append is enabled only when `ID + pathIndex` already has reusable metadata in a loaded Track or StationLink. The lane hint reports **ready for StationLink** or **no safe StationLink metadata**.
+
+The StationLink creator no longer requires a Track specifically. Its initial source can be an existing Track, an existing StationLink, or the currently selected path when safe metadata is already known. Chrono files are not copied automatically into newly created links.
