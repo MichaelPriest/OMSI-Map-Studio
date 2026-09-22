@@ -987,13 +987,18 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <Border Grid.Row="0"
-                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="8"
-                                    Padding="8">
-                                <StackPanel Spacing="7">
+                            <ScrollViewer Grid.Row="0"
+                                          MaxHeight="340"
+                                          VerticalScrollMode="Auto"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollMode="Disabled"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="8">
+                                    <StackPanel Spacing="7">
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -1110,8 +1115,9 @@
                                                     Click="OnDeleteLibraryCollectionClick" />
                                         </Grid>
                                     </StackPanel>
-                                </StackPanel>
-                            </Border>
+                                    </StackPanel>
+                                </Border>
+                            </ScrollViewer>
 
                             <StackPanel Grid.Row="1"
                                         Spacing="6">
@@ -1583,9 +1589,11 @@
                                                           Click="OnTransportPathFilterChanged" />
                                                 <CheckBox x:Name="TransportPathsPedestriansCheckBox"
                                                           Content="Pedestres"
+                                                          IsChecked="True"
                                                           Click="OnTransportPathFilterChanged" />
                                                 <CheckBox x:Name="TransportPathsRailsCheckBox"
                                                           Content="Trilhos"
+                                                          IsChecked="True"
                                                           Click="OnTransportPathFilterChanged" />
                                                 <CheckBox x:Name="TransportPathsAirCheckBox"
                                                           Content="Aéreo"
@@ -1610,7 +1618,6 @@
                                                           Click="OnTransportPathFilterChanged" />
                                                 <CheckBox x:Name="TransportPathsSelectedOnlyCheckBox"
                                                           Content="Só selecionado"
-                                                          IsChecked="True"
                                                           Click="OnTrafficPathIsolationChanged" />
                                             </StackPanel>
                                         </ScrollViewer>
@@ -2031,6 +2038,42 @@
                             </StackPanel>
                         </Grid>
                     </Grid>
+
+                    <Border x:Name="ExplorerResizeGrip"
+                            Grid.Row="0"
+                            Grid.RowSpan="5"
+                            Width="30"
+                            Height="30"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Visibility="Collapsed"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            Canvas.ZIndex="90"
+                            ToolTipService.ToolTip="Arraste para redimensionar o painel Projeto"
+                            PointerPressed="OnExplorerResizeGripPressed"
+                            PointerMoved="OnExplorerResizeGripMoved"
+                            PointerReleased="OnExplorerResizeGripReleased"
+                            PointerCanceled="OnExplorerResizeGripReleased">
+                        <Grid Width="18"
+                              Height="18">
+                            <Line X1="7"
+                                  Y1="17"
+                                  X2="17"
+                                  Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12"
+                                  Y1="17"
+                                  X2="17"
+                                  Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
                 </Grid>
             </Border>
 
