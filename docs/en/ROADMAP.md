@@ -263,8 +263,8 @@ Legend:
 | Trips | ✅ |
 | Stops/stations | ✅ |
 | StationLinks | ✅ |
-| Time profiles | ⬜ |
-| Timetable editor | 🟡 — native Route Studio edits Tracks/Trips/Stops/StationLinks/Lines/Tours, draws Track/Trip/StationLink/Line routes on the map, lists each real ID/pathIndex step, and can focus the segment; time profiles, complete visual creation, and advanced workflows still evolve |
+| Time profiles | ✅ — the native visual editor creates/deletes profiles, adjusts total duration and accumulated stop times while preserving raw OMSI data |
+| Timetable editor | 🟡 — Route Studio and the detachable Timetable window now edit Tracks/Trips/Stops/StationLinks/Lines/Tours and profiles; Lines/Tours have a departure table with add/remove/reorder actions, and Trips can be edited without leaving Timetable. Chrono, service/calendar concepts, and advanced workflows still evolve |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -379,7 +379,7 @@ Create a visual line editor:
 
     path → track → stops → trip → profile → timetable
 
-Current Route Studio state: visual Track, Trip, StationLink, and Line/Tours previews; navigable real `ID:pathIndex` segment list; viewport segment focus; optional OMSI Paths overlay; and preservation-safe editing of existing TTData files.
+Current Route Studio state: visual Track, Trip, StationLink, and Line/Tours previews; navigable real `ID:pathIndex` segment list; viewport segment focus; optional OMSI Paths overlay; and preservation-safe editing of existing TTData files. The detachable Timetable window edits Trips and profiles directly, plus Lines/Tours through a departure table with add, remove, and reorder actions.
 
 Completion criteria:
 

@@ -857,6 +857,8 @@ The **Route Studio** now:
 - synchronizes the selected segment with the matching spline/object and OMSI path lane;
 - when auxiliary path visualization is set to selected-only, can draw only the exact `pathIndex` being edited.
 
+The detachable **Timetable** window is now an operational editor rather than a read-only schedule view: it opens the complete Trip editor in its own `XamlRoot`, reuses the visual profile editor, saves both through the same transactional Core flow, and keeps the catalog synchronized after each write. The **Line/Tours** table can add, remove, and reorder departures; the visible order is the same order persisted as `[addtrip]` entries in the `.ttl` file.
+
 The Trip creator explicitly offers **Type 1 · Track** and **Type 2 · StationLinks**. Type 2 saving is blocked when there are fewer than two stops, an unknown stop, or any consecutive pair without a StationLink.
 
 `TTData` validation now distinguishes:

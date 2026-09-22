@@ -857,6 +857,8 @@ O **Route Studio** agora:
 - sincroniza o trecho selecionado com a spline/objeto e a faixa OMSI correspondente;
 - quando a visualização auxiliar está em "só selecionado", pode mostrar somente o `pathIndex` exato em edição.
 
+A janela **Timetable** destacável passou a ser um editor operacional, e não apenas uma lista: ela abre o editor completo de Trip no próprio `XamlRoot`, reutiliza o editor visual de perfis, salva ambos pelo mesmo fluxo transacional do Core e mantém o catálogo sincronizado após cada gravação. A tabela de **Line/Tours** permite adicionar, remover e reordenar saídas; a ordem mostrada é a mesma persistida como `[addtrip]` no arquivo `.ttl`.
+
 O criador de Trip oferece explicitamente **Tipo 1 · Track** e **Tipo 2 · StationLinks**. No tipo 2, o salvamento é bloqueado se houver menos de dois stops, stop inexistente ou qualquer par consecutivo sem StationLink.
 
 A validação de `TTData` diferencia:
