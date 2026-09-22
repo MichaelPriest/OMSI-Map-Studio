@@ -26,6 +26,23 @@ public sealed class NativeOmsiModelSpaceTests
     }
 
     [Fact]
+    public void UvRestoresDirect3DSourceVOrientation()
+    {
+        var converted =
+            NativeOmsiModelSpace
+                .ToRendererUv(
+                    new Vector2(
+                        0.25f,
+                        0.80f));
+
+        Assert.Equal(
+            new Vector2(
+                0.25f,
+                0.20f),
+            converted);
+    }
+
+    [Fact]
     public void NormalConvertsOmsiUpToRendererUp()
     {
         var converted =
