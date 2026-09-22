@@ -10412,6 +10412,33 @@ public sealed partial class MainWindow : Window
             new List<
                 TransportStationLinkSourceOption>();
 
+        var selectedPathIndex =
+            checked(
+                (int)Math.Round(
+                    Math.Max(
+                        0,
+                        TransportPathIndexBox.Value)));
+
+        if (
+            _selectionInfo is
+                {
+                    Kind:
+                        PickingKind.Object or
+                        PickingKind.Spline
+                } selectedInfo &&
+            TryCreateStationLinkEntryFromKnownMetadata(
+                selectedInfo.EntityId,
+                selectedPathIndex.ToString(
+                    CultureInfo.InvariantCulture),
+                out _))
+        {
+            sourceOptions.Add(
+                new TransportStationLinkSourceOption(
+                    "Selection",
+                    $"{selectedInfo.EntityId}|{selectedPathIndex}",
+                    $"Seleção atual · {selectedInfo.Kind} #{selectedInfo.EntityId} · path {selectedPathIndex}"));
+        }
+
         sourceOptions.AddRange(
             _timetableCatalog.Tracks
                 .Where(
@@ -10526,7 +10553,7 @@ public sealed partial class MainWindow : Window
             new TextBlock
             {
                 Text =
-                    "O caminho inicial reutiliza metadata real já existente em TTData. Depois você pode refinar a sequência no Route Studio com + seleção, Gravar caminho, mover e remover.",
+                    "O caminho inicial reutiliza metadata real já existente em TTData. Se o path atualmente selecionado no mapa já for conhecido por Track/StationLink, ele aparece como fonte direta. Depois refine no Route Studio com + seleção, Gravar caminho, mover e remover.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
@@ -10590,7 +10617,51 @@ public sealed partial class MainWindow : Window
 
         OmsiStationLinkEntry[] entries;
 
-        if (source.Kind == "Track")
+        if (
+            source.Kind ==
+                "Selection")
+        {
+            var parts =
+                source.Key.Split(
+                    '|',
+                    StringSplitOptions.TrimEntries);
+
+            if (
+                parts.Length !=
+                    2 ||
+                !int.TryParse(
+                    parts[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var entityId) ||
+                !int.TryParse(
+                    parts[1],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var selectedSourcePathIndex) ||
+                !TryCreateStationLinkEntryFromKnownMetadata(
+                    entityId,
+                    selectedSourcePathIndex.ToString(
+                        CultureInfo.InvariantCulture),
+                    out var selectedEntry))
+            {
+                StatusText.Text =
+                    "StationLink: a seleção atual perdeu os metadados TTData necessários.";
+                return;
+            }
+
+            entries =
+                [
+                    selectedEntry with
+                    {
+                        Comment =
+                            "0:",
+                        ChronoFiles =
+                            Array.Empty<string>()
+                    }
+                ];
+        }
+        else if (source.Kind == "Track")
         {
             var track =
                 _timetableCatalog.Tracks
