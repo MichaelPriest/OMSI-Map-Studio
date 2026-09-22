@@ -92,10 +92,15 @@ internal static class AdaptiveContentDialogExtensions
             contentWidth,
             contentHeight);
 
+        // ContentDialog already owns the FrameworkElement at this point.
+        // Detach it before re-parenting it into the adaptive ScrollViewer.
+        // WinUI otherwise throws "Element is already the child of another element".
         dialog.Content =
+            null;
+
+        var scroll =
             new ScrollViewer
             {
-                Content = content,
                 MaxWidth = contentWidth,
                 MaxHeight = contentHeight,
                 HorizontalScrollMode = ScrollMode.Enabled,
@@ -103,6 +108,12 @@ internal static class AdaptiveContentDialogExtensions
                 VerticalScrollMode = ScrollMode.Enabled,
                 VerticalScrollBarVisibility = ScrollBarVisibility.Auto
             };
+
+        scroll.Content =
+            content;
+
+        dialog.Content =
+            scroll;
     }
 
     private static void ConfigureScrollViewer(
