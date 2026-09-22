@@ -554,7 +554,12 @@
                     Grid.Column="0"
                     Margin="8"
                     Background="#0C2130"
+                    BorderBrush="#24485C"
+                    BorderThickness="1"
                     CornerRadius="8">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="FullscreenExplorerTranslate" />
+                </Border.RenderTransform>
                 <Grid Padding="14" RowSpacing="10">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -564,16 +569,39 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0"
-                                Spacing="1">
-                        <TextBlock Text="PROJETO &amp; ASSETS"
-                                   FontSize="15"
-                                   FontWeight="SemiBold"
-                                   CharacterSpacing="45" />
-                        <TextBlock Text="Cena, biblioteca e navegação do mapa"
-                                   FontSize="11"
-                                   Foreground="#799AAE" />
-                    </StackPanel>
+                    <Grid Grid.Row="0"
+                          ColumnSpacing="8"
+                          Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="1">
+                            <TextBlock Text="PROJETO &amp; ASSETS"
+                                       FontSize="15"
+                                       FontWeight="SemiBold"
+                                       CharacterSpacing="45" />
+                            <TextBlock Text="Cena, biblioteca e navegação do mapa"
+                                       FontSize="11"
+                                       Foreground="#799AAE" />
+                        </StackPanel>
+                        <Border Grid.Column="1"
+                                Width="28"
+                                Height="28"
+                                Background="#132D3D"
+                                CornerRadius="6"
+                                ToolTipService.ToolTip="Arraste para mover no F11"
+                                PointerPressed="OnExplorerFloatingDragPressed"
+                                PointerMoved="OnExplorerFloatingDragMoved"
+                                PointerReleased="OnExplorerFloatingDragReleased"
+                                PointerCanceled="OnExplorerFloatingDragReleased">
+                            <TextBlock Text="⋮⋮"
+                                       FontSize="14"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="#9FCBE2" />
+                        </Border>
+                    </Grid>
 
                     <StackPanel Grid.Row="1"
                                 Orientation="Horizontal"
@@ -1337,98 +1365,111 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
-            <Border x:Name="FullscreenEditorBar"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="5"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Top"
-                    Margin="16,12"
-                    Padding="9,6"
-                    Background="#F2081722"
-                    BorderBrush="#335A70"
-                    BorderThickness="1"
-                    CornerRadius="12"
-                    Visibility="Collapsed"
-                    Canvas.ZIndex="70">
-                <StackPanel Orientation="Horizontal"
-                            Spacing="8">
-                    <TextBlock Text="MAP STUDIO"
-                               FontSize="12"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Foreground="#EAF7FC" />
-                    <Border Padding="7,3"
-                            Background="#12384C"
-                            CornerRadius="6">
-                        <TextBlock x:Name="FullscreenRootModeText"
-                                   Text="WORKSPACE"
-                                   FontSize="10"
+            <Grid x:Name="FullscreenEditorBar"
+                  Grid.Column="0"
+                  Grid.ColumnSpan="5"
+                  Margin="12,10"
+                  Visibility="Collapsed"
+                  Canvas.ZIndex="80">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        HorizontalAlignment="Left"
+                        Padding="10,6"
+                        Background="#F2081722"
+                        BorderBrush="#335A70"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="OMSI Map Studio"
+                                   FontSize="12"
                                    FontWeight="SemiBold"
-                                   Foreground="#A7E8FF" />
-                    </Border>
-                    <TextBlock x:Name="FullscreenMapTitleText"
-                               Text="Nenhum mapa aberto"
-                               MaxWidth="240"
-                               TextTrimming="CharacterEllipsis"
-                               VerticalAlignment="Center"
-                               Foreground="#AFC8D7" />
-                    <Rectangle Width="1"
-                               Height="22"
-                               Fill="#355467" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Salvar"
-                            IsEnabled="{x:Bind SaveChangesButton.IsEnabled, Mode=OneWay}"
-                            Click="OnSaveChangesClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Desfazer"
-                            IsEnabled="{x:Bind UndoButton.IsEnabled, Mode=OneWay}"
-                            Click="OnUndoClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Refazer"
-                            IsEnabled="{x:Bind RedoButton.IsEnabled, Mode=OneWay}"
-                            Click="OnRedoClick" />
-                    <Rectangle Width="1"
-                               Height="22"
-                               Fill="#355467" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Novo"
-                            ToolTipService.ToolTip="Novo mapa no Workspace"
-                            Click="OnCreateStandaloneMapClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Importar"
-                            ToolTipService.ToolTip="Importar mapa externo para o Workspace"
-                            Click="OnImportStandaloneMapClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Adicionar itens"
-                            ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
-                            Click="OnAddAssetFolderClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Exportar"
-                            ToolTipService.ToolTip="Exportar mapa atual como pacote OMSI"
-                            Click="OnExportWorkspaceOmsiPackageClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Assets"
-                            Click="OnLibraryModeClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Explorer"
-                            Click="OnToggleExplorerClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Inspector"
-                            Click="OnToggleInspectorClick" />
-                    <Rectangle Width="1"
-                               Height="22"
-                               Fill="#355467" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Workspace"
-                            Click="OnOpenWorkspaceClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Abrir OMSI"
-                            Click="OnOpenOmsiClick" />
-                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                            Content="Sair F11"
-                            Click="OnFullscreenClick" />
-                </StackPanel>
-            </Border>
+                                   VerticalAlignment="Center"
+                                   Foreground="#EAF7FC" />
+                        <Rectangle Width="1" Height="20" Fill="#355467" />
+                        <TextBlock x:Name="FullscreenMapTitleText"
+                                   Text="Nenhum mapa aberto"
+                                   MaxWidth="250"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center"
+                                   Foreground="#AFC8D7" />
+                        <Border Padding="7,3"
+                                Background="#12384C"
+                                CornerRadius="6">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <Ellipse Width="7" Height="7" Fill="#55D96B" VerticalAlignment="Center" />
+                                <TextBlock x:Name="FullscreenRootModeText"
+                                           Text="WORKSPACE"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="#A7E8FF" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="1"
+                        HorizontalAlignment="Center"
+                        Padding="8,6"
+                        Background="#F2081722"
+                        BorderBrush="#335A70"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Salvar"
+                                IsEnabled="{x:Bind SaveChangesButton.IsEnabled, Mode=OneWay}"
+                                Click="OnSaveChangesClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Desfazer"
+                                IsEnabled="{x:Bind UndoButton.IsEnabled, Mode=OneWay}"
+                                Click="OnUndoClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Refazer"
+                                IsEnabled="{x:Bind RedoButton.IsEnabled, Mode=OneWay}"
+                                Click="OnRedoClick" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2"
+                        HorizontalAlignment="Right"
+                        Padding="8,6"
+                        Background="#F2081722"
+                        BorderBrush="#335A70"
+                        BorderThickness="1"
+                        CornerRadius="10">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Perspectiva"
+                                Click="OnPerspectiveViewClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Grade"
+                                Click="OnFullscreenGridClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Dia/noite"
+                                Click="OnFullscreenNightClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Explorer"
+                                Click="OnToggleExplorerClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Inspector"
+                                Click="OnToggleInspectorClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Restaurar painéis"
+                                Click="OnResetFullscreenPanelsClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Abrir OMSI"
+                                Click="OnOpenOmsiClick" />
+                        <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                Content="Sair F11"
+                                Click="OnFullscreenClick" />
+                    </StackPanel>
+                </Border>
+            </Grid>
 
             <Border x:Name="ContextToolPalette"
                     Grid.Column="0"
@@ -2013,13 +2054,20 @@
                     Grid.Column="4"
                     Margin="8"
                     Background="#0C2130"
+                    BorderBrush="#24485C"
+                    BorderThickness="1"
                     CornerRadius="8">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="FullscreenInspectorTranslate" />
+                </Border.RenderTransform>
                 <ScrollViewer
                     VerticalScrollBarVisibility="Auto">
                     <StackPanel Padding="12" Spacing="9">
-                        <Grid ColumnSpacing="8">
+                        <Grid ColumnSpacing="8"
+                              Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Spacing="1">
@@ -2043,6 +2091,22 @@
                                            FontSize="9"
                                            FontWeight="SemiBold"
                                            Foreground="#A7E8FF" />
+                            </Border>
+                            <Border Grid.Column="2"
+                                    Width="28"
+                                    Height="28"
+                                    Background="#132D3D"
+                                    CornerRadius="6"
+                                    ToolTipService.ToolTip="Arraste para mover no F11"
+                                    PointerPressed="OnInspectorFloatingDragPressed"
+                                    PointerMoved="OnInspectorFloatingDragMoved"
+                                    PointerReleased="OnInspectorFloatingDragReleased"
+                                    PointerCanceled="OnInspectorFloatingDragReleased">
+                                <TextBlock Text="⋮⋮"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#9FCBE2" />
                             </Border>
                         </Grid>
 

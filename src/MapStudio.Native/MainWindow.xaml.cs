@@ -339,6 +339,22 @@ public sealed partial class MainWindow : Window
 
     private bool _resizingExplorerPanel;
     private bool _resizingInspectorPanel;
+
+    private bool _desktopExplorerWasVisible = true;
+    private bool _desktopInspectorWasVisible = true;
+
+    private bool _draggingFullscreenExplorer;
+    private bool _draggingFullscreenInspector;
+    private uint _fullscreenPanelDragPointerId;
+    private double _fullscreenPanelDragStartX;
+    private double _fullscreenPanelDragStartY;
+    private double _fullscreenPanelDragOriginX;
+    private double _fullscreenPanelDragOriginY;
+    private double _fullscreenExplorerOffsetX;
+    private double _fullscreenExplorerOffsetY;
+    private double _fullscreenInspectorOffsetX;
+    private double _fullscreenInspectorOffsetY;
+
     private bool _fullMapMode = true;
     private bool _mapLoadModeChanging;
     private bool _standaloneWorkspaceInitialized;
@@ -11869,6 +11885,23 @@ public sealed partial class MainWindow : Window
 
     private void ToggleExplorerPanel()
     {
+        if (IsFullscreen())
+        {
+            ExplorerPanel.Visibility =
+                ExplorerPanel.Visibility ==
+                    Visibility.Visible
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+
+            StatusText.Text =
+                ExplorerPanel.Visibility ==
+                    Visibility.Visible
+                    ? "Explorer flutuante visível."
+                    : "Explorer flutuante oculto.";
+
+            return;
+        }
+
         var visible =
             ExplorerColumn.Width.Value >
             0;
@@ -11878,8 +11911,7 @@ public sealed partial class MainWindow : Window
             _explorerPanelWidth =
                 Math.Max(
                     220,
-                    ExplorerColumn
-                        .Width.Value);
+                    ExplorerColumn.Width.Value);
 
             ExplorerColumn.Width =
                 new GridLength(0);
@@ -11915,6 +11947,23 @@ public sealed partial class MainWindow : Window
 
     private void ToggleInspectorPanel()
     {
+        if (IsFullscreen())
+        {
+            InspectorPanel.Visibility =
+                InspectorPanel.Visibility ==
+                    Visibility.Visible
+                    ? Visibility.Collapsed
+                    : Visibility.Visible;
+
+            StatusText.Text =
+                InspectorPanel.Visibility ==
+                    Visibility.Visible
+                    ? "Inspector flutuante visível."
+                    : "Inspector flutuante oculto.";
+
+            return;
+        }
+
         var visible =
             InspectorColumn.Width.Value >
             0;
@@ -11924,8 +11973,7 @@ public sealed partial class MainWindow : Window
             _inspectorPanelWidth =
                 Math.Max(
                     240,
-                    InspectorColumn
-                        .Width.Value);
+                    InspectorColumn.Width.Value);
 
             InspectorColumn.Width =
                 new GridLength(0);
@@ -11958,6 +12006,223 @@ public sealed partial class MainWindow : Window
         StatusText.Text =
             "Inspector restaurado.";
     }
+
+    private void BeginFullscreenPanelDrag(
+        UIElement element,
+        PointerRoutedEventArgs e,
+        bool explorer)
+    {
+        if (!IsFullscreen())
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        _fullscreenPanelDragPointerId =
+            e.Pointer.PointerId;
+
+        _fullscreenPanelDragStartX =
+            point.Position.X;
+
+        _fullscreenPanelDragStartY =
+            point.Position.Y;
+
+        if (explorer)
+        {
+            _draggingFullscreenExplorer =
+                true;
+
+            _fullscreenPanelDragOriginX =
+                FullscreenExplorerTranslate.X;
+
+            _fullscreenPanelDragOriginY =
+                FullscreenExplorerTranslate.Y;
+        }
+        else
+        {
+            _draggingFullscreenInspector =
+                true;
+
+            _fullscreenPanelDragOriginX =
+                FullscreenInspectorTranslate.X;
+
+            _fullscreenPanelDragOriginY =
+                FullscreenInspectorTranslate.Y;
+        }
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void MoveFullscreenPanelDrag(
+        PointerRoutedEventArgs e,
+        bool explorer)
+    {
+        if (!IsFullscreen() ||
+            e.Pointer.PointerId !=
+                _fullscreenPanelDragPointerId ||
+            (explorer
+                ? !_draggingFullscreenExplorer
+                : !_draggingFullscreenInspector))
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        var dx =
+            point.Position.X -
+            _fullscreenPanelDragStartX;
+
+        var dy =
+            point.Position.Y -
+            _fullscreenPanelDragStartY;
+
+        var maxX =
+            Math.Max(
+                80,
+                MainRoot.ActualWidth -
+                280);
+
+        var maxY =
+            Math.Max(
+                80,
+                MainRoot.ActualHeight -
+                240);
+
+        var transform =
+            explorer
+                ? FullscreenExplorerTranslate
+                : FullscreenInspectorTranslate;
+
+        transform.X =
+            Math.Clamp(
+                _fullscreenPanelDragOriginX +
+                    dx,
+                -maxX,
+                maxX);
+
+        transform.Y =
+            Math.Clamp(
+                _fullscreenPanelDragOriginY +
+                    dy,
+                -40,
+                maxY);
+
+        e.Handled =
+            true;
+    }
+
+    private void EndFullscreenPanelDrag(
+        UIElement? element,
+        PointerRoutedEventArgs e,
+        bool explorer)
+    {
+        if (e.Pointer.PointerId !=
+            _fullscreenPanelDragPointerId)
+        {
+            return;
+        }
+
+        if (explorer)
+        {
+            _draggingFullscreenExplorer =
+                false;
+
+            _fullscreenExplorerOffsetX =
+                FullscreenExplorerTranslate.X;
+
+            _fullscreenExplorerOffsetY =
+                FullscreenExplorerTranslate.Y;
+        }
+        else
+        {
+            _draggingFullscreenInspector =
+                false;
+
+            _fullscreenInspectorOffsetX =
+                FullscreenInspectorTranslate.X;
+
+            _fullscreenInspectorOffsetY =
+                FullscreenInspectorTranslate.Y;
+        }
+
+        element?.ReleasePointerCapture(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnExplorerFloatingDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (sender is UIElement element)
+        {
+            BeginFullscreenPanelDrag(
+                element,
+                e,
+                explorer:
+                    true);
+        }
+    }
+
+    private void OnExplorerFloatingDragMoved(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        MoveFullscreenPanelDrag(
+            e,
+            explorer:
+                true);
+
+    private void OnExplorerFloatingDragReleased(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndFullscreenPanelDrag(
+            sender as UIElement,
+            e,
+            explorer:
+                true);
+
+    private void OnInspectorFloatingDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (sender is UIElement element)
+        {
+            BeginFullscreenPanelDrag(
+                element,
+                e,
+                explorer:
+                    false);
+        }
+    }
+
+    private void OnInspectorFloatingDragMoved(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        MoveFullscreenPanelDrag(
+            e,
+            explorer:
+                false);
+
+    private void OnInspectorFloatingDragReleased(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        EndFullscreenPanelDrag(
+            sender as UIElement,
+            e,
+            explorer:
+                false);
 
     private void OnMapToolPaletteDragPressed(
         object sender,
@@ -12764,6 +13029,18 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        _desktopExplorerWasVisible =
+            ExplorerPanel.Visibility ==
+            Visibility.Visible &&
+            ExplorerColumn.Width.Value >
+            0;
+
+        _desktopInspectorWasVisible =
+            InspectorPanel.Visibility ==
+            Visibility.Visible &&
+            InspectorColumn.Width.Value >
+            0;
+
         _appWindow.SetPresenter(
             AppWindowPresenterKind.FullScreen);
 
@@ -12773,12 +13050,164 @@ public sealed partial class MainWindow : Window
         FullscreenEditorBar.Visibility =
             Visibility.Visible;
 
+        MainRoot.RowDefinitions[2].Height =
+            new GridLength(0);
+
+        EnterFullscreenPanelLayout();
+
         StatusText.Text =
-            "Modo Criador em tela cheia · F11 ou Esc para sair.";
+            "Creator Focus ativo · painéis flutuantes podem ser movidos · F11 ou Esc para sair.";
+    }
+
+    private void EnterFullscreenPanelLayout()
+    {
+        ExplorerColumn.Width =
+            new GridLength(0);
+
+        ExplorerSplitterColumn.Width =
+            new GridLength(0);
+
+        InspectorSplitterColumn.Width =
+            new GridLength(0);
+
+        InspectorColumn.Width =
+            new GridLength(0);
+
+        ExplorerSplitter.Visibility =
+            Visibility.Collapsed;
+
+        InspectorSplitter.Visibility =
+            Visibility.Collapsed;
+
+        Grid.SetColumn(
+            ExplorerPanel,
+            0);
+
+        Grid.SetColumnSpan(
+            ExplorerPanel,
+            5);
+
+        ExplorerPanel.HorizontalAlignment =
+            HorizontalAlignment.Left;
+
+        ExplorerPanel.VerticalAlignment =
+            VerticalAlignment.Top;
+
+        ExplorerPanel.Width =
+            Math.Clamp(
+                _explorerPanelWidth,
+                300,
+                430);
+
+        ExplorerPanel.MaxHeight =
+            Math.Max(
+                360,
+                MainRoot.ActualHeight -
+                210);
+
+        ExplorerPanel.Margin =
+            new Thickness(
+                12,
+                68,
+                0,
+                128);
+
+        Canvas.SetZIndex(
+            ExplorerPanel,
+            65);
+
+        Grid.SetColumn(
+            InspectorPanel,
+            0);
+
+        Grid.SetColumnSpan(
+            InspectorPanel,
+            5);
+
+        InspectorPanel.HorizontalAlignment =
+            HorizontalAlignment.Right;
+
+        InspectorPanel.VerticalAlignment =
+            VerticalAlignment.Top;
+
+        InspectorPanel.Width =
+            Math.Clamp(
+                _inspectorPanelWidth,
+                310,
+                440);
+
+        InspectorPanel.MaxHeight =
+            Math.Max(
+                360,
+                MainRoot.ActualHeight -
+                210);
+
+        InspectorPanel.Margin =
+            new Thickness(
+                0,
+                68,
+                12,
+                128);
+
+        Canvas.SetZIndex(
+            InspectorPanel,
+            65);
+
+        FullscreenExplorerTranslate.X =
+            _fullscreenExplorerOffsetX;
+
+        FullscreenExplorerTranslate.Y =
+            _fullscreenExplorerOffsetY;
+
+        FullscreenInspectorTranslate.X =
+            _fullscreenInspectorOffsetX;
+
+        FullscreenInspectorTranslate.Y =
+            _fullscreenInspectorOffsetY;
+
+        ExplorerPanel.Visibility =
+            _desktopExplorerWasVisible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        InspectorPanel.Visibility =
+            _desktopInspectorWasVisible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private void ExitFullscreen()
     {
+        _fullscreenExplorerOffsetX =
+            FullscreenExplorerTranslate.X;
+
+        _fullscreenExplorerOffsetY =
+            FullscreenExplorerTranslate.Y;
+
+        _fullscreenInspectorOffsetX =
+            FullscreenInspectorTranslate.X;
+
+        _fullscreenInspectorOffsetY =
+            FullscreenInspectorTranslate.Y;
+
+        _draggingFullscreenExplorer =
+            false;
+
+        _draggingFullscreenInspector =
+            false;
+
+        FullscreenExplorerTranslate.X =
+            0;
+
+        FullscreenExplorerTranslate.Y =
+            0;
+
+        FullscreenInspectorTranslate.X =
+            0;
+
+        FullscreenInspectorTranslate.Y =
+            0;
+
         _appWindow.SetPresenter(
             AppWindowPresenterKind.Default);
 
@@ -12788,8 +13217,184 @@ public sealed partial class MainWindow : Window
         FullscreenEditorBar.Visibility =
             Visibility.Collapsed;
 
+        MainRoot.RowDefinitions[2].Height =
+            new GridLength(30);
+
+        Grid.SetColumn(
+            ExplorerPanel,
+            0);
+
+        Grid.SetColumnSpan(
+            ExplorerPanel,
+            1);
+
+        ExplorerPanel.HorizontalAlignment =
+            HorizontalAlignment.Stretch;
+
+        ExplorerPanel.VerticalAlignment =
+            VerticalAlignment.Stretch;
+
+        ExplorerPanel.Width =
+            double.NaN;
+
+        ExplorerPanel.MaxHeight =
+            double.PositiveInfinity;
+
+        ExplorerPanel.Margin =
+            new Thickness(8);
+
+        Canvas.SetZIndex(
+            ExplorerPanel,
+            0);
+
+        Grid.SetColumn(
+            InspectorPanel,
+            4);
+
+        Grid.SetColumnSpan(
+            InspectorPanel,
+            1);
+
+        InspectorPanel.HorizontalAlignment =
+            HorizontalAlignment.Stretch;
+
+        InspectorPanel.VerticalAlignment =
+            VerticalAlignment.Stretch;
+
+        InspectorPanel.Width =
+            double.NaN;
+
+        InspectorPanel.MaxHeight =
+            double.PositiveInfinity;
+
+        InspectorPanel.Margin =
+            new Thickness(8);
+
+        Canvas.SetZIndex(
+            InspectorPanel,
+            0);
+
+        ExplorerSplitter.Visibility =
+            Visibility.Visible;
+
+        InspectorSplitter.Visibility =
+            Visibility.Visible;
+
+        if (_desktopExplorerWasVisible)
+        {
+            ExplorerPanel.Visibility =
+                Visibility.Visible;
+
+            ExplorerColumn.Width =
+                new GridLength(
+                    Math.Clamp(
+                        _explorerPanelWidth,
+                        220,
+                        520));
+
+            ExplorerSplitterColumn.Width =
+                new GridLength(6);
+        }
+        else
+        {
+            ExplorerPanel.Visibility =
+                Visibility.Collapsed;
+
+            ExplorerColumn.Width =
+                new GridLength(0);
+
+            ExplorerSplitterColumn.Width =
+                new GridLength(0);
+        }
+
+        if (_desktopInspectorWasVisible)
+        {
+            InspectorPanel.Visibility =
+                Visibility.Visible;
+
+            InspectorColumn.Width =
+                new GridLength(
+                    Math.Clamp(
+                        _inspectorPanelWidth,
+                        240,
+                        560));
+
+            InspectorSplitterColumn.Width =
+                new GridLength(6);
+        }
+        else
+        {
+            InspectorPanel.Visibility =
+                Visibility.Collapsed;
+
+            InspectorColumn.Width =
+                new GridLength(0);
+
+            InspectorSplitterColumn.Width =
+                new GridLength(0);
+        }
+
         StatusText.Text =
-            "Layout desktop restaurado.";
+            "Layout desktop World Builder restaurado.";
+    }
+
+    private void OnFullscreenGridClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        ShowGridMenuItem.IsChecked =
+            !ShowGridMenuItem.IsChecked;
+
+        OnGridVisibilityClick(
+            sender,
+            e);
+    }
+
+    private void OnFullscreenNightClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        NightPreviewCheckBox.IsChecked =
+            NightPreviewCheckBox.IsChecked !=
+            true;
+    }
+
+    private void OnResetFullscreenPanelsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _fullscreenExplorerOffsetX =
+            0;
+
+        _fullscreenExplorerOffsetY =
+            0;
+
+        _fullscreenInspectorOffsetX =
+            0;
+
+        _fullscreenInspectorOffsetY =
+            0;
+
+        FullscreenExplorerTranslate.X =
+            0;
+
+        FullscreenExplorerTranslate.Y =
+            0;
+
+        FullscreenInspectorTranslate.X =
+            0;
+
+        FullscreenInspectorTranslate.Y =
+            0;
+
+        ExplorerPanel.Visibility =
+            Visibility.Visible;
+
+        InspectorPanel.Visibility =
+            Visibility.Visible;
+
+        StatusText.Text =
+            "Painéis flutuantes restaurados às bordas do Creator Focus.";
     }
 
     private void OnMoveGizmoClick(
