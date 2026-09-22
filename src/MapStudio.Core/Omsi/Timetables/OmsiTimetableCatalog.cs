@@ -50,6 +50,7 @@ public sealed record OmsiTimetableCatalog(
     public int BrokenTripTrackReferenceCount =>
         Trips.Count(
             trip =>
+                !trip.UsesStationLinks &&
                 !string.IsNullOrWhiteSpace(
                     trip.TrackName) &&
                 !Tracks.Any(
@@ -57,6 +58,41 @@ public sealed record OmsiTimetableCatalog(
                         KeysMatch(
                             track.Name,
                             trip.TrackName)));
+
+    public int BrokenTripStationLinkReferenceCount =>
+        Trips
+            .Where(
+                trip =>
+                    trip.UsesStationLinks)
+            .Sum(
+                trip =>
+                trip.Stations
+                    .OfType<
+                        OmsiTimetableTripStationType2>()
+                    .Select(
+                        station =>
+                            station.Id)
+                    .Zip(
+                        trip.Stations
+                            .OfType<
+                                OmsiTimetableTripStationType2>()
+                            .Select(
+                                station =>
+                                    station.Id)
+                            .Skip(1),
+                        (start, end) =>
+                            (
+                                Start: start,
+                                End: end
+                            ))
+                    .Count(
+                        pair =>
+                            !StationLinks.Any(
+                                link =>
+                                    link.StartBusStopId ==
+                                        pair.Start &&
+                                    link.EndBusStopId ==
+                                        pair.End)));
 
     private static bool KeysMatch(
         string trackName,
