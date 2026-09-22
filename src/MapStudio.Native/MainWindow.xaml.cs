@@ -12718,6 +12718,8 @@ public sealed partial class MainWindow : Window
                             .Map
                             .DirectoryPath);
 
+            // Reveal the saved Line even when an Explorer search previously hid it.
+            ExplorerSearchBox.Text = string.Empty;
             TransportKindComboBox.SelectedIndex = 4;
             RefreshTransportItems();
 

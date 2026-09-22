@@ -498,22 +498,6 @@ internal sealed class TimetableLineEditor : ContentControl
                 AddRow(
                     null);
 
-        var errorText =
-            new TextBlock
-            {
-                Visibility =
-                    Visibility.Collapsed,
-                Foreground =
-                    new SolidColorBrush(
-                        Windows.UI.Color.FromArgb(
-                            255,
-                            255,
-                            155,
-                            140)),
-                TextWrapping =
-                    TextWrapping.Wrap
-            };
-
         var tableScroll =
             new ScrollViewer
             {
@@ -556,9 +540,6 @@ internal sealed class TimetableLineEditor : ContentControl
 
         panel.Children.Add(
             addRowButton);
-
-        panel.Children.Add(
-            errorText);
 
         panel.Children.Add(
             tableScroll);
