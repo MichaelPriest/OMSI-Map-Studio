@@ -9360,14 +9360,11 @@ public sealed partial class MainWindow : Window
         var stationIds =
             stationIdsBox.Text
                 .Replace(
-                    "
-",
-                    "
-",
+                    "\r\n",
+                    "\n",
                     StringComparison.Ordinal)
                 .Split(
-                    '
-',
+                    '\n',
                     StringSplitOptions
                         .RemoveEmptyEntries |
                     StringSplitOptions
@@ -9406,14 +9403,11 @@ public sealed partial class MainWindow : Window
         var profiles =
             profileBox.Text
                 .Replace(
-                    "
-",
-                    "
-",
+                    "\r\n",
+                    "\n",
                     StringComparison.Ordinal)
                 .Split(
-                    '
-',
+                    '\n',
                     StringSplitOptions
                         .RemoveEmptyEntries |
                     StringSplitOptions
@@ -10390,13 +10384,10 @@ public sealed partial class MainWindow : Window
         var lines =
             editor.Text
                 .Replace(
-                    "
-",
-                    "
-",
+                    "\r\n",
+                    "\n",
                     StringComparison.Ordinal)
-                .Split('
-')
+                .Split('\n')
                 .Select(
                     value =>
                         value.Trim())
