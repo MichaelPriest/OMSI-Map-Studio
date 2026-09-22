@@ -5,9 +5,50 @@
     Title="OMSI Map Studio — Timetable">
 
     <Grid x:Name="RootGrid"
-          Background="#08131D"
+          RequestedTheme="Default"
+          Background="{ThemeResource MapStudioWindowBackgroundBrush}"
           Padding="16"
           RowSpacing="10">
+        <Grid.Resources>
+            <ResourceDictionary>
+                <ResourceDictionary.ThemeDictionaries>
+                    <ResourceDictionary x:Key="Light">
+                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#F4F7FA" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#F0F4F7" />
+                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#C9D6E0" />
+                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#A9BECC" />
+                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#17242D" />
+                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#3F5B6D" />
+                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#647B8B" />
+                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#005A9E" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="Dark">
+                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#08131D" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#071722" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#0B202D" />
+                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#24485C" />
+                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#315064" />
+                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EAF7FC" />
+                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#9FB5C5" />
+                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#7895AD" />
+                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#9EDCF4" />
+                    </ResourceDictionary>
+                    <ResourceDictionary x:Key="HighContrast">
+                        <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#000000" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#000000" />
+                        <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#000000" />
+                        <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#FFFFFF" />
+                        <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#FFFF00" />
+                    </ResourceDictionary>
+                </ResourceDictionary.ThemeDictionaries>
+            </ResourceDictionary>
+        </Grid.Resources>
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -26,21 +67,26 @@
                 <TextBlock Text="TIMETABLE"
                            FontSize="18"
                            FontWeight="SemiBold"
-                           Foreground="#DDF4FF" />
+                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                 <TextBlock Text="Lines · Tours · Trips · horários OMSI"
                            FontSize="11"
-                           Foreground="#7FC6E8" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
             </StackPanel>
 
             <TextBlock Grid.Column="1"
                        VerticalAlignment="Center"
                        Text="Janela destacável"
                        FontSize="10"
-                       Foreground="#7895AD" />
+                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
         </Grid>
 
-        <Grid Grid.Row="1"
-              ColumnSpacing="10">
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollMode="Enabled"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollMode="Disabled"
+                      VerticalScrollBarVisibility="Disabled">
+        <Grid ColumnSpacing="10"
+              MinWidth="860">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="360" />
                 <ColumnDefinition Width="*" />
@@ -62,7 +108,7 @@
                        VerticalAlignment="Bottom"
                        Margin="0,0,0,7"
                        TextWrapping="Wrap"
-                       Foreground="#9FB5C5" />
+                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
             <Button x:Name="FocusTripButton"
                     Grid.Column="2"
@@ -95,10 +141,11 @@
                     Content="Editar Line"
                     Click="OnEditLineClick" />
         </Grid>
+        </ScrollViewer>
 
         <Border x:Name="ScheduleHeader" Grid.Row="2"
-                Background="#0B202D"
-                BorderBrush="#2C5367"
+                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                 BorderThickness="1"
                 CornerRadius="7"
                 Padding="8">
@@ -115,27 +162,27 @@
                 <TextBlock Grid.Column="0"
                            Text="Tour"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                 <TextBlock Grid.Column="1"
                            Text="AI Group"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                 <TextBlock Grid.Column="2"
                            Text="Trip"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                 <TextBlock Grid.Column="3"
                            Text="Saída"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                 <TextBlock Grid.Column="4"
                            Text="Destino / linha"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                 <TextBlock Grid.Column="5"
                            Text="Rota"
                            FontWeight="SemiBold"
-                           Foreground="#9EDCF4" />
+                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
             </Grid>
         </Border>
 
@@ -166,8 +213,8 @@
                 <DataTemplate>
                     <Border Margin="0,2"
                             Padding="8,6"
-                            Background="#071722"
-                            BorderBrush="#18394A"
+                            Background="{ThemeResource MapStudioSurfaceBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
                             BorderThickness="1"
                             CornerRadius="5">
                         <Grid ColumnSpacing="8">
@@ -186,22 +233,22 @@
                             <TextBlock Grid.Column="1"
                                        Text="{Binding AiGroupName}"
                                        TextTrimming="CharacterEllipsis"
-                                       Foreground="#9FB5C5" />
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             <TextBlock Grid.Column="2"
                                        Text="{Binding TripName}"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Grid.Column="3"
                                        Text="{Binding DepartureText}"
                                        FontFamily="Consolas"
-                                       Foreground="#9EDCF4" />
+                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             <TextBlock Grid.Column="4"
                                        Text="{Binding DestinationText}"
                                        TextTrimming="CharacterEllipsis"
-                                       Foreground="#9FB5C5" />
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             <TextBlock Grid.Column="5"
                                        Text="{Binding RouteText}"
                                        TextTrimming="CharacterEllipsis"
-                                       Foreground="#7FC6E8" />
+                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                         </Grid>
                     </Border>
                 </DataTemplate>
