@@ -9293,6 +9293,69 @@ public sealed partial class MainWindow : Window
                 new TimetableWindow(
                     _timetableCatalog);
 
+            _timetableWindow.TripRouteRequested +=
+                tripName =>
+                {
+                    SelectTransportWorkspace(
+                        1,
+                        $"Trip {tripName}: rota selecionada pela janela Timetable.");
+
+                    var selected =
+                        _transportItems
+                            .FirstOrDefault(
+                                candidate =>
+                                    candidate.Kind ==
+                                        "Trip" &&
+                                    string.Equals(
+                                        candidate.Key,
+                                        tripName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    if (selected is not null)
+                    {
+                        TransportListView.SelectedItem =
+                            selected;
+
+                        RefreshTransportRouteWorkbench(
+                            selected,
+                            preview:
+                                true);
+
+                        StatusText.Text =
+                            $"Timetable: Trip {tripName} focado no Route Studio e no mapa.";
+                    }
+                };
+
+            _timetableWindow.EditLineRequested +=
+                async lineName =>
+                {
+                    SelectTransportWorkspace(
+                        4,
+                        $"Line {lineName}: edição aberta pela janela Timetable.");
+
+                    var selected =
+                        _transportItems
+                            .FirstOrDefault(
+                                candidate =>
+                                    candidate.Kind ==
+                                        "Line" &&
+                                    string.Equals(
+                                        candidate.Key,
+                                        lineName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    if (selected is null)
+                    {
+                        return;
+                    }
+
+                    TransportListView.SelectedItem =
+                        selected;
+
+                    await EditTimetableLineAsync(
+                        selected);
+                };
+
             _timetableWindow.Closed +=
                 (
                     _,
