@@ -642,6 +642,10 @@ public sealed partial class MainWindow : Window
                     info?.Kind ==
                     PickingKind.Spline;
 
+                EditSceneryPathButton.IsEnabled =
+                    info?.Kind ==
+                    PickingKind.Object;
+
                 CompleteToSplineButton.IsEnabled =
                     info?.Kind ==
                         PickingKind.Spline &&
@@ -7882,6 +7886,146 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Tráfego: paths reais e preview de semáforos ativos.";
+    }
+
+    private async void OnEditSceneryPathClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo is not
+                {
+                    Kind:
+                        PickingKind.Object
+                } selection ||
+            _session.OmsiRootPath is not
+                { } root ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Paths SCO: selecione um objeto do mapa.";
+            return;
+        }
+
+        if (
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    root,
+                    selection.AssetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            StatusText.Text =
+                "Paths SCO: o arquivo do objeto selecionado não foi encontrado.";
+            return;
+        }
+
+        try
+        {
+            EditSceneryPathButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Paths SCO: lendo {Path.GetFileName(target)}...";
+
+            var metadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        target);
+
+            if (
+                metadata.Paths.Count ==
+                    0)
+            {
+                StatusText.Text =
+                    "Paths SCO: este objeto não possui seções [path].";
+                return;
+            }
+
+            var edit =
+                await SceneryPathEditorDialog
+                    .ShowAsync(
+                        MainRoot.XamlRoot,
+                        selection.AssetPath,
+                        metadata.Paths,
+                        Viewport
+                            .TrafficPathFocusedIndex);
+
+            if (edit is null)
+            {
+                return;
+            }
+
+            StatusText.Text =
+                $"Paths SCO: salvando path {edit.PathOrdinal} com backup...";
+
+            var updated =
+                await _session
+                    .UpdateSceneryPathAsync(
+                        selection.AssetPath,
+                        edit.PathOrdinal,
+                        edit.Path);
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            var owner =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                PickingKind.Object &&
+                            item.EntityId ==
+                                selection.EntityId &&
+                            item.TileX ==
+                                selection.TileX &&
+                            item.TileY ==
+                                selection.TileY &&
+                            string.Equals(
+                                item.AssetPath,
+                                selection.AssetPath,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (owner is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    owner,
+                    focus:
+                        false);
+
+                Viewport
+                    .SetTrafficPathFocusedIndex(
+                        edit.PathOrdinal);
+
+                if (
+                    Viewport
+                        .TrafficPathSelectedOnly)
+                {
+                    Viewport
+                        .RefreshTrafficPathDisplay();
+                }
+            }
+
+            UpdateTrafficPathStatusText();
+
+            StatusText.Text =
+                $"Path SCO {edit.PathOrdinal} salvo · {Path.GetFileName(updated.AssetPath)} · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao salvar path SCO: {exception.Message}";
+        }
+        finally
+        {
+            EditSceneryPathButton.IsEnabled =
+                _selectionInfo?.Kind ==
+                PickingKind.Object;
+        }
     }
 
     private async void OnAddTrafficSignalClick(

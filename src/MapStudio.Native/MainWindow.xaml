@@ -1895,6 +1895,12 @@
 
                             <StackPanel Grid.Row="6"
                                         Spacing="5">
+                                <Button x:Name="EditSceneryPathButton"
+                                        Content="Editar paths do objeto..."
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Edita os [path] internos do SCO selecionado; a alteração vale para todas as instâncias que usam o mesmo objeto"
+                                        Click="OnEditSceneryPathClick" />
                                 <Button x:Name="AddTrafficSignalButton"
                                         Content="Adicionar semáforo..."
                                         HorizontalAlignment="Stretch"
