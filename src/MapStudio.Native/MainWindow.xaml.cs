@@ -10872,27 +10872,667 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var editor =
+        var workingLines =
+            trip.ProfileLines
+                .ToList();
+
+        var profileCombo =
+            new ComboBox
+            {
+                Header =
+                    "Perfil de tempo",
+                DisplayMemberPath =
+                    nameof(
+                        OmsiTimetableProfileDefinition
+                            .DisplayText),
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var totalMinutesBox =
+            new NumberBox
+            {
+                Header =
+                    "Tempo total (min)",
+                Minimum =
+                    0.01,
+                Maximum =
+                    100000,
+                SmallChange =
+                    0.5
+            };
+
+        var applyTotalButton =
+            new Button
+            {
+                Content =
+                    "Aplicar duração",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var stopCombo =
+            new ComboBox
+            {
+                Header =
+                    "Parada do Trip",
+                ItemsSource =
+                    trip.Stations
+                        .Select(
+                            (station, index) =>
+                                $"{index + 1:00} · Stop {station.Id}")
+                        .ToArray(),
+                SelectedIndex =
+                    trip.Stations.Count >
+                    0
+                        ? 0
+                        : -1,
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var arrivalMinutesBox =
+            new NumberBox
+            {
+                Header =
+                    "Chegada acumulada (min)",
+                Minimum =
+                    0,
+                Maximum =
+                    100000,
+                SmallChange =
+                    0.25
+            };
+
+        var applyStopButton =
+            new Button
+            {
+                Content =
+                    "Definir tempo desta parada",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch
+            };
+
+        var profileInfoText =
+            new TextBlock
+            {
+                Text =
+                    "Selecione um perfil.",
+                FontSize =
+                    11,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Foreground =
+                    new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                        Windows.UI.Color.FromArgb(
+                            255,
+                            127,
+                            198,
+                            232))
+            };
+
+        var newProfileNameBox =
             new TextBox
             {
                 Header =
-                    "Profiles OMSI",
+                    "Novo perfil",
+                PlaceholderText =
+                    "Ex.: normal"
+            };
+
+        var newProfileMinutesBox =
+            new NumberBox
+            {
+                Header =
+                    "Duração (min)",
+                Minimum =
+                    0.01,
+                Maximum =
+                    100000,
+                Value =
+                    10,
+                SmallChange =
+                    0.5
+            };
+
+        var addProfileButton =
+            new Button
+            {
+                Content =
+                    "+ Criar perfil"
+            };
+
+        var deleteProfileButton =
+            new Button
+            {
+                Content =
+                    "Excluir perfil",
+                IsEnabled =
+                    false
+            };
+
+        var rawEditor =
+            new TextBox
+            {
+                Header =
+                    "Avançado · dados OMSI do perfil",
                 AcceptsReturn =
                     true,
                 TextWrapping =
                     TextWrapping.NoWrap,
-                MinWidth =
-                    560,
                 MinHeight =
-                    360,
+                    150,
                 FontFamily =
                     new Microsoft.UI.Xaml.Media.FontFamily(
-                        "Consolas"),
-                Text =
+                        "Consolas")
+            };
+
+        List<
+            OmsiTimetableProfileDefinition>
+            profiles =
+                [];
+
+        var synchronizing =
+            false;
+
+        List<string> ReadRawLines()
+        {
+            return rawEditor.Text
+                .Replace(
+                    "\r\n",
+                    "\n",
+                    StringComparison.Ordinal)
+                .Split(
+                    '\n',
+                    StringSplitOptions.None)
+                .Select(
+                    value =>
+                        value.Trim())
+                .Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(
+                            value))
+                .ToList();
+        }
+
+        void RefreshSelectedStopTime()
+        {
+            if (
+                synchronizing ||
+                profileCombo.SelectedItem is not
+                    OmsiTimetableProfileDefinition
+                        profile ||
+                stopCombo.SelectedIndex <
+                    0)
+            {
+                return;
+            }
+
+            var stationIndex =
+                stopCombo.SelectedIndex;
+
+            var current =
+                profile.StopTimes
+                    .FirstOrDefault(
+                        value =>
+                            value.StationIndex ==
+                                stationIndex);
+
+            arrivalMinutesBox.Value =
+                current?.Minutes ??
+                0;
+
+            var previous =
+                profile.StopTimes
+                    .Where(
+                        value =>
+                            value.StationIndex <
+                                stationIndex)
+                    .OrderByDescending(
+                        value =>
+                            value.StationIndex)
+                    .FirstOrDefault();
+
+            var segment =
+                current is null
+                    ? (double?)null
+                    : Math.Max(
+                        0,
+                        current.Minutes -
+                        (
+                            previous?.Minutes ??
+                            0
+                        ));
+
+            profileInfoText.Text =
+                current is null
+                    ? $"Parada {stationIndex + 1}: ainda sem tempo manual. Use a chegada acumulada para definir o trecho."
+                    : $"Parada {stationIndex + 1}: chegada {current.Minutes:0.###} min" +
+                      (segment is double value
+                          ? $" · trecho anterior ≈ {value:0.###} min."
+                          : ".");
+        }
+
+        void RefreshProfileFields()
+        {
+            if (
+                profileCombo.SelectedItem is not
+                    OmsiTimetableProfileDefinition
+                        profile)
+            {
+                totalMinutesBox.Value =
+                    double.NaN;
+
+                deleteProfileButton.IsEnabled =
+                    false;
+
+                profileInfoText.Text =
+                    "Nenhum perfil. Crie um perfil para configurar os tempos.";
+
+                return;
+            }
+
+            totalMinutesBox.Value =
+                profile.TotalMinutes ??
+                double.NaN;
+
+            deleteProfileButton.IsEnabled =
+                true;
+
+            RefreshSelectedStopTime();
+        }
+
+        void RefreshProfiles(
+            int preferredIndex =
+                0)
+        {
+            profiles =
+                OmsiTimetableProfileEditor
+                    .ReadProfiles(
+                        workingLines)
+                    .ToList();
+
+            synchronizing =
+                true;
+
+            try
+            {
+                profileCombo.ItemsSource =
+                    profiles;
+
+                profileCombo.SelectedIndex =
+                    profiles.Count >
+                    0
+                        ? Math.Clamp(
+                            preferredIndex,
+                            0,
+                            profiles.Count -
+                                1)
+                        : -1;
+
+                rawEditor.Text =
                     string.Join(
                         Environment.NewLine,
-                        trip.ProfileLines)
+                        workingLines);
+            }
+            finally
+            {
+                synchronizing =
+                    false;
+            }
+
+            RefreshProfileFields();
+        }
+
+        profileCombo.SelectionChanged +=
+            (_, _) =>
+            {
+                if (!synchronizing)
+                {
+                    RefreshProfileFields();
+                }
             };
+
+        stopCombo.SelectionChanged +=
+            (_, _) =>
+            {
+                if (!synchronizing)
+                {
+                    RefreshSelectedStopTime();
+                }
+            };
+
+        applyTotalButton.Click +=
+            (_, _) =>
+            {
+                if (
+                    profileCombo.SelectedIndex <
+                        0 ||
+                    !double.IsFinite(
+                        totalMinutesBox.Value) ||
+                    totalMinutesBox.Value <=
+                        0)
+                {
+                    profileInfoText.Text =
+                        "Informe um tempo total válido.";
+                    return;
+                }
+
+                workingLines =
+                    ReadRawLines();
+
+                workingLines =
+                    OmsiTimetableProfileEditor
+                        .SetTotalMinutes(
+                            workingLines,
+                            profileCombo
+                                .SelectedIndex,
+                            totalMinutesBox
+                                .Value)
+                        .ToList();
+
+                RefreshProfiles(
+                    profileCombo
+                        .SelectedIndex);
+            };
+
+        applyStopButton.Click +=
+            (_, _) =>
+            {
+                if (
+                    profileCombo.SelectedIndex <
+                        0 ||
+                    stopCombo.SelectedIndex <
+                        0 ||
+                    !double.IsFinite(
+                        arrivalMinutesBox.Value) ||
+                    arrivalMinutesBox.Value <
+                        0)
+                {
+                    profileInfoText.Text =
+                        "Selecione um perfil/parada e informe um tempo válido.";
+                    return;
+                }
+
+                workingLines =
+                    ReadRawLines();
+
+                workingLines =
+                    OmsiTimetableProfileEditor
+                        .SetManualArrivalMinutes(
+                            workingLines,
+                            profileCombo
+                                .SelectedIndex,
+                            stopCombo
+                                .SelectedIndex,
+                            arrivalMinutesBox
+                                .Value)
+                        .ToList();
+
+                RefreshProfiles(
+                    profileCombo
+                        .SelectedIndex);
+            };
+
+        addProfileButton.Click +=
+            (_, _) =>
+            {
+                if (
+                    string.IsNullOrWhiteSpace(
+                        newProfileNameBox.Text) ||
+                    !double.IsFinite(
+                        newProfileMinutesBox.Value) ||
+                    newProfileMinutesBox.Value <=
+                        0)
+                {
+                    profileInfoText.Text =
+                        "Novo perfil: informe nome e duração válidos.";
+                    return;
+                }
+
+                try
+                {
+                    workingLines =
+                        ReadRawLines();
+
+                    workingLines =
+                        OmsiTimetableProfileEditor
+                            .CreateProfile(
+                                workingLines,
+                                newProfileNameBox
+                                    .Text,
+                                newProfileMinutesBox
+                                    .Value)
+                            .ToList();
+
+                    newProfileNameBox.Text =
+                        string.Empty;
+
+                    RefreshProfiles(
+                        int.MaxValue);
+                }
+                catch (Exception exception)
+                {
+                    profileInfoText.Text =
+                        $"Não foi possível criar o perfil: {exception.Message}";
+                }
+            };
+
+        deleteProfileButton.Click +=
+            (_, _) =>
+            {
+                if (
+                    profileCombo.SelectedIndex <
+                        0)
+                {
+                    return;
+                }
+
+                var index =
+                    profileCombo
+                        .SelectedIndex;
+
+                workingLines =
+                    ReadRawLines();
+
+                workingLines =
+                    OmsiTimetableProfileEditor
+                        .DeleteProfile(
+                            workingLines,
+                            index)
+                        .ToList();
+
+                RefreshProfiles(
+                    Math.Max(
+                        0,
+                        index -
+                        1));
+            };
+
+        var profileGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        profileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        profileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width =
+                    new GridLength(
+                        150)
+            });
+
+        Grid.SetColumn(
+            profileCombo,
+            0);
+
+        Grid.SetColumn(
+            totalMinutesBox,
+            1);
+
+        profileGrid.Children.Add(
+            profileCombo);
+
+        profileGrid.Children.Add(
+            totalMinutesBox);
+
+        var stopGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        stopGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        stopGrid.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width =
+                    new GridLength(
+                        170)
+            });
+
+        Grid.SetColumn(
+            stopCombo,
+            0);
+
+        Grid.SetColumn(
+            arrivalMinutesBox,
+            1);
+
+        stopGrid.Children.Add(
+            stopCombo);
+
+        stopGrid.Children.Add(
+            arrivalMinutesBox);
+
+        var newProfileGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    6
+            };
+
+        newProfileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        newProfileGrid.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width =
+                    new GridLength(
+                        150)
+            });
+
+        Grid.SetColumn(
+            newProfileNameBox,
+            0);
+
+        Grid.SetColumn(
+            newProfileMinutesBox,
+            1);
+
+        newProfileGrid.Children.Add(
+            newProfileNameBox);
+
+        newProfileGrid.Children.Add(
+            newProfileMinutesBox);
+
+        var profileActions =
+            new StackPanel
+            {
+                Orientation =
+                    Orientation.Horizontal,
+                Spacing =
+                    6
+            };
+
+        profileActions.Children.Add(
+            applyTotalButton);
+
+        profileActions.Children.Add(
+            deleteProfileButton);
+
+        var createActions =
+            new StackPanel
+            {
+                Orientation =
+                    Orientation.Horizontal,
+                Spacing =
+                    6
+            };
+
+        createActions.Children.Add(
+            addProfileButton);
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    620
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Configure duração total e os tempos de chegada por parada. O Map Studio calcula o trecho anterior pela diferença entre chegadas.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            });
+
+        panel.Children.Add(
+            profileGrid);
+
+        panel.Children.Add(
+            profileActions);
+
+        panel.Children.Add(
+            stopGrid);
+
+        panel.Children.Add(
+            applyStopButton);
+
+        panel.Children.Add(
+            profileInfoText);
+
+        panel.Children.Add(
+            new Separator());
+
+        panel.Children.Add(
+            newProfileGrid);
+
+        panel.Children.Add(
+            createActions);
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    "Avançado: o conteúdo OMSI bruto continua disponível e é preservado no salvamento.",
+                FontSize =
+                    11,
+                Opacity =
+                    0.72,
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        panel.Children.Add(
+            rawEditor);
+
+        RefreshProfiles();
 
         var dialog =
             new ContentDialog
@@ -10902,7 +11542,13 @@ public sealed partial class MainWindow : Window
                 Title =
                     $"Perfis de tempo · {trip.Name}",
                 Content =
-                    editor,
+                    new ScrollViewer
+                    {
+                        Content =
+                            panel,
+                        MaxHeight =
+                            680
+                    },
                 PrimaryButtonText =
                     "Salvar perfis",
                 CloseButtonText =
@@ -10919,20 +11565,7 @@ public sealed partial class MainWindow : Window
         }
 
         var lines =
-            editor.Text
-                .Replace(
-                    "\r\n",
-                    "\n",
-                    StringComparison.Ordinal)
-                .Split('\n')
-                .Select(
-                    value =>
-                        value.Trim())
-                .Where(
-                    value =>
-                        !string.IsNullOrWhiteSpace(
-                            value))
-                .ToArray();
+            ReadRawLines();
 
         try
         {
@@ -10950,7 +11583,7 @@ public sealed partial class MainWindow : Window
                 trip.Name);
 
             StatusText.Text =
-                $"Trip {trip.Name}: perfis de tempo salvos.";
+                $"Trip {trip.Name}: {OmsiTimetableProfileEditor.ReadProfiles(lines).Count} perfil(is) de tempo salvo(s).";
         }
         catch (Exception exception)
         {
