@@ -96,6 +96,8 @@ public sealed class D3D11NativeMapRenderer :
 
     private ID3D11Buffer? _trafficPathBuffer;
     private int _trafficPathVertexCount;
+    private ID3D11Buffer? _trafficPathTriangleBuffer;
+    private int _trafficPathTriangleVertexCount;
     private bool _trafficPathsVisible;
 
     private ID3D11Buffer? _timetableRouteBuffer;
@@ -695,6 +697,9 @@ public sealed class D3D11NativeMapRenderer :
     public int TrafficPathLineCount =>
         _trafficPathVertexCount / 2;
 
+    public int TrafficPathTriangleCount =>
+        _trafficPathTriangleVertexCount / 3;
+
     public void SetTimetableRoutePreview(
         IReadOnlyList<NativeMapVertex>?
             vertices)
@@ -740,30 +745,57 @@ public sealed class D3D11NativeMapRenderer :
         _trafficPathBuffer
             ?.Dispose();
 
+        _trafficPathTriangleBuffer
+            ?.Dispose();
+
         _trafficPathBuffer =
+            null;
+
+        _trafficPathTriangleBuffer =
             null;
 
         _trafficPathVertexCount =
             0;
 
-        if (
-            geometry is null ||
-            geometry.Vertices.Length ==
-                0)
+        _trafficPathTriangleVertexCount =
+            0;
+
+        if (geometry is null)
         {
             return;
         }
 
-        _trafficPathBuffer =
-            _deviceHost.Device
-                .CreateBuffer(
-                    geometry.Vertices
-                        .AsSpan(),
-                    BindFlags
-                        .VertexBuffer);
+        if (
+            geometry.Vertices.Length >
+                0)
+        {
+            _trafficPathBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry.Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
 
-        _trafficPathVertexCount =
-            geometry.Vertices.Length;
+            _trafficPathVertexCount =
+                geometry.Vertices.Length;
+        }
+
+        if (
+            geometry.TriangleVertices.Length >
+                0)
+        {
+            _trafficPathTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry.TriangleVertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _trafficPathTriangleVertexCount =
+                geometry.TriangleVertices.Length;
+        }
     }
 
     public bool SetTrafficPathsVisible(
@@ -1062,6 +1094,10 @@ public sealed class D3D11NativeMapRenderer :
         _trafficPathBuffer = null;
         _trafficPathVertexCount = 0;
 
+        _trafficPathTriangleBuffer?.Dispose();
+        _trafficPathTriangleBuffer = null;
+        _trafficPathTriangleVertexCount = 0;
+
         _sceneryLightBuffer?.Dispose();
         _sceneryLightBuffer = null;
         _sceneryLightVertexCount = 0;
@@ -1267,6 +1303,25 @@ public sealed class D3D11NativeMapRenderer :
             _trafficPathVertexCount =
                 trafficPathGeometry
                     .Vertices.Length;
+        }
+
+        if (
+            trafficPathGeometry is not null &&
+            trafficPathGeometry
+                .TriangleVertices.Length > 0)
+        {
+            _trafficPathTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        trafficPathGeometry
+                            .TriangleVertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _trafficPathTriangleVertexCount =
+                trafficPathGeometry
+                    .TriangleVertices.Length;
         }
 
         if (
@@ -1491,10 +1546,8 @@ public sealed class D3D11NativeMapRenderer :
 
                 if (_trafficPathsVisible)
                 {
-                    DrawLineGeometry(
-                        context,
-                        _trafficPathBuffer,
-                        _trafficPathVertexCount);
+                    DrawTrafficPathGeometry(
+                        context);
                 }
 
                 DrawLineGeometry(
@@ -1738,6 +1791,67 @@ public sealed class D3D11NativeMapRenderer :
         context
             .PSSetShader(
                 _pixelShader);
+    }
+
+    private void DrawTrafficPathGeometry(
+        ID3D11DeviceContext context)
+    {
+        if (
+            _trafficPathTriangleBuffer is
+                not null &&
+            _trafficPathTriangleVertexCount >
+                0)
+        {
+            context
+                .IASetPrimitiveTopology(
+                    PrimitiveTopology
+                        .TriangleList);
+
+            context
+                .IASetVertexBuffer(
+                    0,
+                    _trafficPathTriangleBuffer,
+                    NativeMapVertex
+                        .SizeInBytes);
+
+            context
+                .PSSetShader(
+                    _pixelShader);
+
+            context
+                .OMSetDepthStencilState(
+                    _depthReadState);
+
+            context
+                .OMSetBlendState(
+                    _alphaBlendState);
+
+            context
+                .RSSetState(
+                    _terrainRasterizerState);
+
+            context.Draw(
+                (uint)
+                    _trafficPathTriangleVertexCount,
+                0);
+
+            context
+                .OMSetBlendState(
+                    null);
+
+            context
+                .OMSetDepthStencilState(
+                    null);
+
+            context
+                .RSSetState(
+                    null);
+        }
+
+        DrawLineGeometry(
+            context,
+            _trafficPathBuffer,
+            _trafficPathVertexCount);
     }
 
     private static void DrawLineGeometry(
@@ -3371,6 +3485,7 @@ public sealed class D3D11NativeMapRenderer :
 
         _sceneryLightBuffer?.Dispose();
         _timetableRouteBuffer?.Dispose();
+        _trafficPathTriangleBuffer?.Dispose();
         _trafficPathBuffer?.Dispose();
         _splineGuideBuffer?.Dispose();
         _objectGuideBuffer?.Dispose();
