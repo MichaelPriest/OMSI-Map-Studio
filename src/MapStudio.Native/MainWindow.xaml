@@ -1607,6 +1607,14 @@
                                                           Content="Setas"
                                                           IsChecked="True"
                                                           Click="OnTransportPathFilterChanged" />
+                                                <CheckBox x:Name="TransportPathsNodesCheckBox"
+                                                          Content="Nós"
+                                                          IsChecked="True"
+                                                          Click="OnTransportPathFilterChanged" />
+                                                <CheckBox x:Name="TransportPathsLabelsCheckBox"
+                                                          Content="Rótulos"
+                                                          IsChecked="True"
+                                                          Click="OnTransportPathFilterChanged" />
                                                 <CheckBox x:Name="TransportPathsSignalsCheckBox"
                                                           Content="Destacar semáforo"
                                                           Click="OnTransportPathFilterChanged" />
@@ -1839,22 +1847,35 @@
                                         <ComboBoxItem Content="Trilhos" />
                                         <ComboBoxItem Content="Todos os tipos" />
                                     </ComboBox>
-                                    <StackPanel Orientation="Horizontal"
-                                                Spacing="10">
-                                        <CheckBox x:Name="TrafficPathWidthCheckBox"
-                                                  Content="Largura"
-                                                  Click="OnTrafficPathModeChanged" />
-                                        <CheckBox x:Name="TrafficPathArrowsCheckBox"
-                                                  Content="Setas"
-                                                  IsChecked="True"
-                                                  Click="OnTrafficPathModeChanged" />
-                                        <CheckBox x:Name="TrafficPathSignalsCheckBox"
-                                                  Content="Semáforos em vermelho"
-                                                  Click="OnTrafficPathModeChanged" />
-                                        <CheckBox x:Name="TrafficPathSelectedOnlyCheckBox"
-                                                  Content="Só selecionado"
-                                                  Click="OnTrafficPathIsolationChanged" />
-                                    </StackPanel>
+                                    <ScrollViewer HorizontalScrollMode="Enabled"
+                                                  HorizontalScrollBarVisibility="Auto"
+                                                  VerticalScrollMode="Disabled"
+                                                  VerticalScrollBarVisibility="Disabled">
+                                        <StackPanel Orientation="Horizontal"
+                                                    Spacing="10">
+                                            <CheckBox x:Name="TrafficPathWidthCheckBox"
+                                                      Content="Largura"
+                                                      Click="OnTrafficPathModeChanged" />
+                                            <CheckBox x:Name="TrafficPathArrowsCheckBox"
+                                                      Content="Setas"
+                                                      IsChecked="True"
+                                                      Click="OnTrafficPathModeChanged" />
+                                            <CheckBox x:Name="TrafficPathNodesCheckBox"
+                                                      Content="Nós"
+                                                      IsChecked="True"
+                                                      Click="OnTrafficPathModeChanged" />
+                                            <CheckBox x:Name="TrafficPathLabelsCheckBox"
+                                                      Content="Rótulos"
+                                                      IsChecked="True"
+                                                      Click="OnTrafficPathModeChanged" />
+                                            <CheckBox x:Name="TrafficPathSignalsCheckBox"
+                                                      Content="Semáforos em vermelho"
+                                                      Click="OnTrafficPathModeChanged" />
+                                            <CheckBox x:Name="TrafficPathSelectedOnlyCheckBox"
+                                                      Content="Só selecionado"
+                                                      Click="OnTrafficPathIsolationChanged" />
+                                        </StackPanel>
+                                    </ScrollViewer>
                                 </StackPanel>
                             </Border>
 
