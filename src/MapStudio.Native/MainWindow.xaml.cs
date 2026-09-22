@@ -16363,8 +16363,8 @@ public sealed partial class MainWindow : Window
 
         RootText.Text =
             _session.IsStandaloneWorkspace
-                ? $"Workspace: {root}\nMapas: {count}"
-                : $"OMSI opcional: {root}\nMapas encontrados: {count}";
+                ? $"Workspace · {count} mapa(s) · {root}"
+                : $"OMSI · {count} mapa(s) · {root}";
     }
 
     private void SetContentRootModeLabel(
@@ -17616,17 +17616,17 @@ public sealed partial class MainWindow : Window
 
         MapText.Text =
             $"{snapshot.Map.DisplayName}\n" +
-            $"Tiles carregados: {snapshot.Tiles.Count} / {snapshot.Map.Tiles.Count}\n" +
-            $"Objetos: {snapshot.ObjectCount} · Splines: {snapshot.SplineCount}\n" +
-            $"Terrenos: {snapshot.TerrainCount} · Tile ativo: {activeTile}";
+            $"{snapshot.Tiles.Count}/{snapshot.Map.Tiles.Count} tiles · " +
+            $"{snapshot.ObjectCount} objetos · {snapshot.SplineCount} splines · " +
+            $"tile {activeTile}";
 
         FullscreenMapTitleText.Text =
             snapshot.Map.DisplayName;
 
         MapLoadModeText.Text =
             _fullMapMode
-                ? "Carregamento: mapa completo"
-                : "Carregamento: desempenho 3×3";
+                ? "Completo"
+                : "3×3";
 
         if (
             snapshot.ActiveTile is
