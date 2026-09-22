@@ -315,6 +315,8 @@ public sealed partial class MainWindow : Window
 
     private bool _libraryMode;
     private bool _mapMode;
+    private CancellationTokenSource?
+        _mapExplorerRefreshCancellation;
     private bool _assetPlacementOptionsExpanded;
     private bool _transportMode;
     private bool _transportPathsVisible;
@@ -1008,6 +1010,12 @@ public sealed partial class MainWindow : Window
                 activeButton,
                 MapExplorerModeButton);
 
+        if (!_mapMode)
+        {
+            _mapExplorerRefreshCancellation
+                ?.Cancel();
+        }
+
         MapExplorerPanel.Visibility =
             _mapMode
                 ? Visibility.Visible
@@ -1070,11 +1078,6 @@ public sealed partial class MainWindow : Window
 
         SetTransportTrackRecordMode(
             false);
-
-        Viewport.CancelSceneryPlacement();
-        Viewport.CancelSplinePlacement();
-        Viewport.ClearTimetableRoutePreview();
-        Viewport.RestoreSceneView();
 
         PlaceAssetButton.Content =
             "Posicionar no mapa";
@@ -1197,6 +1200,18 @@ public sealed partial class MainWindow : Window
 
     private void RefreshMapExplorer()
     {
+        _mapExplorerRefreshCancellation
+            ?.Cancel();
+
+        _mapExplorerRefreshCancellation
+            ?.Dispose();
+
+        var cancellation =
+            new CancellationTokenSource();
+
+        _mapExplorerRefreshCancellation =
+            cancellation;
+
         var snapshot =
             _session.CurrentMap;
 
@@ -1211,124 +1226,223 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var loadedCoordinates =
-            snapshot.Tiles
-                .GroupBy(
-                    tile =>
-                        (
-                            tile.Reference.X,
-                            tile.Reference.Y
-                        ))
-                .ToDictionary(
-                    group =>
-                        group.Key,
-                    group =>
-                        group.First());
-
         var query =
             ExplorerSearchBox.Text
                 .Trim();
 
-        var groups =
+        var mapTiles =
             snapshot.Map.Tiles
-                .GroupBy(
+                .Select(
                     tile =>
                         (
-                            tile.X,
-                            tile.Y
+                            X: tile.X,
+                            Y: tile.Y
                         ))
-                .OrderBy(
-                    group =>
-                        group.Key.Y)
-                .ThenBy(
-                    group =>
-                        group.Key.X);
-
-        if (!string.IsNullOrWhiteSpace(
-                query))
-        {
-            groups =
-                groups
-                    .Where(
-                        group =>
-                            $"{group.Key.X},{group.Key.Y}"
-                                .Contains(
-                                    query,
-                                    StringComparison.OrdinalIgnoreCase) ||
-                            group.Key.X
-                                .ToString(
-                                    CultureInfo.InvariantCulture)
-                                .Contains(
-                                    query,
-                                    StringComparison.OrdinalIgnoreCase) ||
-                            group.Key.Y
-                                .ToString(
-                                    CultureInfo.InvariantCulture)
-                                .Contains(
-                                    query,
-                                    StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(
-                        group =>
-                            group.Key.Y)
-                    .ThenBy(
-                        group =>
-                            group.Key.X);
-        }
-
-        var items =
-            groups
-                .Select(
-                    group =>
-                    {
-                        var tile =
-                            group.First();
-
-                        var isActive =
-                            snapshot.ActiveTile?.X ==
-                                tile.X &&
-                            snapshot.ActiveTile?.Y ==
-                                tile.Y;
-
-                        var isLoaded =
-                            loadedCoordinates
-                                .TryGetValue(
-                                    (
-                                        tile.X,
-                                        tile.Y
-                                    ),
-                                    out var loaded);
-
-                        var detail =
-                            isLoaded &&
-                            loaded is not null
-                                ? $"objetos {loaded.Content.Objects.Count} · splines {loaded.Content.Splines.Count}"
-                                : "fora da região carregada";
-
-                        if (group.Count() > 1)
-                        {
-                            detail +=
-                                $" · {group.Count()} refs";
-                        }
-
-                        return new TileManagerViewItem(
-                            tile.X,
-                            tile.Y,
-                            $"{(isActive ? "●" : "○")} Tile {tile.X},{tile.Y} · {detail}",
-                            isActive,
-                            isLoaded);
-                    })
                 .ToArray();
 
-        MapTileListView.ItemsSource =
-            items;
+        var loadedTiles =
+            snapshot.Tiles
+                .Select(
+                    tile =>
+                        (
+                            X: tile.Reference.X,
+                            Y: tile.Reference.Y,
+                            Objects:
+                                tile.Content.Objects.Count,
+                            Splines:
+                                tile.Content.Splines.Count
+                        ))
+                .ToArray();
 
-        MapTileListView.SelectedItem =
-            items.FirstOrDefault(
-                item =>
-                    item.IsActive);
+        var activeX =
+            snapshot.ActiveTile?.X;
+
+        var activeY =
+            snapshot.ActiveTile?.Y;
 
         MapExplorerStatusText.Text =
-            $"{snapshot.Map.Tiles.Count} tile(s) no mapa · {snapshot.Tiles.Count} carregado(s) no viewport · {items.Length} exibido(s).";
+            $"Lendo {mapTiles.Length} tile(s)...";
+
+        _ =
+            RefreshMapExplorerAsync(
+                mapTiles,
+                loadedTiles,
+                activeX,
+                activeY,
+                query,
+                cancellation.Token);
+    }
+
+    private async Task RefreshMapExplorerAsync(
+        (int X, int Y)[] mapTiles,
+        (
+            int X,
+            int Y,
+            int Objects,
+            int Splines
+        )[] loadedTiles,
+        int? activeX,
+        int? activeY,
+        string query,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var items =
+                await Task.Run(
+                    () =>
+                    {
+                        cancellationToken
+                            .ThrowIfCancellationRequested();
+
+                        var loadedCoordinates =
+                            loadedTiles
+                                .GroupBy(
+                                    tile =>
+                                        (
+                                            tile.X,
+                                            tile.Y
+                                        ))
+                                .ToDictionary(
+                                    group =>
+                                        group.Key,
+                                    group =>
+                                        group.First());
+
+                        IEnumerable<
+                            IGrouping<
+                                (int X, int Y),
+                                (int X, int Y)>> groups =
+                                    mapTiles
+                                        .GroupBy(
+                                            tile =>
+                                                (
+                                                    tile.X,
+                                                    tile.Y
+                                                ));
+
+                        if (
+                            !string.IsNullOrWhiteSpace(
+                                query))
+                        {
+                            groups =
+                                groups.Where(
+                                    group =>
+                                        $"{group.Key.X},{group.Key.Y}"
+                                            .Contains(
+                                                query,
+                                                StringComparison.OrdinalIgnoreCase) ||
+                                        group.Key.X
+                                            .ToString(
+                                                CultureInfo.InvariantCulture)
+                                            .Contains(
+                                                query,
+                                                StringComparison.OrdinalIgnoreCase) ||
+                                        group.Key.Y
+                                            .ToString(
+                                                CultureInfo.InvariantCulture)
+                                            .Contains(
+                                                query,
+                                                StringComparison.OrdinalIgnoreCase));
+                        }
+
+                        var result =
+                            groups
+                                .OrderBy(
+                                    group =>
+                                        group.Key.Y)
+                                .ThenBy(
+                                    group =>
+                                        group.Key.X)
+                                .Select(
+                                    group =>
+                                    {
+                                        cancellationToken
+                                            .ThrowIfCancellationRequested();
+
+                                        var isActive =
+                                            activeX ==
+                                                group.Key.X &&
+                                            activeY ==
+                                                group.Key.Y;
+
+                                        var isLoaded =
+                                            loadedCoordinates
+                                                .TryGetValue(
+                                                    group.Key,
+                                                    out var loaded);
+
+                                        var detail =
+                                            isLoaded
+                                                ? $"objetos {loaded.Objects} · splines {loaded.Splines}"
+                                                : "fora da região carregada";
+
+                                        var referenceCount =
+                                            group.Count();
+
+                                        if (
+                                            referenceCount >
+                                                1)
+                                        {
+                                            detail +=
+                                                $" · {referenceCount} refs";
+                                        }
+
+                                        return new TileManagerViewItem(
+                                            group.Key.X,
+                                            group.Key.Y,
+                                            $"{(isActive ? "●" : "○")} Tile {group.Key.X},{group.Key.Y} · {detail}",
+                                            isActive,
+                                            isLoaded);
+                                    })
+                                .ToArray();
+
+                        cancellationToken
+                            .ThrowIfCancellationRequested();
+
+                        return result;
+                    },
+                    cancellationToken);
+
+            if (
+                cancellationToken.IsCancellationRequested ||
+                !_mapMode)
+            {
+                return;
+            }
+
+            MapTileListView.ItemsSource =
+                items;
+
+            MapTileListView.SelectedItem =
+                items.FirstOrDefault(
+                    item =>
+                        item.IsActive);
+
+            MapExplorerStatusText.Text =
+                $"{mapTiles.Length} referência(s) de tile · {loadedTiles.Length} carregado(s) no viewport · {items.Length} coordenada(s) exibida(s).";
+        }
+        catch (OperationCanceledException)
+        {
+            // Uma nova atualização substituiu esta sem bloquear a UI.
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"Map explorer refresh failure type={exception.GetType().FullName} hresult=0x{exception.HResult:X8} message={exception.Message}");
+
+            NativeStartupDiagnostics.Write(
+                exception.ToString());
+
+            if (
+                _mapMode &&
+                !cancellationToken
+                    .IsCancellationRequested)
+            {
+                MapExplorerStatusText.Text =
+                    $"Falha ao listar tiles: {exception.Message}";
+            }
+        }
     }
 
     private async void OnMapTileFocusClick(
