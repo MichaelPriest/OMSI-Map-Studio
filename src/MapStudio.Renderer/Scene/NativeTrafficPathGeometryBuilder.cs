@@ -38,7 +38,7 @@ public sealed class NativeTrafficPathGeometryBuilder
         new(0.96f, 0.08f, 0.06f, 1.0f);
 
     private static readonly Vector4 PedestrianColor =
-        new(0.94f, 0.95f, 0.96f, 1.0f);
+        new(1.0f, 0.82f, 0.08f, 1.0f);
 
     private static readonly Vector4 RailColor =
         new(0.12f, 0.76f, 1.0f, 1.0f);
