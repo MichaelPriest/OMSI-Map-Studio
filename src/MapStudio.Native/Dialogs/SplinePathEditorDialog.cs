@@ -403,7 +403,7 @@ internal static class SplinePathEditorDialog
             };
 
         return
-            await dialog.ShowAsync() ==
+            await dialog.ShowAdaptiveAsync() ==
                 ContentDialogResult.Primary
                 ? result
                 : null;
