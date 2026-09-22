@@ -1143,7 +1143,7 @@ public sealed partial class NativeViewport : UserControl
             _runtime?
                 .TrafficPathDisplayOptions ??
             NativeTrafficPathDisplayOptions
-                .CleanVehicles;
+                .TransportOverview;
 
     public NativeTrafficPathGeometry?
         TrafficPathGeometry =>
