@@ -13537,6 +13537,10 @@ public sealed partial class MainWindow : Window
         ActivateStandaloneWorkspaceAsync(
             bool announce)
     {
+        BeginLoading(
+            "Inicializando Workspace Map Studio",
+            "Preparando catálogo, biblioteca e editor standalone...");
+
         try
         {
             StatusText.Text =
@@ -13567,18 +13571,33 @@ public sealed partial class MainWindow : Window
             RefreshLibraryButton.IsEnabled =
                 true;
 
+            UpdateLoading(
+                "Indexando biblioteca do Workspace",
+                "Localizando SCO, SLI, modelos e texturas...");
+
             var progress =
                 new Progress<
                     OmsiAssetIndexProgress>(
                     value =>
                     {
+                        var detail =
+                            $"Indexando Workspace... {value.ExaminedFiles} arquivos · {value.CandidateFiles} assets";
+
                         LibraryStatusText.Text =
-                            $"Indexando Workspace... {value.CandidateFiles} assets";
+                            detail;
+
+                        UpdateLoading(
+                            "Indexando biblioteca do Workspace",
+                            detail);
                     });
 
             await _session
                 .RefreshAssetLibraryAsync(
                     progress);
+
+            UpdateLoading(
+                "Preparando editor",
+                $"{maps.Count} mapa(s) encontrados · carregando biblioteca...");
 
             await LoadAssetLibraryAsync();
 
@@ -13594,6 +13613,10 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao inicializar Workspace: {exception.Message}";
+        }
+        finally
+        {
+            EndLoading();
         }
     }
 
