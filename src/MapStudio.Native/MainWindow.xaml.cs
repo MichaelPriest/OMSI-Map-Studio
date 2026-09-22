@@ -9580,12 +9580,62 @@ public sealed partial class MainWindow : Window
                 TransportPathChoiceHintText.Text =
                     "Este item não possui paths OMSI ou nenhuma spline/objeto está selecionado.";
             }
+
+            UpdateTransportAddSelectionAvailability();
         }
         finally
         {
             _syncingTransportPathChoice =
                 false;
         }
+    }
+
+    private void UpdateTransportAddSelectionAvailability()
+    {
+        if (TransportAddSelectionButton is null)
+        {
+            return;
+        }
+
+        if (
+            TransportListView.SelectedItem is not
+                TransportExplorerItem item)
+        {
+            TransportAddSelectionButton.IsEnabled =
+                false;
+            return;
+        }
+
+        if (item.Kind == "Track")
+        {
+            TransportAddSelectionButton.IsEnabled =
+                _selectionInfo is
+                    {
+                        Kind:
+                            PickingKind.Object or
+                            PickingKind.Spline
+                    };
+            return;
+        }
+
+        if (
+            item.Kind !=
+                "StationLink" ||
+            _selectionInfo is null ||
+            TransportPathChoiceComboBox.SelectedItem is not
+                NativeTrafficPathChoice choice)
+        {
+            TransportAddSelectionButton.IsEnabled =
+                false;
+            return;
+        }
+
+        TransportAddSelectionButton.IsEnabled =
+            TryCreateStationLinkEntryFromKnownMetadata(
+                _selectionInfo.EntityId,
+                choice.Index.ToString(
+                    CultureInfo.InvariantCulture),
+                out _);
     }
 
     private string GetTransportPathMetadataHint(
@@ -9633,6 +9683,8 @@ public sealed partial class MainWindow : Window
 
         TransportPathChoiceHintText.Text =
             $"Path {choice.Index} · {choice.KindLabel} · direção {choice.DirectionLabel} · largura {choice.Width:F2} m · {GetTransportPathMetadataHint(choice)}.";
+
+        UpdateTransportAddSelectionAvailability();
     }
 
     private void OnTransportPreviousLaneClick(
@@ -14288,10 +14340,7 @@ public sealed partial class MainWindow : Window
                 false);
         }
 
-        TransportAddSelectionButton.IsEnabled =
-            item.Kind is
-                "Track" or
-                "StationLink";
+        UpdateTransportAddSelectionAvailability();
 
         TransportProfilesButton.IsEnabled =
             item.Kind == "Trip";
