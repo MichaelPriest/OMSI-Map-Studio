@@ -1,6 +1,16 @@
 name: Native Windows CI
 
 on:
+  push:
+    branches:
+      - feature/native-subscription-client
+    paths:
+      - "src/MapStudio.Core/**"
+      - "src/MapStudio.Native/**"
+      - "src/MapStudio.Renderer/**"
+      - "tests/MapStudio.Core.Tests/**"
+      - "tests/MapStudio.Renderer.Tests/**"
+      - ".github/workflows/native-ci.yml"
   pull_request:
     branches:
       - feature/alpha3-material-preview
