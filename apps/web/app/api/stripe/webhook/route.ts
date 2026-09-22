@@ -22,7 +22,15 @@ async function syncSubscription(subscription:Stripe.Subscription,fallbackUserId?
     return;
   }
 
-  const periodEnd=new Date(subscription.current_period_end*1000).toISOString();
+  const periodEndUnix=Math.max(
+    ...subscription.items.data.map(item=>item.current_period_end)
+  );
+
+  if(!Number.isFinite(periodEndUnix)){
+    throw new Error("Stripe subscription has no current billing period.");
+  }
+
+  const periodEnd=new Date(periodEndUnix*1000).toISOString();
 
   await admin.from("subscriptions").upsert({
     user_id:userId,
