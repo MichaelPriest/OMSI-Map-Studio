@@ -227,7 +227,7 @@ internal sealed class TimetableLineEditor : ContentControl
                 "Trip",
                 "Line2",
                 "Saída",
-                string.Empty
+                "Ordem"
             };
 
         for (
@@ -248,6 +248,53 @@ internal sealed class TimetableLineEditor : ContentControl
         var rowEditors =
             new List<
                 RowEditor>();
+
+        void MoveRow(
+            Grid target,
+            int delta)
+        {
+            var currentIndex =
+                rowEditors.FindIndex(
+                    candidate =>
+                        ReferenceEquals(
+                            candidate.Row,
+                            target));
+
+            if (currentIndex < 0)
+            {
+                return;
+            }
+
+            var newIndex =
+                currentIndex +
+                delta;
+
+            if (
+                newIndex < 0 ||
+                newIndex >=
+                    rowEditors.Count)
+            {
+                return;
+            }
+
+            var editor =
+                rowEditors[
+                    currentIndex];
+
+            rowEditors.RemoveAt(
+                currentIndex);
+
+            rowEditors.Insert(
+                newIndex,
+                editor);
+
+            rowsPanel.Children.Remove(
+                target);
+
+            rowsPanel.Children.Insert(
+                newIndex + 1,
+                target);
+        }
 
         void AddRow(
             OmsiTimetableLineTableRow?
@@ -366,24 +413,66 @@ internal sealed class TimetableLineEditor : ContentControl
                 departureBox,
                 "Aceita HH:mm, HH:mm:ss ou segundos OMSI.");
 
+            Button CreateRowActionButton(
+                string content,
+                string tooltip)
+            {
+                var button =
+                    new Button
+                    {
+                        Content =
+                            content,
+                        MinWidth =
+                            30,
+                        Padding =
+                            new Thickness(
+                                7,
+                                5,
+                                7,
+                                5),
+                        Tag =
+                            row
+                    };
+
+                ToolTipService.SetToolTip(
+                    button,
+                    tooltip);
+
+                return button;
+            }
+
+            var moveUpButton =
+                CreateRowActionButton(
+                    "↑",
+                    "Mover esta saída para cima");
+
+            var moveDownButton =
+                CreateRowActionButton(
+                    "↓",
+                    "Mover esta saída para baixo");
+
             var removeButton =
-                new Button
+                CreateRowActionButton(
+                    "✕",
+                    "Remover esta saída");
+
+            var actionsPanel =
+                new StackPanel
                 {
-                    Content =
-                        "✕",
-                    Padding =
-                        new Thickness(
-                            9,
-                            5,
-                            9,
-                            5),
-                    Tag =
-                        row
+                    Orientation =
+                        Orientation.Horizontal,
+                    Spacing =
+                        3
                 };
 
-            ToolTipService.SetToolTip(
-                removeButton,
-                "Remover esta saída");
+            actionsPanel.Children.Add(
+                moveUpButton);
+
+            actionsPanel.Children.Add(
+                moveDownButton);
+
+            actionsPanel.Children.Add(
+                removeButton);
 
             FrameworkElement[]
                 controls =
@@ -395,7 +484,7 @@ internal sealed class TimetableLineEditor : ContentControl
                     tripBox,
                     tripLine2Box,
                     departureBox,
-                    removeButton
+                    actionsPanel
                 ];
 
             for (
@@ -428,6 +517,42 @@ internal sealed class TimetableLineEditor : ContentControl
 
             rowsPanel.Children.Add(
                 row);
+
+            moveUpButton.Click +=
+                (
+                    sender,
+                    _
+                ) =>
+                {
+                    if (
+                        sender is
+                            Button button &&
+                        button.Tag is
+                            Grid target)
+                    {
+                        MoveRow(
+                            target,
+                            -1);
+                    }
+                };
+
+            moveDownButton.Click +=
+                (
+                    sender,
+                    _
+                ) =>
+                {
+                    if (
+                        sender is
+                            Button button &&
+                        button.Tag is
+                            Grid target)
+                    {
+                        MoveRow(
+                            target,
+                            1);
+                    }
+                };
 
             removeButton.Click +=
                 (
@@ -531,7 +656,7 @@ internal sealed class TimetableLineEditor : ContentControl
             new TextBlock
             {
                 Text =
-                    "Tabela de horários · cada linha representa um [addtrip]. Tours com o mesmo nome são agrupados no arquivo .ttl.",
+                    "Tabela de horários · cada linha representa um [addtrip]. Tours com o mesmo nome são agrupados no arquivo .ttl. Use ↑/↓ para definir a ordem gravada das saídas.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
