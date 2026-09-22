@@ -405,7 +405,7 @@ internal static class TimetableTripEditorDialog
             };
 
         if (
-            await dialog.ShowAsync() !=
+            await dialog.ShowAdaptiveAsync() !=
                 ContentDialogResult.Primary)
         {
             return null;
