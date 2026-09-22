@@ -1621,10 +1621,12 @@
                                     <Button x:Name="TransportRecordButton"
                                             Content="● Gravar caminho"
                                             IsEnabled="False"
-                                            ToolTipService.ToolTip="Clique nas splines/objetos na ordem da rota; a faixa escolhida é gravada no Track"
+                                            ToolTipService.ToolTip="Clique nas splines/objetos na ordem da rota; a faixa escolhida é gravada no Track ou StationLink selecionado"
                                             Click="OnTransportRecordClick" />
                                     <Button x:Name="TransportAddSelectionButton"
                                             Content="+ trecho selecionado"
+                                            IsEnabled="False"
+                                            ToolTipService.ToolTip="Adiciona o path atual quando o contexto de Track/StationLink é válido"
                                             Click="OnTransportAddSelectionClick" />
                                     <Button x:Name="TransportRemoveStepButton"
                                             Content="Remover"
