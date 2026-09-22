@@ -765,10 +765,12 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - thumbnails geométricos persistentes e cards visuais da biblioteca;
 - preview visual nativo de texturas BMP/PNG/JPG/TGA e DDS compatíveis, incluindo máscaras DDS A8 sem depender de codec WIC;
 - preview 3D nativo também para modelos avulsos `.o3d` e `.x`, sem depender de um SCO wrapper;
-- o Workspace standalone semeia conteúdo original próprio: Road Kit, túnel, Bridge Kit, cruzamento, prédio, árvore, arbusto, poste com `light_enh`, banco, placa de ponto de ônibus e semáforo editável, sem exigir arquivos do OMSI 2;
+- o Workspace standalone semeia conteúdo original próprio: Road Kit, túnel, Bridge Kit, cruzamento, prédio, árvore, arbusto, poste com `light_enh`, banco, placa de ponto de ônibus, caixa de utilidades e semáforo editável, sem exigir arquivos do OMSI 2;
 - o Criador de Pontes nativo gera SLI/texturas próprias, cria backup ao sobrescrever uma ponte existente e abre o resultado diretamente no fluxo de Estrada fácil;
 - o semáforo inicial inclui programa de 60 s com fases OMSI reais e path ligado por `use_traffic_light`, portanto aparece no editor nativo de programas depois de colocado no mapa;
-- dock inferior de criação adaptável/rolável, indicação visual da ferramenta ativa e acesso direto ao criador de túneis;
+- dock inferior de criação adaptável/rolável e móvel, agora separado visualmente em **Editar / Criar / Cenário / Sistemas**, com indicação da ferramenta ativa e acesso direto aos criadores de ponte e túnel;
+- barra do modo F11 usa controles compactos e uniformes para projeto, edição, painéis, Workspace e atalho para abrir OMSI;
+- o painel Tráfego oferece **Adicionar semáforo...**, abrindo diretamente a sinalização da biblioteca para posicionamento;
 - posicionamento de objetos com opção de encaixar/alinha à via mais próxima, usando a tangente real de splines retas ou curvas e alcance configurável;
 - Easy Road com preview editável, confirmação explícita, snap e auto-link linear seguro;
 - geração procedural de vias com suavização, grafo único, auto-link de continuidade em grau 2, junctions próprios e rollback;

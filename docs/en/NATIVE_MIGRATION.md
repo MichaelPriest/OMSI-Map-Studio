@@ -765,10 +765,12 @@ In addition to the checkpoints already described, the native host currently incl
 - persistent geometry thumbnails and visual library cards;
 - native visual previews for BMP/PNG/JPG/TGA and compatible DDS textures, including A8 DDS masks without relying on a WIC codec;
 - native 3D preview for standalone `.o3d` and `.x` model assets without requiring an SCO wrapper;
-- the standalone Workspace seeds its own original content: Road Kit, tunnel, Bridge Kit, junction, building, tree, shrub, `light_enh` street lamp, bench, bus-stop sign, and editable traffic light, without requiring OMSI 2 files;
+- the standalone Workspace seeds its own original content: Road Kit, tunnel, Bridge Kit, junction, building, tree, shrub, `light_enh` street lamp, bench, bus-stop sign, utility cabinet, and editable traffic light, without requiring OMSI 2 files;
 - the native Bridge Creator generates original SLI/textures, backs up an existing bridge before overwrite, and opens the result directly in the Easy Road workflow;
 - the starter traffic light includes a real 60-second OMSI program and a path linked through `use_traffic_light`, so it becomes editable in the native traffic-program editor once placed on a map;
-- an adaptive/scrollable bottom creation dock, visible active-tool state, and direct access to the tunnel creator;
+- an adaptive, scrollable, and movable bottom creation dock, now visually grouped into **Edit / Create / Scenery / Systems**, with visible active-tool state and direct access to the bridge and tunnel creators;
+- the F11 editor bar uses consistent compact controls for project actions, editing, panels, Workspace switching, and the OMSI shortcut;
+- the Traffic panel exposes **Add traffic light...**, opening library signalling assets directly for placement;
 - scenery placement can snap/align to the nearest road using the real tangent of straight or curved splines with a configurable range;
 - Easy Road with editable preview, explicit confirmation, snapping, and safe linear auto-linking;
 - procedural-road generation with smoothing, one graph, degree-2 continuity auto-linking, original junction assets, and rollback;
