@@ -54,6 +54,27 @@
                 <Setter Property="CornerRadius"
                         Value="6" />
             </Style>
+            <Style x:Key="ExplorerModeButtonStyle"
+                   TargetType="Button">
+                <Setter Property="MinHeight"
+                        Value="42" />
+                <Setter Property="Padding"
+                        Value="6,5" />
+                <Setter Property="FontSize"
+                        Value="10.5" />
+                <Setter Property="Background"
+                        Value="#102633" />
+                <Setter Property="BorderBrush"
+                        Value="#27495A" />
+                <Setter Property="BorderThickness"
+                        Value="1" />
+                <Setter Property="CornerRadius"
+                        Value="7" />
+                <Setter Property="HorizontalContentAlignment"
+                        Value="Center" />
+                <Setter Property="VerticalContentAlignment"
+                        Value="Center" />
+            </Style>
             <Style x:Key="MapToolGroupBadgeStyle"
                    TargetType="Border">
                 <Setter Property="Width"
@@ -560,7 +581,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenExplorerTranslate" />
                 </Border.RenderTransform>
-                <Grid Padding="14" RowSpacing="10">
+                <Grid Padding="12" RowSpacing="9">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -576,121 +597,220 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
+
                         <StackPanel Spacing="1">
-                            <TextBlock Text="PROJETO &amp; ASSETS"
+                            <TextBlock Text="PROJETO"
                                        FontSize="15"
                                        FontWeight="SemiBold"
-                                       CharacterSpacing="45" />
-                            <TextBlock Text="Cena, biblioteca e navegação do mapa"
+                                       CharacterSpacing="55" />
+                            <TextBlock x:Name="ExplorerModeSubtitleText"
+                                       Text="Cena e conteúdo do mapa"
                                        FontSize="11"
                                        Foreground="#799AAE" />
                         </StackPanel>
-                        <Border Grid.Column="1"
-                                Width="28"
-                                Height="28"
-                                Background="#132D3D"
-                                CornerRadius="6"
-                                ToolTipService.ToolTip="Arraste para mover no F11"
-                                PointerPressed="OnExplorerFloatingDragPressed"
-                                PointerMoved="OnExplorerFloatingDragMoved"
-                                PointerReleased="OnExplorerFloatingDragReleased"
-                                PointerCanceled="OnExplorerFloatingDragReleased">
-                            <TextBlock Text="⋮⋮"
-                                       FontSize="14"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Foreground="#9FCBE2" />
-                        </Border>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="5">
+                            <Button x:Name="RefreshLibraryButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="↻"
+                                    ToolTipService.ToolTip="Atualizar biblioteca"
+                                    IsEnabled="False"
+                                    Click="OnRefreshLibraryClick" />
+                            <Border Width="28"
+                                    Height="28"
+                                    Background="#132D3D"
+                                    CornerRadius="6"
+                                    ToolTipService.ToolTip="Arraste para mover no F11"
+                                    PointerPressed="OnExplorerFloatingDragPressed"
+                                    PointerMoved="OnExplorerFloatingDragMoved"
+                                    PointerReleased="OnExplorerFloatingDragReleased"
+                                    PointerCanceled="OnExplorerFloatingDragReleased">
+                                <TextBlock Text="⋮⋮"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="#9FCBE2" />
+                            </Border>
+                        </StackPanel>
                     </Grid>
 
-                    <StackPanel Grid.Row="1"
-                                Orientation="Horizontal"
-                                Spacing="5">
-                        <Button Content="Cena"
+                    <Grid Grid.Row="1"
+                          ColumnSpacing="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="SceneExplorerModeButton"
+                                Grid.Column="0"
+                                Style="{StaticResource ExplorerModeButtonStyle}"
                                 ToolTipService.ToolTip="Elementos presentes no mapa"
-                                Click="OnSceneExplorerModeClick" />
-                        <Button Content="Assets"
+                                Click="OnSceneExplorerModeClick">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="◈"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Cena"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="LibraryExplorerModeButton"
+                                Grid.Column="1"
+                                Style="{StaticResource ExplorerModeButtonStyle}"
                                 ToolTipService.ToolTip="Biblioteca de itens do Workspace ou OMSI"
-                                Click="OnLibraryModeClick" />
-                        <Button Content="Mapa"
+                                Click="OnLibraryModeClick">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="▦"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Assets"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="MapExplorerModeButton"
+                                Grid.Column="2"
+                                Style="{StaticResource ExplorerModeButtonStyle}"
                                 ToolTipService.ToolTip="Tiles, coordenadas e ferramentas globais"
-                                Click="OnTileManagerClick" />
-                        <Button Content="Transporte"
+                                Click="OnTileManagerClick">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="⌖"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Mapa"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <Button x:Name="TransportExplorerModeButton"
+                                Grid.Column="3"
+                                Style="{StaticResource ExplorerModeButtonStyle}"
                                 ToolTipService.ToolTip="Tracks, Trips, Stops, StationLinks e Lines/Tours"
-                                Click="OnToolTransportClick" />
-                        <Button x:Name="RefreshLibraryButton"
-                                Content="↻"
-                                ToolTipService.ToolTip="Atualizar biblioteca"
-                                IsEnabled="False"
-                                Click="OnRefreshLibraryClick" />
-                    </StackPanel>
+                                Click="OnToolTransportClick">
+                            <StackPanel Spacing="1">
+                                <TextBlock Text="↔"
+                                           FontSize="14"
+                                           HorizontalAlignment="Center" />
+                                <TextBlock Text="Transporte"
+                                           FontSize="9.5"
+                                           HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
-                    <TextBox x:Name="ExplorerSearchBox"
-                             Grid.Row="2"
-                             PlaceholderText="Buscar..."
-                             TextChanged="OnExplorerSearchTextChanged" />
+                    <Grid Grid.Row="2"
+                          ColumnSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Row="3"
-                                Spacing="6">
-                        <TextBlock x:Name="RootText"
-                                   Text="Inicializando Workspace Map Studio..."
-                                   TextWrapping="Wrap"
-                                   Foreground="#9FB5C5" />
-                        <TextBlock x:Name="MapText"
-                                   Text="Nenhum mapa aberto."
-                                   TextWrapping="Wrap"
-                                   Foreground="#9FB5C5" />
-                        <TextBlock x:Name="MapLoadModeText"
-                                   Text="Carregamento: mapa completo"
-                                   FontSize="12"
-                                   Foreground="#7FA6BF" />
+                        <TextBox x:Name="ExplorerSearchBox"
+                                 Grid.Column="0"
+                                 PlaceholderText="Buscar na área atual..."
+                                 TextChanged="OnExplorerSearchTextChanged" />
 
-                        <Grid ColumnSpacing="6">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
+                        <Button Grid.Column="1"
+                                Width="34"
+                                Content="⌕"
+                                ToolTipService.ToolTip="Focar seleção atual"
+                                Click="OnFocusSelectionClick" />
+                    </Grid>
 
-                            <NumberBox x:Name="TileNavigatorXBox"
-                                       Grid.Column="0"
-                                       Header="Tile X"
-                                       SpinButtonPlacementMode="Compact" />
-                            <NumberBox x:Name="TileNavigatorYBox"
-                                       Grid.Column="1"
-                                       Header="Tile Y"
-                                       SpinButtonPlacementMode="Compact" />
-                            <Button Grid.Column="2"
-                                    VerticalAlignment="Bottom"
-                                    Content="Ir"
-                                    Click="OnTileNavigatorGoClick" />
-                        </Grid>
+                    <Border Grid.Row="3"
+                            Background="#0A1B27"
+                            BorderBrush="#24485C"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="9">
+                        <StackPanel Spacing="5">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                        <Grid ColumnSpacing="4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0"
-                                    Content="←"
-                                    Tag="-1,0"
-                                    Click="OnTileNavigateClick" />
-                            <Button Grid.Column="1"
-                                    Content="↑"
-                                    Tag="0,-1"
-                                    Click="OnTileNavigateClick" />
-                            <Button Grid.Column="2"
-                                    Content="↓"
-                                    Tag="0,1"
-                                    Click="OnTileNavigateClick" />
-                            <Button Grid.Column="3"
-                                    Content="→"
-                                    Tag="1,0"
-                                    Click="OnTileNavigateClick" />
-                        </Grid>
-                    </StackPanel>
+                                <StackPanel>
+                                    <TextBlock x:Name="MapText"
+                                               Text="Nenhum mapa aberto."
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="#D9EDF7" />
+                                    <TextBlock x:Name="RootText"
+                                               Text="Inicializando Workspace Map Studio..."
+                                               FontSize="10"
+                                               TextWrapping="Wrap"
+                                               TextTrimming="CharacterEllipsis"
+                                               Foreground="#7895AD" />
+                                </StackPanel>
+
+                                <Border Grid.Column="1"
+                                        Padding="7,3"
+                                        Background="#12384C"
+                                        CornerRadius="6"
+                                        VerticalAlignment="Top">
+                                    <TextBlock x:Name="MapLoadModeText"
+                                               Text="mapa completo"
+                                               FontSize="10"
+                                               Foreground="#A7E8FF" />
+                                </Border>
+                            </Grid>
+
+                            <Grid ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <NumberBox x:Name="TileNavigatorXBox"
+                                           Grid.Column="0"
+                                           Header="Tile X"
+                                           SpinButtonPlacementMode="Compact" />
+                                <NumberBox x:Name="TileNavigatorYBox"
+                                           Grid.Column="1"
+                                           Header="Tile Y"
+                                           SpinButtonPlacementMode="Compact" />
+                                <Button Grid.Column="2"
+                                        VerticalAlignment="Bottom"
+                                        Content="Ir"
+                                        Click="OnTileNavigatorGoClick" />
+                            </Grid>
+
+                            <Grid ColumnSpacing="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="←"
+                                        Tag="-1,0"
+                                        Click="OnTileNavigateClick" />
+                                <Button Grid.Column="1"
+                                        Content="↑"
+                                        Tag="0,-1"
+                                        Click="OnTileNavigateClick" />
+                                <Button Grid.Column="2"
+                                        Content="↓"
+                                        Tag="0,1"
+                                        Click="OnTileNavigateClick" />
+                                <Button Grid.Column="3"
+                                        Content="→"
+                                        Tag="1,0"
+                                        Click="OnTileNavigateClick" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <Grid Grid.Row="4">
                         <ListView x:Name="ExplorerListView"
