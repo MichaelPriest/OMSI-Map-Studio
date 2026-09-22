@@ -12064,47 +12064,30 @@ public sealed partial class MainWindow : Window
                     HorizontalAlignment.Stretch
             };
 
-        var stopCombo =
-            new ComboBox
+        var stopTimesPanel =
+            new StackPanel
             {
-                Header =
-                    "Parada do Trip",
-                ItemsSource =
-                    trip.Stations
-                        .Select(
-                            (station, index) =>
-                                $"{index + 1:00} · Stop {station.Id}")
-                        .ToArray(),
-                SelectedIndex =
-                    trip.Stations.Count >
-                    0
-                        ? 0
-                        : -1,
-                HorizontalAlignment =
-                    HorizontalAlignment.Stretch
+                Spacing =
+                    3,
+                MinWidth =
+                    520
             };
 
-        var arrivalMinutesBox =
-            new NumberBox
-            {
-                Header =
-                    "Chegada acumulada (min)",
-                Minimum =
-                    0,
-                Maximum =
-                    100000,
-                SmallChange =
-                    0.25
-            };
-
-        var applyStopButton =
+        var applyStopTableButton =
             new Button
             {
                 Content =
-                    "Definir tempo desta parada",
+                    "Aplicar tempos da tabela",
                 HorizontalAlignment =
-                    HorizontalAlignment.Stretch
+                    HorizontalAlignment.Left
             };
+
+        var stopTimeEditors =
+            new List<(
+                int StationIndex,
+                NumberBox Arrival,
+                TextBlock Segment
+            )>();
 
         var profileInfoText =
             new TextBlock
@@ -12208,62 +12191,277 @@ public sealed partial class MainWindow : Window
                 .ToList();
         }
 
-        void RefreshSelectedStopTime()
+        void RefreshStopTimesTable()
         {
+            stopTimesPanel.Children.Clear();
+            stopTimeEditors.Clear();
+
+            var header =
+                new Grid
+                {
+                    ColumnSpacing =
+                        8,
+                    Padding =
+                        new Thickness(
+                            5,
+                            3,
+                            5,
+                            3),
+                    Background =
+                        new Microsoft.UI.Xaml.Media
+                            .SolidColorBrush(
+                                Windows.UI.Color.FromArgb(
+                                    255,
+                                    11,
+                                    32,
+                                    45))
+                };
+
+            header.ColumnDefinitions.Add(
+                new ColumnDefinition());
+
+            header.ColumnDefinitions.Add(
+                new ColumnDefinition
+                {
+                    Width =
+                        new GridLength(
+                            150)
+                });
+
+            header.ColumnDefinitions.Add(
+                new ColumnDefinition
+                {
+                    Width =
+                        new GridLength(
+                            130)
+                });
+
+            var stopHeader =
+                new TextBlock
+                {
+                    Text =
+                        "Parada",
+                    FontWeight =
+                        Microsoft.UI.Text
+                            .FontWeights
+                            .SemiBold
+                };
+
+            var arrivalHeader =
+                new TextBlock
+                {
+                    Text =
+                        "Chegada (min)",
+                    FontWeight =
+                        Microsoft.UI.Text
+                            .FontWeights
+                            .SemiBold
+                };
+
+            var segmentHeader =
+                new TextBlock
+                {
+                    Text =
+                        "Trecho",
+                    FontWeight =
+                        Microsoft.UI.Text
+                            .FontWeights
+                            .SemiBold
+                };
+
+            Grid.SetColumn(
+                stopHeader,
+                0);
+            Grid.SetColumn(
+                arrivalHeader,
+                1);
+            Grid.SetColumn(
+                segmentHeader,
+                2);
+
+            header.Children.Add(
+                stopHeader);
+            header.Children.Add(
+                arrivalHeader);
+            header.Children.Add(
+                segmentHeader);
+
+            stopTimesPanel.Children.Add(
+                header);
+
             if (
-                synchronizing ||
                 profileCombo.SelectedItem is not
                     OmsiTimetableProfileDefinition
-                        profile ||
-                stopCombo.SelectedIndex <
-                    0)
+                        profile)
             {
+                profileInfoText.Text =
+                    "Nenhum perfil. Crie um perfil para configurar os tempos.";
+
                 return;
             }
 
-            var stationIndex =
-                stopCombo.SelectedIndex;
+            double?
+                previousMinutes =
+                    null;
 
-            var current =
-                profile.StopTimes
-                    .FirstOrDefault(
-                        value =>
-                            value.StationIndex ==
-                                stationIndex);
+            for (
+                var stationIndex = 0;
+                stationIndex <
+                    trip.Stations.Count;
+                stationIndex++)
+            {
+                var station =
+                    trip.Stations[
+                        stationIndex];
 
-            arrivalMinutesBox.Value =
-                current?.Minutes ??
-                0;
+                var stop =
+                    _timetableCatalog
+                        ?.BusStops
+                        .FirstOrDefault(
+                            candidate =>
+                                candidate.Id ==
+                                    station.Id);
 
-            var previous =
-                profile.StopTimes
-                    .Where(
-                        value =>
-                            value.StationIndex <
-                                stationIndex)
-                    .OrderByDescending(
-                        value =>
-                            value.StationIndex)
-                    .FirstOrDefault();
+                var current =
+                    profile.StopTimes
+                        .FirstOrDefault(
+                            value =>
+                                value.StationIndex ==
+                                    stationIndex);
 
-            var segment =
-                current is null
-                    ? (double?)null
-                    : Math.Max(
-                        0,
-                        current.Minutes -
-                        (
-                            previous?.Minutes ??
-                            0
-                        ));
+                var row =
+                    new Grid
+                    {
+                        ColumnSpacing =
+                            8,
+                        Padding =
+                            new Thickness(
+                                5,
+                                2,
+                                5,
+                                2)
+                    };
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition());
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width =
+                            new GridLength(
+                                150)
+                    });
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width =
+                            new GridLength(
+                                130)
+                    });
+
+                var stopLabel =
+                    new TextBlock
+                    {
+                        Text =
+                            $"{stationIndex + 1:00} · Stop {station.Id}" +
+                            (
+                                string.IsNullOrWhiteSpace(
+                                    stop?.Name)
+                                    ? string.Empty
+                                    : $" · {stop.Name}"
+                            ),
+                        VerticalAlignment =
+                            VerticalAlignment.Center,
+                        TextTrimming =
+                            TextTrimming.CharacterEllipsis
+                    };
+
+                var arrivalBox =
+                    new NumberBox
+                    {
+                        Minimum =
+                            0,
+                        Maximum =
+                            100000,
+                        SmallChange =
+                            0.25,
+                        SpinButtonPlacementMode =
+                            NumberBoxSpinButtonPlacementMode
+                                .Compact,
+                        Value =
+                            current?.Minutes ??
+                            double.NaN
+                    };
+
+                var segment =
+                    current is null
+                        ? (double?)null
+                        : Math.Max(
+                            0,
+                            current.Minutes -
+                            (
+                                previousMinutes ??
+                                0
+                            ));
+
+                var segmentText =
+                    new TextBlock
+                    {
+                        Text =
+                            segment is
+                                double value
+                                ? $"{value:0.###} min"
+                                : "—",
+                        VerticalAlignment =
+                            VerticalAlignment.Center,
+                        Foreground =
+                            new Microsoft.UI.Xaml.Media
+                                .SolidColorBrush(
+                                    Windows.UI.Color.FromArgb(
+                                        255,
+                                        127,
+                                        198,
+                                        232))
+                    };
+
+                Grid.SetColumn(
+                    stopLabel,
+                    0);
+                Grid.SetColumn(
+                    arrivalBox,
+                    1);
+                Grid.SetColumn(
+                    segmentText,
+                    2);
+
+                row.Children.Add(
+                    stopLabel);
+                row.Children.Add(
+                    arrivalBox);
+                row.Children.Add(
+                    segmentText);
+
+                stopTimesPanel.Children.Add(
+                    row);
+
+                stopTimeEditors.Add(
+                    (
+                        stationIndex,
+                        arrivalBox,
+                        segmentText
+                    ));
+
+                if (current is not null)
+                {
+                    previousMinutes =
+                        current.Minutes;
+                }
+            }
 
             profileInfoText.Text =
-                current is null
-                    ? $"Parada {stationIndex + 1}: ainda sem tempo manual. Use a chegada acumulada para definir o trecho."
-                    : $"Parada {stationIndex + 1}: chegada {current.Minutes:0.###} min" +
-                      (segment is double value
-                          ? $" · trecho anterior ≈ {value:0.###} min."
-                          : ".");
+                $"{trip.Stations.Count} parada(s) · edite chegadas acumuladas e aplique a tabela ao perfil {profile.Name}.";
         }
 
         void RefreshProfileFields()
@@ -12292,7 +12490,7 @@ public sealed partial class MainWindow : Window
             deleteProfileButton.IsEnabled =
                 true;
 
-            RefreshSelectedStopTime();
+            RefreshStopTimesTable();
         }
 
         void RefreshProfiles(
@@ -12346,15 +12544,6 @@ public sealed partial class MainWindow : Window
                 }
             };
 
-        stopCombo.SelectionChanged +=
-            (_, _) =>
-            {
-                if (!synchronizing)
-                {
-                    RefreshSelectedStopTime();
-                }
-            };
-
         applyTotalButton.Click +=
             (_, _) =>
             {
@@ -12389,42 +12578,66 @@ public sealed partial class MainWindow : Window
                         .SelectedIndex);
             };
 
-        applyStopButton.Click +=
+        applyStopTableButton.Click +=
             (_, _) =>
             {
                 if (
                     profileCombo.SelectedIndex <
-                        0 ||
-                    stopCombo.SelectedIndex <
-                        0 ||
-                    !double.IsFinite(
-                        arrivalMinutesBox.Value) ||
-                    arrivalMinutesBox.Value <
                         0)
                 {
                     profileInfoText.Text =
-                        "Selecione um perfil/parada e informe um tempo válido.";
+                        "Selecione um perfil.";
                     return;
                 }
 
                 workingLines =
                     ReadRawLines();
 
-                workingLines =
-                    OmsiTimetableProfileEditor
-                        .SetManualArrivalMinutes(
-                            workingLines,
-                            profileCombo
-                                .SelectedIndex,
-                            stopCombo
-                                .SelectedIndex,
-                            arrivalMinutesBox
-                                .Value)
-                        .ToList();
+                var applied =
+                    0;
+
+                foreach (
+                    var editor in
+                        stopTimeEditors)
+                {
+                    if (
+                        !double.IsFinite(
+                            editor.Arrival.Value))
+                    {
+                        continue;
+                    }
+
+                    if (
+                        editor.Arrival.Value <
+                            0)
+                    {
+                        profileInfoText.Text =
+                            $"Parada {editor.StationIndex + 1}: tempo inválido.";
+                        return;
+                    }
+
+                    workingLines =
+                        OmsiTimetableProfileEditor
+                            .SetManualArrivalMinutes(
+                                workingLines,
+                                profileCombo
+                                    .SelectedIndex,
+                                editor
+                                    .StationIndex,
+                                editor
+                                    .Arrival
+                                    .Value)
+                            .ToList();
+
+                    applied++;
+                }
 
                 RefreshProfiles(
                     profileCombo
                         .SelectedIndex);
+
+                profileInfoText.Text =
+                    $"{applied} tempo(s) de chegada aplicado(s) ao perfil.";
             };
 
         addProfileButton.Click +=
@@ -12534,38 +12747,6 @@ public sealed partial class MainWindow : Window
         profileGrid.Children.Add(
             totalMinutesBox);
 
-        var stopGrid =
-            new Grid
-            {
-                ColumnSpacing =
-                    6
-            };
-
-        stopGrid.ColumnDefinitions.Add(
-            new ColumnDefinition());
-
-        stopGrid.ColumnDefinitions.Add(
-            new ColumnDefinition
-            {
-                Width =
-                    new GridLength(
-                        170)
-            });
-
-        Grid.SetColumn(
-            stopCombo,
-            0);
-
-        Grid.SetColumn(
-            arrivalMinutesBox,
-            1);
-
-        stopGrid.Children.Add(
-            stopCombo);
-
-        stopGrid.Children.Add(
-            arrivalMinutesBox);
-
         var newProfileGrid =
             new Grid
             {
@@ -12652,10 +12833,24 @@ public sealed partial class MainWindow : Window
             profileActions);
 
         panel.Children.Add(
-            stopGrid);
+            new ScrollViewer
+            {
+                Content =
+                    stopTimesPanel,
+                MaxHeight =
+                    330,
+                HorizontalScrollMode =
+                    ScrollMode.Enabled,
+                HorizontalScrollBarVisibility =
+                    ScrollBarVisibility.Auto,
+                VerticalScrollMode =
+                    ScrollMode.Enabled,
+                VerticalScrollBarVisibility =
+                    ScrollBarVisibility.Auto
+            });
 
         panel.Children.Add(
-            applyStopButton);
+            applyStopTableButton);
 
         panel.Children.Add(
             profileInfoText);
