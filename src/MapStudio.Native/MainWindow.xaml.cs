@@ -358,6 +358,7 @@ public sealed partial class MainWindow : Window
     private bool _fullMapMode = true;
     private bool _mapLoadModeChanging;
     private bool _standaloneWorkspaceInitialized;
+    private int _loadingOperationDepth;
 
     private double _explorerPanelWidth =
         310;
@@ -910,6 +911,12 @@ public sealed partial class MainWindow : Window
 
         try
         {
+            BeginLoading(
+                "Atualizando biblioteca",
+                _session.IsStandaloneWorkspace
+                    ? "Indexando assets do Workspace..."
+                    : "Indexando assets da instalação OMSI...");
+
             RefreshLibraryButton.IsEnabled =
                 false;
 
@@ -923,9 +930,16 @@ public sealed partial class MainWindow : Window
                     OmsiAssetIndexProgress>(
                     value =>
                     {
-                        LibraryStatusText.Text =
+                        var detail =
                             $"Indexando... {value.ExaminedFiles} arquivos · " +
                             $"{value.CandidateFiles} assets";
+
+                        LibraryStatusText.Text =
+                            detail;
+
+                        UpdateLoading(
+                            "Atualizando biblioteca",
+                            detail);
                     });
 
             var result =
@@ -950,6 +964,8 @@ public sealed partial class MainWindow : Window
             RefreshLibraryButton.IsEnabled =
                 _session.OmsiRootPath is
                     not null;
+
+            EndLoading();
         }
     }
 
@@ -12982,6 +12998,86 @@ public sealed partial class MainWindow : Window
             NumberBox;
     }
 
+    private void BeginLoading(
+        string title,
+        string? detail = null)
+    {
+        _loadingOperationDepth++;
+
+        LoadingTitleText.Text =
+            title;
+
+        LoadingDetailText.Text =
+            detail ??
+            string.Empty;
+
+        LoadingDetailText.Visibility =
+            string.IsNullOrWhiteSpace(
+                detail)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        LoadingProgressRing.IsActive =
+            true;
+
+        LoadingProgressBar.IsIndeterminate =
+            true;
+
+        LoadingOverlay.Visibility =
+            Visibility.Visible;
+    }
+
+    private void UpdateLoading(
+        string title,
+        string? detail = null)
+    {
+        if (_loadingOperationDepth <=
+            0)
+        {
+            return;
+        }
+
+        LoadingTitleText.Text =
+            title;
+
+        LoadingDetailText.Text =
+            detail ??
+            string.Empty;
+
+        LoadingDetailText.Visibility =
+            string.IsNullOrWhiteSpace(
+                detail)
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+    }
+
+    private void EndLoading()
+    {
+        if (_loadingOperationDepth >
+            0)
+        {
+            _loadingOperationDepth--;
+        }
+
+        if (_loadingOperationDepth >
+            0)
+        {
+            return;
+        }
+
+        _loadingOperationDepth =
+            0;
+
+        LoadingProgressRing.IsActive =
+            false;
+
+        LoadingProgressBar.IsIndeterminate =
+            false;
+
+        LoadingOverlay.Visibility =
+            Visibility.Collapsed;
+    }
+
     private void UpdateContentRootSummary(
         int? mapCount = null)
     {
@@ -13917,6 +14013,12 @@ public sealed partial class MainWindow : Window
             _mapLoadModeChanging =
                 true;
 
+            BeginLoading(
+                fullMap
+                    ? "Carregando mapa completo"
+                    : "Carregando região 3×3",
+                "Lendo tiles, terreno e dependências...");
+
             StatusText.Text =
                 fullMap
                     ? "Carregando mapa completo..."
@@ -13969,6 +14071,8 @@ public sealed partial class MainWindow : Window
         {
             _mapLoadModeChanging =
                 false;
+
+            EndLoading();
         }
     }
 
@@ -14074,6 +14178,14 @@ public sealed partial class MainWindow : Window
             _mapLoadModeChanging =
                 true;
 
+            BeginLoading(
+                _fullMapMode
+                    ? $"Focando tile {tileX},{tileY}"
+                    : $"Carregando tile {tileX},{tileY}",
+                _fullMapMode
+                    ? "Atualizando câmera e seleção..."
+                    : "Atualizando a região 3×3 do viewport...");
+
             if (_fullMapMode)
             {
                 var snapshot =
@@ -14131,6 +14243,8 @@ public sealed partial class MainWindow : Window
         {
             _mapLoadModeChanging =
                 false;
+
+            EndLoading();
         }
     }
 
@@ -14154,6 +14268,10 @@ public sealed partial class MainWindow : Window
             throw new InvalidOperationException(
                 "Instalação OMSI não selecionada.");
         }
+
+        UpdateLoading(
+            "Renderizando mapa",
+            $"{snapshot.Tiles.Count} tile(s) · {snapshot.ObjectCount} objeto(s) · {snapshot.SplineCount} spline(s)");
 
         await Viewport
             .SetMapSnapshotAsync(
@@ -16163,25 +16281,41 @@ public sealed partial class MainWindow : Window
     private async Task OpenMapDirectoryAsync(
         string mapDirectory)
     {
-        _fullMapMode =
-            true;
+        BeginLoading(
+            "Carregando mapa",
+            Path.GetFileName(
+                mapDirectory));
 
-        StatusText.Text =
-            "Carregando mapa completo...";
+        try
+        {
+            _fullMapMode =
+                true;
 
-        var snapshot =
-            await _session
-                .OpenMapAsync(
-                    mapDirectory,
-                    loadFullMap: true);
+            StatusText.Text =
+                "Carregando mapa completo...";
 
-        await ApplyMapSnapshotAsync(
-            snapshot,
-            focusActiveTile: false);
+            var snapshot =
+                await _session
+                    .OpenMapAsync(
+                        mapDirectory,
+                        loadFullMap: true);
 
-        StatusText.Text =
-            $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core · " +
-            $"{snapshot.Tiles.Count} tiles.";
+            UpdateLoading(
+                "Montando viewport nativo",
+                $"{snapshot.Tiles.Count} tile(s) · preparando terreno, objetos, splines e texturas");
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile: false);
+
+            StatusText.Text =
+                $"Mapa {snapshot.Map.DisplayName} carregado pelo MapStudio.Core · " +
+                $"{snapshot.Tiles.Count} tiles.";
+        }
+        finally
+        {
+            EndLoading();
+        }
     }
 
     private async void OnOpenMapClick(
