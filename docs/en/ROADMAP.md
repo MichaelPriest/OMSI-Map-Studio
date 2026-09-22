@@ -253,10 +253,10 @@ Legend:
 | Spline export | ✅ — multi-select loaded splines and export real DirectX `.x` geometry with UVs for Blender |
 | Editable paths | 🟡 |
 | Traffic Rules | ✅ |
-| Speed limits | ⬜ |
-| Traffic density | ⬜ |
-| Vehicle restrictions | ⬜ |
-| Road priorities | ⬜ |
+| Speed limits | ✅ — `speedlimit` preset with a custom value per path and vehicle group |
+| Traffic density | ✅ — `trafficdensity` presets including unscheduled-traffic blocking and graduated density values |
+| Vehicle restrictions | ✅ — OMSI `no_cars`, `truck`, `bus`, and `overtaking_prohib` presets with `[rule]`/`[kill_rule]` support |
+| Road priorities | ✅ — high/low `priority` presets per path, persisted with backup |
 | AI paths / crossing behavior | ⬜ |
 | Traffic lights / signal phases | ✅ |
 | Tracks | ✅ |
