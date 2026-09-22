@@ -764,6 +764,17 @@ public sealed class MapStudioWorkspaceBootstrapper
         var created =
             false;
 
+        var skyCreated =
+            await new MapStudioStarterSkyGenerator()
+                .EnsureAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        created =
+            created ||
+            skyCreated;
+
         var roadKitDirectory =
             Path.Combine(
                 root,

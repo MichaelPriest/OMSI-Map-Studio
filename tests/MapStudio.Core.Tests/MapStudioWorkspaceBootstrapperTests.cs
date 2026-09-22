@@ -110,6 +110,32 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                 Directory.Exists(
                     first.TexturePath));
 
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
+                        "himmel01.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
+                        "himmel05.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
+                        "skybox",
+                        "day01.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
+                        "skybox",
+                        "night01.bmp")));
+
             Assert.NotEmpty(
                 Directory.EnumerateFiles(
                     first.SplinesPath,

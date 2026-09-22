@@ -11140,11 +11140,17 @@ public sealed partial class MainWindow : Window
         StatusText.Text =
             loaded
                 ? enabled
-                    ? "Preview noturno ativo com céu OMSI."
-                    : "Preview diurno ativo com céu OMSI."
+                    ? _session.IsStandaloneWorkspace
+                        ? "Preview noturno ativo com céu do Workspace."
+                        : "Preview noturno ativo com céu OMSI."
+                    : _session.IsStandaloneWorkspace
+                        ? "Preview diurno ativo com céu do Workspace."
+                        : "Preview diurno ativo com céu OMSI."
                 : _session.OmsiRootPath is null
-                    ? "Selecione a instalação OMSI para carregar o céu."
-                    : "Textura de céu OMSI não encontrada; mantendo o fundo padrão.";
+                    ? "Ative o Workspace Map Studio ou selecione uma instalação do OMSI para carregar um céu."
+                    : _session.IsStandaloneWorkspace
+                        ? "Textura de céu do Workspace não encontrada; mantendo o fundo padrão."
+                        : "Textura de céu OMSI não encontrada; mantendo o fundo padrão.";
     }
 
     private async void OnSaveChangesClick(
