@@ -1134,6 +1134,56 @@ public sealed partial class NativeViewport : UserControl
         _runtime?.TrafficPathLineCount ??
         0;
 
+    public NativeTrafficPathDisplayOptions
+        TrafficPathDisplayOptions =>
+            _runtime?
+                .TrafficPathDisplayOptions ??
+            NativeTrafficPathDisplayOptions
+                .CleanVehicles;
+
+    public NativeTrafficPathGeometry?
+        TrafficPathGeometry =>
+            _runtime?
+                .TrafficPathGeometry;
+
+    public IReadOnlyList<
+        NativeTrafficPathChoice>
+        GetTrafficPathChoicesForSelection() =>
+            _runtime?
+                .GetTrafficPathChoicesForSelection() ??
+            Array.Empty<
+                NativeTrafficPathChoice>();
+
+    public bool SetTrafficPathDisplayOptions(
+        NativeTrafficPathDisplayOptions
+            options)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime
+                .SetTrafficPathDisplayOptions(
+                    options);
+
+        if (changed)
+        {
+            var geometry =
+                _runtime
+                    .TrafficPathGeometry;
+
+            PointerStatusChanged?.Invoke(
+                this,
+                geometry is null
+                    ? "Paths OMSI: nenhum caminho disponível."
+                    : $"Paths OMSI: {geometry.PathCount} caminho(s) filtrado(s) · {geometry.LineCount} linha(s).");
+        }
+
+        return changed;
+    }
+
     public NativeAssetTechnicalSnapshot
         GetAssetTechnicalSnapshot() =>
         _runtime
