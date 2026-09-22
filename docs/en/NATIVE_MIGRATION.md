@@ -837,3 +837,34 @@ Still read-only at this stage:
 - unknown/extra fields.
 
 Persistence uses `SafeFileTransaction`, creates a backup, and reloads the tile before replacing the live snapshot.
+
+### OMSI transport: Tracks, StationLinks, and type 2 Trips
+
+The native **Transport** workspace operates directly on the real `TTData` files and keeps both OMSI route forms distinct:
+
+- **Type 1 Trip**: references a complete `.ttr`/Track;
+- **Type 2 Trip**: does not depend on a Track and resolves its path from the `[station_typ2]` sequence; every consecutive stop pair must have a matching StationLink in `StnLinks.cfg`.
+
+For type 2 Trips, the model preserves the three raw `[trip]` fields and exposes the effective interpretation used by the editor: destination, line, and no Track. The writer continues to emit the existing OMSI format and does not introduce a custom route format.
+
+The **Route Studio** now:
+
+- previews type 1 Trips through their Track;
+- previews type 2 Trips by concatenating the StationLinks for every consecutive stop pair;
+- applies the same resolution to Lines/Tours that reference those Trips;
+- preserves segment `entityId`, `pathIndex`, and length in the preview;
+- can isolate one selected route segment;
+- synchronizes the selected segment with the matching spline/object and OMSI path lane;
+- when auxiliary path visualization is set to selected-only, can draw only the exact `pathIndex` being edited.
+
+The Trip creator explicitly offers **Type 1 · Track** and **Type 2 · StationLinks**. Type 2 saving is blocked when there are fewer than two stops, an unknown stop, or any consecutive pair without a StationLink.
+
+`TTData` validation now distinguishes:
+
+- broken Trip → Track references;
+- missing type 2 Trip → StationLink pairs;
+- broken StationLink → Stop references;
+- broken Line → Trip references.
+
+At this stage, when multiple base StationLinks exist for the same stop pair, the preview uses the first valid match in the loaded catalog. Chrono-specific StationLink resolution remains a later migration step.
+
