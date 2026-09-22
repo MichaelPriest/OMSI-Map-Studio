@@ -5597,6 +5597,476 @@ public sealed class OmsiNativeSession
             backupPath);
     }
 
+    public async Task<OmsiTimetableTrack>
+        CreateTimetableTrackAsync(
+            string name,
+            IReadOnlyList<
+                OmsiTimetableTrackEntry> entries,
+            string comment1 = "Created with OMSI Map Studio",
+            string comment2 = "",
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            entries);
+
+        if (entries.Count == 0)
+        {
+            throw new InvalidDataException(
+                "trackRequiresEntries");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var baseName =
+            NormalizeTimetableBaseName(
+                name,
+                ".ttr");
+
+        var ttData =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "TTData");
+
+        Directory.CreateDirectory(
+            ttData);
+
+        var target =
+            Path.Combine(
+                ttData,
+                baseName +
+                ".ttr");
+
+        var relative =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        var source =
+            new OmsiTimetableTrack(
+                target,
+                relative,
+                baseName,
+                comment1.Trim(),
+                comment2.Trim(),
+                entries.ToArray());
+
+        var bytes =
+            new OmsiTimetableTrackWriter()
+                .Write(
+                    source,
+                    entries);
+
+        await CreateNewFileAtomicallyAsync(
+                target,
+                bytes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return await new OmsiTimetableTrackReader()
+            .ReadAsync(
+                snapshot.Map.DirectoryPath,
+                target,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<OmsiTimetableTrip>
+        CreateTimetableTripAsync(
+            string name,
+            string trackName,
+            string destination,
+            string line,
+            bool trainReverse,
+            IReadOnlyList<
+                OmsiTimetableTripStation> stations,
+            IReadOnlyList<string> profileLines,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            stations);
+
+        ArgumentNullException.ThrowIfNull(
+            profileLines);
+
+        if (stations.Count == 0)
+        {
+            throw new InvalidDataException(
+                "tripRequiresStations");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var baseName =
+            NormalizeTimetableBaseName(
+                name,
+                ".ttp");
+
+        var ttData =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "TTData");
+
+        Directory.CreateDirectory(
+            ttData);
+
+        var target =
+            Path.Combine(
+                ttData,
+                baseName +
+                ".ttp");
+
+        var relative =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        var source =
+            new OmsiTimetableTrip(
+                target,
+                relative,
+                baseName,
+                "Created with OMSI Map Studio",
+                string.Empty,
+                trackName.Trim(),
+                destination.Trim(),
+                line.Trim(),
+                trainReverse,
+                stations.ToArray(),
+                profileLines
+                    .Where(
+                        value =>
+                            !string.IsNullOrWhiteSpace(
+                                value))
+                    .Select(
+                        value =>
+                            value.Trim())
+                    .ToArray());
+
+        await CreateNewFileAtomicallyAsync(
+                target,
+                new OmsiTimetableTripWriter()
+                    .Write(source),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return await new OmsiTimetableTripReader()
+            .ReadAsync(
+                snapshot.Map.DirectoryPath,
+                target,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<OmsiTimetableLine>
+        CreateTimetableLineAsync(
+            string name,
+            string priority,
+            bool userAllowed,
+            IReadOnlyList<
+                OmsiTimetableTour> tours,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            tours);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var baseName =
+            NormalizeTimetableBaseName(
+                name,
+                ".ttl");
+
+        var ttData =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "TTData");
+
+        Directory.CreateDirectory(
+            ttData);
+
+        var target =
+            Path.Combine(
+                ttData,
+                baseName +
+                ".ttl");
+
+        var relative =
+            Path.GetRelativePath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        var source =
+            new OmsiTimetableLine(
+                target,
+                relative,
+                baseName,
+                "Created with OMSI Map Studio",
+                string.Empty,
+                userAllowed,
+                priority.Trim(),
+                tours.ToArray());
+
+        await CreateNewFileAtomicallyAsync(
+                target,
+                new OmsiTimetableLineWriter()
+                    .Write(source),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return await new OmsiTimetableLineReader()
+            .ReadAsync(
+                snapshot.Map.DirectoryPath,
+                target,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<
+        OmsiTimetableBusStop>>
+        AddBusStopAsync(
+            OmsiTimetableBusStop stop,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            stop);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var target =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "TTData",
+                "Busstops.cfg");
+
+        Directory.CreateDirectory(
+            Path.GetDirectoryName(
+                target)!);
+
+        var reader =
+            new OmsiTimetableBusStopReader();
+
+        var stops =
+            File.Exists(target)
+                ? (
+                    await reader
+                        .ReadAsync(
+                            target,
+                            cancellationToken)
+                        .ConfigureAwait(false)
+                  ).ToList()
+                : new List<
+                    OmsiTimetableBusStop>();
+
+        if (
+            stops.Any(
+                candidate =>
+                    candidate.Id ==
+                    stop.Id))
+        {
+            throw new InvalidDataException(
+                "duplicateBusStopId");
+        }
+
+        stops.Add(stop);
+
+        var bytes =
+            new OmsiTimetableBusStopWriter()
+                .Write(
+                    stops);
+
+        if (File.Exists(target))
+        {
+            var backupPath =
+                CreateNativeBackupPath(
+                    snapshot.Map.DirectoryPath,
+                    target);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            target,
+                            backupPath,
+                            bytes)
+                    ],
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            await CreateNewFileAtomicallyAsync(
+                    target,
+                    bytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await reader
+            .ReadAsync(
+                target,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<
+        OmsiStationLink>>
+        AddStationLinkAsync(
+            OmsiStationLink link,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            link);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTimetableEdit");
+        }
+
+        var ttData =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "TTData");
+
+        Directory.CreateDirectory(
+            ttData);
+
+        var stopPath =
+            Path.Combine(
+                ttData,
+                "Busstops.cfg");
+
+        if (File.Exists(stopPath))
+        {
+            var stops =
+                await new OmsiTimetableBusStopReader()
+                    .ReadAsync(
+                        stopPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (
+                !stops.Any(
+                    stop =>
+                        stop.Id ==
+                        link.StartBusStopId) ||
+                !stops.Any(
+                    stop =>
+                        stop.Id ==
+                        link.EndBusStopId))
+            {
+                throw new InvalidDataException(
+                    "stationLinkStopMissing");
+            }
+        }
+
+        var target =
+            Path.Combine(
+                ttData,
+                "StnLinks.cfg");
+
+        var reader =
+            new OmsiStationLinkReader();
+
+        var links =
+            File.Exists(target)
+                ? (
+                    await reader
+                        .ReadAsync(
+                            target,
+                            cancellationToken)
+                        .ConfigureAwait(false)
+                  ).ToList()
+                : new List<
+                    OmsiStationLink>();
+
+        links.Add(link);
+
+        var bytes =
+            new OmsiStationLinkWriter()
+                .Write(
+                    links);
+
+        if (File.Exists(target))
+        {
+            var backupPath =
+                CreateNativeBackupPath(
+                    snapshot.Map.DirectoryPath,
+                    target);
+
+            await SafeFileTransaction
+                .WriteAllAsync(
+                    [
+                        new PendingFileWrite(
+                            target,
+                            backupPath,
+                            bytes)
+                    ],
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        else
+        {
+            await CreateNewFileAtomicallyAsync(
+                    target,
+                    bytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await reader
+            .ReadAsync(
+                target,
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<NativeTimetableLineUpdateResult>
         UpdateTimetableLineAsync(
             OmsiTimetableLine line,
@@ -8321,6 +8791,55 @@ public sealed class OmsiNativeSession
                 // Best effort cleanup.
             }
         }
+    }
+
+    private static string NormalizeTimetableBaseName(
+        string name,
+        string extension)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            name);
+
+        var trimmed =
+            name.Trim();
+
+        if (
+            trimmed.IndexOfAny(
+                Path.GetInvalidFileNameChars()) >=
+                    0 ||
+            trimmed.Contains(
+                Path.DirectorySeparatorChar) ||
+            trimmed.Contains(
+                Path.AltDirectorySeparatorChar))
+        {
+            throw new InvalidDataException(
+                "invalidTimetableFileName");
+        }
+
+        if (
+            trimmed.EndsWith(
+                extension,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            trimmed =
+                trimmed[
+                    ..^extension.Length];
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                trimmed) ||
+            !string.Equals(
+                Path.GetFileName(
+                    trimmed),
+                trimmed,
+                StringComparison.Ordinal))
+        {
+            throw new InvalidDataException(
+                "invalidTimetableFileName");
+        }
+
+        return trimmed;
     }
 
     private static string CreateNativeBackupPath(
