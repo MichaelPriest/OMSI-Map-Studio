@@ -352,6 +352,22 @@ public sealed class NativeTrafficPathGeometryBuilderTests
                         NativeTrafficPathDisplayOptions
                             .AllDetailed);
 
+        var transportOverview =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    scene,
+                    new Dictionary<
+                        string,
+                        NativeSplineAsset>(
+                            StringComparer.OrdinalIgnoreCase)
+                    {
+                        [spline.SplinePath] =
+                            asset
+                    },
+                    displayOptions:
+                        NativeTrafficPathDisplayOptions
+                            .TransportOverview);
+
         var cleanWithoutMarkers =
             new NativeTrafficPathGeometryBuilder()
                 .Build(
@@ -391,6 +407,26 @@ public sealed class NativeTrafficPathGeometryBuilderTests
         Assert.Equal(
             3,
             detailed.PathCount);
+
+        Assert.Equal(
+            3,
+            transportOverview.PathCount);
+
+        Assert.Equal(
+            1,
+            transportOverview.VehiclePathCount);
+
+        Assert.Equal(
+            1,
+            transportOverview.PedestrianPathCount);
+
+        Assert.Equal(
+            1,
+            transportOverview.RailPathCount);
+
+        Assert.Equal(
+            0,
+            transportOverview.AirPathCount);
 
         Assert.True(
             clean.LineCount <
@@ -449,11 +485,13 @@ public sealed class NativeTrafficPathGeometryBuilderTests
             detailed.TriangleVertices,
             vertex =>
                 vertex.Color.X >
-                    0.90f &&
+                    0.95f &&
                 vertex.Color.Y >
+                    0.75f &&
+                vertex.Color.Y <
                     0.90f &&
-                vertex.Color.Z >
-                    0.90f);
+                vertex.Color.Z <
+                    0.20f);
 
         Assert.Contains(
             detailed.TriangleVertices,
