@@ -1,0 +1,43 @@
+name: Web Commerce CI
+
+on:
+  push:
+    branches:
+      - feature/public-alpha-commerce
+    paths:
+      - "apps/web/**"
+      - "infra/supabase/**"
+      - ".github/workflows/web-commerce-ci.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "infra/supabase/**"
+      - ".github/workflows/web-commerce-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: test-service-role
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+        run: npm run build
