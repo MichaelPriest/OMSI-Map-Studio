@@ -11599,7 +11599,22 @@ public sealed partial class MainWindow : Window
             profileInfoText);
 
         panel.Children.Add(
-            new Separator());
+            new Border
+            {
+                Height =
+                    1,
+                Margin =
+                    new Thickness(
+                        0,
+                        4,
+                        0,
+                        4),
+                Opacity =
+                    0.24,
+                Background =
+                    new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                        Microsoft.UI.Colors.White)
+            });
 
         panel.Children.Add(
             newProfileGrid);
