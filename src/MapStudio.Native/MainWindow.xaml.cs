@@ -6045,6 +6045,196 @@ public sealed partial class MainWindow : Window
 
         activeButton.Opacity =
             1;
+
+        UpdateContextToolPalette(
+            activeButton);
+    }
+
+    private void UpdateContextToolPalette(
+        Button activeButton)
+    {
+        var panels =
+            new FrameworkElement[]
+            {
+                SelectionContextPanel,
+                ObjectContextPanel,
+                RoadContextPanel,
+                BridgeContextPanel,
+                BuildingContextPanel,
+                VegetationContextPanel,
+                CrossingContextPanel,
+                TerrainContextPanel,
+                WaterContextPanel,
+                TrafficContextPanel,
+                TransportContextPanel,
+                GenericContextPanel
+            };
+
+        foreach (var panel in panels)
+        {
+            panel.Visibility =
+                Visibility.Collapsed;
+        }
+
+        FrameworkElement targetPanel =
+            GenericContextPanel;
+
+        var title =
+            "Ferramenta";
+
+        if (ReferenceEquals(
+                activeButton,
+                ToolSelectionButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolValidationButton))
+        {
+            targetPanel =
+                SelectionContextPanel;
+
+            title =
+                ReferenceEquals(
+                    activeButton,
+                    ToolValidationButton)
+                    ? "Validação"
+                    : "Seleção";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolObjectsButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolStreetFurnitureButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolUtilitiesButton))
+        {
+            targetPanel =
+                ObjectContextPanel;
+
+            title =
+                ReferenceEquals(
+                    activeButton,
+                    ToolStreetFurnitureButton)
+                    ? "Sinalização"
+                    : ReferenceEquals(
+                        activeButton,
+                        ToolUtilitiesButton)
+                        ? "Infraestrutura"
+                        : "Objetos";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolSplinesButton))
+        {
+            targetPanel =
+                RoadContextPanel;
+
+            title =
+                "Ruas";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolBridgesButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolTunnelsButton))
+        {
+            targetPanel =
+                BridgeContextPanel;
+
+            title =
+                "Pontes / Túneis";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolBuildingsButton))
+        {
+            targetPanel =
+                BuildingContextPanel;
+
+            title =
+                "Prédios";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolVegetationButton))
+        {
+            targetPanel =
+                VegetationContextPanel;
+
+            title =
+                "Vegetação";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolCrossingsButton))
+        {
+            targetPanel =
+                CrossingContextPanel;
+
+            title =
+                "Cruzamentos";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolTerrainButton))
+        {
+            targetPanel =
+                TerrainContextPanel;
+
+            title =
+                "Terreno";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolWaterButton))
+        {
+            targetPanel =
+                WaterContextPanel;
+
+            title =
+                "Água";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolTrafficButton))
+        {
+            targetPanel =
+                TrafficContextPanel;
+
+            title =
+                "Tráfego";
+        }
+        else if (
+            ReferenceEquals(
+                activeButton,
+                ToolTransportButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolTransitAssetsButton))
+        {
+            targetPanel =
+                TransportContextPanel;
+
+            title =
+                "Transporte";
+        }
+
+        ContextToolTitleText.Text =
+            title;
+
+        targetPanel.Visibility =
+            Visibility.Visible;
     }
 
     private void OnToolSelectionClick(
@@ -6329,6 +6519,127 @@ public sealed partial class MainWindow : Window
             2,
             null,
             "Ruas/Splines: Estrada fácil ativa. Escolha uma SLI, marque início/fim e ajuste o offset de curva.");
+    }
+
+    private void ConfigureRoadPreset(
+        bool heightMode,
+        bool easyRoad,
+        bool manualCurve,
+        string status)
+    {
+        SplineHeightCheckBox.IsChecked =
+            heightMode;
+
+        SplineEasyRoadCheckBox.IsChecked =
+            easyRoad &&
+            !heightMode;
+
+        SplineCurveCheckBox.IsChecked =
+            manualCurve &&
+            !heightMode;
+
+        SplineCurveOffsetBox.Value =
+            0;
+
+        SplineContinuousCheckBox.IsEnabled =
+            !heightMode;
+
+        SplineEndpointSnapCheckBox.IsEnabled =
+            !heightMode;
+
+        SplineEndpointSnapDistanceBox.IsEnabled =
+            !heightMode;
+
+        SplineAutoConnectCheckBox.IsEnabled =
+            !heightMode;
+
+        SplineEasyRoadCheckBox.IsEnabled =
+            !heightMode;
+
+        Viewport
+            .SetSplinePlacementHeightMode(
+                heightMode);
+
+        Viewport
+            .SetSplineEasyRoadOptions(
+                easyRoad &&
+                !heightMode,
+                0.0);
+
+        StatusText.Text =
+            status;
+    }
+
+    private void OnRoadPresetEasyClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnToolSplinesClick(
+            sender,
+            e);
+
+        ConfigureRoadPreset(
+            heightMode:
+                false,
+            easyRoad:
+                true,
+            manualCurve:
+                false,
+            "Ruas: Estrada fácil ativa. Marque início/fim e use a alça visual de curva.");
+    }
+
+    private void OnRoadPresetStraightClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnToolSplinesClick(
+            sender,
+            e);
+
+        ConfigureRoadPreset(
+            heightMode:
+                false,
+            easyRoad:
+                false,
+            manualCurve:
+                false,
+            "Ruas: criação reta manual ativa.");
+    }
+
+    private void OnRoadPresetCurveClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnToolSplinesClick(
+            sender,
+            e);
+
+        ConfigureRoadPreset(
+            heightMode:
+                false,
+            easyRoad:
+                false,
+            manualCurve:
+                true,
+            "Ruas: curva manual de 3 cliques ativa.");
+    }
+
+    private void OnRoadPresetHeightClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnToolSplinesClick(
+            sender,
+            e);
+
+        ConfigureRoadPreset(
+            heightMode:
+                true,
+            easyRoad:
+                false,
+            manualCurve:
+                false,
+            "Ruas: [spline_h] ativa para segmentos de altura.");
     }
 
     private async void OnToolBridgesClick(

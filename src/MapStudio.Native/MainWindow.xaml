@@ -447,116 +447,91 @@
                         BorderBrush="#1E4053"
                         BorderThickness="1"
                         CornerRadius="9">
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Spacing="8">
-                <Button
-                    x:Name="SaveChangesButton"
-                    Content="Salvar alterações"
-                    IsEnabled="False"
-                    Click="OnSaveChangesClick" />
-                <Button
-                    x:Name="UndoButton"
-                    Content="Desfazer"
-                    IsEnabled="False"
-                    Click="OnUndoClick" />
-                <Button
-                    x:Name="RedoButton"
-                    Content="Refazer"
-                    IsEnabled="False"
-                    Click="OnRedoClick" />
-                <Rectangle Width="1"
-                           Height="24"
-                           Fill="#28495B"
-                           VerticalAlignment="Center" />
-                <Button
-                    Content="Novo mapa"
-                    ToolTipService.ToolTip="Criar um novo mapa no Workspace"
-                    Click="OnCreateStandaloneMapClick" />
-                <Button
-                    Content="Importar mapa"
-                    ToolTipService.ToolTip="Copiar e abrir um mapa externo no Workspace"
-                    Click="OnImportStandaloneMapClick" />
-                <Button
-                    Content="Adicionar itens"
-                    ToolTipService.ToolTip="Adicionar uma pasta de SCO/SLI/modelos/texturas ao Workspace"
-                    Click="OnAddAssetFolderClick" />
-                <Button
-                    Content="Assets"
-                    ToolTipService.ToolTip="Abrir biblioteca de itens"
-                    Click="OnLibraryModeClick" />
-                <Button
-                    Content="Tela cheia"
-                    ToolTipService.ToolTip="Modo criador em tela cheia (F11)"
-                    Click="OnFullscreenClick" />
-                <Rectangle Width="1"
-                           Height="24"
-                           Fill="#28495B"
-                           VerticalAlignment="Center" />
-                <ComboBox
-                    x:Name="SelectionFilterComboBox"
-                    Width="138"
-                    SelectedIndex="0"
-                    ToolTipService.ToolTip="Filtro do ID Buffer de seleção">
-                    <ComboBoxItem Content="Selecionar: todos" />
-                    <ComboBoxItem Content="Só objetos" />
-                    <ComboBoxItem Content="Só splines" />
-                    <ComboBoxItem Content="Só terreno" />
-                </ComboBox>
-                <Button
-                    Content="Enquadrar"
-                    ToolTipService.ToolTip="Enquadrar mapa (Home)"
-                    Click="OnFitSceneClick" />
-                <Button
-                    Content="Focar"
-                    ToolTipService.ToolTip="Focar seleção (F)"
-                    Click="OnFocusSelectionClick" />
-                <Button
-                    x:Name="SnapButton"
-                    Content="Snap: off"
-                    ToolTipService.ToolTip="Alternar snap (N)"
-                    Click="OnSnapClick" />
-                <CheckBox
-                    x:Name="NightPreviewCheckBox"
-                    Content="Noite"
-                    VerticalAlignment="Center"
-                    Checked="OnNightPreviewChecked"
-                    Unchecked="OnNightPreviewUnchecked" />
-                <Button
-                    Content="Mover"
-                    ToolTipService.ToolTip="Gizmo mover (W)"
-                    Click="OnMoveGizmoClick" />
-                <Button
-                    Content="Rotacionar"
-                    ToolTipService.ToolTip="Gizmo rotacionar (E)"
-                    Click="OnRotateGizmoClick" />
-                <Border
-                    Padding="8,4"
-                    Background="#102C3E"
-                    BorderBrush="#315064"
-                    BorderThickness="1"
-                    CornerRadius="8">
-                    <TextBlock
-                        x:Name="RootModeText"
-                        Text="WORKSPACE"
-                        FontSize="11"
-                        FontWeight="SemiBold"
-                        Foreground="#9FE4FF" />
-                </Border>
-                <Button
-                    Content="Workspace"
-                    ToolTipService.ToolTip="Voltar ao Workspace Map Studio"
-                    Click="OnOpenWorkspaceClick" />
-                <Button
-                    Content="Abrir OMSI"
-                    ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
-                    Click="OnOpenOmsiClick" />
-                <Button
-                    x:Name="OpenMapButton"
-                    Content="Mapas"
-                    IsEnabled="False"
-                    Click="OnOpenMapCatalogClick" />
-                    </StackPanel>
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0"
+                                    Orientation="Horizontal"
+                                    Spacing="7"
+                                    HorizontalAlignment="Left">
+                            <Button x:Name="SaveChangesButton"
+                                    Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Salvar"
+                                    IsEnabled="False"
+                                    Click="OnSaveChangesClick" />
+                            <Button x:Name="UndoButton"
+                                    Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Desfazer"
+                                    IsEnabled="False"
+                                    Click="OnUndoClick" />
+                            <Button x:Name="RedoButton"
+                                    Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Refazer"
+                                    IsEnabled="False"
+                                    Click="OnRedoClick" />
+                            <Rectangle Width="1"
+                                       Height="24"
+                                       Fill="#28495B"
+                                       VerticalAlignment="Center" />
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="F11"
+                                    ToolTipService.ToolTip="Modo Criador em tela cheia"
+                                    Click="OnFullscreenClick" />
+                        </StackPanel>
+
+                        <Border Grid.Column="1"
+                                Padding="10,4"
+                                Background="#102C3E"
+                                BorderBrush="#315064"
+                                BorderThickness="1"
+                                CornerRadius="8">
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="7">
+                                <Ellipse Width="8"
+                                         Height="8"
+                                         Fill="#55D96B"
+                                         VerticalAlignment="Center" />
+                                <TextBlock x:Name="RootModeText"
+                                           Text="WORKSPACE"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="#9FE4FF"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="Map Studio"
+                                           FontSize="11"
+                                           Foreground="#B6CBD8"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="7"
+                                    HorizontalAlignment="Right">
+                            <CheckBox x:Name="NightPreviewCheckBox"
+                                      Content="Dia/noite"
+                                      VerticalAlignment="Center"
+                                      Checked="OnNightPreviewChecked"
+                                      Unchecked="OnNightPreviewUnchecked" />
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Workspace"
+                                    ToolTipService.ToolTip="Voltar ao Workspace Map Studio"
+                                    Click="OnOpenWorkspaceClick" />
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Abrir OMSI"
+                                    ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
+                                    Click="OnOpenOmsiClick" />
+                            <Button x:Name="OpenMapButton"
+                                    Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="Mapas"
+                                    IsEnabled="False"
+                                    Click="OnOpenMapCatalogClick" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
             </ScrollViewer>
         </Grid>
@@ -602,15 +577,22 @@
 
                     <StackPanel Grid.Row="1"
                                 Orientation="Horizontal"
-                                Spacing="6">
+                                Spacing="5">
                         <Button Content="Cena"
                                 ToolTipService.ToolTip="Elementos presentes no mapa"
                                 Click="OnSceneExplorerModeClick" />
                         <Button Content="Assets"
                                 ToolTipService.ToolTip="Biblioteca de itens do Workspace ou OMSI"
                                 Click="OnLibraryModeClick" />
+                        <Button Content="Mapa"
+                                ToolTipService.ToolTip="Tiles, coordenadas e ferramentas globais"
+                                Click="OnTileManagerClick" />
+                        <Button Content="Transporte"
+                                ToolTipService.ToolTip="Tracks, Trips, Stops, StationLinks e Lines/Tours"
+                                Click="OnToolTransportClick" />
                         <Button x:Name="RefreshLibraryButton"
-                                Content="Atualizar"
+                                Content="↻"
+                                ToolTipService.ToolTip="Atualizar biblioteca"
                                 IsEnabled="False"
                                 Click="OnRefreshLibraryClick" />
                     </StackPanel>
@@ -1448,6 +1430,235 @@
                 </StackPanel>
             </Border>
 
+            <Border x:Name="ContextToolPalette"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    HorizontalAlignment="Center"
+                    MaxWidth="1180"
+                    VerticalAlignment="Bottom"
+                    Margin="20,20,20,104"
+                    Padding="9,7"
+                    Background="#F00B1C28"
+                    BorderBrush="#31566B"
+                    BorderThickness="1"
+                    CornerRadius="11"
+                    Canvas.ZIndex="48">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0"
+                            Width="5"
+                            Background="#2CB7F5"
+                            CornerRadius="3" />
+
+                    <StackPanel Grid.Column="1"
+                                MinWidth="126"
+                                VerticalAlignment="Center"
+                                Spacing="1">
+                        <TextBlock x:Name="ContextToolTitleText"
+                                   Text="Seleção"
+                                   FontSize="13"
+                                   FontWeight="SemiBold"
+                                   Foreground="#EAF7FC" />
+                        <TextBlock Text="Ferramentas contextuais"
+                                   FontSize="10"
+                                   Foreground="#7799AC" />
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Column="2"
+                                  HorizontalScrollMode="Auto"
+                                  HorizontalScrollBarVisibility="Hidden"
+                                  VerticalScrollMode="Disabled"
+                                  VerticalScrollBarVisibility="Disabled">
+                        <Grid>
+                            <StackPanel x:Name="SelectionContextPanel"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <ComboBox x:Name="SelectionFilterComboBox"
+                                          Width="140"
+                                          SelectedIndex="0"
+                                          ToolTipService.ToolTip="Filtro do ID Buffer de seleção">
+                                    <ComboBoxItem Content="Selecionar: todos" />
+                                    <ComboBoxItem Content="Só objetos" />
+                                    <ComboBoxItem Content="Só splines" />
+                                    <ComboBoxItem Content="Só terreno" />
+                                </ComboBox>
+                                <Button x:Name="SnapButton"
+                                        Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Snap: off"
+                                        Click="OnSnapClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Mover"
+                                        Click="OnMoveGizmoClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Rotacionar"
+                                        Click="OnRotateGizmoClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Focar"
+                                        Click="OnFocusSelectionClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Validar"
+                                        Click="OnToolValidationClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="ObjectContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca"
+                                        Click="OnLibraryModeClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Sinalização"
+                                        Click="OnToolStreetFurnitureClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Infraestrutura"
+                                        Click="OnToolUtilitiesClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="RoadContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Estrada fácil"
+                                        Click="OnRoadPresetEasyClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Reta"
+                                        Click="OnRoadPresetStraightClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Curva"
+                                        Click="OnRoadPresetCurveClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Altura"
+                                        Click="OnRoadPresetHeightClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Road Kit"
+                                        Click="OnInstallRoadKitClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Gerador"
+                                        Click="OnStartProceduralRoadTraceClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="BridgeContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca de pontes"
+                                        Click="OnToolBridgesClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Criador de ponte"
+                                        Click="OnCreateBridgeClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Criador de túnel"
+                                        Click="OnCreateTunnelClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="BuildingContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca"
+                                        Click="OnToolBuildingsClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Criar prédio"
+                                        Click="OnBuildingStudioClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Importar OSM"
+                                        Click="OnImportOsmBuildingsClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="VegetationContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca"
+                                        Click="OnToolVegetationClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Importar OSM"
+                                        Click="OnImportOsmVegetationClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="CrossingContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Detectar encontros"
+                                        Click="OnToolCrossingsClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca"
+                                        Click="OnLibraryModeClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="TerrainContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Escolher ponto"
+                                        Click="OnPickTerrainPointClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Mapa real"
+                                        Click="OnCreateCoordinateMapClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Referência Google"
+                                        Click="OnGoogleMapReferenceClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="WaterContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Biblioteca de água"
+                                        Click="OnToolWaterClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="TrafficContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Tráfego"
+                                        Click="OnToolTrafficClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Sinalização"
+                                        Click="OnToolStreetFurnitureClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="TransportContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="TTData"
+                                        Click="OnToolTransportClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Paradas e terminais"
+                                        Click="OnToolTransitAssetsClick" />
+                            </StackPanel>
+
+                            <StackPanel x:Name="GenericContextPanel"
+                                        Visibility="Collapsed"
+                                        Orientation="Horizontal"
+                                        Spacing="6">
+                                <TextBlock Text="Use o Inspector e a Biblioteca para configurar esta ferramenta."
+                                           VerticalAlignment="Center"
+                                           Foreground="#9EB7C6" />
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
             <Border x:Name="MapToolPalette"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
@@ -1486,20 +1697,7 @@
                                    VerticalAlignment="Center"
                                    Foreground="#9FCBE2" />
                     </Border>
-                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
-                        <StackPanel VerticalAlignment="Center"
-                                    Spacing="1">
-                            <TextBlock Text="EDITAR"
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       TextAlignment="Center"
-                                       Foreground="#8FC8E0" />
-                            <TextBlock Text="1"
-                                       FontSize="11"
-                                       TextAlignment="Center"
-                                       Foreground="#DDF4FF" />
-                        </StackPanel>
-                    </Border>
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
                     <Button x:Name="ToolSelectionButton"
                             Style="{StaticResource MapToolButtonStyle}"
                             ToolTipService.ToolTip="Seleção e edição"
@@ -1518,20 +1716,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
-                        <StackPanel VerticalAlignment="Center"
-                                    Spacing="1">
-                            <TextBlock Text="CRIAR"
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       TextAlignment="Center"
-                                       Foreground="#8FC8E0" />
-                            <TextBlock Text="+"
-                                       FontSize="16"
-                                       TextAlignment="Center"
-                                       Foreground="#DDF4FF" />
-                        </StackPanel>
-                    </Border>
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolObjectsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -1581,8 +1766,8 @@
                                   Stroke="#DDF4FF"
                                   StrokeThickness="1.8"
                                   Data="M 2,19 L 2,13 C 6,6 18,6 22,13 L 22,19 M 2,15 L 22,15 M 6,15 L 6,21 M 18,15 L 18,21" />
-                            <TextBlock Text="Pontes"
-                                       FontSize="11"
+                            <TextBlock Text="Pontes/Túneis"
+                                       FontSize="9.5"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
                     </Button>
@@ -1590,6 +1775,7 @@
 
                     <Button x:Name="ToolTunnelsButton"
                             Style="{StaticResource MapToolButtonStyle}"
+                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Criar túnel e adicionar à biblioteca de vias"
                             Click="OnCreateTunnelClick">
                         <StackPanel Spacing="3"
@@ -1642,23 +1828,11 @@
                         </StackPanel>
                     </Button>
 
-                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
-                        <StackPanel VerticalAlignment="Center"
-                                    Spacing="1">
-                            <TextBlock Text="CENÁRIO"
-                                       FontSize="8.5"
-                                       FontWeight="SemiBold"
-                                       TextAlignment="Center"
-                                       Foreground="#8FC8E0" />
-                            <TextBlock Text="◆"
-                                       FontSize="12"
-                                       TextAlignment="Center"
-                                       Foreground="#DDF4FF" />
-                        </StackPanel>
-                    </Border>
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolTransitAssetsButton"
                             Style="{StaticResource MapToolButtonStyle}"
+                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Pontos, terminais, abrigos e garagens"
                             Click="OnToolTransitAssetsClick">
                         <StackPanel Spacing="3"
@@ -1687,7 +1861,7 @@
                                   Stroke="#DDF4FF"
                                   StrokeThickness="1.8"
                                   Data="M 12,2 L 12,22 M 12,5 L 19,5 L 19,10 L 12,10 M 5,17 L 19,17 M 7,17 L 7,21 M 17,17 L 17,21" />
-                            <TextBlock Text="Mobiliário"
+                            <TextBlock Text="Sinalização"
                                        FontSize="9.5"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
@@ -1695,6 +1869,7 @@
 
                     <Button x:Name="ToolUtilitiesButton"
                             Style="{StaticResource MapToolButtonStyle}"
+                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Energia, água e infraestrutura"
                             Click="OnToolUtilitiesClick">
                         <StackPanel Spacing="3"
@@ -1711,20 +1886,7 @@
                         </StackPanel>
                     </Button>
 
-                    <Border Style="{StaticResource MapToolGroupBadgeStyle}">
-                        <StackPanel VerticalAlignment="Center"
-                                    Spacing="1">
-                            <TextBlock Text="SIST."
-                                       FontSize="9"
-                                       FontWeight="SemiBold"
-                                       TextAlignment="Center"
-                                       Foreground="#8FC8E0" />
-                            <TextBlock Text="⚙"
-                                       FontSize="14"
-                                       TextAlignment="Center"
-                                       Foreground="#DDF4FF" />
-                        </StackPanel>
-                    </Border>
+                    <Rectangle Width="1" Height="46" Margin="4,8" Fill="#315064" Opacity="0.65" VerticalAlignment="Center" />
 
                     <Button x:Name="ToolCrossingsButton"
                             Style="{StaticResource MapToolButtonStyle}"
@@ -1818,6 +1980,7 @@
 
                     <Button x:Name="ToolValidationButton"
                             Style="{StaticResource MapToolButtonStyle}"
+                            Visibility="Collapsed"
                             ToolTipService.ToolTip="Validação do mapa"
                             Click="OnToolValidationClick">
                         <StackPanel Spacing="3"
