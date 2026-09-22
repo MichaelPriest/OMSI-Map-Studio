@@ -355,6 +355,9 @@ public sealed partial class MainWindow : Window
         _transportViewModel =
             new();
 
+    private TimetableWindow?
+        _timetableWindow;
+
     private IReadOnlyList<
         TransportExplorerItem>
         _transportItems =
@@ -9254,6 +9257,13 @@ public sealed partial class MainWindow : Window
             _transportViewModel.Items;
 
         RefreshTransportFilter();
+
+        if (_timetableCatalog is not null)
+        {
+            _timetableWindow
+                ?.SetCatalog(
+                    _timetableCatalog);
+        }
     }
 
     private void RefreshTransportFilter()
@@ -9264,6 +9274,48 @@ public sealed partial class MainWindow : Window
                     ExplorerSearchBox.Text);
     }
 
+
+    private void OnOpenTimetableWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_timetableCatalog is null)
+        {
+            StatusText.Text =
+                "Timetable: nenhum TTData carregado.";
+
+            return;
+        }
+
+        if (_timetableWindow is null)
+        {
+            _timetableWindow =
+                new TimetableWindow(
+                    _timetableCatalog);
+
+            _timetableWindow.Closed +=
+                (
+                    _,
+                    _
+                ) =>
+                {
+                    _timetableWindow =
+                        null;
+                };
+        }
+        else
+        {
+            _timetableWindow
+                .SetCatalog(
+                    _timetableCatalog);
+        }
+
+        _timetableWindow
+            .Activate();
+
+        StatusText.Text =
+            "Timetable aberto em janela separada.";
+    }
 
     private void OnTransportStepTracksClick(
         object sender,
