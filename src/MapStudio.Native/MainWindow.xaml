@@ -1836,7 +1836,7 @@
                                                FontWeight="SemiBold"
                                                Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
                                     <ComboBox x:Name="TrafficPathModeComboBox"
-                                              SelectedIndex="0"
+                                              SelectedIndex="3"
                                               HorizontalAlignment="Stretch"
                                               SelectionChanged="OnTrafficPathModeChanged">
                                         <ComboBoxItem Content="Veículos · visão limpa" />
