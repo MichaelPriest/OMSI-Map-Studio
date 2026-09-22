@@ -350,6 +350,10 @@ public sealed partial class MainWindow : Window
         _trafficPreviewTimer =
             new();
 
+    private readonly DispatcherTimer
+        _libraryFilterDebounceTimer =
+            new();
+
     private IReadOnlyList<
         NativeTrafficLightProgramInfo>
         _trafficPrograms =
@@ -431,6 +435,21 @@ public sealed partial class MainWindow : Window
 
         _trafficPreviewTimer.Tick +=
             OnTrafficPreviewTimerTick;
+
+        _libraryFilterDebounceTimer.Interval =
+            TimeSpan.FromMilliseconds(
+                160);
+
+        _libraryFilterDebounceTimer.Tick +=
+            (_, _) =>
+            {
+                _libraryFilterDebounceTimer.Stop();
+
+                if (_libraryMode)
+                {
+                    RefreshLibraryFilter();
+                }
+            };
 
         TrafficViewComboBox.SelectionChanged +=
             OnTrafficViewSelectionChanged;
@@ -959,7 +978,8 @@ public sealed partial class MainWindow : Window
         }
         else if (_libraryMode)
         {
-            RefreshLibraryFilter();
+            _libraryFilterDebounceTimer.Stop();
+            _libraryFilterDebounceTimer.Start();
         }
         else
         {
@@ -999,6 +1019,8 @@ public sealed partial class MainWindow : Window
 
         SplinePlacementOptionsPanel.Visibility =
             Visibility.Collapsed;
+
+        _libraryFilterDebounceTimer.Stop();
 
         _libraryMode =
             false;
