@@ -1775,9 +1775,8 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e)
     {
         if (
-            AssetLibraryListView
-                .SelectedItem is not
-                OmsiAssetIndexEntry asset)
+            GetSelectedAssetLibraryEntry() is not
+                { } asset)
         {
             return;
         }
@@ -1891,9 +1890,8 @@ public sealed partial class MainWindow : Window
     private void UpdateCollectionButtonForSelection()
     {
         if (
-            AssetLibraryListView
-                .SelectedItem is not
-                OmsiAssetIndexEntry asset)
+            GetSelectedAssetLibraryEntry() is not
+                { } asset)
         {
             CollectionAssetButton.Content =
                 "+ Coleção";
@@ -1925,9 +1923,8 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e)
     {
         if (
-            AssetLibraryListView
-                .SelectedItem is not
-                OmsiAssetIndexEntry asset)
+            GetSelectedAssetLibraryEntry() is not
+                { } asset)
         {
             return;
         }
@@ -2436,10 +2433,8 @@ public sealed partial class MainWindow : Window
                         request;
 
                     if (
-                        AssetLibraryListView
-                            .SelectedItem is
-                            OmsiAssetIndexEntry
-                                selected &&
+                        GetSelectedAssetLibraryEntry() is
+                            { } selected &&
                         selected.Kind ==
                             OmsiAssetKind
                                 .SceneryObject)
@@ -2637,10 +2632,8 @@ public sealed partial class MainWindow : Window
 
             if (
                 mode == 1 &&
-                AssetLibraryListView
-                    .SelectedItem is
-                    OmsiAssetIndexEntry
-                        repeatAsset &&
+                GetSelectedAssetLibraryEntry() is
+                    { } repeatAsset &&
                 repeatAsset.Kind ==
                     OmsiAssetKind
                         .SceneryObject)
@@ -20836,10 +20829,8 @@ public sealed partial class MainWindow : Window
                 Header =
                     "SCO companheiro",
                 Text =
-                    AssetLibraryListView
-                        .SelectedItem is
-                        OmsiAssetIndexEntry
-                            selectedAsset &&
+                    GetSelectedAssetLibraryEntry() is
+                        { } selectedAsset &&
                     selectedAsset.Kind ==
                         OmsiAssetKind
                             .SceneryObject
@@ -21540,10 +21531,8 @@ public sealed partial class MainWindow : Window
                     .Spline;
 
         var suggestedPath =
-            AssetLibraryListView
-                .SelectedItem is
-                OmsiAssetIndexEntry
-                    selectedAsset &&
+            GetSelectedAssetLibraryEntry() is
+                { } selectedAsset &&
             selectedAsset.Kind ==
                 expectedKind
                 ? selectedAsset
