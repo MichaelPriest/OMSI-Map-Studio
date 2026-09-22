@@ -106,6 +106,12 @@ public sealed class MapStudioWorkspaceBootstrapper
                 root,
                 ".mapstudio"));
 
+        await new MapStudioStarterTerrainTextureGenerator()
+            .EnsureAsync(
+                root,
+                cancellationToken)
+            .ConfigureAwait(false);
+
         await EnsureTemplateAsync(
                 template,
                 cancellationToken)
@@ -728,10 +734,40 @@ public sealed class MapStudioWorkspaceBootstrapper
         {
             await File.WriteAllTextAsync(
                     tilePath,
-                    "[terrain]\r\n",
+                    BuildStarterTileConfig(),
                     Encoding.UTF8,
                     cancellationToken)
                 .ConfigureAwait(false);
+        }
+        else
+        {
+            var tileSource =
+                await File.ReadAllTextAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (
+                !tileSource.Contains(
+                    "[groundtex]",
+                    StringComparison
+                        .OrdinalIgnoreCase))
+            {
+                tileSource =
+                    tileSource
+                        .TrimEnd(
+                            '\r',
+                            '\n') +
+                    "\r\n\r\n" +
+                    BuildGroundTextureConfig();
+
+                await File.WriteAllTextAsync(
+                        tilePath,
+                        tileSource,
+                        Encoding.UTF8,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
 
         if (!File.Exists(
@@ -755,6 +791,18 @@ public sealed class MapStudioWorkspaceBootstrapper
                 .ConfigureAwait(false);
         }
     }
+
+    private static string BuildStarterTileConfig() =>
+        "[terrain]\r\n\r\n" +
+        BuildGroundTextureConfig();
+
+    private static string BuildGroundTextureConfig() =>
+        "[groundtex]\r\n" +
+        "Texture\\mapstudio_grass.bmp\r\n" +
+        "Texture\\mapstudio_grass_detail.bmp\r\n" +
+        "0\r\n" +
+        "1\r\n" +
+        "60\r\n";
 
     private static async Task<bool>
         EnsureStarterAssetsAsync(

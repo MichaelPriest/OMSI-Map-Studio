@@ -114,6 +114,18 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                 File.Exists(
                     Path.Combine(
                         first.TexturePath,
+                        "mapstudio_grass.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
+                        "mapstudio_grass_detail.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        first.TexturePath,
                         "himmel01.bmp")));
 
             Assert.True(
@@ -207,6 +219,24 @@ public sealed class MapStudioWorkspaceBootstrapperTests
                         "Starter_Shrub",
                         shrubMetadata.Tree!
                             .TextureName)));
+
+            var templateTile =
+                await File.ReadAllTextAsync(
+                    Path.Combine(
+                        first.TemplatePath,
+                        "tile_0_0.map"));
+
+            Assert.Contains(
+                "[groundtex]",
+                templateTile,
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+            Assert.Contains(
+                @"Texture\mapstudio_grass.bmp",
+                templateTile,
+                StringComparison
+                    .OrdinalIgnoreCase);
 
             var manifestPath =
                 Path.Combine(
