@@ -74,6 +74,10 @@ public sealed partial class NativeViewport : UserControl
         NativeTerrainEditPoint>?
         TerrainPointSelected;
 
+    public event Action<
+        NativeTrafficPathNode>?
+        TrafficPathNodeFocused;
+
     public bool TryBuildSplineXExport(
         IReadOnlyCollection<int> splineIds,
         out NativeSplineXExportResult? result,
@@ -1753,6 +1757,46 @@ public sealed partial class NativeViewport : UserControl
                     $"Posicionamento solicitado em {placement.WorldPoint.X:F2}, " +
                     $"{placement.WorldPoint.Y:F2}, {placement.WorldPoint.Z:F2}.");
             }
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime.TryFocusTrafficPathNode(
+                pixelX,
+                pixelY,
+                out var pathNode) &&
+            pathNode is not null)
+        {
+            PublishSelectionInfo();
+
+            TrafficPathNodeFocused
+                ?.Invoke(
+                    pathNode);
+
+            var kindLabel =
+                pathNode.Type switch
+                {
+                    1 => "HUM",
+                    2 => "RAIL",
+                    3 => "AIR",
+                    _ => "CAR"
+                };
+
+            var endLabel =
+                pathNode.IsStart
+                    ? "início"
+                    : "fim";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                $"Path {pathNode.PathIndex} · {kindLabel} · nó de {endLabel}");
+
+            PointerStatusChanged?.Invoke(
+                this,
+                $"Path {pathNode.PathIndex} focado pelo nó de {endLabel}.");
 
             e.Handled = true;
             return;
