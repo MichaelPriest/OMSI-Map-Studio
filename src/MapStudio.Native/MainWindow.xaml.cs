@@ -19,6 +19,7 @@ using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
 using MapStudio.Core.Workspace;
 using MapStudio.Native.Services;
+using MapStudio.Native.ViewModels;
 using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
@@ -36,12 +37,6 @@ namespace MapStudio.Native;
 
 public sealed partial class MainWindow : Window
 {
-    private sealed record TransportExplorerItem(
-        string Kind,
-        string Key,
-        string DisplayText,
-        string Detail);
-
     private sealed record TransportTripRouteOption(
         bool UsesStationLinks,
         string Label,
@@ -355,6 +350,10 @@ public sealed partial class MainWindow : Window
 
     private OmsiTimetableCatalog?
         _timetableCatalog;
+
+    private readonly TransportViewModel
+        _transportViewModel =
+            new();
 
     private IReadOnlyList<
         TransportExplorerItem>
@@ -9246,124 +9245,25 @@ public sealed partial class MainWindow : Window
 
     private void RefreshTransportItems()
     {
-        if (_timetableCatalog is null)
-        {
-            _transportItems =
-                Array.Empty<
-                    TransportExplorerItem>();
-
-            TransportListView.ItemsSource =
-                _transportItems;
-
-            return;
-        }
+        _transportViewModel.Load(
+            _timetableCatalog,
+            TransportKindComboBox
+                .SelectedIndex);
 
         _transportItems =
-            TransportKindComboBox
-                .SelectedIndex switch
-            {
-                1 =>
-                    _timetableCatalog.Trips
-                        .Select(
-                            trip =>
-                                new TransportExplorerItem(
-                                    "Trip",
-                                    trip.Name,
-                                    $"{trip.Name} · linha {trip.EffectiveLine} → {trip.EffectiveDestination}",
-                                    (
-                                        trip.UsesStationLinks
-                                            ? "Rota: StationLinks (tipo 2)\n"
-                                            : $"Track: {trip.EffectiveTrackName}\n"
-                                    ) +
-                                    $"Estações: {trip.Stations.Count}\n" +
-                                    $"Train reverse: {(trip.TrainReverse ? "sim" : "não")}\n" +
-                                    $"Arquivo: {trip.RelativePath}"))
-                        .ToArray(),
-                2 =>
-                    _timetableCatalog.BusStops
-                        .Select(
-                            (stop, index) =>
-                                new TransportExplorerItem(
-                                    "Stop",
-                                    index.ToString(
-                                        CultureInfo.InvariantCulture),
-                                    $"{stop.Id} · {stop.Name}",
-                                    $"Índice: {index}\n" +
-                                    $"Tile index: {stop.TileIndex}\n" +
-                                    $"Subnome: {stop.SubName}"))
-                        .ToArray(),
-                3 =>
-                    _timetableCatalog.StationLinks
-                        .Select(
-                            (link, index) =>
-                                new TransportExplorerItem(
-                                    "StationLink",
-                                    index.ToString(
-                                        CultureInfo.InvariantCulture),
-                                    $"{link.StartBusStopId} → {link.EndBusStopId} · {link.Comment}",
-                                    $"Índice: {index}\n" +
-                                    $"Entradas: {link.Entries.Count}\n" +
-                                    $"Comprimento/ref: {link.Line1}"))
-                        .ToArray(),
-                4 =>
-                    _timetableCatalog.Lines
-                        .Select(
-                            line =>
-                                new TransportExplorerItem(
-                                    "Line",
-                                    line.Name,
-                                    $"{line.Name} · {line.Tours.Count} tour(s)",
-                                    $"Arquivo: {line.RelativePath}\n" +
-                                    $"Prioridade: {line.Priority}\n" +
-                                    $"Jogador permitido: {(line.UserAllowed ? "sim" : "não")}\n" +
-                                    $"Trips agendados: {line.Tours.Sum(tour => tour.Trips.Count)}"))
-                        .ToArray(),
-                _ =>
-                    _timetableCatalog.Tracks
-                        .Select(
-                            track =>
-                                new TransportExplorerItem(
-                                    "Track",
-                                    track.Name,
-                                    $"{track.Name} · {track.Entries.Count} segmentos",
-                                    $"Arquivo: {track.RelativePath}\n" +
-                                    $"Comentário: {track.Comment1} {track.Comment2}"))
-                        .ToArray()
-            };
+            _transportViewModel.Items;
 
         RefreshTransportFilter();
     }
 
     private void RefreshTransportFilter()
     {
-        var query =
-            ExplorerSearchBox.Text
-                .Trim();
-
-        IEnumerable<
-            TransportExplorerItem> items =
-                _transportItems;
-
-        if (!string.IsNullOrWhiteSpace(
-                query))
-        {
-            items =
-                items.Where(
-                    item =>
-                        item.DisplayText.Contains(
-                            query,
-                            StringComparison.OrdinalIgnoreCase) ||
-                        item.Detail.Contains(
-                            query,
-                            StringComparison.OrdinalIgnoreCase) ||
-                        item.Key.Contains(
-                            query,
-                            StringComparison.OrdinalIgnoreCase));
-        }
-
         TransportListView.ItemsSource =
-            items.ToArray();
+            _transportViewModel
+                .Filter(
+                    ExplorerSearchBox.Text);
     }
+
 
     private void OnTransportStepTracksClick(
         object sender,
