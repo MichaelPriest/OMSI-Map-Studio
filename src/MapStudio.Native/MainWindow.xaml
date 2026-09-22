@@ -34,6 +34,7 @@
                     <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#107C41" />
                     <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2FFFFFF" />
                     <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E6EEF4FA" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#ECFFFFFF" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <Color x:Key="MapStudioSurfaceRaisedColor">#132A39</Color>
@@ -58,6 +59,7 @@
                     <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#55D96B" />
                     <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2081722" />
                     <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#CC102A39" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#E60B202D" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <Color x:Key="MapStudioSurfaceRaisedColor">#000000</Color>
@@ -82,6 +84,7 @@
                     <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#00FF00" />
                     <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#FF000000" />
                     <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#FF000000" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#FF000000" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
             <SolidColorBrush x:Key="MapToolDefaultBackgroundBrush"
@@ -659,7 +662,7 @@
             <Border x:Name="ExplorerPanel"
                     Grid.Column="0"
                     Margin="8"
-                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
@@ -705,6 +708,13 @@
                                     ToolTipService.ToolTip="Atualizar biblioteca"
                                     IsEnabled="False"
                                     Click="OnRefreshLibraryClick" />
+                            <Button x:Name="MinimizeExplorerPanelButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar painel Projeto"
+                                    Click="OnMinimizeExplorerPanelClick" />
                             <Border Width="28"
                                     Height="28"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
@@ -2029,6 +2039,34 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
+            <Button x:Name="RestoreExplorerPanelButton"
+                    Grid.Column="2"
+                    Margin="10,72,0,0"
+                    Padding="10,5"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="75"
+                    Content="Projeto ›"
+                    ToolTipService.ToolTip="Restaurar painel Projeto"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    Click="OnRestoreExplorerPanelClick" />
+
+            <Button x:Name="RestoreInspectorPanelButton"
+                    Grid.Column="2"
+                    Margin="0,72,10,0"
+                    Padding="10,5"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="75"
+                    Content="‹ Inspector"
+                    ToolTipService.ToolTip="Restaurar Inspector"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    Click="OnRestoreInspectorPanelClick" />
+
             <Grid x:Name="LoadingOverlay"
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
@@ -2769,7 +2807,7 @@
             <Border x:Name="InspectorPanel"
                     Grid.Column="4"
                     Margin="8"
-                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
                     CornerRadius="8">
@@ -2783,6 +2821,7 @@
                               Background="Transparent">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
@@ -2808,7 +2847,15 @@
                                            FontWeight="SemiBold"
                                            Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                             </Border>
-                            <Border Grid.Column="2"
+                            <Button x:Name="MinimizeInspectorPanelButton"
+                                    Grid.Column="2"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar Inspector"
+                                    Click="OnMinimizeInspectorPanelClick" />
+                            <Border Grid.Column="3"
                                     Width="28"
                                     Height="28"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
