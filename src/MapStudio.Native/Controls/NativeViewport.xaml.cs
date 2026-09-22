@@ -1146,6 +1146,40 @@ public sealed partial class NativeViewport : UserControl
             _runtime?
                 .TrafficPathGeometry;
 
+    public bool TrafficPathSelectedOnly =>
+        _runtime?
+            .TrafficPathSelectedOnly ??
+        false;
+
+    public bool SetTrafficPathSelectedOnly(
+        bool selectedOnly)
+    {
+        if (_runtime is null)
+        {
+            return false;
+        }
+
+        var changed =
+            _runtime
+                .SetTrafficPathSelectedOnly(
+                    selectedOnly);
+
+        if (changed)
+        {
+            PointerStatusChanged?.Invoke(
+                this,
+                selectedOnly
+                    ? "Paths OMSI: mostrando apenas o item selecionado."
+                    : "Paths OMSI: mostrando todos os itens carregados.");
+        }
+
+        return changed;
+    }
+
+    public void RefreshTrafficPathDisplay() =>
+        _runtime?
+            .RefreshTrafficPathDisplay();
+
     public IReadOnlyList<
         NativeTrafficPathChoice>
         GetTrafficPathChoicesForSelection() =>
