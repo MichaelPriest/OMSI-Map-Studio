@@ -731,6 +731,41 @@ public sealed class D3D11NativeMapRenderer :
             data.Length;
     }
 
+    public void SetTrafficPathGeometry(
+        NativeTrafficPathGeometry?
+            geometry)
+    {
+        ThrowIfDisposed();
+
+        _trafficPathBuffer
+            ?.Dispose();
+
+        _trafficPathBuffer =
+            null;
+
+        _trafficPathVertexCount =
+            0;
+
+        if (
+            geometry is null ||
+            geometry.Vertices.Length ==
+                0)
+        {
+            return;
+        }
+
+        _trafficPathBuffer =
+            _deviceHost.Device
+                .CreateBuffer(
+                    geometry.Vertices
+                        .AsSpan(),
+                    BindFlags
+                        .VertexBuffer);
+
+        _trafficPathVertexCount =
+            geometry.Vertices.Length;
+    }
+
     public bool SetTrafficPathsVisible(
         bool visible)
     {
