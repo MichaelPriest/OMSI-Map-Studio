@@ -13866,6 +13866,28 @@ public sealed partial class MainWindow : Window
         return 0;
     }
 
+    private int PreviewTransportStep(
+        TransportRouteStepItem step)
+    {
+        ArgumentNullException.ThrowIfNull(
+            step);
+
+        var entry =
+            new OmsiTimetableTrackEntry(
+                "0:",
+                step.EntityId,
+                step.PathIndex,
+                -1,
+                string.Empty,
+                null,
+                string.Empty,
+                null);
+
+        return Viewport
+            .PreviewTimetableTrack(
+                [entry]);
+    }
+
     private void OnTransportValidateClick(
         object sender,
         RoutedEventArgs e)
@@ -13997,6 +14019,23 @@ public sealed partial class MainWindow : Window
             TransportRouteStepsListView.SelectedIndex <
                 TransportRouteStepsListView.Items.Count -
                 1;
+
+        if (
+            !_transportMode ||
+            TransportRouteStepsListView.SelectedItem is not
+                TransportRouteStepItem step)
+        {
+            return;
+        }
+
+        var resolved =
+            PreviewTransportStep(
+                step);
+
+        TransportRouteStatusText.Text =
+            resolved > 0
+                ? $"Trecho {step.Sequence:000} isolado no mapa · ID {step.EntityId} · path {step.PathIndex} · {step.SourceLabel}. Use Visualizar rota para restaurar o caminho completo."
+                : $"Trecho {step.Sequence:000} · ID {step.EntityId} · path {step.PathIndex} não pôde ser resolvido no viewport atual.";
     }
 
     private void OnTransportFocusStepClick(
@@ -14009,6 +14048,9 @@ public sealed partial class MainWindow : Window
         {
             return;
         }
+
+        PreviewTransportStep(
+            step);
 
         var target =
             Viewport
