@@ -13631,127 +13631,6 @@ public sealed partial class MainWindow : Window
                 TextBox Departure
             )>();
 
-        string FormatDeparture(
-            OmsiTimetableAddTrip? trip)
-        {
-            if (
-                trip?.DepartureSeconds is not
-                    double seconds ||
-                !double.IsFinite(
-                    seconds) ||
-                seconds < 0)
-            {
-                return trip?.DepartureTime ??
-                    string.Empty;
-            }
-
-            var wholeSeconds =
-                (long)Math.Round(
-                    seconds);
-
-            var hours =
-                wholeSeconds /
-                3600;
-
-            var minutes =
-                (
-                    wholeSeconds %
-                    3600
-                ) /
-                60;
-
-            var remainder =
-                wholeSeconds %
-                60;
-
-            return
-                $"{hours:00}:{minutes:00}:{remainder:00}";
-        }
-
-        bool TryParseDeparture(
-            string text,
-            out double seconds)
-        {
-            seconds =
-                0;
-
-            var value =
-                text.Trim();
-
-            if (
-                double.TryParse(
-                    value,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out var raw) &&
-                double.IsFinite(
-                    raw) &&
-                raw >= 0)
-            {
-                seconds =
-                    raw;
-
-                return true;
-            }
-
-            var parts =
-                value.Split(
-                    ':',
-                    StringSplitOptions.TrimEntries);
-
-            if (
-                parts.Length is not
-                    (
-                        2 or
-                        3
-                    ) ||
-                !int.TryParse(
-                    parts[0],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var hours) ||
-                !int.TryParse(
-                    parts[1],
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var minutes) ||
-                hours < 0 ||
-                minutes is < 0 or > 59)
-            {
-                return false;
-            }
-
-            var parsedSeconds =
-                0d;
-
-            if (
-                parts.Length ==
-                    3 &&
-                (
-                    !double.TryParse(
-                        parts[2],
-                        NumberStyles.Float,
-                        CultureInfo.InvariantCulture,
-                        out parsedSeconds) ||
-                    !double.IsFinite(
-                        parsedSeconds) ||
-                    parsedSeconds < 0 ||
-                    parsedSeconds >= 60
-                ))
-            {
-                return false;
-            }
-
-            seconds =
-                hours *
-                    3600d +
-                minutes *
-                    60d +
-                parsedSeconds;
-
-            return true;
-        }
-
         void AddRow(
             OmsiTimetableTour? tour,
             OmsiTimetableAddTrip? trip)
@@ -13856,8 +13735,9 @@ public sealed partial class MainWindow : Window
                 new TextBox
                 {
                     Text =
-                        FormatDeparture(
-                            trip),
+                        OmsiTimetableDepartureTime
+                            .FormatEditorValue(
+                                trip?.DepartureTime),
                     PlaceholderText =
                         "08:00:00"
                 };
@@ -14142,9 +14022,10 @@ public sealed partial class MainWindow : Window
                     tourName) ||
                 string.IsNullOrWhiteSpace(
                     tripName) ||
-                !TryParseDeparture(
-                    editor.Departure.Text,
-                    out var departure))
+                !OmsiTimetableDepartureTime
+                    .TryParseEditorValue(
+                        editor.Departure.Text,
+                        out var departure))
             {
                 StatusText.Text =
                     $"Line não salva: linha {rowIndex + 1} da tabela possui Tour, Trip ou horário inválido.";
@@ -14192,9 +14073,9 @@ public sealed partial class MainWindow : Window
                     editor.Comment.Text.Trim(),
                     tripName,
                     editor.TripLine2.Text.Trim(),
-                    departure.ToString(
-                        "G17",
-                        CultureInfo.InvariantCulture)));
+                    OmsiTimetableDepartureTime
+                        .FormatOmsiSeconds(
+                            departure)));
         }
 
         if (tourOrder.Count == 0)
