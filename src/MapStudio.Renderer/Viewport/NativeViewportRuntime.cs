@@ -124,6 +124,14 @@ public sealed class NativeViewportRuntime : IDisposable
         _selectionFilter =
             NativeSelectionFilter.All;
 
+    private NativeTrafficPathDisplayOptions
+        _trafficPathDisplayOptions =
+            NativeTrafficPathDisplayOptions
+                .CleanVehicles;
+
+    private NativeTrafficPathGeometry?
+        _trafficPathGeometry;
+
     private bool _disposed;
 
     public NativeViewportRuntime()
@@ -732,6 +740,161 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public int TrafficPathLineCount =>
         MapRenderer.TrafficPathLineCount;
+
+    public NativeTrafficPathDisplayOptions
+        TrafficPathDisplayOptions =>
+            _trafficPathDisplayOptions;
+
+    public NativeTrafficPathGeometry?
+        TrafficPathGeometry =>
+            _trafficPathGeometry;
+
+    public bool SetTrafficPathDisplayOptions(
+        NativeTrafficPathDisplayOptions
+            options)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            options);
+
+        if (
+            _trafficPathDisplayOptions ==
+                options)
+        {
+            return false;
+        }
+
+        _trafficPathDisplayOptions =
+            options;
+
+        if (Scene is null)
+        {
+            return true;
+        }
+
+        _trafficPathGeometry =
+            new NativeTrafficPathGeometryBuilder()
+                .Build(
+                    Scene,
+                    _splineAssets,
+                    _sceneryAssets,
+                    _trafficPathDisplayOptions);
+
+        MapRenderer
+            .SetTrafficPathGeometry(
+                _trafficPathGeometry);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public IReadOnlyList<
+        NativeTrafficPathChoice>
+        GetTrafficPathChoicesForSelection()
+    {
+        ThrowIfDisposed();
+
+        if (
+            Scene is null ||
+            _selectedPickingId.IsNone)
+        {
+            return Array.Empty<
+                NativeTrafficPathChoice>();
+        }
+
+        if (
+            _selectedPickingId.Kind ==
+                PickingKind.Spline)
+        {
+            var entity =
+                Scene.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                                _selectedPickingId);
+
+            if (
+                entity is null ||
+                !_splineAssets
+                    .TryGetValue(
+                        entity.Spline.SplinePath,
+                        out var asset))
+            {
+                return Array.Empty<
+                    NativeTrafficPathChoice>();
+            }
+
+            return asset.Definition.Paths
+                .Select(
+                    (path, index) =>
+                        new NativeTrafficPathChoice(
+                            index,
+                            path.Type,
+                            path.Direction,
+                            path.Width,
+                            $"Path {index} · {DescribeTrafficPathType(path.Type)} · {DescribeTrafficPathDirection(path.Direction)} · {path.Width:F2} m"))
+                .ToArray();
+        }
+
+        if (
+            _selectedPickingId.Kind ==
+                PickingKind.Object)
+        {
+            var entity =
+                Scene.Objects
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                                _selectedPickingId);
+
+            if (
+                entity is null ||
+                !_sceneryAssets
+                    .TryGetValue(
+                        entity.Object.SceneryObjectPath,
+                        out var asset))
+            {
+                return Array.Empty<
+                    NativeTrafficPathChoice>();
+            }
+
+            return asset.Paths
+                .Select(
+                    (path, index) =>
+                        new NativeTrafficPathChoice(
+                            index,
+                            path.Type,
+                            path.Direction,
+                            path.Width,
+                            $"Path {index} · {DescribeTrafficPathType(path.Type)} · {DescribeTrafficPathDirection(path.Direction)} · {path.Width:F2} m"))
+                .ToArray();
+        }
+
+        return Array.Empty<
+            NativeTrafficPathChoice>();
+    }
+
+    private static string DescribeTrafficPathType(
+        int type) =>
+        type switch
+        {
+            1 => "Pedestre",
+            2 => "Trilho",
+            3 => "Aéreo",
+            _ => "Veículo"
+        };
+
+    private static string DescribeTrafficPathDirection(
+        int direction) =>
+        direction switch
+        {
+            0 => "→",
+            1 => "←",
+            2 => "↔",
+            _ => "?"
+        };
 
     public bool SetTrafficPathsVisible(
         bool visible)
@@ -4288,7 +4451,11 @@ public sealed class NativeViewportRuntime : IDisposable
                 .Build(
                     Scene,
                     _splineAssets,
-                    _sceneryAssets);
+                    _sceneryAssets,
+                    _trafficPathDisplayOptions);
+
+        _trafficPathGeometry =
+            trafficPathGeometry;
 
         var sceneryLightGeometry =
             new NativeSceneryLightGeometryBuilder()
