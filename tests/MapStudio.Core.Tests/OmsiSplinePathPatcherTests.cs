@@ -77,11 +77,13 @@ public sealed class OmsiSplinePathPatcherTests
     }
 
     [Fact]
-    public void InsertAfterAddsParallelSplinePath()
+    public void AppendDuplicateKeepsExistingSplinePathIndexesStable()
     {
         const string source =
             "[path]\n" +
             "0\n-1.5\n0.1\n3\n0\n" +
+            "[path]\n" +
+            "1\n4.2\n0.25\n2\n2\n" +
             "[profile]\n0\n";
 
         var document =
@@ -98,7 +100,7 @@ public sealed class OmsiSplinePathPatcherTests
 
         var bytes =
             new OmsiSplinePathPatcher()
-                .InsertAfter(
+                .AppendDuplicate(
                     document,
                     0,
                     duplicate);
@@ -111,7 +113,7 @@ public sealed class OmsiSplinePathPatcherTests
                             bytes));
 
         Assert.Equal(
-            2,
+            3,
             definition.Paths.Count);
 
         Assert.Equal(
@@ -120,8 +122,13 @@ public sealed class OmsiSplinePathPatcherTests
                 .X);
 
         Assert.Equal(
+            4.2,
+            definition.Paths[1]
+                .X);
+
+        Assert.Equal(
             duplicate,
-            definition.Paths[1]);
+            definition.Paths[2]);
     }
 
     [Fact]

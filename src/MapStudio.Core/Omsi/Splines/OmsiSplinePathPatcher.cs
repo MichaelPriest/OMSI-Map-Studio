@@ -170,7 +170,7 @@ public sealed class OmsiSplinePathPatcher
             .ToBytes();
     }
 
-    public byte[] InsertAfter(
+    public byte[] AppendDuplicate(
         OmsiConfigDocument document,
         int sourcePathOrdinal,
         OmsiSplinePathDefinition path)
@@ -219,15 +219,14 @@ public sealed class OmsiSplinePathPatcher
                 "splinePathOrdinalInvalid");
         }
 
-        var target =
-            pathSections[
-                sourcePathOrdinal];
+        var lastPath =
+            pathSections[^1];
 
         var insertAt =
-            target.DocumentIndex + 1 <
+            lastPath.DocumentIndex + 1 <
                 document.Sections.Count
                 ? document.Sections[
-                    target.DocumentIndex + 1]
+                    lastPath.DocumentIndex + 1]
                     .KeywordLineIndex
                 : document.Lines.Count;
 

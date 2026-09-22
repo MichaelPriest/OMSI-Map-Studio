@@ -8200,8 +8200,7 @@ public sealed partial class MainWindow : Window
                                 sourceOrdinal]);
 
                 duplicatedOrdinal =
-                    sourceOrdinal +
-                    1;
+                    metadata.Paths.Count;
 
                 updatedAssetPath =
                     updated.AssetPath;
@@ -8248,8 +8247,7 @@ public sealed partial class MainWindow : Window
                                 sourceOrdinal]);
 
                 duplicatedOrdinal =
-                    sourceOrdinal +
-                    1;
+                    definition.Paths.Count;
 
                 updatedAssetPath =
                     updated.AssetPath;

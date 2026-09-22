@@ -340,7 +340,7 @@ public sealed class OmsiSceneryPathPatcher
             .ToBytes();
     }
 
-    public byte[] InsertAfter(
+    public byte[] AppendDuplicate(
         OmsiConfigDocument document,
         int sourcePathOrdinal,
         OmsiSceneryPathDefinition path)
@@ -389,16 +389,15 @@ public sealed class OmsiSceneryPathPatcher
                 "sceneryPathOrdinalInvalid");
         }
 
-        var target =
-            pathSections[
-                sourcePathOrdinal];
+        var lastPath =
+            pathSections[^1];
 
         var groupEndLine =
             document.Lines.Count;
 
         for (
             var sectionIndex =
-                target.DocumentIndex +
+                lastPath.DocumentIndex +
                 1;
             sectionIndex <
                 document.Sections.Count;

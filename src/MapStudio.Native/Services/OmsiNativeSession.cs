@@ -5586,7 +5586,7 @@ public sealed class OmsiNativeSession
 
         var bytes =
             new OmsiSceneryPathPatcher()
-                .InsertAfter(
+                .AppendDuplicate(
                     document,
                     sourcePathOrdinal,
                     path);
@@ -5615,8 +5615,7 @@ public sealed class OmsiNativeSession
                 .ConfigureAwait(false);
 
         var duplicatedOrdinal =
-            sourcePathOrdinal +
-                1;
+            metadata.Paths.Count;
 
         if (
             duplicatedOrdinal >=
@@ -5814,7 +5813,7 @@ public sealed class OmsiNativeSession
 
         var bytes =
             new OmsiSplinePathPatcher()
-                .InsertAfter(
+                .AppendDuplicate(
                     document,
                     sourcePathOrdinal,
                     path);
@@ -5843,8 +5842,7 @@ public sealed class OmsiNativeSession
                 .ConfigureAwait(false);
 
         var duplicatedOrdinal =
-            sourcePathOrdinal +
-                1;
+            definition.Paths.Count;
 
         if (
             duplicatedOrdinal >=

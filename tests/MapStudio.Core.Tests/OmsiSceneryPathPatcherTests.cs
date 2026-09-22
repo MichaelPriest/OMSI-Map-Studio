@@ -179,11 +179,13 @@ public sealed class OmsiSceneryPathPatcherTests
     }
 
     [Fact]
-    public void InsertAfterAddsNewPathWithoutChangingExistingOnes()
+    public void AppendDuplicateKeepsExistingPathIndexesStable()
     {
         const string source =
             "[path]\n" +
             "0\n0\n0\n0\n0\n10\n0\n0\n0\n3\n0\n0\n\n" +
+            "[path]\n" +
+            "9\n0\n0\n0\n0\n5\n0\n0\n1\n2\n2\n0\n\n" +
             "[mesh]\nmodel.o3d\n";
 
         var document =
@@ -210,7 +212,7 @@ public sealed class OmsiSceneryPathPatcherTests
 
         var bytes =
             new OmsiSceneryPathPatcher()
-                .InsertAfter(
+                .AppendDuplicate(
                     document,
                     0,
                     duplicate);
@@ -223,7 +225,7 @@ public sealed class OmsiSceneryPathPatcherTests
                             bytes));
 
         Assert.Equal(
-            2,
+            3,
             metadata.Paths.Count);
 
         Assert.Equal(
@@ -232,8 +234,13 @@ public sealed class OmsiSceneryPathPatcherTests
                 .X);
 
         Assert.Equal(
+            9,
+            metadata.Paths[1]
+                .X);
+
+        Assert.Equal(
             duplicate,
-            metadata.Paths[1]);
+            metadata.Paths[2]);
     }
 
     [Fact]
