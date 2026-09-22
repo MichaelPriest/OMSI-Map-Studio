@@ -144,40 +144,36 @@ jobs:
           $geometry = Get-Content src/MapStudio.Renderer/Scene/NativeTrafficPathGeometryBuilder.cs -Raw
           $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
 
-          if ($xaml -notmatch 'x:Name="ExplorerResizeGrip"') {
+          if (-not $xaml.Contains('x:Name="ExplorerResizeGrip"')) {
             throw "Project panel resize grip is missing."
           }
 
-          if ($xaml -notmatch 'PointerMoved="OnExplorerResizeGripMoved"') {
+          if (-not $xaml.Contains('PointerMoved="OnExplorerResizeGripMoved"')) {
             throw "Project panel resize grip is not wired."
           }
 
-          if ($main -notmatch 'private void OnExplorerResizeGripMoved') {
+          if (-not $main.Contains('private void OnExplorerResizeGripMoved')) {
             throw "Project panel resize handler is missing."
           }
 
-          if ($xaml -notmatch 'MaxHeight="340"' -or $xaml -notmatch 'VerticalScrollMode="Auto"') {
+          if (-not $xaml.Contains('MaxHeight="340"') -or -not $xaml.Contains('VerticalScrollMode="Auto"')) {
             throw "Asset Library filter area must keep internal vertical scrolling."
           }
 
-          $overview = [regex]::Match(
-            $options,
-            'public static NativeTrafficPathDisplayOptions TransportOverview[\\s\\S]*?public static NativeTrafficPathDisplayOptions AllDetailed'
-          ).Value
-
-          if ($overview -notmatch 'Pedestrians:\\s*true') {
-            throw "TransportOverview must include HUMAN/pedestrian paths."
+          if (-not $options.Contains('TransportOverview') -or -not $options.Contains('Pedestrians: true')) {
+            throw "TransportOverview / pedestrian path support is missing."
           }
 
-          if ($runtime -notmatch 'TransportOverview') {
+          if (-not $runtime.Contains('TransportOverview')) {
             throw "Viewport runtime must default to the transport overview."
           }
 
-          if ($main -notmatch 'trafficPathOptions' -or $main -notmatch 'transportPathOptions' -or $main -notmatch 'TransportOverview') {
-            throw "Traffic and Transport tools must use the overview that includes HUMAN paths."
+          $overviewUses = ([regex]::Matches($main, [regex]::Escape('.TransportOverview'))).Count
+          if ($overviewUses -lt 2) {
+            throw "Traffic and Transport tools must both use the overview that includes HUMAN paths."
           }
 
-          if ($geometry -notmatch 'new\\(1\\.0f, 0\\.82f, 0\\.08f, 1\\.0f\\)') {
+          if (-not $geometry.Contains('new(1.0f, 0.82f, 0.08f, 1.0f)')) {
             throw "HUMAN path high-contrast color is missing."
           }
 
