@@ -72,6 +72,47 @@ public sealed class MapStudioCommercialTests
                 .Allowed);
     }
 
+    [Theory]
+    [InlineData(MapStudioLicenseStatus.Expired)]
+    [InlineData(MapStudioLicenseStatus.Revoked)]
+    [InlineData(MapStudioLicenseStatus.Unavailable)]
+    public void TerminalLicenseStatusAlwaysDeniesEntitlements(
+        MapStudioLicenseStatus status)
+    {
+        var state =
+            new MapStudioCommercialState(
+                EnforcementEnabled:
+                    true,
+                Status:
+                    status,
+                SubscriptionPlanId:
+                    "public-alpha",
+                Entitlements:
+                    new HashSet<string>(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    {
+                        MapStudioEntitlementKeys
+                            .CoreEditor,
+                        MapStudioEntitlementKeys
+                            .All
+                    });
+
+        var result =
+            MapStudioFeatureGate
+                .Evaluate(
+                    state,
+                    MapStudioEntitlementKeys
+                        .CoreEditor);
+
+        Assert.False(
+            result.Allowed);
+
+        Assert.Equal(
+            status,
+            result.Status);
+    }
+
     [Fact]
     public void StripeDesignKeepsSecretOperationsOffDesktop()
     {

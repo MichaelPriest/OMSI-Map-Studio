@@ -200,6 +200,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -244,7 +245,7 @@
 
             <MenuBar Grid.Row="0"
                      Grid.Column="1">
-                <MenuBarItem Title="Arquivo">
+                <MenuBarItem x:Name="FileMenuBarItem" Title="Arquivo">
                     <MenuFlyoutItem
                         Text="Workspace Map Studio"
                         Click="OnOpenWorkspaceClick" />
@@ -278,7 +279,7 @@
                         Text="Abrir pasta de mapa..."
                         Click="OnOpenMapClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Editar">
+                <MenuBarItem x:Name="EditMenuBarItem" Title="Editar">
                     <MenuFlyoutItem
                         x:Name="UndoConstructionMenuItem"
                         Text="Desfazer construção"
@@ -290,7 +291,7 @@
                         IsEnabled="False"
                         Click="OnRedoConstructionClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Visualizar">
+                <MenuBarItem x:Name="ViewMenuBarItem" Title="Visualizar">
                     <MenuFlyoutItem
                         Text="Tela cheia (F11)"
                         Click="OnFullscreenClick" />
@@ -349,7 +350,7 @@
                         Text="Alternar Inspector"
                         Click="OnToggleInspectorClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Mapa">
+                <MenuBarItem x:Name="MapMenuBarItem" Title="Mapa">
                     <MenuFlyoutItem
                         x:Name="FullMapModeMenuItem"
                         Text="Mapa completo"
@@ -387,7 +388,7 @@
                         Text="Remover referência Google"
                         Click="OnClearGoogleMapReferenceClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ferramentas">
+                <MenuBarItem x:Name="ToolsMenuBarItem" Title="Ferramentas">
                     <MenuFlyoutItem
                         Text="Substituir dependência SCO/SLI..."
                         Click="OnReplaceDependencyClick" />
@@ -452,7 +453,7 @@
                             Click="OnClearProceduralRoadGraphClick" />
                     </MenuFlyoutSubItem>
                 </MenuBarItem>
-                <MenuBarItem Title="IA">
+                <MenuBarItem x:Name="AiMenuBarItem" Title="IA">
                     <MenuFlyoutItem
                         Text="Configurar provedores..."
                         Click="OnAiProvidersClick" />
@@ -462,10 +463,14 @@
                         Text="Assinatura e licença..."
                         Click="OnCommercialStatusClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ajuda" />
+                <MenuBarItem Title="Ajuda">
+                    <MenuFlyoutItem
+                        Text="Verificar atualizações..."
+                        Click="OnCheckForUpdatesClick" />
+                </MenuBarItem>
             </MenuBar>
 
-            <ScrollViewer
+            <ScrollViewer x:Name="EditorToolbarScrollViewer"
                 Grid.Row="1"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
@@ -604,6 +609,53 @@
                     </Grid>
                 </Border>
             </ScrollViewer>
+
+            <Border x:Name="UpdateBanner"
+                    Grid.Row="2"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="3"
+                    Margin="8,0,8,6"
+                    Padding="10,7"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0"
+                                Spacing="1">
+                        <TextBlock x:Name="UpdateBannerTitleText"
+                                   Text="Nova versão disponível"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                        <TextBlock x:Name="UpdateBannerDetailText"
+                                   Text="Uma nova versão do OMSI Map Studio está disponível."
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                    </StackPanel>
+
+                    <Button Grid.Column="1"
+                            Content="Atualizar"
+                            VerticalAlignment="Center"
+                            Click="OnOpenAvailableUpdateClick" />
+
+                    <Button Grid.Column="2"
+                            Width="30"
+                            Height="30"
+                            Padding="0"
+                            Content="×"
+                            ToolTipService.ToolTip="Fechar aviso"
+                            VerticalAlignment="Center"
+                            Click="OnDismissUpdateBannerClick" />
+                </Grid>
+            </Border>
         </Grid>
 
         <Grid x:Name="WorkspaceGrid"

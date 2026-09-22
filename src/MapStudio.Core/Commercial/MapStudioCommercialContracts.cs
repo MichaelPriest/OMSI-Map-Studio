@@ -58,6 +58,15 @@ public sealed record MapStudioCommercialState(
             return true;
         }
 
+        if (
+            Status is
+                MapStudioLicenseStatus.Expired or
+                MapStudioLicenseStatus.Revoked or
+                MapStudioLicenseStatus.Unavailable)
+        {
+            return false;
+        }
+
         return
             Entitlements.Contains(
                 MapStudioEntitlementKeys

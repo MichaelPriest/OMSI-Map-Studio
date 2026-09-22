@@ -219,10 +219,27 @@ public sealed partial class MainWindow : Window
     private RoadProfileOption?
         _activeRoadProfile;
 
+    private readonly NativeLicenseService
+        _licenseService =
+            new();
+
     private MapStudioCommercialState
         _commercialState =
             MapStudioCommercialState
                 .DevelopmentPreview();
+
+    private readonly NativeUpdateService
+        _updateService =
+            new();
+
+    private NativeUpdateCheckResult?
+        _availableUpdate;
+
+    private bool
+        _updateCheckStarted;
+
+    private bool
+        _licenseRefreshStarted;
 
     private MapStudioAiConnectionSettings
         _aiConnectionSettings =
@@ -441,6 +458,12 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        ApplyCommercialState(
+            _licenseService
+                .LoadCachedSnapshot(),
+            announce:
+                false);
 
         _trafficPreviewTimer.Interval =
             TimeSpan.FromMilliseconds(
@@ -18556,6 +18579,25 @@ public sealed partial class MainWindow : Window
         await ActivateStandaloneWorkspaceAsync(
             announce:
                 false);
+
+        if (!_updateCheckStarted)
+        {
+            _updateCheckStarted =
+                true;
+
+            await CheckForUpdatesAsync(
+                announceIfCurrent:
+                    false);
+        }
+
+        if (!_licenseRefreshStarted)
+        {
+            _licenseRefreshStarted =
+                true;
+
+            _ =
+                RefreshCommercialLicenseAsync();
+        }
     }
 
     private async Task
@@ -27380,72 +27422,302 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnCheckForUpdatesClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CheckForUpdatesAsync(
+            announceIfCurrent:
+                true);
+    }
+
+    private async Task CheckForUpdatesAsync(
+        bool announceIfCurrent)
+    {
+        var apiBaseUri =
+            NativeCommerceEndpoint
+                .ResolveApiBaseUri();
+
+        if (apiBaseUri is null)
+        {
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    "Atualizações: servidor ainda não configurado nesta build.";
+            }
+
+            return;
+        }
+
+        try
+        {
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    "Verificando atualizações...";
+            }
+
+            var result =
+                await _updateService
+                    .CheckAsync(
+                        apiBaseUri,
+                        NativeCommerceEndpoint
+                            .ResolveUpdateChannel());
+
+            if (result is null)
+            {
+                if (announceIfCurrent)
+                {
+                    StatusText.Text =
+                        "Não foi possível consultar o servidor de atualizações.";
+                }
+
+                return;
+            }
+
+            if (
+                !result.IsUpdateAvailable ||
+                result.Update is null)
+            {
+                _availableUpdate =
+                    null;
+
+                UpdateBanner.Visibility =
+                    Visibility.Collapsed;
+
+                if (announceIfCurrent)
+                {
+                    StatusText.Text =
+                        $"OMSI Map Studio {result.CurrentVersion}: você já está na versão mais recente do canal {result.Channel}.";
+                }
+
+                return;
+            }
+
+            _availableUpdate =
+                result;
+
+            UpdateBannerTitleText.Text =
+                result.Update.Mandatory
+                    ? $"Atualização obrigatória · {result.Update.Version}"
+                    : $"Nova versão disponível · {result.Update.Version}";
+
+            var notes =
+                result.Update.Notes
+                    .Replace(
+                        "\r",
+                        " ")
+                    .Replace(
+                        "\n",
+                        " ")
+                    .Trim();
+
+            if (notes.Length > 220)
+            {
+                notes =
+                    notes[..220] +
+                    "…";
+            }
+
+            UpdateBannerDetailText.Text =
+                string.IsNullOrWhiteSpace(
+                    notes)
+                    ? $"Versão instalada: {result.CurrentVersion}."
+                    : notes;
+
+            UpdateBanner.Visibility =
+                Visibility.Visible;
+
+            StatusText.Text =
+                $"Atualização {result.Update.Version} disponível.";
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"Update check failure type={exception.GetType().FullName} hresult=0x{exception.HResult:X8} message={exception.Message}");
+
+            if (announceIfCurrent)
+            {
+                StatusText.Text =
+                    $"Falha ao verificar atualização: {exception.Message}";
+            }
+        }
+    }
+
+    private async void OnOpenAvailableUpdateClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var downloadUri =
+            _availableUpdate
+                ?.DownloadUri;
+
+        if (downloadUri is null)
+        {
+            StatusText.Text =
+                "Atualização: link de download indisponível.";
+            return;
+        }
+
+        try
+        {
+            var launched =
+                await Windows.System
+                    .Launcher
+                    .LaunchUriAsync(
+                        downloadUri);
+
+            StatusText.Text =
+                launched
+                    ? "Abrindo download da atualização no navegador..."
+                    : "Não foi possível abrir o download da atualização.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao abrir atualização: {exception.Message}";
+        }
+    }
+
+    private void OnDismissUpdateBannerClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        UpdateBanner.Visibility =
+            Visibility.Collapsed;
+    }
+
     private async void OnCommercialStatusClick(
         object sender,
         RoutedEventArgs e)
     {
-        var mode =
-            _commercialState
-                .EnforcementEnabled
-                ? "Cobrança/licença ativa"
-                : "Pré-lançamento · cobrança ainda não aplicada";
-
-        var status =
-            _commercialState
-                .Status
-                .ToString();
-
-        var content =
-            new StackPanel
-            {
-                Spacing =
-                    8,
-                MinWidth =
-                    480
-            };
-
-        content.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    mode,
-                FontSize =
-                    18,
-                FontWeight =
-                    Microsoft.UI.Text
-                        .FontWeights
-                        .SemiBold
-            });
-
-        content.Children.Add(
-            new TextBlock
-            {
-                Text =
-                    $"Estado: {status}\n" +
-                    "Billing planejado: Stripe via backend seguro.\n" +
-                    "O desktop não armazenará chave secreta da Stripe.\n" +
-                    "Checkout, portal do cliente, webhooks e entitlement serão validados no servidor.\n\n" +
-                    "Nesta fase de desenvolvimento todas as funções permanecem liberadas.",
-                TextWrapping =
-                    TextWrapping
-                        .Wrap
-            });
-
-        var dialog =
-            new ContentDialog
-            {
-                XamlRoot =
+        var snapshot =
+            await NativeLicenseDialog
+                .ShowAsync(
                     MainRoot.XamlRoot,
-                Title =
-                    "Assinatura e licença",
-                Content =
-                    content,
-                CloseButtonText =
-                    "Fechar"
-            };
+                    _licenseService);
 
-        await dialog
-            .ShowAsync();
+        ApplyCommercialState(
+            snapshot,
+            announce:
+                true);
+    }
+
+    private async Task RefreshCommercialLicenseAsync()
+    {
+        try
+        {
+            var snapshot =
+                await _licenseService
+                    .RefreshCachedAsync();
+
+            DispatcherQueue.TryEnqueue(
+                () =>
+                {
+                    ApplyCommercialState(
+                        snapshot,
+                        announce:
+                            false);
+                });
+        }
+        catch (Exception exception)
+        {
+            NativeStartupDiagnostics.Write(
+                $"License refresh failed: {exception}");
+
+            DispatcherQueue.TryEnqueue(
+                () =>
+                {
+                    ApplyCommercialState(
+                        _licenseService
+                            .LoadCachedSnapshot(),
+                        announce:
+                            false);
+                });
+        }
+    }
+
+    private void ApplyCommercialState(
+        NativeLicenseSnapshot snapshot,
+        bool announce)
+    {
+        ArgumentNullException.ThrowIfNull(
+            snapshot);
+
+        _commercialState =
+            snapshot.State;
+
+        var coreGate =
+            MapStudioFeatureGate
+                .Evaluate(
+                    _commercialState,
+                    MapStudioEntitlementKeys
+                        .CoreEditor);
+
+        SetCoreEditorCommandsEnabled(
+            coreGate.Allowed);
+
+        if (!coreGate.Allowed)
+        {
+            StatusText.Text =
+                "OMSI Map Studio: licença necessária. Use Conta → Assinatura e licença para ativar este computador.";
+
+            return;
+        }
+
+        if (
+            announce &&
+            _commercialState
+                .EnforcementEnabled)
+        {
+            StatusText.Text =
+                _commercialState.Status ==
+                    MapStudioLicenseStatus
+                        .GracePeriod
+                    ? $"Licença offline válida até {snapshot.OfflineUntil?.ToLocalTime():g}."
+                    : "Licença verificada. Editor liberado.";
+        }
+    }
+
+    private void SetCoreEditorCommandsEnabled(
+        bool enabled)
+    {
+        WorkspaceGrid.IsHitTestVisible =
+            enabled;
+
+        WorkspaceGrid.Opacity =
+            enabled
+                ? 1
+                : 0.58;
+
+        EditorToolbarScrollViewer.IsEnabled =
+            enabled;
+
+        FileMenuBarItem.IsEnabled =
+            enabled;
+
+        EditMenuBarItem.IsEnabled =
+            enabled;
+
+        ViewMenuBarItem.IsEnabled =
+            enabled;
+
+        MapMenuBarItem.IsEnabled =
+            enabled;
+
+        ToolsMenuBarItem.IsEnabled =
+            enabled;
+
+        AiMenuBarItem.IsEnabled =
+            enabled;
+
+        foreach (
+            var accelerator in
+                MainRoot.KeyboardAccelerators)
+        {
+            accelerator.IsEnabled =
+                enabled;
+        }
     }
 
     private bool EnsureCommercialFeature(
