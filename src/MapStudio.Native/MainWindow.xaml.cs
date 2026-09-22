@@ -974,7 +974,6 @@ public sealed partial class MainWindow : Window
                 {
                     SceneExplorerModeButton,
                     LibraryExplorerModeButton,
-                    MapExplorerModeButton,
                     TransportExplorerModeButton
                 })
         {
@@ -18841,10 +18840,6 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        UpdateExplorerModeVisual(
-            MapExplorerModeButton,
-            "Tiles, coordenadas e estrutura do mapa");
-
         var snapshot =
             _session.CurrentMap;
 
