@@ -781,6 +781,8 @@ Além dos checkpoints já descritos, o host nativo atualmente possui:
 - adapters de visão reais para **OpenAI-compatible**, **Ollama**, **LM Studio**, **Anthropic Messages API** e **Google Gemini generateContent**, todos convergindo para o mesmo parser estruturado de edifícios e vias;
 - o diálogo nativo mostra quais adapters são operacionais, sugere endpoints seguros para serviços conhecidos e mantém API keys no Windows Credential Manager;
 - o Workspace standalone gera céu diurno/noturno próprio e texturas base/detail de terreno próprias; mapas novos já recebem uma camada `[groundtex]` funcional sem conteúdo do OMSI;
+- **Arquivo → Exportar mapa como pacote OMSI...** cria uma árvore independente com `maps`, `Sceneryobjects`, `Splines` e texturas do Workspace para teste/distribuição; a instalação original do OMSI nunca é alterada automaticamente;
+- o exportador exclui deliberadamente `himmel01/himmel05` e `Texture/skybox` do pacote para não sobrescrever o ambiente global do jogo, mas preserva as texturas de terreno e os assets necessários do Workspace;
 - leitura de `attachObj`, `splineAttachment/splineAttachement` e repeaters;
 - edição preservativa dos campos numéricos validados desses attachments, com backup e round-trip;
 - camada comercial/entitlements em modo Development Preview, ainda sem enforcement;
