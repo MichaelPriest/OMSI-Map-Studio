@@ -770,8 +770,73 @@ public sealed partial class MainWindow : Window
         SetActiveMapTool(
             ToolSelectionButton);
 
+        UpdateExplorerModeVisual(
+            SceneExplorerModeButton,
+            "Cena e conteúdo do mapa");
+
         Activated +=
             OnMainWindowActivatedInitializeWorkspace;
+    }
+
+    private void UpdateExplorerModeVisual(
+        Button activeButton,
+        string subtitle)
+    {
+        ExplorerModeSubtitleText.Text =
+            subtitle;
+
+        var defaultBackground =
+            MainRoot.Resources[
+                "ExplorerModeDefaultBackgroundBrush"] as
+                    Microsoft.UI.Xaml.Media.Brush;
+
+        var defaultBorder =
+            MainRoot.Resources[
+                "ExplorerModeDefaultBorderBrush"] as
+                    Microsoft.UI.Xaml.Media.Brush;
+
+        var activeBackground =
+            MainRoot.Resources[
+                "ExplorerModeActiveBackgroundBrush"] as
+                    Microsoft.UI.Xaml.Media.Brush;
+
+        var activeBorder =
+            MainRoot.Resources[
+                "ExplorerModeActiveBorderBrush"] as
+                    Microsoft.UI.Xaml.Media.Brush;
+
+        foreach (
+            var button in
+                new[]
+                {
+                    SceneExplorerModeButton,
+                    LibraryExplorerModeButton,
+                    MapExplorerModeButton,
+                    TransportExplorerModeButton
+                })
+        {
+            button.Background =
+                ReferenceEquals(
+                    button,
+                    activeButton)
+                    ? activeBackground
+                    : defaultBackground;
+
+            button.BorderBrush =
+                ReferenceEquals(
+                    button,
+                    activeButton)
+                    ? activeBorder
+                    : defaultBorder;
+
+            button.BorderThickness =
+                new Thickness(
+                    ReferenceEquals(
+                        button,
+                        activeButton)
+                        ? 1.5
+                        : 1);
+        }
     }
 
     private void OnExplorerSearchTextChanged(
@@ -881,6 +946,10 @@ public sealed partial class MainWindow : Window
         ExplorerSearchBox.PlaceholderText =
             "Buscar objetos e splines...";
 
+        UpdateExplorerModeVisual(
+            SceneExplorerModeButton,
+            "Cena e conteúdo do mapa");
+
         RefreshExplorerFilter();
     }
 
@@ -931,6 +1000,10 @@ public sealed partial class MainWindow : Window
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar na biblioteca...";
+
+        UpdateExplorerModeVisual(
+            LibraryExplorerModeButton,
+            "Biblioteca, favoritos e coleções");
 
         await LoadAssetLibraryAsync();
     }
@@ -8854,6 +8927,10 @@ public sealed partial class MainWindow : Window
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar Tracks, Trips, Stops e StationLinks...";
+
+        UpdateExplorerModeVisual(
+            TransportExplorerModeButton,
+            "Tracks, Trips, Station Links e horários");
 
         TransportStatusText.Text =
             "Lendo TTData...";
@@ -16873,6 +16950,10 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        UpdateExplorerModeVisual(
+            MapExplorerModeButton,
+            "Tiles, coordenadas e estrutura do mapa");
+
         var snapshot =
             _session.CurrentMap;
 
