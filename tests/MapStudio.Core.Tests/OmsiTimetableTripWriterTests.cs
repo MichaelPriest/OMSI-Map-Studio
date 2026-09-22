@@ -168,4 +168,106 @@ public sealed class OmsiTimetableTripWriterTests
                 recursive: true);
         }
     }
+    [Fact]
+    public async Task WriteRoundTripsType2StationLinkTripFields()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-trip-writer-type2-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        Directory.CreateDirectory(
+            root);
+
+        var path =
+            Path.Combine(
+                root,
+                "Line_76_Type2.ttp");
+
+        try
+        {
+            var source =
+                new OmsiTimetableTrip(
+                    path,
+                    "TTData\\Line_76_Type2.ttp",
+                    "Line_76_Type2",
+                    "Created with Map Studio",
+                    string.Empty,
+                    "Krankenhaus",
+                    "76",
+                    string.Empty,
+                    false,
+                    [
+                        new OmsiTimetableTripStationType2(
+                            100),
+                        new OmsiTimetableTripStationType2(
+                            200),
+                        new OmsiTimetableTripStationType2(
+                            300)
+                    ],
+                    [
+                        "[profile]",
+                        "standard"
+                    ]);
+
+            await File.WriteAllBytesAsync(
+                path,
+                new OmsiTimetableTripWriter()
+                    .Write(
+                        source));
+
+            var parsed =
+                await new OmsiTimetableTripReader()
+                    .ReadAsync(
+                        root,
+                        path);
+
+            Assert.True(
+                parsed.UsesStationLinks);
+
+            Assert.Equal(
+                "Krankenhaus",
+                parsed.TrackName);
+
+            Assert.Equal(
+                "76",
+                parsed.Destination);
+
+            Assert.Equal(
+                string.Empty,
+                parsed.Line);
+
+            Assert.Equal(
+                string.Empty,
+                parsed.EffectiveTrackName);
+
+            Assert.Equal(
+                "Krankenhaus",
+                parsed.EffectiveDestination);
+
+            Assert.Equal(
+                "76",
+                parsed.EffectiveLine);
+
+            Assert.Equal(
+                3,
+                parsed.Stations.Count);
+
+            Assert.All(
+                parsed.Stations,
+                station =>
+                    Assert.IsType<
+                        OmsiTimetableTripStationType2>(
+                            station));
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
 }
