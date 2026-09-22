@@ -12405,6 +12405,55 @@ public sealed partial class MainWindow : Window
         return 0;
     }
 
+    private void OnTransportValidateClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_timetableCatalog is null)
+        {
+            StatusText.Text =
+                "Validação TTData indisponível: nenhum catálogo carregado.";
+            return;
+        }
+
+        var loadedIds =
+            Viewport
+                .GetExplorerItems()
+                .Select(
+                    item =>
+                        item.EntityId)
+                .ToHashSet();
+
+        var unresolvedSegments =
+            _timetableCatalog.Tracks
+                .SelectMany(
+                    track =>
+                        track.Entries)
+                .Count(
+                    entry =>
+                        !loadedIds.Contains(
+                            entry.Id));
+
+        var problems =
+            _timetableCatalog
+                .BrokenTripTrackReferenceCount +
+            _timetableCatalog
+                .BrokenStationLinkStopReferenceCount +
+            _timetableCatalog
+                .BrokenLineTripReferenceCount;
+
+        TransportRouteStatusText.Text =
+            $"Validação · Trip→Track quebrado: {_timetableCatalog.BrokenTripTrackReferenceCount} · " +
+            $"StationLink→Stop quebrado: {_timetableCatalog.BrokenStationLinkStopReferenceCount} · " +
+            $"Line→Trip quebrado: {_timetableCatalog.BrokenLineTripReferenceCount} · " +
+            $"segmentos fora do viewport atual: {unresolvedSegments}.";
+
+        StatusText.Text =
+            problems == 0
+                ? "TTData: referências estruturais válidas. Segmentos fora da região carregada são informativos."
+                : $"TTData: {problems} referência(s) quebrada(s) encontrada(s).";
+    }
+
     private void OnTransportPreviewClick(
         object sender,
         RoutedEventArgs e)
