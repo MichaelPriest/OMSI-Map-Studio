@@ -652,6 +652,11 @@ public sealed partial class MainWindow : Window
                         PickingKind.Object or
                         PickingKind.Spline;
 
+                DeleteAssetPathButton.IsEnabled =
+                    info?.Kind is
+                        PickingKind.Object or
+                        PickingKind.Spline;
+
                 CompleteToSplineButton.IsEnabled =
                     info?.Kind ==
                         PickingKind.Spline &&
@@ -8311,6 +8316,225 @@ public sealed partial class MainWindow : Window
         finally
         {
             DuplicateAssetPathButton.IsEnabled =
+                _selectionInfo?.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline;
+        }
+    }
+
+    private async void OnDeleteAssetPathClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo is not
+                { } selection ||
+            selection.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ) ||
+            _session.OmsiRootPath is not
+                { } root ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Excluir path: selecione um objeto ou uma spline.";
+            return;
+        }
+
+        var sourceOrdinal =
+            Math.Max(
+                0,
+                Viewport
+                    .TrafficPathFocusedIndex ??
+                0);
+
+        try
+        {
+            DeleteAssetPathButton.IsEnabled =
+                false;
+
+            var pathCount =
+                0;
+
+            if (
+                selection.Kind ==
+                    PickingKind.Object)
+            {
+                if (
+                    !OmsiSceneryObjectPathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Excluir path SCO: asset não encontrado.";
+                    return;
+                }
+
+                pathCount =
+                    (
+                        await new OmsiSceneryObjectReader()
+                            .ReadMetadataAsync(
+                                target)
+                    ).Paths.Count;
+            }
+            else
+            {
+                if (
+                    !OmsiSplinePathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Excluir path SLI: asset não encontrado.";
+                    return;
+                }
+
+                pathCount =
+                    (
+                        await new OmsiSplineDefinitionReader()
+                            .ReadAsync(
+                                target)
+                    ).Paths.Count;
+            }
+
+            if (
+                sourceOrdinal >=
+                    pathCount)
+            {
+                StatusText.Text =
+                    $"Excluir path: índice {sourceOrdinal} não existe.";
+                return;
+            }
+
+            var confirm =
+                new ContentDialog
+                {
+                    XamlRoot =
+                        MainRoot.XamlRoot,
+                    Title =
+                        $"Excluir path {sourceOrdinal}?",
+                    Content =
+                        new TextBlock
+                        {
+                            Text =
+                                pathCount == 1
+                                    ? "Este é o último path do asset. A exclusão removerá toda a circulação definida neste SCO/SLI e afetará todas as instâncias que usam o arquivo. Um backup será criado."
+                                    : "A exclusão afeta todas as instâncias que usam este SCO/SLI. Um backup será criado antes da alteração.",
+                            TextWrapping =
+                                TextWrapping.Wrap
+                        },
+                    PrimaryButtonText =
+                        "Excluir path",
+                    CloseButtonText =
+                        "Cancelar",
+                    DefaultButton =
+                        ContentDialogButton.Close
+                };
+
+            if (
+                await confirm.ShowAsync() !=
+                    ContentDialogResult.Primary)
+            {
+                return;
+            }
+
+            StatusText.Text =
+                $"Excluindo path {sourceOrdinal} com backup...";
+
+            NativeAssetPathDeleteResult
+                updated;
+
+            if (
+                selection.Kind ==
+                    PickingKind.Object)
+            {
+                updated =
+                    await _session
+                        .DeleteSceneryPathAsync(
+                            selection.AssetPath,
+                            sourceOrdinal);
+            }
+            else
+            {
+                updated =
+                    await _session
+                        .DeleteSplinePathAsync(
+                            selection.AssetPath,
+                            sourceOrdinal);
+            }
+
+            await ApplyMapSnapshotAsync(
+                snapshot,
+                focusActiveTile:
+                    false);
+
+            var owner =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                selection.Kind &&
+                            item.EntityId ==
+                                selection.EntityId &&
+                            item.TileX ==
+                                selection.TileX &&
+                            item.TileY ==
+                                selection.TileY &&
+                            string.Equals(
+                                item.AssetPath,
+                                selection.AssetPath,
+                                StringComparison.OrdinalIgnoreCase));
+
+            if (owner is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    owner,
+                    focus:
+                        false);
+
+                Viewport
+                    .SetTrafficPathFocusedIndex(
+                        updated.RemainingPathCount >
+                            0
+                            ? Math.Min(
+                                sourceOrdinal,
+                                updated.RemainingPathCount -
+                                    1)
+                            : null);
+
+                if (
+                    Viewport
+                        .TrafficPathSelectedOnly)
+                {
+                    Viewport
+                        .RefreshTrafficPathDisplay();
+                }
+            }
+
+            UpdateTrafficPathStatusText();
+
+            StatusText.Text =
+                $"Path {sourceOrdinal} excluído · {Path.GetFileName(updated.AssetPath)} · {updated.RemainingPathCount} path(s) restante(s) · backup {updated.BackupPath}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao excluir path: {exception.Message}";
+        }
+        finally
+        {
+            DeleteAssetPathButton.IsEnabled =
                 _selectionInfo?.Kind is
                     PickingKind.Object or
                     PickingKind.Spline;

@@ -1907,6 +1907,12 @@
                                         HorizontalAlignment="Stretch"
                                         ToolTipService.ToolTip="Duplica o path focado do SCO/SLI com backup e mantém a nova faixa selecionada para edição"
                                         Click="OnDuplicateAssetPathClick" />
+                                <Button x:Name="DeleteAssetPathButton"
+                                        Content="Excluir path atual"
+                                        IsEnabled="False"
+                                        HorizontalAlignment="Stretch"
+                                        ToolTipService.ToolTip="Exclui o path focado do SCO/SLI com confirmação e backup; afeta todas as instâncias que usam o mesmo asset"
+                                        Click="OnDeleteAssetPathClick" />
                                 <Button x:Name="AddTrafficSignalButton"
                                         Content="Adicionar semáforo..."
                                         HorizontalAlignment="Stretch"

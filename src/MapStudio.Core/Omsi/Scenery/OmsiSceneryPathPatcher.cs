@@ -487,6 +487,114 @@ public sealed class OmsiSceneryPathPatcher
             .ToBytes();
     }
 
+    public byte[] Remove(
+        OmsiConfigDocument document,
+        int sourcePathOrdinal)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        if (sourcePathOrdinal < 0)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var pathSections =
+            document.Sections
+                .Select(
+                    (
+                        section,
+                        documentIndex
+                    ) =>
+                        (
+                            Section:
+                                section,
+                            DocumentIndex:
+                                documentIndex
+                        ))
+                .Where(
+                    value =>
+                        string.Equals(
+                            value.Section.Keyword,
+                            "path",
+                            StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        if (
+            sourcePathOrdinal >=
+                pathSections.Length)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var target =
+            pathSections[
+                sourcePathOrdinal];
+
+        var groupEndLine =
+            document.Lines.Count;
+
+        for (
+            var sectionIndex =
+                target.DocumentIndex +
+                1;
+            sectionIndex <
+                document.Sections.Count;
+            sectionIndex++)
+        {
+            if (
+                PathBoundaryKeywords.Contains(
+                    document.Sections[
+                        sectionIndex]
+                        .Keyword))
+            {
+                groupEndLine =
+                    document.Sections[
+                        sectionIndex]
+                        .KeywordLineIndex;
+                break;
+            }
+        }
+
+        var lines =
+            document.Lines
+                .ToList();
+
+        lines.RemoveRange(
+            target.Section.KeywordLineIndex,
+            groupEndLine -
+                target.Section.KeywordLineIndex);
+
+        while (
+            target.Section.KeywordLineIndex <
+                lines.Count &&
+            target.Section.KeywordLineIndex >
+                0 &&
+            lines[
+                target.Section.KeywordLineIndex -
+                    1].Length ==
+                0 &&
+            lines[
+                target.Section.KeywordLineIndex].Length ==
+                0)
+        {
+            lines.RemoveAt(
+                target.Section.KeywordLineIndex);
+        }
+
+        return new OmsiConfigDocument(
+            lines,
+            Array.Empty<
+                OmsiConfigSection>(),
+            document.NewLine,
+            document.HasTrailingNewLine,
+            document.TextEncoding,
+            document.HasByteOrderMark)
+            .ToBytes();
+    }
+
     private static void ValidatePath(
         OmsiSceneryPathDefinition path)
     {

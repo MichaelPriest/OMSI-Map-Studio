@@ -132,6 +132,53 @@ public sealed class OmsiSplinePathPatcherTests
     }
 
     [Fact]
+    public void RemoveDeletesSelectedSplinePathAndKeepsFollowingProfile()
+    {
+        const string source =
+            "[path]\n" +
+            "0\n-1.5\n0.1\n3\n0\n" +
+            "KEEP_WITH_REMOVED_PATH\n\n" +
+            "[path]\n" +
+            "1\n4.2\n0.25\n2\n2\n" +
+            "[profile]\n0\n";
+
+        var bytes =
+            new OmsiSplinePathPatcher()
+                .Remove(
+                    OmsiConfigParser.Parse(
+                        source),
+                    0);
+
+        var text =
+            Encoding.UTF8
+                .GetString(
+                    bytes);
+
+        Assert.DoesNotContain(
+            "KEEP_WITH_REMOVED_PATH",
+            text);
+
+        Assert.Contains(
+            "[profile]\n0",
+            text);
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        var remaining =
+            Assert.Single(
+                definition.Paths);
+
+        Assert.Equal(
+            4.2,
+            remaining.X);
+    }
+
+    [Fact]
     public void PatchPreservesEncodingAndNewline()
     {
         const string source =

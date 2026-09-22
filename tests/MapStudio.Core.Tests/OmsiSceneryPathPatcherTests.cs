@@ -244,6 +244,54 @@ public sealed class OmsiSceneryPathPatcherTests
     }
 
     [Fact]
+    public void RemoveDeletesSelectedPathGroupAndKeepsFollowingSections()
+    {
+        const string source =
+            "[path]\n" +
+            "0\n0\n0\n0\n0\n10\n0\n0\n0\n3\n0\n0\n\n" +
+            "[custom_path_modifier]\nREMOVE_ME\n\n" +
+            "[use_traffic_light]\n2\n\n" +
+            "[path]\n" +
+            "9\n0\n0\n0\n0\n5\n0\n0\n1\n2\n2\n0\n\n" +
+            "[mesh]\nmodel.o3d\n";
+
+        var bytes =
+            new OmsiSceneryPathPatcher()
+                .Remove(
+                    OmsiConfigParser.Parse(
+                        source),
+                    0);
+
+        var text =
+            Encoding.UTF8
+                .GetString(
+                    bytes);
+
+        Assert.DoesNotContain(
+            "REMOVE_ME",
+            text);
+
+        Assert.Contains(
+            "[mesh]\nmodel.o3d",
+            text);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        var remaining =
+            Assert.Single(
+                metadata.Paths);
+
+        Assert.Equal(
+            9,
+            remaining.X);
+    }
+
+    [Fact]
     public void PatchRejectsMissingOrdinal()
     {
         var document =

@@ -288,6 +288,97 @@ public sealed class OmsiSplinePathPatcher
             .ToBytes();
     }
 
+    public byte[] Remove(
+        OmsiConfigDocument document,
+        int sourcePathOrdinal)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        if (sourcePathOrdinal < 0)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var pathSections =
+            document.Sections
+                .Select(
+                    (
+                        section,
+                        documentIndex
+                    ) =>
+                        (
+                            Section:
+                                section,
+                            DocumentIndex:
+                                documentIndex
+                        ))
+                .Where(
+                    value =>
+                        string.Equals(
+                            value.Section.Keyword,
+                            "path",
+                            StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        if (
+            sourcePathOrdinal >=
+                pathSections.Length)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var target =
+            pathSections[
+                sourcePathOrdinal];
+
+        var bodyEnd =
+            target.DocumentIndex + 1 <
+                document.Sections.Count
+                ? document.Sections[
+                    target.DocumentIndex + 1]
+                    .KeywordLineIndex
+                : document.Lines.Count;
+
+        var lines =
+            document.Lines
+                .ToList();
+
+        lines.RemoveRange(
+            target.Section.KeywordLineIndex,
+            bodyEnd -
+                target.Section.KeywordLineIndex);
+
+        while (
+            target.Section.KeywordLineIndex <
+                lines.Count &&
+            target.Section.KeywordLineIndex >
+                0 &&
+            lines[
+                target.Section.KeywordLineIndex -
+                    1].Length ==
+                0 &&
+            lines[
+                target.Section.KeywordLineIndex].Length ==
+                0)
+        {
+            lines.RemoveAt(
+                target.Section.KeywordLineIndex);
+        }
+
+        return new OmsiConfigDocument(
+            lines,
+            Array.Empty<
+                OmsiConfigSection>(),
+            document.NewLine,
+            document.HasTrailingNewLine,
+            document.TextEncoding,
+            document.HasByteOrderMark)
+            .ToBytes();
+    }
+
     private static void ValidatePath(
         OmsiSplinePathDefinition path)
     {

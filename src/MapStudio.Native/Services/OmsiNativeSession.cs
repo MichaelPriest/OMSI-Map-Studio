@@ -5632,6 +5632,113 @@ public sealed class OmsiNativeSession
             backupPath);
     }
 
+    public async Task<NativeAssetPathDeleteResult>
+        DeleteSceneryPathAsync(
+            string assetPath,
+            int pathOrdinal,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            assetPath);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Nenhuma fonte de conteúdo ativa.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSceneryPathEdit");
+        }
+
+        if (
+            !OmsiSceneryObjectPathResolver
+                .TryResolve(
+                    root,
+                    assetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            throw new FileNotFoundException(
+                "sceneryPathAssetMissing",
+                assetPath);
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    document);
+
+        if (
+            pathOrdinal < 0 ||
+            pathOrdinal >=
+                metadata.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var bytes =
+            new OmsiSceneryPathPatcher()
+                .Remove(
+                    document,
+                    pathOrdinal);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            await new OmsiSceneryObjectReader()
+                .ReadMetadataAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (
+            reloaded.Paths.Count !=
+                metadata.Paths.Count -
+                    1)
+        {
+            throw new InvalidDataException(
+                "sceneryPathReloadFailed");
+        }
+
+        return new NativeAssetPathDeleteResult(
+            target,
+            backupPath,
+            reloaded.Paths.Count);
+    }
+
     public async Task<NativeSplinePathUpdateResult>
         UpdateSplinePathAsync(
             string assetPath,
@@ -9294,6 +9401,115 @@ public sealed class OmsiNativeSession
         }
 
         return trimmed;
+    }
+
+    public async Task<NativeAssetPathDeleteResult>
+        DeleteSplinePathAsync(
+            string assetPath,
+            int pathOrdinal,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            assetPath);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Nenhuma fonte de conteúdo ativa.");
+
+        if (
+            _pendingTransforms.Count >
+                0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplinePathEdit");
+        }
+
+        if (
+            !OmsiSplinePathResolver
+                .TryResolve(
+                    root,
+                    assetPath,
+                    out var target) ||
+            !File.Exists(
+                target))
+        {
+            throw new FileNotFoundException(
+                "splinePathAssetMissing",
+                assetPath);
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    target,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    document);
+
+        if (
+            pathOrdinal < 0 ||
+            pathOrdinal >=
+                definition.Paths.Count)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var bytes =
+            new OmsiSplinePathPatcher()
+                .Remove(
+                    document,
+                    pathOrdinal);
+
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                target);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        target,
+                        backupPath,
+                        bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var reloaded =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    await OmsiConfigParser
+                        .ParseFileAsync(
+                            target,
+                            cancellationToken)
+                        .ConfigureAwait(false));
+
+        if (
+            reloaded.Paths.Count !=
+                definition.Paths.Count -
+                    1)
+        {
+            throw new InvalidDataException(
+                "splinePathReloadFailed");
+        }
+
+        return new NativeAssetPathDeleteResult(
+            target,
+            backupPath,
+            reloaded.Paths.Count);
     }
 
     private static string CreateNativeBackupPath(
