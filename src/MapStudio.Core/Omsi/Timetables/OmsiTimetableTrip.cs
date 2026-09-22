@@ -14,6 +14,8 @@ public sealed record OmsiTimetableTrip(
     IReadOnlyList<string> ProfileLines)
 {
     public bool UsesStationLinks =>
+        string.IsNullOrWhiteSpace(
+            Line) &&
         Stations.Count >= 2 &&
         Stations.All(
             station =>
