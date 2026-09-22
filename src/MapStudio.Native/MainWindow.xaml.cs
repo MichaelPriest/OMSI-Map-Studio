@@ -8437,7 +8437,7 @@ public sealed partial class MainWindow : Window
 
         var trafficPathOptions =
             NativeTrafficPathDisplayOptions
-                .CleanVehicles;
+                .TransportOverview;
 
         Viewport
             .SetTrafficPathDisplayOptions(
