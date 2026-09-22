@@ -157,11 +157,10 @@ public sealed class OmsiO3dGeometryReader
                                 ref u,
                                 ref v);
 
-                            // Preserve raw O3D model coordinates here.
-                            // OMSI model assets use their source X/Y ground
-                            // plane with Z as height. Renderer-specific axis
-                            // conversion belongs at the renderer boundary so
-                            // editing/export keep original file values.
+                            // O3D binary vertices are already stored in
+                            // OMSI's runtime model axes (Y-up). Keep those
+                            // native axes here; only map/SCO placement data
+                            // needs coordinate conversion at scene level.
                             var p = checked((int)index * 3);
                             positions[p] = x;
                             positions[p + 1] = y;
