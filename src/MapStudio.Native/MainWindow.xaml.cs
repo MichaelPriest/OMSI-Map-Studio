@@ -646,6 +646,52 @@ public sealed partial class MainWindow : Window
                 }
             };
 
+        Viewport.TrafficPathNodeFocused +=
+            node =>
+            {
+                TrafficPathSelectedOnlyCheckBox.IsChecked =
+                    true;
+
+                TransportPathsSelectedOnlyCheckBox.IsChecked =
+                    true;
+
+                Viewport
+                    .SetTrafficPathSelectedOnly(
+                        true);
+
+                Viewport
+                    .SetTrafficPathFocusedIndex(
+                        node.PathIndex);
+
+                if (_transportMode)
+                {
+                    TransportPathIndexBox.Value =
+                        node.PathIndex;
+
+                    RefreshTransportPathChoices();
+                }
+
+                UpdateTrafficPathStatusText();
+
+                var kindLabel =
+                    node.Type switch
+                    {
+                        1 => "HUM",
+                        2 => "RAIL",
+                        3 => "AIR",
+                        _ => "CAR"
+                    };
+
+                StatusText.Text =
+                    $"Path {node.PathIndex} · {kindLabel} · " +
+                    (
+                        node.IsStart
+                            ? "nó inicial"
+                            : "nó final"
+                    ) +
+                    " focado no viewport.";
+            };
+
         Viewport.SelectionChanged +=
             info =>
             {
