@@ -331,19 +331,21 @@ public sealed class NativeObjectTriangleGeometryBuilder
                         geometry.Indices[
                             baseIndex]);
 
+            // Swapping OMSI model Y/Z to native Y-up changes handedness.
+            // Reverse corners 1/2 to preserve the original front face.
             var index1 =
                 checked(
                     (int)
                         geometry.Indices[
                             baseIndex +
-                            1]);
+                            2]);
 
             var index2 =
                 checked(
                     (int)
                         geometry.Indices[
                             baseIndex +
-                            2]);
+                            1]);
 
             if (
                 index0 < 0 ||
@@ -583,14 +585,19 @@ public sealed class NativeObjectTriangleGeometryBuilder
         var offset =
             vertexIndex * 3;
 
-        return Vector3.Transform(
+        var source =
             new Vector3(
                 geometry.Positions[
                     offset],
                 geometry.Positions[
                     offset + 1],
                 geometry.Positions[
-                    offset + 2]),
+                    offset + 2]);
+
+        return Vector3.Transform(
+            NativeOmsiModelSpace
+                .ToRendererPosition(
+                    source),
             transform);
     }
 
@@ -616,15 +623,20 @@ public sealed class NativeObjectTriangleGeometryBuilder
         var offset =
             vertexIndex * 3;
 
+        var sourceNormal =
+            new Vector3(
+                geometry.Normals[
+                    offset],
+                geometry.Normals[
+                    offset + 1],
+                geometry.Normals[
+                    offset + 2]);
+
         var normal =
             Vector3.TransformNormal(
-                new Vector3(
-                    geometry.Normals[
-                        offset],
-                    geometry.Normals[
-                        offset + 1],
-                    geometry.Normals[
-                        offset + 2]),
+                NativeOmsiModelSpace
+                    .ToRendererNormal(
+                        sourceNormal),
                 normalTransform);
 
         return NormalizeOrDefault(
@@ -1203,7 +1215,7 @@ public sealed class NativeObjectTriangleGeometryBuilder
             OmsiSceneryMeshTransform
                 transform)
     {
-        return
+        var sourceTransform =
             Matrix4x4.CreateScale(
                 (float)
                     transform.ScaleX,
@@ -1233,6 +1245,10 @@ public sealed class NativeObjectTriangleGeometryBuilder
                     (float)
                         transform
                             .PositionZ);
+
+        return NativeOmsiModelSpace
+            .ToRendererTransform(
+                sourceTransform);
     }
 
     private static float
