@@ -29,16 +29,17 @@ internal static class TimetableLineEditorDialog
         };
         dialog.PrimaryButtonClick += (_, args) =>
         {
-            try
-            {
-                result = editor.BuildLine();
-            }
-            catch (InvalidDataException exception)
+            if (
+                !editor.TryBuildLine(
+                    out result,
+                    out var validationError))
             {
                 args.Cancel = true;
-                result = null;
-                error.Text = $"Tabela inválida: {exception.Message}";
+                error.Text = validationError;
+                return;
             }
+
+            error.Text = string.Empty;
         };
         return await dialog.ShowAsync() == ContentDialogResult.Primary ? result : null;
     }

@@ -375,7 +375,17 @@ public sealed partial class TimetableWindow
 
         try
         {
-            var updatedLine = _lineEditor.BuildLine();
+            if (
+                !_lineEditor.TryBuildLine(
+                    out var updatedLine,
+                    out var validationError) ||
+                updatedLine is null)
+            {
+                EditorStatusText.Text =
+                    validationError;
+                return;
+            }
+
             var save = SaveLineAsync
                 ?? throw new InvalidOperationException("Salvamento indisponível.");
             _savingLine = true;

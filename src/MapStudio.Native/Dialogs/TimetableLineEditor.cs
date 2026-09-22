@@ -903,4 +903,112 @@ internal sealed class TimetableLineEditor : ContentControl
     }
 
     public OmsiTimetableLine BuildLine() => _buildLine();
+
+    public bool TryBuildLine(
+        out OmsiTimetableLine? line,
+        out string error)
+    {
+        try
+        {
+            line =
+                BuildLine();
+
+            error =
+                string.Empty;
+
+            return true;
+        }
+        catch (InvalidDataException exception)
+        {
+            line =
+                null;
+
+            error =
+                FormatValidationError(
+                    exception.Message);
+
+            return false;
+        }
+    }
+
+    private static string FormatValidationError(
+        string error)
+    {
+        if (
+            string.Equals(
+                error,
+                "timetableLineRowsMissing",
+                StringComparison.Ordinal))
+        {
+            return "Adicione pelo menos uma saída à Line.";
+        }
+
+        if (
+            string.Equals(
+                error,
+                "timetableTourNameMissing",
+                StringComparison.Ordinal))
+        {
+            return "Existe uma saída sem nome de Tour.";
+        }
+
+        if (
+            string.Equals(
+                error,
+                "timetableAddTripNameMissing",
+                StringComparison.Ordinal))
+        {
+            return "Existe uma saída sem Trip selecionado.";
+        }
+
+        if (
+            error.StartsWith(
+                "timetableDepartureInvalid:",
+                StringComparison.Ordinal))
+        {
+            var parts =
+                error.Split(
+                    ':');
+
+            return
+                parts.Length >= 2
+                    ? $"Horário inválido na linha {parts[1]}. Use HH:mm, HH:mm:ss ou segundos OMSI."
+                    : "Existe um horário de saída inválido.";
+        }
+
+        if (
+            error.StartsWith(
+                "timetableUnknownTrip:",
+                StringComparison.Ordinal))
+        {
+            var parts =
+                error.Split(
+                    ':',
+                    3);
+
+            return
+                parts.Length == 3
+                    ? $"Linha {parts[1]}: o Trip '{parts[2]}' não existe no catálogo atual."
+                    : "A tabela referencia um Trip que não existe no catálogo atual.";
+        }
+
+        if (
+            error.StartsWith(
+                "timetableTourMetadataConflict:",
+                StringComparison.Ordinal))
+        {
+            var parts =
+                error.Split(
+                    ':',
+                    3);
+
+            return
+                parts.Length == 3
+                    ? $"Linha {parts[1]}: o Tour '{parts[2]}' repete o nome com AI Group ou Line3 diferente."
+                    : "Um mesmo Tour possui AI Group ou Line3 conflitante.";
+        }
+
+        return
+            $"Tabela inválida: {error}";
+    }
 }
