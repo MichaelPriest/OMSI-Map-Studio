@@ -1129,7 +1129,10 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="150" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
@@ -1139,11 +1142,11 @@
                                       SelectedIndex="0"
                                       HorizontalAlignment="Stretch"
                                       SelectionChanged="OnTransportKindSelectionChanged">
-                                <ComboBoxItem Content="Tracks (.ttr)" />
-                                <ComboBoxItem Content="Trips (.ttp)" />
-                                <ComboBoxItem Content="Stops (Busstops.cfg)" />
+                                <ComboBoxItem Content="Tracks / caminhos (.ttr)" />
+                                <ComboBoxItem Content="Trips / rotas (.ttp)" />
+                                <ComboBoxItem Content="Stops / paradas (Busstops.cfg)" />
                                 <ComboBoxItem Content="StationLinks (StnLinks.cfg)" />
-                                <ComboBoxItem Content="Lines/Tours (.ttl)" />
+                                <ComboBoxItem Content="Lines / Tours (.ttl)" />
                             </ComboBox>
 
                             <TextBlock x:Name="TransportStatusText"
@@ -1153,21 +1156,57 @@
                                        TextWrapping="Wrap"
                                        Foreground="#9FB5C5" />
 
+                            <ScrollViewer Grid.Row="2"
+                                          HorizontalScrollMode="Enabled"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollMode="Disabled"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="5">
+                                    <Button x:Name="TransportPreviewButton"
+                                            Content="Visualizar rota"
+                                            IsEnabled="False"
+                                            Click="OnTransportPreviewClick" />
+                                    <Button x:Name="TransportPathsButton"
+                                            Content="Paths OMSI"
+                                            Click="OnTransportPathsClick" />
+                                    <Button x:Name="TransportFocusStepButton"
+                                            Content="Focar segmento"
+                                            IsEnabled="False"
+                                            Click="OnTransportFocusStepClick" />
+                                    <Button Content="Limpar"
+                                            Click="OnTransportClearPreviewClick" />
+                                </StackPanel>
+                            </ScrollViewer>
+
                             <ListView x:Name="TransportListView"
-                                      Grid.Row="2"
+                                      Grid.Row="3"
                                       SelectionMode="Single"
                                       DisplayMemberPath="DisplayText"
                                       SelectionChanged="OnTransportSelectionChanged" />
 
+                            <TextBlock x:Name="TransportRouteStatusText"
+                                       Grid.Row="4"
+                                       Text="Selecione Track, Trip, StationLink ou Line para inspecionar o caminho."
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Foreground="#7FC6E8" />
+
+                            <ListView x:Name="TransportRouteStepsListView"
+                                      Grid.Row="5"
+                                      SelectionMode="Single"
+                                      DisplayMemberPath="DisplayText"
+                                      SelectionChanged="OnTransportRouteStepSelectionChanged" />
+
                             <TextBlock x:Name="TransportDetailText"
-                                       Grid.Row="3"
+                                       Grid.Row="6"
                                        Text="Selecione um item para ver detalhes."
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        Foreground="#B7CEDC" />
 
                             <Button x:Name="EditTrackButton"
-                                    Grid.Row="4"
+                                    Grid.Row="7"
                                     Content="Editar Track"
                                     Visibility="Collapsed"
                                     IsEnabled="False"
