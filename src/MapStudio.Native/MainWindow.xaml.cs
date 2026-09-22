@@ -9326,6 +9326,40 @@ public sealed partial class MainWindow : Window
                     }
                 };
 
+            _timetableWindow.TripProfileRequested +=
+                tripName =>
+                {
+                    SelectTransportWorkspace(
+                        1,
+                        $"Trip {tripName}: perfis selecionados pela janela Timetable.");
+
+                    var selected =
+                        _transportItems
+                            .FirstOrDefault(
+                                candidate =>
+                                    candidate.Kind ==
+                                        "Trip" &&
+                                    string.Equals(
+                                        candidate.Key,
+                                        tripName,
+                                        StringComparison.OrdinalIgnoreCase));
+
+                    if (selected is null)
+                    {
+                        return;
+                    }
+
+                    TransportListView.SelectedItem =
+                        selected;
+
+                    TransportProfilesButton.IsEnabled =
+                        true;
+
+                    OnTransportProfilesClick(
+                        this,
+                        null!);
+                };
+
             _timetableWindow.EditLineRequested +=
                 async lineName =>
                 {
