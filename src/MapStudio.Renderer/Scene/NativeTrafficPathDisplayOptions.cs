@@ -23,6 +23,18 @@ public sealed record NativeTrafficPathDisplayOptions(
             ShowNodes: true,
             ShowTypeLabels: true);
 
+    public static NativeTrafficPathDisplayOptions TransportOverview =>
+        new(
+            Vehicles: true,
+            Pedestrians: true,
+            Rails: true,
+            Air: false,
+            ShowWidthEdges: false,
+            ShowDirectionArrows: true,
+            HighlightSignalControlled: false,
+            ShowNodes: true,
+            ShowTypeLabels: true);
+
     public static NativeTrafficPathDisplayOptions AllDetailed =>
         new(
             Vehicles: true,
