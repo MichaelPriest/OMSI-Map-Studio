@@ -28,7 +28,7 @@ public sealed record NativeTrafficPathDisplayOptions(
             Vehicles: true,
             Pedestrians: true,
             Rails: true,
-            Air: false,
+            Air: true,
             ShowWidthEdges: false,
             ShowDirectionArrows: true,
             HighlightSignalControlled: false,
