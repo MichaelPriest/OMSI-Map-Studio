@@ -152,7 +152,7 @@ internal static class NativeLicenseDialog
                 Background =
                     (Microsoft.UI.Xaml.Media.Brush)
                     Application.Current.Resources[
-                        "CardBackgroundFillColorDefaultBrush"]
+                        "MapStudioSurfaceAltBrush"]
             };
 
         var statusStack =
