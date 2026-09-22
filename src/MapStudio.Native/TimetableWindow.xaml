@@ -87,7 +87,7 @@
                     Click="OnEditLineClick" />
         </Grid>
 
-        <Border Grid.Row="2"
+        <Border x:Name="ScheduleHeader" Grid.Row="2"
                 Background="#0B202D"
                 BorderBrush="#2C5367"
                 BorderThickness="1"
@@ -129,6 +129,24 @@
                            Foreground="#9EDCF4" />
             </Grid>
         </Border>
+
+        <Grid x:Name="EditorPanel" Grid.Row="2" Grid.RowSpan="2"
+              Visibility="Collapsed" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="SaveLineButton" Content="Salvar Line/Tours" Click="OnSaveLineClick" />
+                <Button x:Name="DiscardLineButton" Content="Descartar edição" Click="OnDiscardLineClick" />
+            </StackPanel>
+            <TextBlock x:Name="EditorStatusText" Grid.Row="1" TextWrapping="Wrap" />
+            <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Auto"
+                          HorizontalScrollMode="Enabled" VerticalScrollBarVisibility="Auto">
+                <ContentControl x:Name="EditorHost" HorizontalContentAlignment="Stretch" />
+            </ScrollViewer>
+        </Grid>
 
         <ListView x:Name="ScheduleListView"
                   Grid.Row="3"

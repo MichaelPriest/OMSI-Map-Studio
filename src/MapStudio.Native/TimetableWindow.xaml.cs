@@ -19,10 +19,11 @@ public sealed partial class TimetableWindow
         string DestinationText,
         string RouteText);
 
-    public event Action<
-        OmsiTimetableLine,
-        OmsiTimetableLine>?
-        LineSaveRequested;
+    public Func<OmsiTimetableLine, OmsiTimetableLine, Task<bool>>? SaveLineAsync { get; set; }
+
+    private TimetableLineEditor? _lineEditor;
+    private OmsiTimetableLine? _editingLine;
+    private bool _savingLine;
 
     public event Action<string>?
         TripRouteRequested;
@@ -57,6 +58,13 @@ public sealed partial class TimetableWindow
     {
         ArgumentNullException.ThrowIfNull(
             catalog);
+
+        _catalog = catalog;
+        // Catalog refreshes must not replace an open draft.
+        if (_lineEditor is not null)
+        {
+            return;
+        }
 
         var previous =
             LineComboBox
@@ -232,37 +240,78 @@ public sealed partial class TimetableWindow
                 row.TripName);
     }
 
-    private async void OnEditLineClick(
-        object sender,
-        RoutedEventArgs e)
+    private void OnEditLineClick(object sender, RoutedEventArgs e)
     {
-        if (
-            LineComboBox.SelectedItem is not
-                OmsiTimetableLine line)
-        {
+        if (LineComboBox.SelectedItem is not OmsiTimetableLine line || _lineEditor is not null)
             return;
-        }
 
-        var updatedLine =
-            await TimetableLineEditorDialog
-                .ShowAsync(
-                    RootGrid.XamlRoot,
-                    line,
-                    _catalog.Trips
-                        .Select(
-                            trip =>
-                                trip.Name)
-                        .ToArray());
+        _editingLine = line;
+        _lineEditor = new TimetableLineEditor(
+            line, _catalog.Trips.Select(trip => trip.Name).ToArray());
+        EditorHost.Content = _lineEditor;
+        EditorPanel.Visibility = Visibility.Visible;
+        ScheduleListView.Visibility = Visibility.Collapsed;
+        ScheduleHeader.Visibility = Visibility.Collapsed;
+        LineComboBox.IsEnabled = false;
+        EditLineButton.IsEnabled = false;
+        EditProfileButton.IsEnabled = false;
+        FocusTripButton.IsEnabled = false;
+        EditorStatusText.Text = "Edite a tabela e salve, ou descarte para voltar.";
+    }
 
-        if (updatedLine is null)
-        {
+    private async void OnSaveLineClick(object sender, RoutedEventArgs e)
+    {
+        if (_savingLine || _lineEditor is null || _editingLine is null)
             return;
-        }
 
-        LineSaveRequested
-            ?.Invoke(
-                line,
-                updatedLine);
+        try
+        {
+            var updatedLine = _lineEditor.BuildLine();
+            var save = SaveLineAsync
+                ?? throw new InvalidOperationException("Salvamento indisponível.");
+            _savingLine = true;
+            EditorHost.IsEnabled = false;
+            SaveLineButton.IsEnabled = false;
+            DiscardLineButton.IsEnabled = false;
+            EditorStatusText.Text = "Salvando Line/Tours...";
+            if (await save(_editingLine, updatedLine))
+            {
+                EndLineEditing();
+            }
+            else
+            {
+                EditorStatusText.Text = "Não foi possível concluir o salvamento. A tabela foi mantida. Consulte o status da janela principal.";
+            }
+        }
+        catch (Exception exception)
+        {
+            EditorStatusText.Text = $"Não foi possível salvar: {exception.Message}";
+        }
+        finally
+        {
+            _savingLine = false;
+            EditorHost.IsEnabled = true;
+            SaveLineButton.IsEnabled = true;
+            DiscardLineButton.IsEnabled = true;
+        }
+    }
+
+    private void OnDiscardLineClick(object sender, RoutedEventArgs e)
+    {
+        if (!_savingLine)
+            EndLineEditing();
+    }
+
+    private void EndLineEditing()
+    {
+        _lineEditor = null;
+        _editingLine = null;
+        EditorHost.Content = null;
+        EditorPanel.Visibility = Visibility.Collapsed;
+        ScheduleListView.Visibility = Visibility.Visible;
+        ScheduleHeader.Visibility = Visibility.Visible;
+        LineComboBox.IsEnabled = true;
+        SetCatalog(_catalog);
     }
 
     private void RefreshSchedule()
@@ -357,6 +406,16 @@ public sealed partial class TimetableWindow
             AppWindow
                 .GetFromWindowId(
                     windowId);
+
+        appWindow.Closing += (_, args) =>
+        {
+            if (_lineEditor is null)
+                return;
+            args.Cancel = true;
+            EditorStatusText.Text = _savingLine
+                ? "Aguarde o salvamento terminar."
+                : "Salve ou descarte a edição antes de fechar a janela.";
+        };
 
         appWindow.Resize(
             new SizeInt32(

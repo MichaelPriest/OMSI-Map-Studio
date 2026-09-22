@@ -9338,16 +9338,7 @@ public sealed partial class MainWindow : Window
                         updatedTrip);
                 };
 
-            _timetableWindow.LineSaveRequested +=
-                async (
-                    sourceLine,
-                    updatedLine
-                ) =>
-                {
-                    await SaveTimetableLineAsync(
-                        sourceLine,
-                        updatedLine);
-                };
+            _timetableWindow.SaveLineAsync = SaveTimetableLineAsync;
 
             _timetableWindow.Closed +=
                 (
@@ -12685,10 +12676,27 @@ public sealed partial class MainWindow : Window
             updatedLine);
     }
 
-    private async Task SaveTimetableLineAsync(
+    private bool _savingTimetableLine;
+
+    private async Task<bool> SaveTimetableLineAsync(
         OmsiTimetableLine sourceLine,
         OmsiTimetableLine updatedLine)
     {
+        if (_savingTimetableLine)
+        {
+            StatusText.Text = "Uma Line já está sendo salva. Aguarde e tente novamente.";
+            return false;
+        }
+
+        // A draft from another catalog/map must never overwrite the current Line.
+        if (_timetableCatalog is null ||
+            !_timetableCatalog.Lines.Any(line => ReferenceEquals(line, sourceLine)))
+        {
+            StatusText.Text = "O catálogo mudou durante a edição. Descarte e reabra a Line antes de salvar.";
+            return false;
+        }
+
+        _savingTimetableLine = true;
         try
         {
             EditTrackButton.IsEnabled =
@@ -12710,6 +12718,7 @@ public sealed partial class MainWindow : Window
                             .Map
                             .DirectoryPath);
 
+            TransportKindComboBox.SelectedIndex = 4;
             RefreshTransportItems();
 
             TransportListView.SelectedItem =
@@ -12723,16 +12732,24 @@ public sealed partial class MainWindow : Window
                                 updated.Line.Name,
                                 StringComparison.OrdinalIgnoreCase));
 
+            if (TransportListView.SelectedItem is TransportExplorerItem lineItem)
+            {
+                RefreshTransportRouteWorkbench(lineItem, preview: true);
+            }
+
             StatusText.Text =
                 $"Line/Tours {updated.Line.Name} salvo pela tabela · {updated.Line.Tours.Count} tour(s) · {updated.Line.Tours.Sum(tour => tour.Trips.Count)} saída(s) · backup {updated.BackupPath}.";
+            return true;
         }
         catch (Exception exception)
         {
             StatusText.Text =
                 $"Falha ao salvar Line/Tours: {exception.Message}";
+            return false;
         }
         finally
         {
+            _savingTimetableLine = false;
             EditTrackButton.IsEnabled =
                 TransportListView.SelectedItem is
                     TransportExplorerItem selected &&
