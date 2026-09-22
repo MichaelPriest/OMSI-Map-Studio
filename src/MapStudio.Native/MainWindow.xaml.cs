@@ -9049,6 +9049,7 @@ public sealed partial class MainWindow : Window
                 $"{_timetableCatalog.StationLinks.Count} StationLinks · " +
                 $"{_timetableCatalog.Lines.Count} Lines · " +
                 $"{_timetableCatalog.BrokenTripTrackReferenceCount} Trip→Track quebrado(s) · " +
+                $"{_timetableCatalog.BrokenTripStationLinkReferenceCount} Trip→StationLink quebrado(s) · " +
                 $"{_timetableCatalog.BrokenStationLinkStopReferenceCount} StnLink→Stop quebrado(s) · " +
                 $"{_timetableCatalog.BrokenLineTripReferenceCount} Line→Trip quebrado(s).";
 
@@ -14084,15 +14085,29 @@ public sealed partial class MainWindow : Window
             _timetableCatalog.Tracks
                 .SelectMany(
                     track =>
-                        track.Entries)
+                        track.Entries
+                            .Select(
+                                entry =>
+                                    entry.Id))
+                .Concat(
+                    _timetableCatalog
+                        .StationLinks
+                        .SelectMany(
+                            link =>
+                                link.Entries
+                                    .Select(
+                                        entry =>
+                                            entry.Id)))
                 .Count(
-                    entry =>
+                    id =>
                         !loadedIds.Contains(
-                            entry.Id));
+                            id));
 
         var problems =
             _timetableCatalog
                 .BrokenTripTrackReferenceCount +
+            _timetableCatalog
+                .BrokenTripStationLinkReferenceCount +
             _timetableCatalog
                 .BrokenStationLinkStopReferenceCount +
             _timetableCatalog
@@ -14100,6 +14115,7 @@ public sealed partial class MainWindow : Window
 
         TransportRouteStatusText.Text =
             $"Validação · Trip→Track quebrado: {_timetableCatalog.BrokenTripTrackReferenceCount} · " +
+            $"Trip→StationLink quebrado: {_timetableCatalog.BrokenTripStationLinkReferenceCount} · " +
             $"StationLink→Stop quebrado: {_timetableCatalog.BrokenStationLinkStopReferenceCount} · " +
             $"Line→Trip quebrado: {_timetableCatalog.BrokenLineTripReferenceCount} · " +
             $"segmentos fora do viewport atual: {unresolvedSegments}.";
@@ -14736,6 +14752,19 @@ public sealed partial class MainWindow : Window
                     "trip-track",
                     $"ERRO · {timetable.BrokenTripTrackReferenceCount} Trip→Track quebrado(s)",
                     "Há .ttp referenciando Track inexistente."));
+        }
+
+        if (
+            timetable
+                .BrokenTripStationLinkReferenceCount >
+            0)
+        {
+            result.Add(
+                new ValidationExplorerItem(
+                    "Erro",
+                    "trip-stationlink",
+                    $"ERRO · {timetable.BrokenTripStationLinkReferenceCount} Trip→StationLink quebrado(s)",
+                    "Há Trip tipo 2 com pares consecutivos de stops sem StationLink correspondente em StnLinks.cfg."));
         }
 
         if (
