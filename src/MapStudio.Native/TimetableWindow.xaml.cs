@@ -27,8 +27,10 @@ public sealed partial class TimetableWindow
     public event Action<string>?
         TripRouteRequested;
 
-    public event Action<string>?
-        TripProfileRequested;
+    public event Action<
+        OmsiTimetableTrip,
+        OmsiTimetableTrip>?
+        TripSaveRequested;
 
     private OmsiTimetableCatalog
         _catalog;
@@ -173,7 +175,7 @@ public sealed partial class TimetableWindow
         RoutedEventArgs e) =>
         RequestSelectedTripRoute();
 
-    private void OnEditProfileClick(
+    private async void OnEditProfileClick(
         object sender,
         RoutedEventArgs e)
     {
@@ -184,9 +186,36 @@ public sealed partial class TimetableWindow
             return;
         }
 
-        TripProfileRequested
+        var trip =
+            _catalog.Trips
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.Name,
+                            row.TripName,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (trip is null)
+        {
+            return;
+        }
+
+        var updatedTrip =
+            await TimetableProfileEditorDialog
+                .ShowAsync(
+                    RootGrid.XamlRoot,
+                    trip,
+                    _catalog.BusStops);
+
+        if (updatedTrip is null)
+        {
+            return;
+        }
+
+        TripSaveRequested
             ?.Invoke(
-                row.TripName);
+                trip,
+                updatedTrip);
     }
 
     private void RequestSelectedTripRoute()
