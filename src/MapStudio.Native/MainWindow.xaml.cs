@@ -13425,7 +13425,9 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Priority",
                 Text =
-                    line.Priority
+                    line.Priority,
+                Width =
+                    120
             };
 
         var userAllowedBox =
@@ -13434,34 +13436,612 @@ public sealed partial class MainWindow : Window
                 Content =
                     "Jogador permitido [userallowed]",
                 IsChecked =
-                    line.UserAllowed
+                    line.UserAllowed,
+                VerticalAlignment =
+                    VerticalAlignment.Bottom
             };
 
-        var toursBox =
-            new TextBox
+        var lineOptionsGrid =
+            new Grid
             {
-                Header =
-                    "Tours · tour|AI group|line3|comentário|trip|line2|departureSeconds",
-                AcceptsReturn =
-                    true,
-                TextWrapping =
-                    TextWrapping.NoWrap,
+                ColumnSpacing =
+                    12
+            };
+
+        lineOptionsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition
+            {
+                Width =
+                    GridLength.Auto
+            });
+
+        lineOptionsGrid.ColumnDefinitions.Add(
+            new ColumnDefinition());
+
+        Grid.SetColumn(
+            priorityBox,
+            0);
+
+        Grid.SetColumn(
+            userAllowedBox,
+            1);
+
+        lineOptionsGrid.Children.Add(
+            priorityBox);
+
+        lineOptionsGrid.Children.Add(
+            userAllowedBox);
+
+        var tripNames =
+            _timetableCatalog.Trips
+                .Select(
+                    trip =>
+                        trip.Name)
+                .OrderBy(
+                    name => name,
+                    StringComparer.CurrentCultureIgnoreCase)
+                .ToArray();
+
+        var rowsPanel =
+            new StackPanel
+            {
+                Spacing =
+                    3,
                 MinWidth =
-                    620,
-                MinHeight =
-                    320,
-                FontFamily =
-                    new Microsoft.UI.Xaml.Media.FontFamily(
-                        "Consolas"),
-                Text =
-                    string.Join(
-                        Environment.NewLine,
-                        line.Tours
-                            .SelectMany(
-                                tour =>
-                                    tour.Trips.Select(
-                                        trip =>
-                                            $"{tour.Name}|{tour.AiGroupName}|{tour.Line3}|{trip.Comment}|{trip.TripName}|{trip.Line2}|{trip.DepartureTime}")))
+                    1120
+            };
+
+        void ConfigureColumns(
+            Grid grid)
+        {
+            foreach (
+                var width in
+                    new[]
+                    {
+                        130d,
+                        120d,
+                        80d,
+                        150d,
+                        180d,
+                        80d,
+                        110d
+                    })
+            {
+                grid.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width =
+                            new GridLength(
+                                width)
+                    });
+            }
+
+            grid.ColumnDefinitions.Add(
+                new ColumnDefinition
+                {
+                    Width =
+                        GridLength.Auto
+                });
+        }
+
+        TextBlock Header(
+            string text,
+            int column)
+        {
+            var block =
+                new TextBlock
+                {
+                    Text =
+                        text,
+                    FontSize =
+                        10,
+                    FontWeight =
+                        Microsoft.UI.Text
+                            .FontWeights
+                            .SemiBold,
+                    Foreground =
+                        new Microsoft.UI.Xaml.Media
+                            .SolidColorBrush(
+                                Windows.UI.Color.FromArgb(
+                                    255,
+                                    158,
+                                    220,
+                                    244)),
+                    Margin =
+                        new Thickness(
+                            5,
+                            0,
+                            5,
+                            3)
+                };
+
+            Grid.SetColumn(
+                block,
+                column);
+
+            return block;
+        }
+
+        var headerGrid =
+            new Grid
+            {
+                ColumnSpacing =
+                    5,
+                Background =
+                    new Microsoft.UI.Xaml.Media
+                        .SolidColorBrush(
+                            Windows.UI.Color.FromArgb(
+                                255,
+                                11,
+                                32,
+                                45)),
+                Padding =
+                    new Thickness(
+                        4)
+            };
+
+        ConfigureColumns(
+            headerGrid);
+
+        headerGrid.Children.Add(
+            Header(
+                "Tour",
+                0));
+        headerGrid.Children.Add(
+            Header(
+                "AI Group",
+                1));
+        headerGrid.Children.Add(
+            Header(
+                "Line3",
+                2));
+        headerGrid.Children.Add(
+            Header(
+                "Comentário",
+                3));
+        headerGrid.Children.Add(
+            Header(
+                "Trip",
+                4));
+        headerGrid.Children.Add(
+            Header(
+                "Line2",
+                5));
+        headerGrid.Children.Add(
+            Header(
+                "Saída",
+                6));
+        headerGrid.Children.Add(
+            Header(
+                "",
+                7));
+
+        rowsPanel.Children.Add(
+            headerGrid);
+
+        var rowEditors =
+            new List<(
+                Grid Row,
+                TextBox Tour,
+                TextBox AiGroup,
+                TextBox Line3,
+                TextBox Comment,
+                ComboBox Trip,
+                TextBox TripLine2,
+                TextBox Departure
+            )>();
+
+        string FormatDeparture(
+            OmsiTimetableAddTrip? trip)
+        {
+            if (
+                trip?.DepartureSeconds is not
+                    double seconds ||
+                !double.IsFinite(
+                    seconds) ||
+                seconds < 0)
+            {
+                return trip?.DepartureTime ??
+                    string.Empty;
+            }
+
+            var wholeSeconds =
+                (long)Math.Round(
+                    seconds);
+
+            var hours =
+                wholeSeconds /
+                3600;
+
+            var minutes =
+                (
+                    wholeSeconds %
+                    3600
+                ) /
+                60;
+
+            var remainder =
+                wholeSeconds %
+                60;
+
+            return
+                $"{hours:00}:{minutes:00}:{remainder:00}";
+        }
+
+        bool TryParseDeparture(
+            string text,
+            out double seconds)
+        {
+            seconds =
+                0;
+
+            var value =
+                text.Trim();
+
+            if (
+                double.TryParse(
+                    value,
+                    NumberStyles.Float,
+                    CultureInfo.InvariantCulture,
+                    out var raw) &&
+                double.IsFinite(
+                    raw) &&
+                raw >= 0)
+            {
+                seconds =
+                    raw;
+
+                return true;
+            }
+
+            var parts =
+                value.Split(
+                    ':',
+                    StringSplitOptions.TrimEntries);
+
+            if (
+                parts.Length is not
+                    (
+                        2 or
+                        3
+                    ) ||
+                !int.TryParse(
+                    parts[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var hours) ||
+                !int.TryParse(
+                    parts[1],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var minutes) ||
+                hours < 0 ||
+                minutes is < 0 or > 59)
+            {
+                return false;
+            }
+
+            var parsedSeconds =
+                0d;
+
+            if (
+                parts.Length ==
+                    3 &&
+                (
+                    !double.TryParse(
+                        parts[2],
+                        NumberStyles.Float,
+                        CultureInfo.InvariantCulture,
+                        out parsedSeconds) ||
+                    !double.IsFinite(
+                        parsedSeconds) ||
+                    parsedSeconds < 0 ||
+                    parsedSeconds >= 60
+                ))
+            {
+                return false;
+            }
+
+            seconds =
+                hours *
+                    3600d +
+                minutes *
+                    60d +
+                parsedSeconds;
+
+            return true;
+        }
+
+        void AddRow(
+            OmsiTimetableTour? tour,
+            OmsiTimetableAddTrip? trip)
+        {
+            var row =
+                new Grid
+                {
+                    ColumnSpacing =
+                        5,
+                    Padding =
+                        new Thickness(
+                            4,
+                            2,
+                            4,
+                            2),
+                    Background =
+                        new Microsoft.UI.Xaml.Media
+                            .SolidColorBrush(
+                                Windows.UI.Color.FromArgb(
+                                    255,
+                                    7,
+                                    23,
+                                    34))
+                };
+
+            ConfigureColumns(
+                row);
+
+            var tourBox =
+                new TextBox
+                {
+                    Text =
+                        tour?.Name ??
+                        (
+                            line.Tours.FirstOrDefault()
+                                ?.Name ??
+                            "Tour 1"
+                        ),
+                    PlaceholderText =
+                        "Tour"
+                };
+
+            var aiGroupBox =
+                new TextBox
+                {
+                    Text =
+                        tour?.AiGroupName ??
+                        (
+                            line.Tours.FirstOrDefault()
+                                ?.AiGroupName ??
+                            "Busses"
+                        ),
+                    PlaceholderText =
+                        "Busses"
+                };
+
+            var line3Box =
+                new TextBox
+                {
+                    Text =
+                        tour?.Line3 ??
+                        "0",
+                    PlaceholderText =
+                        "0"
+                };
+
+            var commentBox =
+                new TextBox
+                {
+                    Text =
+                        trip?.Comment ??
+                        string.Empty,
+                    PlaceholderText =
+                        "comentário"
+                };
+
+            var tripBox =
+                new ComboBox
+                {
+                    ItemsSource =
+                        tripNames,
+                    SelectedItem =
+                        trip?.TripName ??
+                        tripNames.FirstOrDefault(),
+                    HorizontalAlignment =
+                        HorizontalAlignment.Stretch,
+                    IsEditable =
+                        false
+                };
+
+            var tripLine2Box =
+                new TextBox
+                {
+                    Text =
+                        trip?.Line2 ??
+                        "0",
+                    PlaceholderText =
+                        "0"
+                };
+
+            var departureBox =
+                new TextBox
+                {
+                    Text =
+                        FormatDeparture(
+                            trip),
+                    PlaceholderText =
+                        "08:00:00",
+                    ToolTipService =
+                    {
+                        ToolTip =
+                            "Aceita HH:mm, HH:mm:ss ou segundos OMSI."
+                    }
+                };
+
+            var removeButton =
+                new Button
+                {
+                    Content =
+                        "✕",
+                    Padding =
+                        new Thickness(
+                            9,
+                            5,
+                            9,
+                            5),
+                    ToolTipService =
+                    {
+                        ToolTip =
+                            "Remover esta saída"
+                    },
+                    Tag =
+                        row
+                };
+
+            FrameworkElement[]
+                controls =
+                [
+                    tourBox,
+                    aiGroupBox,
+                    line3Box,
+                    commentBox,
+                    tripBox,
+                    tripLine2Box,
+                    departureBox,
+                    removeButton
+                ];
+
+            for (
+                var column = 0;
+                column <
+                    controls.Length;
+                column++)
+            {
+                Grid.SetColumn(
+                    controls[column],
+                    column);
+
+                row.Children.Add(
+                    controls[column]);
+            }
+
+            rowEditors.Add(
+                (
+                    row,
+                    tourBox,
+                    aiGroupBox,
+                    line3Box,
+                    commentBox,
+                    tripBox,
+                    tripLine2Box,
+                    departureBox
+                ));
+
+            rowsPanel.Children.Add(
+                row);
+
+            removeButton.Click +=
+                (
+                    sender,
+                    _
+                ) =>
+                {
+                    if (
+                        rowEditors.Count <=
+                            1 ||
+                        sender is not
+                            Button button ||
+                        button.Tag is not
+                            Grid target)
+                    {
+                        return;
+                    }
+
+                    var editorIndex =
+                        rowEditors.FindIndex(
+                            candidate =>
+                                ReferenceEquals(
+                                    candidate.Row,
+                                    target));
+
+                    if (editorIndex < 0)
+                    {
+                        return;
+                    }
+
+                    rowEditors.RemoveAt(
+                        editorIndex);
+
+                    rowsPanel.Children.Remove(
+                        target);
+                };
+        }
+
+        foreach (
+            var tour in
+                line.Tours)
+        {
+            foreach (
+                var trip in
+                    tour.Trips)
+            {
+                AddRow(
+                    tour,
+                    trip);
+            }
+        }
+
+        if (rowEditors.Count == 0)
+        {
+            AddRow(
+                null,
+                null);
+        }
+
+        var addRowButton =
+            new Button
+            {
+                Content =
+                    "+ Adicionar saída",
+                HorizontalAlignment =
+                    HorizontalAlignment.Left
+            };
+
+        addRowButton.Click +=
+            (
+                _,
+                _
+            ) =>
+            {
+                OmsiTimetableTour?
+                    templateTour =
+                        null;
+
+                if (
+                    rowEditors.Count >
+                        0)
+                {
+                    var last =
+                        rowEditors[^1];
+
+                    templateTour =
+                        new OmsiTimetableTour(
+                            last.Tour.Text,
+                            last.AiGroup.Text,
+                            last.Line3.Text,
+                            Array.Empty<
+                                OmsiTimetableAddTrip>());
+                }
+
+                AddRow(
+                    templateTour,
+                    null);
+            };
+
+        var tableScroll =
+            new ScrollViewer
+            {
+                Content =
+                    rowsPanel,
+                HorizontalScrollMode =
+                    ScrollMode.Enabled,
+                HorizontalScrollBarVisibility =
+                    ScrollBarVisibility.Auto,
+                VerticalScrollMode =
+                    ScrollMode.Enabled,
+                VerticalScrollBarVisibility =
+                    ScrollBarVisibility.Auto,
+                MaxHeight =
+                    440
             };
 
         var panel =
@@ -13470,25 +14050,28 @@ public sealed partial class MainWindow : Window
                 Spacing =
                     8,
                 MinWidth =
-                    640
+                    720
             };
 
         panel.Children.Add(
-            priorityBox);
-        panel.Children.Add(
-            userAllowedBox);
+            lineOptionsGrid);
+
         panel.Children.Add(
             new TextBlock
             {
                 Text =
-                    "Repita o mesmo nome do tour em várias linhas para adicionar vários Trips ao mesmo tour.",
+                    "Tabela de horários · cada linha representa um [addtrip]. Tours com o mesmo nome são agrupados no arquivo .ttl.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
-                    0.75
+                    0.78
             });
+
         panel.Children.Add(
-            toursBox);
+            addRowButton);
+
+        panel.Children.Add(
+            tableScroll);
 
         var dialog =
             new ContentDialog
@@ -13498,13 +14081,7 @@ public sealed partial class MainWindow : Window
                 Title =
                     $"Editar Line/Tours · {line.Name}",
                 Content =
-                    new ScrollViewer
-                    {
-                        Content =
-                            panel,
-                        MaxHeight =
-                            650
-                    },
+                    panel,
                 PrimaryButtonText =
                     "Salvar Line/Tours",
                 CloseButtonText =
@@ -13534,55 +14111,48 @@ public sealed partial class MainWindow : Window
                 )>(
                     StringComparer.OrdinalIgnoreCase);
 
-        var sourceLineNumber =
-            0;
-
-        foreach (
-            var rawLine in
-                toursBox.Text
-                    .Replace(
-                        "\r\n",
-                        "\n",
-                        StringComparison.Ordinal)
-                    .Split('\n'))
+        for (
+            var rowIndex = 0;
+            rowIndex <
+                rowEditors.Count;
+            rowIndex++)
         {
-            sourceLineNumber++;
-
-            var value =
-                rawLine.Trim();
-
-            if (string.IsNullOrWhiteSpace(
-                    value))
-            {
-                continue;
-            }
-
-            var parts =
-                value.Split(
-                    '|');
-
-            if (
-                parts.Length !=
-                    7 ||
-                string.IsNullOrWhiteSpace(
-                    parts[0]) ||
-                string.IsNullOrWhiteSpace(
-                    parts[4]) ||
-                !double.TryParse(
-                    parts[6],
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out var departure) ||
-                !double.IsFinite(
-                    departure))
-            {
-                StatusText.Text =
-                    $"Line não salva: linha {sourceLineNumber} inválida.";
-                return;
-            }
+            var editor =
+                rowEditors[
+                    rowIndex];
 
             var tourName =
-                parts[0].Trim();
+                editor.Tour.Text
+                    .Trim();
+
+            var aiGroup =
+                editor.AiGroup.Text
+                    .Trim();
+
+            var line3 =
+                editor.Line3.Text
+                    .Trim();
+
+            var tripName =
+                editor.Trip.SelectedItem
+                    ?.ToString()
+                    ?.Trim() ??
+                string.Empty;
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    tourName) ||
+                string.IsNullOrWhiteSpace(
+                    tripName) ||
+                !TryParseDeparture(
+                    editor.Departure.Text,
+                    out var departure))
+            {
+                StatusText.Text =
+                    $"Line não salva: linha {rowIndex + 1} da tabela possui Tour, Trip ou horário inválido.";
+
+                return;
+            }
 
             if (
                 !tourData.TryGetValue(
@@ -13591,8 +14161,8 @@ public sealed partial class MainWindow : Window
             {
                 current =
                     (
-                        parts[1].Trim(),
-                        parts[2].Trim(),
+                        aiGroup,
+                        line3,
                         []
                     );
 
@@ -13606,30 +14176,34 @@ public sealed partial class MainWindow : Window
             else if (
                 !string.Equals(
                     current.AiGroup,
-                    parts[1].Trim(),
+                    aiGroup,
                     StringComparison.Ordinal) ||
                 !string.Equals(
                     current.Line3,
-                    parts[2].Trim(),
+                    line3,
                     StringComparison.Ordinal))
             {
                 StatusText.Text =
-                    $"Line não salva: o tour {tourName} usa AI group/line3 diferentes entre as linhas.";
+                    $"Line não salva: o Tour {tourName} precisa usar o mesmo AI Group e Line3 em todas as saídas.";
+
                 return;
             }
 
             current.Trips.Add(
                 new OmsiTimetableAddTrip(
-                    parts[3].Trim(),
-                    parts[4].Trim(),
-                    parts[5].Trim(),
-                    parts[6].Trim()));
+                    editor.Comment.Text.Trim(),
+                    tripName,
+                    editor.TripLine2.Text.Trim(),
+                    departure.ToString(
+                        "G17",
+                        CultureInfo.InvariantCulture)));
         }
 
         if (tourOrder.Count == 0)
         {
             StatusText.Text =
-                "Line não salva: mantenha pelo menos um Tour/Trip.";
+                "Line não salva: mantenha pelo menos uma saída.";
+
             return;
         }
 
@@ -13657,7 +14231,7 @@ public sealed partial class MainWindow : Window
                     priorityBox.Text.Trim(),
                 UserAllowed =
                     userAllowedBox.IsChecked ==
-                    true,
+                        true,
                 Tours =
                     tours
             };
@@ -13668,7 +14242,7 @@ public sealed partial class MainWindow : Window
                 false;
 
             StatusText.Text =
-                $"Salvando Line/Tours {line.Name} com backup...";
+                $"Salvando tabela Line/Tours {line.Name} com backup...";
 
             var updated =
                 await _session
@@ -13697,7 +14271,7 @@ public sealed partial class MainWindow : Window
                                 StringComparison.OrdinalIgnoreCase));
 
             StatusText.Text =
-                $"Line/Tours {updated.Line.Name} salvo · {updated.Line.Tours.Count} tour(s) · backup {updated.BackupPath}.";
+                $"Line/Tours {updated.Line.Name} salvo pela tabela · {updated.Line.Tours.Count} tour(s) · {updated.Line.Tours.Sum(tour => tour.Trips.Count)} saída(s) · backup {updated.BackupPath}.";
         }
         catch (Exception exception)
         {
