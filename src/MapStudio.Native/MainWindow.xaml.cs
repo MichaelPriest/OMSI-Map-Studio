@@ -9154,7 +9154,11 @@ public sealed partial class MainWindow : Window
     {
         if (
             _syncingTrafficPathControls ||
-            TrafficPathModeComboBox is null)
+            TrafficPathModeComboBox is null ||
+            TrafficPathWidthCheckBox is null ||
+            TrafficPathArrowsCheckBox is null ||
+            TrafficPathSignalsCheckBox is null ||
+            Viewport is null)
         {
             return;
         }
