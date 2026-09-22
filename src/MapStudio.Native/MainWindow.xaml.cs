@@ -643,8 +643,9 @@ public sealed partial class MainWindow : Window
                     PickingKind.Spline;
 
                 EditSceneryPathButton.IsEnabled =
-                    info?.Kind ==
-                    PickingKind.Object;
+                    info?.Kind is
+                        PickingKind.Object or
+                        PickingKind.Spline;
 
                 CompleteToSplineButton.IsEnabled =
                     info?.Kind ==
@@ -7894,31 +7895,19 @@ public sealed partial class MainWindow : Window
     {
         if (
             _selectionInfo is not
-                {
-                    Kind:
-                        PickingKind.Object
-                } selection ||
+                { } selection ||
+            selection.Kind is not
+                (
+                    PickingKind.Object or
+                    PickingKind.Spline
+                ) ||
             _session.OmsiRootPath is not
                 { } root ||
             _session.CurrentMap is not
                 { } snapshot)
         {
             StatusText.Text =
-                "Paths SCO: selecione um objeto do mapa.";
-            return;
-        }
-
-        if (
-            !OmsiSceneryObjectPathResolver
-                .TryResolve(
-                    root,
-                    selection.AssetPath,
-                    out var target) ||
-            !File.Exists(
-                target))
-        {
-            StatusText.Text =
-                "Paths SCO: o arquivo do objeto selecionado não foi encontrado.";
+                "Paths: selecione um objeto ou uma spline no mapa.";
             return;
         }
 
@@ -7927,46 +7916,144 @@ public sealed partial class MainWindow : Window
             EditSceneryPathButton.IsEnabled =
                 false;
 
-            StatusText.Text =
-                $"Paths SCO: lendo {Path.GetFileName(target)}...";
-
-            var metadata =
-                await new OmsiSceneryObjectReader()
-                    .ReadMetadataAsync(
-                        target);
+            int editedPathOrdinal;
+            string updatedAssetPath;
+            string backupPath;
 
             if (
-                metadata.Paths.Count ==
-                    0)
+                selection.Kind ==
+                    PickingKind.Object)
             {
+                if (
+                    !OmsiSceneryObjectPathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Paths SCO: o arquivo do objeto selecionado não foi encontrado.";
+                    return;
+                }
+
                 StatusText.Text =
-                    "Paths SCO: este objeto não possui seções [path].";
-                return;
+                    $"Paths SCO: lendo {Path.GetFileName(target)}...";
+
+                var metadata =
+                    await new OmsiSceneryObjectReader()
+                        .ReadMetadataAsync(
+                            target);
+
+                if (
+                    metadata.Paths.Count ==
+                        0)
+                {
+                    StatusText.Text =
+                        "Paths SCO: este objeto não possui seções [path].";
+                    return;
+                }
+
+                var edit =
+                    await SceneryPathEditorDialog
+                        .ShowAsync(
+                            MainRoot.XamlRoot,
+                            selection.AssetPath,
+                            metadata.Paths,
+                            Viewport
+                                .TrafficPathFocusedIndex);
+
+                if (edit is null)
+                {
+                    return;
+                }
+
+                StatusText.Text =
+                    $"Paths SCO: salvando path {edit.PathOrdinal} com backup...";
+
+                var updated =
+                    await _session
+                        .UpdateSceneryPathAsync(
+                            selection.AssetPath,
+                            edit.PathOrdinal,
+                            edit.Path);
+
+                editedPathOrdinal =
+                    edit.PathOrdinal;
+
+                updatedAssetPath =
+                    updated.AssetPath;
+
+                backupPath =
+                    updated.BackupPath;
             }
-
-            var edit =
-                await SceneryPathEditorDialog
-                    .ShowAsync(
-                        MainRoot.XamlRoot,
-                        selection.AssetPath,
-                        metadata.Paths,
-                        Viewport
-                            .TrafficPathFocusedIndex);
-
-            if (edit is null)
+            else
             {
-                return;
+                if (
+                    !OmsiSplinePathResolver
+                        .TryResolve(
+                            root,
+                            selection.AssetPath,
+                            out var target) ||
+                    !File.Exists(
+                        target))
+                {
+                    StatusText.Text =
+                        "Paths SLI: o arquivo da spline selecionada não foi encontrado.";
+                    return;
+                }
+
+                StatusText.Text =
+                    $"Paths SLI: lendo {Path.GetFileName(target)}...";
+
+                var definition =
+                    await new OmsiSplineDefinitionReader()
+                        .ReadAsync(
+                            target);
+
+                if (
+                    definition.Paths.Count ==
+                        0)
+                {
+                    StatusText.Text =
+                        "Paths SLI: esta spline não possui seções [path].";
+                    return;
+                }
+
+                var edit =
+                    await SplinePathEditorDialog
+                        .ShowAsync(
+                            MainRoot.XamlRoot,
+                            selection.AssetPath,
+                            definition.Paths,
+                            Viewport
+                                .TrafficPathFocusedIndex);
+
+                if (edit is null)
+                {
+                    return;
+                }
+
+                StatusText.Text =
+                    $"Paths SLI: salvando path {edit.PathOrdinal} com backup...";
+
+                var updated =
+                    await _session
+                        .UpdateSplinePathAsync(
+                            selection.AssetPath,
+                            edit.PathOrdinal,
+                            edit.Path);
+
+                editedPathOrdinal =
+                    edit.PathOrdinal;
+
+                updatedAssetPath =
+                    updated.AssetPath;
+
+                backupPath =
+                    updated.BackupPath;
             }
-
-            StatusText.Text =
-                $"Paths SCO: salvando path {edit.PathOrdinal} com backup...";
-
-            var updated =
-                await _session
-                    .UpdateSceneryPathAsync(
-                        selection.AssetPath,
-                        edit.PathOrdinal,
-                        edit.Path);
 
             await ApplyMapSnapshotAsync(
                 snapshot,
@@ -7978,7 +8065,7 @@ public sealed partial class MainWindow : Window
                     .FirstOrDefault(
                         item =>
                             item.Kind ==
-                                PickingKind.Object &&
+                                selection.Kind &&
                             item.EntityId ==
                                 selection.EntityId &&
                             item.TileX ==
@@ -7999,7 +8086,7 @@ public sealed partial class MainWindow : Window
 
                 Viewport
                     .SetTrafficPathFocusedIndex(
-                        edit.PathOrdinal);
+                        editedPathOrdinal);
 
                 if (
                     Viewport
@@ -8013,18 +8100,19 @@ public sealed partial class MainWindow : Window
             UpdateTrafficPathStatusText();
 
             StatusText.Text =
-                $"Path SCO {edit.PathOrdinal} salvo · {Path.GetFileName(updated.AssetPath)} · backup {updated.BackupPath}.";
+                $"Path {(selection.Kind == PickingKind.Object ? "SCO" : "SLI")} {editedPathOrdinal} salvo · {Path.GetFileName(updatedAssetPath)} · backup {backupPath}.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao salvar path SCO: {exception.Message}";
+                $"Falha ao salvar path: {exception.Message}";
         }
         finally
         {
             EditSceneryPathButton.IsEnabled =
-                _selectionInfo?.Kind ==
-                PickingKind.Object;
+                _selectionInfo?.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline;
         }
     }
 
