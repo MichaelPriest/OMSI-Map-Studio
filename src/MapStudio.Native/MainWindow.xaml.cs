@@ -286,6 +286,25 @@ public sealed partial class MainWindow : Window
                 OmsiAssetIndexEntry>();
 
     private IReadOnlyList<
+        OmsiAssetIndexEntry>
+        _assetLibraryAllItems =
+            Array.Empty<
+                OmsiAssetIndexEntry>();
+
+    private string?
+        _assetLibraryCacheRootPath;
+
+    private bool
+        _syncingLibraryFilters;
+
+    private readonly Dictionary<
+        string,
+        AssetLibraryViewItem>
+        _assetLibraryViewItemCache =
+            new(
+                StringComparer.OrdinalIgnoreCase);
+
+    private IReadOnlyList<
         LibraryGroupOption>
         _libraryGroupOptions =
             [
@@ -1117,7 +1136,8 @@ public sealed partial class MainWindow : Window
                 $"+{result.AddedFiles} · ~{result.UpdatedFiles} · " +
                 $"-{result.RemovedFiles}";
 
-            await LoadAssetLibraryAsync();
+            await LoadAssetLibraryAsync(
+                forceReload: true);
         }
         catch (Exception exception)
         {
@@ -1139,19 +1159,34 @@ public sealed partial class MainWindow : Window
         SelectionChangedEventArgs e)
     {
         if (
-            _libraryMode &&
+            !_libraryMode ||
+            _syncingLibraryFilters ||
             _session.OmsiRootPath is
-                not null)
+                not { } root)
         {
-            await LoadAssetLibraryAsync();
+            return;
         }
+
+        if (
+            _assetLibraryAllItems.Count >
+                0 &&
+            string.Equals(
+                _assetLibraryCacheRootPath,
+                root,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyLibraryKindFilter();
+            return;
+        }
+
+        await LoadAssetLibraryAsync();
     }
 
     private void OnLibraryGroupSelectionChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (_libraryMode)
+        if (_libraryMode && !_syncingLibraryFilters)
         {
             RefreshLibrarySubcategoryOptions();
             RefreshLibraryFilter();
@@ -1162,7 +1197,7 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (_libraryMode)
+        if (_libraryMode && !_syncingLibraryFilters)
         {
             RefreshLibraryFilter();
         }
@@ -1172,7 +1207,7 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (_libraryMode)
+        if (_libraryMode && !_syncingLibraryFilters)
         {
             RefreshLibraryFilter();
         }
@@ -1182,7 +1217,7 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (_libraryMode)
+        if (_libraryMode && !_syncingLibraryFilters)
         {
             var groupView =
                 LibraryViewComboBox
@@ -1221,7 +1256,9 @@ public sealed partial class MainWindow : Window
         object sender,
         SelectionChangedEventArgs e)
     {
-        if (!_libraryMode)
+        if (
+            !_libraryMode ||
+            _syncingLibraryFilters)
         {
             return;
         }
@@ -3492,6 +3529,27 @@ public sealed partial class MainWindow : Window
         CreateAssetLibraryViewItem(
             OmsiAssetIndexEntry asset)
     {
+        var cacheKey =
+            (_session.OmsiRootPath ??
+                string.Empty) +
+            "|" +
+            asset.Kind +
+            "|" +
+            asset.RelativePath +
+            "|" +
+            asset.Size +
+            "|" +
+            asset.LastWriteUtcTicks;
+
+        if (
+            _assetLibraryViewItemCache
+                .TryGetValue(
+                    cacheKey,
+                    out var cached))
+        {
+            return cached;
+        }
+
         var group =
             OmsiAssetLibraryClassifier
                 .Classify(
@@ -3539,9 +3597,29 @@ public sealed partial class MainWindow : Window
                 kindLabel,
                 null);
 
+        _assetLibraryViewItemCache[
+            cacheKey] =
+            item;
+
+        return item;
+    }
+
+    private void OnAssetLibraryContainerContentChanging(
+        ListViewBase sender,
+        ContainerContentChangingEventArgs args)
+    {
+        if (
+            args.InRecycleQueue ||
+            args.Item is not
+                AssetLibraryViewItem item ||
+            item.ThumbnailSource is not null)
+        {
+            return;
+        }
+
         var thumbnailPath =
             GetAssetThumbnailPath(
-                asset);
+                item.Asset);
 
         if (
             File.Exists(
@@ -3550,8 +3628,6 @@ public sealed partial class MainWindow : Window
             item.SetThumbnailPath(
                 thumbnailPath);
         }
-
-        return item;
     }
 
     private OmsiAssetIndexEntry?
@@ -3634,13 +3710,27 @@ public sealed partial class MainWindow : Window
         return path;
     }
 
-    private async Task LoadAssetLibraryAsync()
+    private async Task LoadAssetLibraryAsync(
+        bool forceReload = false)
     {
-        if (_session.OmsiRootPath is null)
+        var root =
+            _session.OmsiRootPath;
+
+        if (root is null)
         {
             _assetLibraryItems =
                 Array.Empty<
                     OmsiAssetIndexEntry>();
+
+            _assetLibraryAllItems =
+                Array.Empty<
+                    OmsiAssetIndexEntry>();
+
+            _assetLibraryCacheRootPath =
+                null;
+
+            _assetLibraryViewItemCache
+                .Clear();
 
             AssetLibraryListView.ItemsSource =
                 Array.Empty<
@@ -3654,36 +3744,111 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            var kind =
-                GetSelectedLibraryKind();
+            var rootChanged =
+                !string.Equals(
+                    _assetLibraryCacheRootPath,
+                    root,
+                    StringComparison.OrdinalIgnoreCase);
 
-            _assetLibraryItems =
-                await _session
-                    .GetAssetLibraryAsync(
-                        kind);
+            if (
+                forceReload ||
+                rootChanged ||
+                _assetLibraryAllItems.Count ==
+                    0)
+            {
+                _assetLibraryAllItems =
+                    await _session
+                        .GetAssetLibraryAsync(
+                            null);
 
-            RefreshLibraryGroupOptions(
-                kind);
+                _assetLibraryCacheRootPath =
+                    root;
 
-            var stats =
-                await _session
-                    .GetAssetLibraryStatisticsAsync();
+                _assetLibraryViewItemCache
+                    .Clear();
+            }
 
-            LibraryStatusText.Text =
-                stats.TotalEntries == 0
-                    ? "Índice vazio. Clique em Atualizar para catalogar a instalação."
-                    : $"{stats.TotalEntries} assets · " +
-                      $"{stats.SceneryObjects} SCO · {stats.Splines} SLI · " +
-                      $"{stats.Models} modelos · {stats.Textures} texturas";
+            ApplyLibraryKindFilter();
 
-            RefreshLibraryCollectionOptions();
-            RefreshLibraryFilter();
+            var total =
+                _assetLibraryAllItems.Count;
+
+            var scenery =
+                _assetLibraryAllItems.Count(
+                    item =>
+                        item.Kind ==
+                        OmsiAssetKind.SceneryObject);
+
+            var splines =
+                _assetLibraryAllItems.Count(
+                    item =>
+                        item.Kind ==
+                        OmsiAssetKind.Spline);
+
+            var models =
+                _assetLibraryAllItems.Count(
+                    item =>
+                        item.Kind ==
+                        OmsiAssetKind.Model);
+
+            var textures =
+                _assetLibraryAllItems.Count(
+                    item =>
+                        item.Kind ==
+                        OmsiAssetKind.Texture);
+
+            if (total == 0)
+            {
+                LibraryStatusText.Text =
+                    "Índice vazio. Clique em Atualizar para catalogar a instalação.";
+            }
+            else
+            {
+                LibraryStatusText.Text =
+                    $"{total} assets em cache · " +
+                    $"{scenery} SCO · {splines} SLI · " +
+                    $"{models} modelos · {textures} texturas";
+            }
         }
         catch (Exception exception)
         {
             LibraryStatusText.Text =
                 $"Falha ao abrir biblioteca: {exception.Message}";
         }
+    }
+
+    private void ApplyLibraryKindFilter()
+    {
+        var kind =
+            GetSelectedLibraryKind();
+
+        _assetLibraryItems =
+            kind is null
+                ? _assetLibraryAllItems
+                : _assetLibraryAllItems
+                    .Where(
+                        item =>
+                            item.Kind ==
+                                kind.Value)
+                    .ToArray();
+
+        _syncingLibraryFilters =
+            true;
+
+        try
+        {
+            RefreshLibraryGroupOptions(
+                kind);
+
+            RefreshLibraryCollectionOptions();
+        }
+        finally
+        {
+            _syncingLibraryFilters =
+                false;
+        }
+
+        RefreshLibraryFilter();
     }
 
     private void RefreshLibraryGroupOptions(
@@ -3842,6 +4007,7 @@ public sealed partial class MainWindow : Window
     {
         if (
             !_libraryMode ||
+            _syncingLibraryFilters ||
             sender.SelectedNode?.Content is not
                 LibraryCategoryTreeItem selected)
         {
@@ -16012,10 +16178,61 @@ public sealed partial class MainWindow : Window
         RoutedEventArgs e) =>
         ToggleExplorerPanel();
 
+    private void OnMinimizeExplorerPanelClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleExplorerPanel();
+
+    private void OnRestoreExplorerPanelClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleExplorerPanel();
+
+
     private void OnToggleInspectorClick(
         object sender,
         RoutedEventArgs e) =>
         ToggleInspectorPanel();
+
+    private void OnMinimizeInspectorPanelClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleInspectorPanel();
+
+    private void OnRestoreInspectorPanelClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ToggleInspectorPanel();
+
+    private void UpdatePanelRestoreButtons()
+    {
+        var explorerVisible =
+            ExplorerPanel.Visibility ==
+                Visibility.Visible &&
+            (
+                IsFullscreen() ||
+                ExplorerColumn.Width.Value >
+                    0);
+
+        var inspectorVisible =
+            InspectorPanel.Visibility ==
+                Visibility.Visible &&
+            (
+                IsFullscreen() ||
+                InspectorColumn.Width.Value >
+                    0);
+
+        RestoreExplorerPanelButton.Visibility =
+            explorerVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        RestoreInspectorPanelButton.Visibility =
+            inspectorVisible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+    }
+
 
     private void ToggleExplorerPanel()
     {
@@ -16033,6 +16250,7 @@ public sealed partial class MainWindow : Window
                     ? "Explorer flutuante visível."
                     : "Explorer flutuante oculto.";
 
+            UpdatePanelRestoreButtons();
             return;
         }
 
@@ -16059,6 +16277,7 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 "Explorer recolhido.";
 
+            UpdatePanelRestoreButtons();
             return;
         }
 
@@ -16077,6 +16296,8 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Explorer restaurado.";
+
+        UpdatePanelRestoreButtons();
     }
 
     private void ToggleInspectorPanel()
@@ -16095,6 +16316,7 @@ public sealed partial class MainWindow : Window
                     ? "Inspector flutuante visível."
                     : "Inspector flutuante oculto.";
 
+            UpdatePanelRestoreButtons();
             return;
         }
 
@@ -16121,6 +16343,7 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 "Inspector recolhido.";
 
+            UpdatePanelRestoreButtons();
             return;
         }
 
@@ -16139,6 +16362,8 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Inspector restaurado.";
+
+        UpdatePanelRestoreButtons();
     }
 
     private void BeginFullscreenPanelDrag(
@@ -17388,6 +17613,8 @@ public sealed partial class MainWindow : Window
             _desktopInspectorWasVisible
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+
+        UpdatePanelRestoreButtons();
     }
 
     private void ExitFullscreen()
