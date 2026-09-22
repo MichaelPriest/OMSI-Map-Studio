@@ -179,6 +179,64 @@ public sealed class OmsiSceneryPathPatcherTests
     }
 
     [Fact]
+    public void InsertAfterAddsNewPathWithoutChangingExistingOnes()
+    {
+        const string source =
+            "[path]\n" +
+            "0\n0\n0\n0\n0\n10\n0\n0\n0\n3\n0\n0\n\n" +
+            "[mesh]\nmodel.o3d\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var duplicate =
+            new OmsiSceneryPathDefinition(
+                1.5,
+                0,
+                0,
+                0,
+                0,
+                10,
+                0,
+                0,
+                0,
+                3,
+                1,
+                0,
+                null,
+                null,
+                false);
+
+        var bytes =
+            new OmsiSceneryPathPatcher()
+                .InsertAfter(
+                    document,
+                    0,
+                    duplicate);
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        Assert.Equal(
+            2,
+            metadata.Paths.Count);
+
+        Assert.Equal(
+            0,
+            metadata.Paths[0]
+                .X);
+
+        Assert.Equal(
+            duplicate,
+            metadata.Paths[1]);
+    }
+
+    [Fact]
     public void PatchRejectsMissingOrdinal()
     {
         var document =

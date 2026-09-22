@@ -340,6 +340,154 @@ public sealed class OmsiSceneryPathPatcher
             .ToBytes();
     }
 
+    public byte[] InsertAfter(
+        OmsiConfigDocument document,
+        int sourcePathOrdinal,
+        OmsiSceneryPathDefinition path)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        ArgumentNullException.ThrowIfNull(
+            path);
+
+        ValidatePath(
+            path);
+
+        if (sourcePathOrdinal < 0)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var pathSections =
+            document.Sections
+                .Select(
+                    (
+                        section,
+                        documentIndex
+                    ) =>
+                        (
+                            Section:
+                                section,
+                            DocumentIndex:
+                                documentIndex
+                        ))
+                .Where(
+                    value =>
+                        string.Equals(
+                            value.Section.Keyword,
+                            "path",
+                            StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        if (
+            sourcePathOrdinal >=
+                pathSections.Length)
+        {
+            throw new InvalidDataException(
+                "sceneryPathOrdinalInvalid");
+        }
+
+        var target =
+            pathSections[
+                sourcePathOrdinal];
+
+        var groupEndLine =
+            document.Lines.Count;
+
+        for (
+            var sectionIndex =
+                target.DocumentIndex +
+                1;
+            sectionIndex <
+                document.Sections.Count;
+            sectionIndex++)
+        {
+            if (
+                PathBoundaryKeywords.Contains(
+                    document.Sections[
+                        sectionIndex]
+                        .Keyword))
+            {
+                groupEndLine =
+                    document.Sections[
+                        sectionIndex]
+                        .KeywordLineIndex;
+
+                break;
+            }
+        }
+
+        var generated =
+            new List<string>
+            {
+                "[path]"
+            };
+
+        generated.AddRange(
+            SerializePathValues(
+                path));
+
+        var modifiers =
+            SerializeKnownModifiers(
+                path);
+
+        if (
+            modifiers.Count >
+                0)
+        {
+            generated.Add(
+                string.Empty);
+
+            generated.AddRange(
+                modifiers);
+        }
+
+        var lines =
+            document.Lines
+                .ToList();
+
+        if (
+            groupEndLine >
+                0 &&
+            lines[
+                groupEndLine -
+                    1].Length !=
+                0)
+        {
+            generated.Insert(
+                0,
+                string.Empty);
+        }
+
+        if (
+            groupEndLine <
+                lines.Count &&
+            generated.Count >
+                0 &&
+            generated[^1].Length !=
+                0)
+        {
+            generated.Add(
+                string.Empty);
+        }
+
+        lines.InsertRange(
+            groupEndLine,
+            generated);
+
+        return new OmsiConfigDocument(
+            lines,
+            Array.Empty<
+                OmsiConfigSection>(),
+            document.NewLine,
+            document.HasTrailingNewLine,
+            document.TextEncoding,
+            document.HasByteOrderMark)
+            .ToBytes();
+    }
+
     private static void ValidatePath(
         OmsiSceneryPathDefinition path)
     {

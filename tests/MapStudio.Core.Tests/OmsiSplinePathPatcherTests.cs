@@ -77,6 +77,54 @@ public sealed class OmsiSplinePathPatcherTests
     }
 
     [Fact]
+    public void InsertAfterAddsParallelSplinePath()
+    {
+        const string source =
+            "[path]\n" +
+            "0\n-1.5\n0.1\n3\n0\n" +
+            "[profile]\n0\n";
+
+        var document =
+            OmsiConfigParser.Parse(
+                source);
+
+        var duplicate =
+            new OmsiSplinePathDefinition(
+                0,
+                1.5,
+                0.1,
+                3,
+                1);
+
+        var bytes =
+            new OmsiSplinePathPatcher()
+                .InsertAfter(
+                    document,
+                    0,
+                    duplicate);
+
+        var definition =
+            new OmsiSplineDefinitionReader()
+                .Read(
+                    OmsiConfigParser
+                        .ParseBytes(
+                            bytes));
+
+        Assert.Equal(
+            2,
+            definition.Paths.Count);
+
+        Assert.Equal(
+            -1.5,
+            definition.Paths[0]
+                .X);
+
+        Assert.Equal(
+            duplicate,
+            definition.Paths[1]);
+    }
+
+    [Fact]
     public void PatchPreservesEncodingAndNewline()
     {
         const string source =

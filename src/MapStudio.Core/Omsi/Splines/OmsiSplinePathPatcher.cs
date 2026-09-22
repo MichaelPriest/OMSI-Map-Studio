@@ -170,6 +170,125 @@ public sealed class OmsiSplinePathPatcher
             .ToBytes();
     }
 
+    public byte[] InsertAfter(
+        OmsiConfigDocument document,
+        int sourcePathOrdinal,
+        OmsiSplinePathDefinition path)
+    {
+        ArgumentNullException.ThrowIfNull(
+            document);
+
+        ArgumentNullException.ThrowIfNull(
+            path);
+
+        ValidatePath(
+            path);
+
+        if (sourcePathOrdinal < 0)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var pathSections =
+            document.Sections
+                .Select(
+                    (
+                        section,
+                        documentIndex
+                    ) =>
+                        (
+                            Section:
+                                section,
+                            DocumentIndex:
+                                documentIndex
+                        ))
+                .Where(
+                    value =>
+                        string.Equals(
+                            value.Section.Keyword,
+                            "path",
+                            StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+        if (
+            sourcePathOrdinal >=
+                pathSections.Length)
+        {
+            throw new InvalidDataException(
+                "splinePathOrdinalInvalid");
+        }
+
+        var target =
+            pathSections[
+                sourcePathOrdinal];
+
+        var insertAt =
+            target.DocumentIndex + 1 <
+                document.Sections.Count
+                ? document.Sections[
+                    target.DocumentIndex + 1]
+                    .KeywordLineIndex
+                : document.Lines.Count;
+
+        var generated =
+            new List<string>
+            {
+                "[path]",
+                path.Type.ToString(
+                    CultureInfo.InvariantCulture),
+                FormatDouble(
+                    path.X),
+                FormatDouble(
+                    path.Z),
+                FormatDouble(
+                    path.Width),
+                path.Direction.ToString(
+                    CultureInfo.InvariantCulture)
+            };
+
+        var lines =
+            document.Lines
+                .ToList();
+
+        if (
+            insertAt >
+                0 &&
+            lines[
+                insertAt -
+                    1].Length !=
+                0)
+        {
+            generated.Insert(
+                0,
+                string.Empty);
+        }
+
+        if (
+            insertAt <
+                lines.Count &&
+            generated[^1].Length !=
+                0)
+        {
+            generated.Add(
+                string.Empty);
+        }
+
+        lines.InsertRange(
+            insertAt,
+            generated);
+
+        return new OmsiConfigDocument(
+            lines,
+            Array.Empty<
+                OmsiConfigSection>(),
+            document.NewLine,
+            document.HasTrailingNewLine,
+            document.TextEncoding,
+            document.HasByteOrderMark)
+            .ToBytes();
+    }
+
     private static void ValidatePath(
         OmsiSplinePathDefinition path)
     {
