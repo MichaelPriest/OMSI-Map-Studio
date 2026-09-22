@@ -116,6 +116,13 @@ public sealed class NativeSplineTriangleGeometryBuilderTests
             batch.TexturePath);
 
         Assert.Equal(
+            0,
+            batch.AlphaMode);
+
+        Assert.True(
+            batch.DoubleSided);
+
+        Assert.Equal(
             new System.Numerics.Vector2(
                 0,
                 0),
