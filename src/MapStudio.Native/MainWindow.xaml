@@ -1411,6 +1411,8 @@
                   Grid.Column="0"
                   Grid.ColumnSpan="5"
                   Margin="12,10"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Top"
                   Visibility="Collapsed"
                   Canvas.ZIndex="80">
                 <Grid.ColumnDefinitions>
@@ -1420,6 +1422,7 @@
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
+                        VerticalAlignment="Top"
                         HorizontalAlignment="Left"
                         Padding="10,6"
                         Background="#F2081722"
@@ -1455,6 +1458,7 @@
                 </Border>
 
                 <Border Grid.Column="1"
+                        VerticalAlignment="Top"
                         HorizontalAlignment="Center"
                         Padding="8,6"
                         Background="#F2081722"
@@ -1478,6 +1482,7 @@
                 </Border>
 
                 <Border Grid.Column="2"
+                        VerticalAlignment="Top"
                         HorizontalAlignment="Right"
                         Padding="8,6"
                         Background="#F2081722"
