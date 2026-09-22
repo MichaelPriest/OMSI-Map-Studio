@@ -1226,6 +1226,11 @@
                                               VerticalAlignment="Bottom">
                                     <StackPanel Orientation="Horizontal"
                                                 Spacing="5">
+                                        <Button x:Name="TransportRecordButton"
+                                                Content="Gravar caminho"
+                                                IsEnabled="False"
+                                                ToolTipService.ToolTip="Enquanto ativo, cada spline/objeto selecionado no mapa é anexado ao Track atual"
+                                                Click="OnTransportRecordClick" />
                                         <Button x:Name="TransportAddSelectionButton"
                                                 Content="+ seleção"
                                                 ToolTipService.ToolTip="Adicionar o objeto/spline atualmente selecionado ao Track usando o path index informado"
