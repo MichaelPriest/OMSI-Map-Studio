@@ -417,6 +417,15 @@ public sealed partial class MainWindow : Window
     private double _fullscreenInspectorOffsetX;
     private double _fullscreenInspectorOffsetY;
 
+    private bool _resizingFullscreenExplorer;
+    private uint _fullscreenExplorerResizePointerId;
+    private double _fullscreenExplorerResizeStartX;
+    private double _fullscreenExplorerResizeStartY;
+    private double _fullscreenExplorerResizeOriginWidth;
+    private double _fullscreenExplorerResizeOriginHeight;
+    private double _fullscreenExplorerHeight =
+        650;
+
     private bool _fullMapMode = true;
     private bool _mapLoadModeChanging;
     private bool _tileManagerDialogOpen;
@@ -10897,7 +10906,7 @@ public sealed partial class MainWindow : Window
 
         var transportPathOptions =
             NativeTrafficPathDisplayOptions
-                .CleanVehicles;
+                .TransportOverview;
 
         Viewport
             .SetTrafficPathDisplayOptions(
@@ -10905,13 +10914,13 @@ public sealed partial class MainWindow : Window
 
         Viewport
             .SetTrafficPathSelectedOnly(
-                true);
+                false);
 
         TransportPathsSelectedOnlyCheckBox.IsChecked =
-            true;
+            false;
 
         TrafficPathSelectedOnlyCheckBox.IsChecked =
-            true;
+            false;
 
         SynchronizeTrafficPathControls(
             transportPathOptions,
@@ -15286,6 +15295,12 @@ public sealed partial class MainWindow : Window
         _transportPathsVisible =
             !_transportPathsVisible;
 
+        if (_transportPathsVisible)
+        {
+            Viewport
+                .RefreshTrafficPathDisplay();
+        }
+
         Viewport
             .SetTrafficPathsVisible(
                 _transportPathsVisible);
@@ -17036,6 +17051,160 @@ public sealed partial class MainWindow : Window
             explorer:
                 true);
 
+    private void OnExplorerResizeGripPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !IsFullscreen() ||
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        _resizingFullscreenExplorer =
+            true;
+
+        _fullscreenExplorerResizePointerId =
+            e.Pointer.PointerId;
+
+        _fullscreenExplorerResizeStartX =
+            point.Position.X;
+
+        _fullscreenExplorerResizeStartY =
+            point.Position.Y;
+
+        _fullscreenExplorerResizeOriginWidth =
+            Math.Max(
+                300,
+                ExplorerPanel.ActualWidth);
+
+        _fullscreenExplorerResizeOriginHeight =
+            Math.Max(
+                360,
+                ExplorerPanel.ActualHeight);
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnExplorerResizeGripMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !IsFullscreen() ||
+            !_resizingFullscreenExplorer ||
+            e.Pointer.PointerId !=
+                _fullscreenExplorerResizePointerId)
+        {
+            return;
+        }
+
+        var point =
+            e.GetCurrentPoint(
+                MainRoot);
+
+        var dx =
+            point.Position.X -
+            _fullscreenExplorerResizeStartX;
+
+        var dy =
+            point.Position.Y -
+            _fullscreenExplorerResizeStartY;
+
+        var maxWidth =
+            Math.Max(
+                320,
+                Math.Min(
+                    760,
+                    MainRoot.ActualWidth -
+                        32));
+
+        var maxHeight =
+            Math.Max(
+                420,
+                MainRoot.ActualHeight -
+                    96);
+
+        var width =
+            Math.Clamp(
+                _fullscreenExplorerResizeOriginWidth +
+                    dx,
+                300,
+                maxWidth);
+
+        var height =
+            Math.Clamp(
+                _fullscreenExplorerResizeOriginHeight +
+                    dy,
+                360,
+                maxHeight);
+
+        ExplorerPanel.Width =
+            width;
+
+        ExplorerPanel.MaxHeight =
+            maxHeight;
+
+        ExplorerPanel.Height =
+            height;
+
+        _explorerPanelWidth =
+            width;
+
+        _fullscreenExplorerHeight =
+            height;
+
+        e.Handled =
+            true;
+    }
+
+    private void OnExplorerResizeGripReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _fullscreenExplorerResizePointerId)
+        {
+            return;
+        }
+
+        _resizingFullscreenExplorer =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        _explorerPanelWidth =
+            Math.Max(
+                300,
+                ExplorerPanel.ActualWidth);
+
+        _fullscreenExplorerHeight =
+            Math.Max(
+                360,
+                ExplorerPanel.ActualHeight);
+
+        StatusText.Text =
+            $"Projeto redimensionado · {_explorerPanelWidth:F0} × {_fullscreenExplorerHeight:F0}.";
+
+        e.Handled =
+            true;
+    }
+
     private void OnInspectorFloatingDragPressed(
         object sender,
         PointerRoutedEventArgs e)
@@ -18016,24 +18185,39 @@ public sealed partial class MainWindow : Window
         ExplorerPanel.VerticalAlignment =
             VerticalAlignment.Top;
 
+        var explorerMaxHeight =
+            Math.Max(
+                420,
+                MainRoot.ActualHeight -
+                96);
+
         ExplorerPanel.Width =
             Math.Clamp(
                 _explorerPanelWidth,
                 300,
-                430);
+                620);
+
+        ExplorerPanel.MinHeight =
+            360;
 
         ExplorerPanel.MaxHeight =
-            Math.Max(
+            explorerMaxHeight;
+
+        ExplorerPanel.Height =
+            Math.Clamp(
+                _fullscreenExplorerHeight,
                 360,
-                MainRoot.ActualHeight -
-                210);
+                explorerMaxHeight);
 
         ExplorerPanel.Margin =
             new Thickness(
                 12,
                 68,
                 0,
-                128);
+                24);
+
+        ExplorerResizeGrip.Visibility =
+            Visibility.Visible;
 
         Canvas.SetZIndex(
             ExplorerPanel,
@@ -18121,6 +18305,9 @@ public sealed partial class MainWindow : Window
         _draggingFullscreenInspector =
             false;
 
+        _resizingFullscreenExplorer =
+            false;
+
         FullscreenExplorerTranslate.X =
             0;
 
@@ -18162,8 +18349,17 @@ public sealed partial class MainWindow : Window
         ExplorerPanel.Width =
             double.NaN;
 
+        ExplorerPanel.Height =
+            double.NaN;
+
+        ExplorerPanel.MinHeight =
+            0;
+
         ExplorerPanel.MaxHeight =
             double.PositiveInfinity;
+
+        ExplorerResizeGrip.Visibility =
+            Visibility.Collapsed;
 
         ExplorerPanel.Margin =
             new Thickness(8);
