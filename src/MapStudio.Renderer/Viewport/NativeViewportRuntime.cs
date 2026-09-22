@@ -794,6 +794,74 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool TryFocusTrafficPathNode(
+        uint pixelX,
+        uint pixelY,
+        out NativeTrafficPathNode? node)
+    {
+        ThrowIfDisposed();
+
+        node =
+            null;
+
+        if (
+            _assetPreviewActive ||
+            _sceneryPlacementActive ||
+            _splinePlacementActive ||
+            Surface is null ||
+            Scene is null ||
+            !MapRenderer.TrafficPathsVisible ||
+            !_trafficPathDisplayOptions.ShowNodes ||
+            _trafficPathGeometry is null ||
+            _trafficPathGeometry.Nodes.Count ==
+                0)
+        {
+            return false;
+        }
+
+        var viewProjection =
+            Navigation.GetViewProjection(
+                Surface.Width,
+                Surface.Height);
+
+        if (
+            !NativeTrafficPathNodeHitTester
+                .TryHit(
+                    _trafficPathGeometry.Nodes,
+                    viewProjection,
+                    Surface.Width,
+                    Surface.Height,
+                    pixelX,
+                    pixelY,
+                    18.0f,
+                    out node) ||
+            node is null)
+        {
+            return false;
+        }
+
+        if (
+            SelectExplorerItem(
+                node.OwnerPickingId,
+                focus: false) is null)
+        {
+            node =
+                null;
+
+            return false;
+        }
+
+        _trafficPathSelectedOnly =
+            true;
+
+        _trafficPathFocusedIndex =
+            node.PathIndex;
+
+        RebuildTrafficPathGeometry();
+
+        return true;
+    }
+
     public bool SetTrafficPathSelectedOnly(
         bool selectedOnly)
     {
