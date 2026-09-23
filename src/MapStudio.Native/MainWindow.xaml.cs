@@ -7366,8 +7366,25 @@ public sealed partial class MainWindow : Window
                     insertedObjectIds.Count !=
                         objectRequests.Count)
                 {
-                    throw new InvalidDataException(
-                        "duplicateObjectIdentityMismatch");
+                    if (
+                        !string.IsNullOrWhiteSpace(
+                            objectBackup))
+                    {
+                        var rollback =
+                            await _session
+                                .RestoreMapStudioBackupAsync(
+                                    objectBackup);
+
+                        await ApplyMapSnapshotAsync(
+                            rollback.Snapshot,
+                            focusActiveTile:
+                                false);
+                    }
+
+                    StatusText.Text =
+                        "Duplicar grupo: o batch de objetos foi revertido porque as novas identidades não puderam ser confirmadas após o reload.";
+
+                    return;
                 }
             }
 
@@ -7487,14 +7504,6 @@ public sealed partial class MainWindow : Window
                 }
             }
 
-            if (
-                duplicatedSelections.Count !=
-                    selections.Count)
-            {
-                throw new InvalidDataException(
-                    "duplicateSelectionReloadMismatch");
-            }
-
             var selectedCount =
                 Viewport
                     .SelectSelectionInfos(
@@ -7515,19 +7524,13 @@ public sealed partial class MainWindow : Window
                 selectedCount ==
                     selections.Count
                     ? $"{selectedCount} item(ns) duplicado(s) · cópias selecionadas e prontas para mover."
-                    : $"{duplicatedSelections.Count} item(ns) duplicado(s); {selectedCount} reselecionado(s) no viewport.";
+                    : $"{selections.Count} item(ns) duplicado(s) · {selectedCount} cópia(s) reselecionada(s); carregue a região correspondente para acessar as demais.";
         }
         catch (Exception exception)
         {
             var message =
                 exception.Message switch
                 {
-                    "duplicateObjectIdentityMismatch" =>
-                        "as cópias de objetos foram gravadas, mas não puderam ser identificadas com segurança após o reload",
-
-                    "duplicateSelectionReloadMismatch" =>
-                        "as cópias foram gravadas, mas nem todas ficaram disponíveis na região carregada",
-
                     _ =>
                         exception.Message
                 };
