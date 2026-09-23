@@ -22,7 +22,7 @@ public sealed class ProtonBusExportSceneTests
                 chunks);
 
         Assert.Equal(
-            "road_0001",
+            "road",
             chunk.Name);
 
         Assert.Equal(
