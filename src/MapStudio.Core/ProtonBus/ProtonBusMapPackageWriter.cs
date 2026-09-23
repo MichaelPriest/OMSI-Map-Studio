@@ -26,6 +26,12 @@ public sealed record ProtonBusMapPackageRequest(
         Entrypoints { get; init; } =
         Array.Empty<
             ProtonBusEntrypointDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusPedestrianPathDefinition>
+        PedestrianPaths { get; init; } =
+        Array.Empty<
+            ProtonBusPedestrianPathDefinition>();
 }
 
 public sealed record ProtonBusMapPackageResult(
@@ -48,6 +54,11 @@ public sealed record ProtonBusMapPackageResult(
 
     public IReadOnlyList<string>
         DestinationDirectories
+        { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string>
+        PedestrianPathPaths
         { get; init; } =
         Array.Empty<string>();
 }
@@ -202,6 +213,12 @@ public static class ProtonBusMapPackageWriter
                 layout,
                 request.Entrypoints);
 
+        var pedestrianPathPaths =
+            WritePedestrianPaths(
+                root,
+                layout,
+                request.PedestrianPaths);
+
         return new(
             root,
             mapDefinitionPath,
@@ -218,8 +235,73 @@ public static class ProtonBusMapPackageWriter
                     .ListPath,
             DestinationDirectories =
                 entrypointFiles
-                    .DestinationDirectories
+                    .DestinationDirectories,
+            PedestrianPathPaths =
+                pedestrianPathPaths
         };
+    }
+
+    private static IReadOnlyList<string>
+        WritePedestrianPaths(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<
+                ProtonBusPedestrianPathDefinition>
+                paths)
+    {
+        var duplicate =
+            paths
+                .GroupBy(
+                    path =>
+                        path.Prefix,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (
+            duplicate is
+                not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate Proton Bus pedestrian-path prefix '{duplicate.Key}'.",
+                nameof(paths));
+        }
+
+        var output =
+            new List<string>(
+                paths.Count);
+
+        foreach (
+            var path
+            in paths)
+        {
+            ProtonBusPedestrianPathDefinitionWriter
+                .Validate(
+                    path);
+
+            var target =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout
+                            .AiPeopleDirectoryPath,
+                        path
+                            .SuggestedFileName));
+
+            File.WriteAllText(
+                target,
+                ProtonBusPedestrianPathDefinitionWriter
+                    .Serialize(
+                        path));
+
+            output.Add(
+                target);
+        }
+
+        return output;
     }
 
     private sealed record EntrypointWriteResult(
