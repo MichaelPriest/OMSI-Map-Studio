@@ -2053,6 +2053,27 @@ public sealed partial class NativeViewport : UserControl
 
         if (
             _runtime is not null &&
+            _runtime.TryBeginDirectMove(
+                pixelX,
+                pixelY,
+                out var directMoveHandle))
+        {
+            _isManipulatingGizmo =
+                true;
+
+            InputSurface.CapturePointer(
+                e.Pointer);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                "Mover: arraste o próprio item selecionado · solte para aplicar.");
+
+            e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
             _runtime.TryBeginDirectRotation(
                 pixelX,
                 pixelY,
