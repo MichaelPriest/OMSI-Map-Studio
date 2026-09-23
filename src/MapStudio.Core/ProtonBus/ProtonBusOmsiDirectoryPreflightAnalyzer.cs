@@ -892,30 +892,48 @@ public sealed class ProtonBusOmsiDirectoryPreflightAnalyzer
             descriptor,
             timetable,
             new(
-                sources.Count,
-                sources.Sum(
-                    source =>
-                        source.Content
-                            .Objects
-                            .Count),
-                sources.Sum(
-                    source =>
-                        source.Content
-                            .Splines
-                            .Count),
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0),
+                TileCount:
+                    sources.Count,
+                ObjectCount:
+                    sources.Sum(
+                        source =>
+                            source.Content
+                                .Objects
+                                .Count),
+                SplineCount:
+                    sources.Sum(
+                        source =>
+                            source.Content
+                                .Splines
+                                .Count),
+                TerrainMeshCount:
+                    0,
+                SplineMeshCount:
+                    0,
+                SceneryMeshCount:
+                    0,
+                TextureCount:
+                    0,
+                VehiclePathCount:
+                    0,
+                PedestrianPathCount:
+                    0,
+                TrainPathCount:
+                    0,
+                BusStopCount:
+                    0,
+                EntrypointCount:
+                    0,
+                TrafficLightCount:
+                    0,
+                StreetLightCount:
+                    0,
+                GpsRouteCount:
+                    0,
+                GpsMeshCount:
+                    0,
+                MarkerMeshCount:
+                    0),
             issues.ToArray());
     }
 
