@@ -8,6 +8,7 @@ using MapStudio.Native.Services;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Renderer.Scene;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Renderer.Picking;
 using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -1769,37 +1770,37 @@ public sealed partial class NativeViewport : UserControl
         {
             HideSelectionRadialMenu();
 
-            var scaleX =
+            var panScaleX =
                 Math.Max(
                     0.01,
                     SwapChainSurface
                         .CompositionScaleX);
 
-            var scaleY =
+            var panScaleY =
                 Math.Max(
                     0.01,
                     SwapChainSurface
                         .CompositionScaleY);
 
-            var pixelX =
+            var panPixelX =
                 (uint)Math.Max(
                     0,
                     Math.Round(
                         point.Position.X *
-                        scaleX));
+                        panScaleX));
 
-            var pixelY =
+            var panPixelY =
                 (uint)Math.Max(
                     0,
                     Math.Round(
                         point.Position.Y *
-                        scaleY));
+                        panScaleY));
 
             _isPanning =
                 _runtime
                     ?.BeginPointerPan(
-                        pixelX,
-                        pixelY) ??
+                        panPixelX,
+                        panPixelY) ??
                 true;
 
             _lastPanX =
@@ -2255,7 +2256,7 @@ public sealed partial class NativeViewport : UserControl
                 _runtime is not
                     null;
 
-            _selectionBoxDragging =
+            _isSelectionBoxDragging =
                 false;
 
             _selectionBoxAdditive =
@@ -2303,7 +2304,7 @@ public sealed partial class NativeViewport : UserControl
                 _selectionBoxStartY;
 
             if (
-                !_selectionBoxDragging &&
+                !_isSelectionBoxDragging &&
                 (
                     Math.Abs(
                         deltaX) >=
@@ -2313,14 +2314,14 @@ public sealed partial class NativeViewport : UserControl
                         6
                 ))
             {
-                _selectionBoxDragging =
+                _isSelectionBoxDragging =
                     true;
 
                 SelectionBoxLayer.Visibility =
                     Visibility.Visible;
             }
 
-            if (_selectionBoxDragging)
+            if (_isSelectionBoxDragging)
             {
                 UpdateSelectionBoxVisual(
                     point.Position.X,
@@ -2881,7 +2882,7 @@ public sealed partial class NativeViewport : UserControl
         }
 
         if (
-            _selectionBoxDragging &&
+            _isSelectionBoxDragging &&
             _runtime is not null)
         {
             var scaleX =
@@ -3082,7 +3083,7 @@ public sealed partial class NativeViewport : UserControl
         _isSplineDragCreating = false;
         _isManipulatingGizmo = false;
         _selectionBoxPending = false;
-        _selectionBoxDragging = false;
+        _isSelectionBoxDragging = false;
 
         ProtectedCursor =
             _defaultCursor;
