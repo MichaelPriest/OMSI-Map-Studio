@@ -100,15 +100,14 @@ public static class OmsiSplineLinkPlanner
                         current.NextSplineId);
         }
 
-        if (
-            originalPreviousSplineId !=
-                -1 &&
-            states.TryGetValue(
-                originalPreviousSplineId,
-                out var originalPrevious))
+        if (originalPreviousSplineId != -1)
         {
+            var previous =
+                Require(
+                    originalPreviousSplineId);
+
             if (
-                originalPrevious.NextSplineId !=
+                previous.NextSplineId !=
                     splineId)
             {
                 throw new InvalidDataException(
@@ -125,15 +124,14 @@ public static class OmsiSplineLinkPlanner
             }
         }
 
-        if (
-            originalNextSplineId !=
-                -1 &&
-            states.TryGetValue(
-                originalNextSplineId,
-                out var originalNext))
+        if (originalNextSplineId != -1)
         {
+            var next =
+                Require(
+                    originalNextSplineId);
+
             if (
-                originalNext.PreviousSplineId !=
+                next.PreviousSplineId !=
                     splineId)
             {
                 throw new InvalidDataException(
@@ -157,12 +155,9 @@ public static class OmsiSplineLinkPlanner
                     desiredPreviousSplineId);
 
             if (
+                previous.NextSplineId != -1 &&
                 previous.NextSplineId !=
-                    -1 &&
-                previous.NextSplineId !=
-                    splineId &&
-                states.ContainsKey(
-                    previous.NextSplineId))
+                    splineId)
             {
                 throw new InvalidDataException(
                     "splineLinkTargetBusy");
@@ -180,12 +175,9 @@ public static class OmsiSplineLinkPlanner
                     desiredNextSplineId);
 
             if (
+                next.PreviousSplineId != -1 &&
                 next.PreviousSplineId !=
-                    -1 &&
-                next.PreviousSplineId !=
-                    splineId &&
-                states.ContainsKey(
-                    next.PreviousSplineId))
+                    splineId)
             {
                 throw new InvalidDataException(
                     "splineLinkTargetBusy");
