@@ -476,6 +476,25 @@ public sealed partial class MainWindow : Window
 
     private bool _mapExplorerCollapsed;
 
+    private Panel? _transportPanelHome;
+    private int _transportPanelHomeIndex =
+        -1;
+    private bool _draggingTransportToolWindow;
+    private uint _transportToolDragPointerId;
+    private double _transportToolDragStartX;
+    private double _transportToolDragStartY;
+    private double _transportToolDragOriginX;
+    private double _transportToolDragOriginY;
+    private bool _resizingTransportToolWindow;
+    private bool _transportToolWindowMinimized;
+    private double _transportToolRestoreHeight =
+        680;
+    private uint _transportToolResizePointerId;
+    private double _transportToolResizeStartX;
+    private double _transportToolResizeStartY;
+    private double _transportToolResizeOriginWidth;
+    private double _transportToolResizeOriginHeight;
+
     private bool _draggingTrafficPathsWindow;
     private uint _trafficPathsDragPointerId;
     private double _trafficPathsDragStartX;
@@ -521,6 +540,19 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _transportPanelHome =
+            TransportPanel.Parent as
+                Panel;
+
+        if (_transportPanelHome is not null)
+        {
+            _transportPanelHomeIndex =
+                _transportPanelHome
+                    .Children
+                    .IndexOf(
+                        TransportPanel);
+        }
 
         RestorePanelExpansionState();
         RegisterPanelExpansionStateCallbacks();
@@ -1427,8 +1459,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar objetos e splines...";
@@ -1477,8 +1509,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar tile por coordenada...";
@@ -1817,8 +1849,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Visible;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar na biblioteca...";
@@ -9438,8 +9470,8 @@ public sealed partial class MainWindow : Window
         TrafficControlPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
@@ -10017,8 +10049,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         TrafficControlPanel.Visibility =
             Visibility.Visible;
@@ -12423,8 +12455,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Visible;
+        SetTransportPanelProjectVisibility(
+            true);
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar Tracks, Trips, Stops e StationLinks...";
@@ -17159,8 +17191,8 @@ public sealed partial class MainWindow : Window
         AssetLibraryPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         TrafficControlPanel.Visibility =
             Visibility.Collapsed;
@@ -17801,8 +17833,8 @@ public sealed partial class MainWindow : Window
         TrafficControlPanel.Visibility =
             Visibility.Collapsed;
 
-        TransportPanel.Visibility =
-            Visibility.Collapsed;
+        SetTransportPanelProjectVisibility(
+            false);
 
         ExplorerListView.Visibility =
             Visibility.Collapsed;
@@ -21088,6 +21120,434 @@ public sealed partial class MainWindow : Window
         }
 
         _resizingTileNavigatorWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void SetTransportPanelProjectVisibility(
+        bool visible)
+    {
+        TransportPanel.Visibility =
+            TransportToolWindow.Visibility ==
+                Visibility.Visible ||
+            visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void OnToggleTransportWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TransportToolWindow.Visibility ==
+                Visibility.Visible)
+        {
+            CloseTransportToolWindow();
+
+            StatusText.Text =
+                "Route Studio voltou ao painel Projeto.";
+
+            return;
+        }
+
+        OpenTransportToolWindow();
+
+        StatusText.Text =
+            "Route Studio aberto em janela flutuante · mova, redimensione ou minimize livremente.";
+
+        OnToolTransportClick(
+            sender,
+            e);
+    }
+
+    private void OpenTransportToolWindow()
+    {
+        _transportPanelHome ??=
+            TransportPanel.Parent as
+                Panel;
+
+        if (
+            _transportPanelHome is not
+                null &&
+            ReferenceEquals(
+                TransportPanel.Parent,
+                _transportPanelHome))
+        {
+            _transportPanelHomeIndex =
+                _transportPanelHome
+                    .Children
+                    .IndexOf(
+                        TransportPanel);
+
+            _transportPanelHome
+                .Children
+                .Remove(
+                    TransportPanel);
+        }
+
+        if (
+            !ReferenceEquals(
+                TransportFloatingHost.Content,
+                TransportPanel))
+        {
+            TransportFloatingHost.Content =
+                TransportPanel;
+        }
+
+        TransportPanel.Visibility =
+            Visibility.Visible;
+
+        TransportToolWindow.Visibility =
+            Visibility.Visible;
+
+        if (_transportToolWindowMinimized)
+        {
+            SetTransportToolWindowMinimized(
+                false);
+        }
+    }
+
+    private void OnCloseTransportToolWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        CloseTransportToolWindow();
+
+        StatusText.Text =
+            "Route Studio devolvido ao painel Projeto.";
+    }
+
+    private void CloseTransportToolWindow()
+    {
+        TransportToolWindow.Visibility =
+            Visibility.Collapsed;
+
+        _draggingTransportToolWindow =
+            false;
+
+        _resizingTransportToolWindow =
+            false;
+
+        if (
+            ReferenceEquals(
+                TransportFloatingHost.Content,
+                TransportPanel))
+        {
+            TransportFloatingHost.Content =
+                null;
+        }
+
+        if (
+            _transportPanelHome is not
+                null &&
+            TransportPanel.Parent is
+                null)
+        {
+            var insertIndex =
+                Math.Clamp(
+                    _transportPanelHomeIndex,
+                    0,
+                    _transportPanelHome
+                        .Children
+                        .Count);
+
+            _transportPanelHome
+                .Children
+                .Insert(
+                    insertIndex,
+                    TransportPanel);
+        }
+
+        TransportPanel.Visibility =
+            _transportMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void OnToggleTransportToolMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetTransportToolWindowMinimized(
+            !_transportToolWindowMinimized);
+
+    private void SetTransportToolWindowMinimized(
+        bool minimized)
+    {
+        if (
+            _transportToolWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _transportToolRestoreHeight =
+                Math.Max(
+                    360,
+                    TransportToolWindow
+                        .ActualHeight);
+        }
+
+        _transportToolWindowMinimized =
+            minimized;
+
+        TransportFloatingHost.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TransportToolResizeGrip.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TransportToolWindow.Height =
+            minimized
+                ? 58
+                : Math.Max(
+                    360,
+                    _transportToolRestoreHeight);
+
+        TransportToolMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+    }
+
+    private void OnTransportToolWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingTransportToolWindow =
+            true;
+
+        _transportToolDragPointerId =
+            e.Pointer.PointerId;
+
+        _transportToolDragStartX =
+            position.X;
+
+        _transportToolDragStartY =
+            position.Y;
+
+        _transportToolDragOriginX =
+            TransportToolWindowTranslate.X;
+
+        _transportToolDragOriginY =
+            TransportToolWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTransportToolWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingTransportToolWindow ||
+            e.Pointer.PointerId !=
+                _transportToolDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        var baseLeft =
+            TransportToolWindow.Margin.Left;
+
+        var baseTop =
+            TransportToolWindow.Margin.Top;
+
+        var maximumX =
+            Math.Max(
+                -baseLeft +
+                    4,
+                WorkspaceGrid.ActualWidth -
+                    baseLeft -
+                    TransportToolWindow.ActualWidth -
+                    4);
+
+        var maximumY =
+            Math.Max(
+                -baseTop +
+                    4,
+                WorkspaceGrid.ActualHeight -
+                    baseTop -
+                    TransportToolWindow.ActualHeight -
+                    4);
+
+        TransportToolWindowTranslate.X =
+            Math.Clamp(
+                _transportToolDragOriginX +
+                    position.X -
+                    _transportToolDragStartX,
+                -baseLeft +
+                    4,
+                maximumX);
+
+        TransportToolWindowTranslate.Y =
+            Math.Clamp(
+                _transportToolDragOriginY +
+                    position.Y -
+                    _transportToolDragStartY,
+                -baseTop +
+                    4,
+                maximumY);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTransportToolWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _transportToolDragPointerId)
+        {
+            return;
+        }
+
+        _draggingTransportToolWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTransportToolResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingTransportToolWindow =
+            true;
+
+        _transportToolResizePointerId =
+            e.Pointer.PointerId;
+
+        _transportToolResizeStartX =
+            position.X;
+
+        _transportToolResizeStartY =
+            position.Y;
+
+        _transportToolResizeOriginWidth =
+            TransportToolWindow.ActualWidth;
+
+        _transportToolResizeOriginHeight =
+            TransportToolWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTransportToolResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingTransportToolWindow ||
+            e.Pointer.PointerId !=
+                _transportToolResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        TransportToolWindow.Width =
+            Math.Clamp(
+                _transportToolResizeOriginWidth +
+                    position.X -
+                    _transportToolResizeStartX,
+                480,
+                Math.Max(
+                    480,
+                    WorkspaceGrid.ActualWidth -
+                        24));
+
+        TransportToolWindow.Height =
+            Math.Clamp(
+                _transportToolResizeOriginHeight +
+                    position.Y -
+                    _transportToolResizeStartY,
+                360,
+                Math.Max(
+                    360,
+                    WorkspaceGrid.ActualHeight -
+                        24));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTransportToolResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _transportToolResizePointerId)
+        {
+            return;
+        }
+
+        _resizingTransportToolWindow =
             false;
 
         if (
