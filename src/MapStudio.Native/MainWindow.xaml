@@ -381,10 +381,10 @@
                         Text="Importar grade local de elevação no tile ativo..."
                         Click="OnImportLocalElevationGridClick" />
                     <MenuFlyoutItem
-                        Text="Carregar referência Google sobre o terreno..."
-                        Click="OnGoogleMapReferenceClick" />
+                        Text="Referência de mapa sobre o terreno..."
+                        Click="OnMapReferenceClick" />
                     <MenuFlyoutItem
-                        Text="Remover referência Google"
+                        Text="Remover referência de mapa"
                         Click="OnClearGoogleMapReferenceClick" />
                 </MenuBarItem>
                 <MenuBarItem Title="Ferramentas">
@@ -2665,8 +2665,9 @@
                                         Content="Mapa real"
                                         Click="OnCreateCoordinateMapClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Referência Google"
-                                        Click="OnGoogleMapReferenceClick" />
+                                        Content="Mapa referência"
+                                        ToolTipService.ToolTip="OpenStreetMap sem chave ou Google Maps com API key do usuário"
+                                        Click="OnMapReferenceClick" />
                             </StackPanel>
 
                             <StackPanel x:Name="WaterContextPanel"
