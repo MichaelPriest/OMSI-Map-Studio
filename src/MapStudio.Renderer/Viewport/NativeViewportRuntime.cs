@@ -3638,7 +3638,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .FirstOrDefault(
                     entity =>
                         entity.PickingId ==
-                        _selectedPickingId);
+                        pickingId);
 
         if (splineEntity is null)
         {
