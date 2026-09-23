@@ -108,15 +108,10 @@ public sealed class ProtonBusOmsiFunctionalConverterTests
                 302,
                 0.1f,
                 -300),
-            result
-                .MarkerScene
-                .Meshes[0]
-                .Vertices[0]
-                .Position +
-            new Vector3(
-                0.015f,
-                0,
-                0.015f));
+            GetMarkerCenter(
+                result
+                    .MarkerScene
+                    .Meshes[0]));
     }
 
     [Fact]
