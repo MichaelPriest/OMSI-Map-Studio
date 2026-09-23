@@ -12,11 +12,23 @@ public sealed class NativeSplineSplitMathTests
     [Fact]
     public void SplitStraightSplineAtPointerProducesTwoSegments()
     {
+        var tileSummary =
+            new OmsiTileSummary(
+                Exists:
+                    true,
+                ObjectCount:
+                    0,
+                SplineCount:
+                    1,
+                SplineAttachmentCount:
+                    0);
+
         var tile =
             new OmsiTileReference(
                 0,
                 0,
-                "tile_0_0.map");
+                "tile_0_0.map",
+                tileSummary);
 
         var spline =
             new OmsiPlacedSpline(
@@ -53,9 +65,9 @@ public sealed class NativeSplineSplitMathTests
                     new NativeSceneTile(
                         tile,
                         new OmsiTileContent(
+                            tileSummary,
                             [],
-                            [spline],
-                            null))
+                            [spline]))
                 ],
                 [],
                 [entity],
