@@ -8,6 +8,7 @@ namespace MapStudio.Core.ProtonBus;
 public sealed record ProtonBusSceneryConversionOptions(
     string MeshPrefix = "object",
     bool GenerateCollider = false,
+    bool Invisible = false,
     double TerrainOffset = 0,
     bool FlipTextureV = false);
 
@@ -239,8 +240,14 @@ public static class
                     .Collider
                 : string.Empty;
 
+        var invisible =
+            options.Invisible
+                ? ProtonBusMeshNameTags
+                    .Invisible
+                : string.Empty;
+
         return new(
-            $"{options.MeshPrefix}_{tile.X}_{tile.Y}_{placedObject.ObjectId}_{meshOrdinal}{collider}",
+            $"{options.MeshPrefix}_{tile.X}_{tile.Y}_{placedObject.ObjectId}_{meshOrdinal}{collider}{invisible}",
             vertices,
             triangles.ToArray(),
             materials.ToArray());
