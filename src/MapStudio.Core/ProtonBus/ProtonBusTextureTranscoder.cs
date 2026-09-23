@@ -7,6 +7,31 @@ namespace MapStudio.Core.ProtonBus;
 
 public static class ProtonBusTextureTranscoder
 {
+    private static readonly HashSet<string>
+        SupportedExtensions =
+            new(
+                [
+                    ".png",
+                    ".bmp",
+                    ".jpg",
+                    ".jpeg",
+                    ".gif",
+                    ".dds",
+                    ".tga"
+                ],
+                StringComparer.OrdinalIgnoreCase);
+
+    public static bool CanTranscode(
+        string sourcePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            sourcePath);
+
+        return SupportedExtensions.Contains(
+            Path.GetExtension(
+                sourcePath));
+    }
+
     public static void WritePng(
         string sourcePath,
         string targetPath)
@@ -49,6 +74,14 @@ public static class ProtonBusTextureTranscoder
         var extension =
             Path.GetExtension(
                 sourcePath);
+
+        if (
+            !SupportedExtensions.Contains(
+                extension))
+        {
+            throw new NotSupportedException(
+                $"Texture format '{extension}' cannot currently be transcoded to PNG.");
+        }
 
         if (
             string.Equals(
