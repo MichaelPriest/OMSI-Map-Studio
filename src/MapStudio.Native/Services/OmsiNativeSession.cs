@@ -57,6 +57,10 @@ public sealed record NativeSplineFlowToggleResult(
     bool Reversed,
     int ReversedVehiclePathCount);
 
+public sealed record NativeDeleteBackupEntry(
+    string TargetPath,
+    string BackupPath);
+
 public sealed class OmsiNativeSession
 {
     private static readonly HttpClient
@@ -125,6 +129,14 @@ public sealed class OmsiNativeSession
     public NativeMapSnapshot? CurrentMap { get; private set; }
 
     public string? LastBackupDirectory { get; private set; }
+
+    public IReadOnlyList<NativeDeleteBackupEntry>
+        LastDeleteBackupEntries
+    {
+        get;
+        private set;
+    } =
+        Array.Empty<NativeDeleteBackupEntry>();
 
     public int PendingTransformCount =>
         _pendingTransforms.Count;
@@ -8918,6 +8930,15 @@ public sealed class OmsiNativeSession
                 cancellationToken)
             .ConfigureAwait(false);
 
+        LastDeleteBackupEntries =
+            writes
+                .Select(
+                    write =>
+                        new NativeDeleteBackupEntry(
+                            write.TargetPath,
+                            write.BackupPath))
+                .ToArray();
+
         var refreshed =
             new List<NativeLoadedTile>(
                 snapshot.Tiles.Count);
@@ -9501,6 +9522,9 @@ public sealed class OmsiNativeSession
         ArgumentNullException.ThrowIfNull(
             selection);
 
+        LastDeleteBackupEntries =
+            Array.Empty<NativeDeleteBackupEntry>();
+
         var snapshot =
             CurrentMap ??
             throw new InvalidOperationException(
@@ -9532,6 +9556,124 @@ public sealed class OmsiNativeSession
                 throw new InvalidDataException(
                     "selectionDeleteUnsupported")
         };
+    }
+
+    public async Task<NativeMapSnapshot>
+        RestoreDeleteBackupsAsync(
+            IReadOnlyList<NativeDeleteBackupEntry> backups,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            backups);
+
+        if (backups.Count == 0)
+        {
+            throw new ArgumentException(
+                "deleteBackupEmpty",
+                nameof(backups));
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeDeleteRestore");
+        }
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map.DirectoryPath);
+
+        var backupsRoot =
+            Path.GetFullPath(
+                Path.Combine(
+                    mapRoot,
+                    ".mapstudio-backups"));
+
+        var normalizedTargets =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        var writes =
+            new List<PendingFileWrite>(
+                backups.Count);
+
+        foreach (
+            var entry in
+                backups)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var target =
+                Path.GetFullPath(
+                    entry.TargetPath);
+
+            var backup =
+                Path.GetFullPath(
+                    entry.BackupPath);
+
+            var relativeTarget =
+                Path.GetRelativePath(
+                    mapRoot,
+                    target);
+
+            var relativeBackup =
+                Path.GetRelativePath(
+                    backupsRoot,
+                    backup);
+
+            if (
+                !IsSafeRelativePath(
+                    relativeTarget) ||
+                !IsSafeRelativePath(
+                    relativeBackup) ||
+                !normalizedTargets.Add(
+                    target) ||
+                !File.Exists(
+                    target) ||
+                !File.Exists(
+                    backup))
+            {
+                throw new InvalidDataException(
+                    "invalidDeleteBackup");
+            }
+
+            writes.Add(
+                new PendingFileWrite(
+                    target,
+                    CreateNativeBackupPath(
+                        mapRoot,
+                        target),
+                    await File
+                        .ReadAllBytesAsync(
+                            backup,
+                            cancellationToken)
+                        .ConfigureAwait(false)));
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await ReloadCurrentLoadedTilesAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        LastDeleteBackupEntries =
+            Array.Empty<NativeDeleteBackupEntry>();
+
+        return
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "deleteRestoreReloadFailed");
     }
 
     private async Task<NativeMapSnapshot>
@@ -9590,18 +9732,29 @@ public sealed class OmsiNativeSession
                     source.SceneryObjectPath,
                     source.ObjectId);
 
+        var backupPath =
+            CreateNativeBackupPath(
+                snapshot.Map.DirectoryPath,
+                tilePath);
+
         await SafeFileTransaction
             .WriteAllAsync(
                 [
                     new PendingFileWrite(
                         tilePath,
-                        CreateNativeBackupPath(
-                            snapshot.Map.DirectoryPath,
-                            tilePath),
+                        backupPath,
                         result.Bytes)
                 ],
                 cancellationToken)
             .ConfigureAwait(false);
+
+        LastDeleteBackupEntries =
+            new[]
+            {
+                new NativeDeleteBackupEntry(
+                    tilePath,
+                    backupPath)
+            };
 
         var refreshedContent =
             await _tileReader
