@@ -17,7 +17,9 @@ public sealed record ProtonBusOmsiFunctionalConversionOptions(
     double PedestrianSpawnIntervalSeconds = 5.0,
     double TrainSpawnIntervalSeconds = 120.0,
     double MarkerHalfSize = 0.015,
-    bool ConvertStreetLights = true);
+    bool ConvertStreetLights = true,
+    bool MergeLinkedSplinePaths = true,
+    double SplineChainJoinTolerance = 1.0);
 
 public sealed record ProtonBusOmsiFunctionalIssue(
     string Code,
@@ -72,30 +74,27 @@ public static class ProtonBusOmsiFunctionalConverter
         var issues =
             new List<ProtonBusOmsiFunctionalIssue>();
 
-        foreach (var spline in content.Splines)
+        if (options.MergeLinkedSplinePaths)
         {
-            if (!TryGetByPath(
-                    splineDefinitions,
-                    spline.SplinePath,
-                    out var definition) ||
-                definition is null ||
-                !definition.Exists)
+            ConvertSplineChains(
+                tile,
+                content.Splines,
+                splineDefinitions,
+                options,
+                markers,
+                vehiclePaths,
+                pedestrianPaths,
+                trainPaths,
+                issues);
+        }
+        else
+        {
+            foreach (var spline in content.Splines)
             {
-                continue;
-            }
-
-            for (var pathIndex = 0;
-                 pathIndex < definition.Paths.Count;
-                 pathIndex++)
-            {
-                var path =
-                    definition.Paths[pathIndex];
-
-                ConvertSplinePath(
+                ConvertAllSplinePaths(
                     tile,
                     spline,
-                    path,
-                    pathIndex,
+                    splineDefinitions,
                     options,
                     markers,
                     vehiclePaths,
@@ -185,6 +184,440 @@ public static class ProtonBusOmsiFunctionalConverter
             trainPaths.ToArray(),
             streetLights.ToArray(),
             issues.ToArray());
+    }
+
+    private static void ConvertSplineChains(
+        OmsiTileReference tile,
+        IReadOnlyList<OmsiPlacedSpline> splines,
+        IReadOnlyDictionary<string, OmsiSplineDefinition> splineDefinitions,
+        ProtonBusOmsiFunctionalConversionOptions options,
+        ICollection<ProtonBusExportMesh> markers,
+        ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
+        ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
+        ICollection<ProtonBusTrainPathDefinition> trainPaths,
+        ICollection<ProtonBusOmsiFunctionalIssue> issues,
+        bool loop = false)
+    {
+        var plan =
+            ProtonBusOmsiSplineChainPlanner
+                .Plan(
+                    splines);
+
+        foreach (var issue in plan.Issues)
+        {
+            issues.Add(
+                new(
+                    "splineChain_" +
+                    issue.Code,
+                    $"tile {tile.X},{tile.Y} spline {issue.SplineId}",
+                    issue.Detail ??
+                    (
+                        issue.RelatedSplineId.HasValue
+                            ? $"Related spline: {issue.RelatedSplineId.Value}."
+                            : null
+                    )));
+        }
+
+        foreach (var chain in plan.Chains)
+        {
+            if (chain.Splines.Count <= 1)
+            {
+                foreach (var spline in chain.Splines)
+                {
+                    ConvertAllSplinePaths(
+                        tile,
+                        spline,
+                        splineDefinitions,
+                        options,
+                        markers,
+                        vehiclePaths,
+                        pedestrianPaths,
+                        trainPaths,
+                        issues);
+                }
+
+                continue;
+            }
+
+            ConvertSplineChain(
+                tile,
+                chain,
+                splineDefinitions,
+                options,
+                markers,
+                vehiclePaths,
+                pedestrianPaths,
+                trainPaths,
+                issues);
+        }
+    }
+
+    private static void ConvertAllSplinePaths(
+        OmsiTileReference tile,
+        OmsiPlacedSpline spline,
+        IReadOnlyDictionary<string, OmsiSplineDefinition> splineDefinitions,
+        ProtonBusOmsiFunctionalConversionOptions options,
+        ICollection<ProtonBusExportMesh> markers,
+        ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
+        ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
+        ICollection<ProtonBusTrainPathDefinition> trainPaths,
+        ICollection<ProtonBusOmsiFunctionalIssue> issues)
+    {
+        if (!TryGetByPath(
+                splineDefinitions,
+                spline.SplinePath,
+                out var definition) ||
+            definition is null ||
+            !definition.Exists)
+        {
+            return;
+        }
+
+        for (var pathIndex = 0;
+             pathIndex < definition.Paths.Count;
+             pathIndex++)
+        {
+            ConvertSplinePath(
+                tile,
+                spline,
+                definition.Paths[pathIndex],
+                pathIndex,
+                options,
+                markers,
+                vehiclePaths,
+                pedestrianPaths,
+                trainPaths,
+                issues);
+        }
+    }
+
+    private static void ConvertSplineChain(
+        OmsiTileReference tile,
+        ProtonBusOmsiSplineChain chain,
+        IReadOnlyDictionary<string, OmsiSplineDefinition> splineDefinitions,
+        ProtonBusOmsiFunctionalConversionOptions options,
+        ICollection<ProtonBusExportMesh> markers,
+        ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
+        ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
+        ICollection<ProtonBusTrainPathDefinition> trainPaths,
+        ICollection<ProtonBusOmsiFunctionalIssue> issues)
+    {
+        var resolved =
+            new List<(OmsiPlacedSpline Spline, OmsiSplineDefinition Definition)>(
+                chain.Splines.Count);
+
+        foreach (var spline in chain.Splines)
+        {
+            if (!TryGetByPath(
+                    splineDefinitions,
+                    spline.SplinePath,
+                    out var definition) ||
+                definition is null ||
+                !definition.Exists)
+            {
+                foreach (var fallback in chain.Splines)
+                {
+                    ConvertAllSplinePaths(
+                        tile,
+                        fallback,
+                        splineDefinitions,
+                        options,
+                        markers,
+                        vehiclePaths,
+                        pedestrianPaths,
+                        trainPaths,
+                        issues);
+                }
+
+                issues.Add(
+                    new(
+                        "splineChainDefinitionMissing",
+                        $"tile {tile.X},{tile.Y} chain {chain.HeadSplineId}",
+                        $"Spline {spline.SplineId} has no resolved definition; chain merge was skipped."));
+
+                return;
+            }
+
+            resolved.Add(
+                (
+                    spline,
+                    definition
+                ));
+        }
+
+        var maxPathCount =
+            resolved.Max(
+                item =>
+                    item.Definition.Paths.Count);
+
+        for (var pathIndex = 0;
+             pathIndex < maxPathCount;
+             pathIndex++)
+        {
+            if (resolved.Any(
+                    item =>
+                        pathIndex >=
+                        item.Definition.Paths.Count))
+            {
+                FallbackChainPath(
+                    tile,
+                    resolved,
+                    pathIndex,
+                    splineDefinitions,
+                    options,
+                    markers,
+                    vehiclePaths,
+                    pedestrianPaths,
+                    trainPaths,
+                    issues,
+                    "A linked spline segment does not expose this path index.");
+
+                continue;
+            }
+
+            var firstPath =
+                resolved[0]
+                    .Definition
+                    .Paths[pathIndex];
+
+            if (resolved.Any(
+                    item =>
+                    {
+                        var path =
+                            item.Definition.Paths[pathIndex];
+
+                        return
+                            path.Type !=
+                                firstPath.Type ||
+                            path.Direction !=
+                                firstPath.Direction;
+                    }))
+            {
+                FallbackChainPath(
+                    tile,
+                    resolved,
+                    pathIndex,
+                    splineDefinitions,
+                    options,
+                    markers,
+                    vehiclePaths,
+                    pedestrianPaths,
+                    trainPaths,
+                    issues,
+                    "Linked path type/direction changes between spline segments.");
+
+                continue;
+            }
+
+            var source =
+                $"tile {tile.X},{tile.Y} chain {chain.HeadSplineId} path {pathIndex}";
+
+            foreach (var direction in GetDirections(
+                         firstPath.Direction,
+                         source,
+                         issues))
+            {
+                if (!TryBuildSplineChainPositions(
+                        tile,
+                        resolved,
+                        pathIndex,
+                        direction.Reverse,
+                        chain.IsClosedLoop,
+                        options,
+                        out var positions,
+                        out var failure))
+                {
+                    FallbackChainPath(
+                        tile,
+                        resolved,
+                        pathIndex,
+                        splineDefinitions,
+                        options,
+                        markers,
+                        vehiclePaths,
+                        pedestrianPaths,
+                        trainPaths,
+                        issues,
+                        failure);
+
+                    break;
+                }
+
+                var prefix =
+                    BuildSplineChainPrefix(
+                        firstPath.Type,
+                        tile,
+                        chain.HeadSplineId,
+                        pathIndex,
+                        direction.Reverse);
+
+                AddFunctionalPath(
+                    firstPath.Type,
+                    prefix,
+                    positions,
+                    source,
+                    options,
+                    markers,
+                    vehiclePaths,
+                    pedestrianPaths,
+                    trainPaths,
+                    issues,
+                    loop:
+                        chain.IsClosedLoop);
+            }
+        }
+    }
+
+    private static bool TryBuildSplineChainPositions(
+        OmsiTileReference tile,
+        IReadOnlyList<(OmsiPlacedSpline Spline, OmsiSplineDefinition Definition)> resolved,
+        int pathIndex,
+        bool reverse,
+        bool closedLoop,
+        ProtonBusOmsiFunctionalConversionOptions options,
+        out IReadOnlyList<Vector3> positions,
+        out string failure)
+    {
+        var ordered =
+            reverse
+                ? resolved
+                    .Reverse()
+                    .ToArray()
+                : resolved
+                    .ToArray();
+
+        var output =
+            new List<Vector3>();
+
+        foreach (var item in ordered)
+        {
+            var path =
+                item.Definition
+                    .Paths[pathIndex];
+
+            var sampled =
+                SamplePath(
+                    item.Spline.Length,
+                    reverse,
+                    options,
+                    distance =>
+                        GetSplinePathWorldPoint(
+                            tile,
+                            item.Spline,
+                            path,
+                            distance));
+
+            if (sampled.Count == 0)
+            {
+                continue;
+            }
+
+            if (output.Count > 0)
+            {
+                var gap =
+                    Vector3.Distance(
+                        output[^1],
+                        sampled[0]);
+
+                if (gap >
+                    options.SplineChainJoinTolerance)
+                {
+                    positions =
+                        Array.Empty<Vector3>();
+
+                    failure =
+                        $"Linked spline path endpoints are {gap:0.###} m apart, exceeding tolerance {options.SplineChainJoinTolerance:0.###} m.";
+
+                    return false;
+                }
+
+                output.AddRange(
+                    sampled.Skip(1));
+            }
+            else
+            {
+                output.AddRange(
+                    sampled);
+            }
+        }
+
+        if (
+            closedLoop &&
+            output.Count >
+                2)
+        {
+            var closureGap =
+                Vector3.Distance(
+                    output[^1],
+                    output[0]);
+
+            if (closureGap >
+                options.SplineChainJoinTolerance)
+            {
+                positions =
+                    Array.Empty<Vector3>();
+
+                failure =
+                    $"Closed spline loop ends {closureGap:0.###} m from its start, exceeding tolerance {options.SplineChainJoinTolerance:0.###} m.";
+
+                return false;
+            }
+
+            output.RemoveAt(
+                output.Count -
+                1);
+        }
+
+        positions =
+            output;
+
+        failure =
+            string.Empty;
+
+        return output.Count >=
+            2;
+    }
+
+    private static void FallbackChainPath(
+        OmsiTileReference tile,
+        IReadOnlyList<(OmsiPlacedSpline Spline, OmsiSplineDefinition Definition)> resolved,
+        int pathIndex,
+        IReadOnlyDictionary<string, OmsiSplineDefinition> splineDefinitions,
+        ProtonBusOmsiFunctionalConversionOptions options,
+        ICollection<ProtonBusExportMesh> markers,
+        ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
+        ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
+        ICollection<ProtonBusTrainPathDefinition> trainPaths,
+        ICollection<ProtonBusOmsiFunctionalIssue> issues,
+        string reason)
+    {
+        issues.Add(
+            new(
+                "splineChainPathFallback",
+                $"tile {tile.X},{tile.Y} chain {resolved[0].Spline.SplineId} path {pathIndex}",
+                reason));
+
+        foreach (var item in resolved)
+        {
+            if (
+                pathIndex >=
+                item.Definition.Paths.Count)
+            {
+                continue;
+            }
+
+            ConvertSplinePath(
+                tile,
+                item.Spline,
+                item.Definition.Paths[pathIndex],
+                pathIndex,
+                options,
+                markers,
+                vehiclePaths,
+                pedestrianPaths,
+                trainPaths,
+                issues);
+        }
     }
 
     private static void ConvertSplinePath(
@@ -362,7 +795,7 @@ public static class ProtonBusOmsiFunctionalConverter
                     new(
                         Prefix: prefix,
                         Reverse: false,
-                        Loop: false,
+                        Loop: loop,
                         MaxPathsToCheck: positions.Count,
                         IsSpawner: options.VehiclePathsSpawn,
                         IsBusSpawner: false,
@@ -383,7 +816,7 @@ public static class ProtonBusOmsiFunctionalConverter
                     new(
                         Prefix: prefix,
                         Reverse: false,
-                        Loop: false,
+                        Loop: loop,
                         MaxPathsToCheck: positions.Count,
                         IsSpawner: options.PedestrianPathsSpawn,
                         SpawnIntervalSeconds:
@@ -403,7 +836,7 @@ public static class ProtonBusOmsiFunctionalConverter
                     new(
                         Prefix: prefix,
                         Reverse: false,
-                        Loop: false,
+                        Loop: loop,
                         MaxPathsToCheck: positions.Count,
                         IsSpawner: options.TrainPathsSpawn,
                         SpawnTimeIntervalSeconds:
@@ -836,6 +1269,14 @@ public static class ProtonBusOmsiFunctionalConverter
         }
     }
 
+    private static string BuildSplineChainPrefix(
+        int type,
+        OmsiTileReference tile,
+        int headSplineId,
+        int pathIndex,
+        bool reverse) =>
+        $"{GetTypePrefix(type)}_t{tile.X}_{tile.Y}_c{headSplineId}_p{pathIndex}_{(reverse ? "r" : "f")}";
+
     private static string BuildSplinePrefix(
         int type,
         OmsiTileReference tile,
@@ -1010,6 +1451,17 @@ public static class ProtonBusOmsiFunctionalConverter
             throw new ArgumentOutOfRangeException(
                 nameof(options),
                 "Marker size must be finite and greater than zero.");
+        }
+
+        if (
+            !double.IsFinite(
+                options.SplineChainJoinTolerance) ||
+            options.SplineChainJoinTolerance <
+                0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                "Spline chain join tolerance must be finite and non-negative.");
         }
     }
 }
