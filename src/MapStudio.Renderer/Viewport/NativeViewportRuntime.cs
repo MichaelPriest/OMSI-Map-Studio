@@ -131,6 +131,12 @@ public sealed class NativeViewportRuntime : IDisposable
         _selectionFilter =
             NativeSelectionFilter.All;
 
+    private uint? _lastPickPixelX;
+    private uint? _lastPickPixelY;
+    private PickingId[] _lastPickCandidates =
+        Array.Empty<PickingId>();
+    private int _lastPickCandidateIndex;
+
     private NativeTrafficPathDisplayOptions
         _trafficPathDisplayOptions =
             NativeTrafficPathDisplayOptions
@@ -4661,11 +4667,20 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public int LastPickCandidateCount =>
+        _lastPickCandidates.Length;
+
+    public int LastPickCandidatePosition =>
+        _lastPickCandidates.Length == 0
+            ? 0
+            : _lastPickCandidateIndex + 1;
+
     public bool TryPick(
         uint pixelX,
         uint pixelY,
         out PickingId pickingId,
-        out object? item)
+        out object? item,
+        bool cycleCandidates = true)
     {
         ThrowIfDisposed();
 
@@ -4682,21 +4697,111 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
-        var resolved =
-            TryResolveSelectablePick(
+        var candidates =
+            CollectSelectablePickCandidates(
                 pixelX,
                 pixelY,
                 radius:
-                    7,
-                out pickingId,
-                out item);
+                    16);
 
-        if (!resolved)
+        if (candidates.Count == 0)
         {
-            item = null;
+            _lastPickPixelX =
+                pixelX;
+
+            _lastPickPixelY =
+                pixelY;
+
+            _lastPickCandidates =
+                Array.Empty<PickingId>();
+
+            _lastPickCandidateIndex =
+                0;
+
             pickingId =
                 PickingId.None;
+
+            item =
+                null;
+
+            _selectedPickingId =
+                PickingId.None;
+
+            MapRenderer.SetSelection(
+                PickingId.None);
+
+            MapRenderer.SetSelectionPreviewTransform(
+                Matrix4x4.Identity);
+
+            UpdateGizmoGeometry();
+            RenderInitialFrame();
+
+            return false;
         }
+
+        var samePickArea =
+            _lastPickPixelX is { } previousX &&
+            _lastPickPixelY is { } previousY &&
+            Math.Abs(
+                (long)previousX -
+                pixelX) <=
+                5 &&
+            Math.Abs(
+                (long)previousY -
+                pixelY) <=
+                5;
+
+        var candidateIndex =
+            0;
+
+        var currentIndex =
+            candidates.FindIndex(
+                candidate =>
+                    candidate.Id ==
+                    _selectedPickingId);
+
+        if (
+            currentIndex >=
+                0)
+        {
+            candidateIndex =
+                cycleCandidates &&
+                samePickArea &&
+                candidates.Count >
+                    1
+                    ? (
+                        currentIndex +
+                        1
+                    ) %
+                    candidates.Count
+                    : currentIndex;
+        }
+
+        var selectedCandidate =
+            candidates[
+                candidateIndex];
+
+        pickingId =
+            selectedCandidate.Id;
+
+        item =
+            selectedCandidate.Item;
+
+        _lastPickPixelX =
+            pixelX;
+
+        _lastPickPixelY =
+            pixelY;
+
+        _lastPickCandidates =
+            candidates
+                .Select(
+                    candidate =>
+                        candidate.Id)
+                .ToArray();
+
+        _lastPickCandidateIndex =
+            candidateIndex;
 
         _selectedPickingId =
             pickingId;
@@ -4710,7 +4815,7 @@ public sealed class NativeViewportRuntime : IDisposable
         UpdateGizmoGeometry();
         RenderInitialFrame();
 
-        return resolved;
+        return true;
     }
 
     public bool TryBeginGizmoDrag(
@@ -5095,6 +5200,156 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             RenderInitialFrame();
         }
+    }
+
+    private sealed record PickCandidate(
+        PickingId Id,
+        object Item,
+        long DistanceSquared);
+
+    private List<PickCandidate>
+        CollectSelectablePickCandidates(
+            uint pixelX,
+            uint pixelY,
+            int radius)
+    {
+        var output =
+            new Dictionary<
+                PickingId,
+                PickCandidate>();
+
+        if (
+            Surface is null ||
+            Surface.Width == 0 ||
+            Surface.Height == 0)
+        {
+            return [];
+        }
+
+        var maximumRadius =
+            Math.Clamp(
+                radius,
+                0,
+                20);
+
+        var step =
+            maximumRadius <=
+                4
+                ? 1
+                : 2;
+
+        for (
+            var offsetY =
+                -maximumRadius;
+            offsetY <=
+                maximumRadius;
+            offsetY +=
+                step)
+        {
+            for (
+                var offsetX =
+                    -maximumRadius;
+                offsetX <=
+                    maximumRadius;
+                offsetX +=
+                    step)
+            {
+                var distanceSquared =
+                    (
+                        (long)offsetX *
+                        offsetX
+                    ) +
+                    (
+                        (long)offsetY *
+                        offsetY
+                    );
+
+                if (
+                    distanceSquared >
+                    (
+                        (long)maximumRadius *
+                        maximumRadius
+                    ))
+                {
+                    continue;
+                }
+
+                var candidateX =
+                    (long)pixelX +
+                    offsetX;
+
+                var candidateY =
+                    (long)pixelY +
+                    offsetY;
+
+                if (
+                    candidateX <
+                        0 ||
+                    candidateY <
+                        0 ||
+                    candidateX >=
+                        Surface.Width ||
+                    candidateY >=
+                        Surface.Height)
+                {
+                    continue;
+                }
+
+                var candidate =
+                    MapRenderer.Pick(
+                        (uint)candidateX,
+                        (uint)candidateY);
+
+                if (
+                    candidate.Kind is not
+                        (
+                            PickingKind.Object or
+                            PickingKind.Spline
+                        ) ||
+                    !IsSelectionKindEnabled(
+                        candidate.Kind) ||
+                    !Picking.TryResolve(
+                        candidate,
+                        out var resolved) ||
+                    resolved is null)
+                {
+                    continue;
+                }
+
+                if (
+                    !output.TryGetValue(
+                        candidate,
+                        out var existing) ||
+                    distanceSquared <
+                        existing
+                            .DistanceSquared)
+                {
+                    output[
+                        candidate] =
+                        new PickCandidate(
+                            candidate,
+                            resolved,
+                            distanceSquared);
+                }
+            }
+        }
+
+        return output
+            .Values
+            .OrderBy(
+                candidate =>
+                    candidate
+                        .DistanceSquared)
+            .ThenBy(
+                candidate =>
+                    candidate.Id.Kind ==
+                        PickingKind.Object
+                        ? 0
+                        : 1)
+            .ThenBy(
+                candidate =>
+                    candidate.Id.Value)
+            .ToList();
     }
 
     private bool TryResolveSelectablePick(
