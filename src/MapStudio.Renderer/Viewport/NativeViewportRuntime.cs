@@ -63,6 +63,13 @@ public sealed class NativeViewportRuntime : IDisposable
     private float _dragRotationDegrees;
     private uint _lastDragPixelX;
     private uint _lastDragPixelY;
+    private bool _directMoveActive;
+    private Vector3 _directMovePointerStart;
+    private float _directMovePlaneY;
+    private bool _panGrabActive;
+    private Vector3 _panGrabStartWorld;
+    private NativeViewportNavigationState? _panGrabNavigationStart;
+    private float _panGrabPlaneY;
     private bool _assetPreviewActive;
     private bool _sceneryPlacementActive;
     private string? _placementSceneryPath;
@@ -4475,6 +4482,83 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public bool BeginPointerPan(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        if (Surface is null)
+        {
+            return false;
+        }
+
+        CancelGizmoDrag();
+
+        _panGrabPlaneY =
+            Navigation.Target.Y;
+
+        if (
+            !TryGetPointerPlanePoint(
+                pixelX,
+                pixelY,
+                _panGrabPlaneY,
+                out _panGrabStartWorld))
+        {
+            _panGrabActive =
+                false;
+
+            return false;
+        }
+
+        _panGrabNavigationStart =
+            Navigation.CaptureState();
+
+        _panGrabActive =
+            true;
+
+        return true;
+    }
+
+    public void UpdatePointerPan(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !_panGrabActive ||
+            _panGrabNavigationStart is not
+                { } start ||
+            !TryGetPointerPlanePoint(
+                pixelX,
+                pixelY,
+                _panGrabPlaneY,
+                out var currentWorld))
+        {
+            return;
+        }
+
+        var worldDelta =
+            _panGrabStartWorld -
+            currentWorld;
+
+        Navigation.RestoreState(
+            start with
+            {
+                Target =
+                    start.Target +
+                    worldDelta
+            });
+
+        UpdateCameraTransform();
+        RenderInitialFrame();
+    }
+
+    public void EndPointerPan() =>
+        _panGrabActive =
+            false;
+
     public void Pan(
         double deltaPixelX,
         double deltaPixelY)
@@ -5023,6 +5107,9 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
+        _directMoveActive =
+            false;
+
         _activeGizmoHandle =
             handle;
 
@@ -5092,8 +5179,24 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
+        _directMovePlaneY =
+            _dragAnchor.Y;
+
+        if (
+            !TryGetPointerPlanePoint(
+                pixelX,
+                pixelY,
+                _directMovePlaneY,
+                out _directMovePointerStart))
+        {
+            return false;
+        }
+
         handle =
             NativeGizmoHandle.MoveXZ;
+
+        _directMoveActive =
+            true;
 
         _activeGizmoHandle =
             handle;
@@ -5167,6 +5270,9 @@ public sealed class NativeViewportRuntime : IDisposable
         handle =
             NativeGizmoHandle.RotateY;
 
+        _directMoveActive =
+            false;
+
         _activeGizmoHandle =
             handle;
 
@@ -5222,19 +5328,39 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeGizmoHandle.MoveZ or
                 NativeGizmoHandle.MoveXZ)
         {
-            _dragTranslation +=
-                NativeGizmoManipulationMath
-                    .GetMoveDelta(
-                        _activeGizmoHandle,
-                        Navigation
-                            .CameraPosition,
-                        Navigation
-                            .Target,
-                        Navigation
-                            .Distance,
-                        Surface.Height,
-                        deltaX,
-                        deltaY);
+            if (
+                _activeGizmoHandle ==
+                    NativeGizmoHandle.MoveXZ &&
+                _directMoveActive &&
+                TryGetPointerPlanePoint(
+                    pixelX,
+                    pixelY,
+                    _directMovePlaneY,
+                    out var pointerWorld))
+            {
+                _dragTranslation =
+                    pointerWorld -
+                    _directMovePointerStart;
+
+                _dragTranslation.Y =
+                    0;
+            }
+            else
+            {
+                _dragTranslation +=
+                    NativeGizmoManipulationMath
+                        .GetMoveDelta(
+                            _activeGizmoHandle,
+                            Navigation
+                                .CameraPosition,
+                            Navigation
+                                .Target,
+                            Navigation
+                                .Distance,
+                            Surface.Height,
+                            deltaX,
+                            deltaY);
+            }
 
             var effectiveTranslation =
                 GetEffectiveTranslation();
@@ -5286,6 +5412,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _activeGizmoHandle =
             NativeGizmoHandle.None;
+
+        _directMoveActive =
+            false;
 
         var effectiveTranslation =
             GetEffectiveTranslation();
@@ -5363,6 +5492,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _activeGizmoHandle =
             NativeGizmoHandle.None;
+
+        _directMoveActive =
+            false;
 
         _dragTranslation =
             Vector3.Zero;
@@ -6750,6 +6882,58 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetGizmoGeometry(
             geometry);
+    }
+
+    private bool TryGetPointerPlanePoint(
+        uint pixelX,
+        uint pixelY,
+        float planeY,
+        out Vector3 point)
+    {
+        point =
+            default;
+
+        if (
+            Surface is null ||
+            !Navigation.TryGetWorldRay(
+                pixelX,
+                pixelY,
+                Surface.Width,
+                Surface.Height,
+                out var origin,
+                out var direction) ||
+            Math.Abs(
+                direction.Y) <
+                0.00001f)
+        {
+            return false;
+        }
+
+        var distance =
+            (
+                planeY -
+                origin.Y
+            ) /
+            direction.Y;
+
+        if (
+            !float.IsFinite(
+                distance) ||
+            distance <=
+                0)
+        {
+            return false;
+        }
+
+        point =
+            origin +
+            direction *
+            distance;
+
+        return
+            float.IsFinite(point.X) &&
+            float.IsFinite(point.Y) &&
+            float.IsFinite(point.Z);
     }
 
     private bool TryGetTerrainPlacementPoint(
