@@ -2506,6 +2506,11 @@
                                             <MenuFlyoutItem Text="Substituir tipo pela SLI da Biblioteca"
                                                             Click="OnRoadReplaceTypeClick" />
                                             <MenuFlyoutSeparator />
+                                            <MenuFlyoutItem Text="Nivelar spline selecionada na cota atual"
+                                                            Click="OnRoadLevelSelectedClick" />
+                                            <MenuFlyoutItem Text="Ajustar spline selecionada ao terreno"
+                                                            Click="OnLevelSelectedSplineToTerrainClick" />
+                                            <MenuFlyoutSeparator />
                                             <MenuFlyoutItem Text="Modo [spline_h]"
                                                             Click="OnRoadPresetHeightClick" />
                                             <MenuFlyoutItem Text="Instalar/atualizar Road Kit"
