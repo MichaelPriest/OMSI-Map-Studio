@@ -133,14 +133,11 @@ public static class ProtonBusMapPackageWriter
             }
 
             if (
-                !string.Equals(
-                    Path.GetExtension(
-                        texture.SourcePath),
-                    ".png",
-                    StringComparison.OrdinalIgnoreCase))
+                !IsPngSource(
+                    texture.SourcePath))
             {
                 throw new ArgumentException(
-                    "Proton Bus texture sources must already be PNG until the texture transcoder is enabled.",
+                    "Proton Bus texture sources must already be valid PNG files until the texture transcoder is enabled.",
                     nameof(request));
             }
 
@@ -208,6 +205,54 @@ public static class ProtonBusMapPackageWriter
 
         yield return
             layout.StreetLightsDirectoryPath;
+    }
+
+    private static bool IsPngSource(
+        string path)
+    {
+        if (
+            !string.Equals(
+                Path.GetExtension(
+                    path),
+                ".png",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        Span<byte> signature =
+            stackalloc byte[8];
+
+        using var stream =
+            new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+
+        if (
+            stream.Read(
+                signature) !=
+            signature.Length)
+        {
+            return false;
+        }
+
+        ReadOnlySpan<byte> expected =
+        [
+            137,
+            80,
+            78,
+            71,
+            13,
+            10,
+            26,
+            10
+        ];
+
+        return signature
+            .SequenceEqual(
+                expected);
     }
 
     private static string
