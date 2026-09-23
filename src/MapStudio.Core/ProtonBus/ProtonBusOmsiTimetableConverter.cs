@@ -438,8 +438,8 @@ public static class ProtonBusOmsiTimetableConverter
                     character >
                         127 ||
                     character is
-                        '\\r' or
-                        '\\n' or
+                        '\r' or
+                        '\n' or
                         '='
                         ? ' '
                         : character)
