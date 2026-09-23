@@ -454,6 +454,15 @@
                 </MenuBarItem>
                 <MenuBarItem Title="IA">
                     <MenuFlyoutItem
+                        x:Name="AiConnectMenuItem"
+                        Text="Conectar / testar IA no mapa..."
+                        Click="OnConnectAiToMapClick" />
+                    <MenuFlyoutItem
+                        x:Name="AiActiveProfileMenuItem"
+                        Text="Nenhum perfil ativo"
+                        IsEnabled="False" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem
                         Text="Configurar provedores..."
                         Click="OnAiProvidersClick" />
                 </MenuBarItem>
@@ -564,6 +573,11 @@
                                     Content="Abrir OMSI"
                                     ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
                                     Click="OnOpenOmsiClick" />
+                            <Button x:Name="AiStatusButton"
+                                    Style="{StaticResource EditorToolbarButtonStyle}"
+                                    Content="IA: conectar"
+                                    ToolTipService.ToolTip="Conectar ou testar o provedor de IA usado pelas ferramentas do mapa"
+                                    Click="OnConnectAiToMapClick" />
                             <Border Padding="4,2"
                                     Background="{ThemeResource MapStudioSurfaceAltBrush}"
                                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
