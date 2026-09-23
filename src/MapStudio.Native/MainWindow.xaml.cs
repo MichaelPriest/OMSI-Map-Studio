@@ -7527,7 +7527,7 @@ public sealed partial class MainWindow : Window
                     activeButton,
                     ToolValidationButton)
                     ? "Validação"
-                    : "Seleção";
+                    : "Seleção fácil";
         }
         else if (
             ReferenceEquals(
@@ -7711,7 +7711,7 @@ public sealed partial class MainWindow : Window
             0);
 
         StatusText.Text =
-            "Ferramenta Seleção ativa: clique no cenário para selecionar e editar.";
+            "Seleção fácil ativa: clique no item; clique novamente no mesmo ponto para alternar itens sobrepostos.";
     }
 
     private async void OnToolObjectsClick(
