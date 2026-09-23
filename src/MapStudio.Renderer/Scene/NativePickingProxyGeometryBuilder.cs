@@ -110,10 +110,10 @@ public sealed class NativePickingProxyGeometryBuilder
             terrainOffset;
 
         const float halfSize =
-            3.5f;
+            5.0f;
 
         const float proxyHeight =
-            7.0f;
+            8.0f;
 
         var min =
             new Vector3(
@@ -238,7 +238,7 @@ public sealed class NativePickingProxyGeometryBuilder
         }
 
         const float halfWidth =
-            3.0f;
+            4.5f;
 
         var px =
             (float)(
