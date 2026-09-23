@@ -4244,6 +4244,9 @@ public sealed class NativeViewportRuntime : IDisposable
         _selectedPickingId =
             PickingId.None;
 
+        _selectedPickingIds
+            .Clear();
+
         PendingTransformEdit =
             null;
 
@@ -4781,6 +4784,9 @@ public sealed class NativeViewportRuntime : IDisposable
             _selectedPickingId =
                 PickingId.None;
 
+            _selectedPickingIds
+                .Clear();
+
             MapRenderer.SetSelection(
                 PickingId.None);
 
@@ -4878,6 +4884,9 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             _selectedPickingId =
                 PickingId.None;
+
+            _selectedPickingIds
+                .Clear();
 
             MapRenderer.SetSelection(
                 PickingId.None);
@@ -6660,6 +6669,18 @@ public sealed class NativeViewportRuntime : IDisposable
                             edit.ObjectId)
                 ?.PickingId ??
             PickingId.None;
+
+        _selectedPickingIds
+            .Clear();
+
+        if (
+            !_selectedPickingId
+                .IsNone)
+        {
+            _selectedPickingIds
+                .Add(
+                    _selectedPickingId);
+        }
     }
 
     private void SelectSplineEdit(
@@ -6687,6 +6708,18 @@ public sealed class NativeViewportRuntime : IDisposable
                             edit.SplineId)
                 ?.PickingId ??
             PickingId.None;
+
+        _selectedPickingIds
+            .Clear();
+
+        if (
+            !_selectedPickingId
+                .IsNone)
+        {
+            _selectedPickingIds
+                .Add(
+                    _selectedPickingId);
+        }
     }
 
     private void RefreshSelectedScene()
