@@ -476,6 +476,22 @@ public sealed partial class MainWindow : Window
 
     private bool _mapExplorerCollapsed;
 
+    private bool _draggingTrafficPathsWindow;
+    private uint _trafficPathsDragPointerId;
+    private double _trafficPathsDragStartX;
+    private double _trafficPathsDragStartY;
+    private double _trafficPathsDragOriginX;
+    private double _trafficPathsDragOriginY;
+    private bool _resizingTrafficPathsWindow;
+    private bool _trafficPathsWindowMinimized;
+    private double _trafficPathsRestoreHeight =
+        360;
+    private uint _trafficPathsResizePointerId;
+    private double _trafficPathsResizeStartX;
+    private double _trafficPathsResizeStartY;
+    private double _trafficPathsResizeOriginWidth;
+    private double _trafficPathsResizeOriginHeight;
+
     private bool _realMapAreaInitialized;
     private bool _realMapAreaMessageHooked;
     private bool _draggingRealMapAreaWindow;
@@ -12688,6 +12704,9 @@ public sealed partial class MainWindow : Window
         TrafficPathSelectedOnlyCheckBox.IsChecked =
             selectedOnly;
 
+        FloatingPathsSelectedOnlyCheckBox.IsChecked =
+            selectedOnly;
+
         Viewport
             .SetTrafficPathSelectedOnly(
                 selectedOnly);
@@ -12742,6 +12761,50 @@ public sealed partial class MainWindow : Window
         ApplyTrafficPathDisplayOptions(
             options,
             fromTransport: true);
+    }
+
+    private void OnFloatingTrafficPathFilterChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_syncingTrafficPathControls)
+        {
+            return;
+        }
+
+        var options =
+            new NativeTrafficPathDisplayOptions(
+                Vehicles:
+                    FloatingPathsVehiclesCheckBox.IsChecked ==
+                    true,
+                Pedestrians:
+                    FloatingPathsPedestriansCheckBox.IsChecked ==
+                    true,
+                Rails:
+                    FloatingPathsRailsCheckBox.IsChecked ==
+                    true,
+                Air:
+                    FloatingPathsAirCheckBox.IsChecked ==
+                    true,
+                ShowWidthEdges:
+                    FloatingPathsWidthCheckBox.IsChecked ==
+                    true,
+                ShowDirectionArrows:
+                    FloatingPathsArrowsCheckBox.IsChecked ==
+                    true,
+                HighlightSignalControlled:
+                    FloatingPathsSignalsCheckBox.IsChecked ==
+                    true,
+                ShowNodes:
+                    FloatingPathsNodesCheckBox.IsChecked ==
+                    true,
+                ShowTypeLabels:
+                    FloatingPathsLabelsCheckBox.IsChecked ==
+                    true);
+
+        ApplyTrafficPathDisplayOptions(
+            options,
+            fromTransport: false);
     }
 
     private void OnTrafficPathModeChanged(
@@ -12859,6 +12922,33 @@ public sealed partial class MainWindow : Window
                     options.HighlightSignalControlled;
             }
 
+            FloatingPathsVehiclesCheckBox.IsChecked =
+                options.Vehicles;
+
+            FloatingPathsPedestriansCheckBox.IsChecked =
+                options.Pedestrians;
+
+            FloatingPathsRailsCheckBox.IsChecked =
+                options.Rails;
+
+            FloatingPathsAirCheckBox.IsChecked =
+                options.Air;
+
+            FloatingPathsWidthCheckBox.IsChecked =
+                options.ShowWidthEdges;
+
+            FloatingPathsArrowsCheckBox.IsChecked =
+                options.ShowDirectionArrows;
+
+            FloatingPathsNodesCheckBox.IsChecked =
+                options.ShowNodes;
+
+            FloatingPathsLabelsCheckBox.IsChecked =
+                options.ShowTypeLabels;
+
+            FloatingPathsSignalsCheckBox.IsChecked =
+                options.HighlightSignalControlled;
+
             if (
                 options.Vehicles &&
                 !options.Pedestrians &&
@@ -12946,6 +13036,11 @@ public sealed partial class MainWindow : Window
             TransportRouteStatusText.Text =
                 $"Visualização: {summary}";
         }
+
+        FloatingPathsStatusText.Text =
+            _transportPathsVisible
+                ? $"Visíveis · {summary}"
+                : $"Ocultos · {summary}";
     }
 
     private void RefreshTransportPathChoices()
@@ -16828,6 +16923,8 @@ public sealed partial class MainWindow : Window
             _transportPathsVisible
                 ? "Ocultar Paths"
                 : "Mostrar Paths";
+
+        UpdateTrafficPathStatusText();
 
         StatusText.Text =
             _transportPathsVisible
@@ -20991,6 +21088,374 @@ public sealed partial class MainWindow : Window
         }
 
         _resizingTileNavigatorWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnToggleTrafficPathsWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var show =
+            TrafficPathsWindow.Visibility !=
+                Visibility.Visible;
+
+        TrafficPathsWindow.Visibility =
+            show
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (
+            show &&
+            _trafficPathsWindowMinimized)
+        {
+            SetTrafficPathsWindowMinimized(
+                false);
+        }
+
+        if (show)
+        {
+            SynchronizeTrafficPathControls(
+                new NativeTrafficPathDisplayOptions(
+                    Vehicles:
+                        TransportPathsVehiclesCheckBox.IsChecked ==
+                        true,
+                    Pedestrians:
+                        TransportPathsPedestriansCheckBox.IsChecked ==
+                        true,
+                    Rails:
+                        TransportPathsRailsCheckBox.IsChecked ==
+                        true,
+                    Air:
+                        TransportPathsAirCheckBox.IsChecked ==
+                        true,
+                    ShowWidthEdges:
+                        TransportPathsWidthCheckBox.IsChecked ==
+                        true,
+                    ShowDirectionArrows:
+                        TransportPathsArrowsCheckBox.IsChecked ==
+                        true,
+                    HighlightSignalControlled:
+                        TransportPathsSignalsCheckBox.IsChecked ==
+                        true,
+                    ShowNodes:
+                        TransportPathsNodesCheckBox.IsChecked ==
+                        true,
+                    ShowTypeLabels:
+                        TransportPathsLabelsCheckBox.IsChecked ==
+                        true),
+                fromTransport: true);
+
+            FloatingPathsSelectedOnlyCheckBox.IsChecked =
+                TransportPathsSelectedOnlyCheckBox
+                    .IsChecked;
+
+            UpdateTrafficPathStatusText();
+        }
+
+        StatusText.Text =
+            show
+                ? "Janela Paths OMSI aberta."
+                : "Janela Paths OMSI fechada.";
+    }
+
+    private void OnCloseTrafficPathsWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        TrafficPathsWindow.Visibility =
+            Visibility.Collapsed;
+
+        _draggingTrafficPathsWindow =
+            false;
+
+        _resizingTrafficPathsWindow =
+            false;
+    }
+
+    private void OnToggleTrafficPathsMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetTrafficPathsWindowMinimized(
+            !_trafficPathsWindowMinimized);
+
+    private void SetTrafficPathsWindowMinimized(
+        bool minimized)
+    {
+        if (
+            _trafficPathsWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _trafficPathsRestoreHeight =
+                Math.Max(
+                    220,
+                    TrafficPathsWindow
+                        .ActualHeight);
+        }
+
+        _trafficPathsWindowMinimized =
+            minimized;
+
+        TrafficPathsBody.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TrafficPathsResizeGrip.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TrafficPathsWindow.Height =
+            minimized
+                ? 58
+                : Math.Max(
+                    220,
+                    _trafficPathsRestoreHeight);
+
+        TrafficPathsMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+    }
+
+    private void OnTrafficPathsWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingTrafficPathsWindow =
+            true;
+
+        _trafficPathsDragPointerId =
+            e.Pointer.PointerId;
+
+        _trafficPathsDragStartX =
+            position.X;
+
+        _trafficPathsDragStartY =
+            position.Y;
+
+        _trafficPathsDragOriginX =
+            TrafficPathsWindowTranslate.X;
+
+        _trafficPathsDragOriginY =
+            TrafficPathsWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTrafficPathsWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingTrafficPathsWindow ||
+            e.Pointer.PointerId !=
+                _trafficPathsDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        var baseLeft =
+            TrafficPathsWindow.Margin.Left;
+
+        var baseTop =
+            TrafficPathsWindow.Margin.Top;
+
+        var maximumX =
+            Math.Max(
+                -baseLeft +
+                    4,
+                WorkspaceGrid.ActualWidth -
+                    baseLeft -
+                    TrafficPathsWindow.ActualWidth -
+                    4);
+
+        var maximumY =
+            Math.Max(
+                -baseTop +
+                    4,
+                WorkspaceGrid.ActualHeight -
+                    baseTop -
+                    TrafficPathsWindow.ActualHeight -
+                    4);
+
+        TrafficPathsWindowTranslate.X =
+            Math.Clamp(
+                _trafficPathsDragOriginX +
+                    position.X -
+                    _trafficPathsDragStartX,
+                -baseLeft +
+                    4,
+                maximumX);
+
+        TrafficPathsWindowTranslate.Y =
+            Math.Clamp(
+                _trafficPathsDragOriginY +
+                    position.Y -
+                    _trafficPathsDragStartY,
+                -baseTop +
+                    4,
+                maximumY);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTrafficPathsWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _trafficPathsDragPointerId)
+        {
+            return;
+        }
+
+        _draggingTrafficPathsWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTrafficPathsResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingTrafficPathsWindow =
+            true;
+
+        _trafficPathsResizePointerId =
+            e.Pointer.PointerId;
+
+        _trafficPathsResizeStartX =
+            position.X;
+
+        _trafficPathsResizeStartY =
+            position.Y;
+
+        _trafficPathsResizeOriginWidth =
+            TrafficPathsWindow.ActualWidth;
+
+        _trafficPathsResizeOriginHeight =
+            TrafficPathsWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTrafficPathsResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingTrafficPathsWindow ||
+            e.Pointer.PointerId !=
+                _trafficPathsResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        TrafficPathsWindow.Width =
+            Math.Clamp(
+                _trafficPathsResizeOriginWidth +
+                    position.X -
+                    _trafficPathsResizeStartX,
+                320,
+                Math.Max(
+                    320,
+                    WorkspaceGrid.ActualWidth -
+                        32));
+
+        TrafficPathsWindow.Height =
+            Math.Clamp(
+                _trafficPathsResizeOriginHeight +
+                    position.Y -
+                    _trafficPathsResizeStartY,
+                220,
+                Math.Max(
+                    220,
+                    WorkspaceGrid.ActualHeight -
+                        32));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTrafficPathsResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _trafficPathsResizePointerId)
+        {
+            return;
+        }
+
+        _resizingTrafficPathsWindow =
             false;
 
         if (
