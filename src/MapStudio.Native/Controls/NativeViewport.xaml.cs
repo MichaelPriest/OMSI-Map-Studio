@@ -2347,8 +2347,13 @@ public sealed partial class NativeViewport : UserControl
             e.GetCurrentPoint(
                 InputSurface);
 
-        PointerText.Text =
-            $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
+        if (
+            !_isPanning &&
+            !_isOrbiting)
+        {
+            PointerText.Text =
+                $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
+        }
 
         if (
             _selectionBoxPending &&
@@ -2680,12 +2685,6 @@ public sealed partial class NativeViewport : UserControl
                     pixelX,
                     pixelY);
             }
-
-            PointerStatusChanged?.Invoke(
-                this,
-                _isOrbiting
-                    ? $"Órbita · zoom {_runtime.Navigation.Zoom:F2}×"
-                    : $"Pan · mapa acompanhando o cursor · zoom {_runtime.Navigation.Zoom:F2}×");
 
             e.Handled = true;
             return;
@@ -3136,6 +3135,11 @@ public sealed partial class NativeViewport : UserControl
         {
             _runtime
                 ?.EndPointerPan();
+        }
+        else if (_isOrbiting)
+        {
+            _runtime
+                ?.EndOrbit();
         }
 
         _leftPressed = false;

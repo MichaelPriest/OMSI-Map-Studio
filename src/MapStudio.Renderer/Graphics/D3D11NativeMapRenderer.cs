@@ -1482,7 +1482,8 @@ public sealed class D3D11NativeMapRenderer :
     }
 
     public void Render(
-        D3D11SwapChainSurface surface)
+        D3D11SwapChainSurface surface,
+        bool refreshPicking = true)
     {
         ThrowIfDisposed();
 
@@ -1772,6 +1773,19 @@ public sealed class D3D11NativeMapRenderer :
                         0);
                 }
             });
+
+        if (refreshPicking)
+        {
+            RenderPicking(
+                surface.Width,
+                surface.Height);
+        }
+    }
+
+    public void RefreshPicking(
+        D3D11SwapChainSurface surface)
+    {
+        ThrowIfDisposed();
 
         RenderPicking(
             surface.Width,

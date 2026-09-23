@@ -71,9 +71,9 @@ public sealed class NativeViewportRuntime : IDisposable
     private Vector3 _directMovePointerStart;
     private float _directMovePlaneY;
     private bool _panGrabActive;
-    private Vector3 _panGrabStartWorld;
+    private uint _panGrabStartPixelX;
+    private uint _panGrabStartPixelY;
     private NativeViewportNavigationState? _panGrabNavigationStart;
-    private float _panGrabPlaneY;
     private bool _assetPreviewActive;
     private bool _sceneryPlacementActive;
     private string? _placementSceneryPath;
@@ -4893,21 +4893,11 @@ public sealed class NativeViewportRuntime : IDisposable
 
         CancelGizmoDrag();
 
-        _panGrabPlaneY =
-            Navigation.Target.Y;
+        _panGrabStartPixelX =
+            pixelX;
 
-        if (
-            !TryGetPointerPlanePoint(
-                pixelX,
-                pixelY,
-                _panGrabPlaneY,
-                out _panGrabStartWorld))
-        {
-            _panGrabActive =
-                false;
-
-            return false;
-        }
+        _panGrabStartPixelY =
+            pixelY;
 
         _panGrabNavigationStart =
             Navigation.CaptureState();
@@ -4928,36 +4918,41 @@ public sealed class NativeViewportRuntime : IDisposable
             !_panGrabActive ||
             _panGrabNavigationStart is not
                 { } start ||
-            !TryGetPointerPlanePoint(
-                pixelX,
-                pixelY,
-                _panGrabPlaneY,
-                out var currentWorld))
+            Surface is null)
         {
             return;
         }
 
-        var worldDelta =
-            NativeGizmoManipulationMath
-                .GetGrabPanTargetDelta(
-                    _panGrabStartWorld,
-                    currentWorld);
-
         Navigation.RestoreState(
-            start with
-            {
-                Target =
-                    start.Target +
-                    worldDelta
-            });
+            start);
 
-        UpdateCameraTransform();
-        RenderInitialFrame();
+        Navigation.PanPixels(
+            (long)pixelX -
+                (long)_panGrabStartPixelX,
+            (long)pixelY -
+                (long)_panGrabStartPixelY,
+            Surface.Width,
+            Surface.Height);
+
+        UpdateCameraTransform(
+            updateGizmoGeometry:
+                false);
+
+        RenderInitialFrame(
+            refreshPicking:
+                false);
     }
 
-    public void EndPointerPan() =>
+    public void EndPointerPan()
+    {
         _panGrabActive =
             false;
+
+        RefreshPicking();
+    }
+
+    public void EndOrbit() =>
+        RefreshPicking();
 
     public void Pan(
         double deltaPixelX,
@@ -4994,8 +4989,12 @@ public sealed class NativeViewportRuntime : IDisposable
             deltaPixelX,
             deltaPixelY);
 
-        UpdateCameraTransform();
-        RenderInitialFrame();
+        UpdateCameraTransform(
+            updateGizmoGeometry:
+                false);
+        RenderInitialFrame(
+            refreshPicking:
+                false);
     }
 
     public bool FitScene()
@@ -6704,7 +6703,8 @@ public sealed class NativeViewportRuntime : IDisposable
                 .Allows(kind);
     }
 
-    public void RenderInitialFrame()
+    public void RenderInitialFrame(
+        bool refreshPicking = true)
     {
         ThrowIfDisposed();
 
@@ -6724,6 +6724,18 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         MapRenderer.Render(
+            Surface,
+            refreshPicking);
+    }
+
+    private void RefreshPicking()
+    {
+        if (Surface is null)
+        {
+            return;
+        }
+
+        MapRenderer.RefreshPicking(
             Surface);
     }
 
@@ -8484,7 +8496,8 @@ public sealed class NativeViewportRuntime : IDisposable
             resolved);
     }
 
-    private void UpdateCameraTransform()
+    private void UpdateCameraTransform(
+        bool updateGizmoGeometry = true)
     {
         if (Surface is null)
         {
@@ -8499,7 +8512,10 @@ public sealed class NativeViewportRuntime : IDisposable
             Navigation
                 .CameraPosition);
 
-        UpdateGizmoGeometry();
+        if (updateGizmoGeometry)
+        {
+            UpdateGizmoGeometry();
+        }
     }
 
     private void ThrowIfDisposed()

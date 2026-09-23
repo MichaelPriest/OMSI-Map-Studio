@@ -62,6 +62,85 @@ public sealed class NativeViewportNavigationTests
     }
 
     [Fact]
+    public void AbsolutePanFromCapturedStateDoesNotAccumulatePointerEvents()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var start =
+            navigation.CaptureState();
+
+        navigation.RestoreState(
+            start);
+
+        navigation.PanPixels(
+            140,
+            -65,
+            1280,
+            720);
+
+        var first =
+            navigation.Target;
+
+        navigation.RestoreState(
+            start);
+
+        navigation.PanPixels(
+            140,
+            -65,
+            1280,
+            720);
+
+        Assert.Equal(
+            first,
+            navigation.Target);
+    }
+
+    [Fact]
+    public void PanKeepsGrabDirectionNatural()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        var before =
+            navigation.Target;
+
+        var forward =
+            Vector3.Normalize(
+                navigation.Target -
+                navigation.CameraPosition);
+
+        var horizontalForward =
+            Vector3.Normalize(
+                new Vector3(
+                    forward.X,
+                    0,
+                    forward.Z));
+
+        var right =
+            Vector3.Normalize(
+                Vector3.Cross(
+                    Vector3.UnitY,
+                    horizontalForward));
+
+        navigation.PanPixels(
+            120,
+            0,
+            1280,
+            720);
+
+        var delta =
+            navigation.Target -
+            before;
+
+        Assert.True(
+            Vector3.Dot(
+                delta,
+                right) <
+            0);
+    }
+
+    [Fact]
     public void OrbitChangesYawAndPitch()
     {
         var navigation =

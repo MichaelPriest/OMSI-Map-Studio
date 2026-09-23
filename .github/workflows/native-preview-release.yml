@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.13: direct pointer movement + multi-selection + floating tools + real-map area picker.
+# Test 10.14: direct pointer movement + multi-selection + floating tools + real-map area picker.
 
 on:
   push:
@@ -33,8 +33,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.13-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.13-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.14-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.14-native.md"
   workflow_dispatch:
 
 permissions:
@@ -45,8 +45,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.13-native
-  TAG: v0.2.0-alpha.5-test.10.13-native
+  VERSION: 0.2.0-alpha.5-test.10.14-native
+  TAG: v0.2.0-alpha.5-test.10.14-native
 
 jobs:
   build-native-preview:
@@ -437,7 +437,7 @@ jobs:
 
           Write-Host "Verified selection ghost, AI selector, map providers, Project cleanup and spline Auto connect."
 
-      - name: Verify test 10.13 UX and real-map area tools
+      - name: Verify test 10.14 UX and real-map area tools
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -455,7 +455,7 @@ jobs:
             'x:Name="MapExplorerCollapseButton"'
           )) {
             if (-not $xaml.Contains($required)) {
-              throw "Test 10.13 UI wiring is missing: $required"
+              throw "Test 10.14 UI wiring is missing: $required"
             }
           }
 
@@ -467,7 +467,7 @@ jobs:
             'GetSelectedSelectionInfos'
           )) {
             if (-not $runtime.Contains($required)) {
-              throw "Test 10.13 viewport runtime feature is missing: $required"
+              throw "Test 10.14 viewport runtime feature is missing: $required"
             }
           }
 
@@ -495,7 +495,7 @@ jobs:
             'DeleteCurrentSelectionAsync'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.13 MainWindow workflow is missing: $required"
+              throw "Test 10.14 MainWindow workflow is missing: $required"
             }
           }
 
@@ -508,9 +508,9 @@ jobs:
             throw "Google area selector integration is missing."
           }
 
-          Write-Host "Verified Test 10.13 natural movement, multi-selection, radial icons, floating windows and real-map area creation."
+          Write-Host "Verified Test 10.14 natural movement, multi-selection, radial icons, floating windows and real-map area creation."
 
-      - name: Verify test 10.13 tile-grid persistence and terrain continuity
+      - name: Verify test 10.14 tile-grid persistence and terrain continuity
         shell: pwsh
         run: |
           $grid = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs -Raw
@@ -554,7 +554,55 @@ jobs:
             throw "Persisted 3x3 tile round-trip regression test is missing."
           }
 
-          Write-Host "Verified Test 10.13 canonical 300 m grid, diagonal terrain corner continuity and persisted 3x3 round-trip coverage."
+          Write-Host "Verified Test 10.14 canonical 300 m grid, diagonal terrain corner continuity and persisted 3x3 round-trip coverage."
+
+      - name: Verify test 10.14 smooth navigation path
+        shell: pwsh
+        run: |
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs -Raw
+
+          foreach ($required in @(
+            '_panGrabStartPixelX',
+            '_panGrabStartPixelY',
+            'Navigation.RestoreState',
+            'Navigation.PanPixels',
+            'refreshPicking:',
+            'updateGizmoGeometry:'
+          )) {
+            if (-not $runtime.Contains($required)) {
+              throw "Smooth navigation runtime feature is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('RefreshPicking()')) {
+            throw "Navigation must refresh picking after the gesture finishes."
+          }
+
+          if (-not $renderer.Contains('bool refreshPicking = true')) {
+            throw "Renderer must allow visible-only navigation frames."
+          }
+
+          if (-not $renderer.Contains('public void RefreshPicking')) {
+            throw "Renderer picking refresh entry point is missing."
+          }
+
+          if (-not $viewport.Contains('_isPanning &&') -or
+              -not $viewport.Contains('_isOrbiting)')) {
+            throw "Pointer coordinate text suppression during pan/orbit is missing."
+          }
+
+          if (-not $tests.Contains('AbsolutePanFromCapturedStateDoesNotAccumulatePointerEvents')) {
+            throw "Absolute pan stability regression test is missing."
+          }
+
+          if (-not $tests.Contains('PanKeepsGrabDirectionNatural')) {
+            throw "Natural grab direction regression test is missing."
+          }
+
+          Write-Host "Verified Test 10.14 stable absolute pan, navigation-only rendering and deferred picking refresh."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -710,11 +758,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.13-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.14-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.13-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.14-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
