@@ -2243,7 +2243,7 @@ public sealed partial class NativeViewport : UserControl
                 1)
             {
                 selectionMessage +=
-                    $" · {_runtime.SelectedItemCount} itens selecionados · Ctrl/Shift+clique adiciona/remove";
+                    $" · {_runtime.SelectedItemCount} itens selecionados · Ctrl+clique adiciona/remove · Shift+clique também";
             }
 
             SelectionStatusChanged?.Invoke(
