@@ -609,19 +609,19 @@ public sealed partial class MainWindow : Window
                     case NativeSelectionContextAction.Replace:
                         OnRoadReplaceTypeClick(
                             this,
-                            new RoutedEventArgs());
+                            null!);
                         break;
 
                     case NativeSelectionContextAction.Mirror:
                         OnRoadMirrorClick(
                             this,
-                            new RoutedEventArgs());
+                            null!);
                         break;
 
                     case NativeSelectionContextAction.Flow:
                         OnRoadReverseFlowClick(
                             this,
-                            new RoutedEventArgs());
+                            null!);
                         break;
 
                     case NativeSelectionContextAction.Inspector:
