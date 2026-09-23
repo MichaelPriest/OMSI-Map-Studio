@@ -589,6 +589,11 @@
                                     Content="Abrir OMSI"
                                     ToolTipService.ToolTip="Usar opcionalmente mapas e itens da instalação do OMSI"
                                     Click="OnOpenOmsiClick" />
+                            <ComboBox x:Name="AiProfileSelectorBox"
+                                      Width="170"
+                                      PlaceholderText="Perfil de IA"
+                                      ToolTipService.ToolTip="Seleciona imediatamente o perfil de IA ativo para as ferramentas do mapa"
+                                      SelectionChanged="OnAiProfileSelectorChanged" />
                             <Button x:Name="AiStatusButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
                                     Content="IA: conectar"
