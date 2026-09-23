@@ -9,6 +9,10 @@ on:
       - ".github/workflows/native-preview-release.yml"
       - "installer/MapStudio.NativePreview.iss"
       - "src/MapStudio.Native/App.xaml"
+      - "src/MapStudio.Native/MainWindow.xaml"
+      - "src/MapStudio.Native/MainWindow.xaml.cs"
+      - "docs/pt-BR/USER_MANUAL.md"
+      - "docs/en/USER_MANUAL.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.7-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.7-native.md"
   workflow_dispatch:
@@ -179,6 +183,77 @@ jobs:
 
           Write-Host "Verified resizable Project panel, library scroll and HUMAN path visibility."
 
+      - name: Verify city-builder road elevation and bundled manuals
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $math = Get-Content src/MapStudio.Renderer/Viewport/NativeSplinePlacementMath.cs -Raw
+
+          foreach ($control in @(
+            'Content="↓ Baixar"',
+            'Content="Nivelar"',
+            'Content="↑ Elevar"',
+            'x:Name="RoadElevationStepBox"',
+            'x:Name="RoadMaxGradientBox"'
+          )) {
+            if (-not $xaml.Contains($control)) {
+              throw "Road elevation UI is missing: $control"
+            }
+          }
+
+          if (-not $math.Contains('ResolveRoadEndpointHeight')) {
+            throw "Real road endpoint elevation resolver is missing."
+          }
+
+          foreach ($mode in @(
+            'NativeRoadElevationMode.Elevate',
+            'NativeRoadElevationMode.Level',
+            'NativeRoadElevationMode.Lower',
+            'NativeRoadElevationMode.FollowTerrain'
+          )) {
+            if (-not ($main.Contains($mode) -or $runtime.Contains($mode) -or $math.Contains($mode))) {
+              throw "Road elevation mode is missing: $mode"
+            }
+          }
+
+          foreach ($action in @(
+            'NativeSelectionContextAction.Elevate',
+            'NativeSelectionContextAction.Level',
+            'NativeSelectionContextAction.Lower',
+            'NativeSelectionContextAction.Replace',
+            'NativeSelectionContextAction.Mirror',
+            'NativeSelectionContextAction.Flow'
+          )) {
+            if (-not $viewport.Contains($action)) {
+              throw "Spline radial wheel action is missing: $action"
+            }
+          }
+
+          if (-not $xaml.Contains('Text="Manual do Usuário (Português)"')) {
+            throw "Help menu does not expose the Portuguese user manual."
+          }
+
+          if (-not $xaml.Contains('Text="User Manual (English)"')) {
+            throw "Help menu does not expose the English user manual."
+          }
+
+          if (-not $main.Contains('OpenUserManual')) {
+            throw "Bundled manual launcher is missing."
+          }
+
+          if (-not (Test-Path docs/pt-BR/USER_MANUAL.md)) {
+            throw "Portuguese user manual is missing."
+          }
+
+          if (-not (Test-Path docs/en/USER_MANUAL.md)) {
+            throw "English user manual is missing."
+          }
+
+          Write-Host "Verified road elevation tools, expanded radial wheel and bundled user manuals."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -212,6 +287,20 @@ jobs:
           }
 
           Write-Host "Verified MapStudio.Native.pri is present in publish output."
+
+          New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64/Docs | Out-Null
+          Copy-Item docs/pt-BR/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-pt-BR.md -Force
+          Copy-Item docs/en/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-en.md -Force
+
+          if (-not (Test-Path "artifacts/publish/win-x64/Docs/Manual-pt-BR.md")) {
+            throw "Bundled Portuguese manual was not copied."
+          }
+
+          if (-not (Test-Path "artifacts/publish/win-x64/Docs/Manual-en.md")) {
+            throw "Bundled English manual was not copied."
+          }
+
+          Write-Host "Bundled user manuals copied to publish output."
 
       - name: Create portable ZIP
         shell: pwsh
