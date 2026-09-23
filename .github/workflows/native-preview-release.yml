@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.9: direct viewport rotation + tool icons + F11 pointer-label fix.
+# Test 10.10: selection ghost + AI profile selector + OSM/Google + spline auto-connect repair.
 
 on:
   push:
@@ -12,6 +12,11 @@ on:
       - "src/MapStudio.Native/MainWindow.xaml"
       - "src/MapStudio.Native/MainWindow.xaml.cs"
       - "src/MapStudio.Native/Controls/NativeViewport.xaml.cs"
+      - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
+      - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
+      - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointSnapFinder.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
@@ -19,8 +24,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.9-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.9-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.10-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.10-native.md"
   workflow_dispatch:
 
 permissions:
@@ -31,8 +36,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.9-native
-  TAG: v0.2.0-alpha.5-test.10.9-native
+  VERSION: 0.2.0-alpha.5-test.10.10-native
+  TAG: v0.2.0-alpha.5-test.10.10-native
 
 jobs:
   build-native-preview:
@@ -363,6 +368,65 @@ jobs:
 
           Write-Host "Verified direct rotation, optional Inspector rule, tool icons and F11 pointer-label cleanup."
 
+      - name: Verify test 10.10 editor workflows
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $planner = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="AiProfileSelectorBox"',
+            'Click="OnRoadAutoConnectClick"',
+            'x:Name="MapReferenceAttributionBorder"',
+            'Click="OnMapReferenceClick"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.10 UI wiring is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('OnAiProfileSelectorChanged')) {
+            throw "AI profile selector handler is missing."
+          }
+
+          if (-not $main.Contains('OnRoadAutoConnectClick')) {
+            throw "Road Auto connect handler is missing."
+          }
+
+          if (-not $runtime.Contains('TryGetAutoConnectLinksForSelectedSpline')) {
+            throw "Selected spline auto-connect detection is missing."
+          }
+
+          if (-not $renderer.Contains('_selectionGhostBuffer') -or
+              -not $renderer.Contains('RebuildSelectionGhost')) {
+            throw "Filled selection ghost preview is missing."
+          }
+
+          if (-not $session.Contains('LoadOpenStreetMapReferenceAsync') -or
+              -not $session.Contains('tile.openstreetmap.org')) {
+            throw "OpenStreetMap reference provider is missing."
+          }
+
+          if (-not $session.Contains('TimeSpan.FromDays') -or
+              -not $session.Contains('OMSI-Map-Studio/0.2')) {
+            throw "OpenStreetMap cache/User-Agent safeguards are missing."
+          }
+
+          if (-not $planner.Contains('states.ContainsKey')) {
+            throw "Broken reciprocal spline-link repair support is missing."
+          }
+
+          if (-not $xaml.Contains('x:Name="MapText"') -or
+              -not $xaml.Contains('Visibility="Collapsed"')) {
+            throw "Project map summary must remain visually removed."
+          }
+
+          Write-Host "Verified selection ghost, AI selector, map providers, Project cleanup and spline Auto connect."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -475,11 +539,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.9-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.10-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.9-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.10-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
