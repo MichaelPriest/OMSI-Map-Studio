@@ -67,14 +67,24 @@ The **View** menu provides perspective/top views and visibility controls for ter
 
 Click an object or spline in the viewport.
 
-Native picking uses an ID buffer and includes additional tolerance for narrow or small items.
+Native picking uses an ID buffer with an enlarged click area for narrow objects, small objects and splines.
 
-If selection is difficult:
+When multiple items overlap, **click again at nearly the same point**. The editor cycles through the candidates and reports positions such as `1/3 overlapping` and `2/3 overlapping`.
+
+The **Easy selection** strip can filter selection to:
+
+- All;
+- Objects;
+- Roads / splines;
+- Terrain / tile.
+
+If selection is still difficult:
 
 1. move closer;
 2. use top view for splines;
-3. verify the item type is visible;
-4. click near the visual center.
+3. temporarily filter to **Objects** or **Roads / splines**;
+4. verify visibility;
+5. click the same point again to cycle candidates.
 
 ---
 
@@ -132,12 +142,14 @@ The normal workflow avoids manual coordinate entry.
 
 1. Open **Roads**.
 2. Choose a **SLI** in the Library.
-3. Press at the starting point.
-4. Drag.
-5. Watch the ghost preview.
+3. Click **Build spline**.
+4. Press and hold at the starting point.
+5. Drag while watching the ghost preview.
 6. Release at the endpoint.
 
-The Inspector remains available for advanced editing.
+Releasing the mouse now finalizes the dragged road and submits it for insertion. The Inspector remains available for advanced editing.
+
+If **Build spline** cannot start, the status bar reports the missing prerequisite instead of failing silently.
 
 ---
 
@@ -408,11 +420,24 @@ Recommended workflow:
 
 # 26. AI integration
 
-Native OpenAI integration uses the Responses API.
+Native OpenAI integration uses the Responses API, while the project keeps a provider-profile structure for other supported adapters.
 
-Current AI-assisted functionality includes object/spline classification.
+## Connecting AI to the map
 
-API keys are stored in Windows Credential Manager.
+1. Open a map.
+2. Click **AI: connect** in the top bar or use **AI > Connect / test AI on map...**.
+3. If no active profile exists, provider configuration opens automatically.
+4. Choose a provider/preset, model and API key/token.
+5. mark the profile as **active**;
+6. click **Test connection**;
+7. save;
+8. click the active AI button again to test that profile in the map context.
+
+The status bar confirms which profile will be used by map AI tools.
+
+Current AI-assisted functionality includes object/spline classification, reference analysis and assisted creation features exposed by the relevant tools.
+
+API keys are stored in Windows Credential Manager and are not written into map or asset files.
 
 ---
 
