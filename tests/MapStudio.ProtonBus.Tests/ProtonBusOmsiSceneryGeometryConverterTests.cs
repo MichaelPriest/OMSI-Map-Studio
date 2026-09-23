@@ -200,7 +200,7 @@ public sealed class
     }
 
     [Fact]
-    public void ConverterFlipsTextureVByDefault()
+    public void ConverterPreservesCoreNormalizedTextureVByDefault()
     {
         var mesh =
             ProtonBusOmsiSceneryGeometryConverter
@@ -219,7 +219,7 @@ public sealed class
         Assert.Equal(
             new Vector2(
                 0.25f,
-                0.25f),
+                0.75f),
             mesh.Vertices[0]
                 .TextureCoordinate);
     }
