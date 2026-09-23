@@ -3,6 +3,12 @@ using MapStudio.Renderer.Scene;
 
 namespace MapStudio.Renderer.Viewport;
 
+public sealed record NativeViewportNavigationState(
+    Vector3 Target,
+    float Distance,
+    float Yaw,
+    float Pitch);
+
 public sealed class NativeViewportNavigation
 {
     private const float FieldOfViewRadians =
@@ -226,6 +232,57 @@ public sealed class NativeViewportNavigation
 
         Pitch =
             DefaultPitch;
+    }
+
+    public NativeViewportNavigationState
+        CaptureState() =>
+        new(
+            Target,
+            Distance,
+            Yaw,
+            Pitch);
+
+    public void RestoreState(
+        NativeViewportNavigationState state)
+    {
+        ArgumentNullException.ThrowIfNull(
+            state);
+
+        if (
+            !float.IsFinite(
+                state.Target.X) ||
+            !float.IsFinite(
+                state.Target.Y) ||
+            !float.IsFinite(
+                state.Target.Z) ||
+            !float.IsFinite(
+                state.Distance) ||
+            !float.IsFinite(
+                state.Yaw) ||
+            !float.IsFinite(
+                state.Pitch))
+        {
+            Reset();
+            return;
+        }
+
+        Target =
+            state.Target;
+
+        Distance =
+            Math.Clamp(
+                state.Distance,
+                _minimumDistance,
+                _maximumDistance);
+
+        Yaw =
+            state.Yaw;
+
+        Pitch =
+            Math.Clamp(
+                state.Pitch,
+                0.18f,
+                1.553343f);
     }
 
     public void SetTopView()

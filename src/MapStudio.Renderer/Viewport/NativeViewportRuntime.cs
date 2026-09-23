@@ -3383,6 +3383,26 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
+        var previousMapDirectory =
+            _mapDescriptor
+                ?.DirectoryPath;
+
+        var preserveNavigation =
+            Scene is not null &&
+            !string.IsNullOrWhiteSpace(
+                previousMapDirectory) &&
+            string.Equals(
+                previousMapDirectory,
+                map.DirectoryPath,
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+        var previousNavigation =
+            preserveNavigation
+                ? Navigation
+                    .CaptureState()
+                : null;
+
         _assetPreviewActive =
             false;
 
@@ -3446,6 +3466,12 @@ public sealed class NativeViewportRuntime : IDisposable
 
         Navigation.FitToScene(
             Scene);
+
+        if (previousNavigation is not null)
+        {
+            Navigation.RestoreState(
+                previousNavigation);
+        }
 
         UpdateCameraTransform();
 
