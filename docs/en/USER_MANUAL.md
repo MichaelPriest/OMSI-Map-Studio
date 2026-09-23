@@ -409,18 +409,20 @@ Use **Map > Create real map by area...** to build a map without manually typing 
    - **Create terrain / reference only**;
    - **Import roads as guides** — previews the graph in the viewport without writing splines;
    - **Generate roads automatically after preview** — classifies roads, prepares splines/junctions and requires confirmation after preview before writing.
-8. Optionally enable **Google Elevation** and/or **Visual terrain reference**.
+8. Optionally enable **Apply elevation automatically**, choose **Open-Meteo / Copernicus GLO-90** or **Google Elevation**, and/or enable **Visual terrain reference**.
 9. Click **Create area**.
 
 The window can be moved, resized and minimized inside the editor.
 
 **OpenStreetMap:** requires no key and is used for interactive browsing, place search and vector data. Map Studio does not bulk-download/offline-cache the public tile service. Search requests are rate-limited and identify the application.
 
-**Google Maps:** uses the API key stored by the user in Windows Credential Manager. The interactive selector requires Maps JavaScript API access. Google Elevation can incur charges and is disabled by default.
+**Open-Meteo / Copernicus GLO-90:** can be selected as the elevation provider. The API key belongs to the user and is stored in Windows Credential Manager. Map Studio uses the user's commercial endpoint and does not embed a project key. Keep attribution to Open-Meteo and the Copernicus programme according to the provider terms.
+
+**Google Maps / Google Elevation:** uses the API key stored by the user in Windows Credential Manager. The interactive selector requires Maps JavaScript API access. Google Elevation can incur charges and is only applied when explicitly selected.
 
 OSM roads are projected into the map georeference and classified by type/width/lanes when those tags are available. Even in automatic mode, Map Studio shows **Preview before write** and only persists splines/junctions after confirmation.
 
-For elevation without Google, use **Map → Import local elevation grid**. CSV/TXT/ASC data is applied to the active tile through the same safe terrain pipeline with backup; local import is per tile and is not presented as a global DEM for the entire area.
+For fully local elevation, use **Map → Import local elevation grid**. CSV/TXT/ASC data is applied to the active tile through the same safe terrain pipeline with backup; local import is per tile and is not presented as a global DEM for the entire area.
 
 ## Tile X/Y
 
