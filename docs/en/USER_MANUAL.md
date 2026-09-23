@@ -1,7 +1,7 @@
 # OMSI Map Studio — User Manual
 
 > Initial user manual for the native WinUI 3 + Direct3D 11 architecture.  
-> Updated for the **0.2.0-alpha.5-test.10.7-native** series.
+> Updated for the **0.2.0-alpha.5-test.10.9-native** series.
 
 OMSI Map Studio is still an Alpha project. Keep external backups of important maps before editing them. Several operations already create automatic backups, but shared assets can affect more than one map.
 
@@ -14,7 +14,13 @@ The main window is divided into:
 - **3D Viewport** — map visualization and editing;
 - **Project / Explorer** — map, tile, object and spline navigation;
 - **Asset Library** — search and selection of objects, splines and other assets;
-- **Inspector** — advanced adjustments for the current selection.
+- **Inspector** — advanced and numeric adjustments for the current selection.
+
+### Editor interaction rule
+
+**No primary editor function depends on the Inspector.** The Inspector is optional and is reserved for fine/numeric adjustment.
+
+Creation, selection, movement, rotation, duplication, splitting, curve editing, elevation, leveling, replacement and other primary operations must be available directly in the viewport, quick bars or radial wheel.
 
 **Creator Focus / F11** increases viewport space. Panels can be minimized and the Project panel can be resized.
 
@@ -102,6 +108,10 @@ Typical actions:
 - Delete;
 - Inspector;
 - Focus.
+
+**Rotate without Inspector:** select the item, activate **Rotate** (**E**) and drag the selected item itself in the viewport. The rotation ring remains available for more precise visual control. Release the mouse to apply. When Snap is enabled, rotation uses the configured increments.
+
+**Move without Inspector:** select the item, activate **Move** (**W**) and manipulate it through the viewport gizmo.
 
 ### Splines / roads
 
