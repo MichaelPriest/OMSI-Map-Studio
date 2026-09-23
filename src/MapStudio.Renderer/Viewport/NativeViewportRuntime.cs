@@ -3592,6 +3592,369 @@ public sealed class NativeViewportRuntime : IDisposable
             .Cast<NativeSelectionInfo>()
             .ToArray();
 
+    public bool TryBuildSelectedGroupDuplicateRequests(
+        Vector3 worldOffset,
+        out IReadOnlyList<NativeSceneryPlacementRequest>
+            objectRequests,
+        out IReadOnlyList<NativeSplinePlacementRequest>
+            splineRequests,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        var objects =
+            new List<NativeSceneryPlacementRequest>();
+
+        var splines =
+            new List<NativeSplinePlacementRequest>();
+
+        objectRequests =
+            objects;
+
+        splineRequests =
+            splines;
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            _selectedPickingIds.Count <
+                2)
+        {
+            status =
+                "Duplicar grupo: selecione pelo menos dois itens.";
+
+            return false;
+        }
+
+        foreach (
+            var pickingId in
+                _selectedPickingIds)
+        {
+            var objectEntity =
+                Scene.Objects
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                            pickingId);
+
+            if (objectEntity is not null)
+            {
+                var source =
+                    objectEntity.Object;
+
+                var targetWorld =
+                    new Vector3(
+                        objectEntity.WorldX,
+                        objectEntity.WorldY,
+                        objectEntity.WorldZ) +
+                    worldOffset;
+
+                var tileX =
+                    (int)Math.Floor(
+                        targetWorld.X /
+                        300.0f);
+
+                var tileY =
+                    (int)Math.Floor(
+                        targetWorld.Z /
+                        300.0f);
+
+                var targetTile =
+                    Scene.Tiles
+                        .FirstOrDefault(
+                            tile =>
+                                tile.Reference.X ==
+                                    tileX &&
+                                tile.Reference.Y ==
+                                    tileY);
+
+                if (targetTile is null)
+                {
+                    status =
+                        $"Duplicar grupo: a cópia do objeto #{source.ObjectId} cairia no tile {tileX},{tileY}, que não está carregado.";
+
+                    objectRequests =
+                        Array.Empty<NativeSceneryPlacementRequest>();
+
+                    splineRequests =
+                        Array.Empty<NativeSplinePlacementRequest>();
+
+                    return false;
+                }
+
+                objects.Add(
+                    new NativeSceneryPlacementRequest(
+                        targetTile.Reference,
+                        source.SceneryObjectPath,
+                        targetWorld.X -
+                            tileX *
+                            300.0,
+                        targetWorld.Z -
+                            tileY *
+                            300.0,
+                        source.Z +
+                            worldOffset.Y,
+                        source.Rotation,
+                        source.Pitch,
+                        source.Bank,
+                        targetWorld,
+                        false));
+
+                continue;
+            }
+
+            var splineEntity =
+                Scene.Splines
+                    .FirstOrDefault(
+                        item =>
+                            item.PickingId ==
+                            pickingId);
+
+            if (splineEntity is null)
+            {
+                continue;
+            }
+
+            var sourceSpline =
+                splineEntity.Spline;
+
+            var startWorld =
+                new Vector3(
+                    splineEntity.WorldX,
+                    splineEntity.WorldY,
+                    splineEntity.WorldZ) +
+                worldOffset;
+
+            var endWorld =
+                NativeSplinePathMath
+                    .GetFrame(
+                        splineEntity,
+                        sourceSpline.Length)
+                    .Center +
+                worldOffset;
+
+            var targetTileX =
+                (int)Math.Floor(
+                    startWorld.X /
+                    300.0f);
+
+            var targetTileY =
+                (int)Math.Floor(
+                    startWorld.Z /
+                    300.0f);
+
+            var splineTile =
+                Scene.Tiles
+                    .FirstOrDefault(
+                        tile =>
+                            tile.Reference.X ==
+                                targetTileX &&
+                            tile.Reference.Y ==
+                                targetTileY);
+
+            if (splineTile is null)
+            {
+                status =
+                    $"Duplicar grupo: a cópia da spline #{sourceSpline.SplineId} cairia no tile {targetTileX},{targetTileY}, que não está carregado.";
+
+                objectRequests =
+                    Array.Empty<NativeSceneryPlacementRequest>();
+
+                splineRequests =
+                    Array.Empty<NativeSplinePlacementRequest>();
+
+                return false;
+            }
+
+            splines.Add(
+                new NativeSplinePlacementRequest(
+                    splineTile.Reference,
+                    sourceSpline.SplinePath,
+                    -1,
+                    startWorld.X -
+                        targetTileX *
+                        300.0,
+                    startWorld.Z -
+                        targetTileY *
+                        300.0,
+                    startWorld.Y,
+                    sourceSpline.Rotation,
+                    sourceSpline.Length,
+                    sourceSpline.Radius,
+                    sourceSpline.GradientStart,
+                    sourceSpline.GradientEnd,
+                    Math.Abs(
+                        sourceSpline.Radius) >
+                        0.001,
+                    startWorld,
+                    endWorld,
+                    -1,
+                    sourceSpline.IsHeightSpline));
+        }
+
+        if (
+            objects.Count +
+            splines.Count !=
+                _selectedPickingIds.Count)
+        {
+            status =
+                "Duplicar grupo: parte da seleção não pôde ser resolvida na cena atual.";
+
+            objectRequests =
+                Array.Empty<NativeSceneryPlacementRequest>();
+
+            splineRequests =
+                Array.Empty<NativeSplinePlacementRequest>();
+
+            return false;
+        }
+
+        status =
+            $"Duplicar grupo: {objects.Count} objeto(s) e {splines.Count} spline(s) preparados com deslocamento visual.";
+
+        return true;
+    }
+
+    public IReadOnlyList<NativeSelectionInfo>
+        SelectSelectionInfos(
+            IReadOnlyList<NativeSelectionInfo>
+                selections,
+            bool focus)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            selections);
+
+        if (
+            Scene is null ||
+            selections.Count ==
+                0)
+        {
+            return
+                Array.Empty<NativeSelectionInfo>();
+        }
+
+        _selectedPickingIds
+            .Clear();
+
+        _selectedPickingId =
+            PickingId.None;
+
+        foreach (
+            var selection in
+                selections)
+        {
+            PickingId pickingId =
+                PickingId.None;
+
+            if (
+                selection.Kind ==
+                PickingKind.Object)
+            {
+                pickingId =
+                    Scene.Objects
+                        .FirstOrDefault(
+                            item =>
+                                item.Tile.X ==
+                                    selection.TileX &&
+                                item.Tile.Y ==
+                                    selection.TileY &&
+                                item.Object.ObjectId ==
+                                    selection.EntityId &&
+                                string.Equals(
+                                    item.Object.SceneryObjectPath,
+                                    selection.AssetPath,
+                                    StringComparison.OrdinalIgnoreCase))
+                        ?.PickingId ??
+                    PickingId.None;
+            }
+            else if (
+                selection.Kind ==
+                PickingKind.Spline)
+            {
+                pickingId =
+                    Scene.Splines
+                        .FirstOrDefault(
+                            item =>
+                                item.Tile.X ==
+                                    selection.TileX &&
+                                item.Tile.Y ==
+                                    selection.TileY &&
+                                item.Spline.SplineId ==
+                                    selection.EntityId &&
+                                string.Equals(
+                                    item.Spline.SplinePath,
+                                    selection.AssetPath,
+                                    StringComparison.OrdinalIgnoreCase))
+                        ?.PickingId ??
+                    PickingId.None;
+            }
+
+            if (pickingId.IsNone)
+            {
+                continue;
+            }
+
+            if (_selectedPickingId.IsNone)
+            {
+                _selectedPickingId =
+                    pickingId;
+            }
+
+            _selectedPickingIds
+                .Add(
+                    pickingId);
+        }
+
+        if (_selectedPickingId.IsNone)
+        {
+            MapRenderer.SetSelection(
+                PickingId.None);
+
+            MapRenderer.SetAdditionalSelections(
+                Array.Empty<PickingId>());
+
+            UpdateGizmoGeometry();
+            RenderInitialFrame();
+
+            return
+                Array.Empty<NativeSelectionInfo>();
+        }
+
+        MapRenderer.SetHover(
+            PickingId.None);
+
+        MapRenderer.SetSelection(
+            _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
+
+        MapRenderer.SetSelectionPreviewTransform(
+            Matrix4x4.Identity);
+
+        UpdateGizmoGeometry();
+
+        if (focus)
+        {
+            FocusSelection();
+        }
+        else
+        {
+            RenderInitialFrame();
+        }
+
+        return
+            GetSelectedSelectionInfos();
+    }
+
     public NativeSelectionInfo?
         GetSelectionInfo() =>
         GetSelectionInfo(
