@@ -4890,6 +4890,78 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool TryBeginDirectRotation(
+        uint pixelX,
+        uint pixelY,
+        out NativeGizmoHandle handle)
+    {
+        ThrowIfDisposed();
+
+        handle =
+            NativeGizmoHandle.None;
+
+        if (
+            GizmoMode !=
+                NativeGizmoMode.Rotate ||
+            _assetPreviewActive ||
+            _sceneryPlacementActive ||
+            _splinePlacementActive ||
+            Surface is null ||
+            Scene is null ||
+            _selectedPickingId.IsNone ||
+            !IsSelectionKindEnabled(
+                _selectedPickingId.Kind))
+        {
+            return false;
+        }
+
+        var selectedUnderPointer =
+            CollectSelectablePickCandidates(
+                pixelX,
+                pixelY,
+                radius:
+                    14)
+                .Any(
+                    candidate =>
+                        candidate.Id ==
+                        _selectedPickingId);
+
+        if (!selectedUnderPointer)
+        {
+            return false;
+        }
+
+        if (
+            !TryGetSelectionAnchor(
+                out _dragAnchor))
+        {
+            return false;
+        }
+
+        handle =
+            NativeGizmoHandle.RotateY;
+
+        _activeGizmoHandle =
+            handle;
+
+        _dragTranslation =
+            Vector3.Zero;
+
+        _dragRotationDegrees =
+            0;
+
+        _lastDragPixelX =
+            pixelX;
+
+        _lastDragPixelY =
+            pixelY;
+
+        MapRenderer.SetHover(
+            PickingId.None);
+
+        return true;
+    }
+
     public void UpdateGizmoDrag(
         uint pixelX,
         uint pixelY)
