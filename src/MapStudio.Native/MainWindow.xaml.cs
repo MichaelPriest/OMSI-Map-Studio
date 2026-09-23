@@ -21689,6 +21689,1186 @@ public sealed partial class MainWindow : Window
         await InitializeRealMapAreaPickerAsync();
     }
 
+    private async Task InitializeRealMapAreaPickerAsync()
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                RealMapDirectoryBox.Text))
+        {
+            RealMapDirectoryBox.Text =
+                $"MapaReal_{DateTime.Now:yyyyMMdd_HHmm}";
+        }
+
+        if (
+            string.IsNullOrWhiteSpace(
+                RealMapDisplayNameBox.Text))
+        {
+            RealMapDisplayNameBox.Text =
+                "Meu mapa real";
+        }
+
+        double latitude =
+            -23.55052;
+
+        double longitude =
+            -46.633308;
+
+        var zoom =
+            16;
+
+        try
+        {
+            var current =
+                await _session
+                    .LoadMapGeoreferenceAsync();
+
+            if (current is not null)
+            {
+                latitude =
+                    current.Latitude;
+
+                longitude =
+                    current.Longitude;
+
+                zoom =
+                    Math.Clamp(
+                        current.Zoom,
+                        11,
+                        19);
+            }
+        }
+        catch
+        {
+            // The area picker can still start with its neutral editor default.
+        }
+
+        _realMapAreaZoom =
+            zoom;
+
+        await RealMapAreaWebView
+            .EnsureCoreWebView2Async();
+
+        if (
+            !_realMapAreaMessageHooked &&
+            RealMapAreaWebView.CoreWebView2 is not
+                null)
+        {
+            RealMapAreaWebView
+                .CoreWebView2
+                .WebMessageReceived +=
+                (_, args) =>
+                {
+                    try
+                    {
+                        using var document =
+                            JsonDocument.Parse(
+                                args.WebMessageAsJson);
+
+                        var root =
+                            document.RootElement;
+
+                        if (
+                            !root.TryGetProperty(
+                                "type",
+                                out var type) ||
+                            !string.Equals(
+                                type.GetString(),
+                                "bounds",
+                                StringComparison.Ordinal))
+                        {
+                            return;
+                        }
+
+                        _realMapSouth =
+                            root.GetProperty(
+                                    "south")
+                                .GetDouble();
+
+                        _realMapWest =
+                            root.GetProperty(
+                                    "west")
+                                .GetDouble();
+
+                        _realMapNorth =
+                            root.GetProperty(
+                                    "north")
+                                .GetDouble();
+
+                        _realMapEast =
+                            root.GetProperty(
+                                    "east")
+                                .GetDouble();
+
+                        if (
+                            root.TryGetProperty(
+                                "zoom",
+                                out var zoomElement) &&
+                            zoomElement
+                                .TryGetInt32(
+                                    out var reportedZoom))
+                        {
+                            _realMapAreaZoom =
+                                reportedZoom;
+                        }
+
+                        UpdateRealMapAreaEstimate();
+                    }
+                    catch (Exception exception)
+                    {
+                        RealMapAreaBoundsText.Text =
+                            $"Não foi possível calcular a área: {exception.Message}";
+                    }
+                };
+
+            _realMapAreaMessageHooked =
+                true;
+        }
+
+        NavigateRealMapAreaPicker(
+            latitude,
+            longitude,
+            zoom);
+
+        _realMapAreaInitialized =
+            true;
+    }
+
+    private void NavigateRealMapAreaPicker(
+        double latitude,
+        double longitude,
+        int zoom)
+    {
+        if (
+            RealMapAreaWebView.CoreWebView2 is
+                null)
+        {
+            return;
+        }
+
+        var google =
+            RealMapProviderBox.SelectedIndex ==
+                1;
+
+        var googleKey =
+            google
+                ? NativeMapCredentialStore
+                    .TryGetGoogleMapsApiKey()
+                : null;
+
+        if (
+            google &&
+            string.IsNullOrWhiteSpace(
+                googleKey))
+        {
+            RealMapProviderBox.SelectedIndex =
+                0;
+
+            google =
+                false;
+
+            StatusText.Text =
+                "Google Maps: salve primeiro uma API key em Mapa > Referência de mapa. O seletor voltou para OpenStreetMap.";
+        }
+
+        RealMapAreaWebView.NavigateToString(
+            BuildRealMapAreaPickerHtml(
+                latitude,
+                longitude,
+                zoom,
+                google,
+                googleKey));
+    }
+
+    private static string BuildRealMapAreaPickerHtml(
+        double latitude,
+        double longitude,
+        int zoom,
+        bool google,
+        string? googleKey)
+    {
+        var lat =
+            latitude.ToString(
+                "G17",
+                CultureInfo.InvariantCulture);
+
+        var lon =
+            longitude.ToString(
+                "G17",
+                CultureInfo.InvariantCulture);
+
+        if (google)
+        {
+            var key =
+                Uri.EscapeDataString(
+                    googleKey ??
+                    string.Empty);
+
+            return $"""
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:#18232c; }
+.gm-style-cc, .gmnoprint { opacity:.9; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+let map, overlay;
+function postBounds() {
+  if (!map || !overlay || !overlay.getProjection()) return;
+  const div = document.getElementById('map');
+  const w = div.clientWidth, h = div.clientHeight;
+  const fx = 0.62, fy = 0.58;
+  const left = w * (1 - fx) / 2;
+  const right = w - left;
+  const top = h * (1 - fy) / 2;
+  const bottom = h - top;
+  const projection = overlay.getProjection();
+  const nw = projection.fromContainerPixelToLatLng(new google.maps.Point(left, top));
+  const se = projection.fromContainerPixelToLatLng(new google.maps.Point(right, bottom));
+  chrome.webview.postMessage({
+    type:'bounds',
+    south:se.lat(), west:nw.lng(),
+    north:nw.lat(), east:se.lng(),
+    zoom:map.getZoom()
+  });
+}
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center:{lat:{{lat}}, lng:{{lon}}},
+    zoom:{{zoom}},
+    mapTypeId:'roadmap',
+    streetViewControl:false,
+    mapTypeControl:true,
+    fullscreenControl:false
+  });
+  overlay = new google.maps.OverlayView();
+  overlay.onAdd = function(){};
+  overlay.draw = function(){};
+  overlay.setMap(map);
+  map.addListener('idle', () => setTimeout(postBounds, 0));
+  window.addEventListener('resize', () => setTimeout(postBounds, 50));
+}
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key={{key}}&callback=initMap"></script>
+</body>
+</html>
+""";
+        }
+
+        return $"""
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:#18232c; }
+.leaflet-control-attribution { font-size:10px; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map = L.map('map', { zoomControl:true }).setView([{{lat}}, {{lon}}], {{zoom}});
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom:19,
+  attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+function postBounds() {
+  const size = map.getSize();
+  const fx = 0.62, fy = 0.58;
+  const left = size.x * (1 - fx) / 2;
+  const right = size.x - left;
+  const top = size.y * (1 - fy) / 2;
+  const bottom = size.y - top;
+  const nw = map.containerPointToLatLng([left, top]);
+  const se = map.containerPointToLatLng([right, bottom]);
+  chrome.webview.postMessage({
+    type:'bounds',
+    south:se.lat, west:nw.lng,
+    north:nw.lat, east:se.lng,
+    zoom:map.getZoom()
+  });
+}
+map.on('moveend zoomend', postBounds);
+window.addEventListener('resize', () => setTimeout(postBounds, 50));
+setTimeout(postBounds, 250);
+</script>
+</body>
+</html>
+""";
+    }
+
+    private void UpdateRealMapAreaEstimate()
+    {
+        if (
+            !double.IsFinite(
+                _realMapSouth) ||
+            !double.IsFinite(
+                _realMapNorth) ||
+            !double.IsFinite(
+                _realMapWest) ||
+            !double.IsFinite(
+                _realMapEast) ||
+            _realMapNorth <=
+                _realMapSouth)
+        {
+            CreateRealMapAreaButton.IsEnabled =
+                false;
+
+            return;
+        }
+
+        const double earthRadius =
+            6_378_137.0;
+
+        var centerLatitude =
+            (
+                _realMapSouth +
+                _realMapNorth
+            ) *
+            0.5;
+
+        var latitudeSpan =
+            (
+                _realMapNorth -
+                _realMapSouth
+            ) *
+            Math.PI /
+            180.0;
+
+        var longitudeSpan =
+            (
+                _realMapEast -
+                _realMapWest
+            ) *
+            Math.PI /
+            180.0;
+
+        var heightMeters =
+            Math.Abs(
+                latitudeSpan *
+                earthRadius);
+
+        var widthMeters =
+            Math.Abs(
+                longitudeSpan *
+                earthRadius *
+                Math.Cos(
+                    centerLatitude *
+                    Math.PI /
+                    180.0));
+
+        _realMapAreaColumns =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    widthMeters /
+                    300.0));
+
+        _realMapAreaRows =
+            Math.Max(
+                1,
+                (int)Math.Ceiling(
+                    heightMeters /
+                    300.0));
+
+        var tileCount =
+            checked(
+                _realMapAreaColumns *
+                _realMapAreaRows);
+
+        RealMapAreaBoundsText.Text =
+            $"N {_realMapNorth:F6} · S {_realMapSouth:F6} · " +
+            $"O {_realMapWest:F6} · L {_realMapEast:F6} · zoom {_realMapAreaZoom}";
+
+        RealMapAreaEstimateText.Text =
+            $"{widthMeters / 1000.0:F2} × {heightMeters / 1000.0:F2} km · " +
+            $"{_realMapAreaColumns} × {_realMapAreaRows} tiles OMSI · {tileCount} total";
+
+        CreateRealMapAreaButton.IsEnabled =
+            tileCount is >=
+                1 and <=
+                400;
+
+        if (tileCount > 400)
+        {
+            RealMapAreaEstimateText.Text +=
+                " · reduza a área (limite Alpha: 400 tiles)";
+        }
+    }
+
+    private void OnRealMapProviderChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            !_realMapAreaInitialized ||
+            RealMapAreaWindow.Visibility !=
+                Visibility.Visible)
+        {
+            return;
+        }
+
+        OnReloadRealMapAreaClick(
+            sender,
+            new RoutedEventArgs());
+    }
+
+    private void OnReloadRealMapAreaClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var centerLatitude =
+            double.IsFinite(
+                _realMapSouth) &&
+            double.IsFinite(
+                _realMapNorth)
+                ? (
+                    _realMapSouth +
+                    _realMapNorth
+                ) *
+                0.5
+                : -23.55052;
+
+        var centerLongitude =
+            double.IsFinite(
+                _realMapWest) &&
+            double.IsFinite(
+                _realMapEast)
+                ? (
+                    _realMapWest +
+                    _realMapEast
+                ) *
+                0.5
+                : -46.633308;
+
+        NavigateRealMapAreaPicker(
+            centerLatitude,
+            centerLongitude,
+            _realMapAreaZoom);
+    }
+
+    private void OnCloseRealMapAreaWindowClick(
+        object sender,
+        RoutedEventArgs e) =>
+        RealMapAreaWindow.Visibility =
+            Visibility.Collapsed;
+
+    private async void OnCreateRealMapAreaClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var directoryName =
+            RealMapDirectoryBox.Text
+                .Trim();
+
+        var displayName =
+            RealMapDisplayNameBox.Text
+                .Trim();
+
+        var totalTiles =
+            _realMapAreaColumns *
+            _realMapAreaRows;
+
+        if (
+            string.IsNullOrWhiteSpace(
+                directoryName) ||
+            string.IsNullOrWhiteSpace(
+                displayName) ||
+            totalTiles is <
+                1 or >
+                400)
+        {
+            StatusText.Text =
+                "Mapa real: informe nome/pasta válidos e escolha uma área de até 400 tiles.";
+
+            return;
+        }
+
+        var centerLatitude =
+            (
+                _realMapSouth +
+                _realMapNorth
+            ) *
+            0.5;
+
+        var centerLongitude =
+            (
+                _realMapWest +
+                _realMapEast
+            ) *
+            0.5;
+
+        CreateRealMapAreaButton.IsEnabled =
+            false;
+
+        try
+        {
+            BeginLoading(
+                "Criando mapa real",
+                $"{_realMapAreaColumns} × {_realMapAreaRows} tiles · {totalTiles} total");
+
+            var created =
+                await _session
+                    .CreateCoordinateMapAsync(
+                        directoryName,
+                        displayName,
+                        centerLatitude,
+                        centerLongitude);
+
+            var anchor =
+                created.Snapshot.ActiveTile ??
+                OmsiTileRegionSelector
+                    .FindInitialTile(
+                        created.Snapshot.Map.Tiles)
+                ?? throw new InvalidDataException(
+                    "Mapa real criado sem tile inicial.");
+
+            var minimumDx =
+                -(
+                    _realMapAreaColumns /
+                    2
+                );
+
+            var minimumDy =
+                -(
+                    _realMapAreaRows /
+                    2
+                );
+
+            var createdCount =
+                1;
+
+            for (
+                var row =
+                    0;
+                row <
+                    _realMapAreaRows;
+                row++)
+            {
+                for (
+                    var column =
+                        0;
+                    column <
+                        _realMapAreaColumns;
+                    column++)
+                {
+                    var tileX =
+                        anchor.X +
+                        minimumDx +
+                        column;
+
+                    var tileY =
+                        anchor.Y +
+                        minimumDy +
+                        row;
+
+                    if (
+                        tileX ==
+                            anchor.X &&
+                        tileY ==
+                            anchor.Y)
+                    {
+                        continue;
+                    }
+
+                    UpdateLoading(
+                        "Criando tiles do mapa real",
+                        $"{createdCount + 1}/{totalTiles} · tile {tileX},{tileY}");
+
+                    await _session
+                        .CreateTileFromTemplateAsync(
+                            tileX,
+                            tileY);
+
+                    createdCount++;
+                }
+            }
+
+            var finalSnapshot =
+                _session.CurrentMap ??
+                created.Snapshot;
+
+            _fullMapMode =
+                true;
+
+            await ApplyMapSnapshotAsync(
+                finalSnapshot,
+                focusActiveTile:
+                    false);
+
+            Viewport.SetTopView();
+            Viewport.FitScene();
+
+            if (
+                RealMapApplyElevationCheckBox
+                    .IsChecked ==
+                true)
+            {
+                await ApplyRealMapAreaElevationAsync(
+                    finalSnapshot);
+            }
+
+            if (
+                RealMapShowGroundReferenceCheckBox
+                    .IsChecked ==
+                true)
+            {
+                await ApplyRealMapCenterReferenceAsync();
+            }
+
+            RealMapAreaWindow.Visibility =
+                Visibility.Collapsed;
+
+            StatusText.Text =
+                $"Mapa real criado: {displayName} · {totalTiles} tiles · " +
+                $"{centerLatitude:F6}, {centerLongitude:F6}.";
+
+            if (
+                RealMapGenerateRoadsCheckBox
+                    .IsChecked ==
+                true)
+            {
+                await PrepareOsmRoadsForRealMapAreaAsync(
+                    _realMapSouth,
+                    _realMapWest,
+                    _realMapNorth,
+                    _realMapEast);
+            }
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao criar mapa real por área: {exception.Message}";
+        }
+        finally
+        {
+            CreateRealMapAreaButton.IsEnabled =
+                totalTiles is >=
+                    1 and <=
+                    400;
+
+            EndLoading();
+        }
+    }
+
+    private async Task ApplyRealMapAreaElevationAsync(
+        NativeMapSnapshot snapshot)
+    {
+        var apiKey =
+            NativeMapCredentialStore
+                .TryGetGoogleMapsApiKey();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey))
+        {
+            StatusText.Text =
+                "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
+
+            return;
+        }
+
+        if (
+            snapshot.Map.Tiles.Count >
+                36)
+        {
+            StatusText.Text =
+                "Mapa real criado. Elevação automática foi ignorada acima de 36 tiles para evitar chamadas/custos inesperados; use a ferramenta de elevação por região.";
+
+            return;
+        }
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            var grid =
+                await _session
+                    .LoadGoogleElevationGridAsync(
+                        apiKey,
+                        tile.X,
+                        tile.Y,
+                        9);
+
+            await _session
+                .ApplyTerrainElevationGridAsync(
+                    grid,
+                    0);
+        }
+
+        if (
+            _session.CurrentMap is
+                { } elevated)
+        {
+            await ApplyMapSnapshotAsync(
+                elevated,
+                focusActiveTile:
+                    false);
+        }
+    }
+
+    private async Task ApplyRealMapCenterReferenceAsync()
+    {
+        NativeGoogleMapReference reference;
+
+        var google =
+            RealMapProviderBox.SelectedIndex ==
+                1;
+
+        if (google)
+        {
+            var key =
+                NativeMapCredentialStore
+                    .TryGetGoogleMapsApiKey();
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    key))
+            {
+                return;
+            }
+
+            reference =
+                await _session
+                    .LoadGoogleMapReferenceAsync(
+                        key);
+        }
+        else
+        {
+            reference =
+                await _session
+                    .LoadOpenStreetMapReferenceAsync();
+        }
+
+        Viewport.SetReferenceOverlay(
+            new NativeReferenceOverlayDefinition(
+                reference.ImagePath,
+                reference.Width,
+                reference.Height,
+                reference.MetersPerPixel,
+                reference.AnchorWorldX,
+                reference.AnchorWorldZ,
+                0.62f,
+                reference.Attribution));
+
+        _referenceOverlayMapDirectory =
+            _session.CurrentMap
+                ?.Map
+                .DirectoryPath;
+
+        _activeGoogleMapReference =
+            reference;
+
+        MapReferenceAttributionText.Text =
+            reference.Attribution;
+
+        MapReferenceAttributionBorder.Visibility =
+            Visibility.Visible;
+    }
+
+    private async Task PrepareOsmRoadsForRealMapAreaAsync(
+        double south,
+        double west,
+        double north,
+        double east)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .ProceduralRoads,
+                "Geração automática de ruas OSM"))
+        {
+            return;
+        }
+
+        var georeference =
+            await _session
+                .LoadMapGeoreferenceAsync();
+
+        if (georeference is null)
+        {
+            return;
+        }
+
+        StatusText.Text =
+            "Buscando vias OpenStreetMap da área selecionada...";
+
+        var invariant =
+            CultureInfo.InvariantCulture;
+
+        var query =
+            string.Create(
+                invariant,
+                $"[out:xml][timeout:45];(way[\"highway\"]({south:G17},{west:G17},{north:G17},{east:G17}););(._;>;);out body;");
+
+        using var client =
+            new HttpClient
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        60)
+            };
+
+        client.DefaultRequestHeaders
+            .UserAgent
+            .ParseAdd(
+                "OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)");
+
+        using var form =
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["data"] =
+                        query
+                });
+
+        using var response =
+            await client.PostAsync(
+                "https://overpass-api.de/api/interpreter",
+                form);
+
+        response.EnsureSuccessStatusCode();
+
+        var xml =
+            await response.Content
+                .ReadAsStringAsync();
+
+        var imported =
+            new MapStudioOsmRoadImporter()
+                .Parse(
+                    xml);
+
+        var pointCount =
+            imported.Traces.Sum(
+                trace =>
+                    trace.Points.Count);
+
+        if (
+            imported.Traces.Count >
+                5_000 ||
+            pointCount >
+                100_000)
+        {
+            throw new InvalidDataException(
+                $"Área OSM grande demais: {imported.Traces.Count} vias / {pointCount} pontos.");
+        }
+
+        var anchorGeo =
+            new MapStudioGeographicAnchor(
+                georeference.Latitude,
+                georeference.Longitude,
+                georeference.AnchorTileX *
+                    300.0 +
+                georeference.AnchorX,
+                georeference.AnchorTileY *
+                    300.0 +
+                georeference.AnchorY);
+
+        var profiles =
+            GetProceduralRoadProfiles();
+
+        _proceduralRoadTraces
+            .Clear();
+
+        foreach (
+            var geoTrace in
+                imported.Traces)
+        {
+            var points =
+                new List<MapStudioRoadPoint>(
+                    geoTrace.Points.Count);
+
+            foreach (
+                var geoPoint in
+                    geoTrace.Points)
+            {
+                var projected =
+                    MapStudioGeographicProjection
+                        .Project(
+                            anchorGeo,
+                            geoPoint);
+
+                if (
+                    points.Count ==
+                        0 ||
+                    points[^1]
+                        .DistanceTo(
+                            projected) >=
+                        0.20)
+                {
+                    points.Add(
+                        projected);
+                }
+            }
+
+            if (points.Count < 2)
+            {
+                continue;
+            }
+
+            var profile =
+                SelectProceduralRoadProfile(
+                    geoTrace,
+                    profiles);
+
+            _proceduralRoadTraces.Add(
+                new MapStudioRoadTrace(
+                    $"area-osm-{++_proceduralRoadTraceSequence}-{geoTrace.Id}",
+                    points,
+                    profile.ProfileId,
+                    geoTrace.LaneCount ??
+                        profile.LaneCount,
+                    geoTrace.OneWay ??
+                        profile.OneWay,
+                    geoTrace.WidthMeters ??
+                        profile.WidthMeters));
+        }
+
+        if (
+            _proceduralRoadTraces.Count ==
+                0)
+        {
+            StatusText.Text =
+                "Mapa criado, mas nenhuma via OSM utilizável foi encontrada na área.";
+
+            return;
+        }
+
+        AnalyzeProceduralRoadGraphMenuItem
+            .IsEnabled =
+            true;
+
+        ClearProceduralRoadGraphMenuItem
+            .IsEnabled =
+            true;
+
+        var graph =
+            BuildProceduralRoadGraph();
+
+        Viewport
+            .PreviewProceduralRoadGraph(
+                graph);
+
+        StatusText.Text =
+            $"Mapa criado · OSM preparou {_proceduralRoadTraces.Count} via(s), " +
+            $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s). " +
+            "Use Gerar vias para confirmar a gravação automática das splines.";
+    }
+
+    private void OnRealMapAreaWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingRealMapAreaWindow =
+            true;
+
+        _realMapAreaDragPointerId =
+            e.Pointer.PointerId;
+
+        _realMapAreaDragStartX =
+            position.X;
+
+        _realMapAreaDragStartY =
+            position.Y;
+
+        _realMapAreaDragOriginX =
+            RealMapAreaWindowTranslate.X;
+
+        _realMapAreaDragOriginY =
+            RealMapAreaWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnRealMapAreaWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingRealMapAreaWindow ||
+            e.Pointer.PointerId !=
+                _realMapAreaDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        RealMapAreaWindowTranslate.X =
+            _realMapAreaDragOriginX +
+            position.X -
+            _realMapAreaDragStartX;
+
+        RealMapAreaWindowTranslate.Y =
+            _realMapAreaDragOriginY +
+            position.Y -
+            _realMapAreaDragStartY;
+
+        e.Handled =
+            true;
+    }
+
+    private void OnRealMapAreaWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _realMapAreaDragPointerId)
+        {
+            return;
+        }
+
+        _draggingRealMapAreaWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnRealMapAreaResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingRealMapAreaWindow =
+            true;
+
+        _realMapAreaResizePointerId =
+            e.Pointer.PointerId;
+
+        _realMapAreaResizeStartX =
+            position.X;
+
+        _realMapAreaResizeStartY =
+            position.Y;
+
+        _realMapAreaResizeOriginWidth =
+            RealMapAreaWindow.ActualWidth;
+
+        _realMapAreaResizeOriginHeight =
+            RealMapAreaWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnRealMapAreaResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingRealMapAreaWindow ||
+            e.Pointer.PointerId !=
+                _realMapAreaResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        RealMapAreaWindow.Width =
+            Math.Clamp(
+                _realMapAreaResizeOriginWidth +
+                position.X -
+                _realMapAreaResizeStartX,
+                620,
+                Math.Max(
+                    620,
+                    WorkspaceGrid.ActualWidth -
+                        24));
+
+        RealMapAreaWindow.Height =
+            Math.Clamp(
+                _realMapAreaResizeOriginHeight +
+                    position.Y -
+                    _realMapAreaResizeStartY,
+                480,
+                Math.Max(
+                    480,
+                    WorkspaceGrid.ActualHeight -
+                        24));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnRealMapAreaResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _realMapAreaResizePointerId)
+        {
+            return;
+        }
+
+        _resizingRealMapAreaWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
     private async void OnCreateCoordinateMapAdvancedClick(
         object sender,
         RoutedEventArgs e)
