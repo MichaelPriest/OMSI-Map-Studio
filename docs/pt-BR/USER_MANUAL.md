@@ -1,7 +1,7 @@
 # OMSI Map Studio — Manual do Usuário
 
 > Manual inicial da arquitetura nativa WinUI 3 + Direct3D 11.  
-> Atualizado para a série **0.2.0-alpha.5-test.10.9-native**.
+> Atualizado para a série **0.2.0-alpha.5-test.10.10-native**.
 
 O OMSI Map Studio ainda está em desenvolvimento Alpha. Antes de editar mapas importantes, mantenha cópias de segurança. Diversas operações do editor já criam backup automaticamente, mas mapas e assets compartilhados podem afetar mais de um projeto.
 
@@ -105,6 +105,16 @@ Se a seleção ainda estiver difícil:
 3. filtre temporariamente para **Objetos** ou **Ruas / splines**;
 4. confira se o tipo de item está visível;
 5. clique novamente no mesmo ponto para alternar candidatos.
+
+### 4.1 Mover e girar com ghost visual
+
+Ao usar **Mover** ou **Girar**, o item selecionado mostra um **ghost preenchido da própria geometria** acompanhando o mouse em tempo real. O item original permanece no ponto inicial até você soltar o botão.
+
+- **Mover (W)**: arraste o próprio objeto ou spline no viewport.
+- **Girar (E)**: arraste o próprio item ou use o anel do gizmo.
+- Soltar confirma a transformação.
+- Ctrl+Z / Ctrl+Y continuam disponíveis.
+- O Inspector não é necessário.
 
 ---
 
@@ -388,6 +398,20 @@ Depois de criar um trecho, o próximo começa a partir do endpoint anterior.
 
 ---
 
+## 10.1 Auto conectar e reparar vínculos
+
+Na barra de **Ruas**, o botão **Auto conectar** trabalha sobre a spline selecionada.
+
+Ele procura endpoints compatíveis dentro da distância de snap e:
+
+- preenche Previous/Next ausentes;
+- corrige links que apontam para IDs que não existem mais;
+- atualiza o vínculo recíproco da spline vizinha;
+- preserva vínculos válidos;
+- cria backup antes da gravação.
+
+Isso funciona sem abrir o Inspector.
+
 # 11. Dividir spline
 
 1. selecione a spline;
@@ -611,6 +635,22 @@ A API key é armazenada no **Windows Credential Manager** e não é gravada no m
 O usuário continua responsável por escolher o provedor e configurar sua própria credencial.
 
 ---
+
+## 26.1 Selecionando o perfil ativo
+
+A barra superior possui um seletor **Perfil de IA**. Escolher um perfil nesse ComboBox o torna ativo imediatamente e salva a escolha.
+
+Depois use **IA: conectar/testar** para validar a conexão.
+
+## 26.2 Referência de mapa
+
+Em **Mapa → Referência de mapa sobre o terreno...**:
+
+- **OpenStreetMap** é a opção padrão e não exige API key;
+- **Google Maps** usa a Maps Static API e exige uma chave do usuário;
+- a chave Google pode ser salva no Windows Credential Manager;
+- a mesma chave salva pode ser reutilizada pelo Google Elevation;
+- a referência aparece sobre o terreno com opacidade configurável.
 
 # 27. Testando uma build Alpha
 
