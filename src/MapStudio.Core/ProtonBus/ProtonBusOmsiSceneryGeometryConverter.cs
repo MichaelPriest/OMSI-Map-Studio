@@ -142,6 +142,7 @@ public static class
         var materials =
             BuildMaterials(
                 geometry,
+                tile,
                 placedObject.ObjectId,
                 meshOrdinal);
 
@@ -149,7 +150,7 @@ public static class
             materials.Count >
                 0
                 ? materials[0].Name
-                : $"object_{placedObject.ObjectId}_{meshOrdinal}_material_0";
+                : $"object_{tile.X}_{tile.Y}_{placedObject.ObjectId}_{meshOrdinal}_material_0";
 
         if (
             materials.Count ==
@@ -249,6 +250,7 @@ public static class
         ProtonBusExportMaterial>
         BuildMaterials(
             OmsiO3dGeometry geometry,
+            OmsiTileReference tile,
             int objectId,
             int meshOrdinal)
     {
@@ -268,7 +270,7 @@ public static class
                     index];
 
             var materialName =
-                $"object_{objectId}_{meshOrdinal}_material_{index}";
+                $"object_{tile.X}_{tile.Y}_{objectId}_{meshOrdinal}_material_{index}";
 
             var textureName =
                 string.IsNullOrWhiteSpace(
