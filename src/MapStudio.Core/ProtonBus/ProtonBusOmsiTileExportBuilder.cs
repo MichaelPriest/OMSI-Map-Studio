@@ -15,7 +15,30 @@ public sealed record ProtonBusResolvedSceneryMesh(
 public sealed record ProtonBusResolvedSceneryAsset(
     IReadOnlyList<ProtonBusResolvedSceneryMesh>
         Meshes,
-    bool UsesAbsoluteHeight = false);
+    bool UsesAbsoluteHeight = false,
+    IReadOnlyList<OmsiSceneryPathDefinition>?
+        Paths = null,
+    IReadOnlyList<OmsiTrafficLightController>?
+        TrafficLightControllers = null,
+    IReadOnlyList<OmsiSceneryLightPoint>?
+        LightPoints = null,
+    string? FriendlyName = null)
+{
+    public IReadOnlyList<OmsiSceneryPathDefinition>
+        ResolvedPaths =>
+        Paths ??
+        Array.Empty<OmsiSceneryPathDefinition>();
+
+    public IReadOnlyList<OmsiTrafficLightController>
+        ResolvedTrafficLightControllers =>
+        TrafficLightControllers ??
+        Array.Empty<OmsiTrafficLightController>();
+
+    public IReadOnlyList<OmsiSceneryLightPoint>
+        ResolvedLightPoints =>
+        LightPoints ??
+        Array.Empty<OmsiSceneryLightPoint>();
+}
 
 public sealed record ProtonBusOmsiTileExportOptions(
     ProtonBusSplineTessellationOptions?
