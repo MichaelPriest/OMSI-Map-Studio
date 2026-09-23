@@ -76,6 +76,15 @@ public sealed class OmsiNativeSession
         OpenStreetMapHttpClient =
             CreateOpenStreetMapHttpClient();
 
+    private static readonly HttpClient
+        OpenMeteoHttpClient =
+            new()
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        30)
+            };
+
     private static HttpClient
         CreateOpenStreetMapHttpClient()
     {
@@ -890,6 +899,299 @@ public sealed class OmsiNativeSession
         {
             throw new InvalidDataException(
                 "googleElevationGridError");
+        }
+
+        return new NativeGoogleElevationGrid(
+            tileX,
+            tileY,
+            sampleCount,
+            sampleCount,
+            elevations,
+            elevations.Min(),
+            elevations.Max(),
+            georeference.Latitude,
+            georeference.Longitude);
+    }
+
+    public async Task<NativeGoogleElevationGrid>
+        LoadOpenMeteoElevationGridAsync(
+            string apiKey,
+            int tileX,
+            int tileY,
+            int sampleCount,
+            CancellationToken cancellationToken =
+                default)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey) ||
+            sampleCount is
+                < 3 or > 33)
+        {
+            throw new InvalidDataException(
+                "invalidOpenMeteoElevationRequest");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (
+            !snapshot.Map.Tiles.Any(
+                tile =>
+                    tile.X ==
+                        tileX &&
+                    tile.Y ==
+                        tileY))
+        {
+            throw new InvalidDataException(
+                "unknownTile");
+        }
+
+        var georeference =
+            await LoadMapGeoreferenceAsync(
+                    cancellationToken)
+                .ConfigureAwait(false)
+            ?? throw new InvalidDataException(
+                "mapGeoreferenceRequired");
+
+        ValidateGeoreference(
+            georeference);
+
+        const double earthRadius =
+            6378137.0;
+
+        var anchorWorldX =
+            georeference.AnchorTileX *
+                300.0 +
+            georeference.AnchorX;
+
+        var anchorWorldY =
+            georeference.AnchorTileY *
+                300.0 +
+            georeference.AnchorY;
+
+        var coordinates =
+            new List<(
+                double Latitude,
+                double Longitude)>(
+                    checked(
+                        sampleCount *
+                        sampleCount));
+
+        for (
+            var row = 0;
+            row < sampleCount;
+            row++)
+        {
+            var localY =
+                row *
+                300.0 /
+                (
+                    sampleCount -
+                    1
+                );
+
+            for (
+                var column = 0;
+                column < sampleCount;
+                column++)
+            {
+                var localX =
+                    column *
+                    300.0 /
+                    (
+                        sampleCount -
+                        1
+                    );
+
+                var worldX =
+                    tileX *
+                        300.0 +
+                    localX;
+
+                var worldY =
+                    tileY *
+                        300.0 +
+                    localY;
+
+                var eastMeters =
+                    worldX -
+                    anchorWorldX;
+
+                var northMeters =
+                    -(
+                        worldY -
+                        anchorWorldY
+                    );
+
+                var latitudeDelta =
+                    northMeters /
+                    earthRadius *
+                    180.0 /
+                    Math.PI;
+
+                var longitudeScale =
+                    Math.Cos(
+                        georeference.Latitude *
+                        Math.PI /
+                        180.0);
+
+                if (
+                    Math.Abs(
+                        longitudeScale) <
+                    0.000001)
+                {
+                    throw new InvalidDataException(
+                        "invalidOpenMeteoElevationRequest");
+                }
+
+                var longitudeDelta =
+                    eastMeters /
+                    (
+                        earthRadius *
+                        longitudeScale
+                    ) *
+                    180.0 /
+                    Math.PI;
+
+                coordinates.Add(
+                    (
+                        georeference.Latitude +
+                            latitudeDelta,
+                        georeference.Longitude +
+                            longitudeDelta
+                    ));
+            }
+        }
+
+        var elevations =
+            new List<double>(
+                coordinates.Count);
+
+        const int batchSize =
+            100;
+
+        for (
+            var offset = 0;
+            offset < coordinates.Count;
+            offset += batchSize)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var batch =
+                coordinates
+                    .Skip(offset)
+                    .Take(
+                        Math.Min(
+                            batchSize,
+                            coordinates.Count -
+                            offset))
+                    .ToArray();
+
+            var latitudes =
+                string.Join(
+                    ",",
+                    batch.Select(
+                        coordinate =>
+                            coordinate.Latitude
+                                .ToString(
+                                    "G17",
+                                    CultureInfo.InvariantCulture)));
+
+            var longitudes =
+                string.Join(
+                    ",",
+                    batch.Select(
+                        coordinate =>
+                            coordinate.Longitude
+                                .ToString(
+                                    "G17",
+                                    CultureInfo.InvariantCulture)));
+
+            var uri =
+                "https://customer-api.open-meteo.com/v1/elevation" +
+                "?latitude=" +
+                Uri.EscapeDataString(
+                    latitudes) +
+                "&longitude=" +
+                Uri.EscapeDataString(
+                    longitudes) +
+                "&apikey=" +
+                Uri.EscapeDataString(
+                    apiKey.Trim());
+
+            using var response =
+                await OpenMeteoHttpClient
+                    .GetAsync(
+                        uri,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (!response
+                .IsSuccessStatusCode)
+            {
+                throw new HttpRequestException(
+                    $"openMeteoElevationHttp:{(int)response.StatusCode}");
+            }
+
+            await using var stream =
+                await response.Content
+                    .ReadAsStreamAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            using var document =
+                await JsonDocument
+                    .ParseAsync(
+                        stream,
+                        cancellationToken:
+                            cancellationToken)
+                    .ConfigureAwait(false);
+
+            var root =
+                document.RootElement;
+
+            if (
+                !root.TryGetProperty(
+                    "elevation",
+                    out var values) ||
+                values.ValueKind !=
+                    JsonValueKind.Array ||
+                values.GetArrayLength() !=
+                    batch.Length)
+            {
+                throw new InvalidDataException(
+                    "openMeteoElevationGridError");
+            }
+
+            foreach (
+                var elevation in
+                    values.EnumerateArray())
+            {
+                if (
+                    !elevation.TryGetDouble(
+                        out var value) ||
+                    !double.IsFinite(
+                        value))
+                {
+                    throw new InvalidDataException(
+                        "openMeteoElevationGridError");
+                }
+
+                elevations.Add(
+                    value);
+            }
+        }
+
+        if (
+            elevations.Count !=
+            coordinates.Count)
+        {
+            throw new InvalidDataException(
+                "openMeteoElevationGridError");
         }
 
         return new NativeGoogleElevationGrid(
