@@ -51,6 +51,12 @@ public sealed record NativeSplineSplitResult(
     int FirstSplineId,
     int SecondSplineId);
 
+public sealed record NativeSplineFlowToggleResult(
+    NativeMapSnapshot Snapshot,
+    string SplinePath,
+    bool Reversed,
+    int ReversedVehiclePathCount);
+
 public sealed class OmsiNativeSession
 {
     private static readonly HttpClient
@@ -8576,6 +8582,232 @@ public sealed class OmsiNativeSession
             };
 
         return CurrentMap;
+    }
+
+    public async Task<NativeSplineFlowToggleResult>
+        TogglePlacedSplineVehicleFlowAsync(
+            NativeSelectionInfo selection,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            selection);
+
+        if (
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            throw new InvalidDataException(
+                "splineFlowSelectionInvalid");
+        }
+
+        var root =
+            OmsiRootPath ??
+            throw new InvalidOperationException(
+                "Nenhuma fonte de conteúdo ativa.");
+
+        const string suffix =
+            "__mapstudio_flowrev";
+
+        if (
+            !OmsiSplinePathResolver
+                .TryResolve(
+                    root,
+                    selection.AssetPath,
+                    out var sourceFullPath) ||
+            !File.Exists(
+                sourceFullPath))
+        {
+            throw new FileNotFoundException(
+                "SLI selecionada não encontrada.",
+                selection.AssetPath);
+        }
+
+        var sourceDirectory =
+            Path.GetDirectoryName(
+                sourceFullPath) ??
+            throw new InvalidOperationException(
+                "splineDirectoryMissing");
+
+        var sourceName =
+            Path.GetFileNameWithoutExtension(
+                sourceFullPath);
+
+        var extension =
+            Path.GetExtension(
+                sourceFullPath);
+
+        string targetFullPath;
+        bool reversed;
+        int reversedPathCount =
+            0;
+
+        if (
+            sourceName.EndsWith(
+                suffix,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var originalName =
+                sourceName[
+                    ..^suffix.Length] +
+                extension;
+
+            targetFullPath =
+                Path.Combine(
+                    sourceDirectory,
+                    originalName);
+
+            if (
+                !File.Exists(
+                    targetFullPath))
+            {
+                throw new FileNotFoundException(
+                    "SLI original da variante invertida não foi encontrada.",
+                    targetFullPath);
+            }
+
+            reversed =
+                false;
+        }
+        else
+        {
+            targetFullPath =
+                Path.Combine(
+                    sourceDirectory,
+                    sourceName +
+                    suffix +
+                    extension);
+
+            var sourceDocument =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        sourceFullPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var reversedDefinition =
+                OmsiSplineTrafficFlowReverser
+                    .ReverseVehiclePaths(
+                        sourceDocument);
+
+            if (
+                reversedDefinition
+                    .ReversedPathCount ==
+                0)
+            {
+                throw new InvalidDataException(
+                    "splineHasNoOneWayVehiclePaths");
+            }
+
+            reversedPathCount =
+                reversedDefinition
+                    .ReversedPathCount;
+
+            if (
+                File.Exists(
+                    targetFullPath))
+            {
+                var backupRoot =
+                    Path.Combine(
+                        root,
+                        ".mapstudio-backups",
+                        DateTimeOffset.UtcNow
+                            .ToString(
+                                "yyyyMMdd-HHmmssfff'Z'",
+                                CultureInfo.InvariantCulture) +
+                        "-flow-reverse-" +
+                        Guid.NewGuid()
+                            .ToString("N"));
+
+                await SafeFileTransaction
+                    .WriteAllAsync(
+                        [
+                            new PendingFileWrite(
+                                targetFullPath,
+                                Path.Combine(
+                                    backupRoot,
+                                    Path.GetFileName(
+                                        targetFullPath)),
+                                reversedDefinition
+                                    .Bytes)
+                        ],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+                LastBackupDirectory =
+                    backupRoot;
+            }
+            else
+            {
+                var temp =
+                    Path.Combine(
+                        sourceDirectory,
+                        "." +
+                        Path.GetFileName(
+                            targetFullPath) +
+                        ".mapstudio-" +
+                        Guid.NewGuid()
+                            .ToString("N") +
+                        ".tmp");
+
+                try
+                {
+                    await File
+                        .WriteAllBytesAsync(
+                            temp,
+                            reversedDefinition
+                                .Bytes,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                    File.Move(
+                        temp,
+                        targetFullPath,
+                        overwrite:
+                            false);
+                }
+                finally
+                {
+                    if (
+                        File.Exists(
+                            temp))
+                    {
+                        try
+                        {
+                            File.Delete(
+                                temp);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+
+            reversed =
+                true;
+        }
+
+        var relative =
+            Path.GetRelativePath(
+                    root,
+                    targetFullPath)
+                .Replace(
+                    Path.DirectorySeparatorChar,
+                    '\\');
+
+        var snapshot =
+            await ReplacePlacedSplinePathAsync(
+                    selection,
+                    relative,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        return new NativeSplineFlowToggleResult(
+            snapshot,
+            relative,
+            reversed,
+            reversedPathCount);
     }
 
     public async Task<NativeMapSnapshot>

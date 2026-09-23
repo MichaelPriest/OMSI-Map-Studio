@@ -2480,6 +2480,8 @@
                                         <MenuFlyout Placement="Bottom">
                                             <MenuFlyoutItem Text="Espelhar spline"
                                                             Click="OnRoadMirrorClick" />
+                                            <MenuFlyoutItem Text="Inverter fluxo de veículos"
+                                                            Click="OnRoadReverseFlowClick" />
                                             <MenuFlyoutItem Text="Substituir tipo pela SLI da Biblioteca"
                                                             Click="OnRoadReplaceTypeClick" />
                                             <MenuFlyoutSeparator />

@@ -8138,6 +8138,60 @@ public sealed partial class MainWindow : Window
             1.0);
     }
 
+    private async void OnRoadReverseFlowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para inverter o fluxo.";
+            return;
+        }
+
+        try
+        {
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                "Ruas: preparando variante de fluxo...";
+
+            var result =
+                await _session
+                    .TogglePlacedSplineVehicleFlowAsync(
+                        _selectionInfo);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    result.Snapshot,
+                    _session.OmsiRootPath!);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            StatusText.Text =
+                result.Reversed
+                    ? $"Ruas: fluxo invertido neste trecho · {result.ReversedVehiclePathCount} path(s) de veículo alterado(s)."
+                    : "Ruas: fluxo restaurado para a SLI original.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Ruas: não foi possível inverter o fluxo: {exception.Message}";
+        }
+    }
+
     private async void OnRoadReplaceTypeClick(
         object sender,
         RoutedEventArgs e)
