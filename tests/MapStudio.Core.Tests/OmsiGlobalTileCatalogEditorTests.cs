@@ -81,4 +81,41 @@ public sealed class OmsiGlobalTileCatalogEditorTests
                         0,
                         @"..\outside.map")));
     }
+    [Fact]
+    public void AppendTilePreservesNegativeCoordinates()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n");
+
+        var bytes =
+            OmsiGlobalTileCatalogEditor
+                .AppendTile(
+                    document,
+                    new OmsiTileReference(
+                        -1,
+                        -1,
+                        "tile_-1_-1.map"));
+
+        var parsed =
+            OmsiConfigParser.Parse(
+                Encoding.UTF8.GetString(
+                    bytes));
+
+        var tile =
+            Assert.Single(
+                OmsiMapCatalog
+                    .ReadTiles(parsed)
+                    .Where(
+                        item =>
+                            item.X ==
+                                -1 &&
+                            item.Y ==
+                                -1));
+
+        Assert.Equal(
+            "tile_-1_-1.map",
+            tile.RelativeMapPath);
+    }
+
 }

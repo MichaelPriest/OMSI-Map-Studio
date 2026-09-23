@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Picking;
 
 namespace MapStudio.Renderer.Scene;
@@ -28,10 +29,12 @@ public sealed class NativeSceneBuilder
         foreach (var tile in tiles)
         {
             var tileX =
-                tile.Reference.X * 300.0;
+                OmsiTileGrid.GetOriginX(
+                    tile.Reference.X);
 
             var tileY =
-                tile.Reference.Y * 300.0;
+                OmsiTileGrid.GetOriginZ(
+                    tile.Reference.Y);
 
             foreach (
                 var placedObject in

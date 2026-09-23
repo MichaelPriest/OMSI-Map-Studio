@@ -1447,12 +1447,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 start.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 start.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         if (
             !Scene.Tiles.Any(
@@ -2557,12 +2557,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 point.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 point.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         if (
             !Scene.Tiles.Any(
@@ -2636,12 +2636,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 point.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 point.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tile =
             Scene.Tiles
@@ -2662,11 +2662,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 tile.Reference,
                 _placementSceneryPath,
                 point.X -
-                    tileX *
-                    300.0,
+                    tileX * OmsiTileGrid.TileSize,
                 point.Z -
-                    tileY *
-                    300.0,
+                    tileY * OmsiTileGrid.TileSize,
                 _placementZOverride ??
                     (
                         _placementUsesAbsoluteHeight
@@ -2731,12 +2729,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 point.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 point.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tile =
             Scene.Tiles
@@ -2760,11 +2758,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 tile.Reference,
                 _placementSceneryPath,
                 point.X -
-                    tileX *
-                    300.0,
+                    tileX * OmsiTileGrid.TileSize,
                 point.Z -
-                    tileY *
-                    300.0,
+                    tileY * OmsiTileGrid.TileSize,
                 _placementZOverride ??
                     (
                         _placementUsesAbsoluteHeight
@@ -3528,12 +3524,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 shape.Start.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 shape.Start.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tile =
             Scene.Tiles
@@ -3557,11 +3553,9 @@ public sealed class NativeViewportRuntime : IDisposable
                 source.SplinePath,
                 -1,
                 shape.Start.X -
-                    tileX *
-                    300.0,
+                    tileX * OmsiTileGrid.TileSize,
                 shape.Start.Z -
-                    tileY *
-                    300.0,
+                    tileY * OmsiTileGrid.TileSize,
                 shape.Start.Y,
                 shape.Rotation,
                 shape.Length,
@@ -3654,12 +3648,12 @@ public sealed class NativeViewportRuntime : IDisposable
                 var tileX =
                     (int)Math.Floor(
                         targetWorld.X /
-                        300.0f);
+                        (float)OmsiTileGrid.TileSize);
 
                 var tileY =
                     (int)Math.Floor(
                         targetWorld.Z /
-                        300.0f);
+                        (float)OmsiTileGrid.TileSize);
 
                 var targetTile =
                     Scene.Tiles
@@ -3689,11 +3683,9 @@ public sealed class NativeViewportRuntime : IDisposable
                         targetTile.Reference,
                         source.SceneryObjectPath,
                         targetWorld.X -
-                            tileX *
-                            300.0,
+                            tileX * OmsiTileGrid.TileSize,
                         targetWorld.Z -
-                            tileY *
-                            300.0,
+                            tileY * OmsiTileGrid.TileSize,
                         source.Z +
                             worldOffset.Y,
                         source.Rotation,
@@ -3738,12 +3730,12 @@ public sealed class NativeViewportRuntime : IDisposable
             var targetTileX =
                 (int)Math.Floor(
                     startWorld.X /
-                    300.0f);
+                    (float)OmsiTileGrid.TileSize);
 
             var targetTileY =
                 (int)Math.Floor(
                     startWorld.Z /
-                    300.0f);
+                    (float)OmsiTileGrid.TileSize);
 
             var splineTile =
                 Scene.Tiles
@@ -3774,11 +3766,9 @@ public sealed class NativeViewportRuntime : IDisposable
                     sourceSpline.SplinePath,
                     -1,
                     startWorld.X -
-                        targetTileX *
-                        300.0,
+                        targetTileX * OmsiTileGrid.TileSize,
                     startWorld.Z -
-                        targetTileY *
-                        300.0,
+                        targetTileY * OmsiTileGrid.TileSize,
                     startWorld.Y,
                     sourceSpline.Rotation,
                     sourceSpline.Length,
@@ -4472,12 +4462,12 @@ public sealed class NativeViewportRuntime : IDisposable
 
         var worldX =
             tileX *
-            300.0f +
+            (float)OmsiTileGrid.TileSize +
             150.0f;
 
         var worldZ =
             tileY *
-            300.0f +
+            (float)OmsiTileGrid.TileSize +
             150.0f;
 
         var worldY =
@@ -5111,7 +5101,7 @@ public sealed class NativeViewportRuntime : IDisposable
             Math.Clamp(
                 span,
                 8.0f,
-                300.0f) *
+                (float)OmsiTileGrid.TileSize) *
             0.5f;
 
         Navigation.FitToBounds(
@@ -8176,12 +8166,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 point.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 point.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         if (
             !Scene.Tiles.Any(
@@ -8276,12 +8266,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 point.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 point.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tile =
             Scene.Tiles
@@ -8301,11 +8291,9 @@ public sealed class NativeViewportRuntime : IDisposable
             new NativeTerrainEditPoint(
                 tile.Reference,
                 point.X -
-                    tileX *
-                    300.0,
+                    tileX * OmsiTileGrid.TileSize,
                 point.Z -
-                    tileY *
-                    300.0,
+                    tileY * OmsiTileGrid.TileSize,
                 point.Y,
                 point);
 
@@ -8327,12 +8315,12 @@ public sealed class NativeViewportRuntime : IDisposable
         var tileX =
             (int)Math.Floor(
                 shape.Start.X /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 shape.Start.Z /
-                300.0f);
+                (float)OmsiTileGrid.TileSize);
 
         var tile =
             Scene.Tiles
@@ -8351,11 +8339,9 @@ public sealed class NativeViewportRuntime : IDisposable
             _placementSplinePath,
             _splinePreviousId,
             shape.Start.X -
-                tileX *
-                300.0,
+                tileX * OmsiTileGrid.TileSize,
             shape.Start.Z -
-                tileY *
-                300.0,
+                tileY * OmsiTileGrid.TileSize,
             shape.Start.Y,
             shape.Rotation,
             shape.Length,

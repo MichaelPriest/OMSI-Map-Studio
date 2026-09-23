@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Maps;
 using System.Numerics;
 
 namespace MapStudio.Renderer.Scene;
@@ -27,27 +28,27 @@ public readonly record struct NativeSceneProjection(
             scene.Tiles.Min(
                 tile =>
                     tile.Reference.X *
-                    300.0);
+                    OmsiTileGrid.TileSize);
 
         var maxX =
             scene.Tiles.Max(
                 tile =>
                     tile.Reference.X *
-                    300.0 +
-                    300.0);
+                    OmsiTileGrid.TileSize +
+                    OmsiTileGrid.TileSize);
 
         var minZ =
             scene.Tiles.Min(
                 tile =>
                     tile.Reference.Y *
-                    300.0);
+                    OmsiTileGrid.TileSize);
 
         var maxZ =
             scene.Tiles.Max(
                 tile =>
                     tile.Reference.Y *
-                    300.0 +
-                    300.0);
+                    OmsiTileGrid.TileSize +
+                    OmsiTileGrid.TileSize);
 
         return new NativeSceneProjection(
             CenterX:

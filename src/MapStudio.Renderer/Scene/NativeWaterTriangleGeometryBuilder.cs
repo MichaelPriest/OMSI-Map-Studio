@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Maps;
 using System.Numerics;
 
 namespace MapStudio.Renderer.Scene;
@@ -55,11 +56,11 @@ public sealed class NativeWaterTriangleGeometryBuilder
 
             var originX =
                 tile.Reference.X *
-                300.0f;
+                (float)OmsiTileGrid.TileSize;
 
             var originZ =
                 tile.Reference.Y *
-                300.0f;
+                (float)OmsiTileGrid.TileSize;
 
             var h00 =
                 water.Heights[0];
@@ -84,17 +85,17 @@ public sealed class NativeWaterTriangleGeometryBuilder
             AddVertex(
                 vertices,
                 originX +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 h11,
                 originZ +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 1,
                 1);
 
             AddVertex(
                 vertices,
                 originX +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 h10,
                 originZ,
                 1,
@@ -113,17 +114,17 @@ public sealed class NativeWaterTriangleGeometryBuilder
                 originX,
                 h01,
                 originZ +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 0,
                 1);
 
             AddVertex(
                 vertices,
                 originX +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 h11,
                 originZ +
-                    300.0f,
+                    (float)OmsiTileGrid.TileSize,
                 1,
                 1);
 

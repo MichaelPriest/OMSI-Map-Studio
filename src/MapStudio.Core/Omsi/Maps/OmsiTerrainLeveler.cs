@@ -6,7 +6,7 @@ public sealed record OmsiTerrainLevelResult(
 
 public static class OmsiTerrainLeveler
 {
-    private const double TileSize = 300.0;
+    private const double TileSize = OmsiTileGrid.TileSize;
 
     public static OmsiTerrainLevelResult
         LevelCircularBrush(

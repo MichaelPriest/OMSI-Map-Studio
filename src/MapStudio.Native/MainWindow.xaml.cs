@@ -3828,12 +3828,12 @@ public sealed partial class MainWindow : Window
             var tileX =
                 (int)Math.Floor(
                     placement.WorldX /
-                    300.0);
+                        OmsiTileGrid.TileSize);
 
             var tileY =
                 (int)Math.Floor(
                     placement.WorldZ /
-                    300.0);
+                        OmsiTileGrid.TileSize);
 
             var tile =
                 map.Tiles
@@ -3855,12 +3855,10 @@ public sealed partial class MainWindow : Window
                     Tile = tile,
                     X =
                         placement.WorldX -
-                        tileX *
-                        300.0,
+                        tileX * OmsiTileGrid.TileSize,
                     Y =
                         placement.WorldZ -
-                        tileY *
-                        300.0,
+                        tileY * OmsiTileGrid.TileSize,
                     Z = placement.Z,
                     Rotation =
                         placement.Rotation,
@@ -24832,14 +24830,14 @@ setTimeout(postBounds, 250);
                 1,
                 (int)Math.Ceiling(
                     widthMeters /
-                    300.0));
+                    OmsiTileGrid.TileSize));
 
         _realMapAreaRows =
             Math.Max(
                 1,
                 (int)Math.Ceiling(
                     heightMeters /
-                    300.0));
+                    OmsiTileGrid.TileSize));
 
         var tileCount =
             checked(
@@ -25378,8 +25376,8 @@ setTimeout(postBounds, 250);
                         centerLongitude,
                         anchor.X,
                         anchor.Y,
-                        150.0,
-                        150.0,
+                        OmsiTileGrid.HalfTileSize,
+                        OmsiTileGrid.HalfTileSize,
                         Math.Clamp(
                             _realMapAreaZoom,
                             11,
@@ -25772,11 +25770,11 @@ setTimeout(postBounds, 250);
             new MapStudioGeographicAnchor(
                 georeference.Latitude,
                 georeference.Longitude,
-                georeference.AnchorTileX *
-                    300.0 +
+                OmsiTileGrid.GetOriginX(
+                        georeference.AnchorTileX) +
                 georeference.AnchorX,
-                georeference.AnchorTileY *
-                    300.0 +
+                OmsiTileGrid.GetOriginZ(
+                        georeference.AnchorTileY) +
                 georeference.AnchorY);
 
         var profiles =
@@ -27945,14 +27943,14 @@ setTimeout(postBounds, 250);
                 tile.Reference,
                 placedSpline,
                 (float)(
-                    tile.Reference.X *
-                        300.0 +
+                    OmsiTileGrid.GetOriginX(
+                        tile.Reference.X) +
                     placedSpline.X),
                 (float)
                     placedSpline.Z,
                 (float)(
-                    tile.Reference.Y *
-                        300.0 +
+                    OmsiTileGrid.GetOriginZ(
+                        tile.Reference.Y) +
                     placedSpline.Y));
 
         var editing =
@@ -28592,12 +28590,12 @@ setTimeout(postBounds, 250);
                 var tileX =
                     (int)Math.Floor(
                         placement.WorldX /
-                        300.0);
+                        OmsiTileGrid.TileSize);
 
                 var tileY =
                     (int)Math.Floor(
                         placement.WorldZ /
-                        300.0);
+                        OmsiTileGrid.TileSize);
 
                 var tile =
                     map.Tiles
@@ -28618,11 +28616,9 @@ setTimeout(postBounds, 250);
                         tile,
                         group.SceneryObjectPath,
                         placement.WorldX -
-                            tileX *
-                            300.0,
+                            tileX * OmsiTileGrid.TileSize,
                         placement.WorldZ -
-                            tileY *
-                            300.0,
+                            tileY * OmsiTileGrid.TileSize,
                         placement.Z,
                         placement.Rotation,
                         placement.Pitch,
@@ -29443,11 +29439,11 @@ setTimeout(postBounds, 250);
                 new MapStudioGeographicAnchor(
                     georeference.Latitude,
                     georeference.Longitude,
-                    georeference.AnchorTileX *
-                        300.0 +
+                    OmsiTileGrid.GetOriginX(
+                        georeference.AnchorTileX) +
                     georeference.AnchorX,
-                    georeference.AnchorTileY *
-                        300.0 +
+                    OmsiTileGrid.GetOriginZ(
+                        georeference.AnchorTileY) +
                     georeference.AnchorY);
 
             var profiles =
@@ -29659,11 +29655,11 @@ setTimeout(postBounds, 250);
                 new MapStudioGeographicAnchor(
                     georeference.Latitude,
                     georeference.Longitude,
-                    georeference.AnchorTileX *
-                        300.0 +
+                    OmsiTileGrid.GetOriginX(
+                        georeference.AnchorTileX) +
                     georeference.AnchorX,
-                    georeference.AnchorTileY *
-                        300.0 +
+                    OmsiTileGrid.GetOriginZ(
+                        georeference.AnchorTileY) +
                     georeference.AnchorY);
 
             var profiles =
@@ -32172,11 +32168,11 @@ setTimeout(postBounds, 250);
                 new MapStudioGeographicAnchor(
                     georeference.Latitude,
                     georeference.Longitude,
-                    georeference.AnchorTileX *
-                        300.0 +
+                    OmsiTileGrid.GetOriginX(
+                        georeference.AnchorTileX) +
                     georeference.AnchorX,
-                    georeference.AnchorTileY *
-                        300.0 +
+                    OmsiTileGrid.GetOriginZ(
+                        georeference.AnchorTileY) +
                     georeference.AnchorY);
 
             var projectedPoints =
@@ -32242,10 +32238,10 @@ setTimeout(postBounds, 250);
                                 (
                                     (int)Math.Floor(
                                         point.Position.X /
-                                        300.0),
+                        OmsiTileGrid.TileSize),
                                     (int)Math.Floor(
                                         point.Position.Z /
-                                        300.0)
+                        OmsiTileGrid.TileSize)
                                 )))
                     .ToArray();
 
@@ -32919,11 +32915,11 @@ setTimeout(postBounds, 250);
                 new MapStudioGeographicAnchor(
                     georeference.Latitude,
                     georeference.Longitude,
-                    georeference.AnchorTileX *
-                        300.0 +
+                    OmsiTileGrid.GetOriginX(
+                        georeference.AnchorTileX) +
                     georeference.AnchorX,
-                    georeference.AnchorTileY *
-                        300.0 +
+                    OmsiTileGrid.GetOriginZ(
+                        georeference.AnchorTileY) +
                     georeference.AnchorY);
 
             var projected =
@@ -32950,10 +32946,10 @@ setTimeout(postBounds, 250);
                                 (
                                     (int)Math.Floor(
                                         building.Center.X /
-                                        300.0),
+                        OmsiTileGrid.TileSize),
                                     (int)Math.Floor(
                                         building.Center.Z /
-                                        300.0)
+                        OmsiTileGrid.TileSize)
                                 )))
                     .Take(128)
                     .ToArray();
@@ -33164,12 +33160,12 @@ setTimeout(postBounds, 250);
                 var tileX =
                     (int)Math.Floor(
                         building.Center.X /
-                        300.0);
+                        OmsiTileGrid.TileSize);
 
                 var tileY =
                     (int)Math.Floor(
                         building.Center.Z /
-                        300.0);
+                        OmsiTileGrid.TileSize);
 
                 var tile =
                     snapshot.Map.Tiles
@@ -33185,11 +33181,9 @@ setTimeout(postBounds, 250);
                         tile,
                         relativePath,
                         building.Center.X -
-                            tileX *
-                            300.0,
+                            tileX * OmsiTileGrid.TileSize,
                         building.Center.Z -
-                            tileY *
-                            300.0,
+                            tileY * OmsiTileGrid.TileSize,
                         0.0,
                         0.0,
                         0.0,

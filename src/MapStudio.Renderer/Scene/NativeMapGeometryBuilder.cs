@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Maps;
 using System.Numerics;
 
 namespace MapStudio.Renderer.Scene;
@@ -159,16 +160,16 @@ public sealed class NativeMapGeometryBuilder
         {
             var originX =
                 tile.Reference.X *
-                300.0;
+                OmsiTileGrid.TileSize;
 
             var originZ =
                 tile.Reference.Y *
-                300.0;
+                OmsiTileGrid.TileSize;
 
-            AddTerrainLine(tile, 0, 0, 300, 0, originX, originZ, TerrainColor, AddGridLine);
-            AddTerrainLine(tile, 300, 0, 300, 300, originX, originZ, TerrainColor, AddGridLine);
-            AddTerrainLine(tile, 300, 300, 0, 300, originX, originZ, TerrainColor, AddGridLine);
-            AddTerrainLine(tile, 0, 300, 0, 0, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, 0, 0, OmsiTileGrid.TileSize, 0, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, OmsiTileGrid.TileSize, 0, OmsiTileGrid.TileSize, OmsiTileGrid.TileSize, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, OmsiTileGrid.TileSize, OmsiTileGrid.TileSize, 0, OmsiTileGrid.TileSize, originX, originZ, TerrainColor, AddGridLine);
+            AddTerrainLine(tile, 0, OmsiTileGrid.TileSize, 0, 0, originX, originZ, TerrainColor, AddGridLine);
 
             var terrain =
                 tile.Content.Terrain;
@@ -192,12 +193,12 @@ public sealed class NativeMapGeometryBuilder
                 cell += step)
             {
                 var offset =
-                    300.0 *
+                    OmsiTileGrid.TileSize *
                     cell /
                     terrain.CellCount;
 
-                AddTerrainLine(tile, offset, 0, offset, 300, originX, originZ, TerrainColor, AddGridLine);
-                AddTerrainLine(tile, 0, offset, 300, offset, originX, originZ, TerrainColor, AddGridLine);
+                AddTerrainLine(tile, offset, 0, offset, OmsiTileGrid.TileSize, originX, originZ, TerrainColor, AddGridLine);
+                AddTerrainLine(tile, 0, offset, OmsiTileGrid.TileSize, offset, originX, originZ, TerrainColor, AddGridLine);
             }
         }
 

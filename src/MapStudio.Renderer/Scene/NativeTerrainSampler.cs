@@ -1,3 +1,4 @@
+using MapStudio.Core.Omsi.Maps;
 namespace MapStudio.Renderer.Scene;
 
 public static class NativeTerrainSampler
@@ -49,12 +50,12 @@ public static class NativeTerrainSampler
         var tileX =
             (int)Math.Floor(
                 worldX /
-                300.0);
+                OmsiTileGrid.TileSize);
 
         var tileY =
             (int)Math.Floor(
                 worldZ /
-                300.0);
+                OmsiTileGrid.TileSize);
 
         foreach (var tile in scene.Tiles)
         {
@@ -91,10 +92,10 @@ public static class NativeTerrainSampler
                     tile,
                     worldX -
                     tileX *
-                    300.0,
+                    OmsiTileGrid.TileSize,
                     worldZ -
                     tileY *
-                    300.0);
+                    OmsiTileGrid.TileSize);
 
             return
                 double.IsFinite(
@@ -127,7 +128,7 @@ public static class NativeTerrainSampler
         var gridX =
             Math.Clamp(
                 localX /
-                300.0 *
+                OmsiTileGrid.TileSize *
                 cellCount,
                 0,
                 cellCount);
@@ -135,7 +136,7 @@ public static class NativeTerrainSampler
         var gridY =
             Math.Clamp(
                 localY /
-                300.0 *
+                OmsiTileGrid.TileSize *
                 cellCount,
                 0,
                 cellCount);

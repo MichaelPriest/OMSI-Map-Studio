@@ -382,12 +382,12 @@ public sealed class OmsiNativeSession
 
         var anchorWorldX =
             georeference.AnchorTileX *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorX;
 
         var anchorWorldZ =
             georeference.AnchorTileY *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorY;
 
         return new NativeGoogleMapReference(
@@ -575,12 +575,12 @@ public sealed class OmsiNativeSession
 
         var anchorWorldX =
             georeference.AnchorTileX *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorX;
 
         var anchorWorldZ =
             georeference.AnchorTileY *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorY;
 
         var tileCenterPixelX =
@@ -672,12 +672,12 @@ public sealed class OmsiNativeSession
 
         var anchorWorldX =
             georeference.AnchorTileX *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorX;
 
         var anchorWorldY =
             georeference.AnchorTileY *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorY;
 
         var coordinates =
@@ -695,7 +695,7 @@ public sealed class OmsiNativeSession
         {
             var localY =
                 row *
-                300.0 /
+                OmsiTileGrid.TileSize /
                 (
                     sampleCount -
                     1
@@ -708,7 +708,7 @@ public sealed class OmsiNativeSession
             {
                 var localX =
                     column *
-                    300.0 /
+                    OmsiTileGrid.TileSize /
                     (
                         sampleCount -
                         1
@@ -716,12 +716,12 @@ public sealed class OmsiNativeSession
 
                 var worldX =
                     tileX *
-                        300.0 +
+                        OmsiTileGrid.TileSize +
                     localX;
 
                 var worldY =
                     tileY *
-                        300.0 +
+                        OmsiTileGrid.TileSize +
                     localY;
 
                 var eastMeters =
@@ -964,12 +964,12 @@ public sealed class OmsiNativeSession
 
         var anchorWorldX =
             georeference.AnchorTileX *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorX;
 
         var anchorWorldY =
             georeference.AnchorTileY *
-                300.0 +
+                OmsiTileGrid.TileSize +
             georeference.AnchorY;
 
         var coordinates =
@@ -987,7 +987,7 @@ public sealed class OmsiNativeSession
         {
             var localY =
                 row *
-                300.0 /
+                OmsiTileGrid.TileSize /
                 (
                     sampleCount -
                     1
@@ -1000,7 +1000,7 @@ public sealed class OmsiNativeSession
             {
                 var localX =
                     column *
-                    300.0 /
+                    OmsiTileGrid.TileSize /
                     (
                         sampleCount -
                         1
@@ -1008,12 +1008,12 @@ public sealed class OmsiNativeSession
 
                 var worldX =
                     tileX *
-                        300.0 +
+                        OmsiTileGrid.TileSize +
                     localX;
 
                 var worldY =
                     tileY *
-                        300.0 +
+                        OmsiTileGrid.TileSize +
                     localY;
 
                 var eastMeters =
@@ -2218,6 +2218,14 @@ public sealed class OmsiNativeSession
                     item.Destination);
             }
 
+            await StitchCreatedTileTerrainAsync(
+                    snapshot.Map,
+                    tileX,
+                    tileY,
+                    targetMapPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             await SafeFileTransaction
                 .WriteAllAsync(
                     [
@@ -2691,6 +2699,139 @@ public sealed class OmsiNativeSession
 
             throw;
         }
+    }
+
+    private static async Task
+        StitchCreatedTileTerrainAsync(
+            OmsiMapDescriptor map,
+            int tileX,
+            int tileY,
+            string targetMapPath,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(
+            map);
+
+        var targetTerrainPath =
+            targetMapPath +
+            ".terrain";
+
+        if (!File.Exists(
+                targetTerrainPath))
+        {
+            throw new InvalidDataException(
+                "newMapTemplateTileInvalid");
+        }
+
+        var terrainReader =
+            new OmsiTerrainReader();
+
+        var targetTerrain =
+            await terrainReader
+                .ReadAsync(
+                    targetTerrainPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        async Task<OmsiTerrainGrid?>
+            ReadNeighborAsync(
+                int neighborX,
+                int neighborY)
+        {
+            var reference =
+                map.Tiles
+                    .FirstOrDefault(
+                        tile =>
+                            tile.X ==
+                                neighborX &&
+                            tile.Y ==
+                                neighborY);
+
+            if (
+                reference is null ||
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        map.DirectoryPath,
+                        reference.RelativeMapPath,
+                        out var neighborMapPath))
+            {
+                return null;
+            }
+
+            var terrainPath =
+                neighborMapPath +
+                ".terrain";
+
+            if (!File.Exists(
+                    terrainPath))
+            {
+                return null;
+            }
+
+            try
+            {
+                return await terrainReader
+                    .ReadAsync(
+                        terrainPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (InvalidDataException)
+            {
+                return null;
+            }
+        }
+
+        var negativeX =
+            await ReadNeighborAsync(
+                    tileX -
+                        1,
+                    tileY)
+                .ConfigureAwait(false);
+
+        var positiveX =
+            await ReadNeighborAsync(
+                    tileX +
+                        1,
+                    tileY)
+                .ConfigureAwait(false);
+
+        var negativeY =
+            await ReadNeighborAsync(
+                    tileX,
+                    tileY -
+                        1)
+                .ConfigureAwait(false);
+
+        var positiveY =
+            await ReadNeighborAsync(
+                    tileX,
+                    tileY +
+                        1)
+                .ConfigureAwait(false);
+
+        var stitched =
+            OmsiTerrainBorderStitcher
+                .StitchToNeighbors(
+                    targetTerrain,
+                    negativeX,
+                    positiveX,
+                    negativeY,
+                    positiveY);
+
+        if (
+            stitched.ChangedSamples ==
+                0)
+        {
+            return;
+        }
+
+        await File.WriteAllBytesAsync(
+                targetTerrainPath,
+                OmsiTerrainWriter.Write(
+                    stitched.Terrain),
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<NativeCoordinateMapCreateResult>

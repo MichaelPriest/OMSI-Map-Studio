@@ -326,16 +326,16 @@ public sealed class NativeTerrainTriangleGeometryBuilder
             vertices.Count;
 
         var spacing =
-            300.0 /
+            OmsiTileGrid.TileSize /
             cellCount;
 
         var originX =
             tile.Reference.X *
-            300.0;
+            OmsiTileGrid.TileSize;
 
         var originZ =
             tile.Reference.Y *
-            300.0;
+            OmsiTileGrid.TileSize;
 
         for (
             var row = 0;
@@ -610,11 +610,11 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         return new Vector2(
             (float)(
                 localX /
-                300.0 *
+                OmsiTileGrid.TileSize *
                 safeRepeating),
             (float)(
                 localZ /
-                300.0 *
+                OmsiTileGrid.TileSize *
                 safeRepeating));
     }
 
@@ -624,10 +624,10 @@ public sealed class NativeTerrainTriangleGeometryBuilder
         new(
             (float)(
                 localX /
-                300.0),
+                OmsiTileGrid.TileSize),
             (float)(
                 localZ /
-                300.0));
+                OmsiTileGrid.TileSize));
 
     private static void AppendBatch(
         List<NativeMaterialBatch> batches,
