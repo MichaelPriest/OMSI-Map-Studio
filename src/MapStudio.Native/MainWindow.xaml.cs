@@ -25104,11 +25104,15 @@ setTimeout(postBounds, 250);
 
     private void OnRealMapElevationProviderChanged(
         object sender,
-        SelectionChangedEventArgs e)
+        SelectionChangedEventArgs e) =>
+        RefreshRealMapElevationProviderUi();
+
+    private void RefreshRealMapElevationProviderUi()
     {
         if (
             RealMapOpenMeteoKeyBox is null ||
-            SaveRealMapOpenMeteoKeyButton is null)
+            SaveRealMapOpenMeteoKeyButton is null ||
+            RealMapElevationProviderBox is null)
         {
             return;
         }
@@ -25171,11 +25175,7 @@ setTimeout(postBounds, 250);
         RealMapOpenMeteoKeyBox.Password =
             string.Empty;
 
-        OnRealMapElevationProviderChanged(
-            RealMapElevationProviderBox,
-            new SelectionChangedEventArgs(
-                Array.Empty<object>(),
-                Array.Empty<object>()));
+        RefreshRealMapElevationProviderUi();
 
         StatusText.Text =
             "Open-Meteo: chave salva com segurança no Windows Credential Manager.";
