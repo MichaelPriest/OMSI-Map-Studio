@@ -2409,6 +2409,10 @@
                                         Content="Duplicar"
                                         ToolTipService.ToolTip="Duplicar a spline selecionada e reposicionar"
                                         Click="OnRoadDuplicateClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Dividir"
+                                        ToolTipService.ToolTip="Clique em um ponto da spline selecionada para dividir o trecho"
+                                        Click="OnRoadSplitClick" />
                                 <NumberBox x:Name="RoadParallelOffsetBox"
                                            Width="78"
                                            Value="3.5"

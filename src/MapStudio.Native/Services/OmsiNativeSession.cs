@@ -46,6 +46,11 @@ public sealed record NativeMapSnapshot(
                 tile.Content.Terrain is not null);
 }
 
+public sealed record NativeSplineSplitResult(
+    NativeMapSnapshot Snapshot,
+    int FirstSplineId,
+    int SecondSplineId);
+
 public sealed class OmsiNativeSession
 {
     private static readonly HttpClient
@@ -4220,6 +4225,508 @@ public sealed class OmsiNativeSession
             };
 
         return CurrentMap;
+    }
+
+    public async Task<NativeSplineSplitResult>
+        SplitSplineAsync(
+            NativeSplineSplitRequest request,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            request);
+
+        var selection =
+            request.Selection;
+
+        if (
+            selection.Kind !=
+                PickingKind.Spline ||
+            selection.PreviousSplineId is
+                not int previousSplineId ||
+            selection.NextSplineId is
+                not int nextSplineId ||
+            selection.IsHeightSpline is
+                not bool isHeightSpline)
+        {
+            throw new InvalidDataException(
+                "splineSplitSelectionInvalid");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplineSplit");
+        }
+
+        var loadedByPath =
+            snapshot.Tiles.ToDictionary(
+                tile =>
+                    tile.Reference
+                        .RelativeMapPath,
+                tile =>
+                    tile.Content,
+                StringComparer.OrdinalIgnoreCase);
+
+        var mapContents =
+            new List<(
+                OmsiTileReference Reference,
+                OmsiTileContent Content)>();
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            if (
+                loadedByPath.TryGetValue(
+                    tile.RelativeMapPath,
+                    out var loaded))
+            {
+                mapContents.Add(
+                    (
+                        tile,
+                        loaded
+                    ));
+
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var path) ||
+                !File.Exists(
+                    path))
+            {
+                continue;
+            }
+
+            mapContents.Add(
+                (
+                    tile,
+                    await _tileReader
+                        .ReadContentAsync(
+                            path,
+                            cancellationToken)
+                        .ConfigureAwait(false)
+                ));
+        }
+
+        var allSplines =
+            mapContents
+                .SelectMany(
+                    entry =>
+                        entry.Content.Splines
+                            .Select(
+                                spline =>
+                                    (
+                                        entry.Reference,
+                                        Spline: spline
+                                    )))
+                .ToArray();
+
+        if (
+            allSplines
+                .GroupBy(
+                    item =>
+                        item.Spline.SplineId)
+                .Any(
+                    group =>
+                        group.Count() >
+                        1))
+        {
+            throw new InvalidDataException(
+                "duplicateSplineId");
+        }
+
+        var sourceEntry =
+            allSplines
+                .FirstOrDefault(
+                    item =>
+                        item.Spline.SplineId ==
+                            selection.EntityId);
+
+        if (
+            sourceEntry.Spline is null ||
+            sourceEntry.Reference.X !=
+                selection.TileX ||
+            sourceEntry.Reference.Y !=
+                selection.TileY ||
+            !string.Equals(
+                sourceEntry.Spline.SplinePath,
+                selection.AssetPath,
+                StringComparison.OrdinalIgnoreCase) ||
+            sourceEntry.Spline.PreviousSplineId !=
+                previousSplineId ||
+            sourceEntry.Spline.NextSplineId !=
+                nextSplineId ||
+            sourceEntry.Spline.IsHeightSpline !=
+                isHeightSpline)
+        {
+            throw new InvalidDataException(
+                "splineSourceChanged");
+        }
+
+        var source =
+            sourceEntry.Spline;
+
+        if (
+            request.FirstLength <=
+                0.5 ||
+            request.SecondLength <=
+                0.5 ||
+            Math.Abs(
+                request.FirstLength +
+                request.SecondLength -
+                source.Length) >
+                Math.Max(
+                    0.02,
+                    source.Length *
+                        0.0005))
+        {
+            throw new InvalidDataException(
+                "invalidSplineSplitGeometry");
+        }
+
+        var maxUsedId =
+            mapContents
+                .SelectMany(
+                    content =>
+                        content.Content.Objects
+                            .Select(
+                                item =>
+                                    item.ObjectId)
+                            .Concat(
+                                content.Content.Splines
+                                    .Select(
+                                        item =>
+                                            item.SplineId)))
+                .DefaultIfEmpty(
+                    0)
+                .Max();
+
+        if (
+            maxUsedId >=
+            int.MaxValue)
+        {
+            throw new InvalidDataException(
+                "splineIdExhausted");
+        }
+
+        var secondSplineId =
+            checked(
+                maxUsedId +
+                1);
+
+        var pathToTile =
+            snapshot.Map.Tiles
+                .ToDictionary(
+                    tile =>
+                        tile.RelativeMapPath,
+                    StringComparer.OrdinalIgnoreCase);
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    sourceEntry.Reference
+                        .RelativeMapPath,
+                    out var sourcePath) ||
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    request.SecondTile
+                        .RelativeMapPath,
+                    out var secondPath))
+        {
+            throw new InvalidDataException(
+                "splineSplitTilePathInvalid");
+        }
+
+        var documents =
+            new Dictionary<
+                string,
+                OmsiConfigDocument>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        async Task<OmsiConfigDocument>
+            GetDocumentAsync(
+                string path)
+        {
+            if (
+                documents.TryGetValue(
+                    path,
+                    out var existing))
+            {
+                return existing;
+            }
+
+            var loaded =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        path,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            documents[path] =
+                loaded;
+
+            return loaded;
+        }
+
+        void SetDocument(
+            string path,
+            byte[] bytes)
+        {
+            documents[path] =
+                OmsiConfigParser
+                    .ParseBytes(
+                        bytes);
+        }
+
+        var sourceDocument =
+            await GetDocumentAsync(
+                sourcePath);
+
+        var transformed =
+            OmsiTileSplineEditor
+                .ApplyTransforms(
+                    sourceDocument,
+                    [
+                        new OmsiSplineTransformEdit(
+                            source.SourceSectionOrdinal,
+                            source.SplinePath,
+                            source.SplineId,
+                            source.PreviousSplineId,
+                            source.NextSplineId,
+                            source.IsHeightSpline,
+                            source.X,
+                            source.Z,
+                            source.Y,
+                            source.Rotation,
+                            request.FirstLength,
+                            source.Radius,
+                            request.FirstGradientStart,
+                            request.FirstGradientEnd)
+                    ]);
+
+        SetDocument(
+            sourcePath,
+            transformed.Bytes);
+
+        var sourceLinked =
+            OmsiTileSplineLinkEditor
+                .ApplyLinks(
+                    await GetDocumentAsync(
+                        sourcePath),
+                    [
+                        new OmsiSplineLinkEdit(
+                            source.SourceSectionOrdinal,
+                            source.SplinePath,
+                            source.SplineId,
+                            source.PreviousSplineId,
+                            source.NextSplineId,
+                            source.IsHeightSpline,
+                            source.PreviousSplineId,
+                            secondSplineId)
+                    ]);
+
+        SetDocument(
+            sourcePath,
+            sourceLinked.Bytes);
+
+        var secondDocument =
+            await GetDocumentAsync(
+                secondPath);
+
+        var secondInsertion =
+            OmsiTileSplineInserter
+                .Append(
+                    secondDocument,
+                    new OmsiNewPlacedSpline(
+                        source.HeaderValue,
+                        source.SplinePath,
+                        secondSplineId,
+                        source.SplineId,
+                        source.NextSplineId,
+                        request.SecondX,
+                        request.SecondZ,
+                        request.SecondY,
+                        request.SecondRotation,
+                        request.SecondLength,
+                        request.SecondRadius,
+                        request.SecondGradientStart,
+                        request.SecondGradientEnd,
+                        source.IsHeightSpline,
+                        source.ExtraValues));
+
+        SetDocument(
+            secondPath,
+            secondInsertion.Bytes);
+
+        if (
+            source.NextSplineId >=
+            0)
+        {
+            var nextEntry =
+                allSplines
+                    .FirstOrDefault(
+                        item =>
+                            item.Spline.SplineId ==
+                            source.NextSplineId);
+
+            if (
+                nextEntry.Spline is null ||
+                nextEntry.Spline.PreviousSplineId !=
+                    source.SplineId)
+            {
+                throw new InvalidDataException(
+                    "splineSplitNextLinkMismatch");
+            }
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        nextEntry.Reference
+                            .RelativeMapPath,
+                        out var nextPath))
+            {
+                throw new InvalidDataException(
+                    "splineSplitNextTilePathInvalid");
+            }
+
+            var nextLinked =
+                OmsiTileSplineLinkEditor
+                    .ApplyLinks(
+                        await GetDocumentAsync(
+                            nextPath),
+                        [
+                            new OmsiSplineLinkEdit(
+                                nextEntry.Spline
+                                    .SourceSectionOrdinal,
+                                nextEntry.Spline
+                                    .SplinePath,
+                                nextEntry.Spline
+                                    .SplineId,
+                                nextEntry.Spline
+                                    .PreviousSplineId,
+                                nextEntry.Spline
+                                    .NextSplineId,
+                                nextEntry.Spline
+                                    .IsHeightSpline,
+                                secondSplineId,
+                                nextEntry.Spline
+                                    .NextSplineId)
+                        ]);
+
+            SetDocument(
+                nextPath,
+                nextLinked.Bytes);
+        }
+
+        var backupRoot =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                ".mapstudio-backups",
+                DateTimeOffset.UtcNow
+                    .ToString(
+                        "yyyyMMdd-HHmmssfff'Z'",
+                        CultureInfo.InvariantCulture) +
+                "-native-split-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var writes =
+            documents
+                .Select(
+                    pair =>
+                        new PendingFileWrite(
+                            pair.Key,
+                            Path.Combine(
+                                backupRoot,
+                                Path.GetRelativePath(
+                                    snapshot.Map.DirectoryPath,
+                                    pair.Key)),
+                            pair.Value
+                                .ToBytes()))
+                .ToArray();
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        LastBackupDirectory =
+            backupRoot;
+
+        var affectedPaths =
+            documents.Keys
+                .Select(
+                    path =>
+                        Path.GetFullPath(
+                            path))
+                .ToHashSet(
+                    StringComparer.OrdinalIgnoreCase);
+
+        var refreshedTiles =
+            new List<NativeLoadedTile>(
+                snapshot.Tiles.Count);
+
+        foreach (
+            var tile in
+                snapshot.Tiles)
+        {
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map.DirectoryPath,
+                        tile.Reference
+                            .RelativeMapPath,
+                        out var tilePath) ||
+                !affectedPaths.Contains(
+                    Path.GetFullPath(
+                        tilePath)))
+            {
+                refreshedTiles.Add(
+                    tile);
+
+                continue;
+            }
+
+            refreshedTiles.Add(
+                new NativeLoadedTile(
+                    tile.Reference,
+                    await _tileReader
+                        .ReadContentAsync(
+                            tilePath,
+                            cancellationToken)
+                        .ConfigureAwait(false)));
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    refreshedTiles
+                        .ToArray()
+            };
+
+        return new NativeSplineSplitResult(
+            CurrentMap,
+            source.SplineId,
+            secondSplineId);
     }
 
     public async Task<NativeSplineInsertionResult>

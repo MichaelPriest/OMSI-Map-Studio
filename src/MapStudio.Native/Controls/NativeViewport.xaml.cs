@@ -36,6 +36,7 @@ public sealed partial class NativeViewport : UserControl
     private double _rightPressX;
     private double _rightPressY;
     private bool _isSplineDragCreating;
+    private bool _splineSplitPickActive;
     private bool _isManipulatingGizmo;
     private double _lastPanX;
     private double _lastPanY;
@@ -101,6 +102,10 @@ public sealed partial class NativeViewport : UserControl
     public event Action<
         NativeSelectionContextAction>?
         SelectionContextActionRequested;
+
+    public event Action<
+        NativeSplineSplitRequest>?
+        SplineSplitRequested;
 
     public event Action<
         NativeTrafficPathNode>?
@@ -1006,6 +1011,33 @@ public sealed partial class NativeViewport : UserControl
         return focused;
     }
 
+    public bool BeginSplineSplitPick()
+    {
+        if (
+            _runtime?.GetSelectionInfo()
+                ?.Kind !=
+            MapStudio.Renderer.Picking
+                .PickingKind.Spline)
+        {
+            return false;
+        }
+
+        _splineSplitPickActive =
+            true;
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Dividir: clique no ponto da spline onde deseja cortar.");
+
+        return true;
+    }
+
+    public void CancelSplineSplitPick()
+    {
+        _splineSplitPickActive =
+            false;
+    }
+
     public bool TryCreateParallelSplineRequest(
         double lateralOffset,
         out NativeSplinePlacementRequest? request,
@@ -1744,6 +1776,37 @@ public sealed partial class NativeViewport : UserControl
                 Math.Round(
                     point.Position.Y *
                     scaleY));
+
+        if (
+            _splineSplitPickActive &&
+            _runtime is not null)
+        {
+            _splineSplitPickActive =
+                false;
+
+            if (
+                _runtime
+                    .TryCreateSelectedSplineSplitRequest(
+                        pixelX,
+                        pixelY,
+                        out var splitRequest,
+                        out var splitStatus) &&
+                splitRequest is not null)
+            {
+                SplineSplitRequested
+                    ?.Invoke(
+                        splitRequest);
+            }
+
+            PointerStatusChanged?.Invoke(
+                this,
+                splitStatus);
+
+            e.Handled =
+                true;
+
+            return;
+        }
 
         if (
             _terrainPointPickActive &&

@@ -612,6 +612,13 @@ public sealed partial class MainWindow : Window
                     request);
             };
 
+        Viewport.SplineSplitRequested +=
+            async request =>
+            {
+                await HandleSplineSplitAsync(
+                    request);
+            };
+
         Viewport.SplinePlacementControlStateChanged +=
             state =>
             {
@@ -7940,6 +7947,79 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             status;
+    }
+
+    private void OnRoadSplitClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline antes de dividir.";
+            return;
+        }
+
+        Viewport.CancelSplinePlacement();
+
+        if (
+            !Viewport
+                .BeginSplineSplitPick())
+        {
+            StatusText.Text =
+                "Ruas: não foi possível iniciar o modo Dividir.";
+            return;
+        }
+
+        StatusText.Text =
+            "Ruas: Dividir ativo. Clique no ponto exato do trecho onde deseja cortar.";
+    }
+
+    private async Task HandleSplineSplitAsync(
+        NativeSplineSplitRequest request)
+    {
+        try
+        {
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                "Ruas: dividindo trecho com backup...";
+
+            var result =
+                await _session
+                    .SplitSplineAsync(
+                        request);
+
+            RegisterConstructionHistory(
+                "Dividir spline");
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    result.Snapshot,
+                    _session.OmsiRootPath!);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            StatusText.Text =
+                $"Ruas: spline #{result.FirstSplineId} dividida; novo segmento #{result.SecondSplineId}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Ruas: falha ao dividir: {exception.Message}";
+        }
     }
 
     private async Task CreateParallelRoadAsync(

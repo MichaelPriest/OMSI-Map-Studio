@@ -5949,6 +5949,63 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public bool TryCreateSelectedSplineSplitRequest(
+        uint pixelX,
+        uint pixelY,
+        out NativeSplineSplitRequest? request,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        request =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var pointerWorld))
+        {
+            status =
+                "Dividir: selecione uma spline e clique sobre o trecho.";
+            return false;
+        }
+
+        var entity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.PickingId ==
+                        _selectedPickingId);
+
+        var selection =
+            GetSelectionInfo();
+
+        if (
+            entity is null ||
+            selection is null)
+        {
+            status =
+                "Dividir: seleção não encontrada.";
+            return false;
+        }
+
+        return NativeSplineSplitMath
+            .TryCreateRequest(
+                Scene,
+                entity,
+                selection,
+                pointerWorld,
+                out request,
+                out status);
+    }
+
     public bool TryGetTerrainEditPoint(
         uint pixelX,
         uint pixelY,
