@@ -184,6 +184,15 @@ public sealed class
             material.Emissive);
 
         Assert.Equal(
+            0.5f,
+            material.Opacity,
+            precision: 4);
+
+        Assert.Equal(
+            Vector3.One,
+            material.DiffuseColor);
+
+        Assert.Equal(
             material.Name,
             Assert.Single(
                     mesh.Triangles)
