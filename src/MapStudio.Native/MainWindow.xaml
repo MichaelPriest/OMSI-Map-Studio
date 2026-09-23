@@ -2238,16 +2238,27 @@
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center" />
                         </StackPanel>
-                        <Button Grid.Column="1"
-                                Width="28"
-                                Height="28"
-                                Padding="0"
-                                Content="×"
-                                ToolTipService.ToolTip="Fechar"
-                                Click="OnCloseTileNavigatorWindowClick" />
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                            <Button x:Name="TileNavigatorMinimizeButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar/restaurar"
+                                    Click="OnToggleTileNavigatorMinimizeClick" />
+                            <Button Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTipService.ToolTip="Fechar"
+                                    Click="OnCloseTileNavigatorWindowClick" />
+                        </StackPanel>
                     </Grid>
 
-                    <Grid Grid.Row="1"
+                    <Grid x:Name="TileNavigatorBody"
+                          Grid.Row="1"
                           ColumnSpacing="6"
                           RowSpacing="8">
                         <Grid.RowDefinitions>
@@ -2386,15 +2397,27 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <Button Grid.Column="1"
-                                Width="30"
-                                Height="30"
-                                Padding="0"
-                                Content="×"
-                                Click="OnCloseRealMapAreaWindowClick" />
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                            <Button x:Name="RealMapAreaMinimizeButton"
+                                    Width="30"
+                                    Height="30"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar/restaurar"
+                                    Click="OnToggleRealMapAreaMinimizeClick" />
+                            <Button Width="30"
+                                    Height="30"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTipService.ToolTip="Fechar"
+                                    Click="OnCloseRealMapAreaWindowClick" />
+                        </StackPanel>
                     </Grid>
 
-                    <Grid Grid.Row="1"
+                    <Grid x:Name="RealMapAreaOptionsRow"
+                          Grid.Row="1"
                           ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.2*" />
@@ -2425,7 +2448,8 @@
                                 Click="OnReloadRealMapAreaClick" />
                     </Grid>
 
-                    <Grid Grid.Row="2">
+                    <Grid x:Name="RealMapAreaMapRow"
+                          Grid.Row="2">
                         <WebView2 x:Name="RealMapAreaWebView"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch" />
@@ -2470,7 +2494,8 @@
                         </Grid>
                     </Grid>
 
-                    <Grid Grid.Row="3"
+                    <Grid x:Name="RealMapAreaFooterRow"
+                          Grid.Row="3"
                           ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
