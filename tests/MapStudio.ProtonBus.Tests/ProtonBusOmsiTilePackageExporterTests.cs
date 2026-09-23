@@ -100,7 +100,7 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
     }
 
     [Fact]
-    public async Task ExporterStopsBeforeWritingWhenTextureNeedsConversion()
+    public async Task ExporterTranscodesDdsTextureToPng()
     {
         var root =
             CreateRoot();
@@ -115,12 +115,7 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
             CreateSplineFixture(
                 root,
                 "road.dds",
-                [
-                    68,
-                    68,
-                    83,
-                    32
-                ]);
+                CreateDxt1Dds());
 
             var result =
                 await new ProtonBusOmsiTilePackageExporter()
@@ -138,33 +133,158 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
                         CreateContent(
                             @"Splines\Test\road.sli"));
 
-            Assert.False(
+            Assert.True(
                 result.IsExported);
 
-            Assert.Null(
+            Assert.NotNull(
                 result.Package);
 
-            Assert.Null(
+            Assert.NotNull(
                 result.Tile);
 
-            Assert.Contains(
-                result.Issues,
-                issue =>
-                    issue.Code ==
-                    "textureConversionRequired");
+            Assert.Empty(
+                result.Issues);
 
-            Assert.False(
-                File.Exists(
-                    Path.Combine(
-                        output,
-                        "maps",
-                        "Mapa.map.txt")));
+            var texturePath =
+                Assert.Single(
+                    result.Package!
+                        .TexturePaths);
+
+            Assert.EndsWith(
+                "road.png",
+                texturePath,
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+            var bytes =
+                File.ReadAllBytes(
+                    texturePath);
+
+            Assert.True(
+                bytes.Length >
+                8);
+
+            Assert.Equal(
+                new byte[]
+                {
+                    137,
+                    80,
+                    78,
+                    71,
+                    13,
+                    10,
+                    26,
+                    10
+                },
+                bytes.Take(8)
+                    .ToArray());
         }
         finally
         {
             DeleteRoot(
                 root);
         }
+    }
+
+
+    private static byte[] CreateDxt1Dds()
+    {
+        using var stream =
+            new MemoryStream();
+
+        using var writer =
+            new BinaryWriter(
+                stream);
+
+        writer.Write(
+            new byte[]
+            {
+                68,
+                68,
+                83,
+                32
+            });
+
+        writer.Write(
+            124u);
+
+        writer.Write(
+            0x00081007u);
+
+        writer.Write(
+            4u);
+
+        writer.Write(
+            4u);
+
+        writer.Write(
+            8u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        for (
+            var index = 0;
+            index <
+            11;
+            index++)
+        {
+            writer.Write(
+                0u);
+        }
+
+        writer.Write(
+            32u);
+
+        writer.Write(
+            0x00000004u);
+
+        writer.Write(
+            0x31545844u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0x00001000u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            0u);
+
+        writer.Write(
+            (ushort)0xF800);
+
+        writer.Write(
+            (ushort)0x0000);
+
+        writer.Write(
+            0u);
+
+        return stream.ToArray();
     }
 
     private static OmsiTileContent
