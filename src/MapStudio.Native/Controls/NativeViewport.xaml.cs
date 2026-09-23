@@ -2881,9 +2881,12 @@ public sealed partial class NativeViewport : UserControl
                 point.Position.Y);
         }
 
+        var selectionRuntime =
+            _runtime;
+
         if (
             _isSelectionBoxDragging &&
-            _runtime is not null)
+            selectionRuntime is not null)
         {
             var scaleX =
                 Math.Max(
@@ -2926,7 +2929,7 @@ public sealed partial class NativeViewport : UserControl
                         scaleY));
 
             var selectedCount =
-                _runtime
+                selectionRuntime
                     .SelectInRectangle(
                         startPixelX,
                         startPixelY,
