@@ -576,6 +576,30 @@ public sealed partial class NativeViewport : UserControl
                 distance,
                 autoConnect);
 
+    public bool TryGetAutoConnectLinksForSelectedSpline(
+        double maximumDistance,
+        out int previousSplineId,
+        out int nextSplineId,
+        out string status)
+    {
+        previousSplineId =
+            -1;
+
+        nextSplineId =
+            -1;
+
+        status =
+            "Auto conectar indisponível.";
+
+        return _runtime is not null &&
+            _runtime
+                .TryGetAutoConnectLinksForSelectedSpline(
+                    maximumDistance,
+                    out previousSplineId,
+                    out nextSplineId,
+                    out status);
+    }
+
     public bool SeedSplinePlacementStart(
         System.Numerics.Vector3 start,
         int previousSplineId =
