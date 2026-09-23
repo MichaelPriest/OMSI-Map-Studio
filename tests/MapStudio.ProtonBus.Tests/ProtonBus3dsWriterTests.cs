@@ -28,7 +28,9 @@ public sealed class ProtonBus3dsWriterTests
                         2)));
 
         Assert.Equal(
-            bytes.Length,
+            checked(
+                (uint)
+                    bytes.Length),
             BinaryPrimitives
                 .ReadUInt32LittleEndian(
                     bytes.AsSpan(
