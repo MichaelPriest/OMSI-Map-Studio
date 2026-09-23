@@ -5973,7 +5973,9 @@ public sealed partial class MainWindow : Window
                     .UpdateSplineLinksAsync(
                         selection,
                         desiredPrevious,
-                        desiredNext);
+                        desiredNext,
+                        repairBrokenLinks:
+                            true);
 
             RegisterConstructionHistory(
                 "Auto conectar spline");
