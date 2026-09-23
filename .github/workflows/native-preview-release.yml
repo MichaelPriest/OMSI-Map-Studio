@@ -17,6 +17,8 @@ on:
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
       - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointSnapFinder.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
+      - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
@@ -416,8 +418,9 @@ jobs:
             throw "OpenStreetMap cache/User-Agent safeguards are missing."
           }
 
-          if (-not $planner.Contains('states.ContainsKey')) {
-            throw "Broken reciprocal spline-link repair support is missing."
+          if (-not $session.Contains('repairBrokenLinks') -or
+              -not $main.Contains('repairBrokenLinks:')) {
+            throw "Auto connect broken-link repair mode is missing."
           }
 
           if (-not $xaml.Contains('x:Name="MapText"') -or
