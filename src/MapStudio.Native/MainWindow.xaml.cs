@@ -424,6 +424,10 @@ public sealed partial class MainWindow : Window
     private double _fullscreenExplorerResizeStartY;
     private double _fullscreenExplorerResizeOriginWidth;
     private double _fullscreenExplorerResizeOriginHeight;
+
+    private NativeRoadElevationMode _roadElevationMode =
+        NativeRoadElevationMode.FollowTerrain;
+
     private double _fullscreenExplorerHeight =
         650;
 
@@ -678,6 +682,27 @@ public sealed partial class MainWindow : Window
 
                 EasyRoadEndZBox.Value =
                     state.End.Z;
+
+                var maxGradient =
+                    double.IsFinite(
+                        RoadMaxGradientBox.Value)
+                        ? Math.Clamp(
+                            RoadMaxGradientBox.Value,
+                            1.0,
+                            40.0)
+                        : 12.0;
+
+                if (
+                    state.Length >
+                        0.1 &&
+                    Math.Abs(
+                        state.Gradient) >
+                        maxGradient)
+                {
+                    StatusText.Text =
+                        $"⚠ Rua com inclinação {state.Gradient:+0.0;-0.0;0.0}% · " +
+                        $"limite recomendado {maxGradient:0.#}%.";
+                }
             };
 
         Viewport.TerrainPointSelected +=
@@ -7886,8 +7911,20 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             0;
 
+        _roadElevationMode =
+            NativeRoadElevationMode
+                .FollowTerrain;
+
+        Viewport
+            .SetSplinePlacementElevationMode(
+                _roadElevationMode);
+
+        Viewport
+            .SetSplinePlacementElevationOffset(
+                0.0);
+
         RoadElevationText.Text =
-            "0 m";
+            "Elevação: terreno";
 
         RoadSnapButton.Content =
             "Snap: on";
@@ -8358,14 +8395,74 @@ public sealed partial class MainWindow : Window
         await StartSelectionCopyPlacementAsync();
     }
 
+    private double GetRoadElevationStep() =>
+        RoadElevationStepBox.SelectedIndex switch
+        {
+            0 => 0.5,
+            2 => 2.0,
+            3 => 5.0,
+            _ => 1.0
+        };
+
+    private void ApplyRoadElevationMode(
+        NativeRoadElevationMode mode,
+        double elevationValue,
+        string status)
+    {
+        _roadElevationMode =
+            mode;
+
+        SplineElevationOffsetBox.Value =
+            elevationValue;
+
+        Viewport
+            .SetSplinePlacementElevationMode(
+                mode);
+
+        Viewport
+            .SetSplinePlacementElevationOffset(
+                elevationValue);
+
+        RoadElevationText.Text =
+            mode switch
+            {
+                NativeRoadElevationMode.Elevate =>
+                    $"Elevação: {Math.Abs(elevationValue):+0.#;-0.#;0} m",
+                NativeRoadElevationMode.Lower =>
+                    $"Elevação: {-Math.Abs(elevationValue):+0.#;-0.#;0} m",
+                NativeRoadElevationMode.Level =>
+                    "Elevação: nível",
+                _ =>
+                    "Elevação: terreno"
+            };
+
+        StatusText.Text =
+            status;
+    }
+
     private void AdjustRoadElevation(
         double delta)
     {
         var current =
-            double.IsFinite(
-                SplineElevationOffsetBox.Value)
-                ? SplineElevationOffsetBox.Value
-                : 0.0;
+            _roadElevationMode switch
+            {
+                NativeRoadElevationMode.Elevate =>
+                    Math.Abs(
+                        double.IsFinite(
+                            SplineElevationOffsetBox.Value)
+                            ? SplineElevationOffsetBox.Value
+                            : 0.0),
+
+                NativeRoadElevationMode.Lower =>
+                    -Math.Abs(
+                        double.IsFinite(
+                            SplineElevationOffsetBox.Value)
+                            ? SplineElevationOffsetBox.Value
+                            : 0.0),
+
+                _ =>
+                    0.0
+            };
 
         var updated =
             Math.Clamp(
@@ -8374,47 +8471,60 @@ public sealed partial class MainWindow : Window
                 -100.0,
                 300.0);
 
-        SplineElevationOffsetBox.Value =
-            updated;
+        if (
+            Math.Abs(
+                updated) <
+            0.001)
+        {
+            ApplyRoadElevationMode(
+                NativeRoadElevationMode.Level,
+                0.0,
+                "Ruas: Nivelar ativo · o fim manterá a mesma cota do início.");
+            return;
+        }
 
-        Viewport
-            .SetSplinePlacementElevationOffset(
-                updated);
+        var mode =
+            updated >
+            0
+                ? NativeRoadElevationMode.Elevate
+                : NativeRoadElevationMode.Lower;
 
-        RoadElevationText.Text =
-            $"{updated:+0;-0;0} m";
-
-        StatusText.Text =
-            updated == 0
-                ? "Ruas: elevação seguindo o terreno."
-                : $"Ruas: elevação rápida {updated:+0.0;-0.0;0.0} m.";
+        ApplyRoadElevationMode(
+            mode,
+            updated,
+            mode ==
+                NativeRoadElevationMode.Elevate
+                ? $"Ruas: elevar · fim {updated:+0.0;-0.0;0.0} m em relação ao início."
+                : $"Ruas: baixar · fim {updated:+0.0;-0.0;0.0} m em relação ao início.");
     }
 
     private void OnRoadElevationUpClick(
         object sender,
         RoutedEventArgs e) =>
         AdjustRoadElevation(
-            1.0);
+            GetRoadElevationStep());
 
     private void OnRoadElevationDownClick(
         object sender,
         RoutedEventArgs e) =>
         AdjustRoadElevation(
-            -1.0);
+            -GetRoadElevationStep());
+
+    private void OnRoadLevelElevationClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ApplyRoadElevationMode(
+            NativeRoadElevationMode.Level,
+            0.0,
+            "Ruas: Nivelar ativo · o trecho manterá a cota do ponto inicial.");
 
     private void OnRoadElevationResetClick(
         object sender,
-        RoutedEventArgs e)
-    {
-        var current =
-            double.IsFinite(
-                SplineElevationOffsetBox.Value)
-                ? SplineElevationOffsetBox.Value
-                : 0.0;
-
-        AdjustRoadElevation(
-            -current);
-    }
+        RoutedEventArgs e) =>
+        ApplyRoadElevationMode(
+            NativeRoadElevationMode.FollowTerrain,
+            0.0,
+            "Ruas: seguindo novamente a altura real do terreno.");
 
     private void OnRoadSnapToggleClick(
         object sender,
