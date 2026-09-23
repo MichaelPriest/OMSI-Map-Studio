@@ -459,6 +459,12 @@ public sealed partial class NativeViewport : UserControl
             ?.SetSplinePlacementElevationOffset(
                 offset);
 
+    public void SetSplinePlacementElevationMode(
+        NativeRoadElevationMode mode) =>
+        _runtime
+            ?.SetSplinePlacementElevationMode(
+                mode);
+
     public void SetSplinePlacementHeightMode(
         bool isHeightSpline) =>
         _runtime
@@ -633,6 +639,10 @@ public sealed partial class NativeViewport : UserControl
 
         _runtime.SetSplinePlacementElevationOffset(
             0.0);
+
+        _runtime.SetSplinePlacementElevationMode(
+            NativeRoadElevationMode
+                .FollowTerrain);
 
         _runtime.SetSplineEasyRoadOptions(
             enabled: false,
@@ -2399,25 +2409,69 @@ public sealed partial class NativeViewport : UserControl
                     pixelX,
                     pixelY))
             {
-                PointerStatusChanged?.Invoke(
-                    this,
-                    _isSplineDragCreating
-                        ? "Rua: arrastando prévia · solte para criar."
-                        : _runtime.SplinePlacementStage switch
+                var controlState =
+                    _runtime
+                        .GetSplinePlacementControlState();
+
+                SplinePlacementControlStateChanged
+                    ?.Invoke(
+                        controlState);
+
+                if (
+                    controlState is not null &&
+                    controlState.Length >
+                        0.01)
+                {
+                    var radiusText =
+                        Math.Abs(
+                            controlState.Radius) >
+                        0.01
+                            ? $" · R {Math.Abs(controlState.Radius):F1} m"
+                            : string.Empty;
+
+                    var modeText =
+                        controlState.ElevationMode switch
                         {
-                            NativeSplinePlacementStage.AwaitingStart =>
-                                "Rua: clique e arraste a partir do ponto inicial.",
-                            NativeSplinePlacementStage.AwaitingEnd =>
-                                "Rua: mova até o ponto final.",
-                            NativeSplinePlacementStage.AwaitingCurve =>
-                                "Curva: mova o cursor para definir a curvatura e clique.",
-                            NativeSplinePlacementStage.AwaitingEasyRoadCurveControl =>
-                                "Curva visual: mova lateralmente e clique para fixar.",
-                            NativeSplinePlacementStage.AwaitingEasyRoadConfirm =>
-                                "Rua pronta para confirmar.",
+                            NativeRoadElevationMode.Elevate =>
+                                "elevar",
+                            NativeRoadElevationMode.Level =>
+                                "nivelar",
+                            NativeRoadElevationMode.Lower =>
+                                "baixar",
                             _ =>
-                                "Construindo rua..."
-                        });
+                                "terreno"
+                        };
+
+                    PointerStatusChanged?.Invoke(
+                        this,
+                        $"{controlState.Length:F1} m · " +
+                        $"{controlState.StartElevation:+0.0;-0.0;0.0} → " +
+                        $"{controlState.EndElevation:+0.0;-0.0;0.0} m · " +
+                        $"{controlState.Gradient:+0.0;-0.0;0.0}%{radiusText} · " +
+                        modeText);
+                }
+                else
+                {
+                    PointerStatusChanged?.Invoke(
+                        this,
+                        _isSplineDragCreating
+                            ? "Rua: arrastando prévia · solte para criar."
+                            : _runtime.SplinePlacementStage switch
+                            {
+                                NativeSplinePlacementStage.AwaitingStart =>
+                                    "Rua: clique e arraste a partir do ponto inicial.",
+                                NativeSplinePlacementStage.AwaitingEnd =>
+                                    "Rua: mova até o ponto final.",
+                                NativeSplinePlacementStage.AwaitingCurve =>
+                                    "Curva: mova o cursor para definir a curvatura e clique.",
+                                NativeSplinePlacementStage.AwaitingEasyRoadCurveControl =>
+                                    "Curva visual: mova lateralmente e clique para fixar.",
+                                NativeSplinePlacementStage.AwaitingEasyRoadConfirm =>
+                                    "Rua pronta para confirmar.",
+                                _ =>
+                                    "Construindo rua..."
+                            });
+                }
             }
 
             e.Handled = true;
