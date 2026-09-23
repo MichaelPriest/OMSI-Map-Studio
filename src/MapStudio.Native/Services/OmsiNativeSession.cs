@@ -503,7 +503,7 @@ public sealed class OmsiNativeSession
                         .LocalApplicationData),
                 "OMSI Map Studio",
                 "reference-cache",
-                "openstreetmap");
+                "carto-osm");
 
         Directory.CreateDirectory(
             cacheRoot);
@@ -511,7 +511,7 @@ public sealed class OmsiNativeSession
         var path =
             Path.Combine(
                 cacheRoot,
-                $"osm-{zoom}-{tileX}-{tileY}.png");
+                $"carto-{zoom}-{tileX}-{tileY}.png");
 
         var cacheValid =
             File.Exists(
@@ -525,7 +525,7 @@ public sealed class OmsiNativeSession
         if (!cacheValid)
         {
             var uri =
-                $"https://tile.openstreetmap.org/{zoom}/{tileX}/{tileY}.png";
+                $"https://a.basemaps.cartocdn.com/light_all/{zoom}/{tileX}/{tileY}.png";
 
             using var response =
                 await OpenStreetMapHttpClient
@@ -537,7 +537,7 @@ public sealed class OmsiNativeSession
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"openStreetMapReferenceHttp:{(int)response.StatusCode}");
+                    $"cartoOpenStreetMapReferenceHttp:{(int)response.StatusCode}");
             }
 
             var bytes =
@@ -555,7 +555,7 @@ public sealed class OmsiNativeSession
                     1024L)
             {
                 throw new InvalidDataException(
-                    "openStreetMapReferenceInvalidPayload");
+                    "cartoOpenStreetMapReferenceInvalidPayload");
             }
 
             await File.WriteAllBytesAsync(
@@ -618,7 +618,7 @@ public sealed class OmsiNativeSession
             longitude,
             zoom,
             "roadmap",
-            "© OpenStreetMap contributors");
+            "© OpenStreetMap contributors · © CARTO");
     }
 
     public async Task<NativeGoogleElevationGrid>

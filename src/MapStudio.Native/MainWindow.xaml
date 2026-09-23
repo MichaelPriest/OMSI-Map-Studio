@@ -28,10 +28,8 @@
                              Color="{ThemeResource MapStudioAccentColor}" />
             <Style x:Key="MapToolButtonStyle"
                    TargetType="Button">
-                <Setter Property="Width"
-                        Value="76" />
-                <Setter Property="Height"
-                        Value="64" />
+                <Setter Property="Width"\n                        Value="64" />
+                <Setter Property="Height"\n                        Value="54" />
                 <Setter Property="Padding"
                         Value="5" />
                 <Setter Property="Background"
@@ -49,12 +47,9 @@
             </Style>
             <Style x:Key="EditorToolbarButtonStyle"
                    TargetType="Button">
-                <Setter Property="MinHeight"
-                        Value="30" />
-                <Setter Property="Padding"
-                        Value="10,4" />
-                <Setter Property="FontSize"
-                        Value="11" />
+                <Setter Property="MinHeight"\n                        Value="27" />
+                <Setter Property="Padding"\n                        Value="8,3" />
+                <Setter Property="FontSize"\n                        Value="10.5" />
                 <Setter Property="Background"
                         Value="{ThemeResource MapStudioSurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush"
@@ -66,8 +61,7 @@
             </Style>
             <Style x:Key="ExplorerModeButtonStyle"
                    TargetType="Button">
-                <Setter Property="MinHeight"
-                        Value="42" />
+                <Setter Property="MinHeight"\n                        Value="36" />
                 <Setter Property="Padding"
                         Value="6,5" />
                 <Setter Property="FontSize"
@@ -87,8 +81,7 @@
             </Style>
             <Style x:Key="MapToolGroupBadgeStyle"
                    TargetType="Border">
-                <Setter Property="Width"
-                        Value="48" />
+                <Setter Property="Width"\n                        Value="42" />
                 <Setter Property="Height"
                         Value="64" />
                 <Setter Property="Margin"
@@ -191,7 +184,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="30" />
+            <RowDefinition Height="26" />
         </Grid.RowDefinitions>
 
         <Grid x:Name="DesktopChromePanel"
@@ -1528,23 +1521,23 @@
                                 <GridView.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <ItemsWrapGrid Orientation="Horizontal"
-                                                       ItemWidth="156"
-                                                       ItemHeight="164" />
+                                                       ItemWidth="138"
+                                                       ItemHeight="146" />
                                     </ItemsPanelTemplate>
                                 </GridView.ItemsPanel>
                                 <GridView.ItemTemplate>
                                     <DataTemplate>
                                         <Border Margin="3"
-                                                Width="148"
-                                                Height="156"
-                                                Padding="6"
+                                                Width="130"
+                                                Height="138"
+                                                Padding="5"
                                                 Background="{ThemeResource MapStudioSurfaceAltBrush}"
                                                 BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                                 BorderThickness="1"
                                                 CornerRadius="8">
                                             <Grid RowSpacing="4">
                                                 <Grid.RowDefinitions>
-                                                    <RowDefinition Height="86" />
+                                                    <RowDefinition Height="72" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="Auto" />
                                                     <RowDefinition Height="*" />
@@ -2600,8 +2593,8 @@
             <Border x:Name="AiToolWindow"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="430"
-                    Height="330"
+                    Width="390"
+                    Height="320"
                     Margin="640,96,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
@@ -2707,6 +2700,29 @@
                             <Grid ColumnSpacing="6">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="FloatingAiCredentialBox"
+                                             Grid.Column="0"
+                                             Header="Token / API key"
+                                             PlaceholderText="Cole a chave do perfil ativo"
+                                             PasswordRevealMode="Peek" />
+                                <Button x:Name="SaveActiveAiCredentialButton"
+                                        Grid.Column="1"
+                                        VerticalAlignment="Bottom"
+                                        Content="Salvar"
+                                        Click="OnSaveActiveAiCredentialClick" />
+                                <Button x:Name="ClearActiveAiCredentialButton"
+                                        Grid.Column="2"
+                                        VerticalAlignment="Bottom"
+                                        Content="Limpar"
+                                        Click="OnClearActiveAiCredentialClick" />
+                            </Grid>
+
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <Button Grid.Column="0"
@@ -2754,8 +2770,8 @@
             <Border x:Name="AssetLibraryToolWindow"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="620"
-                    Height="680"
+                    Width="560"
+                    Height="600"
                     Margin="350,84,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
@@ -2958,8 +2974,8 @@
             <Border x:Name="RealMapAreaWindow"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="860"
-                    Height="650"
+                    Width="800"
+                    Height="600"
                     Margin="190,58,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
@@ -3058,7 +3074,7 @@
                                   Header="Mapa para escolher a área"
                                   SelectedIndex="0"
                                   SelectionChanged="OnRealMapProviderChanged">
-                            <ComboBoxItem Content="OpenStreetMap · sem chave" />
+                            <ComboBoxItem Content="CARTO / OpenStreetMap · sem chave" />
                             <ComboBoxItem Content="Google Maps · chave do usuário" />
                         </ComboBox>
                         <Button Grid.Row="0"
@@ -3240,6 +3256,28 @@
                                               Content="Referência visual no terreno"
                                               IsChecked="True" />
                                 </StackPanel>
+
+                                <Grid ColumnSpacing="7">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Content="+ Pasta de itens"
+                                            ToolTipService.ToolTip="Adicionar SCO/SLI e outros itens ao Workspace"
+                                            Click="OnAddAssetFolderClick" />
+                                    <Button Grid.Column="1"
+                                            Content="Abrir Biblioteca"
+                                            ToolTipService.ToolTip="Escolher objetos/splines e posicionar no mapa"
+                                            Click="OnOpenAssetLibraryFromRealMapClick" />
+                                    <CheckBox x:Name="RealMapOpenLibraryAfterCreateCheckBox"
+                                              Grid.Column="2"
+                                              HorizontalAlignment="Right"
+                                              VerticalAlignment="Center"
+                                              Content="Abrir Biblioteca após criar"
+                                              IsChecked="True" />
+                                </Grid>
                             </StackPanel>
                             <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus e Google usam credenciais do próprio usuário; nenhuma chave privada é distribuída pelo Map Studio."
                                        FontSize="9.5"

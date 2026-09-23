@@ -22215,6 +22215,23 @@ public sealed partial class MainWindow : Window
             e);
     }
 
+    private void OnOpenAssetLibraryFromRealMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        RealMapAreaWindow.Visibility =
+            Visibility.Collapsed;
+
+        OpenAssetLibraryToolWindow();
+
+        OnLibraryModeClick(
+            sender,
+            e);
+
+        StatusText.Text =
+            "Biblioteca aberta: selecione um SCO/SLI e use “+ Posicionar no mapa”.";
+    }
+
     private void OpenAssetLibraryToolWindow()
     {
         _assetLibraryPanelHome ??=
@@ -24729,9 +24746,10 @@ html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const map = L.map('map', { zoomControl:true }).setView([{{lat}}, {{lon}}], {{zoom}});
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom:19,
-  attribution:'&copy; OpenStreetMap contributors'
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  subdomains:'abcd',
+  maxZoom:20,
+  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
 }).addTo(map);
 
 let selectionFx = {{selectionX}}, selectionFy = {{selectionY}};
@@ -25393,7 +25411,7 @@ setTimeout(postBounds, 250);
                         RealMapProviderBox.SelectedIndex ==
                             1
                             ? "Google Maps"
-                            : "OpenStreetMap"));
+                            : "CARTO / OpenStreetMap"));
 
             var minimumDx =
                 OmsiTileGrid
@@ -25510,6 +25528,21 @@ setTimeout(postBounds, 250);
                     generateAutomatically:
                         roadImportMode ==
                         2);
+            }
+
+            if (
+                RealMapOpenLibraryAfterCreateCheckBox
+                    .IsChecked ==
+                true)
+            {
+                OpenAssetLibraryToolWindow();
+
+                OnLibraryModeClick(
+                    this,
+                    new RoutedEventArgs());
+
+                StatusText.Text +=
+                    " · Biblioteca aberta: selecione um item e use “+ Posicionar no mapa”.";
             }
         }
         catch (Exception exception)
@@ -30997,6 +31030,18 @@ setTimeout(postBounds, 250);
             FloatingAiCredentialText.Text =
                 "Credencial: —";
 
+            FloatingAiCredentialBox.Password =
+                string.Empty;
+
+            FloatingAiCredentialBox.IsEnabled =
+                false;
+
+            SaveActiveAiCredentialButton.IsEnabled =
+                false;
+
+            ClearActiveAiCredentialButton.IsEnabled =
+                false;
+
             return;
         }
 
@@ -31033,6 +31078,99 @@ setTimeout(postBounds, 250);
             hasCredential
                 ? "Credencial: salva e protegida no Windows"
                 : "Credencial: não salva";
+
+        FloatingAiCredentialBox.Password =
+            string.Empty;
+
+        FloatingAiCredentialBox.PlaceholderText =
+            hasCredential
+                ? "Chave já salva · cole outra para substituir"
+                : "Cole a chave do perfil ativo";
+
+        FloatingAiCredentialBox.IsEnabled =
+            true;
+
+        SaveActiveAiCredentialButton.IsEnabled =
+            true;
+
+        ClearActiveAiCredentialButton.IsEnabled =
+            hasCredential;
+    }
+
+    private void OnSaveActiveAiCredentialClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            StatusText.Text =
+                "IA: selecione ou crie um perfil antes de salvar a chave.";
+            return;
+        }
+
+        var secret =
+            FloatingAiCredentialBox
+                .Password
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                secret))
+        {
+            StatusText.Text =
+                "IA: cole o token/API key antes de salvar.";
+            return;
+        }
+
+        try
+        {
+            NativeAiCredentialStore
+                .SaveSecret(
+                    activeProfile.Id,
+                    secret);
+
+            FloatingAiCredentialBox.Password =
+                string.Empty;
+
+            RefreshAiConnectionUi();
+
+            StatusText.Text =
+                $"IA: credencial de {activeProfile.DisplayName} salva com proteção do Windows.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"IA: não foi possível salvar a credencial: {exception.Message}";
+        }
+    }
+
+    private void OnClearActiveAiCredentialClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            return;
+        }
+
+        NativeAiCredentialStore
+            .DeleteSecret(
+                activeProfile.Id);
+
+        FloatingAiCredentialBox.Password =
+            string.Empty;
+
+        RefreshAiConnectionUi();
+
+        StatusText.Text =
+            $"IA: credencial de {activeProfile.DisplayName} removida.";
     }
 
     private void OnAiProfileSelectorChanged(
