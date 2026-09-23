@@ -557,6 +557,14 @@ Para elevação sem Google, use **Mapa → Importar grade local de elevação**.
 
 Tile X/Y não ocupa mais o card Projeto. Use o botão **Tile XY** na barra superior. A janela pode ser movida, redimensionada e minimizada dentro do editor. Ao minimizar, somente a barra de título permanece visível; o mesmo botão restaura a janela sem perder sua posição.
 
+A janela lista os tiles reais do mapa e mostra quais estão **ativos** e **carregados no viewport**, além da quantidade de objetos/splines e do caminho do arquivo. As ações principais ficam disponíveis diretamente nela:
+
+- **Focar** — enquadra um tile que já está carregado sem recarregar a região;
+- **Carregar** — torna o tile ativo e, no modo desempenho, carrega a região 3×3;
+- **Criar** — cria um tile usando as coordenadas X/Y informadas;
+- **Excluir** — ativa o tile escolhido e reutiliza a exclusão segura com validação e backup;
+- duplo clique na lista também carrega/foca o tile.
+
 A janela **Criar mapa real por área** segue o mesmo padrão: pode ser movida, redimensionada e minimizada sem fechar o seletor de área.
 
 ## Painéis recolhíveis
@@ -578,7 +586,9 @@ Essas janelas podem ser movidas, redimensionadas, minimizadas e fechadas. **Tran
 
 Use **Ctrl+clique** ou **Shift+clique** para adicionar/remover objetos e splines da seleção. Para selecionar vários itens visualmente, comece o arrasto em uma área vazia do viewport e desenhe uma caixa sobre os itens desejados. Com **Ctrl** ou **Shift** pressionado, a caixa adiciona itens ao grupo atual; sem modificador, ela substitui a seleção.
 
-O grupo selecionado pode ser **movido**, **girado** e **focado** diretamente no viewport. O preview/ghost acompanha o conjunto durante a transformação e o histórico trata a transformação como uma única ação visual. Nenhuma dessas funções depende do Inspector.
+O grupo selecionado pode ser **movido**, **girado**, **duplicado** e **focado** diretamente no viewport. O preview/ghost acompanha o conjunto durante a transformação e o histórico trata a transformação como uma única ação visual. Nenhuma dessas funções depende do Inspector.
+
+Ao usar **Duplicar** com vários itens, o Map Studio cria novos IDs em lote com backup, desloca inicialmente as cópias em 2 m e deixa o novo conjunto selecionado em modo Mover. Splines copiadas são criadas desconectadas (previous/next = -1) por segurança; reposicione e use **Auto conectar** quando desejar reconstruir as ligações.
 
 Pressione **Delete** para excluir o conjunto selecionado com uma única confirmação e backup seguro. Depois da exclusão, **Ctrl+Z** restaura o lote a partir dos backups reais dos arquivos do mapa.
 
