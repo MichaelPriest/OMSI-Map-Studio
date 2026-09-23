@@ -41,6 +41,12 @@ public sealed record ProtonBusOmsiMapExportOptions(
     public ProtonBusOmsiTrafficLightConversionOptions?
         TrafficLightOptions { get; init; }
 
+    public bool GenerateGpsRoutes { get; init; } =
+        true;
+
+    public ProtonBusOmsiGpsRouteOptions?
+        GpsOptions { get; init; }
+
     public IReadOnlyList<ProtonBusBusStopDefinition>
         BusStops { get; init; } =
         Array.Empty<ProtonBusBusStopDefinition>();
@@ -66,6 +72,9 @@ public sealed record ProtonBusOmsiMapPackageExportResult(
 {
     public ProtonBusOmsiTimetableConversionResult?
         Timetable { get; init; }
+
+    public ProtonBusOmsiGpsRoutesResult?
+        GpsRoutes { get; init; }
 }
 
 public sealed class ProtonBusOmsiMapPackageExporter
@@ -461,6 +470,10 @@ public sealed class ProtonBusOmsiMapPackageExporter
             timetableResult =
                 null;
 
+        ProtonBusOmsiGpsRoutesResult?
+            gpsRoutes =
+                null;
+
         var busStops =
             new List<ProtonBusBusStopDefinition>(
                 options.BusStops);
@@ -525,6 +538,57 @@ public sealed class ProtonBusOmsiMapPackageExporter
                 busStops,
                 entrypoints,
                 issues);
+
+            if (
+                options.GenerateGpsRoutes &&
+                !issues.Any(
+                    IsBlockingIssue) &&
+                timetableResult
+                    .TripEntrypoints
+                    .Count >
+                0)
+            {
+                gpsRoutes =
+                    ProtonBusOmsiGpsRouteBuilder
+                        .Build(
+                            timetableSource
+                                .TileOrder,
+                            timetableSource
+                                .Catalog,
+                            contentByTile,
+                            assetsByTile,
+                            timetableResult
+                                .TripEntrypoints,
+                            options
+                                .GpsOptions);
+
+                foreach (
+                    var issue
+                    in gpsRoutes.Issues)
+                {
+                    issues.Add(
+                        new(
+                            null,
+                            null,
+                            issue.Code,
+                            $"trip '{issue.TripName}'",
+                            issue.Detail));
+                }
+
+                if (
+                    gpsRoutes
+                        .Scene
+                        .Meshes
+                        .Count >
+                    0)
+                {
+                    models.Add(
+                        new(
+                            "gps_routes.3ds",
+                            gpsRoutes
+                                .Scene));
+                }
+            }
         }
 
         if (
@@ -538,7 +602,9 @@ public sealed class ProtonBusOmsiMapPackageExporter
                 issues)
             {
                 Timetable =
-                    timetableResult
+                    timetableResult,
+                GpsRoutes =
+                    gpsRoutes
             };
         }
 
@@ -586,7 +652,9 @@ public sealed class ProtonBusOmsiMapPackageExporter
             issues)
         {
             Timetable =
-                timetableResult
+                timetableResult,
+            GpsRoutes =
+                gpsRoutes
         };
     }
 
