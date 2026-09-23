@@ -8427,6 +8427,11 @@ public sealed partial class MainWindow : Window
         await StartSelectionCopyPlacementAsync();
     }
 
+    private void OnRoadLevelSelectedClick(
+        object sender,
+        RoutedEventArgs e) =>
+        LevelSelectedRoadAtCurrentHeight();
+
     private void ShiftSelectedRoadElevation(
         double delta)
     {
