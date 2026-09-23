@@ -17,7 +17,9 @@ public sealed record ProtonBusExportMaterial(
     string? TextureFileName = null,
     bool Transparent = false,
     bool Emissive = false,
-    bool Additive = false);
+    bool Additive = false,
+    Vector3? DiffuseColor = null,
+    float Opacity = 1.0f);
 
 public sealed record ProtonBusExportMesh(
     string Name,
