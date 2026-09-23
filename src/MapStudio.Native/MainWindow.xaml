@@ -2354,32 +2354,45 @@
                         <Grid>
                             <StackPanel x:Name="SelectionContextPanel"
                                         Orientation="Horizontal"
-                                        Spacing="6">
+                                        Spacing="8">
                                 <ComboBox x:Name="SelectionFilterComboBox"
-                                          Width="140"
+                                          Width="132"
                                           SelectedIndex="0"
-                                          ToolTipService.ToolTip="Filtro do ID Buffer de seleção">
-                                    <ComboBoxItem Content="Selecionar: todos" />
-                                    <ComboBoxItem Content="Só objetos" />
-                                    <ComboBoxItem Content="Só splines" />
-                                    <ComboBoxItem Content="Só terreno" />
+                                          ToolTipService.ToolTip="Escolha o tipo de item que pode ser selecionado">
+                                    <ComboBoxItem Content="Todos" />
+                                    <ComboBoxItem Content="Objetos" />
+                                    <ComboBoxItem Content="Ruas / splines" />
+                                    <ComboBoxItem Content="Terreno / tile" />
                                 </ComboBox>
                                 <Button x:Name="SnapButton"
                                         Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Snap: off"
+                                        Content="Snap off"
+                                        ToolTipService.ToolTip="Snap para mover/girar a seleção"
                                         Click="OnSnapClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Mover"
+                                        ToolTipService.ToolTip="Mover item selecionado"
                                         Click="OnMoveGizmoClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Rotacionar"
+                                        Content="Girar"
+                                        ToolTipService.ToolTip="Girar item selecionado"
                                         Click="OnRotateGizmoClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Focar"
+                                        ToolTipService.ToolTip="Centralizar a câmera no item selecionado"
                                         Click="OnFocusSelectionClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Validar"
-                                        Click="OnToolValidationClick" />
+                                <Border Padding="9,4"
+                                        Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="7"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="Clique de novo no mesmo ponto para alternar itens sobrepostos"
+                                               MaxWidth="260"
+                                               FontSize="10"
+                                               TextWrapping="Wrap"
+                                               Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                </Border>
                             </StackPanel>
 
                             <StackPanel x:Name="ObjectContextPanel"
@@ -2690,7 +2703,7 @@
                     <Rectangle Width="1" Height="46" Margin="4,8" Fill="{ThemeResource MapStudioBorderStrongBrush}" Opacity="0.65" VerticalAlignment="Center" />
                     <Button x:Name="ToolSelectionButton"
                             Style="{StaticResource MapToolButtonStyle}"
-                            ToolTipService.ToolTip="Seleção e edição"
+                            ToolTipService.ToolTip="Seleção fácil · clique novamente no mesmo ponto para alternar itens sobrepostos"
                             Click="OnToolSelectionClick">
                         <StackPanel Spacing="3"
                                     HorizontalAlignment="Center">
@@ -2700,7 +2713,7 @@
                                   Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
                                   StrokeThickness="1.8"
                                   Data="M 2,2 L 20,10 L 12,12 L 16,20 L 12,22 L 8,14 L 3,19 Z" />
-                            <TextBlock Text="Seleção"
+                            <TextBlock Text="Selecionar"
                                        FontSize="11"
                                        HorizontalAlignment="Center" />
                         </StackPanel>
