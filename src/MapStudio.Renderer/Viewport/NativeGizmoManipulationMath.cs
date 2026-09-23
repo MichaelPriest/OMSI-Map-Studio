@@ -109,6 +109,34 @@ public static class NativeGizmoManipulationMath
                 axis);
     }
 
+    public static Vector3 GetPointerPlaneMoveDelta(
+        Vector3 pointerStartWorld,
+        Vector3 pointerCurrentWorld)
+    {
+        var delta =
+            pointerCurrentWorld -
+            pointerStartWorld;
+
+        delta.Y =
+            0;
+
+        return delta;
+    }
+
+    public static Vector3 GetGrabPanTargetDelta(
+        Vector3 grabStartWorld,
+        Vector3 pointerCurrentWorld)
+    {
+        var delta =
+            grabStartWorld -
+            pointerCurrentWorld;
+
+        delta.Y =
+            0;
+
+        return delta;
+    }
+
     public static float GetRotationDeltaDegrees(
         double deltaPixelX,
         double deltaPixelY) =>
