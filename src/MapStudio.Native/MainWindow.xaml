@@ -648,6 +648,14 @@
                                     <TextBlock Text="Tile XY" />
                                 </StackPanel>
                             </Button>
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    ToolTipService.ToolTip="Abrir controles de Paths OMSI em janela flutuante"
+                                    Click="OnToggleTrafficPathsWindowClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="↝" FontSize="13" />
+                                    <TextBlock Text="Paths" />
+                                </StackPanel>
+                            </Button>
                             <Button x:Name="OpenMapButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
                                     Content="Mapas"
@@ -2332,6 +2340,187 @@
                             PointerMoved="OnTileNavigatorResizeMoved"
                             PointerReleased="OnTileNavigatorResizeReleased"
                             PointerCanceled="OnTileNavigatorResizeReleased">
+                        <Grid Width="18" Height="18">
+                            <Line X1="7" Y1="17" X2="17" Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12" Y1="17" X2="17" Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border x:Name="TrafficPathsWindow"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    Width="430"
+                    Height="360"
+                    Margin="720,110,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="107"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="TrafficPathsWindowTranslate" />
+                </Border.RenderTransform>
+
+                <Grid Padding="10"
+                      RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Background="Transparent"
+                          ColumnSpacing="8"
+                          PointerPressed="OnTrafficPathsWindowDragPressed"
+                          PointerMoved="OnTrafficPathsWindowDragMoved"
+                          PointerReleased="OnTrafficPathsWindowDragReleased"
+                          PointerCanceled="OnTrafficPathsWindowDragReleased">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="7">
+                            <FontIcon Glyph="↝"
+                                      FontSize="15"
+                                      Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <StackPanel>
+                                <TextBlock Text="PATHS OMSI"
+                                           FontSize="12"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="Visualização real de faixas e caminhos"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                            <Button x:Name="TrafficPathsMinimizeButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar/restaurar"
+                                    Click="OnToggleTrafficPathsMinimizeClick" />
+                            <Button Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTipService.ToolTip="Fechar"
+                                    Click="OnCloseTrafficPathsWindowClick" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ScrollViewer x:Name="TrafficPathsBody"
+                                  Grid.Row="1"
+                                  VerticalScrollMode="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollMode="Disabled">
+                        <StackPanel Spacing="9">
+                            <TextBlock x:Name="FloatingPathsStatusText"
+                                       Text="Paths prontos para visualização."
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0"
+                                            Spacing="4">
+                                    <CheckBox x:Name="FloatingPathsVehiclesCheckBox"
+                                              Content="Veículos"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsPedestriansCheckBox"
+                                              Content="Pedestres"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsRailsCheckBox"
+                                              Content="Trilhos"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsAirCheckBox"
+                                              Content="Aéreo"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsSelectedOnlyCheckBox"
+                                              Content="Só selecionado"
+                                              Click="OnTrafficPathIsolationChanged" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1"
+                                            Spacing="4">
+                                    <CheckBox x:Name="FloatingPathsWidthCheckBox"
+                                              Content="Largura"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsArrowsCheckBox"
+                                              Content="Setas"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsNodesCheckBox"
+                                              Content="Nós"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsLabelsCheckBox"
+                                              Content="Rótulos"
+                                              IsChecked="True"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                    <CheckBox x:Name="FloatingPathsSignalsCheckBox"
+                                              Content="Destacar semáforo"
+                                              Click="OnFloatingTrafficPathFilterChanged" />
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="Mostrar / ocultar"
+                                        Click="OnTransportPathsClick" />
+                                <Button Grid.Column="1"
+                                        Content="Focar seleção"
+                                        Click="OnFocusSelectionClick" />
+                            </Grid>
+
+                            <TextBlock Text="Inspector não é necessário para visualizar ou filtrar paths."
+                                       FontSize="9.5"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Border x:Name="TrafficPathsResizeGrip"
+                            Width="28"
+                            Height="28"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para redimensionar"
+                            PointerPressed="OnTrafficPathsResizePressed"
+                            PointerMoved="OnTrafficPathsResizeMoved"
+                            PointerReleased="OnTrafficPathsResizeReleased"
+                            PointerCanceled="OnTrafficPathsResizeReleased">
                         <Grid Width="18" Height="18">
                             <Line X1="7" Y1="17" X2="17" Y2="7"
                                   Stroke="{ThemeResource MapStudioAccentTextBrush}"
