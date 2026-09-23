@@ -195,6 +195,147 @@ public sealed class ProtonBusOmsiTrafficLightPackageIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task TileExporterAlsoPackagesConvertedTrafficLights()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudioProtonBusTrafficTileTests",
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var output =
+            Path.Combine(
+                root,
+                "export");
+
+        try
+        {
+            var sceneryDirectory =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    "Test");
+
+            Directory.CreateDirectory(
+                sceneryDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    sceneryDirectory,
+                    "traffic.sco"),
+                CreateTrafficSco());
+
+            var tile =
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map");
+
+            var content =
+                new OmsiTileContent(
+                    new(
+                        true,
+                        ObjectCount:
+                            1,
+                        SplineCount:
+                            0,
+                        SplineAttachmentCount:
+                            0),
+                    [
+                        new(
+                            HeaderValue:
+                                "object",
+                            SceneryObjectPath:
+                                @"Sceneryobjects\Test\traffic.sco",
+                            ObjectId:
+                                50,
+                            X:
+                                10,
+                            Y:
+                                20,
+                            Z:
+                                0,
+                            Rotation:
+                                0,
+                            Pitch:
+                                0,
+                            Bank:
+                                0,
+                            ExtraValues:
+                                [])
+                    ],
+                    []);
+
+            var result =
+                await new ProtonBusOmsiTilePackageExporter()
+                    .ExportAsync(
+                        root,
+                        output,
+                        new(
+                            "Mapa",
+                            "Mapa",
+                            "Rota"),
+                        tile,
+                        content);
+
+            Assert.True(
+                result.IsExported);
+
+            Assert.NotNull(
+                result.Package);
+
+            Assert.NotNull(
+                result.TrafficLights);
+
+            var machine =
+                Assert.Single(
+                    result
+                        .TrafficLights!
+                        .TrafficLights);
+
+            Assert.Equal(
+                "tl_t0_0_o50_c0",
+                machine.Prefix);
+
+            var path =
+                Assert.Single(
+                    result
+                        .Package!
+                        .TrafficLightPaths);
+
+            Assert.True(
+                File.Exists(
+                    path));
+
+            Assert.Contains(
+                "prefix=tl_t0_0_o50_c0",
+                File.ReadAllText(
+                    path),
+                StringComparison.Ordinal);
+
+            Assert.DoesNotContain(
+                result.Issues,
+                issue =>
+                    issue.Code.StartsWith(
+                        "trafficLight",
+                        StringComparison.Ordinal));
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
     private static string CreateTrafficSco() =>
         string.Join(
             Environment.NewLine,
