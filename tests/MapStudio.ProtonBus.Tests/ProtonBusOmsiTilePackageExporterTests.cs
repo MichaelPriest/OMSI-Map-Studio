@@ -1,3 +1,4 @@
+using System.Text;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.ProtonBus;
 using Xunit;
@@ -91,6 +92,125 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
                 1,
                 result.Tile!
                     .SplineMeshCount);
+        }
+        finally
+        {
+            DeleteRoot(
+                root);
+        }
+    }
+
+    [Fact]
+    public async Task ExporterWritesAutomaticVehiclePathAnd3dMarkers()
+    {
+        var root =
+            CreateRoot();
+
+        var output =
+            Path.Combine(
+                root,
+                "export");
+
+        try
+        {
+            CreateSplineFixture(
+                root,
+                "road.png",
+                [
+                    137,
+                    80,
+                    78,
+                    71,
+                    13,
+                    10,
+                    26,
+                    10
+                ],
+                includeVehiclePath:
+                    true);
+
+            var result =
+                await new ProtonBusOmsiTilePackageExporter()
+                    .ExportAsync(
+                        root,
+                        output,
+                        new(
+                            "Mapa",
+                            "Mapa",
+                            "Rota"),
+                        new(
+                            0,
+                            0,
+                            "tile_0_0.map"),
+                        CreateContent(
+                            @"Splines\Test\road.sli"),
+                        new()
+                        {
+                            FunctionalOptions =
+                                new(
+                                    WaypointSpacing:
+                                        5)
+                        });
+
+            Assert.True(
+                result.IsExported);
+
+            Assert.NotNull(
+                result.Functional);
+
+            var vehicle =
+                Assert.Single(
+                    result.Functional!
+                        .VehiclePaths);
+
+            Assert.Equal(
+                "pv_t0_0_s1_p0_f",
+                vehicle.Prefix);
+
+            Assert.Equal(
+                3,
+                vehicle.MaxPathsToCheck);
+
+            var pathFile =
+                Assert.Single(
+                    result.Package!
+                        .VehiclePathPaths);
+
+            Assert.True(
+                File.Exists(
+                    pathFile));
+
+            Assert.Contains(
+                "prefix=pv_t0_0_s1_p0_f",
+                File.ReadAllText(
+                    pathFile),
+                StringComparison.Ordinal);
+
+            var modelPath =
+                Assert.Single(
+                    result.Package
+                        .ModelPaths);
+
+            var modelBytes =
+                File.ReadAllBytes(
+                    modelPath);
+
+            var markerName =
+                Encoding.ASCII
+                    .GetBytes(
+                        "pv_t0_0_s1_p0_f.000\0");
+
+            Assert.True(
+                modelBytes
+                    .AsSpan()
+                    .IndexOf(
+                        markerName) >=
+                0);
+
+            Assert.Equal(
+                3,
+                result.Functional
+                    .MarkerMeshCount);
         }
         finally
         {
@@ -324,7 +444,8 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
     private static void CreateSplineFixture(
         string root,
         string textureName,
-        byte[] textureBytes)
+        byte[] textureBytes,
+        bool includeVehiclePath = false)
     {
         var splinePath =
             Path.Combine(
@@ -337,26 +458,43 @@ public sealed class ProtonBusOmsiTilePackageExporterTests
             Path.GetDirectoryName(
                 splinePath)!);
 
+        var lines =
+            new List<string>
+            {
+                "[texture]",
+                textureName,
+                "[profile]",
+                "0",
+                "[profilepnt]",
+                "-3",
+                "0",
+                "0",
+                "1",
+                "[profilepnt]",
+                "3",
+                "0",
+                "1",
+                "1"
+            };
+
+        if (includeVehiclePath)
+        {
+            lines.AddRange(
+                [
+                    "[path]",
+                    "0",
+                    "0",
+                    "0.1",
+                    "3",
+                    "0"
+                ]);
+        }
+
         File.WriteAllText(
             splinePath,
             string.Join(
                 Environment.NewLine,
-                [
-                    "[texture]",
-                    textureName,
-                    "[profile]",
-                    "0",
-                    "[profilepnt]",
-                    "-3",
-                    "0",
-                    "0",
-                    "1",
-                    "[profilepnt]",
-                    "3",
-                    "0",
-                    "1",
-                    "1"
-                ]));
+                lines));
 
         var texturePath =
             Path.Combine(
