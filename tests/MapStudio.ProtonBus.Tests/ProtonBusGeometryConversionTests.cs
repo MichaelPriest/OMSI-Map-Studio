@@ -181,12 +181,9 @@ public sealed class ProtonBusGeometryConversionTests
 
         Assert.Equal(
             2,
-            mesh.Vertices[1]
-                .Position.Y -
             mesh.Vertices[0]
-                .Position.Y +
-            1,
-            2);
+                .Position.Y,
+            precision: 4);
 
         Assert.Equal(
             3,
