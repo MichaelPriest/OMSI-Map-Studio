@@ -20,6 +20,12 @@ public sealed record ProtonBusMapPackageRequest(
         BusStops { get; init; } =
         Array.Empty<
             ProtonBusBusStopDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusEntrypointDefinition>
+        Entrypoints { get; init; } =
+        Array.Empty<
+            ProtonBusEntrypointDefinition>();
 }
 
 public sealed record ProtonBusMapPackageResult(
@@ -32,6 +38,17 @@ public sealed record ProtonBusMapPackageResult(
 {
     public IReadOnlyList<string>
         BusStopPaths { get; init; } =
+        Array.Empty<string>();
+
+    public string? EntrypointsPath
+        { get; init; }
+
+    public string? EntrypointsListPath
+        { get; init; }
+
+    public IReadOnlyList<string>
+        DestinationDirectories
+        { get; init; } =
         Array.Empty<string>();
 }
 
@@ -179,6 +196,12 @@ public static class ProtonBusMapPackageWriter
                 layout,
                 request.BusStops);
 
+        var entrypointFiles =
+            WriteEntrypoints(
+                root,
+                layout,
+                request.Entrypoints);
+
         return new(
             root,
             mapDefinitionPath,
@@ -186,8 +209,120 @@ public static class ProtonBusMapPackageWriter
             texturePaths.ToArray())
         {
             BusStopPaths =
-                busStopPaths
+                busStopPaths,
+            EntrypointsPath =
+                entrypointFiles
+                    .DefinitionsPath,
+            EntrypointsListPath =
+                entrypointFiles
+                    .ListPath,
+            DestinationDirectories =
+                entrypointFiles
+                    .DestinationDirectories
         };
+    }
+
+    private sealed record EntrypointWriteResult(
+        string? DefinitionsPath,
+        string? ListPath,
+        IReadOnlyList<string>
+            DestinationDirectories);
+
+    private static EntrypointWriteResult
+        WriteEntrypoints(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<
+                ProtonBusEntrypointDefinition>
+                entrypoints)
+    {
+        ProtonBusEntrypointDefinitionWriter
+            .ValidateAll(
+                entrypoints);
+
+        if (
+            entrypoints.Count ==
+            0)
+        {
+            return new(
+                null,
+                null,
+                Array.Empty<string>());
+        }
+
+        var definitionsPath =
+            ResolveOutputPath(
+                root,
+                CombineRelative(
+                    layout.ModelsDirectoryPath,
+                    "entrypoints.txt"));
+
+        var listPath =
+            ResolveOutputPath(
+                root,
+                CombineRelative(
+                    layout.ModelsDirectoryPath,
+                    "entrypoints_list.txt"));
+
+        File.WriteAllText(
+            definitionsPath,
+            ProtonBusEntrypointDefinitionWriter
+                .SerializeDefinitions(
+                    entrypoints));
+
+        File.WriteAllText(
+            listPath,
+            ProtonBusEntrypointDefinitionWriter
+                .SerializeList(
+                    entrypoints));
+
+        var destinations =
+            new List<string>(
+                entrypoints.Count);
+
+        foreach (
+            var entrypoint
+            in entrypoints)
+        {
+            var destination =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout
+                            .DestinationsDirectoryPath,
+                        entrypoint.Name));
+
+            Directory.CreateDirectory(
+                destination);
+
+            if (
+                entrypoint.IsIntercity)
+            {
+                File.WriteAllText(
+                    Path.Combine(
+                        destination,
+                        "intercity.txt"),
+                    string.Empty);
+            }
+
+            if (
+                entrypoint.IsOutOfService)
+            {
+                File.WriteAllText(
+                    Path.Combine(
+                        destination,
+                        "outofservice.txt"),
+                    string.Empty);
+            }
+
+            destinations.Add(
+                destination);
+        }
+
+        return new(
+            definitionsPath,
+            listPath,
+            destinations.ToArray());
     }
 
     private static IReadOnlyList<string>
