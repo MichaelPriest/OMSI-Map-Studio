@@ -186,7 +186,7 @@ public static class ProtonBusOmsiSplineTessellator
                     surfaceIndex];
 
             var materialName =
-                $"spline_material_{surface.TextureIndex}_{surfaceIndex}";
+                $"{options.MeshPrefix}_{tile.X}_{tile.Y}_{spline.SplineId}_material_{surface.TextureIndex}_{surfaceIndex}";
 
             if (
                 !materials.ContainsKey(
@@ -638,6 +638,9 @@ public static class ProtonBusOmsiTerrainTessellator
             }
         }
 
+        var materialName =
+            $"{options.MaterialName}_{tile.X}_{tile.Y}";
+
         var triangles =
             new List<
                 ProtonBusExportTriangle>(
@@ -679,14 +682,14 @@ public static class ProtonBusOmsiTerrainTessellator
                         topLeft,
                         bottomRight,
                         topRight,
-                        options.MaterialName));
+                        materialName));
 
                 triangles.Add(
                     new(
                         topLeft,
                         bottomLeft,
                         bottomRight,
-                        options.MaterialName));
+                        materialName));
             }
         }
 
@@ -711,7 +714,7 @@ public static class ProtonBusOmsiTerrainTessellator
             triangles.ToArray(),
             [
                 new(
-                    options.MaterialName,
+                    materialName,
                     texture)
             ]);
     }
