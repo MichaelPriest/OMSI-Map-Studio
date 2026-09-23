@@ -132,6 +132,18 @@ public static class ProtonBusMapPackageWriter
                     texture.SourcePath);
             }
 
+            if (
+                !string.Equals(
+                    Path.GetExtension(
+                        texture.SourcePath),
+                    ".png",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException(
+                    "Proton Bus texture sources must already be PNG until the texture transcoder is enabled.",
+                    nameof(request));
+            }
+
             var fileName =
                 NormalizePngFileName(
                     texture.FileName);
