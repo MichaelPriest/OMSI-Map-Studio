@@ -204,6 +204,9 @@ public sealed class D3D11NativeMapRenderer :
     private PickingId _selectionPickingId =
         PickingId.None;
 
+    private PickingId[] _additionalSelectionPickingIds =
+        Array.Empty<PickingId>();
+
     private Vector3 _cameraPosition =
         Vector3.Zero;
 
@@ -3142,6 +3145,9 @@ public sealed class D3D11NativeMapRenderer :
         _selectionPickingId =
             pickingId;
 
+        _additionalSelectionPickingIds =
+            Array.Empty<PickingId>();
+
         if (
             _hoverPickingId ==
             pickingId)
@@ -3155,6 +3161,35 @@ public sealed class D3D11NativeMapRenderer :
         RebuildSelection();
 
         return true;
+    }
+
+    public void SetAdditionalSelections(
+        IEnumerable<PickingId> pickingIds)
+    {
+        var resolved =
+            pickingIds
+                .Where(
+                    id =>
+                        !id.IsNone &&
+                        id !=
+                            _selectionPickingId &&
+                        IsPickingKindEnabled(
+                            id.Kind))
+                .Distinct()
+                .ToArray();
+
+        if (
+            _additionalSelectionPickingIds
+                .SequenceEqual(
+                    resolved))
+        {
+            return;
+        }
+
+        _additionalSelectionPickingIds =
+            resolved;
+
+        RebuildSelection();
     }
 
     private void RebuildHighlights()
@@ -3205,7 +3240,10 @@ public sealed class D3D11NativeMapRenderer :
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
 
-        var vertices =
+        var output =
+            new List<NativeMapVertex>();
+
+        var primaryVertices =
             BuildHighlight(
                 _selectionPickingId,
                 new Vector4(
@@ -3221,13 +3259,14 @@ public sealed class D3D11NativeMapRenderer :
         {
             for (
                 var index = 0;
-                index < vertices.Length;
+                index <
+                    primaryVertices.Length;
                 index++)
             {
                 var vertex =
-                    vertices[index];
+                    primaryVertices[index];
 
-                vertices[index] =
+                primaryVertices[index] =
                     new NativeMapVertex(
                         Vector3.Transform(
                             vertex.Position,
@@ -3235,6 +3274,27 @@ public sealed class D3D11NativeMapRenderer :
                         vertex.Color);
             }
         }
+
+        output.AddRange(
+            primaryVertices);
+
+        foreach (
+            var additionalPickingId in
+                _additionalSelectionPickingIds)
+        {
+            output.AddRange(
+                BuildHighlight(
+                    additionalPickingId,
+                    new Vector4(
+                        1.0f,
+                        0.58f,
+                        0.05f,
+                        1.0f),
+                    0.055f));
+        }
+
+        var vertices =
+            output.ToArray();
 
         if (vertices.Length > 0)
         {
