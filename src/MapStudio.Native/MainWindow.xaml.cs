@@ -21904,7 +21904,7 @@ public sealed partial class MainWindow : Window
                     googleKey ??
                     string.Empty);
 
-            return $"""
+            return $$"""
 <!doctype html>
 <html>
 <head>
@@ -21961,7 +21961,7 @@ function initMap() {
 """;
         }
 
-        return $"""
+        return $$"""
 <!doctype html>
 <html>
 <head>
