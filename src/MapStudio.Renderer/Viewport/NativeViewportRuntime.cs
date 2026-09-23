@@ -4571,8 +4571,10 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         var worldDelta =
-            _panGrabStartWorld -
-            currentWorld;
+            NativeGizmoManipulationMath
+                .GetGrabPanTargetDelta(
+                    _panGrabStartWorld,
+                    currentWorld);
 
         Navigation.RestoreState(
             start with
@@ -5451,11 +5453,10 @@ public sealed class NativeViewportRuntime : IDisposable
                     out var pointerWorld))
             {
                 _dragTranslation =
-                    pointerWorld -
-                    _directMovePointerStart;
-
-                _dragTranslation.Y =
-                    0;
+                    NativeGizmoManipulationMath
+                        .GetPointerPlaneMoveDelta(
+                            _directMovePointerStart,
+                            pointerWorld);
             }
             else
             {
