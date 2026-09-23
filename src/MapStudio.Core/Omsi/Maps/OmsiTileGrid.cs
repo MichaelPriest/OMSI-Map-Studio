@@ -44,6 +44,35 @@ public static class OmsiTileGrid
                 TileSize);
     }
 
+    public static int GetCenteredAreaMinimumOffset(
+        int tileCount)
+    {
+        ValidateAreaTileCount(
+            tileCount);
+
+        return -(
+            tileCount /
+            2
+        );
+    }
+
+    public static double
+        GetCenteredAreaAnchorLocalCoordinate(
+            int tileCount)
+    {
+        var minimumOffset =
+            GetCenteredAreaMinimumOffset(
+                tileCount);
+
+        return
+            (
+                minimumOffset +
+                tileCount /
+                    2.0
+            ) *
+            TileSize;
+    }
+
     public static int WorldToTileX(
         double worldX) =>
         WorldToTileCoordinate(
@@ -82,5 +111,15 @@ public static class OmsiTileGrid
             (int)Math.Floor(
                 worldCoordinate /
                 TileSize));
+    }
+
+    private static void ValidateAreaTileCount(
+        int tileCount)
+    {
+        if (tileCount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(tileCount));
+        }
     }
 }
