@@ -2232,8 +2232,8 @@
             <Border x:Name="TileNavigatorWindow"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
-                    Width="320"
-                    Height="205"
+                    Width="440"
+                    Height="500"
                     Margin="390,92,0,0"
                     HorizontalAlignment="Left"
                     VerticalAlignment="Top"
@@ -2300,6 +2300,8 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -2320,7 +2322,7 @@
                         <Button Grid.Row="0"
                                 Grid.Column="2"
                                 VerticalAlignment="Bottom"
-                                Content="Ir"
+                                Content="Ir / carregar"
                                 Click="OnTileNavigatorGoClick" />
 
                         <Grid Grid.Row="1"
@@ -2331,23 +2333,58 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <Button Grid.Column="0"
-                                    Content="Focar tile"
-                                    Click="OnTileNavigatorGoClick" />
+                                    Content="Focar"
+                                    Click="OnTileNavigatorFocusSelectedClick" />
                             <Button Grid.Column="1"
-                                    Content="Criar tile"
-                                    Click="OnCreateMapTileClick" />
+                                    Content="Carregar"
+                                    Click="OnTileNavigatorLoadSelectedClick" />
                             <Button Grid.Column="2"
-                                    Content="Excluir tile"
-                                    Click="OnDeleteActiveMapTileClick" />
+                                    Content="Criar"
+                                    Click="OnCreateMapTileClick" />
+                            <Button Grid.Column="3"
+                                    Content="Excluir"
+                                    Click="OnTileNavigatorDeleteSelectedClick" />
                         </Grid>
 
-                        <TextBlock Grid.Row="2"
+                        <ListView x:Name="TileNavigatorListView"
+                                  Grid.Row="2"
+                                  Grid.Column="0"
+                                  Grid.ColumnSpan="3"
+                                  SelectionMode="Single"
+                                  DisplayMemberPath="DisplayText"
+                                  SelectionChanged="OnTileNavigatorSelectionChanged"
+                                  DoubleTapped="OnTileNavigatorListDoubleTapped" />
+
+                        <Border Grid.Row="3"
+                                Grid.Column="0"
+                                Grid.ColumnSpan="3"
+                                Padding="7"
+                                Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="7">
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Name="TileNavigatorStatusText"
+                                           Text="Abra um mapa para listar tiles."
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextSecondaryBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock x:Name="TileNavigatorPropertiesText"
+                                           Text="Selecione um tile para ver propriedades."
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Grid.Row="4"
                                    Grid.Column="0"
                                    Grid.ColumnSpan="3"
-                                   Text="Arraste pelo cabeçalho para mover · arraste o canto inferior direito para redimensionar."
-                                   FontSize="10"
+                                   Text="Duplo clique carrega/foca · arraste pelo cabeçalho para mover · canto inferior direito redimensiona."
+                                   FontSize="9.5"
                                    TextWrapping="Wrap"
                                    Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                     </Grid>
