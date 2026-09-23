@@ -23,7 +23,10 @@ public enum NativeSelectionContextAction
     Duplicate,
     Delete,
     Focus,
-    Inspector
+    Inspector,
+    EditCurve,
+    Split,
+    Parallel
 }
 
 public sealed partial class NativeViewport : UserControl
@@ -2678,6 +2681,74 @@ public sealed partial class NativeViewport : UserControl
                 ? $"Objeto #{info.EntityId}"
                 : $"Spline #{info.EntityId}";
 
+        if (
+            info.Kind ==
+                MapStudio.Renderer.Picking
+                    .PickingKind.Spline)
+        {
+            ConfigureRadialButton(
+                RadialTopButton,
+                "Mover",
+                NativeSelectionContextAction.Move);
+
+            ConfigureRadialButton(
+                RadialUpperRightButton,
+                "Curvar",
+                NativeSelectionContextAction.EditCurve);
+
+            ConfigureRadialButton(
+                RadialLowerRightButton,
+                "Duplicar",
+                NativeSelectionContextAction.Duplicate);
+
+            ConfigureRadialButton(
+                RadialBottomButton,
+                "Excluir",
+                NativeSelectionContextAction.Delete);
+
+            ConfigureRadialButton(
+                RadialLowerLeftButton,
+                "Dividir",
+                NativeSelectionContextAction.Split);
+
+            ConfigureRadialButton(
+                RadialUpperLeftButton,
+                "Paralela",
+                NativeSelectionContextAction.Parallel);
+        }
+        else
+        {
+            ConfigureRadialButton(
+                RadialTopButton,
+                "Mover",
+                NativeSelectionContextAction.Move);
+
+            ConfigureRadialButton(
+                RadialUpperRightButton,
+                "Girar",
+                NativeSelectionContextAction.Rotate);
+
+            ConfigureRadialButton(
+                RadialLowerRightButton,
+                "Duplicar",
+                NativeSelectionContextAction.Duplicate);
+
+            ConfigureRadialButton(
+                RadialBottomButton,
+                "Excluir",
+                NativeSelectionContextAction.Delete);
+
+            ConfigureRadialButton(
+                RadialLowerLeftButton,
+                "Inspector",
+                NativeSelectionContextAction.Inspector);
+
+            ConfigureRadialButton(
+                RadialUpperLeftButton,
+                "Focar",
+                NativeSelectionContextAction.Focus);
+        }
+
         var left =
             Math.Clamp(
                 x -
@@ -2712,6 +2783,18 @@ public sealed partial class NativeViewport : UserControl
         PointerStatusChanged?.Invoke(
             this,
             "Ações rápidas da seleção abertas.");
+    }
+
+    private static void ConfigureRadialButton(
+        Button button,
+        string label,
+        NativeSelectionContextAction action)
+    {
+        button.Content =
+            label;
+
+        button.Tag =
+            action.ToString();
     }
 
     private void HideSelectionRadialMenu()

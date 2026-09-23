@@ -557,6 +557,37 @@ public sealed partial class MainWindow : Window
                         FocusCurrentSelection();
                         break;
 
+                    case NativeSelectionContextAction.EditCurve:
+                        if (
+                            Viewport
+                                .BeginSelectedSplineCurveEdit(
+                                    out var curveStatus))
+                        {
+                            StatusText.Text =
+                                curveStatus;
+                        }
+                        else
+                        {
+                            StatusText.Text =
+                                curveStatus;
+                        }
+                        break;
+
+                    case NativeSelectionContextAction.Split:
+                        Viewport.CancelSplinePlacement();
+
+                        StatusText.Text =
+                            Viewport
+                                .BeginSplineSplitPick()
+                                ? "Ruas: Dividir ativo. Clique no ponto do trecho."
+                                : "Ruas: selecione uma spline para dividir.";
+                        break;
+
+                    case NativeSelectionContextAction.Parallel:
+                        await CreateParallelRoadAsync(
+                            1.0);
+                        break;
+
                     case NativeSelectionContextAction.Inspector:
                         var inspectorVisible =
                             InspectorPanel.Visibility ==
