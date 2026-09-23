@@ -231,6 +231,9 @@ public sealed partial class MainWindow : Window
             NativeAiConnectionSettingsStore
                 .Load();
 
+    private bool
+        _refreshingAiProfileSelector;
+
     private NativeAssetLibraryState
         _assetLibraryState =
             NativeAssetLibraryStateStore
@@ -25638,6 +25641,46 @@ public sealed partial class MainWindow : Window
 
     private void RefreshAiConnectionUi()
     {
+        var profiles =
+            _aiConnectionSettings
+                .Profiles
+                .Select(
+                    profile =>
+                        new AiProfileOption(
+                            profile.DisplayName +
+                            " · " +
+                            profile.AdapterId,
+                            profile))
+                .ToArray();
+
+        _refreshingAiProfileSelector =
+            true;
+
+        try
+        {
+            AiProfileSelectorBox.ItemsSource =
+                profiles;
+
+            AiProfileSelectorBox.DisplayMemberPath =
+                nameof(
+                    AiProfileOption.Label);
+
+            AiProfileSelectorBox.SelectedItem =
+                profiles.FirstOrDefault(
+                    option =>
+                        string.Equals(
+                            option.Profile?.Id,
+                            _aiConnectionSettings
+                                .ActiveProfileId,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _refreshingAiProfileSelector =
+                false;
+        }
+
         var activeProfile =
             _aiConnectionSettings
                 .GetActiveProfile();
@@ -25679,6 +25722,45 @@ public sealed partial class MainWindow : Window
 
         AiActiveProfileMenuItem.Text =
             $"Ativa: {activeProfile.DisplayName} · {activeProfile.AdapterId}";
+    }
+
+    private void OnAiProfileSelectorChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            _refreshingAiProfileSelector)
+        {
+            return;
+        }
+
+        var selected =
+            AiProfileSelectorBox
+                .SelectedItem as
+                AiProfileOption;
+
+        if (
+            selected?.Profile is not
+                { } profile)
+        {
+            return;
+        }
+
+        _aiConnectionSettings =
+            new MapStudioAiConnectionSettings(
+                profile.Id,
+                _aiConnectionSettings
+                    .Profiles)
+            .Normalize();
+
+        NativeAiConnectionSettingsStore
+            .Save(
+                _aiConnectionSettings);
+
+        RefreshAiConnectionUi();
+
+        StatusText.Text =
+            $"IA: perfil ativo alterado para '{profile.DisplayName}'. Clique IA para testar a conexão.";
     }
 
     private async void OnConnectAiToMapClick(
