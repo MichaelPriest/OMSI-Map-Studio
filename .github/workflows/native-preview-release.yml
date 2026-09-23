@@ -300,6 +300,18 @@ jobs:
           $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
           $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
 
+          if (-not $runtime.Contains('TryBeginDirectMove')) {
+            throw "Direct selected-item move is missing from the viewport runtime."
+          }
+
+          if (-not $viewport.Contains('TryBeginDirectMove')) {
+            throw "NativeViewport does not start direct selected-item move."
+          }
+
+          if (-not $runtime.Contains('NativeGizmoHandle.MoveXZ')) {
+            throw "Free planar direct move handle is missing."
+          }
+
           if (-not $runtime.Contains('TryBeginDirectRotation')) {
             throw "Direct selected-item rotation is missing from the viewport runtime."
           }
