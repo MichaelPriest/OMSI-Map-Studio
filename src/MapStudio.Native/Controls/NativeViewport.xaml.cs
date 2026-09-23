@@ -16,12 +16,25 @@ using Microsoft.UI.Input;
 
 namespace MapStudio.Native.Controls;
 
+public enum NativeSelectionContextAction
+{
+    Move,
+    Rotate,
+    Duplicate,
+    Delete,
+    Focus,
+    Inspector
+}
+
 public sealed partial class NativeViewport : UserControl
 {
     private NativeViewportRuntime? _runtime;
     private bool _leftPressed;
     private bool _isPanning;
     private bool _isOrbiting;
+    private bool _rightPressed;
+    private double _rightPressX;
+    private double _rightPressY;
     private bool _isManipulatingGizmo;
     private double _lastPanX;
     private double _lastPanY;
@@ -83,6 +96,10 @@ public sealed partial class NativeViewport : UserControl
     public event Action<
         NativeTerrainEditPoint>?
         TerrainPointSelected;
+
+    public event Action<
+        NativeSelectionContextAction>?
+        SelectionContextActionRequested;
 
     public event Action<
         NativeTrafficPathNode>?
@@ -1607,15 +1624,13 @@ public sealed partial class NativeViewport : UserControl
             point.Properties
                 .IsRightButtonPressed;
 
-        if (
-            panPressed ||
-            orbitPressed)
+        if (panPressed)
         {
-            _isPanning =
-                panPressed;
+            HideSelectionRadialMenu();
 
-            _isOrbiting =
-                orbitPressed;
+            _isPanning =
+                true;
+
             _lastPanX =
                 point.Position.X;
             _lastPanY =
@@ -1624,18 +1639,44 @@ public sealed partial class NativeViewport : UserControl
             _runtime?.ClearHover();
 
             ProtectedCursor =
-                _isPanning
-                    ? _panCursor
-                    : _orbitCursor;
+                _panCursor;
 
             InputSurface.CapturePointer(
                 e.Pointer);
 
             PointerStatusChanged?.Invoke(
                 this,
-                _isOrbiting
-                    ? "Órbita 3D nativa ativa"
-                    : "Pan 3D nativo ativo");
+                "Pan 3D nativo ativo");
+
+            e.Handled = true;
+            return;
+        }
+
+        if (orbitPressed)
+        {
+            HideSelectionRadialMenu();
+
+            _rightPressed =
+                true;
+
+            _rightPressX =
+                point.Position.X;
+            _rightPressY =
+                point.Position.Y;
+
+            _lastPanX =
+                point.Position.X;
+            _lastPanY =
+                point.Position.Y;
+
+            _runtime?.ClearHover();
+
+            InputSurface.CapturePointer(
+                e.Pointer);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                "Botão direito: clique abre ações · arraste orbita");
 
             e.Handled = true;
             return;
@@ -1644,6 +1685,11 @@ public sealed partial class NativeViewport : UserControl
         _leftPressed =
             point.Properties
                 .IsLeftButtonPressed;
+
+        if (_leftPressed)
+        {
+            HideSelectionRadialMenu();
+        }
 
         if (!_leftPressed)
         {
@@ -1935,6 +1981,50 @@ public sealed partial class NativeViewport : UserControl
         }
 
         if (
+            _rightPressed &&
+            !_isOrbiting)
+        {
+            var rightDeltaX =
+                point.Position.X -
+                _rightPressX;
+
+            var rightDeltaY =
+                point.Position.Y -
+                _rightPressY;
+
+            if (
+                Math.Sqrt(
+                    rightDeltaX *
+                    rightDeltaX +
+                    rightDeltaY *
+                    rightDeltaY) >=
+                6.0)
+            {
+                _isOrbiting =
+                    true;
+
+                _lastPanX =
+                    point.Position.X;
+
+                _lastPanY =
+                    point.Position.Y;
+
+                ProtectedCursor =
+                    _orbitCursor;
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Órbita 3D nativa ativa");
+            }
+            else
+            {
+                e.Handled =
+                    true;
+                return;
+            }
+        }
+
+        if (
             (
                 _isPanning ||
                 _isOrbiting
@@ -2186,6 +2276,19 @@ public sealed partial class NativeViewport : UserControl
         object sender,
         PointerRoutedEventArgs e)
     {
+        var point =
+            e.GetCurrentPoint(
+                InputSurface);
+
+        if (
+            _rightPressed &&
+            !_isOrbiting)
+        {
+            TryOpenSelectionRadialMenu(
+                point.Position.X,
+                point.Position.Y);
+        }
+
         if (
             _isManipulatingGizmo &&
             _runtime is not null)
@@ -2213,6 +2316,7 @@ public sealed partial class NativeViewport : UserControl
             _leftPressed ||
             _isPanning ||
             _isOrbiting ||
+            _rightPressed ||
             _isManipulatingGizmo)
         {
             InputSurface.ReleasePointerCapture(
@@ -2222,10 +2326,152 @@ public sealed partial class NativeViewport : UserControl
         _leftPressed = false;
         _isPanning = false;
         _isOrbiting = false;
+        _rightPressed = false;
         _isManipulatingGizmo = false;
 
         ProtectedCursor =
             _defaultCursor;
+    }
+
+    private void TryOpenSelectionRadialMenu(
+        double x,
+        double y)
+    {
+        if (_runtime is null)
+        {
+            return;
+        }
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    x *
+                    scaleX));
+
+        var pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    y *
+                    scaleY));
+
+        if (
+            !_runtime.TryPick(
+                pixelX,
+                pixelY,
+                out _,
+                out var selected) ||
+            selected is null)
+        {
+            HideSelectionRadialMenu();
+            PublishSelectionInfo();
+            return;
+        }
+
+        var info =
+            _runtime
+                .GetSelectionInfo();
+
+        if (info is null)
+        {
+            HideSelectionRadialMenu();
+            return;
+        }
+
+        PublishSelectionInfo();
+
+        RadialMenuSelectionText.Text =
+            info.Kind ==
+                MapStudio.Renderer.Picking
+                    .PickingKind.Object
+                ? $"Objeto #{info.EntityId}"
+                : $"Spline #{info.EntityId}";
+
+        var left =
+            Math.Clamp(
+                x -
+                140,
+                4,
+                Math.Max(
+                    4,
+                    InputSurface.ActualWidth -
+                    284));
+
+        var top =
+            Math.Clamp(
+                y -
+                140,
+                4,
+                Math.Max(
+                    4,
+                    InputSurface.ActualHeight -
+                    284));
+
+        Canvas.SetLeft(
+            SelectionRadialMenu,
+            left);
+
+        Canvas.SetTop(
+            SelectionRadialMenu,
+            top);
+
+        RadialMenuLayer.Visibility =
+            Visibility.Visible;
+
+        PointerStatusChanged?.Invoke(
+            this,
+            "Ações rápidas da seleção abertas.");
+    }
+
+    private void HideSelectionRadialMenu()
+    {
+        if (
+            RadialMenuLayer.Visibility ==
+            Visibility.Visible)
+        {
+            RadialMenuLayer.Visibility =
+                Visibility.Collapsed;
+        }
+    }
+
+    private void OnRadialMenuActionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            sender is not
+                Button
+                {
+                    Tag: string actionText
+                } ||
+            !Enum.TryParse<
+                NativeSelectionContextAction>(
+                    actionText,
+                    ignoreCase:
+                        true,
+                    out var action))
+        {
+            return;
+        }
+
+        HideSelectionRadialMenu();
+
+        SelectionContextActionRequested
+            ?.Invoke(
+                action);
     }
 
     private void OnPointerExited(

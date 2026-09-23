@@ -43,5 +43,90 @@
                 Text="x: 0 · y: 0"
                 Foreground="#9FC7DE" />
         </Border>
+
+        <Canvas x:Name="RadialMenuLayer"
+                Visibility="Collapsed">
+            <Canvas x:Name="SelectionRadialMenu"
+                    Width="280"
+                    Height="280">
+                <Ellipse Width="280"
+                         Height="280"
+                         Fill="#E6111D28"
+                         Stroke="#8059D9FF"
+                         StrokeThickness="2" />
+                <Ellipse Width="126"
+                         Height="126"
+                         Canvas.Left="77"
+                         Canvas.Top="77"
+                         Fill="#F0182733"
+                         Stroke="#6048B8D7"
+                         StrokeThickness="1" />
+
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="99"
+                        Canvas.Top="15"
+                        Content="Mover"
+                        Tag="Move"
+                        Click="OnRadialMenuActionClick" />
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="184"
+                        Canvas.Top="68"
+                        Content="Girar"
+                        Tag="Rotate"
+                        Click="OnRadialMenuActionClick" />
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="184"
+                        Canvas.Top="170"
+                        Content="Duplicar"
+                        Tag="Duplicate"
+                        Click="OnRadialMenuActionClick" />
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="99"
+                        Canvas.Top="225"
+                        Content="Excluir"
+                        Tag="Delete"
+                        Click="OnRadialMenuActionClick" />
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="14"
+                        Canvas.Top="170"
+                        Content="Inspector"
+                        Tag="Inspector"
+                        Click="OnRadialMenuActionClick" />
+                <Button Width="82"
+                        Height="40"
+                        Canvas.Left="14"
+                        Canvas.Top="68"
+                        Content="Focar"
+                        Tag="Focus"
+                        Click="OnRadialMenuActionClick" />
+
+                <Border Width="112"
+                        Height="64"
+                        Canvas.Left="84"
+                        Canvas.Top="108"
+                        Padding="8"
+                        Background="#E8213442"
+                        CornerRadius="32">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="SELEÇÃO"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#79D9F5" />
+                        <TextBlock x:Name="RadialMenuSelectionText"
+                                   Text="Objeto"
+                                   FontSize="11"
+                                   TextTrimming="CharacterEllipsis"
+                                   HorizontalAlignment="Center"
+                                   Foreground="White" />
+                    </StackPanel>
+                </Border>
+            </Canvas>
+        </Canvas>
     </Grid>
 </UserControl>

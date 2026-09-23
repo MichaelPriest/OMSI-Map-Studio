@@ -522,6 +522,61 @@ public sealed partial class MainWindow : Window
                 SelectionText.Text = message;
             };
 
+        Viewport.SelectionContextActionRequested +=
+            async action =>
+            {
+                switch (action)
+                {
+                    case NativeSelectionContextAction.Move:
+                        Viewport.SetGizmoMode(
+                            NativeGizmoMode.Move);
+                        StatusText.Text =
+                            "Ferramenta mover ativa.";
+                        break;
+
+                    case NativeSelectionContextAction.Rotate:
+                        Viewport.SetGizmoMode(
+                            NativeGizmoMode.Rotate);
+                        StatusText.Text =
+                            "Ferramenta girar ativa.";
+                        break;
+
+                    case NativeSelectionContextAction.Duplicate:
+                        if (_selectionInfo is not null)
+                        {
+                            await StartSelectionCopyPlacementAsync();
+                        }
+                        break;
+
+                    case NativeSelectionContextAction.Delete:
+                        await DeleteCurrentSelectionAsync();
+                        break;
+
+                    case NativeSelectionContextAction.Focus:
+                        FocusCurrentSelection();
+                        break;
+
+                    case NativeSelectionContextAction.Inspector:
+                        var inspectorVisible =
+                            InspectorPanel.Visibility ==
+                                Visibility.Visible &&
+                            (
+                                IsFullscreen() ||
+                                InspectorColumn.Width.Value >
+                                    0
+                            );
+
+                        if (!inspectorVisible)
+                        {
+                            ToggleInspectorPanel();
+                        }
+
+                        StatusText.Text =
+                            "Inspector aberto para a seleção atual.";
+                        break;
+                }
+            };
+
         Viewport.TransformEditPending +=
             edit =>
             {
