@@ -50,7 +50,7 @@ public sealed class NativeSplineSplitMathTests
 
         var entity =
             new NativeSplineEntity(
-                PickingId.Create(
+                new PickingId(
                     PickingKind.Spline,
                     10),
                 tile,
