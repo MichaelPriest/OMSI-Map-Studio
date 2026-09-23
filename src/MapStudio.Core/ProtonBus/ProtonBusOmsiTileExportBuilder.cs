@@ -22,7 +22,10 @@ public sealed record ProtonBusResolvedSceneryAsset(
         TrafficLightControllers = null,
     IReadOnlyList<OmsiSceneryLightPoint>?
         LightPoints = null,
-    string? FriendlyName = null)
+    string? FriendlyName = null,
+    OmsiSceneryTreeDefinition?
+        Tree = null,
+    string? TreeTextureFileName = null)
 {
     public IReadOnlyList<OmsiSceneryPathDefinition>
         ResolvedPaths =>
