@@ -182,7 +182,7 @@ public sealed class ProtonBusOmsiDirectoryPreflightAnalyzerTests
                     issue.Severity ==
                         ProtonBusOmsiPreflightSeverity.Error &&
                     issue.Code ==
-                        "map-name");
+                        "PBMAP_MAP_NAME_NOT_RELATIVE");
         }
         finally
         {
