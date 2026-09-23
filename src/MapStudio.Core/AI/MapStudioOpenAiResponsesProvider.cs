@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using MapStudio.Core.Omsi.Indexing;
 
 namespace MapStudio.Core.AI;
 

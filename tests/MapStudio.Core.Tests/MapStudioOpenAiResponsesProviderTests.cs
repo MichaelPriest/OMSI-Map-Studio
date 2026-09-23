@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using MapStudio.Core.AI;
+using MapStudio.Core.Omsi.Indexing;
 using Xunit;
 
 namespace MapStudio.Core.Tests;
