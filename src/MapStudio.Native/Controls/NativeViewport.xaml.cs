@@ -2665,6 +2665,81 @@ public sealed partial class NativeViewport : UserControl
         }
 
         if (
+            _isSplineDragCreating &&
+            _runtime is not null &&
+            _runtime.IsSplinePlacementActive)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                _runtime.TryAdvanceSplinePlacement(
+                    pixelX,
+                    pixelY,
+                    out var splinePlacement,
+                    out var splineStatus))
+            {
+                if (
+                    splinePlacement is null &&
+                    _runtime.SplinePlacementStage ==
+                        NativeSplinePlacementStage
+                            .AwaitingEasyRoadConfirm)
+                {
+                    _runtime.TryConfirmEasyRoad(
+                        out splinePlacement,
+                        out splineStatus);
+                }
+
+                if (splinePlacement is not null)
+                {
+                    SplinePlacementRequested
+                        ?.Invoke(
+                            splinePlacement);
+                }
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    splinePlacement is not null
+                        ? "Rua definida pelo arrasto · inserindo..."
+                        : splineStatus);
+
+                SplinePlacementControlStateChanged
+                    ?.Invoke(
+                        _runtime
+                            .GetSplinePlacementControlState());
+            }
+            else
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Rua: não foi possível definir o ponto final. Solte sobre um tile carregado e com distância maior do ponto inicial.");
+            }
+        }
+
+        if (
             _leftPressed ||
             _isPanning ||
             _isOrbiting ||
