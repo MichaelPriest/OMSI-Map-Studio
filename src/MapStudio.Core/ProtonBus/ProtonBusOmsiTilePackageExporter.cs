@@ -16,6 +16,9 @@ public sealed record ProtonBusOmsiTilePackageExportResult(
 {
     public ProtonBusOmsiFunctionalConversionResult?
         Functional { get; init; }
+
+    public ProtonBusOmsiTrafficLightConversionResult?
+        TrafficLights { get; init; }
 }
 
 public sealed class ProtonBusOmsiTilePackageExporter
@@ -155,6 +158,56 @@ public sealed class ProtonBusOmsiTilePackageExporter
                     options?
                         .FunctionalOptions);
 
+        ProtonBusOmsiTrafficLightConversionResult?
+            traffic =
+                null;
+
+        if (
+            options?
+                .ConvertTrafficLights ??
+            true)
+        {
+            traffic =
+                ProtonBusOmsiTrafficLightConverter
+                    .Convert(
+                        tile,
+                        content,
+                        assets
+                            .SceneryAssets,
+                        options?
+                            .TrafficLightOptions);
+
+            foreach (
+                var issue
+                in traffic.Issues)
+            {
+                issues.Add(
+                    new(
+                        issue.Code,
+                        issue.Source,
+                        null,
+                        issue.Detail));
+            }
+        }
+
+        if (
+            HasBlockingIssue(
+                issues))
+        {
+            return new(
+                false,
+                null,
+                assets,
+                tileResult,
+                issues.ToArray())
+            {
+                Functional =
+                    functional,
+                TrafficLights =
+                    traffic
+            };
+        }
+
         var combinedScene =
             new ProtonBusExportScene(
                 tileResult
@@ -164,6 +217,12 @@ public sealed class ProtonBusOmsiTilePackageExporter
                         functional
                             .MarkerScene
                             .Meshes)
+                    .Concat(
+                        traffic?
+                            .MarkerScene
+                            .Meshes ??
+                        Array.Empty<
+                            ProtonBusExportMesh>())
                     .ToArray());
 
         var packageRequest =
@@ -195,7 +254,12 @@ public sealed class ProtonBusOmsiTilePackageExporter
                         .TrainPaths,
                 StreetLights =
                     functional
-                        .StreetLights
+                        .StreetLights,
+                TrafficLights =
+                    traffic?
+                        .TrafficLights ??
+                    Array.Empty<
+                        ProtonBusTrafficLightDefinition>()
             };
 
         var package =
@@ -212,7 +276,9 @@ public sealed class ProtonBusOmsiTilePackageExporter
             issues.ToArray())
         {
             Functional =
-                functional
+                functional,
+            TrafficLights =
+                traffic
         };
     }
 
@@ -235,5 +301,14 @@ public sealed class ProtonBusOmsiTilePackageExporter
                     "textureTargetCollision" or
                     "textureTranscodeUnsupported" or
                     "splineDefinitionMissingAfterResolution" or
-                    "sceneryAssetMissingAfterResolution");
+                    "sceneryAssetMissingAfterResolution" or
+                    "trafficLightControllerAmbiguous" or
+                    "trafficLightProgramsMissing" or
+                    "trafficLightProgramDurationInvalid" or
+                    "trafficLightProgramExceedsCycle" or
+                    "trafficLightTimingPrecisionUnsupported" or
+                    "trafficLightTimelineEmpty" or
+                    "trafficLightTickIntervalInvalid" or
+                    "trafficLightRepeatOverflow" or
+                    "trafficLightMultipleTriggerPaths");
 }
