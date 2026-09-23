@@ -22137,7 +22137,10 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Google Maps Platform API key",
                 PlaceholderText =
-                    "A chave é usada somente nesta operação"
+                    NativeMapCredentialStore
+                        .HasGoogleMapsApiKey()
+                        ? "Chave já salva no Windows · deixe vazio para reutilizar"
+                        : "Informe a chave Google Maps Platform"
             };
 
         var samplesBox =
@@ -22238,16 +22241,23 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var apiKey =
+            string.IsNullOrWhiteSpace(
+                apiKeyBox.Password)
+                ? NativeMapCredentialStore
+                    .TryGetGoogleMapsApiKey()
+                : apiKeyBox.Password.Trim();
+
         if (
             string.IsNullOrWhiteSpace(
-                apiKeyBox.Password) ||
+                apiKey) ||
             !double.IsFinite(
                 samplesBox.Value) ||
             !double.IsFinite(
                 offsetBox.Value))
         {
             StatusText.Text =
-                "Dados inválidos para buscar a elevação.";
+                "Google Elevation: informe uma API key ou salve a chave pela Referência de mapa.";
 
             return;
         }
@@ -22267,7 +22277,7 @@ public sealed partial class MainWindow : Window
             var grid =
                 await _session
                     .LoadGoogleElevationGridAsync(
-                        apiKeyBox.Password,
+                        apiKey,
                         active.X,
                         active.Y,
                         sampleCount);
