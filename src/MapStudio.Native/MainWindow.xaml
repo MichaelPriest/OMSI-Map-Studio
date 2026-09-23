@@ -369,8 +369,11 @@
                         Text="Excluir tile ativo..."
                         Click="OnDeleteActiveMapTileClick" />
                     <MenuFlyoutItem
-                        Text="Criar mapa real por coordenadas..."
+                        Text="Criar mapa real por área..."
                         Click="OnCreateCoordinateMapClick" />
+                    <MenuFlyoutItem
+                        Text="Mapa real avançado por coordenadas..."
+                        Click="OnCreateCoordinateMapAdvancedClick" />
                     <MenuFlyoutItem
                         Text="Georreferência do mapa..."
                         Click="OnEditMapGeoreferenceClick" />
@@ -2312,6 +2315,208 @@
                             PointerMoved="OnTileNavigatorResizeMoved"
                             PointerReleased="OnTileNavigatorResizeReleased"
                             PointerCanceled="OnTileNavigatorResizeReleased">
+                        <Grid Width="18" Height="18">
+                            <Line X1="7" Y1="17" X2="17" Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12" Y1="17" X2="17" Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border x:Name="RealMapAreaWindow"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    Width="860"
+                    Height="650"
+                    Margin="190,58,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="108"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="12">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="RealMapAreaWindowTranslate" />
+                </Border.RenderTransform>
+
+                <Grid Padding="10"
+                      RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Background="Transparent"
+                          ColumnSpacing="8"
+                          PointerPressed="OnRealMapAreaWindowDragPressed"
+                          PointerMoved="OnRealMapAreaWindowDragMoved"
+                          PointerReleased="OnRealMapAreaWindowDragReleased"
+                          PointerCanceled="OnRealMapAreaWindowDragReleased">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="7">
+                            <FontIcon Glyph="⌖"
+                                      FontSize="16"
+                                      Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <StackPanel>
+                                <TextBlock Text="CRIAR MAPA REAL POR ÁREA"
+                                           FontSize="13"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="Mova/zoome o mapa sob o retângulo para escolher a área"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Button Grid.Column="1"
+                                Width="30"
+                                Height="30"
+                                Padding="0"
+                                Content="×"
+                                Click="OnCloseRealMapAreaWindowClick" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="1.2*" />
+                            <ColumnDefinition Width="1*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="RealMapDirectoryBox"
+                                 Grid.Column="0"
+                                 Header="Pasta"
+                                 PlaceholderText="MeuMapaReal" />
+                        <TextBox x:Name="RealMapDisplayNameBox"
+                                 Grid.Column="1"
+                                 Header="Nome"
+                                 PlaceholderText="Meu mapa real" />
+                        <ComboBox x:Name="RealMapProviderBox"
+                                  Grid.Column="2"
+                                  Header="Mapa para escolher a área"
+                                  SelectedIndex="0"
+                                  SelectionChanged="OnRealMapProviderChanged">
+                            <ComboBoxItem Content="OpenStreetMap · sem chave" />
+                            <ComboBoxItem Content="Google Maps · chave do usuário" />
+                        </ComboBox>
+                        <Button Grid.Column="3"
+                                VerticalAlignment="Bottom"
+                                Content="Recarregar"
+                                Click="OnReloadRealMapAreaClick" />
+                    </Grid>
+
+                    <Grid Grid.Row="2"
+                          ClipToBounds="True">
+                        <WebView2 x:Name="RealMapAreaWebView"
+                                  HorizontalAlignment="Stretch"
+                                  VerticalAlignment="Stretch" />
+
+                        <Border HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Width="62%"
+                                Height="58%"
+                                IsHitTestVisible="False"
+                                BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                                BorderThickness="3"
+                                Background="#08000000"
+                                CornerRadius="4">
+                            <Grid>
+                                <Border HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Width="12"
+                                        Height="12"
+                                        CornerRadius="6"
+                                        Background="{ThemeResource MapStudioAccentBrush}" />
+                                <TextBlock Text="ÁREA DO MAPA"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Top"
+                                           Margin="0,7,0,0"
+                                           Padding="7,3"
+                                           FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Background="{ThemeResource MapStudioTranslucentRaisedBrush}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
+
+                    <Grid Grid.Row="3"
+                          ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="RealMapAreaBoundsText"
+                                       Text="Mova o mapa para selecionar uma área."
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                            <TextBlock x:Name="RealMapAreaEstimateText"
+                                       Text="—"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="12">
+                                <CheckBox x:Name="RealMapGenerateRoadsCheckBox"
+                                          Content="Gerar ruas OSM automaticamente"
+                                          IsChecked="True" />
+                                <CheckBox x:Name="RealMapApplyElevationCheckBox"
+                                          Content="Aplicar elevação Google se houver chave"
+                                          IsChecked="True" />
+                                <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
+                                          Content="Referência visual no terreno"
+                                          IsChecked="True" />
+                            </StackPanel>
+                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos."
+                                       FontSize="9.5"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="7"
+                                    VerticalAlignment="Bottom">
+                            <Button Content="Avançado"
+                                    Click="OnCreateCoordinateMapAdvancedClick" />
+                            <Button x:Name="CreateRealMapAreaButton"
+                                    Content="Criar área"
+                                    IsEnabled="False"
+                                    Click="OnCreateRealMapAreaClick" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border x:Name="RealMapAreaResizeGrip"
+                            Width="30"
+                            Height="30"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para redimensionar"
+                            PointerPressed="OnRealMapAreaResizePressed"
+                            PointerMoved="OnRealMapAreaResizeMoved"
+                            PointerReleased="OnRealMapAreaResizeReleased"
+                            PointerCanceled="OnRealMapAreaResizeReleased">
                         <Grid Width="18" Height="18">
                             <Line X1="7" Y1="17" X2="17" Y2="7"
                                   Stroke="{ThemeResource MapStudioAccentTextBrush}"
