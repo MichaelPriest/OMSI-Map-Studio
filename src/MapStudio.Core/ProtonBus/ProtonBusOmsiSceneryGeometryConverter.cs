@@ -9,7 +9,7 @@ public sealed record ProtonBusSceneryConversionOptions(
     string MeshPrefix = "object",
     bool GenerateCollider = false,
     double TerrainOffset = 0,
-    bool FlipTextureV = true);
+    bool FlipTextureV = false);
 
 public static class
     ProtonBusOmsiSceneryGeometryConverter
