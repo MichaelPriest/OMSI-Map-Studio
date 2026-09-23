@@ -420,7 +420,7 @@ Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortc
 
 ## Multi-selection
 
-Use **Ctrl+click** to add/remove objects and splines. Press **Delete** to remove the selected group with one confirmation.
+Use **Ctrl+click** or **Shift+click** to add/remove objects and splines. To select several items visually, start dragging from an empty area of the viewport and draw a box over the desired items. With **Ctrl** or **Shift** held, the box adds items to the current group; without a modifier, it replaces the selection. Press **Delete** to remove the selected group with one confirmation and safe backup.
 
 ## Natural movement
 
