@@ -2425,32 +2425,42 @@
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch" />
 
-                        <Border HorizontalAlignment="Center"
-                                VerticalAlignment="Center"
-                                Width="62%"
-                                Height="58%"
-                                IsHitTestVisible="False"
-                                BorderBrush="{ThemeResource MapStudioAccentBrush}"
-                                BorderThickness="3"
-                                Background="#08000000"
-                                CornerRadius="4">
-                            <Grid>
-                                <Border HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Width="12"
-                                        Height="12"
-                                        CornerRadius="6"
-                                        Background="{ThemeResource MapStudioAccentBrush}" />
-                                <TextBlock Text="ÁREA DO MAPA"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Top"
-                                           Margin="0,7,0,0"
-                                           Padding="7,3"
-                                           FontSize="10"
-                                           FontWeight="SemiBold"
-                                           Background="{ThemeResource MapStudioTranslucentRaisedBrush}" />
-                            </Grid>
-                        </Border>
+                        <Grid IsHitTestVisible="False">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="19*" />
+                                <ColumnDefinition Width="62*" />
+                                <ColumnDefinition Width="19*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="21*" />
+                                <RowDefinition Height="58*" />
+                                <RowDefinition Height="21*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="1"
+                                    Grid.Column="1"
+                                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                                    BorderThickness="3"
+                                    Background="#08000000"
+                                    CornerRadius="4">
+                                <Grid>
+                                    <Border HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Width="12"
+                                            Height="12"
+                                            CornerRadius="6"
+                                            Background="{ThemeResource MapStudioAccentBrush}" />
+                                    <TextBlock Text="ÁREA DO MAPA"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Top"
+                                               Margin="0,7,0,0"
+                                               Padding="7,3"
+                                               FontSize="10"
+                                               FontWeight="SemiBold"
+                                               Background="{ThemeResource MapStudioTranslucentRaisedBrush}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
                     </Grid>
 
                     <Grid Grid.Row="3"
@@ -2477,8 +2487,8 @@
                                           Content="Gerar ruas OSM automaticamente"
                                           IsChecked="True" />
                                 <CheckBox x:Name="RealMapApplyElevationCheckBox"
-                                          Content="Aplicar elevação Google se houver chave"
-                                          IsChecked="True" />
+                                          Content="Aplicar elevação Google (pode gerar cobrança)"
+                                          IsChecked="False" />
                                 <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
                                           Content="Referência visual no terreno"
                                           IsChecked="True" />
