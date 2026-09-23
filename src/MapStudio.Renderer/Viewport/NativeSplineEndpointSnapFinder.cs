@@ -47,7 +47,11 @@ public static class NativeSplineEndpointSnapFinder
                 endpoint ==
                     NativeSplineEndpointKind.End &&
                 placed.NextSplineId !=
-                    -1)
+                    -1 &&
+                scene.Splines.Any(
+                    candidate =>
+                        candidate.Spline.SplineId ==
+                        placed.NextSplineId))
             {
                 continue;
             }
@@ -56,7 +60,11 @@ public static class NativeSplineEndpointSnapFinder
                 endpoint ==
                     NativeSplineEndpointKind.Start &&
                 placed.PreviousSplineId !=
-                    -1)
+                    -1 &&
+                scene.Splines.Any(
+                    candidate =>
+                        candidate.Spline.SplineId ==
+                        placed.PreviousSplineId))
             {
                 continue;
             }
