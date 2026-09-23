@@ -24891,6 +24891,27 @@ public sealed partial class MainWindow : Window
                     "Ex.: Meu modelo local"
             };
 
+        var quickProviderBox =
+            new ComboBox
+            {
+                Header =
+                    "Configuração rápida",
+                PlaceholderText =
+                    "Escolha um provedor",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch,
+                ItemsSource =
+                    new[]
+                    {
+                        "OpenAI · Responses API",
+                        "OpenAI-compatible",
+                        "Ollama · local",
+                        "LM Studio · local",
+                        "Anthropic",
+                        "Google Gemini"
+                    }
+            };
+
         var adapterBox =
             new TextBox
             {
@@ -24961,6 +24982,100 @@ public sealed partial class MainWindow : Window
             {
                 Content =
                     "Executa localmente/offline"
+            };
+
+        quickProviderBox.SelectionChanged +=
+            (_, _) =>
+            {
+                switch (
+                    quickProviderBox
+                        .SelectedIndex)
+                {
+                    case 0:
+                        adapterBox.Text =
+                            "openai";
+                        endpointBox.Text =
+                            "https://api.openai.com/v1/responses";
+                        modelBox.Text =
+                            "gpt-5.6-terra";
+                        localCheckBox.IsChecked =
+                            false;
+
+                        if (
+                            string.IsNullOrWhiteSpace(
+                                nameBox.Text))
+                        {
+                            nameBox.Text =
+                                "OpenAI";
+                        }
+
+                        break;
+
+                    case 1:
+                        adapterBox.Text =
+                            "openai-compatible";
+                        localCheckBox.IsChecked =
+                            false;
+                        break;
+
+                    case 2:
+                        adapterBox.Text =
+                            "ollama";
+                        endpointBox.Text =
+                            "http://localhost:11434/v1";
+                        localCheckBox.IsChecked =
+                            true;
+
+                        if (
+                            string.IsNullOrWhiteSpace(
+                                nameBox.Text))
+                        {
+                            nameBox.Text =
+                                "Ollama";
+                        }
+
+                        break;
+
+                    case 3:
+                        adapterBox.Text =
+                            "lmstudio";
+                        endpointBox.Text =
+                            "http://localhost:1234/v1";
+                        localCheckBox.IsChecked =
+                            true;
+
+                        if (
+                            string.IsNullOrWhiteSpace(
+                                nameBox.Text))
+                        {
+                            nameBox.Text =
+                                "LM Studio";
+                        }
+
+                        break;
+
+                    case 4:
+                        adapterBox.Text =
+                            "anthropic";
+                        endpointBox.Text =
+                            "https://api.anthropic.com/v1/messages";
+                        localCheckBox.IsChecked =
+                            false;
+                        break;
+
+                    case 5:
+                        adapterBox.Text =
+                            "gemini";
+                        endpointBox.Text =
+                            "https://generativelanguage.googleapis.com/v1beta";
+                        localCheckBox.IsChecked =
+                            false;
+                        break;
+                }
+
+                UpdateAdapterHelp(
+                    applyDefaults:
+                        false);
             };
 
         var activeCheckBox =
@@ -25337,6 +25452,9 @@ public sealed partial class MainWindow : Window
 
         panel.Children.Add(
             profileCombo);
+
+        panel.Children.Add(
+            quickProviderBox);
 
         panel.Children.Add(
             nameBox);
