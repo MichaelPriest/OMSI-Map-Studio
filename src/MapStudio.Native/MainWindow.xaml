@@ -466,6 +466,9 @@
                         IsEnabled="False" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
+                        Text="Abrir painel IA..."
+                        Click="OnToggleAiToolWindowClick" />
+                    <MenuFlyoutItem
                         Text="Configurar provedores..."
                         Click="OnAiProvidersClick" />
                 </MenuBarItem>
@@ -646,6 +649,14 @@
                                 <StackPanel Orientation="Horizontal" Spacing="5">
                                     <FontIcon Glyph="⌖" FontSize="13" />
                                     <TextBlock Text="Tile XY" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    ToolTipService.ToolTip="Abrir painel de IA"
+                                    Click="OnToggleAiToolWindowClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="✦" FontSize="13" />
+                                    <TextBlock Text="IA painel" />
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource EditorToolbarButtonStyle}"
@@ -2537,6 +2548,160 @@
                             PointerMoved="OnTrafficPathsResizeMoved"
                             PointerReleased="OnTrafficPathsResizeReleased"
                             PointerCanceled="OnTrafficPathsResizeReleased">
+                        <Grid Width="18" Height="18">
+                            <Line X1="7" Y1="17" X2="17" Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12" Y1="17" X2="17" Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border x:Name="AiToolWindow"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    Width="430"
+                    Height="330"
+                    Margin="640,96,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="111"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="AiToolWindowTranslate" />
+                </Border.RenderTransform>
+
+                <Grid Padding="10"
+                      RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Background="Transparent"
+                          ColumnSpacing="8"
+                          PointerPressed="OnAiToolWindowDragPressed"
+                          PointerMoved="OnAiToolWindowDragMoved"
+                          PointerReleased="OnAiToolWindowDragReleased"
+                          PointerCanceled="OnAiToolWindowDragReleased">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="7">
+                            <FontIcon Glyph="✦"
+                                      FontSize="15"
+                                      Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <StackPanel>
+                                <TextBlock Text="ASSISTENTE DE IA"
+                                           FontSize="12"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="Opcional · o editor continua funcionando sem IA"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                            <Button x:Name="AiToolMinimizeButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar/restaurar"
+                                    Click="OnToggleAiToolMinimizeClick" />
+                            <Button Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTipService.ToolTip="Fechar"
+                                    Click="OnCloseAiToolWindowClick" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ScrollViewer x:Name="AiToolBody"
+                                  Grid.Row="1"
+                                  VerticalScrollMode="Auto"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel Spacing="9">
+                            <ComboBox x:Name="FloatingAiProfileSelectorBox"
+                                      Header="Perfil ativo"
+                                      PlaceholderText="Selecione um perfil de IA"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnAiProfileSelectorChanged" />
+
+                            <Border Padding="8"
+                                    Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                    BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="7">
+                                <StackPanel Spacing="3">
+                                    <TextBlock x:Name="FloatingAiConnectionStatusText"
+                                               Text="Nenhum perfil ativo"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock x:Name="FloatingAiProviderText"
+                                               Text="Provedor: —"
+                                               FontSize="10"
+                                               Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                    <TextBlock x:Name="FloatingAiModelText"
+                                               Text="Modelo: —"
+                                               FontSize="10"
+                                               Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                    <TextBlock x:Name="FloatingAiCredentialText"
+                                               Text="Credencial: —"
+                                               FontSize="10"
+                                               Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Grid ColumnSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="Testar conexão"
+                                        Click="OnConnectAiToMapClick" />
+                                <Button Grid.Column="1"
+                                        Content="Provedores..."
+                                        Click="OnAiProvidersClick" />
+                            </Grid>
+
+                            <TextBlock Text="A IA pode classificar assets, sugerir splines e auxiliar mapas reais; nenhuma função principal depende dela."
+                                       FontSize="9.5"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Border x:Name="AiToolResizeGrip"
+                            Width="28"
+                            Height="28"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para redimensionar"
+                            PointerPressed="OnAiToolResizePressed"
+                            PointerMoved="OnAiToolResizeMoved"
+                            PointerReleased="OnAiToolResizeReleased"
+                            PointerCanceled="OnAiToolResizeReleased">
                         <Grid Width="18" Height="18">
                             <Line X1="7" Y1="17" X2="17" Y2="7"
                                   Stroke="{ThemeResource MapStudioAccentTextBrush}"
