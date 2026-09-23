@@ -3113,12 +3113,88 @@ public sealed partial class NativeViewport : UserControl
         string label,
         NativeSelectionContextAction action)
     {
+        var content =
+            new StackPanel
+            {
+                Orientation =
+                    Orientation.Horizontal,
+                Spacing =
+                    4,
+                HorizontalAlignment =
+                    HorizontalAlignment.Center,
+                VerticalAlignment =
+                    VerticalAlignment.Center
+            };
+
+        content.Children.Add(
+            new FontIcon
+            {
+                Glyph =
+                    GetRadialActionGlyph(
+                        action),
+                FontSize =
+                    12
+            });
+
+        content.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    label,
+                FontSize =
+                    10,
+                VerticalAlignment =
+                    VerticalAlignment.Center
+            });
+
         button.Content =
-            label;
+            content;
 
         button.Tag =
             action.ToString();
+
+        ToolTipService.SetToolTip(
+            button,
+            label);
     }
+
+    private static string GetRadialActionGlyph(
+        NativeSelectionContextAction action) =>
+        action switch
+        {
+            NativeSelectionContextAction.Move =>
+                "↔",
+            NativeSelectionContextAction.Rotate =>
+                "⟳",
+            NativeSelectionContextAction.Duplicate =>
+                "⧉",
+            NativeSelectionContextAction.Delete =>
+                "✕",
+            NativeSelectionContextAction.Focus =>
+                "◎",
+            NativeSelectionContextAction.Inspector =>
+                "⚙",
+            NativeSelectionContextAction.EditCurve =>
+                "⌒",
+            NativeSelectionContextAction.Split =>
+                "✂",
+            NativeSelectionContextAction.Parallel =>
+                "∥",
+            NativeSelectionContextAction.Elevate =>
+                "↑",
+            NativeSelectionContextAction.Level =>
+                "━",
+            NativeSelectionContextAction.Lower =>
+                "↓",
+            NativeSelectionContextAction.Replace =>
+                "⇄",
+            NativeSelectionContextAction.Mirror =>
+                "⇋",
+            NativeSelectionContextAction.Flow =>
+                "→",
+            _ =>
+                "•"
+        };
 
     private void HideSelectionRadialMenu()
     {
