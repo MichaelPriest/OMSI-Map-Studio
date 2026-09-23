@@ -601,7 +601,7 @@ public static class ProtonBusOmsiTimetableConverter
         value
             .Trim()
             .Replace(
-                '\',
+                '\\',
                 '/');
 
     private static void ValidateOptions(
