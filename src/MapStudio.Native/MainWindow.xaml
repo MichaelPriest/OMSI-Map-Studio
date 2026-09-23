@@ -982,7 +982,8 @@
                                       DisplayMemberPath="DisplayText"
                                       DoubleTapped="OnMapTileListDoubleTapped" />
 
-                            <Grid Grid.Row="2"
+                            <Grid x:Name="MapExplorerActionGrid"
+                                  Grid.Row="2"
                                   ColumnSpacing="5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
