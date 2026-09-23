@@ -395,7 +395,38 @@ Road elevation changes the spline, not the terrain mesh.
 
 ---
 
-# 20. Georeference and map reference
+# 20. Create real map by area
+
+Use **Map > Create real map by area...** to build a map without manually typing latitude/longitude.
+
+1. Choose **OpenStreetMap** or **Google Maps**.
+2. Pan/zoom the map underneath the fixed center frame.
+3. Review estimated dimensions and required 300 m OMSI tiles.
+4. Enter folder/name.
+5. Choose automatic OSM roads, Google Elevation and terrain reference options.
+6. Click **Create area**.
+
+The window can be moved and resized inside the editor.
+
+**OpenStreetMap:** requires no key and is used for interactive browsing and vector data. Map Studio does not bulk-download/offline-cache the public tile service.
+
+**Google Maps:** uses the API key stored by the user in Windows Credential Manager. The interactive selector requires Maps JavaScript API access. Google Elevation can incur charges and is disabled by default.
+
+Automatic roads query the selected OSM area, project geographic coordinates into the map and start procedural spline/junction generation.
+
+## Tile X/Y
+
+Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortcut. Its internal window is movable and resizable.
+
+## Multi-selection
+
+Use **Ctrl+click** to add/remove objects and splines. Press **Delete** to remove the selected group with one confirmation.
+
+## Natural movement
+
+In **Move**, drag the selected item itself: the ghost follows the pointer on the item plane. Middle-button navigation behaves like grabbing and pulling the map.
+
+# 21. Georeference and map reference
 
 The Map menu includes real-coordinate map creation, georeference editing, Google elevation, local grids and Google map reference overlays.
 
