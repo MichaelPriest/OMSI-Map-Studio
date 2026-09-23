@@ -44,6 +44,12 @@ public sealed record ProtonBusMapPackageRequest(
         TrainPaths { get; init; } =
         Array.Empty<
             ProtonBusTrainPathDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusTrafficLightDefinition>
+        TrafficLights { get; init; } =
+        Array.Empty<
+            ProtonBusTrafficLightDefinition>();
 }
 
 public sealed record ProtonBusMapPackageResult(
@@ -81,6 +87,11 @@ public sealed record ProtonBusMapPackageResult(
 
     public IReadOnlyList<string>
         TrainPathPaths
+        { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string>
+        TrafficLightPaths
         { get; init; } =
         Array.Empty<string>();
 }
@@ -258,6 +269,12 @@ public static class ProtonBusMapPackageWriter
                 layout,
                 request.TrainPaths);
 
+        var trafficLightPaths =
+            WriteTrafficLights(
+                root,
+                layout,
+                request.TrafficLights);
+
         return new(
             root,
             mapDefinitionPath,
@@ -280,8 +297,51 @@ public static class ProtonBusMapPackageWriter
             VehiclePathPaths =
                 vehiclePathPaths,
             TrainPathPaths =
-                trainPathPaths
+                trainPathPaths,
+            TrafficLightPaths =
+                trafficLightPaths
         };
+    }
+
+    private static IReadOnlyList<string>
+        WriteTrafficLights(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<ProtonBusTrafficLightDefinition> definitions)
+    {
+        var duplicate =
+            definitions
+                .GroupBy(item => item.Prefix, StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1);
+
+        if (duplicate is not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate Proton Bus traffic-light prefix '{duplicate.Key}'.",
+                nameof(definitions));
+        }
+
+        var output = new List<string>(definitions.Count);
+
+        foreach (var definition in definitions)
+        {
+            ProtonBusTrafficLightDefinitionWriter.Validate(definition);
+
+            var target =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout.TrafficLightsDirectoryPath,
+                        definition.SuggestedFileName));
+
+            File.WriteAllText(
+                target,
+                ProtonBusTrafficLightDefinitionWriter.Serialize(definition));
+
+            output.Add(target);
+        }
+
+        return output;
     }
 
     private static void ValidateMovingPathPrefixes(
