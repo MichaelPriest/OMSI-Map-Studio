@@ -3282,7 +3282,7 @@ public sealed class D3D11NativeMapRenderer :
             var additionalPickingId in
                 _additionalSelectionPickingIds)
         {
-            output.AddRange(
+            var additionalVertices =
                 BuildHighlight(
                     additionalPickingId,
                     new Vector4(
@@ -3290,7 +3290,32 @@ public sealed class D3D11NativeMapRenderer :
                         0.58f,
                         0.05f,
                         1.0f),
-                    0.055f));
+                    0.055f);
+
+            if (
+                _selectionPreviewTransform !=
+                Matrix4x4.Identity)
+            {
+                for (
+                    var index = 0;
+                    index <
+                        additionalVertices.Length;
+                    index++)
+                {
+                    var vertex =
+                        additionalVertices[index];
+
+                    additionalVertices[index] =
+                        new NativeMapVertex(
+                            Vector3.Transform(
+                                vertex.Position,
+                                _selectionPreviewTransform),
+                            vertex.Color);
+                }
+            }
+
+            output.AddRange(
+                additionalVertices);
         }
 
         var vertices =
@@ -3327,20 +3352,21 @@ public sealed class D3D11NativeMapRenderer :
             _selectionPreviewTransform ==
                 Matrix4x4.Identity ||
             _selectionPickingId
-                .IsNone ||
-            !TryGetHighlightSource(
-                _selectionPickingId,
-                out var sourceVertices,
-                out var range) ||
-            range.VertexCount <=
-                0)
+                .IsNone)
         {
             return;
         }
 
-        var vertices =
-            new NativeMapVertex[
-                range.VertexCount];
+        var output =
+            new List<NativeMapVertex>();
+
+        var selectedIds =
+            new[]
+            {
+                _selectionPickingId
+            }
+            .Concat(
+                _additionalSelectionPickingIds);
 
         var ghostColor =
             new Vector4(
@@ -3349,21 +3375,45 @@ public sealed class D3D11NativeMapRenderer :
                 1.0f,
                 0.48f);
 
-        for (
-            var index = 0;
-            index <
-                vertices.Length;
-            index++)
+        foreach (
+            var pickingId in
+                selectedIds)
         {
-            var source =
-                sourceVertices[
-                    range.StartVertex +
-                    index];
+            if (
+                !TryGetHighlightSource(
+                    pickingId,
+                    out var sourceVertices,
+                    out var range) ||
+                range.VertexCount <=
+                    0)
+            {
+                continue;
+            }
 
-            vertices[index] =
-                new NativeMapVertex(
-                    source.Position,
-                    ghostColor);
+            for (
+                var index = 0;
+                index <
+                    range.VertexCount;
+                index++)
+            {
+                var source =
+                    sourceVertices[
+                        range.StartVertex +
+                        index];
+
+                output.Add(
+                    new NativeMapVertex(
+                        source.Position,
+                        ghostColor));
+            }
+        }
+
+        var vertices =
+            output.ToArray();
+
+        if (vertices.Length == 0)
+        {
+            return;
         }
 
         _selectionGhostBuffer =
