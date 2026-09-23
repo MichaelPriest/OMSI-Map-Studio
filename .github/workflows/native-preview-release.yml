@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.7: city-builder road elevation + expanded spline radial wheel.
+# Test 10.8: spline drag fix + easy selection + map AI connection + PDF manual.
 
 on:
   push:
@@ -11,10 +11,16 @@ on:
       - "src/MapStudio.Native/App.xaml"
       - "src/MapStudio.Native/MainWindow.xaml"
       - "src/MapStudio.Native/MainWindow.xaml.cs"
+      - "src/MapStudio.Native/Controls/NativeViewport.xaml.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
+      - "src/MapStudio.Renderer/Scene/NativePickingProxyGeometryBuilder.cs"
+      - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.7-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.7-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.8-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.8-native.md"
   workflow_dispatch:
 
 permissions:
@@ -25,8 +31,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.7-native
-  TAG: v0.2.0-alpha.5-test.10.7-native
+  VERSION: 0.2.0-alpha.5-test.10.8-native
+  TAG: v0.2.0-alpha.5-test.10.8-native
 
 jobs:
   build-native-preview:
@@ -42,6 +48,14 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      - name: Setup Python for PDF manual
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PDF manual dependency
+        run: python -m pip install --disable-pip-version-check reportlab
 
       - name: Verify WinUI theme resources
         shell: pwsh
@@ -252,7 +266,31 @@ jobs:
             throw "English user manual is missing."
           }
 
-          Write-Host "Verified road elevation tools, expanded radial wheel and bundled user manuals."
+          if (-not $viewport.Contains('_isSplineDragCreating')) {
+            throw "Spline drag creation state is missing."
+          }
+
+          if (-not $viewport.Contains('TryConfirmEasyRoad')) {
+            throw "Drag release does not finalize Easy Road."
+          }
+
+          if (-not $runtime.Contains('CollectSelectablePickCandidates')) {
+            throw "Easy overlapping selection candidate collector is missing."
+          }
+
+          if (-not $xaml.Contains('x:Name="AiStatusButton"')) {
+            throw "Map AI connection button is missing."
+          }
+
+          if (-not $main.Contains('OnConnectAiToMapClick')) {
+            throw "Map AI connection handler is missing."
+          }
+
+          if (-not (Test-Path tools/build_user_manual_pdf.py)) {
+            throw "PDF manual generator is missing."
+          }
+
+          Write-Host "Verified road elevation, drag spline finalization, easy selection, map AI connection and manuals."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -292,15 +330,35 @@ jobs:
           Copy-Item docs/pt-BR/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-pt-BR.md -Force
           Copy-Item docs/en/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-en.md -Force
 
-          if (-not (Test-Path "artifacts/publish/win-x64/Docs/Manual-pt-BR.md")) {
-            throw "Bundled Portuguese manual was not copied."
+          python tools/build_user_manual_pdf.py docs/pt-BR/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf --language pt-BR
+          if ($LASTEXITCODE -ne 0) {
+            throw "Portuguese PDF manual generation failed."
           }
 
-          if (-not (Test-Path "artifacts/publish/win-x64/Docs/Manual-en.md")) {
-            throw "Bundled English manual was not copied."
+          python tools/build_user_manual_pdf.py docs/en/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-en.pdf --language en
+          if ($LASTEXITCODE -ne 0) {
+            throw "English PDF manual generation failed."
           }
 
-          Write-Host "Bundled user manuals copied to publish output."
+          foreach ($manual in @(
+            "artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf",
+            "artifacts/publish/win-x64/Docs/Manual-en.pdf"
+          )) {
+            if (-not (Test-Path $manual)) {
+              throw "Bundled PDF manual is missing: $manual"
+            }
+
+            if ((Get-Item $manual).Length -lt 10000) {
+              throw "Bundled PDF manual is unexpectedly small: $manual"
+            }
+          }
+
+          $ptManualAsset = "artifacts/OMSI-Map-Studio-Manual-pt-BR-$env:VERSION.pdf"
+          $enManualAsset = "artifacts/OMSI-Map-Studio-Manual-en-$env:VERSION.pdf"
+          Copy-Item artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf $ptManualAsset -Force
+          Copy-Item artifacts/publish/win-x64/Docs/Manual-en.pdf $enManualAsset -Force
+
+          Write-Host "Bundled PDF user manuals generated and copied to publish output."
 
       - name: Create portable ZIP
         shell: pwsh
@@ -346,11 +404,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.7-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.8-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.7-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.8-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
@@ -361,6 +419,8 @@ jobs:
             artifacts/OMSI-Map-Studio-${{ env.VERSION }}-portable-win-x64.zip.sha256
             artifacts/OMSI-Map-Studio-Native-Preview-Setup-${{ env.VERSION }}-win-x64.exe
             artifacts/OMSI-Map-Studio-Native-Preview-Setup-${{ env.VERSION }}-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-Manual-pt-BR-${{ env.VERSION }}.pdf
+            artifacts/OMSI-Map-Studio-Manual-en-${{ env.VERSION }}.pdf
           compression-level: 0
           if-no-files-found: error
 
@@ -373,13 +433,15 @@ jobs:
           $setupHash = "$setup.sha256"
           $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
           $zipHash = "$zip.sha256"
+          $ptManual = "artifacts/OMSI-Map-Studio-Manual-pt-BR-$env:VERSION.pdf"
+          $enManual = "artifacts/OMSI-Map-Studio-Manual-en-$env:VERSION.pdf"
 
           gh release view "$env:TAG" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash --clobber
+            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash $ptManual $enManual --clobber
           }
           else {
-            gh release create "$env:TAG" $setup $setupHash $zip $zipHash `
+            gh release create "$env:TAG" $setup $setupHash $zip $zipHash $ptManual $enManual `
               --target "$env:GITHUB_SHA" `
               --title "OMSI Map Studio $env:TAG — Native Feature Preview" `
               --notes-file artifacts/release-notes.md `
