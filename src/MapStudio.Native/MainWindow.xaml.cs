@@ -507,6 +507,7 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         RestorePanelExpansionState();
+        RegisterPanelExpansionStateCallbacks();
 
         RefreshAiConnectionUi();
 
@@ -2998,9 +2999,28 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnPanelExpanderStateChanged(
-        object sender,
-        RoutedEventArgs e)
+    private void RegisterPanelExpansionStateCallbacks()
+    {
+        ProjectSummaryCard
+            .RegisterPropertyChangedCallback(
+                Expander.IsExpandedProperty,
+                (_, _) =>
+                    SavePanelExpansionState());
+
+        AssetFiltersExpander
+            .RegisterPropertyChangedCallback(
+                Expander.IsExpandedProperty,
+                (_, _) =>
+                    SavePanelExpansionState());
+
+        TransportPathsExpander
+            .RegisterPropertyChangedCallback(
+                Expander.IsExpandedProperty,
+                (_, _) =>
+                    SavePanelExpansionState());
+    }
+
+    private void SavePanelExpansionState()
     {
         if (_restoringPanelExpansionState)
         {
