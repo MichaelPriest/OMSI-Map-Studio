@@ -48,6 +48,11 @@ public sealed partial class NativeViewport : UserControl
     private bool _isSplineDragCreating;
     private bool _splineSplitPickActive;
     private bool _isManipulatingGizmo;
+    private bool _selectionBoxPending;
+    private bool _isSelectionBoxDragging;
+    private bool _selectionBoxAdditive;
+    private double _selectionBoxStartX;
+    private double _selectionBoxStartY;
     private double _lastPanX;
     private double _lastPanY;
     private long _lastHoverTick;
@@ -2162,7 +2167,17 @@ public sealed partial class NativeViewport : UserControl
             this,
             message);
 
-        if (
+        var additiveSelection =
+            (
+                e.KeyModifiers &
+                (
+                    VirtualKeyModifiers.Control |
+                    VirtualKeyModifiers.Shift
+                )
+            ) !=
+            0;
+
+        var picked =
             _runtime is not null &&
             _runtime.TryPick(
                 pixelX,
@@ -2170,12 +2185,13 @@ public sealed partial class NativeViewport : UserControl
                 out var pickingId,
                 out var selected,
                 additiveSelection:
-                    (
-                        e.KeyModifiers &
-                        VirtualKeyModifiers.Control
-                    ) !=
-                    0))
+                    additiveSelection);
+
+        if (picked)
         {
+            _selectionBoxPending =
+                false;
+
             var selectionMessage =
                 selected switch
                 {
@@ -2188,7 +2204,7 @@ public sealed partial class NativeViewport : UserControl
                 };
 
             if (
-                _runtime
+                _runtime!
                     .LastPickCandidateCount >
                 1)
             {
@@ -2202,7 +2218,7 @@ public sealed partial class NativeViewport : UserControl
                 1)
             {
                 selectionMessage +=
-                    $" · {_runtime.SelectedItemCount} itens selecionados · Ctrl+clique adiciona/remove";
+                    $" · {_runtime.SelectedItemCount} itens selecionados · Ctrl/Shift+clique adiciona/remove";
             }
 
             SelectionStatusChanged?.Invoke(
@@ -2211,9 +2227,27 @@ public sealed partial class NativeViewport : UserControl
         }
         else
         {
+            _selectionBoxPending =
+                _runtime is not
+                    null;
+
+            _selectionBoxDragging =
+                false;
+
+            _selectionBoxAdditive =
+                additiveSelection;
+
+            _selectionBoxStartX =
+                point.Position.X;
+
+            _selectionBoxStartY =
+                point.Position.Y;
+
             SelectionStatusChanged?.Invoke(
                 this,
-                "Sem seleção.");
+                additiveSelection
+                    ? "Arraste para adicionar itens com a caixa de seleção."
+                    : "Arraste em área vazia para selecionar vários itens.");
         }
 
         PublishSelectionInfo();
@@ -2231,6 +2265,55 @@ public sealed partial class NativeViewport : UserControl
 
         PointerText.Text =
             $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
+
+        if (
+            _selectionBoxPending &&
+            _leftPressed)
+        {
+            var deltaX =
+                point.Position.X -
+                _selectionBoxStartX;
+
+            var deltaY =
+                point.Position.Y -
+                _selectionBoxStartY;
+
+            if (
+                !_selectionBoxDragging &&
+                (
+                    Math.Abs(
+                        deltaX) >=
+                        6 ||
+                    Math.Abs(
+                        deltaY) >=
+                        6
+                ))
+            {
+                _selectionBoxDragging =
+                    true;
+
+                SelectionBoxLayer.Visibility =
+                    Visibility.Visible;
+            }
+
+            if (_selectionBoxDragging)
+            {
+                UpdateSelectionBoxVisual(
+                    point.Position.X,
+                    point.Position.Y);
+
+                PointerStatusChanged?.Invoke(
+                    this,
+                    _selectionBoxAdditive
+                        ? "Caixa de seleção: adicionando ao grupo atual."
+                        : "Caixa de seleção: solte para selecionar o grupo.");
+
+                e.Handled =
+                    true;
+
+                return;
+            }
+        }
 
         if (
             _runtime is not null &&
@@ -2774,6 +2857,78 @@ public sealed partial class NativeViewport : UserControl
         }
 
         if (
+            _selectionBoxDragging &&
+            _runtime is not null)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var startPixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        _selectionBoxStartX *
+                        scaleX));
+
+            var startPixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        _selectionBoxStartY *
+                        scaleY));
+
+            var endPixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var endPixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            var selectedCount =
+                _runtime
+                    .SelectInRectangle(
+                        startPixelX,
+                        startPixelY,
+                        endPixelX,
+                        endPixelY,
+                        _selectionBoxAdditive);
+
+            PublishSelectionInfo();
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                selectedCount ==
+                    0
+                    ? "Caixa de seleção sem itens."
+                    : $"{selectedCount} item(ns) selecionado(s) pela caixa.");
+
+            PointerStatusChanged?.Invoke(
+                this,
+                selectedCount ==
+                    0
+                    ? "Seleção por caixa concluída sem itens."
+                    : $"Seleção por caixa: {selectedCount} item(ns).");
+        }
+
+        ResetSelectionBox();
+
+        if (
             _isManipulatingGizmo &&
             _runtime is not null)
         {
@@ -2894,9 +3049,56 @@ public sealed partial class NativeViewport : UserControl
         _rightPressed = false;
         _isSplineDragCreating = false;
         _isManipulatingGizmo = false;
+        _selectionBoxPending = false;
+        _selectionBoxDragging = false;
 
         ProtectedCursor =
             _defaultCursor;
+    }
+
+    private void UpdateSelectionBoxVisual(
+        double currentX,
+        double currentY)
+    {
+        var left =
+            Math.Min(
+                _selectionBoxStartX,
+                currentX);
+
+        var top =
+            Math.Min(
+                _selectionBoxStartY,
+                currentY);
+
+        SelectionBoxBorder.Width =
+            Math.Abs(
+                currentX -
+                _selectionBoxStartX);
+
+        SelectionBoxBorder.Height =
+            Math.Abs(
+                currentY -
+                _selectionBoxStartY);
+
+        Canvas.SetLeft(
+            SelectionBoxBorder,
+            left);
+
+        Canvas.SetTop(
+            SelectionBoxBorder,
+            top);
+    }
+
+    private void ResetSelectionBox()
+    {
+        SelectionBoxLayer.Visibility =
+            Visibility.Collapsed;
+
+        SelectionBoxBorder.Width =
+            0;
+
+        SelectionBoxBorder.Height =
+            0;
     }
 
     private void TryOpenSelectionRadialMenu(
