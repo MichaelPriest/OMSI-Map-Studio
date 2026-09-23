@@ -67,6 +67,14 @@ public static class NativeAiProviderFactory
 
         switch (provider)
         {
+            case MapStudioOpenAiResponsesProvider
+                openAi:
+                await openAi
+                    .TestConnectionAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                return;
+
             case MapStudioOpenAiCompatibleProvider
                 compatible:
                 await compatible
