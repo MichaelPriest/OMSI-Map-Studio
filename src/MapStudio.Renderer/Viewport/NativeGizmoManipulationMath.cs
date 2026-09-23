@@ -84,6 +84,13 @@ public static class NativeGizmoManipulationMath
                 worldPerPixel
             );
 
+        if (
+            handle ==
+                NativeGizmoHandle.MoveXZ)
+        {
+            return cameraPlaneDelta;
+        }
+
         var axis =
             handle switch
             {
