@@ -570,6 +570,11 @@ public sealed partial class MainWindow : Window
     private int _realMapAreaColumns;
     private int _realMapAreaRows;
     private int _realMapAreaZoom = 16;
+    private double _realMapSelectionFractionX =
+        0.62;
+    private double _realMapSelectionFractionY =
+        0.58;
+    private bool _syncingRealMapAreaSelectionControls;
     private bool _autoGenerateProceduralRoadsWithoutPrompt;
 
     public MainWindow()
@@ -23763,6 +23768,8 @@ public sealed partial class MainWindow : Window
         _realMapAreaZoom =
             zoom;
 
+        UpdateRealMapAreaSelectionVisual();
+
         await RealMapAreaWebView
             .EnsureCoreWebView2Async();
 
@@ -23894,7 +23901,9 @@ public sealed partial class MainWindow : Window
                 longitude,
                 zoom,
                 google,
-                googleKey));
+                googleKey,
+                _realMapSelectionFractionX,
+                _realMapSelectionFractionY));
     }
 
     private static string BuildRealMapAreaPickerHtml(
@@ -23902,7 +23911,9 @@ public sealed partial class MainWindow : Window
         double longitude,
         int zoom,
         bool google,
-        string? googleKey)
+        string? googleKey,
+        double selectionFractionX,
+        double selectionFractionY)
     {
         var lat =
             latitude.ToString(
@@ -23913,6 +23924,24 @@ public sealed partial class MainWindow : Window
             longitude.ToString(
                 "G17",
                 CultureInfo.InvariantCulture);
+
+        var selectionX =
+            Math.Clamp(
+                    selectionFractionX,
+                    0.20,
+                    0.95)
+                .ToString(
+                    "G17",
+                    CultureInfo.InvariantCulture);
+
+        var selectionY =
+            Math.Clamp(
+                    selectionFractionY,
+                    0.20,
+                    0.95)
+                .ToString(
+                    "G17",
+                    CultureInfo.InvariantCulture);
 
         if (google)
         {
@@ -23936,14 +23965,19 @@ html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:
 <div id="map"></div>
 <script>
 let map, overlay;
+let selectionFx = {{selectionX}}, selectionFy = {{selectionY}};
+window.setSelectionFraction = function(fx, fy) {
+  selectionFx = Math.max(0.20, Math.min(0.95, fx));
+  selectionFy = Math.max(0.20, Math.min(0.95, fy));
+  postBounds();
+};
 function postBounds() {
   if (!map || !overlay || !overlay.getProjection()) return;
   const div = document.getElementById('map');
   const w = div.clientWidth, h = div.clientHeight;
-  const fx = 0.62, fy = 0.58;
-  const left = w * (1 - fx) / 2;
+  const left = w * (1 - selectionFx) / 2;
   const right = w - left;
-  const top = h * (1 - fy) / 2;
+  const top = h * (1 - selectionFy) / 2;
   const bottom = h - top;
   const projection = overlay.getProjection();
   const nw = projection.fromContainerPixelToLatLng(new google.maps.Point(left, top));
@@ -24000,12 +24034,18 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution:'&copy; OpenStreetMap contributors'
 }).addTo(map);
 
+let selectionFx = {{selectionX}}, selectionFy = {{selectionY}};
+window.setSelectionFraction = function(fx, fy) {
+  selectionFx = Math.max(0.20, Math.min(0.95, fx));
+  selectionFy = Math.max(0.20, Math.min(0.95, fy));
+  postBounds();
+};
+
 function postBounds() {
   const size = map.getSize();
-  const fx = 0.62, fy = 0.58;
-  const left = size.x * (1 - fx) / 2;
+  const left = size.x * (1 - selectionFx) / 2;
   const right = size.x - left;
-  const top = size.y * (1 - fy) / 2;
+  const top = size.y * (1 - selectionFy) / 2;
   const bottom = size.y - top;
   const nw = map.containerPointToLatLng([left, top]);
   const se = map.containerPointToLatLng([right, bottom]);
@@ -24122,6 +24162,243 @@ setTimeout(postBounds, 250);
             RealMapAreaEstimateText.Text +=
                 " · reduza a área (limite Alpha: 400 tiles)";
         }
+    }
+
+    private async void OnRealMapSearchClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var query =
+            RealMapSearchBox.Text
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                query))
+        {
+            StatusText.Text =
+                "Mapa real: digite uma cidade, endereço ou local para buscar.";
+
+            return;
+        }
+
+        RealMapSearchButton.IsEnabled =
+            false;
+
+        StatusText.Text =
+            $"Mapa real: buscando “{query}” no OpenStreetMap...";
+
+        try
+        {
+            var results =
+                await NativeOpenStreetMapGeocoder
+                    .SearchAsync(
+                        query);
+
+            RealMapSearchResultsBox.ItemsSource =
+                results;
+
+            if (results.Count == 0)
+            {
+                RealMapSearchResultsBox.SelectedIndex =
+                    -1;
+
+                StatusText.Text =
+                    "Mapa real: nenhum local encontrado. Tente um endereço ou nome mais específico.";
+
+                return;
+            }
+
+            RealMapSearchResultsBox.SelectedIndex =
+                0;
+
+            StatusText.Text =
+                $"Mapa real: {results.Count} resultado(s) encontrado(s).";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Mapa real: falha ao buscar local: {exception.Message}";
+        }
+        finally
+        {
+            RealMapSearchButton.IsEnabled =
+                true;
+        }
+    }
+
+    private void OnRealMapSearchResultChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            RealMapSearchResultsBox.SelectedItem is not
+                NativeMapSearchResult result)
+        {
+            return;
+        }
+
+        var zoom =
+            Math.Clamp(
+                _realMapAreaZoom,
+                14,
+                19);
+
+        NavigateRealMapAreaPicker(
+            result.Latitude,
+            result.Longitude,
+            zoom);
+
+        StatusText.Text =
+            $"Mapa real: centralizado em {result.DisplayName}.";
+    }
+
+    private async void OnRealMapAreaSelectionSizeChanged(
+        NumberBox sender,
+        NumberBoxValueChangedEventArgs args)
+    {
+        if (
+            _syncingRealMapAreaSelectionControls ||
+            RealMapAreaWidthPercentBox is null ||
+            RealMapAreaHeightPercentBox is null ||
+            RealMapAreaLeftColumn is null ||
+            RealMapAreaCenterColumn is null ||
+            RealMapAreaRightColumn is null ||
+            RealMapAreaTopRow is null ||
+            RealMapAreaCenterRow is null ||
+            RealMapAreaBottomRow is null)
+        {
+            return;
+        }
+
+        var widthPercent =
+            double.IsFinite(
+                RealMapAreaWidthPercentBox.Value)
+                ? Math.Clamp(
+                    RealMapAreaWidthPercentBox.Value,
+                    20,
+                    95)
+                : 62;
+
+        var heightPercent =
+            double.IsFinite(
+                RealMapAreaHeightPercentBox.Value)
+                ? Math.Clamp(
+                    RealMapAreaHeightPercentBox.Value,
+                    20,
+                    95)
+                : 58;
+
+        _realMapSelectionFractionX =
+            widthPercent /
+            100.0;
+
+        _realMapSelectionFractionY =
+            heightPercent /
+            100.0;
+
+        UpdateRealMapAreaSelectionVisual();
+
+        if (
+            !_realMapAreaInitialized ||
+            RealMapAreaWebView.CoreWebView2 is
+                null)
+        {
+            return;
+        }
+
+        var fx =
+            _realMapSelectionFractionX
+                .ToString(
+                    "G17",
+                    CultureInfo.InvariantCulture);
+
+        var fy =
+            _realMapSelectionFractionY
+                .ToString(
+                    "G17",
+                    CultureInfo.InvariantCulture);
+
+        try
+        {
+            await RealMapAreaWebView
+                .CoreWebView2
+                .ExecuteScriptAsync(
+                    $"window.setSelectionFraction && window.setSelectionFraction({fx}, {fy});");
+        }
+        catch
+        {
+            // The map may be navigating between providers; its next load receives the current fractions.
+        }
+    }
+
+    private void UpdateRealMapAreaSelectionVisual()
+    {
+        if (
+            RealMapAreaLeftColumn is null ||
+            RealMapAreaCenterColumn is null ||
+            RealMapAreaRightColumn is null ||
+            RealMapAreaTopRow is null ||
+            RealMapAreaCenterRow is null ||
+            RealMapAreaBottomRow is null)
+        {
+            return;
+        }
+
+        var centerX =
+            Math.Clamp(
+                _realMapSelectionFractionX,
+                0.20,
+                0.95);
+
+        var centerY =
+            Math.Clamp(
+                _realMapSelectionFractionY,
+                0.20,
+                0.95);
+
+        var sideX =
+            (
+                1.0 -
+                centerX
+            ) /
+            2.0;
+
+        var sideY =
+            (
+                1.0 -
+                centerY
+            ) /
+            2.0;
+
+        RealMapAreaLeftColumn.Width =
+            new GridLength(
+                sideX,
+                GridUnitType.Star);
+
+        RealMapAreaCenterColumn.Width =
+            new GridLength(
+                centerX,
+                GridUnitType.Star);
+
+        RealMapAreaRightColumn.Width =
+            new GridLength(
+                sideX,
+                GridUnitType.Star);
+
+        RealMapAreaTopRow.Height =
+            new GridLength(
+                sideY,
+                GridUnitType.Star);
+
+        RealMapAreaCenterRow.Height =
+            new GridLength(
+                centerY,
+                GridUnitType.Star);
+
+        RealMapAreaBottomRow.Height =
+            new GridLength(
+                sideY,
+                GridUnitType.Star);
     }
 
     private void OnRealMapProviderChanged(
