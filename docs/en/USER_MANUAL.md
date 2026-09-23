@@ -399,20 +399,28 @@ Road elevation changes the spline, not the terrain mesh.
 
 Use **Map > Create real map by area...** to build a map without manually typing latitude/longitude.
 
-1. Choose **OpenStreetMap** or **Google Maps**.
-2. Pan/zoom the map underneath the fixed center frame.
-3. Review estimated dimensions and required 300 m OMSI tiles.
-4. Enter folder/name.
-5. Choose automatic OSM roads, Google Elevation and terrain reference options.
-6. Click **Create area**.
+1. Search for a **city, address or place**. Search uses OpenStreetMap/Nominatim only on an explicit user action and requires no API key.
+2. Choose **OpenStreetMap** or **Google Maps** to view the area.
+3. Pan and zoom the map.
+4. Adjust **Area width %** and **Area height %** to enlarge or reduce the center selection frame. Geographic bounds are recalculated from the frame in real time.
+5. Review estimated physical dimensions and required 300 m OMSI tiles.
+6. Enter folder/name.
+7. Under **OpenStreetMap roads**, choose:
+   - **Create terrain / reference only**;
+   - **Import roads as guides** — previews the graph in the viewport without writing splines;
+   - **Generate roads automatically after preview** — classifies roads, prepares splines/junctions and requires confirmation after preview before writing.
+8. Optionally enable **Google Elevation** and/or **Visual terrain reference**.
+9. Click **Create area**.
 
-The window can be moved and resized inside the editor.
+The window can be moved, resized and minimized inside the editor.
 
-**OpenStreetMap:** requires no key and is used for interactive browsing and vector data. Map Studio does not bulk-download/offline-cache the public tile service.
+**OpenStreetMap:** requires no key and is used for interactive browsing, place search and vector data. Map Studio does not bulk-download/offline-cache the public tile service. Search requests are rate-limited and identify the application.
 
 **Google Maps:** uses the API key stored by the user in Windows Credential Manager. The interactive selector requires Maps JavaScript API access. Google Elevation can incur charges and is disabled by default.
 
-Automatic roads query the selected OSM area, project geographic coordinates into the map and start procedural spline/junction generation.
+OSM roads are projected into the map georeference and classified by type/width/lanes when those tags are available. Even in automatic mode, Map Studio shows **Preview before write** and only persists splines/junctions after confirmation.
+
+For elevation without Google, use **Map → Import local elevation grid**. CSV/TXT/ASC data is applied to the active tile through the same safe terrain pipeline with backup; local import is per tile and is not presented as a global DEM for the entire area.
 
 ## Tile X/Y
 
