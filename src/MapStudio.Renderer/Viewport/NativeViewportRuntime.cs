@@ -55,6 +55,10 @@ public sealed class NativeViewportRuntime : IDisposable
     private PickingId _selectedPickingId =
         PickingId.None;
 
+    private readonly HashSet<PickingId>
+        _selectedPickingIds =
+            new();
+
     private NativeGizmoHandle _activeGizmoHandle =
         NativeGizmoHandle.None;
 
@@ -3570,14 +3574,31 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    public IReadOnlyList<NativeSelectionInfo>
+        GetSelectedSelectionInfos() =>
+        _selectedPickingIds
+            .Select(
+                GetSelectionInfo)
+            .Where(
+                info =>
+                    info is not null)
+            .Cast<NativeSelectionInfo>()
+            .ToArray();
+
     public NativeSelectionInfo?
-        GetSelectionInfo()
+        GetSelectionInfo() =>
+        GetSelectionInfo(
+            _selectedPickingId);
+
+    private NativeSelectionInfo?
+        GetSelectionInfo(
+            PickingId pickingId)
     {
         if (
             Scene is null ||
-            _selectedPickingId.IsNone ||
+            pickingId.IsNone ||
             !IsSelectionKindEnabled(
-                    _selectedPickingId.Kind))
+                    pickingId.Kind))
         {
             return null;
         }
@@ -3587,7 +3608,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .FirstOrDefault(
                     entity =>
                         entity.PickingId ==
-                        _selectedPickingId);
+                        pickingId);
 
         if (objectEntity is not null)
         {
@@ -3982,6 +4003,13 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             return null;
         }
+
+        _selectedPickingIds
+            .Clear();
+
+        _selectedPickingIds
+            .Add(
+                pickingId);
 
         _selectedPickingId =
             pickingId;
@@ -4913,12 +4941,16 @@ public sealed class NativeViewportRuntime : IDisposable
             ? 0
             : _lastPickCandidateIndex + 1;
 
+    public int SelectedItemCount =>
+        _selectedPickingIds.Count;
+
     public bool TryPick(
         uint pixelX,
         uint pixelY,
         out PickingId pickingId,
         out object? item,
-        bool cycleCandidates = true)
+        bool cycleCandidates = true,
+        bool additiveSelection = false)
     {
         ThrowIfDisposed();
 
@@ -4944,6 +4976,21 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (candidates.Count == 0)
         {
+            if (additiveSelection)
+            {
+                pickingId =
+                    _selectedPickingId;
+
+                item =
+                    ResolvePickingItem(
+                        _selectedPickingId);
+
+                return false;
+            }
+
+            _selectedPickingIds
+                .Clear();
+
             _lastPickPixelX =
                 pixelX;
 
@@ -5041,11 +5088,65 @@ public sealed class NativeViewportRuntime : IDisposable
         _lastPickCandidateIndex =
             candidateIndex;
 
-        _selectedPickingId =
-            pickingId;
+        if (additiveSelection)
+        {
+            if (
+                _selectedPickingIds
+                    .Contains(
+                        pickingId))
+            {
+                _selectedPickingIds
+                    .Remove(
+                        pickingId);
+
+                if (
+                    _selectedPickingId ==
+                        pickingId)
+                {
+                    _selectedPickingId =
+                        _selectedPickingIds
+                            .LastOrDefault();
+
+                    pickingId =
+                        _selectedPickingId;
+
+                    item =
+                        ResolvePickingItem(
+                            pickingId);
+                }
+            }
+            else
+            {
+                _selectedPickingIds
+                    .Add(
+                        pickingId);
+
+                _selectedPickingId =
+                    pickingId;
+            }
+        }
+        else
+        {
+            _selectedPickingIds
+                .Clear();
+
+            _selectedPickingIds
+                .Add(
+                    pickingId);
+
+            _selectedPickingId =
+                pickingId;
+        }
 
         MapRenderer.SetSelection(
-            pickingId);
+            _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
 
         MapRenderer.SetSelectionPreviewTransform(
             Matrix4x4.Identity);
@@ -5053,7 +5154,9 @@ public sealed class NativeViewportRuntime : IDisposable
         UpdateGizmoGeometry();
         RenderInitialFrame();
 
-        return true;
+        return
+            !_selectedPickingId
+                .IsNone;
     }
 
     public bool TryBeginGizmoDrag(
@@ -5631,6 +5734,39 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             RenderInitialFrame();
         }
+    }
+
+    private object? ResolvePickingItem(
+        PickingId pickingId)
+    {
+        if (
+            Scene is null ||
+            pickingId.IsNone)
+        {
+            return null;
+        }
+
+        return pickingId.Kind switch
+        {
+            PickingKind.Object =>
+                Scene.Objects
+                    .FirstOrDefault(
+                        entity =>
+                            entity.PickingId ==
+                            pickingId)
+                    ?.Object,
+
+            PickingKind.Spline =>
+                Scene.Splines
+                    .FirstOrDefault(
+                        entity =>
+                            entity.PickingId ==
+                            pickingId)
+                    ?.Spline,
+
+            _ =>
+                null
+        };
     }
 
     private sealed record PickCandidate(
