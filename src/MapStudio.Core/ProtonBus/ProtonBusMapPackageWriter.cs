@@ -50,6 +50,12 @@ public sealed record ProtonBusMapPackageRequest(
         TrafficLights { get; init; } =
         Array.Empty<
             ProtonBusTrafficLightDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusStreetLightDefinition>
+        StreetLights { get; init; } =
+        Array.Empty<
+            ProtonBusStreetLightDefinition>();
 }
 
 public sealed record ProtonBusMapPackageResult(
@@ -92,6 +98,11 @@ public sealed record ProtonBusMapPackageResult(
 
     public IReadOnlyList<string>
         TrafficLightPaths
+        { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string>
+        StreetLightPaths
         { get; init; } =
         Array.Empty<string>();
 }
@@ -275,6 +286,12 @@ public static class ProtonBusMapPackageWriter
                 layout,
                 request.TrafficLights);
 
+        var streetLightPaths =
+            WriteStreetLights(
+                root,
+                layout,
+                request.StreetLights);
+
         return new(
             root,
             mapDefinitionPath,
@@ -299,8 +316,60 @@ public static class ProtonBusMapPackageWriter
             TrainPathPaths =
                 trainPathPaths,
             TrafficLightPaths =
-                trafficLightPaths
+                trafficLightPaths,
+            StreetLightPaths =
+                streetLightPaths
         };
+    }
+
+    private static IReadOnlyList<string>
+        WriteStreetLights(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<
+                ProtonBusStreetLightDefinition>
+                definitions)
+    {
+        var duplicate =
+            definitions
+                .GroupBy(
+                    item => item.Prefix,
+                    StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group => group.Count() > 1);
+
+        if (duplicate is not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate Proton Bus street-light prefix '{duplicate.Key}'.",
+                nameof(definitions));
+        }
+
+        var output =
+            new List<string>(
+                definitions.Count);
+
+        foreach (var definition in definitions)
+        {
+            ProtonBusStreetLightDefinitionWriter
+                .Validate(definition);
+
+            var targetPath =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout.StreetLightsDirectoryPath,
+                        definition.SuggestedFileName));
+
+            File.WriteAllText(
+                targetPath,
+                ProtonBusStreetLightDefinitionWriter
+                    .Serialize(definition));
+
+            output.Add(targetPath);
+        }
+
+        return output;
     }
 
     private static IReadOnlyList<string>
