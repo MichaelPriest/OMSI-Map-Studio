@@ -25623,10 +25623,9 @@ public sealed partial class MainWindow : Window
             AiStatusButton.Content =
                 "IA: conectar";
 
-            AiStatusButton.ToolTipService
-                .SetToolTip(
-                    AiStatusButton,
-                    "Nenhum perfil ativo. Clique para configurar a IA usada pelas ferramentas do mapa.");
+            ToolTipService.SetToolTip(
+                AiStatusButton,
+                "Nenhum perfil ativo. Clique para configurar a IA usada pelas ferramentas do mapa.");
 
             AiConnectMenuItem.Text =
                 "Conectar / testar IA no mapa...";
