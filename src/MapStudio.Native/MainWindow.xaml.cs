@@ -24083,7 +24083,7 @@ public sealed partial class MainWindow : Window
             await ApplyMapSnapshotAsync(
                 result.Snapshot,
                 focusActiveTile:
-                    true);
+                    false);
 
             UpdateContentRootSummary();
 
@@ -24374,7 +24374,7 @@ public sealed partial class MainWindow : Window
             await ApplyMapSnapshotAsync(
                 result.Snapshot,
                 focusActiveTile:
-                    true);
+                    false);
 
             UpdateContentRootSummary();
 
