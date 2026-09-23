@@ -719,3 +719,141 @@ public static class ProtonBusOmsiTerrainTessellator
             ]);
     }
 }
+
+
+public static class ProtonBusOmsiTerrainSampler
+{
+    public static double GetHeightAtLocalPoint(
+        OmsiTerrainGrid? terrain,
+        double localX,
+        double localZ)
+    {
+        if (
+            terrain is null ||
+            terrain.CellCount <=
+                0)
+        {
+            return 0;
+        }
+
+        var cellCount =
+            terrain.CellCount;
+
+        var sampleCount =
+            cellCount +
+            1;
+
+        if (
+            terrain.Heights.Count !=
+            sampleCount *
+            sampleCount)
+        {
+            return 0;
+        }
+
+        var gridX =
+            Math.Clamp(
+                localX /
+                OmsiTileGrid.TileSize *
+                cellCount,
+                0,
+                cellCount);
+
+        var gridZ =
+            Math.Clamp(
+                localZ /
+                OmsiTileGrid.TileSize *
+                cellCount,
+                0,
+                cellCount);
+
+        var column0 =
+            (int)Math.Floor(
+                gridX);
+
+        var row0 =
+            (int)Math.Floor(
+                gridZ);
+
+        var column1 =
+            Math.Min(
+                cellCount,
+                column0 +
+                1);
+
+        var row1 =
+            Math.Min(
+                cellCount,
+                row0 +
+                1);
+
+        var fractionX =
+            gridX -
+            column0;
+
+        var fractionZ =
+            gridZ -
+            row0;
+
+        var height00 =
+            terrain.Heights[
+                row0 *
+                    sampleCount +
+                column0];
+
+        var height10 =
+            terrain.Heights[
+                row0 *
+                    sampleCount +
+                column1];
+
+        var height01 =
+            terrain.Heights[
+                row1 *
+                    sampleCount +
+                column0];
+
+        var height11 =
+            terrain.Heights[
+                row1 *
+                    sampleCount +
+                column1];
+
+        if (
+            !float.IsFinite(
+                height00) ||
+            !float.IsFinite(
+                height10) ||
+            !float.IsFinite(
+                height01) ||
+            !float.IsFinite(
+                height11))
+        {
+            return 0;
+        }
+
+        var top =
+            height00 +
+            (
+                height10 -
+                height00
+            ) *
+            fractionX;
+
+        var bottom =
+            height01 +
+            (
+                height11 -
+                height01
+            ) *
+            fractionX;
+
+        return
+            top +
+            (
+                bottom -
+                top
+            ) *
+            fractionZ;
+    }
+}
