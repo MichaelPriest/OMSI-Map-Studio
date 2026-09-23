@@ -18,6 +18,18 @@ public sealed class NativeSceneryAssetLoader
         _directXReader =
             new();
 
+    private readonly NativeDerivedFileCache<
+        OmsiSceneryObjectMetadata>
+        _sceneryMetadataCache =
+            new(
+                512);
+
+    private readonly NativeDerivedFileCache<
+        OmsiO3dGeometry>
+        _meshGeometryCache =
+            new(
+                1024);
+
     public async Task<
         IReadOnlyDictionary<
             string,
@@ -103,8 +115,7 @@ public sealed class NativeSceneryAssetLoader
         }
 
         var metadata =
-            await _sceneryReader
-                .ReadMetadataAsync(
+            await LoadMetadataAsync(
                     fullScoPath,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -149,16 +160,8 @@ public sealed class NativeSceneryAssetLoader
             }
 
             var geometry =
-                string.Equals(
-                    Path.GetExtension(
-                        meshPath),
-                    ".x",
-                    StringComparison
-                        .OrdinalIgnoreCase)
-                    ? _directXReader.Read(
-                        meshPath)
-                    : _o3dReader.Read(
-                        meshPath);
+                LoadGeometry(
+                    meshPath);
 
             if (!geometry.IsLoaded)
             {
@@ -446,6 +449,69 @@ public sealed class NativeSceneryAssetLoader
             UsesLightMapMapping =
                 metadata.UsesLightMapMapping
         };
+    }
+
+    private async Task<
+        OmsiSceneryObjectMetadata>
+        LoadMetadataAsync(
+            string fullScoPath,
+            CancellationToken cancellationToken)
+    {
+        if (
+            _sceneryMetadataCache
+                .TryGet(
+                    fullScoPath,
+                    out var cached))
+        {
+            return cached;
+        }
+
+        var metadata =
+            await _sceneryReader
+                .ReadMetadataAsync(
+                    fullScoPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        _sceneryMetadataCache
+            .Set(
+                fullScoPath,
+                metadata);
+
+        return metadata;
+    }
+
+    private OmsiO3dGeometry
+        LoadGeometry(
+            string meshPath)
+    {
+        if (
+            _meshGeometryCache
+                .TryGet(
+                    meshPath,
+                    out var cached))
+        {
+            return cached;
+        }
+
+        var geometry =
+            string.Equals(
+                Path.GetExtension(
+                    meshPath),
+                ".x",
+                StringComparison
+                    .OrdinalIgnoreCase)
+                ? _directXReader.Read(
+                    meshPath)
+                : _o3dReader.Read(
+                    meshPath);
+
+        _meshGeometryCache
+            .Set(
+                meshPath,
+                geometry);
+
+        return geometry;
     }
 
     private static int ResolveMaterialIndex(

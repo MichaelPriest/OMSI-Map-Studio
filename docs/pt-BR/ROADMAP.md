@@ -111,7 +111,7 @@ O índice não substitui os arquivos OMSI. Ele é derivado deles e pode ser reco
 
 A base persistente usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
 
-O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. Ainda faltam cache derivado, fila completa por prioridade e gerenciamento/LOD de recursos GPU para concluir a Fase A.
+O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. O primeiro estágio de cache derivado em memória agora reutiliza parsing de SCO, SLI, O3D e X enquanto o fingerprint do arquivo permanece válido, com limite LRU para controlar memória. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e gerenciamento/LOD de recursos GPU para concluir a Fase A.
 
 ### 3.2 Cache derivado
 

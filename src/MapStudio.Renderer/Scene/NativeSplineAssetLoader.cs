@@ -9,6 +9,12 @@ public sealed class NativeSplineAssetLoader
         _reader =
             new();
 
+    private readonly NativeDerivedFileCache<
+        OmsiSplineDefinition>
+        _definitionCache =
+            new(
+                512);
+
     public async Task<
         IReadOnlyDictionary<
             string,
@@ -92,8 +98,7 @@ public sealed class NativeSplineAssetLoader
         }
 
         var definition =
-            await _reader
-                .ReadAsync(
+            await LoadDefinitionAsync(
                     fullPath,
                     cancellationToken)
                 .ConfigureAwait(false);
@@ -130,5 +135,35 @@ public sealed class NativeSplineAssetLoader
             definition.Surfaces.Count == 0
                 ? "noRenderableProfile"
                 : null);
+    }
+
+    private async Task<
+        OmsiSplineDefinition>
+        LoadDefinitionAsync(
+            string fullPath,
+            CancellationToken cancellationToken)
+    {
+        if (
+            _definitionCache
+                .TryGet(
+                    fullPath,
+                    out var cached))
+        {
+            return cached;
+        }
+
+        var definition =
+            await _reader
+                .ReadAsync(
+                    fullPath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        _definitionCache
+            .Set(
+                fullPath,
+                definition);
+
+        return definition;
     }
 }

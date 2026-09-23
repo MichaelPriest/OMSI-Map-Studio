@@ -111,7 +111,7 @@ The index never replaces OMSI files. It is derived data and can be rebuilt.
 
 The persistent foundation uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
 
-Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. Derived caching, a complete priority queue, and GPU resource management/LOD are still required to finish Phase A.
+Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. The first in-memory derived-cache stage now reuses SCO, SLI, O3D, and X parsing while each file fingerprint remains valid, with an LRU bound to control memory. Persistent/broader caching, a complete priority queue, and GPU resource management/LOD are still required to finish Phase A.
 
 ### 3.2 Derived cache
 
