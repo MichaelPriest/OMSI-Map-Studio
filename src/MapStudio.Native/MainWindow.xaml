@@ -2992,7 +2992,12 @@
 
                     <Grid x:Name="RealMapAreaOptionsRow"
                           Grid.Row="1"
-                          ColumnSpacing="8">
+                          ColumnSpacing="8"
+                          RowSpacing="7">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.2*" />
                             <ColumnDefinition Width="1.2*" />
@@ -3001,14 +3006,17 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBox x:Name="RealMapDirectoryBox"
+                                 Grid.Row="0"
                                  Grid.Column="0"
                                  Header="Pasta"
                                  PlaceholderText="MeuMapaReal" />
                         <TextBox x:Name="RealMapDisplayNameBox"
+                                 Grid.Row="0"
                                  Grid.Column="1"
                                  Header="Nome"
                                  PlaceholderText="Meu mapa real" />
                         <ComboBox x:Name="RealMapProviderBox"
+                                  Grid.Row="0"
                                   Grid.Column="2"
                                   Header="Mapa para escolher a área"
                                   SelectedIndex="0"
@@ -3016,10 +3024,62 @@
                             <ComboBoxItem Content="OpenStreetMap · sem chave" />
                             <ComboBoxItem Content="Google Maps · chave do usuário" />
                         </ComboBox>
-                        <Button Grid.Column="3"
+                        <Button Grid.Row="0"
+                                Grid.Column="3"
                                 VerticalAlignment="Bottom"
                                 Content="Recarregar"
                                 Click="OnReloadRealMapAreaClick" />
+
+                        <Grid Grid.Row="1"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="4"
+                              ColumnSpacing="7">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.45*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="1.4*" />
+                                <ColumnDefinition Width="105" />
+                                <ColumnDefinition Width="105" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox x:Name="RealMapSearchBox"
+                                     Grid.Column="0"
+                                     Header="Buscar cidade, endereço ou local"
+                                     PlaceholderText="Ex.: Av. Paulista, São Paulo" />
+
+                            <Button x:Name="RealMapSearchButton"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Bottom"
+                                    Content="Buscar"
+                                    Click="OnRealMapSearchClick" />
+
+                            <ComboBox x:Name="RealMapSearchResultsBox"
+                                      Grid.Column="2"
+                                      Header="Resultados"
+                                      DisplayMemberPath="DisplayName"
+                                      PlaceholderText="Selecione um resultado"
+                                      SelectionChanged="OnRealMapSearchResultChanged" />
+
+                            <NumberBox x:Name="RealMapAreaWidthPercentBox"
+                                       Grid.Column="3"
+                                       Header="Largura área %"
+                                       Minimum="20"
+                                       Maximum="95"
+                                       SmallChange="5"
+                                       Value="62"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="OnRealMapAreaSelectionSizeChanged" />
+
+                            <NumberBox x:Name="RealMapAreaHeightPercentBox"
+                                       Grid.Column="4"
+                                       Header="Altura área %"
+                                       Minimum="20"
+                                       Maximum="95"
+                                       SmallChange="5"
+                                       Value="58"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="OnRealMapAreaSelectionSizeChanged" />
+                        </Grid>
                     </Grid>
 
                     <Grid x:Name="RealMapAreaMapRow"
@@ -3030,14 +3090,20 @@
 
                         <Grid IsHitTestVisible="False">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="19*" />
-                                <ColumnDefinition Width="62*" />
-                                <ColumnDefinition Width="19*" />
+                                <ColumnDefinition x:Name="RealMapAreaLeftColumn"
+                                                  Width="19*" />
+                                <ColumnDefinition x:Name="RealMapAreaCenterColumn"
+                                                  Width="62*" />
+                                <ColumnDefinition x:Name="RealMapAreaRightColumn"
+                                                  Width="19*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="21*" />
-                                <RowDefinition Height="58*" />
-                                <RowDefinition Height="21*" />
+                                <RowDefinition x:Name="RealMapAreaTopRow"
+                                               Height="21*" />
+                                <RowDefinition x:Name="RealMapAreaCenterRow"
+                                               Height="58*" />
+                                <RowDefinition x:Name="RealMapAreaBottomRow"
+                                               Height="21*" />
                             </Grid.RowDefinitions>
 
                             <Border Grid.Row="1"
