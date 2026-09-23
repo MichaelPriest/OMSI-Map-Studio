@@ -25,7 +25,7 @@ public sealed class
             shape);
 
         if (
-            !asset.IsLoaded ||
+            !asset.CanPlace ||
             shape.Length <
                 0.01)
         {
@@ -48,11 +48,79 @@ public sealed class
                 2,
                 256);
 
-        foreach (
-            var surface in
-                asset.Definition
-                    .Surfaces)
+        if (
+            asset.Definition
+                .Surfaces.Count >
+            0)
         {
+            foreach (
+                var surface in
+                    asset.Definition
+                        .Surfaces)
+            {
+                for (
+                    var segment = 0;
+                    segment < segments;
+                    segment++)
+                {
+                    var distance0 =
+                        shape.Length *
+                        segment /
+                        segments;
+
+                    var distance1 =
+                        shape.Length *
+                        (segment + 1) /
+                        segments;
+
+                    var frame0 =
+                        GetFrame(
+                            shape,
+                            distance0);
+
+                    var frame1 =
+                        GetFrame(
+                            shape,
+                            distance1);
+
+                    var left0 =
+                        TransformProfilePoint(
+                            frame0,
+                            surface.From.X,
+                            surface.From.Z);
+
+                    var right0 =
+                        TransformProfilePoint(
+                            frame0,
+                            surface.To.X,
+                            surface.To.Z);
+
+                    var left1 =
+                        TransformProfilePoint(
+                            frame1,
+                            surface.From.X,
+                            surface.From.Z);
+
+                    var right1 =
+                        TransformProfilePoint(
+                            frame1,
+                            surface.To.X,
+                            surface.To.Z);
+
+                    AppendQuad(
+                        left0,
+                        left1,
+                        right1,
+                        right0,
+                        vertices);
+                }
+            }
+        }
+        else
+        {
+            const float fallbackHalfWidth =
+                3.5f;
+
             for (
                 var segment = 0;
                 segment < segments;
@@ -78,35 +146,19 @@ public sealed class
                         shape,
                         distance1);
 
-                var left0 =
-                    TransformProfilePoint(
-                        frame0,
-                        surface.From.X,
-                        surface.From.Z);
-
-                var right0 =
-                    TransformProfilePoint(
-                        frame0,
-                        surface.To.X,
-                        surface.To.Z);
-
-                var left1 =
-                    TransformProfilePoint(
-                        frame1,
-                        surface.From.X,
-                        surface.From.Z);
-
-                var right1 =
-                    TransformProfilePoint(
-                        frame1,
-                        surface.To.X,
-                        surface.To.Z);
-
                 AppendQuad(
-                    left0,
-                    left1,
-                    right1,
-                    right0,
+                    frame0.Center +
+                        frame0.Lateral *
+                        fallbackHalfWidth,
+                    frame1.Center +
+                        frame1.Lateral *
+                        fallbackHalfWidth,
+                    frame1.Center -
+                        frame1.Lateral *
+                        fallbackHalfWidth,
+                    frame0.Center -
+                        frame0.Lateral *
+                        fallbackHalfWidth,
                     vertices);
             }
         }
@@ -150,8 +202,10 @@ public sealed class
             vertices.ToArray(),
             minimum,
             maximum,
-            asset.Definition
-                .Surfaces.Count,
+            Math.Max(
+                1,
+                asset.Definition
+                    .Surfaces.Count),
             null);
     }
 
