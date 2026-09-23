@@ -212,6 +212,21 @@ public static class ProtonBus3dsMeshChunkPlanner
 
         Flush();
 
+        if (
+            chunks.Count ==
+            1)
+        {
+            var only =
+                chunks[0];
+
+            chunks[0] =
+                only with
+                {
+                    Name =
+                        mesh.Name
+                };
+        }
+
         return chunks;
     }
 
