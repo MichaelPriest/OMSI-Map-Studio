@@ -2067,8 +2067,7 @@ public sealed partial class NativeViewport : UserControl
                 out var pickingId,
                 out var selected))
         {
-            SelectionStatusChanged?.Invoke(
-                this,
+            var selectionMessage =
                 selected switch
                 {
                     OmsiPlacedObject item =>
@@ -2077,7 +2076,20 @@ public sealed partial class NativeViewport : UserControl
                         $"Spline #{item.SplineId} · {item.SplinePath} · ID {pickingId.Value}",
                     _ =>
                         $"{pickingId.Kind} · ID {pickingId.Value}"
-                });
+                };
+
+            if (
+                _runtime
+                    .LastPickCandidateCount >
+                1)
+            {
+                selectionMessage +=
+                    $" · {_runtime.LastPickCandidatePosition}/{_runtime.LastPickCandidateCount} sobrepostos · clique novamente para alternar";
+            }
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                selectionMessage);
         }
         else
         {
@@ -2714,7 +2726,9 @@ public sealed partial class NativeViewport : UserControl
                 pixelX,
                 pixelY,
                 out _,
-                out var selected) ||
+                out var selected,
+                cycleCandidates:
+                    false) ||
             selected is null)
         {
             HideSelectionRadialMenu();
