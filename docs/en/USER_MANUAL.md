@@ -426,6 +426,14 @@ For elevation without Google, use **Map → Import local elevation grid**. CSV/T
 
 Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortcut. Its internal window is movable, resizable and minimizable. When minimized, only the title bar remains visible; the same button restores the window without losing its position.
 
+The window lists the map's real tiles and shows which ones are **active** and **loaded in the viewport**, plus object/spline counts and the tile file path. Main actions are available directly in the window:
+
+- **Focus** — frames a tile that is already loaded without reloading the region;
+- **Load** — makes the tile active and, in performance mode, loads the 3×3 region;
+- **Create** — creates a tile using the entered X/Y coordinates;
+- **Delete** — activates the chosen tile and reuses the safe validated deletion with backup;
+- double-clicking the list also loads/focuses the tile.
+
 The **Create real map by area** window follows the same pattern: it can be moved, resized and minimized without closing the area picker.
 
 ## Collapsible panels
@@ -447,7 +455,9 @@ These windows can be moved, resized, minimized and closed. **Transport** and **L
 
 Use **Ctrl+click** or **Shift+click** to add/remove objects and splines. To select several items visually, start dragging from an empty area of the viewport and draw a box over the desired items. With **Ctrl** or **Shift** held, the box adds items to the current group; without a modifier, it replaces the selection.
 
-The selected group can be **moved**, **rotated** and **focused** directly in the viewport. The preview/filled ghost follows the group during manipulation, and transform history treats it as one visual action. None of these operations depends on the Inspector.
+The selected group can be **moved**, **rotated**, **duplicated** and **focused** directly in the viewport. The preview/filled ghost follows the group during manipulation, and transform history treats it as one visual action. None of these operations depends on the Inspector.
+
+When **Duplicate** is used with multiple items, Map Studio creates new IDs in a backed-up batch, initially offsets the copies by 2 m and leaves the new group selected in Move mode. Copied splines are created disconnected (previous/next = -1) for safety; reposition them and use **Auto connect** when you want to rebuild links.
 
 Press **Delete** to remove the selected group with one confirmation and safe backup. After deletion, **Ctrl+Z** restores the batch from the real map-file backups.
 
