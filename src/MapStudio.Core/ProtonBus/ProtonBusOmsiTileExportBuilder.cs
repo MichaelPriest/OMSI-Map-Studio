@@ -46,7 +46,11 @@ public sealed record ProtonBusOmsiTileExportOptions(
     ProtonBusTerrainTessellationOptions?
         TerrainOptions = null,
     ProtonBusSceneryConversionOptions?
-        SceneryOptions = null);
+        SceneryOptions = null)
+{
+    public ProtonBusOmsiFunctionalConversionOptions?
+        FunctionalOptions { get; init; }
+}
 
 public sealed record ProtonBusOmsiTileExportResult(
     ProtonBusExportScene Scene,
