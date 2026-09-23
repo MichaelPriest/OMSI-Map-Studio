@@ -2725,7 +2725,7 @@
                                         Visibility="Collapsed"
                                         Orientation="Horizontal"
                                         Spacing="6">
-                                <TextBlock Text="Use o Inspector e a Biblioteca para configurar esta ferramenta."
+                                <TextBlock Text="Use o viewport, a barra rápida e a Biblioteca. Inspector é opcional para ajuste fino."
                                            VerticalAlignment="Center"
                                            Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
                             </StackPanel>
