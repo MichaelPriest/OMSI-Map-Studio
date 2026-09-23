@@ -210,6 +210,9 @@ public sealed class NativeViewportRuntime : IDisposable
     public bool SplinePlacementCurved =>
         _splinePlacementCurved;
 
+    public bool SplineEasyRoadEnabled =>
+        _splineEasyRoadEnabled;
+
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
 

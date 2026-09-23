@@ -2992,7 +2992,7 @@ public sealed partial class MainWindow : Window
                             : "[spline_h] altura: clique início e fim."
                         : SplineEasyRoadCheckBox.IsChecked ==
                         true
-                        ? "Estrada fácil: clique no início e no fim. Ajuste o offset lateral para curvar." +
+                        ? "Rua: clique no início, arraste a prévia e solte no fim." +
                           (
                               Math.Abs(
                                   SplineElevationOffsetBox.Value) >
@@ -3003,7 +3003,7 @@ public sealed partial class MainWindow : Window
                         : SplineCurveCheckBox.IsChecked ==
                             true
                             ? "Spline curva manual: clique início, fim e ponto de curvatura."
-                            : "Spline reta: clique início e fim." +
+                            : "Rua reta: clique no início, arraste e solte no fim." +
                               (
                                   Math.Abs(
                                       SplineElevationOffsetBox.Value) >
@@ -7848,6 +7848,15 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             0;
 
+        RoadElevationText.Text =
+            "0 m";
+
+        RoadSnapButton.Content =
+            "Snap: on";
+
+        RoadContinuousButton.Content =
+            "Contínuo: on";
+
 
         SplineHeightCheckBox.IsChecked =
             false;
@@ -7881,7 +7890,7 @@ public sealed partial class MainWindow : Window
         await ActivateLibraryToolAsync(
             2,
             null,
-            "Ruas/Splines: Estrada fácil ativa. Escolha uma SLI, marque início/fim e ajuste o offset de curva.");
+            "Ruas: escolha uma SLI e clique-arraste do início ao fim. Use Curva, ↑/↓, Snap e Contínuo na barra inferior.");
     }
 
     private void ConfigureRoadPreset(
@@ -7933,6 +7942,143 @@ public sealed partial class MainWindow : Window
             status;
     }
 
+    private async void OnRoadDuplicateClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para duplicar.";
+            return;
+        }
+
+        await StartSelectionCopyPlacementAsync();
+    }
+
+    private void AdjustRoadElevation(
+        double delta)
+    {
+        var current =
+            double.IsFinite(
+                SplineElevationOffsetBox.Value)
+                ? SplineElevationOffsetBox.Value
+                : 0.0;
+
+        var updated =
+            Math.Clamp(
+                current +
+                delta,
+                -100.0,
+                300.0);
+
+        SplineElevationOffsetBox.Value =
+            updated;
+
+        Viewport
+            .SetSplinePlacementElevationOffset(
+                updated);
+
+        RoadElevationText.Text =
+            $"{updated:+0;-0;0} m";
+
+        StatusText.Text =
+            updated == 0
+                ? "Ruas: elevação seguindo o terreno."
+                : $"Ruas: elevação rápida {updated:+0.0;-0.0;0.0} m.";
+    }
+
+    private void OnRoadElevationUpClick(
+        object sender,
+        RoutedEventArgs e) =>
+        AdjustRoadElevation(
+            1.0);
+
+    private void OnRoadElevationDownClick(
+        object sender,
+        RoutedEventArgs e) =>
+        AdjustRoadElevation(
+            -1.0);
+
+    private void OnRoadElevationResetClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var current =
+            double.IsFinite(
+                SplineElevationOffsetBox.Value)
+                ? SplineElevationOffsetBox.Value
+                : 0.0;
+
+        AdjustRoadElevation(
+            -current);
+    }
+
+    private void OnRoadSnapToggleClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var enabled =
+            SplineEndpointSnapCheckBox
+                .IsChecked !=
+            true;
+
+        SplineEndpointSnapCheckBox.IsChecked =
+            enabled;
+
+        SplineAutoConnectCheckBox.IsChecked =
+            enabled;
+
+        var distance =
+            double.IsFinite(
+                SplineEndpointSnapDistanceBox
+                    .Value)
+                ? SplineEndpointSnapDistanceBox
+                    .Value
+                : 5.0;
+
+        Viewport
+            .SetSplineEndpointSnapOptions(
+                enabled,
+                distance,
+                enabled);
+
+        RoadSnapButton.Content =
+            enabled
+                ? "Snap: on"
+                : "Snap: off";
+
+        StatusText.Text =
+            enabled
+                ? "Ruas: snap e conexão automática ativos."
+                : "Ruas: snap desativado.";
+    }
+
+    private void OnRoadContinuousToggleClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var enabled =
+            SplineContinuousCheckBox
+                .IsChecked !=
+            true;
+
+        SplineContinuousCheckBox.IsChecked =
+            enabled;
+
+        RoadContinuousButton.Content =
+            enabled
+                ? "Contínuo: on"
+                : "Contínuo: off";
+
+        StatusText.Text =
+            enabled
+                ? "Ruas: próximos segmentos continuarão do endpoint anterior."
+                : "Ruas: cada segmento será criado separadamente.";
+    }
+
     private void OnRoadPresetEasyClick(
         object sender,
         RoutedEventArgs e)
@@ -7948,7 +8094,7 @@ public sealed partial class MainWindow : Window
                 true,
             manualCurve:
                 false,
-            "Ruas: Estrada fácil ativa. Marque início/fim e use a alça visual de curva.");
+            "Ruas: modo Arrastar ativo. Pressione no início, arraste a prévia e solte no fim.");
     }
 
     private void OnRoadPresetStraightClick(
@@ -7966,7 +8112,7 @@ public sealed partial class MainWindow : Window
                 false,
             manualCurve:
                 false,
-            "Ruas: criação reta manual ativa.");
+            "Ruas: reta por arrasto ativa. Pressione, arraste e solte.");
     }
 
     private void OnRoadPresetCurveClick(
@@ -7984,7 +8130,7 @@ public sealed partial class MainWindow : Window
                 false,
             manualCurve:
                 true,
-            "Ruas: curva manual de 3 cliques ativa.");
+            "Ruas: curva visual ativa. Defina início/fim e mova o cursor para ajustar a curvatura.");
     }
 
     private void OnRoadPresetHeightClick(
@@ -8002,7 +8148,7 @@ public sealed partial class MainWindow : Window
                 false,
             manualCurve:
                 false,
-            "Ruas: [spline_h] ativa para segmentos de altura.");
+            "Ruas: [spline_h] ativa. Use ↑/↓ para controlar a elevação sem abrir o Inspector.");
     }
 
     private async void OnToolBridgesClick(
