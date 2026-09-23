@@ -448,6 +448,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
+        RefreshAiConnectionUi();
+
         _trafficPreviewTimer.Interval =
             TimeSpan.FromMilliseconds(
                 250);
@@ -25610,6 +25612,120 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void RefreshAiConnectionUi()
+    {
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            AiStatusButton.Content =
+                "IA: conectar";
+
+            AiStatusButton.ToolTipService
+                .SetToolTip(
+                    AiStatusButton,
+                    "Nenhum perfil ativo. Clique para configurar a IA usada pelas ferramentas do mapa.");
+
+            AiConnectMenuItem.Text =
+                "Conectar / testar IA no mapa...";
+
+            AiActiveProfileMenuItem.Text =
+                "Nenhum perfil ativo";
+
+            return;
+        }
+
+        var hasCredential =
+            NativeAiCredentialStore
+                .HasSecret(
+                    activeProfile.Id);
+
+        AiStatusButton.Content =
+            $"IA: {activeProfile.DisplayName}";
+
+        ToolTipService.SetToolTip(
+            AiStatusButton,
+            hasCredential
+                ? $"Perfil ativo: {activeProfile.DisplayName} · {activeProfile.AdapterId} · credencial protegida no Windows."
+                : $"Perfil ativo: {activeProfile.DisplayName} · {activeProfile.AdapterId} · sem credencial salva.");
+
+        AiConnectMenuItem.Text =
+            "Testar IA ativa no mapa...";
+
+        AiActiveProfileMenuItem.Text =
+            $"Ativa: {activeProfile.DisplayName} · {activeProfile.AdapterId}";
+    }
+
+    private async void OnConnectAiToMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            StatusText.Text =
+                "IA: escolha um provedor, salve a credencial e marque o perfil como ativo.";
+
+            OnAiProvidersClick(
+                sender,
+                e);
+
+            return;
+        }
+
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .AiAssistance,
+                "Conexão de IA"))
+        {
+            return;
+        }
+
+        try
+        {
+            AiStatusButton.IsEnabled =
+                false;
+
+            AiStatusButton.Content =
+                "IA: testando...";
+
+            StatusText.Text =
+                $"IA: testando {activeProfile.DisplayName} para as ferramentas do mapa...";
+
+            await NativeAiProviderFactory
+                .TestConnectionAsync(
+                    activeProfile,
+                    NativeAiCredentialStore
+                        .TryGetSecret(
+                            activeProfile.Id));
+
+            AiStatusButton.Content =
+                $"IA: {activeProfile.DisplayName} · conectada";
+
+            StatusText.Text =
+                $"IA conectada: {activeProfile.DisplayName} · {activeProfile.AdapterId} · {activeProfile.Model}. Esse perfil será usado pelas ferramentas de IA do mapa.";
+        }
+        catch (Exception exception)
+        {
+            AiStatusButton.Content =
+                $"IA: {activeProfile.DisplayName} · erro";
+
+            StatusText.Text =
+                $"IA: falha ao conectar {activeProfile.DisplayName}: {exception.Message}";
+        }
+        finally
+        {
+            AiStatusButton.IsEnabled =
+                true;
+        }
+    }
+
     private async void OnAiProvidersClick(
         object sender,
         RoutedEventArgs e)
@@ -26336,6 +26452,8 @@ public sealed partial class MainWindow : Window
                 .DeleteSecret(
                     removedId);
 
+            RefreshAiConnectionUi();
+
             StatusText.Text =
                 $"IA: perfil '{selected.Profile.DisplayName}' e sua credencial foram excluídos.";
 
@@ -26422,6 +26540,8 @@ public sealed partial class MainWindow : Window
                         profile.Id,
                         tokenBox.Password);
             }
+
+            RefreshAiConnectionUi();
 
             var credentialMessage =
                 NativeAiCredentialStore
