@@ -4762,11 +4762,11 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             currentIndex >=
-                0)
+                0 &&
+            samePickArea)
         {
             candidateIndex =
                 cycleCandidates &&
-                samePickArea &&
                 candidates.Count >
                     1
                     ? (
