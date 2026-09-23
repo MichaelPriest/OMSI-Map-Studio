@@ -133,6 +133,65 @@ public sealed partial class NativeViewport : UserControl
             ?.GetSelectedSelectionInfos() ??
         Array.Empty<NativeSelectionInfo>();
 
+    public bool TryBuildSelectedGroupDuplicateRequests(
+        Vector3 worldOffset,
+        out IReadOnlyList<NativeSceneryPlacementRequest>
+            objectRequests,
+        out IReadOnlyList<NativeSplinePlacementRequest>
+            splineRequests,
+        out string status)
+    {
+        objectRequests =
+            Array.Empty<NativeSceneryPlacementRequest>();
+
+        splineRequests =
+            Array.Empty<NativeSplinePlacementRequest>();
+
+        status =
+            "Duplicar grupo indisponível.";
+
+        return
+            _runtime is not null &&
+            _runtime
+                .TryBuildSelectedGroupDuplicateRequests(
+                    worldOffset,
+                    out objectRequests,
+                    out splineRequests,
+                    out status);
+    }
+
+    public int SelectSelectionInfos(
+        IReadOnlyList<NativeSelectionInfo>
+            selections,
+        bool focus)
+    {
+        if (_runtime is null)
+        {
+            return 0;
+        }
+
+        var selected =
+            _runtime
+                .SelectSelectionInfos(
+                    selections,
+                    focus);
+
+        PublishSelectionInfo();
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            selected.Count >
+                1
+                ? $"{selected.Count} itens selecionados."
+                : selected.Count ==
+                    1
+                    ? "1 item selecionado."
+                    : "Sem seleção.");
+
+        return
+            selected.Count;
+    }
+
     public bool TryBuildSplineXExport(
         IReadOnlyCollection<int> splineIds,
         out NativeSplineXExportResult? result,
