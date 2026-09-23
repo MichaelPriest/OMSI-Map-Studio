@@ -63,18 +63,20 @@ public sealed class ProtonBusOmsiTilePackageExporter
 
         foreach (
             var texture
-            in assets.Textures
-                .Where(
-                    texture =>
-                        texture
-                            .RequiresConversion))
+            in assets.Textures)
         {
-            issues.Add(
-                new(
-                    "textureConversionRequired",
-                    texture.DeclaredName,
-                    texture.SourcePath,
-                    texture.TargetFileName));
+            if (
+                !ProtonBusTextureTranscoder
+                    .CanTranscode(
+                        texture.SourcePath))
+            {
+                issues.Add(
+                    new(
+                        "textureTranscodeUnsupported",
+                        texture.DeclaredName,
+                        texture.SourcePath,
+                        texture.TargetFileName));
+            }
         }
 
         if (
@@ -183,7 +185,7 @@ public sealed class ProtonBusOmsiTilePackageExporter
                     "splineTextureMissing" or
                     "sceneryTextureMissing" or
                     "textureTargetCollision" or
-                    "textureConversionRequired" or
+                    "textureTranscodeUnsupported" or
                     "splineDefinitionMissingAfterResolution" or
                     "sceneryAssetMissingAfterResolution");
 }
