@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.11: direct pointer movement + multi-selection + floating tools + real-map area picker.
+# Test 10.12: direct pointer movement + multi-selection + floating tools + real-map area picker.
 
 on:
   push:
@@ -17,7 +17,13 @@ on:
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
       - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointSnapFinder.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTerrainBorderStitcherTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
@@ -26,8 +32,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.11-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.11-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.12-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.12-native.md"
   workflow_dispatch:
 
 permissions:
@@ -38,8 +44,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.11-native
-  TAG: v0.2.0-alpha.5-test.10.11-native
+  VERSION: 0.2.0-alpha.5-test.10.12-native
+  TAG: v0.2.0-alpha.5-test.10.12-native
 
 jobs:
   build-native-preview:
@@ -430,7 +436,7 @@ jobs:
 
           Write-Host "Verified selection ghost, AI selector, map providers, Project cleanup and spline Auto connect."
 
-      - name: Verify test 10.11 UX and real-map area tools
+      - name: Verify test 10.12 UX and real-map area tools
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -448,7 +454,7 @@ jobs:
             'x:Name="MapExplorerCollapseButton"'
           )) {
             if (-not $xaml.Contains($required)) {
-              throw "Test 10.11 UI wiring is missing: $required"
+              throw "Test 10.12 UI wiring is missing: $required"
             }
           }
 
@@ -460,7 +466,7 @@ jobs:
             'GetSelectedSelectionInfos'
           )) {
             if (-not $runtime.Contains($required)) {
-              throw "Test 10.11 viewport runtime feature is missing: $required"
+              throw "Test 10.12 viewport runtime feature is missing: $required"
             }
           }
 
@@ -488,7 +494,7 @@ jobs:
             'DeleteCurrentSelectionAsync'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.11 MainWindow workflow is missing: $required"
+              throw "Test 10.12 MainWindow workflow is missing: $required"
             }
           }
 
@@ -501,7 +507,53 @@ jobs:
             throw "Google area selector integration is missing."
           }
 
-          Write-Host "Verified Test 10.11 natural movement, multi-selection, radial icons, floating windows and real-map area creation."
+          Write-Host "Verified Test 10.12 natural movement, multi-selection, radial icons, floating windows and real-map area creation."
+
+      - name: Verify test 10.12 tile-grid persistence and terrain continuity
+        shell: pwsh
+        run: |
+          $grid = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs -Raw
+          $stitcher = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $roundTrip = Get-Content tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs -Raw
+
+          foreach ($required in @(
+            'TileSize = 300.0',
+            'GetCenteredAreaMinimumOffset',
+            'GetCenteredAreaAnchorLocalCoordinate',
+            'WorldToTileCoordinate'
+          )) {
+            if (-not $grid.Contains($required)) {
+              throw "Canonical OMSI tile-grid feature is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'StitchToNeighbors',
+            'negativeXNegativeY',
+            'positiveXNegativeY',
+            'negativeXPositiveY',
+            'positiveXPositiveY'
+          )) {
+            if (-not $stitcher.Contains($required)) {
+              throw "Terrain edge/corner stitching feature is missing: $required"
+            }
+          }
+
+          if (-not $session.Contains('StitchCreatedTileTerrainAsync')) {
+            throw "Created tiles are not routed through terrain stitching."
+          }
+
+          if (-not $main.Contains('GetCenteredAreaAnchorLocalCoordinate')) {
+            throw "Real-map area centering is not using the canonical OMSI grid."
+          }
+
+          if (-not $roundTrip.Contains('PersistedThreeByThreeGridReopensWithContinuousTerrainEdges')) {
+            throw "Persisted 3x3 tile round-trip regression test is missing."
+          }
+
+          Write-Host "Verified Test 10.12 canonical 300 m grid, diagonal terrain corner continuity and persisted 3x3 round-trip coverage."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -615,11 +667,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.11-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.12-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.11-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.12-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
