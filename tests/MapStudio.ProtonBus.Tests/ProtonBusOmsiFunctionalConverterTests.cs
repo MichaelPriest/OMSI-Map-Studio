@@ -480,7 +480,7 @@ public sealed class ProtonBusOmsiFunctionalConverterTests
     }
 
     [Fact]
-    public void ConverterReportsTrafficLightAndBlinkerSemanticsWithoutGuessing()
+    public void ConverterLeavesTrafficSignalsToDedicatedConverter()
     {
         var tile =
             new OmsiTileReference(
@@ -573,17 +573,12 @@ public sealed class ProtonBusOmsiFunctionalConverterTests
                 issue.Code ==
                 "blinkerMappingPending");
 
-        Assert.Contains(
+        Assert.DoesNotContain(
             result.Issues,
             issue =>
-                issue.Code ==
-                "trafficLightPathLinkPending");
-
-        Assert.Contains(
-            result.Issues,
-            issue =>
-                issue.Code ==
-                "trafficLightControllerConversionPending");
+                issue.Code.StartsWith(
+                    "trafficLight",
+                    StringComparison.Ordinal));
     }
 
     [Fact]
