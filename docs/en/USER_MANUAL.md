@@ -416,7 +416,13 @@ Automatic roads query the selected OSM area, project geographic coordinates into
 
 ## Tile X/Y
 
-Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortcut. Its internal window is movable and resizable.
+Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortcut. Its internal window is movable, resizable and minimizable. When minimized, only the title bar remains visible; the same button restores the window without losing its position.
+
+The **Create real map by area** window follows the same pattern: it can be moved, resized and minimized without closing the area picker.
+
+## Collapsible panels
+
+**Project actions**, **Assets · Filters** and **Paths · Visualization** can be collapsed to free workspace. Map Studio saves the expanded/collapsed state in the local profile and restores it on the next run.
 
 ## Multi-selection
 
