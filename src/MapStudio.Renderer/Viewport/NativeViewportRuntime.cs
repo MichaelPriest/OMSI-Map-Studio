@@ -1358,7 +1358,7 @@ public sealed class NativeViewportRuntime : IDisposable
                     cancellationToken)
                 .ConfigureAwait(false);
 
-        if (!asset.IsLoaded)
+        if (!asset.CanPlace)
         {
             return false;
         }
