@@ -975,7 +975,7 @@ public static class ProtonBusOmsiFunctionalConverter
         value
             .Trim()
             .Replace(
-                '\',
+                '\\',
                 '/');
 
     private static void ValidateOptions(
