@@ -13,7 +13,8 @@ public sealed record ProtonBusResolvedSceneryMesh(
 
 public sealed record ProtonBusResolvedSceneryAsset(
     IReadOnlyList<ProtonBusResolvedSceneryMesh>
-        Meshes);
+        Meshes,
+    bool UsesAbsoluteHeight = false);
 
 public sealed record ProtonBusOmsiTileExportOptions(
     ProtonBusSplineTessellationOptions?
@@ -186,6 +187,15 @@ public static class ProtonBusOmsiTileExportBuilder
                         .SceneryOptions ??
                     new();
 
+                var terrainOffset =
+                    asset.UsesAbsoluteHeight
+                        ? 0.0
+                        : ProtonBusOmsiTerrainSampler
+                            .GetHeightAtLocalPoint(
+                                content.Terrain,
+                                placedObject.X,
+                                placedObject.Y);
+
                 var mesh =
                     ProtonBusOmsiSceneryGeometryConverter
                         .Build(
@@ -203,7 +213,11 @@ public static class ProtonBusOmsiTileExportBuilder
                                     resolvedMesh
                                         .GenerateCollider ||
                                     baseOptions
-                                        .GenerateCollider
+                                        .GenerateCollider,
+                                TerrainOffset =
+                                    baseOptions
+                                        .TerrainOffset +
+                                    terrainOffset
                             });
 
                 if (
