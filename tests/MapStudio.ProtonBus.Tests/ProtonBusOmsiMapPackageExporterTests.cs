@@ -1,4 +1,6 @@
+using System.Text;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.ProtonBus;
 using Xunit;
 
@@ -220,6 +222,258 @@ public sealed class ProtonBusOmsiMapPackageExporterTests
                         output,
                         "maps",
                         "Mapa.map.txt")));
+        }
+        finally
+        {
+            DeleteRoot(
+                root);
+        }
+    }
+
+    [Fact]
+    public async Task ExporterIntegratesTimetableStopsEntrypointsAndMarkers()
+    {
+        var root =
+            CreateRoot();
+
+        var output =
+            Path.Combine(
+                root,
+                "export");
+
+        try
+        {
+            var sceneryDirectory =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    "Test");
+
+            Directory.CreateDirectory(
+                sceneryDirectory);
+
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    sceneryDirectory,
+                    "stop.sco"),
+                string.Join(
+                    Environment.NewLine,
+                    [
+                        "[friendlyname]",
+                        "Test Stop"
+                    ]));
+
+            var tile =
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map");
+
+            var placedStop =
+                new OmsiPlacedObject(
+                    HeaderValue:
+                        "object",
+                    SceneryObjectPath:
+                        @"Sceneryobjects\Test\stop.sco",
+                    ObjectId:
+                        100,
+                    X:
+                        10,
+                    Y:
+                        20,
+                    Z:
+                        2,
+                    Rotation:
+                        90,
+                    Pitch:
+                        0,
+                    Bank:
+                        0,
+                    ExtraValues:
+                        []);
+
+            var content =
+                new OmsiTileContent(
+                    new(
+                        true,
+                        ObjectCount:
+                            1,
+                        SplineCount:
+                            0,
+                        SplineAttachmentCount:
+                            0,
+                        TerrainMarkerPresent:
+                            true,
+                        TerrainFileExists:
+                            true),
+                    [
+                        placedStop
+                    ],
+                    [],
+                    Terrain:
+                        new(
+                            1,
+                            [
+                                5,
+                                5,
+                                5,
+                                5
+                            ]));
+
+            var timetable =
+                new OmsiTimetableCatalog(
+                    [],
+                    [
+                        new OmsiTimetableTrip(
+                            FilePath:
+                                "trip.ttp",
+                            RelativePath:
+                                "TTData/trip.ttp",
+                            Name:
+                                "Trip Centro",
+                            Comment1:
+                                string.Empty,
+                            Comment2:
+                                string.Empty,
+                            TrackName:
+                                "Track",
+                            Destination:
+                                "Centro",
+                            Line:
+                                "10",
+                            TrainReverse:
+                                false,
+                            Stations:
+                            [
+                                new OmsiTimetableTripStationType2(
+                                    100)
+                            ],
+                            ProfileLines:
+                                [])
+                    ])
+                {
+                    BusStops =
+                    [
+                        new(
+                            "Sao Jose",
+                            TileIndex:
+                                0,
+                            Id:
+                                100,
+                            ExitingPassengers:
+                                null,
+                            Line4:
+                                string.Empty,
+                            Line5:
+                                string.Empty,
+                            SubName:
+                                string.Empty)
+                    ]
+                };
+
+            var result =
+                await new ProtonBusOmsiMapPackageExporter()
+                    .ExportAsync(
+                        root,
+                        output,
+                        new(
+                            "Mapa",
+                            "Mapa",
+                            "Rota"),
+                        [
+                            new(
+                                tile,
+                                content)
+                        ],
+                        new()
+                        {
+                            Timetable =
+                                new(
+                                    [
+                                        tile
+                                    ],
+                                    timetable)
+                        });
+
+            Assert.True(
+                result.IsExported);
+
+            Assert.NotNull(
+                result.Package);
+
+            Assert.NotNull(
+                result.Timetable);
+
+            var busStop =
+                Assert.Single(
+                    result.Timetable!
+                        .BusStops);
+
+            Assert.Equal(
+                "bs_100",
+                busStop.Prefix);
+
+            var busStopPath =
+                Assert.Single(
+                    result.Package!
+                        .BusStopPaths);
+
+            Assert.EndsWith(
+                Path.Combine(
+                    "busstops",
+                    "bs_100.txt"),
+                busStopPath,
+                StringComparison
+                    .OrdinalIgnoreCase);
+
+            Assert.True(
+                File.Exists(
+                    busStopPath));
+
+            Assert.NotNull(
+                result.Package
+                    .EntrypointsPath);
+
+            Assert.Contains(
+                "name=10 Centro",
+                File.ReadAllText(
+                    result.Package
+                        .EntrypointsPath!),
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                result.Package
+                    .DestinationDirectories,
+                path =>
+                    path.EndsWith(
+                        Path.Combine(
+                            "dest",
+                            "10 Centro"),
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            var markerModel =
+                Assert.Single(
+                    result.Package
+                        .ModelPaths,
+                    path =>
+                        path.EndsWith(
+                            "timetable_markers.3ds",
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+            var markerBytes =
+                File.ReadAllBytes(
+                    markerModel);
+
+            Assert.True(
+                markerBytes
+                    .AsSpan()
+                    .IndexOf(
+                        Encoding.ASCII
+                            .GetBytes(
+                                "bs_100_trigger\0")) >=
+                0);
         }
         finally
         {
