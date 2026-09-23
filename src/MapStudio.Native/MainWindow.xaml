@@ -423,7 +423,7 @@
                     <MenuFlyoutSubItem
                         Text="Gerador procedural de vias">
                         <MenuFlyoutItem
-                            Text="Analisar referência Google com IA..."
+                            Text="Analisar referência de mapa com IA..."
                             Click="OnAnalyzeGoogleRoadReferenceWithAiClick" />
                         <MenuFlyoutItem
                             Text="Importar GeoJSON georreferenciado..."
