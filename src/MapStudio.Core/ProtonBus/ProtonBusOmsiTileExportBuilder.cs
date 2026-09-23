@@ -9,7 +9,8 @@ public sealed record ProtonBusResolvedSceneryMesh(
     OmsiO3dGeometry Geometry,
     OmsiSceneryMeshTransform Transform,
     int MeshOrdinal,
-    bool GenerateCollider = false);
+    bool GenerateCollider = false,
+    bool Invisible = false);
 
 public sealed record ProtonBusResolvedSceneryAsset(
     IReadOnlyList<ProtonBusResolvedSceneryMesh>
@@ -214,6 +215,11 @@ public static class ProtonBusOmsiTileExportBuilder
                                         .GenerateCollider ||
                                     baseOptions
                                         .GenerateCollider,
+                                Invisible =
+                                    resolvedMesh
+                                        .Invisible ||
+                                    baseOptions
+                                        .Invisible,
                                 TerrainOffset =
                                     baseOptions
                                         .TerrainOffset +
