@@ -229,7 +229,7 @@ public static class ProtonBusTrafficLightDefinitionWriter
             }
         }
 
-        ValidatePositiveFinite(light.Intensity, $"{section}.intensity");
+        ValidateUnit(light.Intensity, $"{section}.intensity");
         ValidatePositiveFinite(light.Range, $"{section}.range");
     }
 
@@ -244,6 +244,16 @@ public static class ProtonBusTrafficLightDefinitionWriter
             throw new ArgumentException(
                 "Traffic-light prefix must use only ASCII letters, numbers, underscore or hyphen.",
                 nameof(value));
+        }
+    }
+
+    private static void ValidateUnit(double value, string name)
+    {
+        if (!double.IsFinite(value) || value < 0 || value > 1)
+        {
+            throw new ArgumentOutOfRangeException(
+                name,
+                $"{name} must be finite and between 0 and 1.");
         }
     }
 
