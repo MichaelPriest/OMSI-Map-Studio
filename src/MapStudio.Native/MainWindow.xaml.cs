@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using MapStudio.Core.AI;
 using MapStudio.Core.Commercial;
 using MapStudio.Core.Generation.Buildings;
@@ -462,6 +463,28 @@ public sealed partial class MainWindow : Window
     private double _tileNavigatorResizeOriginHeight;
 
     private bool _mapExplorerCollapsed;
+
+    private bool _realMapAreaInitialized;
+    private bool _realMapAreaMessageHooked;
+    private bool _draggingRealMapAreaWindow;
+    private uint _realMapAreaDragPointerId;
+    private double _realMapAreaDragStartX;
+    private double _realMapAreaDragStartY;
+    private double _realMapAreaDragOriginX;
+    private double _realMapAreaDragOriginY;
+    private bool _resizingRealMapAreaWindow;
+    private uint _realMapAreaResizePointerId;
+    private double _realMapAreaResizeStartX;
+    private double _realMapAreaResizeStartY;
+    private double _realMapAreaResizeOriginWidth;
+    private double _realMapAreaResizeOriginHeight;
+    private double _realMapSouth;
+    private double _realMapWest;
+    private double _realMapNorth;
+    private double _realMapEast;
+    private int _realMapAreaColumns;
+    private int _realMapAreaRows;
+    private int _realMapAreaZoom = 16;
 
     public MainWindow()
     {
@@ -21649,6 +21672,24 @@ public sealed partial class MainWindow : Window
     }
 
     private async void OnCreateCoordinateMapClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.OmsiRootPath is null)
+        {
+            StatusText.Text =
+                "Ative o Workspace Map Studio ou selecione uma instalação do OMSI para criar um mapa.";
+
+            return;
+        }
+
+        RealMapAreaWindow.Visibility =
+            Visibility.Visible;
+
+        await InitializeRealMapAreaPickerAsync();
+    }
+
+    private async void OnCreateCoordinateMapAdvancedClick(
         object sender,
         RoutedEventArgs e)
     {
