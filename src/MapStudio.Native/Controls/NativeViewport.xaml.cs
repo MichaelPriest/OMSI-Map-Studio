@@ -12,6 +12,7 @@ using MapStudio.Renderer.Viewport;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Input;
 
 namespace MapStudio.Native.Controls;
 
@@ -32,6 +33,15 @@ public sealed partial class NativeViewport : UserControl
     private bool _swapChainBound;
     private bool _terrainPointPickActive;
     private bool _terrainPointPickPersistent;
+    private readonly InputCursor _defaultCursor =
+        InputSystemCursor.Create(
+            InputSystemCursorShape.Arrow);
+    private readonly InputCursor _panCursor =
+        InputSystemCursor.Create(
+            InputSystemCursorShape.Hand);
+    private readonly InputCursor _orbitCursor =
+        InputSystemCursor.Create(
+            InputSystemCursorShape.SizeAll);
 
     public NativeViewport()
     {
@@ -1613,6 +1623,11 @@ public sealed partial class NativeViewport : UserControl
 
             _runtime?.ClearHover();
 
+            ProtectedCursor =
+                _isPanning
+                    ? _panCursor
+                    : _orbitCursor;
+
             InputSurface.CapturePointer(
                 e.Pointer);
 
@@ -2208,6 +2223,9 @@ public sealed partial class NativeViewport : UserControl
         _isPanning = false;
         _isOrbiting = false;
         _isManipulatingGizmo = false;
+
+        ProtectedCursor =
+            _defaultCursor;
     }
 
     private void OnPointerExited(
@@ -2221,6 +2239,14 @@ public sealed partial class NativeViewport : UserControl
             uint.MaxValue;
 
         _runtime?.ClearHover();
+
+        if (
+            !_isPanning &&
+            !_isOrbiting)
+        {
+            ProtectedCursor =
+                _defaultCursor;
+        }
     }
 
     private void PublishSelectionInfo()
