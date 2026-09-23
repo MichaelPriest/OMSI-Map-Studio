@@ -79,16 +79,26 @@ No menu **Visualizar** estão disponíveis:
 
 Clique sobre um objeto ou spline no viewport.
 
-A seleção nativa usa picking por ID e possui tolerância ampliada para facilitar itens estreitos ou pequenos.
+A seleção nativa usa picking por ID com uma área de clique ampliada para facilitar objetos estreitos, pequenos e splines.
 
 Ao passar o mouse, o hover é atualizado sem precisar selecionar.
 
-Se a seleção estiver difícil:
+Quando existem vários itens muito próximos ou sobrepostos, **clique novamente praticamente no mesmo ponto**. O editor alterna entre os candidatos e informa algo como `1/3 sobrepostos`, `2/3 sobrepostos`.
+
+Na faixa **Seleção fácil** você pode filtrar por:
+
+- Todos;
+- Objetos;
+- Ruas / splines;
+- Terreno / tile.
+
+Se a seleção ainda estiver difícil:
 
 1. aproxime a câmera;
 2. use vista superior quando for uma spline;
-3. confira se o tipo de item está visível;
-4. tente clicar no centro visual do item.
+3. filtre temporariamente para **Objetos** ou **Ruas / splines**;
+4. confira se o tipo de item está visível;
+5. clique novamente no mesmo ponto para alternar candidatos.
 
 ---
 
@@ -163,12 +173,14 @@ O fluxo principal foi desenhado para evitar digitar coordenadas manualmente.
 
 1. Entre em **Ruas**.
 2. Escolha uma **SLI** na Biblioteca.
-3. Clique no ponto inicial.
-4. Arraste o mouse.
-5. Observe a prévia fantasma.
+3. Clique em **Construir spline**.
+4. Clique e mantenha pressionado no ponto inicial.
+5. Arraste o mouse observando a prévia fantasma.
 6. Solte no ponto final.
 
-O Inspector fica reservado para ajustes avançados.
+Ao soltar o botão do mouse, o trecho é finalizado e enviado para inserção. O Inspector fica reservado para ajustes avançados.
+
+Se **Construir spline** não puder iniciar, o editor mostra na barra de status o motivo: mapa não aberto, SLI não selecionada, arquivo SLI inválido ou outro pré-requisito ausente.
 
 ---
 
@@ -567,11 +579,24 @@ Recomendação:
 
 # 26. IA no Map Studio
 
-A integração OpenAI nativa usa a Responses API.
+A integração OpenAI nativa usa a Responses API. O Map Studio também mantém a estrutura de perfis para outros adapters suportados pelo projeto.
 
-Recursos atuais incluem classificação assistida de objects e splines.
+## Como conectar a IA ao mapa
 
-A API key é armazenada no **Windows Credential Manager**.
+1. Abra um mapa.
+2. Clique em **IA: conectar** na barra superior ou use **IA > Conectar / testar IA no mapa...**.
+3. Se ainda não houver perfil ativo, a janela de provedores será aberta.
+4. Escolha o provedor/preset, informe o modelo e a API key/token.
+5. Marque o perfil como **ativo**.
+6. Clique em **Testar conexão**.
+7. Salve.
+8. Clique novamente em **IA: <nome do perfil>** para testar a conexão ativa no contexto do mapa.
+
+Quando a conexão estiver correta, a barra de status informa que aquele perfil será usado pelas ferramentas de IA do mapa.
+
+Recursos atuais incluem classificação assistida de objects e splines, análise de referências e funções de criação assistida que forem habilitadas na ferramenta correspondente.
+
+A API key é armazenada no **Windows Credential Manager** e não é gravada no mapa nem nos assets.
 
 O usuário continua responsável por escolher o provedor e configurar sua própria credencial.
 
