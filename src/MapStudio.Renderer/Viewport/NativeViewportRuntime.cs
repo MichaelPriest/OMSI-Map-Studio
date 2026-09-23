@@ -196,6 +196,13 @@ public sealed class NativeViewportRuntime : IDisposable
         private set;
     }
 
+    public IReadOnlyList<NativePendingTransformEdit> LastTransformEdits
+    {
+        get;
+        private set;
+    } =
+        Array.Empty<NativePendingTransformEdit>();
+
     public bool SnapEnabled
     {
         get;
@@ -5441,7 +5448,7 @@ public sealed class NativeViewportRuntime : IDisposable
         }
 
         if (
-            !TryGetSelectionAnchor(
+            !TryGetManipulationAnchor(
                 out _dragAnchor))
         {
             handle =
@@ -5507,8 +5514,8 @@ public sealed class NativeViewportRuntime : IDisposable
                     14)
                 .Any(
                     candidate =>
-                        candidate.Id ==
-                        _selectedPickingId);
+                        IsSelectedPickingId(
+                            candidate.Id));
 
         if (!selectedUnderPointer)
         {
@@ -5794,11 +5801,18 @@ public sealed class NativeViewportRuntime : IDisposable
 
             _redoStack.Clear();
 
+            LastTransformEdits =
+                history.AfterEdits;
+
             PendingTransformEdit =
-                history.After;
+                LastTransformEdits
+                    .FirstOrDefault();
         }
         else
         {
+            LastTransformEdits =
+                Array.Empty<NativePendingTransformEdit>();
+
             PendingTransformEdit =
                 null;
         }
@@ -5817,6 +5831,13 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetSelection(
             _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
 
         UpdateGizmoGeometry();
         RenderInitialFrame();
@@ -5867,8 +5888,8 @@ public sealed class NativeViewportRuntime : IDisposable
             _undoStack.Pop();
 
         if (
-            !ApplyPendingTransformToScene(
-                entry.Before))
+            !ApplyPendingTransformsToScene(
+                entry.BeforeEdits))
         {
             _undoStack.Push(
                 entry);
@@ -5879,8 +5900,12 @@ public sealed class NativeViewportRuntime : IDisposable
         _redoStack.Push(
             entry);
 
+        LastTransformEdits =
+            entry.BeforeEdits;
+
         PendingTransformEdit =
-            entry.Before;
+            LastTransformEdits
+                .FirstOrDefault();
 
         RefreshSelectedScene();
 
@@ -5904,8 +5929,8 @@ public sealed class NativeViewportRuntime : IDisposable
             _redoStack.Pop();
 
         if (
-            !ApplyPendingTransformToScene(
-                entry.After))
+            !ApplyPendingTransformsToScene(
+                entry.AfterEdits))
         {
             _redoStack.Push(
                 entry);
@@ -5916,8 +5941,12 @@ public sealed class NativeViewportRuntime : IDisposable
         _undoStack.Push(
             entry);
 
+        LastTransformEdits =
+            entry.AfterEdits;
+
         PendingTransformEdit =
-            entry.After;
+            LastTransformEdits
+                .FirstOrDefault();
 
         RefreshSelectedScene();
 
@@ -6577,131 +6606,215 @@ public sealed class NativeViewportRuntime : IDisposable
             return null;
         }
 
-        var objectEntity =
-            Scene.Objects
-                .FirstOrDefault(
-                    entity =>
-                        entity.PickingId ==
-                        _selectedPickingId);
+        var selectedIds =
+            new List<PickingId>
+            {
+                _selectedPickingId
+            };
 
-        if (objectEntity is not null)
+        selectedIds.AddRange(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
+
+        var beforeEdits =
+            new List<NativePendingTransformEdit>();
+
+        var afterEdits =
+            new List<NativePendingTransformEdit>();
+
+        var rotateGroupPosition =
+            selectedIds.Count >
+                1 &&
+            handle ==
+                NativeGizmoHandle.RotateY &&
+            Math.Abs(
+                rotationDegrees) >
+                0.0001f;
+
+        var groupRotationTransform =
+            rotateGroupPosition
+                ? NativeGizmoManipulationMath
+                    .CreateRotationPreview(
+                        NativeGizmoHandle.RotateY,
+                        _dragAnchor,
+                        rotationDegrees)
+                : Matrix4x4.Identity;
+
+        foreach (
+            var selectedId in
+                selectedIds)
         {
-            var source =
-                objectEntity.Object;
+            var objectEntity =
+                Scene.Objects
+                    .FirstOrDefault(
+                        entity =>
+                            entity.PickingId ==
+                            selectedId);
 
-            var updated =
-                source with
+            if (objectEntity is not null)
+            {
+                var source =
+                    objectEntity.Object;
+
+                var rotatedDelta =
+                    Vector3.Zero;
+
+                if (rotateGroupPosition)
+                {
+                    var world =
+                        new Vector3(
+                            objectEntity.WorldX,
+                            objectEntity.WorldY,
+                            objectEntity.WorldZ);
+
+                    rotatedDelta =
+                        Vector3.Transform(
+                            world,
+                            groupRotationTransform) -
+                        world;
+                }
+
+                var updated =
+                    source with
+                    {
+                        X =
+                            source.X +
+                            translation.X +
+                            rotatedDelta.X,
+                        Y =
+                            source.Y +
+                            translation.Z +
+                            rotatedDelta.Z,
+                        Z =
+                            source.Z +
+                            translation.Y +
+                            rotatedDelta.Y,
+                        Rotation =
+                            source.Rotation +
+                            (
+                                handle ==
+                                NativeGizmoHandle.RotateY
+                                    ? rotationDegrees
+                                    : 0
+                            ),
+                        Pitch =
+                            source.Pitch +
+                            (
+                                handle ==
+                                NativeGizmoHandle.RotateX
+                                    ? rotationDegrees
+                                    : 0
+                            ),
+                        Bank =
+                            source.Bank +
+                            (
+                                handle ==
+                                NativeGizmoHandle.RotateZ
+                                    ? rotationDegrees
+                                    : 0
+                            )
+                    };
+
+                beforeEdits.Add(
+                    CreateObjectEdit(
+                        objectEntity.Tile,
+                        source));
+
+                afterEdits.Add(
+                    CreateObjectEdit(
+                        objectEntity.Tile,
+                        updated));
+
+                continue;
+            }
+
+            var splineEntity =
+                Scene.Splines
+                    .FirstOrDefault(
+                        entity =>
+                            entity.PickingId ==
+                            selectedId);
+
+            if (splineEntity is null)
+            {
+                continue;
+            }
+
+            var spline =
+                splineEntity.Spline;
+
+            var splineRotatedDelta =
+                Vector3.Zero;
+
+            if (rotateGroupPosition)
+            {
+                var world =
+                    new Vector3(
+                        splineEntity.WorldX,
+                        splineEntity.WorldY,
+                        splineEntity.WorldZ);
+
+                splineRotatedDelta =
+                    Vector3.Transform(
+                        world,
+                        groupRotationTransform) -
+                    world;
+            }
+
+            var updatedSpline =
+                spline with
                 {
                     X =
-                        source.X +
-                        translation.X,
+                        spline.X +
+                        translation.X +
+                        splineRotatedDelta.X,
                     Y =
-                        source.Y +
-                        translation.Z,
+                        spline.Y +
+                        translation.Z +
+                        splineRotatedDelta.Z,
                     Z =
-                        source.Z +
-                        translation.Y,
+                        spline.Z +
+                        translation.Y +
+                        splineRotatedDelta.Y,
                     Rotation =
-                        source.Rotation +
+                        spline.Rotation +
                         (
                             handle ==
                             NativeGizmoHandle.RotateY
                                 ? rotationDegrees
                                 : 0
-                        ),
-                    Pitch =
-                        source.Pitch +
-                        (
-                            handle ==
-                            NativeGizmoHandle.RotateX
-                                ? rotationDegrees
-                                : 0
-                        ),
-                    Bank =
-                        source.Bank +
-                        (
-                            handle ==
-                            NativeGizmoHandle.RotateZ
-                                ? rotationDegrees
-                                : 0
                         )
                 };
 
-            var objectBefore =
-                CreateObjectEdit(
-                    objectEntity.Tile,
-                    source);
+            beforeEdits.Add(
+                CreateSplineEdit(
+                    splineEntity.Tile,
+                    spline));
 
-            var objectAfter =
-                CreateObjectEdit(
-                    objectEntity.Tile,
-                    updated);
-
-            ReplaceObject(
-                objectEntity,
-                updated);
-
-            return
-                new NativeTransformHistoryEntry(
-                    objectBefore,
-                    objectAfter);
+            afterEdits.Add(
+                CreateSplineEdit(
+                    splineEntity.Tile,
+                    updatedSpline));
         }
 
-        var splineEntity =
-            Scene.Splines
-                .FirstOrDefault(
-                    entity =>
-                        entity.PickingId ==
-                        pickingId);
-
-        if (splineEntity is null)
+        if (
+            afterEdits.Count ==
+                0 ||
+            beforeEdits.Count !=
+                afterEdits.Count ||
+            !ApplyPendingTransformsToScene(
+                afterEdits))
         {
             return null;
         }
 
-        var spline =
-            splineEntity.Spline;
-
-        var updatedSpline =
-            spline with
-            {
-                X =
-                    spline.X +
-                    translation.X,
-                Y =
-                    spline.Y +
-                    translation.Z,
-                Z =
-                    spline.Z +
-                    translation.Y,
-                Rotation =
-                    spline.Rotation +
-                    (
-                        handle ==
-                        NativeGizmoHandle.RotateY
-                            ? rotationDegrees
-                            : 0
-                    )
-            };
-
-        var splineBefore =
-            CreateSplineEdit(
-                splineEntity.Tile,
-                spline);
-
-        var splineAfter =
-            CreateSplineEdit(
-                splineEntity.Tile,
-                updatedSpline);
-
-        ReplaceSpline(
-            splineEntity,
-            updatedSpline);
-
         return
             new NativeTransformHistoryEntry(
-                splineBefore,
-                splineAfter);
+                beforeEdits.ToArray(),
+                afterEdits.ToArray());
     }
 
     private NativePendingTransformEdit
@@ -6746,132 +6859,274 @@ public sealed class NativeViewportRuntime : IDisposable
                 item.GradientEnd));
 
     private bool ApplyPendingTransformToScene(
-        NativePendingTransformEdit edit)
+        NativePendingTransformEdit edit) =>
+        ApplyPendingTransformsToScene(
+            new[]
+            {
+                edit
+            });
+
+    private bool ApplyPendingTransformsToScene(
+        IReadOnlyList<NativePendingTransformEdit> edits)
+    {
+        if (
+            Scene is null ||
+            edits.Count ==
+                0)
+        {
+            return false;
+        }
+
+        var appliedCount =
+            0;
+
+        var tiles =
+            Scene.Tiles
+                .Select(
+                    tile =>
+                    {
+                        var tileObjectEdits =
+                            edits
+                                .Where(
+                                    edit =>
+                                        edit.Tile.X ==
+                                            tile.Reference.X &&
+                                        edit.Tile.Y ==
+                                            tile.Reference.Y &&
+                                        edit.ObjectEdit is not
+                                            null)
+                                .Select(
+                                    edit =>
+                                        edit.ObjectEdit!)
+                                .ToArray();
+
+                        var tileSplineEdits =
+                            edits
+                                .Where(
+                                    edit =>
+                                        edit.Tile.X ==
+                                            tile.Reference.X &&
+                                        edit.Tile.Y ==
+                                            tile.Reference.Y &&
+                                        edit.SplineEdit is not
+                                            null)
+                                .Select(
+                                    edit =>
+                                        edit.SplineEdit!)
+                                .ToArray();
+
+                        if (
+                            tileObjectEdits.Length ==
+                                0 &&
+                            tileSplineEdits.Length ==
+                                0)
+                        {
+                            return tile;
+                        }
+
+                        var objects =
+                            tile.Content.Objects
+                                .Select(
+                                    item =>
+                                    {
+                                        var edit =
+                                            tileObjectEdits
+                                                .FirstOrDefault(
+                                                    candidate =>
+                                                        item.SourceSectionOrdinal ==
+                                                            candidate.SourceSectionOrdinal &&
+                                                        item.ObjectId ==
+                                                            candidate.ObjectId &&
+                                                        string.Equals(
+                                                            item.SceneryObjectPath,
+                                                            candidate.SceneryObjectPath,
+                                                            StringComparison.OrdinalIgnoreCase));
+
+                                        if (edit is null)
+                                        {
+                                            return item;
+                                        }
+
+                                        appliedCount++;
+
+                                        return
+                                            item with
+                                            {
+                                                X = edit.X,
+                                                Y = edit.Y,
+                                                Z = edit.Z,
+                                                Rotation =
+                                                    edit.Rotation,
+                                                Pitch =
+                                                    edit.Pitch,
+                                                Bank =
+                                                    edit.Bank
+                                            };
+                                    })
+                                .ToArray();
+
+                        var splines =
+                            tile.Content.Splines
+                                .Select(
+                                    item =>
+                                    {
+                                        var edit =
+                                            tileSplineEdits
+                                                .FirstOrDefault(
+                                                    candidate =>
+                                                        item.SourceSectionOrdinal ==
+                                                            candidate.SourceSectionOrdinal &&
+                                                        item.SplineId ==
+                                                            candidate.SplineId &&
+                                                        string.Equals(
+                                                            item.SplinePath,
+                                                            candidate.SplinePath,
+                                                            StringComparison.OrdinalIgnoreCase));
+
+                                        if (edit is null)
+                                        {
+                                            return item;
+                                        }
+
+                                        appliedCount++;
+
+                                        return
+                                            item with
+                                            {
+                                                X = edit.X,
+                                                Z = edit.Z,
+                                                Y = edit.Y,
+                                                Rotation =
+                                                    edit.Rotation,
+                                                Length =
+                                                    edit.Length,
+                                                Radius =
+                                                    edit.Radius,
+                                                GradientStart =
+                                                    edit.GradientStart,
+                                                GradientEnd =
+                                                    edit.GradientEnd
+                                            };
+                                    })
+                                .ToArray();
+
+                        return
+                            tile with
+                            {
+                                Content =
+                                    tile.Content with
+                                    {
+                                        Objects =
+                                            objects,
+                                        Splines =
+                                            splines
+                                    }
+                            };
+                    })
+                .ToArray();
+
+        if (
+            appliedCount !=
+                edits.Count)
+        {
+            return false;
+        }
+
+        Scene =
+            new NativeSceneBuilder()
+                .Build(
+                    tiles,
+                    Picking);
+
+        RestoreSelectionFromEdits(
+            edits);
+
+        return true;
+    }
+
+    private void RestoreSelectionFromEdits(
+        IReadOnlyList<NativePendingTransformEdit> edits)
     {
         if (Scene is null)
         {
-            return false;
+            return;
         }
 
-        if (
-            edit.ObjectEdit is
-                { } objectEdit)
-        {
-            var entity =
-                Scene.Objects
-                    .FirstOrDefault(
-                        item =>
-                            item.Tile.X ==
-                                edit.Tile.X &&
-                            item.Tile.Y ==
-                                edit.Tile.Y &&
-                            item.Object
-                                .SourceSectionOrdinal ==
-                                objectEdit
-                                    .SourceSectionOrdinal &&
-                            item.Object.ObjectId ==
-                                objectEdit.ObjectId &&
-                            string.Equals(
-                                item.Object
-                                    .SceneryObjectPath,
-                                objectEdit
-                                    .SceneryObjectPath,
-                                StringComparison
-                                    .OrdinalIgnoreCase));
+        _selectedPickingIds
+            .Clear();
 
-            if (entity is null)
+        _selectedPickingId =
+            PickingId.None;
+
+        foreach (
+            var edit in
+                edits)
+        {
+            PickingId pickingId =
+                PickingId.None;
+
+            if (
+                edit.ObjectEdit is
+                    { } objectEdit)
             {
-                return false;
+                pickingId =
+                    Scene.Objects
+                        .FirstOrDefault(
+                            item =>
+                                item.Tile.X ==
+                                    edit.Tile.X &&
+                                item.Tile.Y ==
+                                    edit.Tile.Y &&
+                                item.Object.SourceSectionOrdinal ==
+                                    objectEdit.SourceSectionOrdinal &&
+                                item.Object.ObjectId ==
+                                    objectEdit.ObjectId &&
+                                string.Equals(
+                                    item.Object.SceneryObjectPath,
+                                    objectEdit.SceneryObjectPath,
+                                    StringComparison.OrdinalIgnoreCase))
+                        ?.PickingId ??
+                    PickingId.None;
+            }
+            else if (
+                edit.SplineEdit is
+                    { } splineEdit)
+            {
+                pickingId =
+                    Scene.Splines
+                        .FirstOrDefault(
+                            item =>
+                                item.Tile.X ==
+                                    edit.Tile.X &&
+                                item.Tile.Y ==
+                                    edit.Tile.Y &&
+                                item.Spline.SourceSectionOrdinal ==
+                                    splineEdit.SourceSectionOrdinal &&
+                                item.Spline.SplineId ==
+                                    splineEdit.SplineId &&
+                                string.Equals(
+                                    item.Spline.SplinePath,
+                                    splineEdit.SplinePath,
+                                    StringComparison.OrdinalIgnoreCase))
+                        ?.PickingId ??
+                    PickingId.None;
             }
 
-            var updated =
-                entity.Object with
-                {
-                    X = objectEdit.X,
-                    Y = objectEdit.Y,
-                    Z = objectEdit.Z,
-                    Rotation =
-                        objectEdit.Rotation,
-                    Pitch =
-                        objectEdit.Pitch,
-                    Bank =
-                        objectEdit.Bank
-                };
-
-            ReplaceObject(
-                entity,
-                updated);
-
-            SelectObjectEdit(
-                edit.Tile,
-                objectEdit);
-
-            return true;
-        }
-
-        if (
-            edit.SplineEdit is not
-                { } splineEdit)
-        {
-            return false;
-        }
-
-        var splineEntity =
-            Scene.Splines
-                .FirstOrDefault(
-                    item =>
-                        item.Tile.X ==
-                            edit.Tile.X &&
-                        item.Tile.Y ==
-                            edit.Tile.Y &&
-                        item.Spline
-                            .SourceSectionOrdinal ==
-                            splineEdit
-                                .SourceSectionOrdinal &&
-                        item.Spline.SplineId ==
-                            splineEdit.SplineId &&
-                        string.Equals(
-                            item.Spline
-                                .SplinePath,
-                            splineEdit
-                                .SplinePath,
-                            StringComparison
-                                .OrdinalIgnoreCase));
-
-        if (splineEntity is null)
-        {
-            return false;
-        }
-
-        var updatedSpline =
-            splineEntity.Spline with
+            if (pickingId.IsNone)
             {
-                X = splineEdit.X,
-                Z = splineEdit.Z,
-                Y = splineEdit.Y,
-                Rotation =
-                    splineEdit.Rotation,
-                Length =
-                    splineEdit.Length,
-                Radius =
-                    splineEdit.Radius,
-                GradientStart =
-                    splineEdit
-                        .GradientStart,
-                GradientEnd =
-                    splineEdit
-                        .GradientEnd
-            };
+                continue;
+            }
 
-        ReplaceSpline(
-            splineEntity,
-            updatedSpline);
+            if (_selectedPickingId.IsNone)
+            {
+                _selectedPickingId =
+                    pickingId;
+            }
 
-        SelectSplineEdit(
-            edit.Tile,
-            splineEdit);
-
-        return true;
+            _selectedPickingIds
+                .Add(
+                    pickingId);
+        }
     }
 
     private void SelectObjectEdit(
@@ -6962,6 +7217,13 @@ public sealed class NativeViewportRuntime : IDisposable
 
         MapRenderer.SetSelection(
             _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
 
         UpdateGizmoGeometry();
         RenderInitialFrame();
@@ -7232,6 +7494,32 @@ public sealed class NativeViewportRuntime : IDisposable
         return true;
     }
 
+    private bool IsSelectedPickingId(
+        PickingId pickingId) =>
+        pickingId ==
+            _selectedPickingId ||
+        _selectedPickingIds
+            .Contains(
+                pickingId);
+
+    private bool TryGetManipulationAnchor(
+        out Vector3 anchor)
+    {
+        if (
+            _selectedPickingIds.Count >
+                1 &&
+            TryGetSelectionFocus(
+                out anchor,
+                out _))
+        {
+            return true;
+        }
+
+        return
+            TryGetSelectionAnchor(
+                out anchor);
+    }
+
     private bool TryGetSelectionFocus(
         out Vector3 center,
         out float span)
@@ -7324,7 +7612,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _selectedPickingId.IsNone ||
-            !TryGetSelectionAnchor(
+            !TryGetManipulationAnchor(
                 out var anchor))
         {
             MapRenderer
