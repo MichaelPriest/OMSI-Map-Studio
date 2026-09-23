@@ -1127,6 +1127,160 @@ public sealed class NativeViewportRuntime : IDisposable
             autoConnect;
     }
 
+    public bool TryGetAutoConnectLinksForSelectedSpline(
+        double maximumDistance,
+        out int previousSplineId,
+        out int nextSplineId,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        previousSplineId =
+            -1;
+
+        nextSplineId =
+            -1;
+
+        status =
+            "Auto conectar: selecione uma spline.";
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline)
+        {
+            return false;
+        }
+
+        var selected =
+            Scene.Splines
+                .FirstOrDefault(
+                    entity =>
+                        entity.PickingId ==
+                        _selectedPickingId);
+
+        if (
+            selected is null ||
+            selected.Spline.IsHeightSpline)
+        {
+            status =
+                "Auto conectar: selecione uma rua/spline comum.";
+            return false;
+        }
+
+        var distance =
+            Math.Clamp(
+                double.IsFinite(
+                    maximumDistance)
+                    ? maximumDistance
+                    : 5.0,
+                0.5,
+                30.0);
+
+        var source =
+            selected.Spline;
+
+        var validPrevious =
+            source.PreviousSplineId >=
+                0 &&
+            Scene.Splines.Any(
+                candidate =>
+                    candidate.Spline.SplineId ==
+                        source.PreviousSplineId &&
+                    candidate.Spline.NextSplineId ==
+                        source.SplineId);
+
+        var validNext =
+            source.NextSplineId >=
+                0 &&
+            Scene.Splines.Any(
+                candidate =>
+                    candidate.Spline.SplineId ==
+                        source.NextSplineId &&
+                    candidate.Spline.PreviousSplineId ==
+                        source.SplineId);
+
+        previousSplineId =
+            validPrevious
+                ? source.PreviousSplineId
+                : -1;
+
+        nextSplineId =
+            validNext
+                ? source.NextSplineId
+                : -1;
+
+        var start =
+            new Vector3(
+                selected.WorldX,
+                selected.WorldY,
+                selected.WorldZ);
+
+        var end =
+            NativeSplinePathMath
+                .GetFrame(
+                    selected,
+                    Math.Max(
+                        0.0,
+                        source.Length))
+                .Center;
+
+        if (!validPrevious)
+        {
+            var previous =
+                NativeSplineEndpointSnapFinder
+                    .FindFreeEndpoint(
+                        Scene,
+                        start,
+                        NativeSplineEndpointKind.End,
+                        distance,
+                        source.SplineId);
+
+            if (previous is not null)
+            {
+                previousSplineId =
+                    previous.SplineId;
+            }
+        }
+
+        if (!validNext)
+        {
+            var next =
+                NativeSplineEndpointSnapFinder
+                    .FindFreeEndpoint(
+                        Scene,
+                        end,
+                        NativeSplineEndpointKind.Start,
+                        distance,
+                        source.SplineId);
+
+            if (
+                next is not null &&
+                next.SplineId !=
+                    previousSplineId)
+            {
+                nextSplineId =
+                    next.SplineId;
+            }
+        }
+
+        var repairedPrevious =
+            source.PreviousSplineId !=
+                previousSplineId;
+
+        var repairedNext =
+            source.NextSplineId !=
+                nextSplineId;
+
+        status =
+            repairedPrevious ||
+            repairedNext
+                ? $"Auto conectar: #{source.SplineId} · Previous {source.PreviousSplineId} → {previousSplineId} · Next {source.NextSplineId} → {nextSplineId}."
+                : $"Auto conectar: spline #{source.SplineId} já está conectada ou não há endpoint compatível até {distance:F1} m.";
+
+        return true;
+    }
+
     public void SetSplinePlacementElevationOffset(
         double offset)
     {
