@@ -3199,17 +3199,49 @@
                                     <ComboBoxItem Content="Importar vias como guias" />
                                     <ComboBoxItem Content="Gerar ruas automaticamente após preview" />
                                 </ComboBox>
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1.2*" />
+                                        <ColumnDefinition Width="1*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <ComboBox x:Name="RealMapElevationProviderBox"
+                                              Grid.Column="0"
+                                              Header="Elevação"
+                                              SelectedIndex="0"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnRealMapElevationProviderChanged">
+                                        <ComboBoxItem Content="Nenhuma" />
+                                        <ComboBoxItem Content="Open-Meteo / Copernicus GLO-90 · chave do usuário" />
+                                        <ComboBoxItem Content="Google Elevation · chave do usuário" />
+                                    </ComboBox>
+
+                                    <PasswordBox x:Name="RealMapOpenMeteoKeyBox"
+                                                 Grid.Column="1"
+                                                 Header="Chave Open-Meteo"
+                                                 PlaceholderText="API key"
+                                                 Visibility="Collapsed" />
+
+                                    <Button x:Name="SaveRealMapOpenMeteoKeyButton"
+                                            Grid.Column="2"
+                                            VerticalAlignment="Bottom"
+                                            Content="Salvar chave"
+                                            Visibility="Collapsed"
+                                            Click="OnSaveRealMapOpenMeteoKeyClick" />
+                                </Grid>
+
                                 <StackPanel Orientation="Horizontal"
                                             Spacing="12">
                                     <CheckBox x:Name="RealMapApplyElevationCheckBox"
-                                              Content="Aplicar elevação Google (pode gerar cobrança)"
+                                              Content="Aplicar elevação automaticamente"
                                               IsChecked="False" />
                                     <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
                                               Content="Referência visual no terreno"
                                               IsChecked="True" />
                                 </StackPanel>
                             </StackPanel>
-                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos."
+                            <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus e Google usam credenciais do próprio usuário; nenhuma chave privada é distribuída pelo Map Studio."
                                        FontSize="9.5"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
