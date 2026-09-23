@@ -7048,10 +7048,36 @@ public sealed partial class MainWindow : Window
 
     private async Task DeleteCurrentSelectionAsync()
     {
-        var selection =
-            _selectionInfo;
+        var selections =
+            Viewport
+                .GetSelectedSelectionInfos()
+                .GroupBy(
+                    selection =>
+                        (
+                            selection.Kind,
+                            selection.EntityId,
+                            selection.TileX,
+                            selection.TileY,
+                            selection.AssetPath
+                        ))
+                .Select(
+                    group =>
+                        group.First())
+                .ToArray();
 
-        if (selection is null)
+        if (
+            selections.Length ==
+                0 &&
+            _selectionInfo is not
+                null)
+        {
+            selections =
+                [
+                    _selectionInfo
+                ];
+        }
+
+        if (selections.Length == 0)
         {
             return;
         }
@@ -7076,19 +7102,40 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        var isObject =
-            selection.Kind ==
-            PickingKind.Object;
+        var objectCount =
+            selections.Count(
+                selection =>
+                    selection.Kind ==
+                    PickingKind.Object);
+
+        var splineCount =
+            selections.Count(
+                selection =>
+                    selection.Kind ==
+                    PickingKind.Spline);
+
+        var single =
+            selections.Length ==
+                1
+                ? selections[0]
+                : null;
 
         var label =
-            isObject
-                ? $"objeto #{selection.EntityId}"
-                : $"spline #{selection.EntityId}";
+            single is not null
+                ? single.Kind ==
+                    PickingKind.Object
+                    ? $"objeto #{single.EntityId}"
+                    : $"spline #{single.EntityId}"
+                : $"{selections.Length} itens";
 
         var detail =
-            isObject
-                ? "O objeto será removido do tile OMSI."
-                : "A spline será removida e os vínculos recíprocos dos vizinhos serão liberados.";
+            single is not null
+                ? single.Kind ==
+                    PickingKind.Object
+                    ? "O objeto será removido do tile OMSI."
+                    : "A spline será removida e os vínculos recíprocos dos vizinhos serão liberados."
+                : $"Serão removidos {objectCount} objeto(s) e {splineCount} spline(s). " +
+                  "Cada alteração usa a rotina segura com backup; vínculos de splines são atualizados conforme necessário.";
 
         var dialog =
             new ContentDialog
@@ -7098,9 +7145,12 @@ public sealed partial class MainWindow : Window
                 Title =
                     $"Excluir {label}?",
                 Content =
-                    $"{detail}\n\nUm backup seguro será criado antes de gravar.",
+                    $"{detail}\n\nEsta operação grava os arquivos do mapa com backup seguro.",
                 PrimaryButtonText =
-                    "Excluir",
+                    selections.Length >
+                        1
+                        ? "Excluir todos"
+                        : "Excluir",
                 CloseButtonText =
                     "Cancelar",
                 DefaultButton =
@@ -7126,17 +7176,36 @@ public sealed partial class MainWindow : Window
                 false;
 
             StatusText.Text =
-                $"Excluindo {label} com backup seguro...";
+                selections.Length >
+                    1
+                    ? $"Excluindo {selections.Length} itens com backup seguro..."
+                    : $"Excluindo {label} com backup seguro...";
 
-            var snapshot =
-                await _session
-                    .DeleteSelectionAsync(
-                        selection);
+            NativeMapSnapshot? snapshot =
+                null;
 
-            if (_session.OmsiRootPath is null)
+            foreach (
+                var selection in
+                    selections
+                        .OrderBy(
+                            selection =>
+                                selection.Kind ==
+                                    PickingKind.Spline
+                                    ? 1
+                                    : 0))
+            {
+                snapshot =
+                    await _session
+                        .DeleteSelectionAsync(
+                            selection);
+            }
+
+            if (
+                snapshot is null ||
+                _session.OmsiRootPath is null)
             {
                 throw new InvalidOperationException(
-                    "Instalação OMSI não selecionada.");
+                    "Não foi possível recarregar o mapa após a exclusão.");
             }
 
             await Viewport
@@ -7157,15 +7226,20 @@ public sealed partial class MainWindow : Window
                 false;
 
             StatusText.Text =
-                $"{(isObject ? "Objeto" : "Spline")} #{selection.EntityId} excluído(a) com backup.";
+                selections.Length >
+                    1
+                    ? $"{selections.Length} itens excluídos com backup · {objectCount} objeto(s) · {splineCount} spline(s)."
+                    : $"{(single!.Kind == PickingKind.Object ? "Objeto" : "Spline")} #{single.EntityId} excluído(a) com backup.";
         }
         catch (Exception exception)
         {
             DeleteSelectionButton.IsEnabled =
-                _selectionInfo is not null;
+                _selectionInfo is not
+                    null;
 
             ApplyInspectorButton.IsEnabled =
-                _selectionInfo is not null;
+                _selectionInfo is not
+                    null;
 
             StatusText.Text =
                 $"Falha ao excluir {label}: {exception.Message}";
