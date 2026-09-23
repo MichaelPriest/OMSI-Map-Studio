@@ -24623,7 +24623,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Adapter ID",
                 PlaceholderText =
-                    "openai-compatible, ollama, lmstudio, anthropic ou gemini"
+                    "openai, openai-compatible, ollama, lmstudio, anthropic ou gemini"
             };
 
         var endpointBox =
@@ -24641,7 +24641,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Modelo",
                 PlaceholderText =
-                    "Obrigatório para os adapters operacionais"
+                    "Ex.: gpt-5.6-terra, gpt-5.6, modelo local..."
             };
 
         var tokenBox =
@@ -24650,7 +24650,7 @@ public sealed partial class MainWindow : Window
                 Header =
                     "Token / API key",
                 PlaceholderText =
-                    "Anthropic/Gemini exigem credencial; local pode dispensar",
+                    "OpenAI/Anthropic/Gemini exigem API key; local pode dispensar",
                 PasswordRevealMode =
                     PasswordRevealMode
                         .Peek
@@ -24731,6 +24731,8 @@ public sealed partial class MainWindow : Window
             adapterSupportText.Text =
                 adapter switch
                 {
+                    "openai" =>
+                        "OpenAI oficial · Responses API com visão. Padrão: gpt-5.6-terra. API key obrigatória e protegida no Windows Credential Manager.",
                     "openai-compatible" =>
                         "Operacional · API de chat/completions compatível com OpenAI. Endpoint e modelo são obrigatórios; token depende do servidor.",
                     "ollama" =>
@@ -24742,13 +24744,26 @@ public sealed partial class MainWindow : Window
                     "gemini" =>
                         "Operacional · Google Gemini generateContent com inline_data. Modelo e API key são obrigatórios.",
                     "" =>
-                        "Informe um adapter. Adapters operacionais: openai-compatible, ollama, lmstudio, anthropic e gemini.",
+                        "Informe um adapter. Adapters operacionais: openai, openai-compatible, ollama, lmstudio, anthropic e gemini.",
                     _ =>
                         "Adapter ainda não implementado diretamente. Para serviços com API compatível, use openai-compatible."
                 };
 
             switch (adapter)
             {
+                case "openai":
+                    defaultEndpoint =
+                        "https://api.openai.com/v1/responses";
+                    if (
+                        applyDefaults &&
+                        string.IsNullOrWhiteSpace(
+                            modelBox.Text))
+                    {
+                        modelBox.Text =
+                            "gpt-5.6-terra";
+                    }
+                    break;
+
                 case "ollama":
                     defaultEndpoint =
                         "http://localhost:11434/v1";
@@ -24808,7 +24823,7 @@ public sealed partial class MainWindow : Window
             adapterBox.Text =
                 profile
                     ?.AdapterId ??
-                "openai-compatible";
+                "openai";
 
             endpointBox.Text =
                 profile

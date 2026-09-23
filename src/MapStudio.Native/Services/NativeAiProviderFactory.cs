@@ -29,6 +29,10 @@ public static class NativeAiProviderFactory
 
         return adapter switch
         {
+            "openai" =>
+                CreateOpenAi(
+                    normalized,
+                    secretOverride),
             "openai-compatible" or
             "lmstudio" or
             "ollama" =>
@@ -106,11 +110,39 @@ public static class NativeAiProviderFactory
                 .ToLowerInvariant();
 
         return adapter is
+            "openai" or
             "openai-compatible" or
             "lmstudio" or
             "ollama" or
             "anthropic" or
             "gemini";
+    }
+
+    private static IMapStudioAiProvider
+        CreateOpenAi(
+            MapStudioAiConnectionProfile profile,
+            string? secretOverride)
+    {
+        var model =
+            string.IsNullOrWhiteSpace(
+                profile.Model)
+                ? "gpt-5.6-terra"
+                : profile.Model;
+
+        var secret =
+            ResolveSecret(
+                profile,
+                secretOverride,
+                "aiOpenAiCredentialRequired");
+
+        return new MapStudioOpenAiResponsesProvider(
+            HttpClient,
+            profile.Endpoint ??
+                "https://api.openai.com/v1/responses",
+            model,
+            secret,
+            profile.AdapterId,
+            profile.DisplayName);
     }
 
     private static IMapStudioAiProvider
