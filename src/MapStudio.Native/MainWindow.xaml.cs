@@ -574,7 +574,6 @@ public sealed partial class MainWindow : Window
         0.62;
     private double _realMapSelectionFractionY =
         0.58;
-    private bool _syncingRealMapAreaSelectionControls;
 
     public MainWindow()
     {
@@ -24256,7 +24255,6 @@ setTimeout(postBounds, 250);
         NumberBoxValueChangedEventArgs args)
     {
         if (
-            _syncingRealMapAreaSelectionControls ||
             RealMapAreaWidthPercentBox is null ||
             RealMapAreaHeightPercentBox is null ||
             RealMapAreaLeftColumn is null ||
