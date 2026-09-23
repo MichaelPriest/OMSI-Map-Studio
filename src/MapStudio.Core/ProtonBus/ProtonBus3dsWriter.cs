@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 
 namespace MapStudio.Core.ProtonBus;
@@ -122,6 +123,10 @@ public static class ProtonBus3dsWriter
                     MaterialName,
                     material.Name);
 
+                var diffuse =
+                    material.DiffuseColor ??
+                    Vector3.One;
+
                 WriteChunk(
                     materialWriter,
                     MaterialDiffuse,
@@ -132,16 +137,43 @@ public static class ProtonBus3dsWriter
                             colorWriter =>
                             {
                                 colorWriter.Write(
-                                    (byte)255);
+                                    ToColorByte(
+                                        diffuse.X));
                                 colorWriter.Write(
-                                    (byte)255);
+                                    ToColorByte(
+                                        diffuse.Y));
                                 colorWriter.Write(
-                                    (byte)255);
+                                    ToColorByte(
+                                        diffuse.Z));
                             }));
 
+                var opacity =
+                    Math.Clamp(
+                        material.Opacity,
+                        0.0f,
+                        1.0f);
+
                 if (
-                    material.Transparent)
+                    material.Transparent ||
+                    opacity <
+                        0.999f)
                 {
+                    var effectiveOpacity =
+                        material.Transparent &&
+                        opacity >=
+                            0.999f
+                            ? 0.5f
+                            : opacity;
+
+                    var transparency =
+                        checked(
+                            (ushort)Math.Round(
+                                (
+                                    1.0f -
+                                    effectiveOpacity
+                                ) *
+                                100.0f));
+
                     WriteChunk(
                         materialWriter,
                         MaterialTransparency,
@@ -151,7 +183,7 @@ public static class ProtonBus3dsWriter
                                 PercentInteger,
                                 percentWriter =>
                                     percentWriter.Write(
-                                        (ushort)50)));
+                                        transparency)));
                 }
 
                 if (
@@ -416,6 +448,30 @@ public static class ProtonBus3dsWriter
                     "Material name");
 
                 if (
+                    !float.IsFinite(
+                        material.Opacity))
+                {
+                    throw new ArgumentException(
+                        $"Material '{material.Name}' contains a non-finite opacity.");
+                }
+
+                if (
+                    material.DiffuseColor is
+                        Vector3 diffuse &&
+                    (
+                        !float.IsFinite(
+                            diffuse.X) ||
+                        !float.IsFinite(
+                            diffuse.Y) ||
+                        !float.IsFinite(
+                            diffuse.Z)
+                    ))
+                {
+                    throw new ArgumentException(
+                        $"Material '{material.Name}' contains a non-finite diffuse color.");
+                }
+
+                if (
                     !string.IsNullOrWhiteSpace(
                         material.TextureFileName))
                 {
@@ -450,6 +506,16 @@ public static class ProtonBus3dsWriter
             }
         }
     }
+
+    private static byte ToColorByte(
+        float value) =>
+        checked(
+            (byte)Math.Round(
+                Math.Clamp(
+                    value,
+                    0.0f,
+                    1.0f) *
+                255.0f));
 
     private static void WriteStringChunk(
         BinaryWriter writer,
