@@ -44,6 +44,19 @@
                 Foreground="#9FC7DE" />
         </Border>
 
+        <Canvas x:Name="SelectionBoxLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Border x:Name="SelectionBoxBorder"
+                    Width="0"
+                    Height="0"
+                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                    BorderThickness="1.5"
+                    Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                    Opacity="0.55"
+                    CornerRadius="2" />
+        </Canvas>
+
         <Canvas x:Name="RadialMenuLayer"
                 Visibility="Collapsed">
             <Canvas x:Name="SelectionRadialMenu"
