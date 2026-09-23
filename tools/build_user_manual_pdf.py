@@ -71,6 +71,13 @@ def choose_font() -> tuple[str, str]:
         if regular.exists() and bold.exists():
             pdfmetrics.registerFont(TTFont(regular_name, str(regular)))
             pdfmetrics.registerFont(TTFont(bold_name, str(bold)))
+            pdfmetrics.registerFontFamily(
+                regular_name,
+                normal=regular_name,
+                bold=bold_name,
+                italic=regular_name,
+                boldItalic=bold_name,
+            )
             return regular_name, bold_name
     return "Helvetica", "Helvetica-Bold"
 
