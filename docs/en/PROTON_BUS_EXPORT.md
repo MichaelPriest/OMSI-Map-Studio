@@ -12,15 +12,24 @@ Confirmed starting base on 2026-09-23:
 
 This work does not modify `main`.
 
-Proton Bus support must not yet be advertised as complete. This first stage only adds:
+Proton Bus support must not yet be advertised as game-validated, but this branch now contains a functional Core export pipeline plus initial native-app integration.
 
-- map manifest model;
-- `.map.txt` writer;
-- package layout;
-- portable name/path validation;
-- constants for special mesh-name tags;
-- unit tests;
-- this implementation plan.
+Implemented on this branch:
+
+- `.map.txt` manifest and complete package layout;
+- single-tile, multi-tile, and full OMSI map-directory export through `global.cfg`;
+- terrain triangulation, spline tessellation, and scenery-object conversion;
+- automatic resolution of `.sli`, `.sco`, `.o3d`, `.x`, and their dependencies;
+- DDS/TGA/BMP/JPG/JPEG/GIF to PNG transcoding plus safe copying of already-valid PNG files;
+- automatic vehicle, pedestrian, and train paths with 3D markers and linked-OMSI-spline merging when geometry is compatible;
+- `TTData` reading for bus stops, entrypoints, and GPS routes;
+- synchronized OMSI traffic-light controller conversion;
+- street lights derived from OMSI light points;
+- native 3DS writer with materials, UVs, Proton tags, and mesh splitting;
+- native `File > Export to Proton Bus...` menu independent of Inspector;
+- automated Proton Bus Core validation plus native WinUI host compilation on this branch.
+
+Visual/runtime validation in an actual Proton Bus build is still required before final compatibility can be claimed.
 
 ## Sources researched
 
@@ -199,7 +208,9 @@ Street/ambient light types should generate files under `streetlights/` plus the 
 
 ### GPS/routes
 
-This is a separate stage after validating the currently used target-build format against a real example map.
+Core now generates GPS meshes from OMSI timetable routes and uses the documented `_gps_<entrypoint>_` naming convention, including additional pieces for the same route.
+
+Automatic generation is implemented; visual/navigation behavior still needs validation in the target Proton Bus build.
 
 ## 3DS exporter
 
@@ -266,7 +277,7 @@ These features should only be implemented after inspecting the help/example file
 - local index remapping for 3DS limits;
 - per-tile `ProtonBusExportScene` assembly with missing-asset reporting.
 
-### P2 — started
+### P2 — completed in Core; in-game validation pending
 
 Completed:
 
@@ -275,30 +286,46 @@ Completed:
 - full object/texture names without the legacy 12-character truncation;
 - diffuse textures;
 - basic transparency and self-illumination;
-- automatic splitting for large meshes.
+- automatic splitting for large meshes;
+- automatic DDS/TGA/BMP/JPG/JPEG/GIF to PNG transcoding;
+- PNG signature validation;
+- OMSI collision meshes converted with `_gencol_` + `_invisible_` tags;
+- protection against cross-tile texture-name collisions.
 
 Pending:
 
 - validate generated files directly in the target Proton Bus build;
-- actual source-texture conversion to PNG (the package currently requires PNG but does not transcode DDS/BMP/TGA);
-- final scenery-collider rules based on metadata/use;
-- final emissive/additive rules;
+- refine final collider rules from observed in-game behavior;
+- validate final emissive/additive behavior in the Proton renderer;
 - a real fixture to visually validate axes, winding, UVs and materials.
 
-### P3
+### P3 — completed in Core
 
-- entry points;
-- stops/passengers;
-- pedestrians;
-- AI vehicles;
-- trains.
+- entrypoints generated from the first stop of OMSI trips;
+- OMSI bus stops resolved by `TileIndex` + placed-object ID and written under `busstops/`;
+- 3D bus-stop trigger markers;
+- pedestrian paths under `aipeople/`;
+- vehicle paths under `aivehicles/`;
+- train paths under `aitrains/`;
+- optional merging of linked splines into one continuous Proton path;
+- safe per-spline fallback when endpoints/types/directions are incompatible;
+- deterministic prefixes by tile and entity.
 
-### P4
+Note: automatically generated passenger waiting positions remain conservative; `paxAmount=0` is the default so Map Studio does not invent sidewalk waiting points.
 
-- traffic lights;
-- street lights;
-- GPS/routes;
-- full package validation.
+### P4 — Core implementation completed; in-game validation pending
+
+- OMSI traffic-light machines converted to `trafficlights/`;
+- synchronized OMSI programs/phases converted to Proton Bus ticks;
+- traffic-light triggers and marker meshes;
+- OMSI light points converted to `streetlights/`;
+- GPS/routes generated from timetable data;
+- multi-tile aggregation of these functional resources.
+
+Pending:
+
+- validate timing, triggers, lights, GPS, and traffic behavior in the target Proton Bus build;
+- refine map-specific edge cases discovered through real-map testing.
 
 ### P5
 
@@ -308,13 +335,23 @@ Pending:
 - target-specific optimization;
 - PC/mobile profiles.
 
-### P6
+### P6 — started
 
-- `Export > Proton Bus` UI;
-- pre-export report;
-- target version selection;
+Completed:
+
+- native `File > Export to Proton Bus...` menu;
+- direct export of the currently open map without Inspector dependency;
+- fields for map name, base directory, and model/route set;
+- option to include TTData, bus stops, entrypoints, and GPS;
+- progress and primary errors surfaced through app status;
+- branch CI builds the WinUI host in addition to running Proton Bus tests.
+
+Pending:
+
+- detailed pre-export report in a dedicated dialog;
+- explicit target Proton Bus version/profile selection;
 - ZIP output;
-- validation against a real example map.
+- validation against a real example map and a real Proton Bus installation.
 
 ## Requirement before advertising Proton Bus support
 
@@ -329,4 +366,4 @@ The Proton Bus adapter should only be registered as functional in `MapStudioSimu
 7. automated tests pass;
 8. a small redistributable or generated fixture map exists.
 
-Until then, `MapStudioSimulatorIds.ProtonBus` remains only a known simulator ID.
+Until in-game validation is complete, `MapStudioSimulatorIds.ProtonBus` remains an experimental target and must not be advertised as final compatibility.

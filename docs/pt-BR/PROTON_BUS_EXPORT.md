@@ -12,15 +12,24 @@ Base inicial confirmada em 2026-09-23:
 
 A `main` não é alterada por este trabalho.
 
-O suporte Proton Bus ainda não deve ser anunciado como completo. Nesta primeira etapa foram adicionados apenas:
+O suporte Proton Bus ainda não deve ser anunciado como validado em jogo, mas a branch já possui um pipeline funcional de exportação no Core e integração inicial no app nativo.
 
-- modelo do manifesto do mapa;
-- writer do arquivo `.map.txt`;
-- layout de pacote;
-- validação de nomes/caminhos portáveis;
-- constantes para nomes especiais de meshes;
-- testes unitários;
-- este plano de implementação.
+Já implementado nesta branch:
+
+- manifesto `.map.txt` e layout completo do pacote;
+- exportação de um tile, múltiplos tiles e de uma pasta de mapa OMSI inteira via `global.cfg`;
+- triangulação de terreno, tesselação de splines e conversão de scenery objects;
+- resolução automática de `.sli`, `.sco`, `.o3d`, `.x` e dependências;
+- conversão de texturas DDS/TGA/BMP/JPG/JPEG/GIF para PNG e cópia segura de PNG já válido;
+- paths automáticos de veículos, pedestres e trens, com markers 3D e união de splines OMSI vinculadas quando a geometria é compatível;
+- leitura de `TTData` para paradas, entrypoints e rotas GPS;
+- conversão sincronizada de controladores de semáforo OMSI;
+- street lights derivados de pontos de luz OMSI;
+- writer 3DS nativo com materiais, UV, tags e divisão de meshes;
+- menu nativo `Arquivo > Exportar para Proton Bus...`, independente do Inspector;
+- validação automatizada do Core Proton Bus e compilação do host WinUI nesta branch.
+
+Ainda falta a validação visual/funcional do pacote em uma build real do Proton Bus antes de declarar compatibilidade final.
 
 ## Fontes pesquisadas
 
@@ -199,7 +208,9 @@ Tipos de poste/ambiente deverão gerar arquivos em `streetlights/` e marker mesh
 
 ### GPS/rotas
 
-Será tratado como etapa própria depois que o formato atual da build-alvo for validado em um mapa real.
+O Core já gera meshes GPS a partir das rotas/timetables OMSI e usa a convenção documentada `_gps_<entrypoint>_`, incluindo suporte a partes adicionais do mesmo trajeto.
+
+A geração automática está implementada; ainda falta validar o comportamento visual e de navegação na build Proton Bus alvo.
 
 ## Exportador 3DS
 
@@ -266,7 +277,7 @@ Esses recursos serão adicionados somente após analisarmos os arquivos de ajuda
 - remapeamento local de índices para os limites do 3DS;
 - montagem de `ProtonBusExportScene` por tile, com relatório de assets ausentes.
 
-### P2 — iniciada
+### P2 — concluída no Core; validação em jogo pendente
 
 Concluído:
 
@@ -275,30 +286,46 @@ Concluído:
 - nomes completos de objetos/texturas, sem o truncamento legado de 12 caracteres;
 - textura difusa;
 - transparência e self-illumination básicas;
-- divisão automática de meshes grandes.
+- divisão automática de meshes grandes;
+- transcodificação automática de DDS/TGA/BMP/JPG/JPEG/GIF para PNG;
+- validação de assinatura para fontes PNG;
+- collision meshes OMSI convertidos com tags `_gencol_` + `_invisible_`;
+- proteção contra colisões de nomes de textura entre tiles.
 
 Pendente:
 
 - validar o arquivo gerado diretamente na build alvo do Proton Bus;
-- conversão real das texturas de origem para PNG (hoje o pacote exige PNG, mas não recodifica DDS/BMP/TGA);
-- regras finais para colisores de scenery conforme metadata/uso do objeto;
-- regras finais para emissive/additive;
+- refinar regras finais de colisores conforme comportamento observado no jogo;
+- validar regras finais de emissive/additive no renderer Proton;
 - fixture real para validar visualmente eixos, winding, UV e materiais.
 
-### P3
+### P3 — concluída no Core
 
-- entry points;
-- paradas/passageiros;
-- pedestres;
-- veículos de tráfego;
-- trens.
+- entrypoints gerados a partir do primeiro stop dos trips OMSI;
+- paradas OMSI resolvidas por `TileIndex` + ID do objeto e gravadas em `busstops/`;
+- trigger 3D de parada;
+- paths de pedestres em `aipeople/`;
+- paths de veículos em `aivehicles/`;
+- paths de trens em `aitrains/`;
+- união opcional de splines vinculadas em um path Proton contínuo;
+- fallback seguro quando endpoints/tipos/direções não são compatíveis;
+- nomes/prefixos determinísticos por tile e entidade.
 
-### P4
+Observação: posições automáticas de passageiros ainda são conservadoras; por padrão `paxAmount=0` para não inventar pontos de espera na calçada.
 
-- semáforos;
-- street lights;
-- GPS/rotas;
-- validação completa do pacote.
+### P4 — implementação Core concluída; validação em jogo pendente
+
+- conversão de máquinas de semáforo OMSI para `trafficlights/`;
+- sincronização de programas/fases em ticks Proton Bus;
+- triggers e marker meshes de semáforo;
+- conversão de pontos de luz OMSI para `streetlights/`;
+- GPS/rotas gerados a partir de timetable;
+- agregação multi-tile de todos esses recursos.
+
+Pendente:
+
+- validar tempos, triggers, luzes, GPS e comportamento de tráfego na build Proton Bus alvo;
+- ajustar exceções específicas encontradas em mapas reais.
 
 ### P5
 
@@ -308,13 +335,23 @@ Pendente:
 - otimizações específicas;
 - perfil PC/mobile.
 
-### P6
+### P6 — iniciada
 
-- UI `Exportar > Proton Bus`;
-- relatório pré-exportação;
-- seleção da versão alvo;
+Concluído:
+
+- menu nativo `Arquivo > Exportar para Proton Bus...`;
+- exportação direta do mapa atualmente aberto, sem depender do Inspector;
+- campos para nome do mapa, pasta base e conjunto/rota;
+- opção para incluir TTData, paradas, entrypoints e GPS;
+- progresso e erros principais exibidos no status do app;
+- CI da branch compila o host WinUI além de executar a suíte Proton Bus.
+
+Pendente:
+
+- relatório pré-exportação detalhado em janela própria;
+- seleção/perfil explícito da versão Proton Bus alvo;
 - exportação ZIP;
-- teste contra mapa exemplo real.
+- teste contra mapa exemplo real e contra uma instalação real do Proton Bus.
 
 ## Critério para marcar Proton Bus como suportado
 
@@ -329,4 +366,4 @@ O adapter Proton Bus só deve ser registrado como funcional no `MapStudioSimulat
 7. os testes automatizados passarem;
 8. houver um mapa de fixture pequeno e redistribuível ou gerado pelo próprio teste.
 
-Até lá, `MapStudioSimulatorIds.ProtonBus` permanece apenas como ID conhecido.
+Até a validação em jogo ser concluída, `MapStudioSimulatorIds.ProtonBus` permanece como alvo experimental e não deve ser anunciado como compatibilidade final.
