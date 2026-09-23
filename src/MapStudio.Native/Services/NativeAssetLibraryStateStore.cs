@@ -41,6 +41,13 @@ public sealed class NativeAssetLibraryState
     public double ToolPaletteOffsetX { get; init; }
 
     public double ToolPaletteOffsetY { get; init; }
+
+    public bool ProjectSummaryExpanded { get; set; } =
+        true;
+
+    public bool AssetFiltersExpanded { get; set; }
+
+    public bool TransportPathsExpanded { get; set; }
 }
 
 public static class NativeAssetLibraryStateStore
@@ -295,7 +302,13 @@ public static class NativeAssetLibraryStateStore
                         state.ToolPaletteOffsetY,
                         -4000,
                         4000)
-                    : 0
+                    : 0,
+            ProjectSummaryExpanded =
+                state.ProjectSummaryExpanded,
+            AssetFiltersExpanded =
+                state.AssetFiltersExpanded,
+            TransportPathsExpanded =
+                state.TransportPathsExpanded
         };
     }
 
