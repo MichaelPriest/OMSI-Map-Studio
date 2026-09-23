@@ -476,6 +476,25 @@ public sealed partial class MainWindow : Window
 
     private bool _mapExplorerCollapsed;
 
+    private Panel? _assetLibraryPanelHome;
+    private int _assetLibraryPanelHomeIndex =
+        -1;
+    private bool _draggingAssetLibraryToolWindow;
+    private uint _assetLibraryToolDragPointerId;
+    private double _assetLibraryToolDragStartX;
+    private double _assetLibraryToolDragStartY;
+    private double _assetLibraryToolDragOriginX;
+    private double _assetLibraryToolDragOriginY;
+    private bool _resizingAssetLibraryToolWindow;
+    private bool _assetLibraryToolWindowMinimized;
+    private double _assetLibraryToolRestoreHeight =
+        680;
+    private uint _assetLibraryToolResizePointerId;
+    private double _assetLibraryToolResizeStartX;
+    private double _assetLibraryToolResizeStartY;
+    private double _assetLibraryToolResizeOriginWidth;
+    private double _assetLibraryToolResizeOriginHeight;
+
     private Panel? _transportPanelHome;
     private int _transportPanelHomeIndex =
         -1;
@@ -540,6 +559,19 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        _assetLibraryPanelHome =
+            AssetLibraryPanel.Parent as
+                Panel;
+
+        if (_assetLibraryPanelHome is not null)
+        {
+            _assetLibraryPanelHomeIndex =
+                _assetLibraryPanelHome
+                    .Children
+                    .IndexOf(
+                        AssetLibraryPanel);
+        }
 
         _transportPanelHome =
             TransportPanel.Parent as
@@ -1456,8 +1488,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Visible;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         SetTransportPanelProjectVisibility(
             false);
@@ -1506,8 +1538,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         SetTransportPanelProjectVisibility(
             false);
@@ -1846,8 +1878,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Visible;
+        SetAssetLibraryPanelProjectVisibility(
+            true);
 
         SetTransportPanelProjectVisibility(
             false);
@@ -9473,8 +9505,8 @@ public sealed partial class MainWindow : Window
         SetTransportPanelProjectVisibility(
             false);
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         ExplorerListView.Visibility =
             Visibility.Visible;
@@ -10046,8 +10078,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         SetTransportPanelProjectVisibility(
             false);
@@ -12452,8 +12484,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         SetTransportPanelProjectVisibility(
             true);
@@ -17188,8 +17220,8 @@ public sealed partial class MainWindow : Window
 
         _trafficPreviewTimer.Stop();
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Collapsed;
+        SetAssetLibraryPanelProjectVisibility(
+            false);
 
         SetTransportPanelProjectVisibility(
             false);
@@ -17839,8 +17871,8 @@ public sealed partial class MainWindow : Window
         ExplorerListView.Visibility =
             Visibility.Collapsed;
 
-        AssetLibraryPanel.Visibility =
-            Visibility.Visible;
+        SetAssetLibraryPanelProjectVisibility(
+            true);
 
         ExplorerSearchBox.PlaceholderText =
             "Buscar na biblioteca...";
@@ -21120,6 +21152,434 @@ public sealed partial class MainWindow : Window
         }
 
         _resizingTileNavigatorWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void SetAssetLibraryPanelProjectVisibility(
+        bool visible)
+    {
+        AssetLibraryPanel.Visibility =
+            AssetLibraryToolWindow.Visibility ==
+                Visibility.Visible ||
+            visible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void OnToggleAssetLibraryWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            AssetLibraryToolWindow.Visibility ==
+                Visibility.Visible)
+        {
+            CloseAssetLibraryToolWindow();
+
+            StatusText.Text =
+                "Biblioteca voltou ao painel Projeto.";
+
+            return;
+        }
+
+        OpenAssetLibraryToolWindow();
+
+        StatusText.Text =
+            "Biblioteca aberta em janela flutuante · mova, redimensione ou minimize livremente.";
+
+        OnLibraryModeClick(
+            sender,
+            e);
+    }
+
+    private void OpenAssetLibraryToolWindow()
+    {
+        _assetLibraryPanelHome ??=
+            AssetLibraryPanel.Parent as
+                Panel;
+
+        if (
+            _assetLibraryPanelHome is not
+                null &&
+            ReferenceEquals(
+                AssetLibraryPanel.Parent,
+                _assetLibraryPanelHome))
+        {
+            _assetLibraryPanelHomeIndex =
+                _assetLibraryPanelHome
+                    .Children
+                    .IndexOf(
+                        AssetLibraryPanel);
+
+            _assetLibraryPanelHome
+                .Children
+                .Remove(
+                    AssetLibraryPanel);
+        }
+
+        if (
+            !ReferenceEquals(
+                AssetLibraryFloatingHost.Content,
+                AssetLibraryPanel))
+        {
+            AssetLibraryFloatingHost.Content =
+                AssetLibraryPanel;
+        }
+
+        AssetLibraryPanel.Visibility =
+            Visibility.Visible;
+
+        AssetLibraryToolWindow.Visibility =
+            Visibility.Visible;
+
+        if (_assetLibraryToolWindowMinimized)
+        {
+            SetAssetLibraryToolWindowMinimized(
+                false);
+        }
+    }
+
+    private void OnCloseAssetLibraryToolWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        CloseAssetLibraryToolWindow();
+
+        StatusText.Text =
+            "Biblioteca devolvida ao painel Projeto.";
+    }
+
+    private void CloseAssetLibraryToolWindow()
+    {
+        AssetLibraryToolWindow.Visibility =
+            Visibility.Collapsed;
+
+        _draggingAssetLibraryToolWindow =
+            false;
+
+        _resizingAssetLibraryToolWindow =
+            false;
+
+        if (
+            ReferenceEquals(
+                AssetLibraryFloatingHost.Content,
+                AssetLibraryPanel))
+        {
+            AssetLibraryFloatingHost.Content =
+                null;
+        }
+
+        if (
+            _assetLibraryPanelHome is not
+                null &&
+            AssetLibraryPanel.Parent is
+                null)
+        {
+            var insertIndex =
+                Math.Clamp(
+                    _assetLibraryPanelHomeIndex,
+                    0,
+                    _assetLibraryPanelHome
+                        .Children
+                        .Count);
+
+            _assetLibraryPanelHome
+                .Children
+                .Insert(
+                    insertIndex,
+                    AssetLibraryPanel);
+        }
+
+        AssetLibraryPanel.Visibility =
+            _libraryMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void OnToggleAssetLibraryToolMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetAssetLibraryToolWindowMinimized(
+            !_assetLibraryToolWindowMinimized);
+
+    private void SetAssetLibraryToolWindowMinimized(
+        bool minimized)
+    {
+        if (
+            _assetLibraryToolWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _assetLibraryToolRestoreHeight =
+                Math.Max(
+                    360,
+                    AssetLibraryToolWindow
+                        .ActualHeight);
+        }
+
+        _assetLibraryToolWindowMinimized =
+            minimized;
+
+        AssetLibraryFloatingHost.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        AssetLibraryToolResizeGrip.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        AssetLibraryToolWindow.Height =
+            minimized
+                ? 58
+                : Math.Max(
+                    360,
+                    _assetLibraryToolRestoreHeight);
+
+        AssetLibraryToolMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+    }
+
+    private void OnAssetLibraryToolWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingAssetLibraryToolWindow =
+            true;
+
+        _assetLibraryToolDragPointerId =
+            e.Pointer.PointerId;
+
+        _assetLibraryToolDragStartX =
+            position.X;
+
+        _assetLibraryToolDragStartY =
+            position.Y;
+
+        _assetLibraryToolDragOriginX =
+            AssetLibraryToolWindowTranslate.X;
+
+        _assetLibraryToolDragOriginY =
+            AssetLibraryToolWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAssetLibraryToolWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingAssetLibraryToolWindow ||
+            e.Pointer.PointerId !=
+                _assetLibraryToolDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        var baseLeft =
+            AssetLibraryToolWindow.Margin.Left;
+
+        var baseTop =
+            AssetLibraryToolWindow.Margin.Top;
+
+        var maximumX =
+            Math.Max(
+                -baseLeft +
+                    4,
+                WorkspaceGrid.ActualWidth -
+                    baseLeft -
+                    AssetLibraryToolWindow.ActualWidth -
+                    4);
+
+        var maximumY =
+            Math.Max(
+                -baseTop +
+                    4,
+                WorkspaceGrid.ActualHeight -
+                    baseTop -
+                    AssetLibraryToolWindow.ActualHeight -
+                    4);
+
+        AssetLibraryToolWindowTranslate.X =
+            Math.Clamp(
+                _assetLibraryToolDragOriginX +
+                    position.X -
+                    _assetLibraryToolDragStartX,
+                -baseLeft +
+                    4,
+                maximumX);
+
+        AssetLibraryToolWindowTranslate.Y =
+            Math.Clamp(
+                _assetLibraryToolDragOriginY +
+                    position.Y -
+                    _assetLibraryToolDragStartY,
+                -baseTop +
+                    4,
+                maximumY);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAssetLibraryToolWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _assetLibraryToolDragPointerId)
+        {
+            return;
+        }
+
+        _draggingAssetLibraryToolWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAssetLibraryToolResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingAssetLibraryToolWindow =
+            true;
+
+        _assetLibraryToolResizePointerId =
+            e.Pointer.PointerId;
+
+        _assetLibraryToolResizeStartX =
+            position.X;
+
+        _assetLibraryToolResizeStartY =
+            position.Y;
+
+        _assetLibraryToolResizeOriginWidth =
+            AssetLibraryToolWindow.ActualWidth;
+
+        _assetLibraryToolResizeOriginHeight =
+            AssetLibraryToolWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAssetLibraryToolResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingAssetLibraryToolWindow ||
+            e.Pointer.PointerId !=
+                _assetLibraryToolResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        AssetLibraryToolWindow.Width =
+            Math.Clamp(
+                _assetLibraryToolResizeOriginWidth +
+                    position.X -
+                    _assetLibraryToolResizeStartX,
+                480,
+                Math.Max(
+                    480,
+                    WorkspaceGrid.ActualWidth -
+                        24));
+
+        AssetLibraryToolWindow.Height =
+            Math.Clamp(
+                _assetLibraryToolResizeOriginHeight +
+                    position.Y -
+                    _assetLibraryToolResizeStartY,
+                360,
+                Math.Max(
+                    360,
+                    WorkspaceGrid.ActualHeight -
+                        24));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAssetLibraryToolResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _assetLibraryToolResizePointerId)
+        {
+            return;
+        }
+
+        _resizingAssetLibraryToolWindow =
             false;
 
         if (
