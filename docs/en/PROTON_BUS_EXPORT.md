@@ -250,22 +250,39 @@ These features should only be implemented after inspecting the help/example file
 - basic name tags;
 - tests.
 
-### P1 — next
+### P1 — in progress
+
+Completed:
 
 - `ProtonBusExportScene` intermediate model;
-- coordinate conversion;
+- 3DS chunk planning and automatic splitting;
+- local index remapping for 3DS limits.
+
+Pending:
+
+- explicit coordinate conversion;
 - road/spline tessellation;
 - terrain triangulation;
-- material conversion;
-- 3DS chunk planning.
+- complete material conversion.
 
-### P2
+### P2 — started
 
-- binary `.3ds` writer;
-- PNG/material pipeline;
-- colliders;
-- transparent/emissive/additive support;
-- large-mesh splitting.
+Completed:
+
+- native binary `.3ds` writer for static meshes;
+- material, object, vertex, face, face-material and UV chunks;
+- full object/texture names without the legacy 12-character truncation;
+- diffuse textures;
+- basic transparency and self-illumination;
+- automatic splitting for large meshes.
+
+Pending:
+
+- validate generated files directly in the target Proton Bus build;
+- complete PNG/material pipeline;
+- colliders generated from Map Studio properties;
+- final emissive/additive rules;
+- coordinate-axis conversion validated against a real fixture.
 
 ### P3
 
