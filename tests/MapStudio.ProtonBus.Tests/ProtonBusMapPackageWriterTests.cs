@@ -186,6 +186,67 @@ public sealed class ProtonBusMapPackageWriterTests
     }
 
     [Fact]
+    public void WriterRejectsNonPngSourceEvenWithPngTargetName()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudioProtonBusTests",
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        var source =
+            Path.Combine(
+                root,
+                "source.dds");
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            File.WriteAllBytes(
+                source,
+                [68, 68, 83, 32]);
+
+            var error =
+                Assert.Throws<
+                    ArgumentException>(
+                        () =>
+                            ProtonBusMapPackageWriter
+                                .Write(
+                                    root,
+                                    new(
+                                        new(
+                                            "Mapa",
+                                            "Mapa",
+                                            "Rota"),
+                                        [],
+                                        [
+                                            new(
+                                                source,
+                                                "source.png")
+                                        ])));
+
+            Assert.Contains(
+                "already be PNG",
+                error.Message,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void WriterRejectsModelPathTraversal()
     {
         var root =
