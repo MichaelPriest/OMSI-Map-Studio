@@ -51,6 +51,52 @@ public sealed class
     }
 
     [Fact]
+    public void RoadElevationModesUseStartHeightForRampsAndLeveling()
+    {
+        const float terrain =
+            103.0f;
+
+        const float start =
+            100.0f;
+
+        Assert.Equal(
+            106.0f,
+            NativeSplinePlacementMath
+                .ResolveRoadEndpointHeight(
+                    terrain,
+                    start,
+                    NativeRoadElevationMode.Elevate,
+                    6.0));
+
+        Assert.Equal(
+            100.0f,
+            NativeSplinePlacementMath
+                .ResolveRoadEndpointHeight(
+                    terrain,
+                    start,
+                    NativeRoadElevationMode.Level,
+                    99.0));
+
+        Assert.Equal(
+            95.0f,
+            NativeSplinePlacementMath
+                .ResolveRoadEndpointHeight(
+                    terrain,
+                    start,
+                    NativeRoadElevationMode.Lower,
+                    -5.0));
+
+        Assert.Equal(
+            105.0f,
+            NativeSplinePlacementMath
+                .ResolveRoadEndpointHeight(
+                    terrain,
+                    start,
+                    NativeRoadElevationMode.FollowTerrain,
+                    2.0));
+    }
+
+    [Fact]
     public void ArcThroughControlPointProducesFiniteRadius()
     {
         var ok =
