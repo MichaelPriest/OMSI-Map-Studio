@@ -160,7 +160,7 @@ As ações específicas de rua não aparecem para objetos comuns.
 
 ## 6. Projeto e Biblioteca de Assets
 
-**Projeto** e **Biblioteca de Assets** são áreas separadas.
+**Projeto** e **Biblioteca de Assets** são áreas separadas. As áreas mais densas usam painéis recolhíveis; **Filtros de Assets** e **Paths / Visualização** podem permanecer fechados para liberar espaço no editor.
 
 ### Projeto
 
@@ -551,7 +551,11 @@ Tile X/Y não ocupa mais o card Projeto. Use o botão **Tile XY** na barra super
 
 ## Multi-seleção
 
-Use **Ctrl+clique** ou **Shift+clique** para adicionar/remover objetos e splines da seleção. Para selecionar vários itens visualmente, comece o arrasto em uma área vazia do viewport e desenhe uma caixa sobre os itens desejados. Com **Ctrl** ou **Shift** pressionado, a caixa adiciona itens ao grupo atual; sem modificador, ela substitui a seleção. Pressione **Delete** para excluir o conjunto selecionado com uma única confirmação e backup seguro.
+Use **Ctrl+clique** ou **Shift+clique** para adicionar/remover objetos e splines da seleção. Para selecionar vários itens visualmente, comece o arrasto em uma área vazia do viewport e desenhe uma caixa sobre os itens desejados. Com **Ctrl** ou **Shift** pressionado, a caixa adiciona itens ao grupo atual; sem modificador, ela substitui a seleção.
+
+O grupo selecionado pode ser **movido**, **girado** e **focado** diretamente no viewport. O preview/ghost acompanha o conjunto durante a transformação e o histórico trata a transformação como uma única ação visual. Nenhuma dessas funções depende do Inspector.
+
+Pressione **Delete** para excluir o conjunto selecionado com uma única confirmação e backup seguro. Depois da exclusão, **Ctrl+Z** restaura o lote a partir dos backups reais dos arquivos do mapa.
 
 ## Movimento natural
 
