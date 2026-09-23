@@ -25376,8 +25376,12 @@ setTimeout(postBounds, 250);
                         centerLongitude,
                         anchor.X,
                         anchor.Y,
-                        OmsiTileGrid.HalfTileSize,
-                        OmsiTileGrid.HalfTileSize,
+                        OmsiTileGrid
+                            .GetCenteredAreaAnchorLocalCoordinate(
+                                _realMapAreaColumns),
+                        OmsiTileGrid
+                            .GetCenteredAreaAnchorLocalCoordinate(
+                                _realMapAreaRows),
                         Math.Clamp(
                             _realMapAreaZoom,
                             11,
@@ -25392,16 +25396,14 @@ setTimeout(postBounds, 250);
                             : "OpenStreetMap"));
 
             var minimumDx =
-                -(
-                    _realMapAreaColumns /
-                    2
-                );
+                OmsiTileGrid
+                    .GetCenteredAreaMinimumOffset(
+                        _realMapAreaColumns);
 
             var minimumDy =
-                -(
-                    _realMapAreaRows /
-                    2
-                );
+                OmsiTileGrid
+                    .GetCenteredAreaMinimumOffset(
+                        _realMapAreaRows);
 
             var createdCount =
                 1;
