@@ -526,7 +526,38 @@ As operações de terreno são diferentes da elevação de uma spline: alterar a
 
 ---
 
-# 20. Referência de mapa e georreferência
+# 20. Mapa real por área
+
+Use **Mapa > Criar mapa real por área...** para criar um mapa sem precisar digitar manualmente latitude/longitude.
+
+1. Escolha **OpenStreetMap** ou **Google Maps**.
+2. Mova e dê zoom no mapa por baixo do retângulo central.
+3. Confira o tamanho estimado e a quantidade de tiles OMSI de 300 m.
+4. Informe pasta/nome.
+5. Escolha se deseja preparar/gerar ruas OSM, Google Elevation e referência visual no terreno.
+6. Clique **Criar área**.
+
+A janela pode ser movida e redimensionada dentro do editor.
+
+**OpenStreetMap:** não exige chave e é usado para navegação interativa e dados vetoriais. O Map Studio não faz download em massa/offline dos tiles do servidor público.
+
+**Google Maps:** usa a API key salva pelo próprio usuário no Windows Credential Manager. Para o seletor interativo, a chave precisa ter Maps JavaScript API habilitada. Google Elevation pode gerar cobrança e por isso fica desativado por padrão.
+
+A opção de ruas automáticas consulta as vias OSM da área, projeta as coordenadas para o mapa e inicia a geração procedural das splines/junctions.
+
+## Tile X/Y
+
+Tile X/Y não ocupa mais o card Projeto. Use o botão **Tile XY** na barra superior. A janela pode ser movida e redimensionada dentro do editor.
+
+## Multi-seleção
+
+Use **Ctrl+clique** para adicionar/remover objetos e splines da seleção. Pressione **Delete** para excluir o conjunto selecionado com uma única confirmação.
+
+## Movimento natural
+
+No modo **Mover**, arraste o próprio item: o ghost acompanha a posição do cursor no plano do objeto. Para navegar, o botão do meio agora funciona como agarrar/puxar o mapa.
+
+# 21. Referência de mapa e georreferência
 
 No menu **Mapa** estão disponíveis:
 
