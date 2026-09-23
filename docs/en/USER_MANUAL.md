@@ -111,7 +111,7 @@ Typical actions:
 
 **Rotate without Inspector:** select the item, activate **Rotate** (**E**) and drag the selected item itself in the viewport. The rotation ring remains available for more precise visual control. Release the mouse to apply. When Snap is enabled, rotation uses the configured increments.
 
-**Move without Inspector:** select the item, activate **Move** (**W**) and manipulate it through the viewport gizmo.
+**Move without Inspector:** select the item, activate **Move** (**W**) and drag the object or spline itself in the viewport to move it across the map plane. Gizmo axes remain available for precise and vertical movement.
 
 ### Splines / roads
 
