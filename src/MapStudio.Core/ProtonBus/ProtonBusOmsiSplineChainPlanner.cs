@@ -146,14 +146,17 @@ public static class ProtonBusOmsiSplineChainPlanner
         foreach (
             var remaining
             in splines
-                .Where(
-                    spline =>
-                        !visited.Contains(
-                            spline.SplineId))
                 .OrderBy(
                     spline =>
                         spline.SplineId))
         {
+            if (
+                visited.Contains(
+                    remaining.SplineId))
+            {
+                continue;
+            }
+
             chains.Add(
                 WalkChain(
                     remaining,
