@@ -164,16 +164,6 @@ public static class ProtonBusOmsiFunctionalConverter
                     issues);
             }
 
-            if (asset.ResolvedTrafficLightControllers.Count > 0)
-            {
-                issues.Add(
-                    new(
-                        "trafficLightControllerConversionPending",
-                        BuildObjectSource(
-                            tile,
-                            placedObject),
-                        $"{asset.ResolvedTrafficLightControllers.Count} OMSI traffic-light controller(s) preserved for a later synchronized conversion pass."));
-            }
         }
 
         return new(
@@ -716,15 +706,6 @@ public static class ProtonBusOmsiFunctionalConverter
                     "blinkerMappingPending",
                     source,
                     $"OMSI blinker code {path.BlinkerCode} was preserved as a diagnostic and is not guessed."));
-        }
-
-        if (path.TrafficLightIndex.HasValue)
-        {
-            issues.Add(
-                new(
-                    "trafficLightPathLinkPending",
-                    source,
-                    $"OMSI path references traffic-light index {path.TrafficLightIndex.Value}."));
         }
 
         foreach (var direction in GetDirections(
