@@ -29,7 +29,16 @@ public sealed class ProtonBusMapPackageWriterTests
 
             File.WriteAllBytes(
                 sourceTexture,
-                [137, 80, 78, 71]);
+                [
+                    137,
+                    80,
+                    78,
+                    71,
+                    13,
+                    10,
+                    26,
+                    10
+                ]);
 
             var definition =
                 new ProtonBusMapDefinition(
@@ -229,7 +238,7 @@ public sealed class ProtonBusMapPackageWriterTests
                                         ])));
 
             Assert.Contains(
-                "already be PNG",
+                "valid PNG",
                 error.Message,
                 StringComparison.Ordinal);
         }
