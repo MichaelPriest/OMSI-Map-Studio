@@ -117,4 +117,80 @@ public sealed class OmsiGlobalTileCatalogEditorTests
             tile.RelativeMapPath);
     }
 
+    [Fact]
+    public void AppendTileBuildsContinuousPersistedThreeByThreeCatalog()
+    {
+        var document =
+            OmsiConfigParser.Parse(
+                "[map]\r\n0\r\n0\r\ntile_0_0.map\r\n");
+
+        foreach (
+            var tile in
+                (
+                    from y in
+                        Enumerable.Range(
+                            -1,
+                            3)
+                    from x in
+                        Enumerable.Range(
+                            -1,
+                            3)
+                    where
+                        x != 0 ||
+                        y != 0
+                    select new OmsiTileReference(
+                        x,
+                        y,
+                        $"tile_{x}_{y}.map")
+                ))
+        {
+            document =
+                OmsiConfigParser.Parse(
+                    Encoding.UTF8.GetString(
+                        OmsiGlobalTileCatalogEditor
+                            .AppendTile(
+                                document,
+                                tile)));
+        }
+
+        var tiles =
+            OmsiMapCatalog
+                .ReadTiles(
+                    document)
+                .ToDictionary(
+                    tile =>
+                        (
+                            tile.X,
+                            tile.Y
+                        ));
+
+        Assert.Equal(
+            9,
+            tiles.Count);
+
+        for (
+            var y = -1;
+            y <= 1;
+            y++)
+        {
+            for (
+                var x = -1;
+                x <= 1;
+                x++)
+            {
+                Assert.True(
+                    tiles.ContainsKey(
+                        (
+                            x,
+                            y
+                        )));
+
+                Assert.Equal(
+                    $"tile_{x}_{y}.map",
+                    tiles[(x, y)]
+                        .RelativeMapPath);
+            }
+        }
+    }
+
 }
