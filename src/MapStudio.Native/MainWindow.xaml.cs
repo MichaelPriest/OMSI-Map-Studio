@@ -25102,6 +25102,85 @@ setTimeout(postBounds, 250);
                 GridUnitType.Star);
     }
 
+    private void OnRealMapElevationProviderChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        if (
+            RealMapOpenMeteoKeyBox is null ||
+            SaveRealMapOpenMeteoKeyButton is null)
+        {
+            return;
+        }
+
+        var openMeteo =
+            RealMapElevationProviderBox
+                .SelectedIndex ==
+            1;
+
+        RealMapOpenMeteoKeyBox.Visibility =
+            openMeteo
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SaveRealMapOpenMeteoKeyButton.Visibility =
+            openMeteo
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (openMeteo)
+        {
+            var hasKey =
+                !string.IsNullOrWhiteSpace(
+                    NativeMapCredentialStore
+                        .TryGetOpenMeteoApiKey());
+
+            RealMapOpenMeteoKeyBox.PlaceholderText =
+                hasKey
+                    ? "Chave já salva · digite para substituir"
+                    : "API key Open-Meteo";
+
+            SaveRealMapOpenMeteoKeyButton.Content =
+                hasKey
+                    ? "Atualizar chave"
+                    : "Salvar chave";
+        }
+    }
+
+    private void OnSaveRealMapOpenMeteoKeyClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var key =
+            RealMapOpenMeteoKeyBox.Password
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                key))
+        {
+            StatusText.Text =
+                "Open-Meteo: informe a API key do usuário para salvar.";
+
+            return;
+        }
+
+        NativeMapCredentialStore
+            .SaveOpenMeteoApiKey(
+                key);
+
+        RealMapOpenMeteoKeyBox.Password =
+            string.Empty;
+
+        OnRealMapElevationProviderChanged(
+            RealMapElevationProviderBox,
+            new SelectionChangedEventArgs(
+                Array.Empty<object>(),
+                Array.Empty<object>()));
+
+        StatusText.Text =
+            "Open-Meteo: chave salva com segurança no Windows Credential Manager.";
+    }
+
     private void OnRealMapProviderChanged(
         object sender,
         SelectionChangedEventArgs e)
@@ -25452,16 +25531,17 @@ setTimeout(postBounds, 250);
     private async Task ApplyRealMapAreaElevationAsync(
         NativeMapSnapshot snapshot)
     {
-        var apiKey =
-            NativeMapCredentialStore
-                .TryGetGoogleMapsApiKey();
+        var providerIndex =
+            Math.Clamp(
+                RealMapElevationProviderBox
+                    .SelectedIndex,
+                0,
+                2);
 
-        if (
-            string.IsNullOrWhiteSpace(
-                apiKey))
+        if (providerIndex == 0)
         {
             StatusText.Text =
-                "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
+                "Mapa real criado sem elevação automática.";
 
             return;
         }
@@ -25476,17 +25556,46 @@ setTimeout(postBounds, 250);
             return;
         }
 
+        var apiKey =
+            providerIndex ==
+                1
+                ? NativeMapCredentialStore
+                    .TryGetOpenMeteoApiKey()
+                : NativeMapCredentialStore
+                    .TryGetGoogleMapsApiKey();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey))
+        {
+            StatusText.Text =
+                providerIndex ==
+                    1
+                    ? "Mapa real criado. Elevação Open-Meteo/Copernicus não aplicada porque não há API key do usuário salva."
+                    : "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
+
+            return;
+        }
+
         foreach (
             var tile in
                 snapshot.Map.Tiles)
         {
             var grid =
-                await _session
-                    .LoadGoogleElevationGridAsync(
-                        apiKey,
-                        tile.X,
-                        tile.Y,
-                        9);
+                providerIndex ==
+                    1
+                    ? await _session
+                        .LoadOpenMeteoElevationGridAsync(
+                            apiKey,
+                            tile.X,
+                            tile.Y,
+                            9)
+                    : await _session
+                        .LoadGoogleElevationGridAsync(
+                            apiKey,
+                            tile.X,
+                            tile.Y,
+                            9);
 
             await _session
                 .ApplyTerrainElevationGridAsync(
@@ -25503,6 +25612,12 @@ setTimeout(postBounds, 250);
                 focusActiveTile:
                     false);
         }
+
+        StatusText.Text =
+            providerIndex ==
+                1
+                ? "Elevação Open-Meteo/Copernicus GLO-90 aplicada ao mapa real."
+                : "Elevação Google aplicada ao mapa real.";
     }
 
     private async Task ApplyRealMapCenterReferenceAsync()
