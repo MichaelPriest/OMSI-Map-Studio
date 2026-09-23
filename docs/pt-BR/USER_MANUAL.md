@@ -540,18 +540,20 @@ Use **Mapa > Criar mapa real por área...** para criar um mapa sem precisar digi
    - **Criar apenas terreno / referência**;
    - **Importar vias como guias** — mostra o grafo no viewport sem gravar splines;
    - **Gerar ruas automaticamente após preview** — classifica as vias, prepara splines/junctions e exige confirmação depois da prévia antes de gravar.
-8. Opcionalmente ative **Google Elevation** e/ou **Referência visual no terreno**.
+8. Opcionalmente ative **Aplicar elevação automaticamente**, escolha **Open-Meteo / Copernicus GLO-90** ou **Google Elevation**, e/ou ative **Referência visual no terreno**.
 9. Clique **Criar área**.
 
 A janela pode ser movida, redimensionada e minimizada dentro do editor.
 
 **OpenStreetMap:** não exige chave e é usado para navegação interativa, busca de locais e dados vetoriais. O Map Studio não faz download em massa/offline dos tiles do servidor público. Consultas de busca são limitadas e identificam o aplicativo.
 
-**Google Maps:** usa a API key salva pelo próprio usuário no Windows Credential Manager. Para o seletor interativo, a chave precisa ter Maps JavaScript API habilitada. Google Elevation pode gerar cobrança e por isso fica desativado por padrão.
+**Open-Meteo / Copernicus GLO-90:** pode ser escolhido como provedor de elevação. A chave é do próprio usuário e fica no Windows Credential Manager. O Map Studio usa o endpoint comercial do usuário e não incorpora chave do projeto. Mantenha a atribuição a Open-Meteo e ao programa Copernicus conforme os termos do provedor.
+
+**Google Maps / Google Elevation:** usa a API key salva pelo próprio usuário no Windows Credential Manager. Para o seletor interativo, a chave precisa ter Maps JavaScript API habilitada. Google Elevation pode gerar cobrança e só é aplicado quando escolhido explicitamente.
 
 As vias OSM são projetadas para a georreferência do mapa e classificadas por tipo/largura/faixas quando os dados estiverem disponíveis. Mesmo no modo automático, o Map Studio mostra **Preview antes de gravar** e só persiste as splines/junctions após confirmação.
 
-Para elevação sem Google, use **Mapa → Importar grade local de elevação**. CSV/TXT/ASC são aplicados ao tile ativo pelo mesmo pipeline seguro de terreno, com backup; essa importação local é por tile e não é tratada como DEM global da área inteira.
+Para elevação totalmente local, use **Mapa → Importar grade local de elevação**. CSV/TXT/ASC são aplicados ao tile ativo pelo mesmo pipeline seguro de terreno, com backup; essa importação local é por tile e não é tratada como DEM global da área inteira.
 
 ## Tile X/Y
 
