@@ -5170,6 +5170,228 @@ public sealed class NativeViewportRuntime : IDisposable
                 .IsNone;
     }
 
+    public int SelectInRectangle(
+        uint startPixelX,
+        uint startPixelY,
+        uint endPixelX,
+        uint endPixelY,
+        bool additiveSelection)
+    {
+        ThrowIfDisposed();
+
+        if (
+            _assetPreviewActive ||
+            _sceneryPlacementActive ||
+            _splinePlacementActive ||
+            Surface is null ||
+            Surface.Width == 0 ||
+            Surface.Height == 0)
+        {
+            return
+                SelectedItemCount;
+        }
+
+        var minX =
+            Math.Min(
+                startPixelX,
+                endPixelX);
+
+        var maxX =
+            Math.Min(
+                Math.Max(
+                    startPixelX,
+                    endPixelX),
+                Surface.Width - 1);
+
+        var minY =
+            Math.Min(
+                startPixelY,
+                endPixelY);
+
+        var maxY =
+            Math.Min(
+                Math.Max(
+                    startPixelY,
+                    endPixelY),
+                Surface.Height - 1);
+
+        minX =
+            Math.Min(
+                minX,
+                Surface.Width - 1);
+
+        minY =
+            Math.Min(
+                minY,
+                Surface.Height - 1);
+
+        var width =
+            (long)maxX -
+            minX +
+            1;
+
+        var height =
+            (long)maxY -
+            minY +
+            1;
+
+        var sampleStep =
+            Math.Clamp(
+                (int)Math.Ceiling(
+                    Math.Sqrt(
+                        Math.Max(
+                            1.0,
+                            width *
+                            height /
+                            18000.0))),
+                1,
+                12);
+
+        var hits =
+            new HashSet<PickingId>();
+
+        void Sample(
+            uint x,
+            uint y)
+        {
+            var id =
+                MapRenderer.Pick(
+                    x,
+                    y);
+
+            if (
+                id.Kind is
+                    PickingKind.Object or
+                    PickingKind.Spline &&
+                IsSelectionKindEnabled(
+                    id.Kind) &&
+                ResolvePickingItem(
+                    id) is not
+                    null)
+            {
+                hits.Add(
+                    id);
+            }
+        }
+
+        for (
+            var y =
+                (long)minY;
+            y <=
+                maxY;
+            y +=
+                sampleStep)
+        {
+            for (
+                var x =
+                    (long)minX;
+                x <=
+                    maxX;
+                x +=
+                    sampleStep)
+            {
+                Sample(
+                    (uint)x,
+                    (uint)y);
+            }
+
+            Sample(
+                maxX,
+                (uint)y);
+        }
+
+        for (
+            var x =
+                (long)minX;
+            x <=
+                maxX;
+            x +=
+                sampleStep)
+        {
+            Sample(
+                (uint)x,
+                maxY);
+        }
+
+        Sample(
+            maxX,
+            maxY);
+
+        if (!additiveSelection)
+        {
+            _selectedPickingIds
+                .Clear();
+        }
+
+        foreach (
+            var id in
+                hits
+                    .OrderBy(
+                        id =>
+                            id.Kind)
+                    .ThenBy(
+                        id =>
+                            id.Value))
+        {
+            _selectedPickingIds
+                .Add(
+                    id);
+        }
+
+        if (
+            _selectedPickingIds.Count ==
+                0)
+        {
+            _selectedPickingId =
+                PickingId.None;
+        }
+        else if (
+            _selectedPickingId.IsNone ||
+            !_selectedPickingIds
+                .Contains(
+                    _selectedPickingId))
+        {
+            _selectedPickingId =
+                hits.Count >
+                    0
+                    ? hits
+                        .OrderBy(
+                            id =>
+                                id.Kind)
+                        .ThenBy(
+                            id =>
+                                id.Value)
+                        .First()
+                    : _selectedPickingIds
+                        .First();
+        }
+
+        _lastPickCandidates =
+            Array.Empty<PickingId>();
+
+        _lastPickCandidateIndex =
+            0;
+
+        MapRenderer.SetSelection(
+            _selectedPickingId);
+
+        MapRenderer.SetAdditionalSelections(
+            _selectedPickingIds
+                .Where(
+                    id =>
+                        id !=
+                        _selectedPickingId));
+
+        MapRenderer.SetSelectionPreviewTransform(
+            Matrix4x4.Identity);
+
+        UpdateGizmoGeometry();
+        RenderInitialFrame();
+
+        return
+            SelectedItemCount;
+    }
+
     public bool TryBeginGizmoDrag(
         uint pixelX,
         uint pixelY,
