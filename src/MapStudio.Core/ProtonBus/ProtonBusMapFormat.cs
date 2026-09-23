@@ -247,8 +247,7 @@ public static class ProtonBusMapDefinitionValidator
                 "/",
                 StringComparison.Ordinal) ||
             normalized.Contains(
-                ':',
-                StringComparison.Ordinal) ||
+                ':') ||
             normalized
                 .Split(
                     '/',
