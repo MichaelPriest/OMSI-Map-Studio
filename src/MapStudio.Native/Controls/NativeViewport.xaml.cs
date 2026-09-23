@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Input;
+using Windows.System;
 
 namespace MapStudio.Native.Controls;
 
@@ -119,6 +120,12 @@ public sealed partial class NativeViewport : UserControl
     public event Action<
         NativeTrafficPathNode>?
         TrafficPathNodeFocused;
+
+    public IReadOnlyList<NativeSelectionInfo>
+        GetSelectedSelectionInfos() =>
+        _runtime
+            ?.GetSelectedSelectionInfos() ??
+        Array.Empty<NativeSelectionInfo>();
 
     public bool TryBuildSplineXExport(
         IReadOnlyCollection<int> splineIds,
@@ -2161,7 +2168,13 @@ public sealed partial class NativeViewport : UserControl
                 pixelX,
                 pixelY,
                 out var pickingId,
-                out var selected))
+                out var selected,
+                additiveSelection:
+                    (
+                        e.KeyModifiers &
+                        VirtualKeyModifiers.Control
+                    ) !=
+                    0))
         {
             var selectionMessage =
                 selected switch
@@ -2181,6 +2194,15 @@ public sealed partial class NativeViewport : UserControl
             {
                 selectionMessage +=
                     $" · {_runtime.LastPickCandidatePosition}/{_runtime.LastPickCandidateCount} sobrepostos · clique novamente para alternar";
+            }
+
+            if (
+                _runtime
+                    .SelectedItemCount >
+                1)
+            {
+                selectionMessage +=
+                    $" · {_runtime.SelectedItemCount} itens selecionados · Ctrl+clique adiciona/remove";
             }
 
             SelectionStatusChanged?.Invoke(
