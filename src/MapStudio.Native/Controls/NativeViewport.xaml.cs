@@ -1006,6 +1006,25 @@ public sealed partial class NativeViewport : UserControl
         return focused;
     }
 
+    public bool TryCreateParallelSplineRequest(
+        double lateralOffset,
+        out NativeSplinePlacementRequest? request,
+        out string status)
+    {
+        request =
+            null;
+
+        status =
+            "Paralela indisponível.";
+
+        return _runtime
+            ?.TryCreateParallelSelectionRequest(
+                lateralOffset,
+                out request,
+                out status) ??
+            false;
+    }
+
     public bool FocusSelection()
     {
         var focused =

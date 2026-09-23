@@ -2815,6 +2815,221 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
+    public bool TryCreateParallelSelectionRequest(
+        double lateralOffset,
+        out NativeSplinePlacementRequest? request,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        request =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline ||
+            !double.IsFinite(
+                lateralOffset) ||
+            Math.Abs(
+                lateralOffset) <
+                0.05)
+        {
+            status =
+                "Paralela: selecione uma spline e informe um afastamento válido.";
+            return false;
+        }
+
+        var entity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.PickingId ==
+                        _selectedPickingId);
+
+        if (entity is null)
+        {
+            status =
+                "Paralela: a spline selecionada não está mais carregada.";
+            return false;
+        }
+
+        var source =
+            entity.Spline;
+
+        if (
+            source.Length <=
+                0.01)
+        {
+            status =
+                "Paralela: comprimento da spline inválido.";
+            return false;
+        }
+
+        var startFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0);
+
+        var endFrame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    source.Length);
+
+        var offset =
+            (float)lateralOffset;
+
+        var start =
+            startFrame.Center +
+            startFrame.Lateral *
+                offset;
+
+        var end =
+            endFrame.Center +
+            endFrame.Lateral *
+                offset;
+
+        NativeSplinePlacementShape?
+            shape;
+
+        if (
+            Math.Abs(
+                source.Radius) <
+            0.001)
+        {
+            if (
+                !NativeSplinePlacementMath
+                    .TryCreateStraight(
+                        start,
+                        end,
+                        out shape) ||
+                shape is null)
+            {
+                status =
+                    "Paralela: não foi possível gerar a reta paralela.";
+                return false;
+            }
+        }
+        else
+        {
+            var sweep =
+                source.Length /
+                source.Radius;
+
+            var parallelRadius =
+                source.Radius -
+                lateralOffset;
+
+            if (
+                !double.IsFinite(
+                    parallelRadius) ||
+                Math.Abs(
+                    parallelRadius) <
+                    0.25 ||
+                Math.Sign(
+                    parallelRadius) !=
+                    Math.Sign(
+                        source.Radius))
+            {
+                status =
+                    "Paralela: o afastamento cruza o centro da curva; reduza a distância.";
+                return false;
+            }
+
+            var parallelLength =
+                parallelRadius *
+                sweep;
+
+            if (
+                !double.IsFinite(
+                    parallelLength) ||
+                parallelLength <=
+                    0.05)
+            {
+                status =
+                    "Paralela: comprimento calculado inválido.";
+                return false;
+            }
+
+            var gradientScale =
+                source.Length /
+                parallelLength;
+
+            shape =
+                new NativeSplinePlacementShape(
+                    start,
+                    end,
+                    source.Rotation,
+                    parallelLength,
+                    parallelRadius,
+                    source.GradientStart *
+                        gradientScale,
+                    source.GradientEnd *
+                        gradientScale,
+                    true);
+        }
+
+        var tileX =
+            (int)Math.Floor(
+                shape.Start.X /
+                300.0f);
+
+        var tileY =
+            (int)Math.Floor(
+                shape.Start.Z /
+                300.0f);
+
+        var tile =
+            Scene.Tiles
+                .FirstOrDefault(
+                    item =>
+                        item.Reference.X ==
+                            tileX &&
+                        item.Reference.Y ==
+                            tileY);
+
+        if (tile is null)
+        {
+            status =
+                "Paralela: o início calculado ficou fora dos tiles carregados.";
+            return false;
+        }
+
+        request =
+            new NativeSplinePlacementRequest(
+                tile.Reference,
+                source.SplinePath,
+                -1,
+                shape.Start.X -
+                    tileX *
+                    300.0,
+                shape.Start.Z -
+                    tileY *
+                    300.0,
+                shape.Start.Y,
+                shape.Rotation,
+                shape.Length,
+                shape.Radius,
+                shape.GradientStart,
+                shape.GradientEnd,
+                shape.IsCurved,
+                shape.Start,
+                shape.End,
+                -1,
+                source.IsHeightSpline);
+
+        status =
+            $"Paralela pronta · afastamento {lateralOffset:+0.0;-0.0} m · " +
+            $"comprimento {shape.Length:F1} m.";
+
+        return true;
+    }
+
     public NativeSelectionInfo?
         GetSelectionInfo()
     {

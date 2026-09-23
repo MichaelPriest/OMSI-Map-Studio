@@ -7942,6 +7942,141 @@ public sealed partial class MainWindow : Window
             status;
     }
 
+    private async Task CreateParallelRoadAsync(
+        double direction)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para criar a paralela.";
+            return;
+        }
+
+        var distance =
+            double.IsFinite(
+                RoadParallelOffsetBox.Value)
+                ? Math.Clamp(
+                    RoadParallelOffsetBox.Value,
+                    0.5,
+                    30.0)
+                : 3.5;
+
+        if (
+            !Viewport
+                .TryCreateParallelSplineRequest(
+                    distance *
+                        direction,
+                    out var request,
+                    out var status) ||
+            request is null)
+        {
+            StatusText.Text =
+                status;
+            return;
+        }
+
+        StatusText.Text =
+            status;
+
+        await HandleSplinePlacementAsync(
+            request);
+    }
+
+    private async void OnRoadParallelLeftClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CreateParallelRoadAsync(
+            -1.0);
+    }
+
+    private async void OnRoadParallelRightClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CreateParallelRoadAsync(
+            1.0);
+    }
+
+    private async void OnRoadMirrorClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para espelhar.";
+            return;
+        }
+
+        try
+        {
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            var source =
+                _session.CurrentMap
+                    ?.Tiles
+                    .SelectMany(
+                        tile =>
+                            tile.Content.Splines)
+                    .FirstOrDefault(
+                        spline =>
+                            spline.SplineId ==
+                            _selectionInfo.EntityId &&
+                            string.Equals(
+                                spline.SplinePath,
+                                _selectionInfo.AssetPath,
+                                StringComparison
+                                    .OrdinalIgnoreCase));
+
+            if (source is null)
+            {
+                StatusText.Text =
+                    "Ruas: a spline selecionada não foi encontrada no snapshot.";
+                return;
+            }
+
+            var update =
+                await _session
+                    .UpdateSplineAdvancedAsync(
+                        _selectionInfo,
+                        source.CantStart,
+                        source.CantEnd,
+                        !source.IsMirrored);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    update.Snapshot,
+                    _session.OmsiRootPath!);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            StatusText.Text =
+                update.Spline.IsMirrored
+                    ? "Ruas: spline espelhada."
+                    : "Ruas: espelhamento removido.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Ruas: falha ao espelhar: {exception.Message}";
+        }
+    }
+
     private async void OnRoadDuplicateClick(
         object sender,
         RoutedEventArgs e)
