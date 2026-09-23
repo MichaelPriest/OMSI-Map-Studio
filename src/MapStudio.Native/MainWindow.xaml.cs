@@ -8671,6 +8671,17 @@ public sealed partial class MainWindow : Window
         SplineElevationOffsetBox.Value =
             5;
 
+        _roadElevationMode =
+            NativeRoadElevationMode
+                .FollowTerrain;
+
+        Viewport
+            .SetSplinePlacementElevationMode(
+                _roadElevationMode);
+
+        Viewport
+            .SetSplinePlacementElevationOffset(
+                5.0);
 
         SplineHeightCheckBox.IsChecked =
             false;
