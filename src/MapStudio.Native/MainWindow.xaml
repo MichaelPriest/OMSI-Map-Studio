@@ -3245,6 +3245,10 @@
                                        FontSize="9.5"
                                        TextWrapping="Wrap"
                                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            <TextBlock Text="Elevação Open-Meteo: Copernicus DEM 2021 GLO-90 · dados com atribuição Open-Meteo / Copernicus."
+                                       FontSize="9"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="1"
