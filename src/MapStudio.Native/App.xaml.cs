@@ -4,6 +4,9 @@ namespace MapStudio.Native;
 
 public partial class App : Application
 {
+    private const string StartupSmokeTestArgument =
+        "--startup-smoke-test";
+
     public static Window? MainWindowInstance { get; private set; }
 
     public App()
@@ -51,6 +54,15 @@ public partial class App : Application
 
             NativeStartupDiagnostics.Write(
                 "MainWindow activated.");
+
+            if (IsStartupSmokeTestRequested())
+            {
+                NativeStartupDiagnostics.Write(
+                    "STARTUP_SMOKE_TEST_PASSED");
+
+                MainWindowInstance.Close();
+                Exit();
+            }
         }
         catch (Exception exception)
         {
@@ -61,6 +73,17 @@ public partial class App : Application
             throw;
         }
     }
+
+    private static bool IsStartupSmokeTestRequested() =>
+        Environment
+            .GetCommandLineArgs()
+            .Skip(1)
+            .Any(
+                argument =>
+                    string.Equals(
+                        argument,
+                        StartupSmokeTestArgument,
+                        StringComparison.OrdinalIgnoreCase));
 
     private static void OnUnhandledException(
         object sender,
