@@ -5172,7 +5172,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 pixelX,
                 pixelY,
                 radius:
-                    0,
+                    4,
                 out var pickingId,
                 out _);
 
