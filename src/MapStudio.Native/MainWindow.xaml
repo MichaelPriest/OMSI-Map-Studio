@@ -3153,17 +3153,24 @@
                                        FontSize="11"
                                        FontWeight="SemiBold"
                                        Foreground="{ThemeResource MapStudioAccentTextBrush}" />
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="12">
-                                <CheckBox x:Name="RealMapGenerateRoadsCheckBox"
-                                          Content="Gerar ruas OSM automaticamente"
-                                          IsChecked="True" />
-                                <CheckBox x:Name="RealMapApplyElevationCheckBox"
-                                          Content="Aplicar elevação Google (pode gerar cobrança)"
-                                          IsChecked="False" />
-                                <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
-                                          Content="Referência visual no terreno"
-                                          IsChecked="True" />
+                            <StackPanel Spacing="5">
+                                <ComboBox x:Name="RealMapRoadImportModeBox"
+                                          Header="Vias OpenStreetMap"
+                                          SelectedIndex="2"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBoxItem Content="Criar apenas terreno / referência" />
+                                    <ComboBoxItem Content="Importar vias como guias" />
+                                    <ComboBoxItem Content="Gerar ruas automaticamente após preview" />
+                                </ComboBox>
+                                <StackPanel Orientation="Horizontal"
+                                            Spacing="12">
+                                    <CheckBox x:Name="RealMapApplyElevationCheckBox"
+                                              Content="Aplicar elevação Google (pode gerar cobrança)"
+                                              IsChecked="False" />
+                                    <CheckBox x:Name="RealMapShowGroundReferenceCheckBox"
+                                              Content="Referência visual no terreno"
+                                              IsChecked="True" />
+                                </StackPanel>
                             </StackPanel>
                             <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos."
                                        FontSize="9.5"
