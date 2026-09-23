@@ -106,6 +106,8 @@ public sealed class NativeViewportRuntime : IDisposable
         true;
 
     private double _splineElevationOffset;
+    private NativeRoadElevationMode _splineElevationMode =
+        NativeRoadElevationMode.FollowTerrain;
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
     private bool _selectedSplineCurveEditActive;
@@ -229,7 +231,6 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         if (
             !_splinePlacementActive ||
-            !_splineEasyRoadEnabled ||
             _splineStartWorld is not { } start)
         {
             return null;
@@ -240,19 +241,60 @@ public sealed class NativeViewportRuntime : IDisposable
                 NativeSplinePlacementStage
                     .AwaitingEasyRoadConfirm or
                 NativeSplinePlacementStage
-                    .AwaitingEasyRoadCurveControl
+                    .AwaitingEasyRoadCurveControl or
+                NativeSplinePlacementStage
+                    .AwaitingCurve
                 ? _splineEndWorld
                 : _splinePointerWorld;
 
-        return end is { } value
-            ? new NativeSplinePlacementControlState(
-                start,
-                value,
-                _splineEasyRoadCurveOffset,
-                _splinePlacementStage ==
-                    NativeSplinePlacementStage
-                        .AwaitingEasyRoadConfirm)
-            : null;
+        if (end is not { } value)
+        {
+            return null;
+        }
+
+        var shape =
+            _splinePlacementShape;
+
+        var length =
+            shape?.Length ??
+            Math.Sqrt(
+                Math.Pow(
+                    value.X -
+                    start.X,
+                    2) +
+                Math.Pow(
+                    value.Z -
+                    start.Z,
+                    2));
+
+        var gradient =
+            shape?.GradientStart ??
+            (
+                length >
+                    0.0001
+                    ? (
+                        value.Y -
+                        start.Y
+                    ) /
+                    length *
+                    100.0
+                    : 0.0
+            );
+
+        return new NativeSplinePlacementControlState(
+            start,
+            value,
+            _splineEasyRoadCurveOffset,
+            _splinePlacementStage ==
+                NativeSplinePlacementStage
+                    .AwaitingEasyRoadConfirm,
+            length,
+            start.Y,
+            value.Y,
+            gradient,
+            shape?.Radius ??
+                0.0,
+            _splineElevationMode);
     }
 
     public NativeSceneVisibility SceneVisibility =>
@@ -1093,6 +1135,15 @@ public sealed class NativeViewportRuntime : IDisposable
                 300.0);
     }
 
+    public void SetSplinePlacementElevationMode(
+        NativeRoadElevationMode mode)
+    {
+        ThrowIfDisposed();
+
+        _splineElevationMode =
+            mode;
+    }
+
     public void SetSplinePlacementHeightMode(
         bool isHeightSpline)
     {
@@ -1360,9 +1411,32 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
-        point.Y +=
-            (float)
-                _splineElevationOffset;
+        var terrainHeight =
+            point.Y;
+
+        if (
+            _splineStartWorld is { } elevationStart &&
+            _splinePlacementStage !=
+                NativeSplinePlacementStage
+                    .AwaitingStart)
+        {
+            point.Y =
+                NativeSplinePlacementMath
+                    .ResolveRoadEndpointHeight(
+                        terrainHeight,
+                        elevationStart.Y,
+                        _splineElevationMode,
+                        _splineElevationOffset);
+        }
+        else if (
+            _splineElevationMode ==
+                NativeRoadElevationMode
+                    .FollowTerrain)
+        {
+            point.Y +=
+                (float)
+                    _splineElevationOffset;
+        }
 
         _splinePointerWorld = point;
 
@@ -1890,17 +1964,24 @@ public sealed class NativeViewportRuntime : IDisposable
         var start =
             new Vector3(
                 (float)startX,
-                (float)(
-                    startHeight +
-                    _splineElevationOffset),
+                _splineElevationMode ==
+                    NativeRoadElevationMode
+                        .FollowTerrain
+                    ? (float)(
+                        startHeight +
+                        _splineElevationOffset)
+                    : (float)startHeight,
                 (float)startZ);
 
         var end =
             new Vector3(
                 (float)endX,
-                (float)(
-                    endHeight +
-                    _splineElevationOffset),
+                NativeSplinePlacementMath
+                    .ResolveRoadEndpointHeight(
+                        (float)endHeight,
+                        start.Y,
+                        _splineElevationMode,
+                        _splineElevationOffset),
                 (float)endZ);
 
         if (
