@@ -1739,7 +1739,37 @@ public sealed partial class NativeViewport : UserControl
         {
             HideSelectionRadialMenu();
 
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
             _isPanning =
+                _runtime
+                    ?.BeginPointerPan(
+                        pixelX,
+                        pixelY) ??
                 true;
 
             _lastPanX =
@@ -1757,7 +1787,7 @@ public sealed partial class NativeViewport : UserControl
 
             PointerStatusChanged?.Invoke(
                 this,
-                "Pan 3D nativo ativo");
+                "Pan: agarre o mapa e puxe na direção desejada.");
 
             e.Handled = true;
             return;
@@ -2415,6 +2445,20 @@ public sealed partial class NativeViewport : UserControl
                     SwapChainSurface
                         .CompositionScaleY);
 
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
             var deltaX =
                 (
                     point.Position.X -
@@ -2443,16 +2487,16 @@ public sealed partial class NativeViewport : UserControl
             }
             else
             {
-                _runtime.Pan(
-                    deltaX,
-                    deltaY);
+                _runtime.UpdatePointerPan(
+                    pixelX,
+                    pixelY);
             }
 
             PointerStatusChanged?.Invoke(
                 this,
                 _isOrbiting
                     ? $"Órbita · zoom {_runtime.Navigation.Zoom:F2}×"
-                    : $"Pan · zoom {_runtime.Navigation.Zoom:F2}×");
+                    : $"Pan · mapa acompanhando o cursor · zoom {_runtime.Navigation.Zoom:F2}×");
 
             e.Handled = true;
             return;
@@ -2814,6 +2858,12 @@ public sealed partial class NativeViewport : UserControl
         {
             InputSurface.ReleasePointerCapture(
                 e.Pointer);
+        }
+
+        if (_isPanning)
+        {
+            _runtime
+                ?.EndPointerPan();
         }
 
         _leftPressed = false;
