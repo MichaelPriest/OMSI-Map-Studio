@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.17: derived OMSI asset cache + persistent loaders; carries Test 10.16 UX.
+# Test 10.18: bounded GPU texture warm cache; carries Test 10.17 asset caching.
 
 on:
   push:
@@ -16,6 +16,9 @@ on:
       - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
       - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
+      - "src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs"
+      - "src/MapStudio.Renderer/Graphics/NativeTextureRetentionPlanner.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTextureRetentionPlannerTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointSnapFinder.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
@@ -37,8 +40,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.17-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.17-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.18-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.18-native.md"
   workflow_dispatch:
 
 permissions:
@@ -49,8 +52,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.17-native
-  TAG: v0.2.0-alpha.5-test.10.17-native
+  VERSION: 0.2.0-alpha.5-test.10.18-native
+  TAG: v0.2.0-alpha.5-test.10.18-native
 
 jobs:
   build-native-preview:
@@ -849,11 +852,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.17-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.18-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.17-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.18-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

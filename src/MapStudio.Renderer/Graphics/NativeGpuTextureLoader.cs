@@ -12,10 +12,15 @@ internal sealed class NativeGpuTexture :
 {
     public NativeGpuTexture(
         ID3D11Texture2D texture,
-        ID3D11ShaderResourceView view)
+        ID3D11ShaderResourceView view,
+        long estimatedBytes = 0)
     {
         Texture = texture;
         View = view;
+        EstimatedBytes =
+            Math.Max(
+                0,
+                estimatedBytes);
     }
 
     public ID3D11Texture2D Texture
@@ -24,6 +29,11 @@ internal sealed class NativeGpuTexture :
     }
 
     public ID3D11ShaderResourceView View
+    {
+        get;
+    }
+
+    public long EstimatedBytes
     {
         get;
     }
@@ -631,7 +641,11 @@ internal sealed class NativeGpuTextureLoader
 
         return new NativeGpuTexture(
             texture,
-            view);
+            view,
+            checked(
+                (long)width *
+                height *
+                4L));
     }
 
 

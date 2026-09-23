@@ -82,6 +82,26 @@ public sealed class D3D11NativeMapRenderer :
                 StringComparer
                     .OrdinalIgnoreCase);
 
+    private readonly Dictionary<
+        string,
+        long>
+        _textureLastAccess =
+            new(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+    private long _textureAccessCounter;
+
+    private const int
+        MaxRetainedStaleTextureCount =
+            64;
+
+    private const long
+        MaxRetainedStaleTextureBytes =
+            128L *
+            1024L *
+            1024L;
+
     private Matrix4x4 _viewProjection =
         Matrix4x4.Identity;
 
@@ -2732,6 +2752,19 @@ public sealed class D3D11NativeMapRenderer :
             .IntersectWith(
                 requested);
 
+        foreach (
+            var path in requested)
+        {
+            if (
+                _textureCache
+                    .ContainsKey(path))
+            {
+                _textureLastAccess[
+                    path] =
+                    ++_textureAccessCounter;
+            }
+        }
+
         var stale =
             _textureCache.Keys
                 .Where(
@@ -2740,13 +2773,43 @@ public sealed class D3D11NativeMapRenderer :
                             .Contains(path))
                 .ToArray();
 
+        var retainedStale =
+            NativeTextureRetentionPlanner
+                .SelectRetained(
+                    stale.Select(
+                        path =>
+                            new NativeTextureRetentionCandidate(
+                                path,
+                                _textureLastAccess
+                                    .TryGetValue(
+                                        path,
+                                        out var lastAccess)
+                                    ? lastAccess
+                                    : 0,
+                                _textureCache[
+                                    path]
+                                    .EstimatedBytes)),
+                    MaxRetainedStaleTextureCount,
+                    MaxRetainedStaleTextureBytes);
+
         foreach (var path in stale)
         {
+            if (
+                retainedStale
+                    .Contains(path))
+            {
+                continue;
+            }
+
             _textureCache[path]
                 .Dispose();
 
             _textureCache.Remove(
                 path);
+
+            _textureLastAccess
+                .Remove(
+                    path);
         }
 
         _failedTexturePaths
@@ -2787,6 +2850,10 @@ public sealed class D3D11NativeMapRenderer :
 
             _textureCache[path] =
                 texture;
+
+            _textureLastAccess[
+                path] =
+                ++_textureAccessCounter;
         }
     }
 
@@ -3751,6 +3818,7 @@ public sealed class D3D11NativeMapRenderer :
         }
 
         _textureCache.Clear();
+        _textureLastAccess.Clear();
         _failedTexturePaths.Clear();
 
         _skyTexture?.Dispose();
