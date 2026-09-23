@@ -26,7 +26,13 @@ public enum NativeSelectionContextAction
     Inspector,
     EditCurve,
     Split,
-    Parallel
+    Parallel,
+    Elevate,
+    Level,
+    Lower,
+    Replace,
+    Mirror,
+    Flow
 }
 
 public sealed partial class NativeViewport : UserControl
