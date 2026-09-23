@@ -68,6 +68,32 @@ public sealed class NativeGizmoManipulationMathTests
     }
 
     [Fact]
+    public void MoveXZUsesCameraPlaneWithoutChangingHeight()
+    {
+        var delta =
+            NativeGizmoManipulationMath
+                .GetMoveDelta(
+                    NativeGizmoHandle.MoveXZ,
+                    new Vector3(
+                        -100,
+                        100,
+                        -100),
+                    Vector3.Zero,
+                    150,
+                    900,
+                    20,
+                    10);
+
+        Assert.NotEqual(
+            Vector3.Zero,
+            delta);
+
+        Assert.Equal(
+            0,
+            delta.Y);
+    }
+
+    [Fact]
     public void SnapTranslationRoundsEachWorldAxis()
     {
         var snapped =
