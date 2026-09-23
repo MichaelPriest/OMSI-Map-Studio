@@ -698,14 +698,14 @@
               Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="ExplorerColumn"
-                                  Width="340" />
+                                  Width="300" />
                 <ColumnDefinition x:Name="ExplorerSplitterColumn"
                                   Width="6" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition x:Name="InspectorSplitterColumn"
                                   Width="6" />
                 <ColumnDefinition x:Name="InspectorColumn"
-                                  Width="330" />
+                                  Width="290" />
             </Grid.ColumnDefinitions>
 
             <Border x:Name="ExplorerPanel"
@@ -718,7 +718,7 @@
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenExplorerTranslate" />
                 </Border.RenderTransform>
-                <Grid Padding="12" RowSpacing="9">
+                <Grid Padding="9" RowSpacing="7">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />

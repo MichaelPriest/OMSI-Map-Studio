@@ -452,10 +452,10 @@ public sealed partial class MainWindow : Window
     private int _loadingOperationDepth;
 
     private double _explorerPanelWidth =
-        310;
+        300;
 
     private double _inspectorPanelWidth =
-        330;
+        290;
 
     private bool _draggingTileNavigatorWindow;
     private uint _tileNavigatorDragPointerId;
@@ -20254,7 +20254,7 @@ public sealed partial class MainWindow : Window
         ExplorerPanel.Width =
             Math.Clamp(
                 _explorerPanelWidth,
-                300,
+                260,
                 620);
 
         ExplorerPanel.MinHeight =
@@ -20300,7 +20300,7 @@ public sealed partial class MainWindow : Window
         InspectorPanel.Width =
             Math.Clamp(
                 _inspectorPanelWidth,
-                310,
+                270,
                 440);
 
         InspectorPanel.MaxHeight =
