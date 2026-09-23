@@ -462,7 +462,14 @@
                         Text="Assinatura e licença..."
                         Click="OnCommercialStatusClick" />
                 </MenuBarItem>
-                <MenuBarItem Title="Ajuda" />
+                <MenuBarItem Title="Ajuda">
+                    <MenuFlyoutItem
+                        Text="Manual do Usuário (Português)"
+                        Click="OnOpenUserManualPtBrClick" />
+                    <MenuFlyoutItem
+                        Text="User Manual (English)"
+                        Click="OnOpenUserManualEnClick" />
+                </MenuBarItem>
             </MenuBar>
 
             <ScrollViewer
