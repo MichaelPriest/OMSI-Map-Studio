@@ -12,7 +12,11 @@ public sealed record ProtonBusOmsiTilePackageExportResult(
         Tile,
     IReadOnlyList<
         ProtonBusOmsiAssetIssue>
-        Issues);
+        Issues)
+{
+    public ProtonBusOmsiFunctionalConversionResult?
+        Functional { get; init; }
+}
 
 public sealed class ProtonBusOmsiTilePackageExporter
 {
@@ -139,33 +143,77 @@ public sealed class ProtonBusOmsiTilePackageExporter
         cancellationToken
             .ThrowIfCancellationRequested();
 
+        var functional =
+            ProtonBusOmsiFunctionalConverter
+                .Convert(
+                    tile,
+                    content,
+                    assets
+                        .SplineDefinitions,
+                    assets
+                        .SceneryAssets,
+                    options?
+                        .FunctionalOptions);
+
+        var combinedScene =
+            new ProtonBusExportScene(
+                tileResult
+                    .Scene
+                    .Meshes
+                    .Concat(
+                        functional
+                            .MarkerScene
+                            .Meshes)
+                    .ToArray());
+
+        var packageRequest =
+            new ProtonBusMapPackageRequest(
+                definition,
+                [
+                    new(
+                        $"tile_{tile.X}_{tile.Y}.3ds",
+                        combinedScene)
+                ],
+                assets.Textures
+                    .Select(
+                        texture =>
+                            new ProtonBusTextureExport(
+                                texture
+                                    .SourcePath,
+                                texture
+                                    .TargetFileName))
+                    .ToArray())
+            {
+                VehiclePaths =
+                    functional
+                        .VehiclePaths,
+                PedestrianPaths =
+                    functional
+                        .PedestrianPaths,
+                TrainPaths =
+                    functional
+                        .TrainPaths,
+                StreetLights =
+                    functional
+                        .StreetLights
+            };
+
         var package =
             ProtonBusMapPackageWriter
                 .Write(
                     outputRoot,
-                    new(
-                        definition,
-                        [
-                            new(
-                                $"tile_{tile.X}_{tile.Y}.3ds",
-                                tileResult.Scene)
-                        ],
-                        assets.Textures
-                            .Select(
-                                texture =>
-                                    new ProtonBusTextureExport(
-                                        texture
-                                            .SourcePath,
-                                        texture
-                                            .TargetFileName))
-                            .ToArray()));
+                    packageRequest);
 
         return new(
             true,
             package,
             assets,
             tileResult,
-            issues.ToArray());
+            issues.ToArray())
+        {
+            Functional =
+                functional
+        };
     }
 
     private static bool HasBlockingIssue(
