@@ -4805,6 +4805,16 @@ public sealed class OmsiNativeSession
                 .Select(item => item.Content)
                 .ToArray();
 
+        var existingSplineIds =
+            contents
+                .SelectMany(
+                    content =>
+                        content.Splines)
+                .Select(
+                    spline =>
+                        spline.SplineId)
+                .ToHashSet();
+
         var maxUsedId =
             contents
                 .SelectMany(
@@ -4994,7 +5004,9 @@ public sealed class OmsiNativeSession
 
             if (
                 previousSpline.NextSplineId !=
-                -1)
+                    -1 &&
+                existingSplineIds.Contains(
+                    previousSpline.NextSplineId))
             {
                 throw new InvalidDataException(
                     "previousSplineAlreadyLinked");
@@ -5054,7 +5066,9 @@ public sealed class OmsiNativeSession
 
             if (
                 nextSpline.PreviousSplineId !=
-                -1)
+                    -1 &&
+                existingSplineIds.Contains(
+                    nextSpline.PreviousSplineId))
             {
                 throw new InvalidDataException(
                     "nextSplineAlreadyLinked");
