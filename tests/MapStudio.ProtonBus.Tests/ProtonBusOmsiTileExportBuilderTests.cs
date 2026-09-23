@@ -300,7 +300,7 @@ public sealed class
     }
 
     [Fact]
-    public void BuilderPropagatesColliderFlagFromResolvedMesh()
+    public void BuilderPropagatesColliderAndInvisibleFlagsFromResolvedMesh()
     {
         var tile =
             new OmsiTileReference(
@@ -345,6 +345,8 @@ public sealed class
                                         MeshOrdinal:
                                             0,
                                         GenerateCollider:
+                                            true,
+                                        Invisible:
                                             true)
                                 ])
                     });
@@ -356,6 +358,12 @@ public sealed class
         Assert.Contains(
             ProtonBusMeshNameTags
                 .Collider,
+            mesh.Name,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            ProtonBusMeshNameTags
+                .Invisible,
             mesh.Name,
             StringComparison.Ordinal);
     }
