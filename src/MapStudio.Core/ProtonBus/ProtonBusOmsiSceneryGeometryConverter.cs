@@ -298,7 +298,14 @@ public static class
                         source.DiffuseA <
                         0.999f,
                     Emissive:
-                        emissive));
+                        emissive,
+                    DiffuseColor:
+                        new(
+                            source.DiffuseR,
+                            source.DiffuseG,
+                            source.DiffuseB),
+                    Opacity:
+                        source.DiffuseA));
         }
 
         return output;
