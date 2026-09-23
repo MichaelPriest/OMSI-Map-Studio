@@ -7216,7 +7216,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .FirstOrDefault(
                     entity =>
                         entity.PickingId ==
-                        _selectedPickingId);
+                        pickingId);
 
         if (splineEntity is null)
         {
@@ -7242,13 +7242,16 @@ public sealed class NativeViewportRuntime : IDisposable
         span =
             0;
 
-        var selectedIds =
+        IEnumerable<PickingId> selectedIds =
             _selectedPickingIds.Count >
                 0
                 ? _selectedPickingIds
                 : _selectedPickingId.IsNone
-                    ? []
-                    : [_selectedPickingId];
+                    ? Array.Empty<PickingId>()
+                    : new[]
+                    {
+                        _selectedPickingId
+                    };
 
         var hasPoint =
             false;
