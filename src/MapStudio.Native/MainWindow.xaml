@@ -2564,6 +2564,14 @@
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Contínuo: on"
                                         Click="OnRoadContinuousToggleClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Corrigir automaticamente Previous/Next da spline selecionada usando endpoints próximos"
+                                        Click="OnRoadAutoConnectClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="⛓" FontSize="13" />
+                                        <TextBlock Text="Auto conectar" />
+                                    </StackPanel>
+                                </Button>
 
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Mais ▾">
