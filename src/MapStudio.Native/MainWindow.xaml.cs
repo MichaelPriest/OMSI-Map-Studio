@@ -575,7 +575,6 @@ public sealed partial class MainWindow : Window
     private double _realMapSelectionFractionY =
         0.58;
     private bool _syncingRealMapAreaSelectionControls;
-    private bool _autoGenerateProceduralRoadsWithoutPrompt;
 
     public MainWindow()
     {
@@ -24713,16 +24712,23 @@ setTimeout(postBounds, 250);
                 $"Mapa real criado: {displayName} · {totalTiles} tiles · " +
                 $"{centerLatitude:F6}, {centerLongitude:F6}.";
 
-            if (
-                RealMapGenerateRoadsCheckBox
-                    .IsChecked ==
-                true)
+            var roadImportMode =
+                Math.Clamp(
+                    RealMapRoadImportModeBox
+                        .SelectedIndex,
+                    0,
+                    2);
+
+            if (roadImportMode > 0)
             {
                 await PrepareOsmRoadsForRealMapAreaAsync(
                     _realMapSouth,
                     _realMapWest,
                     _realMapNorth,
-                    _realMapEast);
+                    _realMapEast,
+                    generateAutomatically:
+                        roadImportMode ==
+                        2);
             }
         }
         catch (Exception exception)
@@ -24860,9 +24866,11 @@ setTimeout(postBounds, 250);
         double south,
         double west,
         double north,
-        double east)
+        double east,
+        bool generateAutomatically)
     {
         if (
+            generateAutomatically &&
             !EnsureCommercialFeature(
                 MapStudioEntitlementKeys
                     .ProceduralRoads,
@@ -25039,13 +25047,20 @@ setTimeout(postBounds, 250);
             .PreviewProceduralRoadGraph(
                 graph);
 
-        StatusText.Text =
-            $"Mapa criado · OSM preparou {_proceduralRoadTraces.Count} via(s), " +
-            $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s). " +
-            "Gerando as splines automaticamente...";
+        if (!generateAutomatically)
+        {
+            StatusText.Text =
+                $"Mapa criado · {_proceduralRoadTraces.Count} via(s) OSM importada(s) como guias · " +
+                $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s). " +
+                "Revise o preview no viewport; nenhuma spline foi gravada.";
 
-        _autoGenerateProceduralRoadsWithoutPrompt =
-            true;
+            return;
+        }
+
+        StatusText.Text =
+            $"Mapa criado · preview OSM pronto com {_proceduralRoadTraces.Count} via(s), " +
+            $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s). " +
+            "Confirme a geração após revisar a prévia.";
 
         OnAnalyzeProceduralRoadGraphClick(
             this,
@@ -29217,38 +29232,29 @@ setTimeout(postBounds, 250);
                     "O preview já usa o traçado suavizado que será persistido. Segmentos contínuos da mesma linha recebem auto-link somente em nós lineares de grau 2; nós de grau 3/4 não são ligados através do cruzamento e recebem junctions próprios gerados antes da gravação."
             });
 
-        var autoGenerate =
-            _autoGenerateProceduralRoadsWithoutPrompt;
-
-        _autoGenerateProceduralRoadsWithoutPrompt =
-            false;
-
-        if (!autoGenerate)
-        {
-            var dialog =
-                new ContentDialog
-                {
-                    XamlRoot =
-                        MainRoot.XamlRoot,
-                    Title =
-                        "Grafo procedural de vias",
-                    Content =
-                        content,
-                    PrimaryButtonText =
-                        "Gerar vias",
-                    CloseButtonText =
-                        "Fechar",
-                    DefaultButton =
-                        ContentDialogButton
-                            .Close
-                };
-
-            if (
-                await dialog.ShowAdaptiveAsync() !=
-                    ContentDialogResult.Primary)
+        var dialog =
+            new ContentDialog
             {
-                return;
-            }
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Grafo procedural de vias",
+                Content =
+                    content,
+                PrimaryButtonText =
+                    "Gerar vias",
+                CloseButtonText =
+                    "Fechar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Close
+            };
+
+        if (
+            await dialog.ShowAdaptiveAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
         }
 
         var root =
