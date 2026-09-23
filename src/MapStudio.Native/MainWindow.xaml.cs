@@ -244,6 +244,8 @@ public sealed partial class MainWindow : Window
             NativeAssetLibraryStateStore
                 .Load();
 
+    private bool _restoringPanelExpansionState;
+
     private readonly List<
         ConstructionHistoryEntry>
         _constructionUndoStack = [];
@@ -503,6 +505,8 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        RestorePanelExpansionState();
 
         RefreshAiConnectionUi();
 
@@ -2966,6 +2970,59 @@ public sealed partial class MainWindow : Window
         {
             // Personalização nunca deve bloquear edição do mapa.
         }
+    }
+
+    private void RestorePanelExpansionState()
+    {
+        _restoringPanelExpansionState =
+            true;
+
+        try
+        {
+            ProjectSummaryCard.IsExpanded =
+                _assetLibraryState
+                    .ProjectSummaryExpanded;
+
+            AssetFiltersExpander.IsExpanded =
+                _assetLibraryState
+                    .AssetFiltersExpanded;
+
+            TransportPathsExpander.IsExpanded =
+                _assetLibraryState
+                    .TransportPathsExpanded;
+        }
+        finally
+        {
+            _restoringPanelExpansionState =
+                false;
+        }
+    }
+
+    private void OnPanelExpanderStateChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_restoringPanelExpansionState)
+        {
+            return;
+        }
+
+        _assetLibraryState
+            .ProjectSummaryExpanded =
+            ProjectSummaryCard
+                .IsExpanded;
+
+        _assetLibraryState
+            .AssetFiltersExpanded =
+            AssetFiltersExpander
+                .IsExpanded;
+
+        _assetLibraryState
+            .TransportPathsExpanded =
+            TransportPathsExpander
+                .IsExpanded;
+
+        SaveAssetLibraryState();
     }
 
     private async void OnPlaceAssetClick(
@@ -18814,10 +18871,22 @@ public sealed partial class MainWindow : Window
                 ConstructionSets =
                     _assetLibraryState
                         .ConstructionSets,
+                AiClassifications =
+                    _assetLibraryState
+                        .AiClassifications,
                 ToolPaletteOffsetX =
                     MapToolPaletteTranslate.X,
                 ToolPaletteOffsetY =
-                    MapToolPaletteTranslate.Y
+                    MapToolPaletteTranslate.Y,
+                ProjectSummaryExpanded =
+                    _assetLibraryState
+                        .ProjectSummaryExpanded,
+                AssetFiltersExpanded =
+                    _assetLibraryState
+                        .AssetFiltersExpanded,
+                TransportPathsExpanded =
+                    _assetLibraryState
+                        .TransportPathsExpanded
             };
 
         SaveAssetLibraryState();
