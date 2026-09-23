@@ -21418,6 +21418,274 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnMapReferenceClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Referência de mapa: abra um mapa primeiro.";
+            return;
+        }
+
+        NativeMapGeoreference? georeference;
+
+        try
+        {
+            georeference =
+                await _session
+                    .LoadMapGeoreferenceAsync();
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Não foi possível ler a georreferência: {exception.Message}";
+            return;
+        }
+
+        if (georeference is null)
+        {
+            StatusText.Text =
+                "Salve primeiro a georreferência do mapa.";
+            return;
+        }
+
+        var providerBox =
+            new ComboBox
+            {
+                Header =
+                    "Provedor",
+                HorizontalAlignment =
+                    HorizontalAlignment.Stretch,
+                SelectedIndex =
+                    0
+            };
+
+        providerBox.Items.Add(
+            "OpenStreetMap · sem chave");
+
+        providerBox.Items.Add(
+            "Google Maps · API key");
+
+        var apiKeyBox =
+            new PasswordBox
+            {
+                Header =
+                    "Google Maps Platform API key",
+                PlaceholderText =
+                    NativeMapCredentialStore
+                        .HasGoogleMapsApiKey()
+                        ? "Chave já salva no Windows · deixe vazio para reutilizar"
+                        : "Necessária somente para Google Maps",
+                IsEnabled =
+                    false
+            };
+
+        var saveKeyCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Salvar chave Google com segurança no Windows",
+                IsEnabled =
+                    false,
+                IsChecked =
+                    true
+            };
+
+        var opacityBox =
+            new NumberBox
+            {
+                Header =
+                    "Opacidade",
+                Minimum =
+                    0.05,
+                Maximum =
+                    1.0,
+                Value =
+                    0.55,
+                SmallChange =
+                    0.05
+            };
+
+        var providerInfo =
+            new TextBlock
+            {
+                Text =
+                    "OpenStreetMap usa o tile necessário da posição atual, com atribuição e cache local. Google Maps usa Maps Static API e requer chave/billing.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.8
+            };
+
+        providerBox.SelectionChanged +=
+            (_, _) =>
+            {
+                var google =
+                    providerBox.SelectedIndex ==
+                        1;
+
+                apiKeyBox.IsEnabled =
+                    google;
+
+                saveKeyCheckBox.IsEnabled =
+                    google;
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    8,
+                MinWidth =
+                    470
+            };
+
+        panel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    $"Centro: {georeference.Latitude:F6}, {georeference.Longitude:F6} · zoom {georeference.Zoom}",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        panel.Children.Add(
+            providerInfo);
+
+        panel.Children.Add(
+            providerBox);
+
+        panel.Children.Add(
+            apiKeyBox);
+
+        panel.Children.Add(
+            saveKeyCheckBox);
+
+        panel.Children.Add(
+            opacityBox);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Referência de mapa sobre o terreno",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Carregar",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton.Primary
+            };
+
+        if (
+            await dialog.ShowAdaptiveAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        if (
+            !double.IsFinite(
+                opacityBox.Value))
+        {
+            StatusText.Text =
+                "Opacidade inválida.";
+            return;
+        }
+
+        try
+        {
+            NativeGoogleMapReference reference;
+
+            if (
+                providerBox.SelectedIndex ==
+                    1)
+            {
+                var apiKey =
+                    string.IsNullOrWhiteSpace(
+                        apiKeyBox.Password)
+                        ? NativeMapCredentialStore
+                            .TryGetGoogleMapsApiKey()
+                        : apiKeyBox.Password.Trim();
+
+                if (
+                    string.IsNullOrWhiteSpace(
+                        apiKey))
+                {
+                    StatusText.Text =
+                        "Google Maps: informe uma API key ou use OpenStreetMap.";
+                    return;
+                }
+
+                StatusText.Text =
+                    "Carregando referência Google Maps...";
+
+                reference =
+                    await _session
+                        .LoadGoogleMapReferenceAsync(
+                            apiKey);
+
+                if (
+                    saveKeyCheckBox
+                        .IsChecked ==
+                    true)
+                {
+                    NativeMapCredentialStore
+                        .SaveGoogleMapsApiKey(
+                            apiKey);
+                }
+            }
+            else
+            {
+                StatusText.Text =
+                    "Carregando referência OpenStreetMap...";
+
+                reference =
+                    await _session
+                        .LoadOpenStreetMapReferenceAsync();
+            }
+
+            var opacity =
+                (float)Math.Clamp(
+                    opacityBox.Value,
+                    0.05,
+                    1.0);
+
+            Viewport.SetReferenceOverlay(
+                new NativeReferenceOverlayDefinition(
+                    reference.ImagePath,
+                    reference.Width,
+                    reference.Height,
+                    reference.MetersPerPixel,
+                    reference.AnchorWorldX,
+                    reference.AnchorWorldZ,
+                    opacity,
+                    reference.Attribution));
+
+            _referenceOverlayMapDirectory =
+                snapshot.Map.DirectoryPath;
+
+            _activeGoogleMapReference =
+                reference;
+
+            StatusText.Text =
+                $"Referência ativa: {reference.Attribution} · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao carregar referência de mapa: {exception.Message}";
+        }
+    }
+
     private async void OnGoogleMapReferenceClick(
         object sender,
         RoutedEventArgs e)
@@ -21608,7 +21876,7 @@ public sealed partial class MainWindow : Window
         ClearReferenceOverlay();
 
         StatusText.Text =
-            "Referência Google removida do viewport.";
+            "Referência de mapa removida do viewport.";
     }
 
     private void ClearReferenceOverlay()
