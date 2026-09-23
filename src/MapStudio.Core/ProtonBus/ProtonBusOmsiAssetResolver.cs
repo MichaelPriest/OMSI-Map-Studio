@@ -527,7 +527,15 @@ public sealed class ProtonBusOmsiAssetResolver
                     resolvedMeshes
                         .ToArray(),
                     metadata
-                        .UsesAbsoluteHeight);
+                        .UsesAbsoluteHeight,
+                    metadata
+                        .Paths,
+                    metadata
+                        .TrafficLightControllers,
+                    metadata
+                        .LightPoints,
+                    metadata
+                        .FriendlyName);
         }
 
         return new(
