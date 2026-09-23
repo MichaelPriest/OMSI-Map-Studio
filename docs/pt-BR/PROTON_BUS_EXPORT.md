@@ -15,7 +15,7 @@ A `main` não é alterada por este trabalho.
 O suporte Proton Bus ainda não deve ser anunciado como completo. Nesta primeira etapa foram adicionados apenas:
 
 - modelo do manifesto do mapa;
-- writer do arquivo `.map`;
+- writer do arquivo `.map.txt`;
 - layout de pacote;
 - validação de nomes/caminhos portáveis;
 - constantes para nomes especiais de meshes;
@@ -37,13 +37,13 @@ A documentação Fase 3 encontrada em espelhos deve ser tratada como referência
 
 ## Estrutura básica confirmada
 
-O Proton Bus usa um arquivo `.map` de texto e uma pasta base dentro de `maps`.
+O Proton Bus usa um arquivo `.map.txt` de texto e uma pasta base dentro de `maps` nas Fases 2/3 documentadas.
 
 Exemplo:
 
 ```text
 maps/
-  Cidade.map
+  Cidade.map.txt
   Cidade/
     dest/
     skins/
@@ -128,7 +128,7 @@ ProtonBus Export Scene
        +-- marker meshes
        |
        v
-3DS + TXT + PNG + .map
+3DS + TXT + PNG + .map.txt
 ```
 
 ## Mapeamento inicial Map Studio -> Proton Bus
@@ -250,20 +250,21 @@ Esses recursos serão adicionados somente após analisarmos os arquivos de ajuda
 - tags básicas;
 - testes.
 
-### P1 — em andamento
-
-Concluído:
+### P1 — concluído no Core
 
 - modelo intermediário `ProtonBusExportScene`;
+- transformação explícita do espaço Y-up do Map Studio para o espaço 3DS usado pelo pipeline Proton;
+- correção da ordem dos triângulos após a troca Y/Z;
+- tesselação de splines OMSI com reta, curva, perfil, UV e gradiente;
+- triangulação de terreno OMSI por tile;
+- amostragem bilinear do terreno para posicionamento de objetos;
+- conversão de objetos OMSI carregados pelo Core (`.o3d` e `.x`) com posição, rotação, escala e UV;
+- preservação de altura relativa e `[absheight]`;
+- materiais com textura, cor difusa, opacidade e emissive básico;
+- nomes de materiais globalmente únicos por tile/objeto;
 - planejamento e divisão automática de chunks 3DS;
-- remapeamento local de índices para os limites do 3DS.
-
-Pendente:
-
-- sistema explícito de transformação de coordenadas;
-- tesselação de ruas/splines;
-- triangulação do terreno;
-- conversão completa de materiais.
+- remapeamento local de índices para os limites do 3DS;
+- montagem de `ProtonBusExportScene` por tile, com relatório de assets ausentes.
 
 ### P2 — iniciada
 
@@ -279,10 +280,10 @@ Concluído:
 Pendente:
 
 - validar o arquivo gerado diretamente na build alvo do Proton Bus;
-- PNG/material pipeline completo;
-- colisores gerados a partir das propriedades do Map Studio;
+- conversão real das texturas de origem para PNG (hoje o pacote exige PNG, mas não recodifica DDS/BMP/TGA);
+- regras finais para colisores de scenery conforme metadata/uso do objeto;
 - regras finais para emissive/additive;
-- transformação de eixos validada contra fixture real.
+- fixture real para validar visualmente eixos, winding, UV e materiais.
 
 ### P3
 

@@ -52,7 +52,7 @@ public sealed class ProtonBusMapFormatTests
                     definition);
 
         Assert.Equal(
-            "maps/Mapa Teste.map",
+            "maps/Mapa Teste.map.txt",
             layout.MapDefinitionPath);
 
         Assert.Equal(
@@ -135,12 +135,28 @@ public sealed class ProtonBusMapFormatTests
     }
 
     [Fact]
-    public void MapFileNameKeepsExistingMapExtension()
+    public void MapFileNameUsesDocumentedMapTxtExtension()
     {
         Assert.Equal(
-            "Cidade.map",
+            "Cidade.map.txt",
+            new ProtonBusMapDefinition(
+                "Cidade",
+                "Cidade",
+                "Rota")
+                .MapFileName);
+
+        Assert.Equal(
+            "Cidade.map.txt",
             new ProtonBusMapDefinition(
                 "Cidade.map",
+                "Cidade",
+                "Rota")
+                .MapFileName);
+
+        Assert.Equal(
+            "Cidade.map.txt",
+            new ProtonBusMapDefinition(
+                "Cidade.map.txt",
                 "Cidade",
                 "Rota")
                 .MapFileName);

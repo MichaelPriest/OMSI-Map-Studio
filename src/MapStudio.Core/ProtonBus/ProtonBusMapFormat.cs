@@ -8,12 +8,32 @@ public sealed record ProtonBusMapDefinition(
     int MapModVersion = 3,
     string Preview = "preview")
 {
-    public string MapFileName =>
-        MapName.EndsWith(
-            ".map",
-            StringComparison.OrdinalIgnoreCase)
-            ? MapName
-            : $"{MapName}.map";
+    public string MapFileName
+    {
+        get
+        {
+            if (
+                MapName.EndsWith(
+                    ".map.txt",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return MapName;
+            }
+
+            if (
+                MapName.EndsWith(
+                    ".map",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return
+                    MapName +
+                    ".txt";
+            }
+
+            return
+                $"{MapName}.map.txt";
+        }
+    }
 }
 
 public sealed record ProtonBusMapPackageLayout(

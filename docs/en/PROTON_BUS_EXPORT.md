@@ -15,7 +15,7 @@ This work does not modify `main`.
 Proton Bus support must not yet be advertised as complete. This first stage only adds:
 
 - map manifest model;
-- `.map` writer;
+- `.map.txt` writer;
 - package layout;
 - portable name/path validation;
 - constants for special mesh-name tags;
@@ -37,13 +37,13 @@ The mirrored Phase 3 document should be treated as a historical technical refere
 
 ## Confirmed basic structure
 
-A Proton Bus map uses a text `.map` file plus a base directory below `maps`.
+For the documented Phase 2/3 format, a Proton Bus map uses a text `.map.txt` file plus a base directory below `maps`.
 
 Example:
 
 ```text
 maps/
-  City.map
+  City.map.txt
   City/
     dest/
     skins/
@@ -128,7 +128,7 @@ ProtonBus Export Scene
        +-- marker meshes
        |
        v
-3DS + TXT + PNG + .map
+3DS + TXT + PNG + .map.txt
 ```
 
 ## Initial Map Studio -> Proton Bus mapping
@@ -250,20 +250,21 @@ These features should only be implemented after inspecting the help/example file
 - basic name tags;
 - tests.
 
-### P1 — in progress
-
-Completed:
+### P1 — completed in Core
 
 - `ProtonBusExportScene` intermediate model;
+- explicit conversion from Map Studio Y-up coordinates to the 3DS space used by the Proton pipeline;
+- triangle winding correction after the Y/Z swap;
+- OMSI spline tessellation including straights, curves, profiles, UVs and gradients;
+- OMSI terrain triangulation per tile;
+- bilinear terrain sampling for object placement;
+- conversion of OMSI geometry loaded by Core (`.o3d` and `.x`) with placement, rotation, scale and UVs;
+- relative height and `[absheight]` semantics;
+- materials with texture, diffuse color, opacity and basic emissive state;
+- globally unique material names per tile/object;
 - 3DS chunk planning and automatic splitting;
-- local index remapping for 3DS limits.
-
-Pending:
-
-- explicit coordinate conversion;
-- road/spline tessellation;
-- terrain triangulation;
-- complete material conversion.
+- local index remapping for 3DS limits;
+- per-tile `ProtonBusExportScene` assembly with missing-asset reporting.
 
 ### P2 — started
 
@@ -279,10 +280,10 @@ Completed:
 Pending:
 
 - validate generated files directly in the target Proton Bus build;
-- complete PNG/material pipeline;
-- colliders generated from Map Studio properties;
+- actual source-texture conversion to PNG (the package currently requires PNG but does not transcode DDS/BMP/TGA);
+- final scenery-collider rules based on metadata/use;
 - final emissive/additive rules;
-- coordinate-axis conversion validated against a real fixture.
+- a real fixture to visually validate axes, winding, UVs and materials.
 
 ### P3
 
