@@ -447,6 +447,22 @@ public sealed partial class MainWindow : Window
     private double _inspectorPanelWidth =
         330;
 
+    private bool _draggingTileNavigatorWindow;
+    private uint _tileNavigatorDragPointerId;
+    private double _tileNavigatorDragStartX;
+    private double _tileNavigatorDragStartY;
+    private double _tileNavigatorDragOriginX;
+    private double _tileNavigatorDragOriginY;
+
+    private bool _resizingTileNavigatorWindow;
+    private uint _tileNavigatorResizePointerId;
+    private double _tileNavigatorResizeStartX;
+    private double _tileNavigatorResizeStartY;
+    private double _tileNavigatorResizeOriginWidth;
+    private double _tileNavigatorResizeOriginHeight;
+
+    private bool _mapExplorerCollapsed;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -20403,6 +20419,320 @@ public sealed partial class MainWindow : Window
 
             EndLoading();
         }
+    }
+
+    private void OnToggleTileNavigatorWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var show =
+            TileNavigatorWindow.Visibility !=
+                Visibility.Visible;
+
+        TileNavigatorWindow.Visibility =
+            show
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (
+            show &&
+            _session.CurrentMap
+                ?.ActiveTile is
+                { } active)
+        {
+            TileNavigatorXBox.Value =
+                active.X;
+
+            TileNavigatorYBox.Value =
+                active.Y;
+        }
+
+        StatusText.Text =
+            show
+                ? "Navegador Tile X/Y aberto · arraste e redimensione dentro do editor."
+                : "Navegador Tile X/Y fechado.";
+    }
+
+    private void OnCloseTileNavigatorWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        TileNavigatorWindow.Visibility =
+            Visibility.Collapsed;
+
+        _draggingTileNavigatorWindow =
+            false;
+
+        _resizingTileNavigatorWindow =
+            false;
+    }
+
+    private void OnTileNavigatorWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingTileNavigatorWindow =
+            true;
+
+        _tileNavigatorDragPointerId =
+            e.Pointer.PointerId;
+
+        _tileNavigatorDragStartX =
+            position.X;
+
+        _tileNavigatorDragStartY =
+            position.Y;
+
+        _tileNavigatorDragOriginX =
+            TileNavigatorWindowTranslate.X;
+
+        _tileNavigatorDragOriginY =
+            TileNavigatorWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTileNavigatorWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingTileNavigatorWindow ||
+            e.Pointer.PointerId !=
+                _tileNavigatorDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        var baseLeft =
+            TileNavigatorWindow.Margin.Left;
+
+        var baseTop =
+            TileNavigatorWindow.Margin.Top;
+
+        var maximumX =
+            Math.Max(
+                -baseLeft +
+                    4,
+                WorkspaceGrid.ActualWidth -
+                    baseLeft -
+                    TileNavigatorWindow.ActualWidth -
+                    4);
+
+        var maximumY =
+            Math.Max(
+                -baseTop +
+                    4,
+                WorkspaceGrid.ActualHeight -
+                    baseTop -
+                    TileNavigatorWindow.ActualHeight -
+                    4);
+
+        TileNavigatorWindowTranslate.X =
+            Math.Clamp(
+                _tileNavigatorDragOriginX +
+                    position.X -
+                    _tileNavigatorDragStartX,
+                -baseLeft +
+                    4,
+                maximumX);
+
+        TileNavigatorWindowTranslate.Y =
+            Math.Clamp(
+                _tileNavigatorDragOriginY +
+                    position.Y -
+                    _tileNavigatorDragStartY,
+                -baseTop +
+                    4,
+                maximumY);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTileNavigatorWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _tileNavigatorDragPointerId)
+        {
+            return;
+        }
+
+        _draggingTileNavigatorWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTileNavigatorResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingTileNavigatorWindow =
+            true;
+
+        _tileNavigatorResizePointerId =
+            e.Pointer.PointerId;
+
+        _tileNavigatorResizeStartX =
+            position.X;
+
+        _tileNavigatorResizeStartY =
+            position.Y;
+
+        _tileNavigatorResizeOriginWidth =
+            TileNavigatorWindow.ActualWidth;
+
+        _tileNavigatorResizeOriginHeight =
+            TileNavigatorWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTileNavigatorResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingTileNavigatorWindow ||
+            e.Pointer.PointerId !=
+                _tileNavigatorResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        TileNavigatorWindow.Width =
+            Math.Clamp(
+                _tileNavigatorResizeOriginWidth +
+                    position.X -
+                    _tileNavigatorResizeStartX,
+                270,
+                Math.Max(
+                    270,
+                    WorkspaceGrid.ActualWidth -
+                        32));
+
+        TileNavigatorWindow.Height =
+            Math.Clamp(
+                _tileNavigatorResizeOriginHeight +
+                    position.Y -
+                    _tileNavigatorResizeStartY,
+                170,
+                Math.Max(
+                    170,
+                    WorkspaceGrid.ActualHeight -
+                        32));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnTileNavigatorResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _tileNavigatorResizePointerId)
+        {
+            return;
+        }
+
+        _resizingTileNavigatorWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnMapExplorerCollapseClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _mapExplorerCollapsed =
+            !_mapExplorerCollapsed;
+
+        MapTileListView.Visibility =
+            _mapExplorerCollapsed
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        MapExplorerActionGrid.Visibility =
+            _mapExplorerCollapsed
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        MapExplorerPanel
+            .RowDefinitions[1]
+            .Height =
+            _mapExplorerCollapsed
+                ? new GridLength(0)
+                : new GridLength(
+                    1,
+                    GridUnitType.Star);
+
+        MapExplorerCollapseButton.Content =
+            _mapExplorerCollapsed
+                ? "+"
+                : "−";
     }
 
     private async void OnTileNavigatorGoClick(
