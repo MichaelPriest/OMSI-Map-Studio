@@ -79,6 +79,33 @@ public sealed class ProtonBusTrafficLightDefinitionTests
     }
 
     [Fact]
+    public void WriterRejectsRealLightIntensityAboveOne()
+    {
+        var definition =
+            CreateDefinition() with
+            {
+                GreenLight =
+                    new(
+                        new Vector4(
+                            0,
+                            1,
+                            0,
+                            1),
+                        Intensity:
+                            1.1,
+                        Range:
+                            10)
+            };
+
+        Assert.Throws<
+            ArgumentOutOfRangeException>(
+                () =>
+                    ProtonBusTrafficLightDefinitionWriter
+                        .Serialize(
+                            definition));
+    }
+
+    [Fact]
     public void PackageWriterPlacesTrafficLightUnderTrafficlights()
     {
         var root = Path.Combine(
