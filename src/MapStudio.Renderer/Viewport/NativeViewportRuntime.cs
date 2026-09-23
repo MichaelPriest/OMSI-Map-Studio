@@ -108,6 +108,11 @@ public sealed class NativeViewportRuntime : IDisposable
     private double _splineElevationOffset;
     private NativeSplinePlacementStage _splinePlacementStage =
         NativeSplinePlacementStage.AwaitingStart;
+    private bool _selectedSplineCurveEditActive;
+    private NativeSplineEntity? _selectedSplineCurveEntity;
+    private Vector3? _selectedSplineCurveStart;
+    private Vector3? _selectedSplineCurveEnd;
+    private NativeSplinePlacementShape? _selectedSplineCurveShape;
 
     private OmsiMapDescriptor? _mapDescriptor;
     private string? _omsiRoot;
@@ -212,6 +217,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool SplineEasyRoadEnabled =>
         _splineEasyRoadEnabled;
+
+    public bool IsSelectedSplineCurveEditActive =>
+        _selectedSplineCurveEditActive;
 
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
@@ -2813,6 +2821,290 @@ public sealed class NativeViewportRuntime : IDisposable
         UpdateCameraTransform();
         UpdateGizmoGeometry();
         RenderInitialFrame();
+    }
+
+    public bool BeginSelectedSplineCurveEdit(
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline)
+        {
+            status =
+                "Curva: selecione uma spline.";
+            return false;
+        }
+
+        var entity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.PickingId ==
+                        _selectedPickingId);
+
+        if (
+            entity is null ||
+            entity.Spline.Length <=
+                0.5 ||
+            entity.Spline.IsHeightSpline)
+        {
+            status =
+                "Curva: esta spline não pode ser editada por alça.";
+            return false;
+        }
+
+        if (
+            !_splineAssets.TryGetValue(
+                entity.Spline.SplinePath,
+                out var asset))
+        {
+            status =
+                "Curva: asset SLI da seleção não está carregado.";
+            return false;
+        }
+
+        CancelGizmoDrag();
+        CancelSplinePlacement();
+        CancelSceneryPlacement();
+
+        var start =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0)
+                .Center;
+
+        var end =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    entity.Spline.Length)
+                .Center;
+
+        _selectedSplineCurveEditActive =
+            true;
+
+        _selectedSplineCurveEntity =
+            entity;
+
+        _selectedSplineCurveStart =
+            start;
+
+        _selectedSplineCurveEnd =
+            end;
+
+        _selectedSplineCurveShape =
+            new NativeSplinePlacementShape(
+                start,
+                end,
+                entity.Spline.Rotation,
+                entity.Spline.Length,
+                entity.Spline.Radius,
+                entity.Spline.GradientStart,
+                entity.Spline.GradientEnd,
+                Math.Abs(
+                    entity.Spline.Radius) >
+                    0.001);
+
+        var preview =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    asset,
+                    _selectedSplineCurveShape);
+
+        MapRenderer
+            .SetPlacementPreview(
+                preview.IsRenderable
+                    ? preview
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        status =
+            "Curva: mova o mouse lateralmente para ajustar e clique para aplicar.";
+
+        return true;
+    }
+
+    public bool UpdateSelectedSplineCurveEdit(
+        uint pixelX,
+        uint pixelY)
+    {
+        ThrowIfDisposed();
+
+        if (
+            !_selectedSplineCurveEditActive ||
+            _selectedSplineCurveEntity is
+                not { } entity ||
+            _selectedSplineCurveStart is
+                not { } start ||
+            _selectedSplineCurveEnd is
+                not { } end ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var control) ||
+            !_splineAssets.TryGetValue(
+                entity.Spline.SplinePath,
+                out var asset) ||
+            !NativeSplinePlacementMath
+                .TryCreateArc(
+                    start,
+                    end,
+                    control,
+                    out var shape) ||
+            shape is null)
+        {
+            return false;
+        }
+
+        _selectedSplineCurveShape =
+            shape;
+
+        var preview =
+            new NativeSplinePlacementGeometryBuilder()
+                .Build(
+                    asset,
+                    shape);
+
+        MapRenderer
+            .SetPlacementPreview(
+                preview.IsRenderable
+                    ? preview
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        return true;
+    }
+
+    public bool TryFinishSelectedSplineCurveEdit(
+        uint pixelX,
+        uint pixelY,
+        out NativePendingTransformEdit? edit,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        edit =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            !_selectedSplineCurveEditActive)
+        {
+            status =
+                "Curva: modo de edição não está ativo.";
+            return false;
+        }
+
+        UpdateSelectedSplineCurveEdit(
+            pixelX,
+            pixelY);
+
+        var shape =
+            _selectedSplineCurveShape;
+
+        var selection =
+            GetSelectionInfo();
+
+        if (
+            shape is null ||
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            CancelSelectedSplineCurveEdit();
+
+            status =
+                "Curva: prévia inválida.";
+            return false;
+        }
+
+        CancelSelectedSplineCurveEdit(
+            render:
+                false);
+
+        var values =
+            selection with
+            {
+                Rotation =
+                    shape.Rotation,
+                Length =
+                    shape.Length,
+                Radius =
+                    shape.Radius,
+                GradientStart =
+                    shape.GradientStart,
+                GradientEnd =
+                    shape.GradientEnd
+            };
+
+        edit =
+            ApplySelectionInfo(
+                values);
+
+        if (edit is null)
+        {
+            status =
+                "Curva: não foi possível aplicar a transformação.";
+            return false;
+        }
+
+        status =
+            shape.IsCurved
+                ? $"Curva aplicada · raio {shape.Radius:F1} m · comprimento {shape.Length:F1} m."
+                : $"Trecho endireitado · comprimento {shape.Length:F1} m.";
+
+        return true;
+    }
+
+    public void CancelSelectedSplineCurveEdit(
+        bool render =
+            true)
+    {
+        if (
+            !_selectedSplineCurveEditActive &&
+            _selectedSplineCurveEntity is
+                null)
+        {
+            return;
+        }
+
+        _selectedSplineCurveEditActive =
+            false;
+
+        _selectedSplineCurveEntity =
+            null;
+
+        _selectedSplineCurveStart =
+            null;
+
+        _selectedSplineCurveEnd =
+            null;
+
+        _selectedSplineCurveShape =
+            null;
+
+        MapRenderer
+            .SetPlacementPreview(
+                null,
+                Matrix4x4.Identity);
+
+        if (render)
+        {
+            RenderInitialFrame();
+        }
     }
 
     public bool TryCreateParallelSelectionRequest(

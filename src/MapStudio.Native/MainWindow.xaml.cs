@@ -7949,6 +7949,33 @@ public sealed partial class MainWindow : Window
             status;
     }
 
+    private void OnRoadEditCurveClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para editar a curva.";
+            return;
+        }
+
+        if (
+            !Viewport
+                .BeginSelectedSplineCurveEdit(
+                    out var status))
+        {
+            StatusText.Text =
+                status;
+            return;
+        }
+
+        StatusText.Text =
+            status;
+    }
+
     private void OnRoadSplitClick(
         object sender,
         RoutedEventArgs e)
@@ -18642,6 +18669,8 @@ public sealed partial class MainWindow : Window
         KeyboardAccelerator sender,
         KeyboardAcceleratorInvokedEventArgs args)
     {
+        Viewport.CancelSelectedSplineCurveEdit();
+
         if (
             Viewport.IsSceneryPlacementActive ||
             Viewport.IsSplinePlacementActive)

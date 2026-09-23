@@ -1011,6 +1011,22 @@ public sealed partial class NativeViewport : UserControl
         return focused;
     }
 
+    public bool BeginSelectedSplineCurveEdit(
+        out string status)
+    {
+        status =
+            "Curva indisponível.";
+
+        return _runtime
+            ?.BeginSelectedSplineCurveEdit(
+                out status) ??
+            false;
+    }
+
+    public void CancelSelectedSplineCurveEdit() =>
+        _runtime
+            ?.CancelSelectedSplineCurveEdit();
+
     public bool BeginSplineSplitPick()
     {
         if (
@@ -1778,6 +1794,37 @@ public sealed partial class NativeViewport : UserControl
                     scaleY));
 
         if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineCurveEditActive)
+        {
+            if (
+                _runtime
+                    .TryFinishSelectedSplineCurveEdit(
+                        pixelX,
+                        pixelY,
+                        out var curveEdit,
+                        out var curveStatus) &&
+                curveEdit is not null)
+            {
+                TransformEditPending
+                    ?.Invoke(
+                        curveEdit);
+
+                PublishSelectionInfo();
+            }
+
+            PointerStatusChanged?.Invoke(
+                this,
+                curveStatus);
+
+            e.Handled =
+                true;
+
+            return;
+        }
+
+        if (
             _splineSplitPickActive &&
             _runtime is not null)
         {
@@ -1843,6 +1890,54 @@ public sealed partial class NativeViewport : UserControl
             }
 
             e.Handled = true;
+            return;
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineCurveEditActive)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                _runtime
+                    .UpdateSelectedSplineCurveEdit(
+                        pixelX,
+                        pixelY))
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Curva: mova a alça visual e clique para aplicar.");
+            }
+
+            e.Handled =
+                true;
+
             return;
         }
 

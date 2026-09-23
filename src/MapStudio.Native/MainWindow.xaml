@@ -2406,6 +2406,10 @@
                                         ToolTipService.ToolTip="Modo de curva visual sem coordenadas no Inspector"
                                         Click="OnRoadPresetCurveClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Editar curva"
+                                        ToolTipService.ToolTip="Curvar ou endireitar a spline selecionada usando uma alça no mapa"
+                                        Click="OnRoadEditCurveClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Duplicar"
                                         ToolTipService.ToolTip="Duplicar a spline selecionada e reposicionar"
                                         Click="OnRoadDuplicateClick" />
