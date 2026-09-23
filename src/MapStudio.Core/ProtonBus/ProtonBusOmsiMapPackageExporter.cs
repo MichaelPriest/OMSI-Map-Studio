@@ -1,4 +1,5 @@
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Timetables;
 
 namespace MapStudio.Core.ProtonBus;
 
@@ -19,9 +20,17 @@ public sealed record ProtonBusOmsiMapExportIssue(
     string Source,
     string? Detail = null);
 
+public sealed record ProtonBusOmsiTimetableExportSource(
+    IReadOnlyList<OmsiTileReference> TileOrder,
+    OmsiTimetableCatalog Catalog,
+    ProtonBusOmsiTimetableConversionOptions? Options = null);
+
 public sealed record ProtonBusOmsiMapExportOptions(
     ProtonBusOmsiTileExportOptions? TileOptions = null)
 {
+    public ProtonBusOmsiTimetableExportSource?
+        Timetable { get; init; }
+
     public IReadOnlyList<ProtonBusBusStopDefinition>
         BusStops { get; init; } =
         Array.Empty<ProtonBusBusStopDefinition>();
@@ -43,7 +52,11 @@ public sealed record ProtonBusOmsiMapPackageExportResult(
     bool IsExported,
     ProtonBusMapPackageResult? Package,
     IReadOnlyList<ProtonBusOmsiMapTileExportResult> Tiles,
-    IReadOnlyList<ProtonBusOmsiMapExportIssue> Issues);
+    IReadOnlyList<ProtonBusOmsiMapExportIssue> Issues)
+{
+    public ProtonBusOmsiTimetableConversionResult?
+        Timetable { get; init; }
+}
 
 public sealed class ProtonBusOmsiMapPackageExporter
 {
@@ -134,6 +147,21 @@ public sealed class ProtonBusOmsiMapPackageExporter
         var streetLights =
             new List<ProtonBusStreetLightDefinition>();
 
+        var assetsByTile =
+            new Dictionary<
+                (int X, int Y),
+                ProtonBusOmsiAssetResolutionResult>();
+
+        var contentByTile =
+            tiles.ToDictionary(
+                source =>
+                    (
+                        source.Tile.X,
+                        source.Tile.Y
+                    ),
+                source =>
+                    source.Content);
+
         foreach (
             var source
             in tiles)
@@ -160,6 +188,14 @@ public sealed class ProtonBusOmsiMapPackageExporter
                         source.Content,
                         cancellationToken)
                     .ConfigureAwait(false);
+
+            assetsByTile[
+                (
+                    tile.X,
+                    tile.Y
+                )
+            ] =
+                assets;
 
             AddAssetIssues(
                 tile,
@@ -360,6 +396,91 @@ public sealed class ProtonBusOmsiMapPackageExporter
         streetLights.AddRange(
             options.AdditionalStreetLights);
 
+        ProtonBusOmsiTimetableConversionResult?
+            timetableResult =
+                null;
+
+        var busStops =
+            new List<ProtonBusBusStopDefinition>(
+                options.BusStops);
+
+        var entrypoints =
+            new List<ProtonBusEntrypointDefinition>(
+                options.Entrypoints);
+
+        if (
+            options.Timetable is
+                { } timetableSource)
+        {
+            timetableResult =
+                ProtonBusOmsiTimetableConverter
+                    .Convert(
+                        timetableSource
+                            .TileOrder,
+                        timetableSource
+                            .Catalog,
+                        contentByTile,
+                        assetsByTile,
+                        timetableSource
+                            .Options);
+
+            foreach (
+                var issue
+                in timetableResult
+                    .Issues)
+            {
+                issues.Add(
+                    new(
+                        null,
+                        null,
+                        issue.Code,
+                        issue.Source,
+                        issue.Detail));
+            }
+
+            busStops.AddRange(
+                timetableResult
+                    .BusStops);
+
+            entrypoints.AddRange(
+                timetableResult
+                    .Entrypoints);
+
+            if (
+                timetableResult
+                    .MarkerScene
+                    .Meshes
+                    .Count >
+                0)
+            {
+                models.Add(
+                    new(
+                        "timetable_markers.3ds",
+                        timetableResult
+                            .MarkerScene));
+            }
+
+            ValidateGeneratedTimetableNames(
+                busStops,
+                entrypoints,
+                issues);
+        }
+
+        if (
+            issues.Any(
+                IsBlockingIssue))
+        {
+            return new(
+                false,
+                null,
+                tileResults,
+                issues)
+            {
+                Timetable =
+                    timetableResult
+            };
+        }
+
         var request =
             new ProtonBusMapPackageRequest(
                 definition,
@@ -373,9 +494,9 @@ public sealed class ProtonBusOmsiMapPackageExporter
                     .ToArray())
             {
                 BusStops =
-                    options.BusStops,
+                    busStops,
                 Entrypoints =
-                    options.Entrypoints,
+                    entrypoints,
                 TrafficLights =
                     options.TrafficLights,
                 StreetLights =
@@ -401,7 +522,68 @@ public sealed class ProtonBusOmsiMapPackageExporter
             true,
             package,
             tileResults,
-            issues);
+            issues)
+        {
+            Timetable =
+                timetableResult
+        };
+    }
+
+    private static void ValidateGeneratedTimetableNames(
+        IReadOnlyList<ProtonBusBusStopDefinition>
+            busStops,
+        IReadOnlyList<ProtonBusEntrypointDefinition>
+            entrypoints,
+        ICollection<ProtonBusOmsiMapExportIssue>
+            issues)
+    {
+        var duplicateStop =
+            busStops
+                .GroupBy(
+                    stop =>
+                        stop.Prefix,
+                    StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (
+            duplicateStop is
+                not null)
+        {
+            issues.Add(
+                new(
+                    null,
+                    null,
+                    "duplicateBusStopPrefix",
+                    duplicateStop.Key,
+                    "Generated and explicit Proton Bus stops must use unique prefixes."));
+        }
+
+        var duplicateEntrypoint =
+            entrypoints
+                .GroupBy(
+                    entrypoint =>
+                        entrypoint.Name,
+                    StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (
+            duplicateEntrypoint is
+                not null)
+        {
+            issues.Add(
+                new(
+                    null,
+                    null,
+                    "duplicateEntrypointName",
+                    duplicateEntrypoint.Key,
+                    "Generated and explicit Proton Bus entrypoints must use unique names."));
+        }
     }
 
     private static void AddAssetIssues(
@@ -453,5 +635,12 @@ public sealed class ProtonBusOmsiMapPackageExporter
             "textureTargetCollisionAcrossTiles" or
             "textureTranscodeUnsupported" or
             "splineDefinitionMissingAfterResolution" or
-            "sceneryAssetMissingAfterResolution";
+            "sceneryAssetMissingAfterResolution" or
+            "duplicateBusStopPrefix" or
+            "duplicateEntrypointName" or
+            "duplicateBusStopId" or
+            "busStopTileIndexOutOfRange" or
+            "busStopTileMissing" or
+            "busStopObjectMissing" or
+            "tripFirstStopMissing";
 }
