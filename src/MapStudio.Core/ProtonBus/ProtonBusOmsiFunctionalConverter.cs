@@ -195,8 +195,7 @@ public static class ProtonBusOmsiFunctionalConverter
         ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
         ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
         ICollection<ProtonBusTrainPathDefinition> trainPaths,
-        ICollection<ProtonBusOmsiFunctionalIssue> issues,
-        bool loop = false)
+        ICollection<ProtonBusOmsiFunctionalIssue> issues)
     {
         var plan =
             ProtonBusOmsiSplineChainPlanner
@@ -776,7 +775,8 @@ public static class ProtonBusOmsiFunctionalConverter
         ICollection<ProtonBusVehiclePathDefinition> vehiclePaths,
         ICollection<ProtonBusPedestrianPathDefinition> pedestrianPaths,
         ICollection<ProtonBusTrainPathDefinition> trainPaths,
-        ICollection<ProtonBusOmsiFunctionalIssue> issues)
+        ICollection<ProtonBusOmsiFunctionalIssue> issues,
+        bool loop = false)
     {
         if (positions.Count < 2)
         {
