@@ -19596,7 +19596,7 @@ public sealed partial class MainWindow : Window
             NativeGizmoMode.Move);
 
         StatusText.Text =
-            "Ferramenta mover ativa.";
+            "Mover ativo: arraste os eixos do gizmo diretamente no mapa. Inspector não é necessário.";
     }
 
     private void OnRotateGizmoClick(
@@ -19607,7 +19607,7 @@ public sealed partial class MainWindow : Window
             NativeGizmoMode.Rotate);
 
         StatusText.Text =
-            "Ferramenta rotacionar ativa.";
+            "Girar ativo: arraste o próprio item selecionado ou o anel do gizmo. Inspector não é necessário.";
     }
 
     private async void
