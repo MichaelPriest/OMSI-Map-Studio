@@ -176,6 +176,129 @@ public sealed class
             result.Scene.Meshes);
     }
 
+
+    [Fact]
+    public void BuilderAppliesTerrainHeightOnlyToRelativeObjects()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile.map");
+
+        var placedObject =
+            new OmsiPlacedObject(
+                HeaderValue:
+                    "object",
+                SceneryObjectPath:
+                    @"Sceneryobjects\test.sco",
+                ObjectId: 9,
+                X: 150,
+                Y: 150,
+                Z: 2,
+                Rotation: 0,
+                Pitch: 0,
+                Bank: 0,
+                ExtraValues: []);
+
+        var content =
+            new OmsiTileContent(
+                new(
+                    true,
+                    ObjectCount: 1,
+                    SplineCount: 0,
+                    SplineAttachmentCount: 0,
+                    TerrainMarkerPresent:
+                        true,
+                    TerrainFileExists:
+                        true),
+                [
+                    placedObject
+                ],
+                [],
+                Terrain:
+                    new(
+                        1,
+                        [
+                            10,
+                            10,
+                            10,
+                            10
+                        ]));
+
+        ProtonBusResolvedSceneryAsset CreateAsset(
+            bool absolute) =>
+            new(
+                [
+                    new(
+                        CreateGeometry(),
+                        OmsiSceneryMeshTransform
+                            .Identity,
+                        MeshOrdinal:
+                            0)
+                ],
+                UsesAbsoluteHeight:
+                    absolute);
+
+        ProtonBusOmsiTileExportResult Build(
+            bool absolute) =>
+            ProtonBusOmsiTileExportBuilder
+                .Build(
+                    tile,
+                    content,
+                    new Dictionary<
+                        string,
+                        OmsiSplineDefinition>(),
+                    new Dictionary<
+                        string,
+                        ProtonBusResolvedSceneryAsset>
+                    {
+                        [
+                            @"Sceneryobjects\test.sco"
+                        ] =
+                            CreateAsset(
+                                absolute)
+                    });
+
+        var relativeObject =
+            Assert.Single(
+                Build(
+                    absolute:
+                        false)
+                    .Scene
+                    .Meshes,
+                mesh =>
+                    mesh.Name.StartsWith(
+                        "object_",
+                        StringComparison.Ordinal));
+
+        var absoluteObject =
+            Assert.Single(
+                Build(
+                    absolute:
+                        true)
+                    .Scene
+                    .Meshes,
+                mesh =>
+                    mesh.Name.StartsWith(
+                        "object_",
+                        StringComparison.Ordinal));
+
+        Assert.Equal(
+            12,
+            relativeObject
+                .Vertices[0]
+                .Position.Y,
+            precision: 4);
+
+        Assert.Equal(
+            2,
+            absoluteObject
+                .Vertices[0]
+                .Position.Y,
+            precision: 4);
+    }
+
     [Fact]
     public void BuilderPropagatesColliderFlagFromResolvedMesh()
     {
