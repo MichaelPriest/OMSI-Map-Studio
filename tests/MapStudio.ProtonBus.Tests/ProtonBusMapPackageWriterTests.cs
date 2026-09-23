@@ -195,7 +195,7 @@ public sealed class ProtonBusMapPackageWriterTests
     }
 
     [Fact]
-    public void WriterRejectsNonPngSourceEvenWithPngTargetName()
+    public void WriterRejectsUnsupportedTextureSourceFormat()
     {
         var root =
             Path.Combine(
@@ -207,7 +207,7 @@ public sealed class ProtonBusMapPackageWriterTests
         var source =
             Path.Combine(
                 root,
-                "source.dds");
+                "source.webp");
 
         try
         {
@@ -216,11 +216,11 @@ public sealed class ProtonBusMapPackageWriterTests
 
             File.WriteAllBytes(
                 source,
-                [68, 68, 83, 32]);
+                [82, 73, 70, 70]);
 
             var error =
                 Assert.Throws<
-                    ArgumentException>(
+                    NotSupportedException>(
                         () =>
                             ProtonBusMapPackageWriter
                                 .Write(
@@ -238,9 +238,9 @@ public sealed class ProtonBusMapPackageWriterTests
                                         ])));
 
             Assert.Contains(
-                "valid PNG",
+                ".webp",
                 error.Message,
-                StringComparison.Ordinal);
+                StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
