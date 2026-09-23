@@ -102,4 +102,172 @@ public sealed class OmsiTerrainBorderStitcherTests
         Assert.Equal(15f, result.Terrain.Heights[3]);
         Assert.Equal(20f, result.Terrain.Heights[6]);
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SequentialThreeByThreeCreationKeepsEverySharedEdgeContinuous(
+        bool reverseCreationOrder)
+    {
+        var template =
+            new OmsiTerrainGrid(
+                2,
+                new float[]
+                {
+                    0, 1, 2,
+                    10, 11, 12,
+                    20, 21, 22
+                });
+
+        (int X, int Y)[] creationOrder =
+        [
+            (-1, -1), (0, -1), (1, -1),
+            (-1, 0), (0, 0), (1, 0),
+            (-1, 1), (0, 1), (1, 1)
+        ];
+
+        if (reverseCreationOrder)
+        {
+            Array.Reverse(
+                creationOrder);
+        }
+
+        var terrains =
+            new Dictionary<
+                (int X, int Y),
+                OmsiTerrainGrid>();
+
+        foreach (var coordinate in creationOrder)
+        {
+            var result =
+                OmsiTerrainBorderStitcher
+                    .StitchToNeighbors(
+                        template,
+                        GetTerrain(
+                            terrains,
+                            coordinate.X - 1,
+                            coordinate.Y),
+                        GetTerrain(
+                            terrains,
+                            coordinate.X + 1,
+                            coordinate.Y),
+                        GetTerrain(
+                            terrains,
+                            coordinate.X,
+                            coordinate.Y - 1),
+                        GetTerrain(
+                            terrains,
+                            coordinate.X,
+                            coordinate.Y + 1));
+
+            terrains[coordinate] =
+                result.Terrain;
+        }
+
+        Assert.Equal(
+            9,
+            terrains.Count);
+
+        foreach (var coordinate in creationOrder)
+        {
+            var terrain =
+                terrains[coordinate];
+
+            if (
+                terrains.TryGetValue(
+                    (
+                        coordinate.X + 1,
+                        coordinate.Y
+                    ),
+                    out var positiveX))
+            {
+                AssertVerticalSharedEdge(
+                    terrain,
+                    positiveX);
+            }
+
+            if (
+                terrains.TryGetValue(
+                    (
+                        coordinate.X,
+                        coordinate.Y + 1
+                    ),
+                    out var positiveY))
+            {
+                AssertHorizontalSharedEdge(
+                    terrain,
+                    positiveY);
+            }
+        }
+    }
+
+    private static OmsiTerrainGrid? GetTerrain(
+        IReadOnlyDictionary<
+            (int X, int Y),
+            OmsiTerrainGrid> terrains,
+        int tileX,
+        int tileY)
+    {
+        return
+            terrains.TryGetValue(
+                (tileX, tileY),
+                out var terrain)
+                ? terrain
+                : null;
+    }
+
+    private static void AssertVerticalSharedEdge(
+        OmsiTerrainGrid left,
+        OmsiTerrainGrid right)
+    {
+        Assert.Equal(
+            left.CellCount,
+            right.CellCount);
+
+        var sampleCount =
+            left.CellCount +
+            1;
+
+        for (
+            var row = 0;
+            row < sampleCount;
+            row++)
+        {
+            Assert.Equal(
+                left.Heights[
+                    row *
+                        sampleCount +
+                    left.CellCount],
+                right.Heights[
+                    row *
+                    sampleCount]);
+        }
+    }
+
+    private static void AssertHorizontalSharedEdge(
+        OmsiTerrainGrid top,
+        OmsiTerrainGrid bottom)
+    {
+        Assert.Equal(
+            top.CellCount,
+            bottom.CellCount);
+
+        var sampleCount =
+            top.CellCount +
+            1;
+
+        for (
+            var column = 0;
+            column < sampleCount;
+            column++)
+        {
+            Assert.Equal(
+                top.Heights[
+                    top.CellCount *
+                        sampleCount +
+                    column],
+                bottom.Heights[
+                    column]);
+        }
+    }
 }
