@@ -22234,6 +22234,28 @@ setTimeout(postBounds, 250);
                 ?? throw new InvalidDataException(
                     "Mapa real criado sem tile inicial.");
 
+            await _session
+                .SaveMapGeoreferenceAsync(
+                    new NativeMapGeoreference(
+                        centerLatitude,
+                        centerLongitude,
+                        anchor.X,
+                        anchor.Y,
+                        150.0,
+                        150.0,
+                        Math.Clamp(
+                            _realMapAreaZoom,
+                            11,
+                            19),
+                        RealMapProviderBox.SelectedIndex ==
+                            1
+                            ? "roadmap"
+                            : "roadmap",
+                        RealMapProviderBox.SelectedIndex ==
+                            1
+                            ? "Google Maps"
+                            : "OpenStreetMap"));
+
             var minimumDx =
                 -(
                     _realMapAreaColumns /
