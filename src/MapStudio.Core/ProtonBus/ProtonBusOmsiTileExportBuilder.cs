@@ -50,6 +50,12 @@ public sealed record ProtonBusOmsiTileExportOptions(
 {
     public ProtonBusOmsiFunctionalConversionOptions?
         FunctionalOptions { get; init; }
+
+    public bool ConvertTrafficLights { get; init; } =
+        true;
+
+    public ProtonBusOmsiTrafficLightConversionOptions?
+        TrafficLightOptions { get; init; }
 }
 
 public sealed record ProtonBusOmsiTileExportResult(
