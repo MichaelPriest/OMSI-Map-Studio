@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.19: reusable tile-content cache for overlapping streamed regions.
+# Test 10.20: visible-first tile navigation with progressive 3×3 completion.
 
 on:
   push:
@@ -42,8 +42,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.19-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.19-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.20-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.20-native.md"
   workflow_dispatch:
 
 permissions:
@@ -54,8 +54,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.19-native
-  TAG: v0.2.0-alpha.5-test.10.19-native
+  VERSION: 0.2.0-alpha.5-test.10.20-native
+  TAG: v0.2.0-alpha.5-test.10.20-native
 
 jobs:
   build-native-preview:
@@ -700,6 +700,37 @@ jobs:
 
           Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
 
+      - name: Verify test 10.20 progressive region navigation
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'LoadPerformanceRegionProgressivelyAsync',
+            'targetAlreadyLoaded',
+            'focusedExistingTarget',
+            'radius: 0',
+            'radius: 1',
+            'focusActiveTile: false',
+            'Tile alvo pronto'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.20 progressive navigation wiring is missing: $required"
+            }
+          }
+
+          $progressive = [regex]::Match(
+            $main,
+            'private async Task<NativeMapSnapshot>[\s\S]*?LoadPerformanceRegionProgressivelyAsync[\s\S]*?return region;'
+          ).Value
+
+          if (-not $progressive.Contains('_session.SetActiveTile') -or
+              -not $progressive.Contains('Viewport.FocusTile')) {
+            throw "Loaded target tiles must focus immediately before the surrounding 3×3 refresh."
+          }
+
+          Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -854,11 +885,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.19-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.20-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.19-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.20-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

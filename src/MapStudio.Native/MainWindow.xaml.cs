@@ -21139,6 +21139,10 @@ public sealed partial class MainWindow : Window
                 snapshot =
                     await _session
                         .LoadFullMapAsync();
+
+                await ApplyMapSnapshotAsync(
+                    snapshot,
+                    focusActiveTile: true);
             }
             else
             {
@@ -21151,19 +21155,13 @@ public sealed partial class MainWindow : Window
                         "mapTileNotFound");
 
                 snapshot =
-                    await _session
-                        .LoadRegionAsync(
-                            center.X,
-                            center.Y,
-                            radius: 1);
+                    await LoadPerformanceRegionProgressivelyAsync(
+                        center.X,
+                        center.Y);
             }
 
             _fullMapMode =
                 fullMap;
-
-            await ApplyMapSnapshotAsync(
-                snapshot,
-                focusActiveTile: true);
 
             StatusText.Text =
                 fullMap
@@ -23556,10 +23554,10 @@ public sealed partial class MainWindow : Window
             BeginLoading(
                 _fullMapMode
                     ? $"Focando tile {tileX},{tileY}"
-                    : $"Carregando tile {tileX},{tileY}",
+                    : $"Navegando para {tileX},{tileY}",
                 _fullMapMode
                     ? "Atualizando câmera e seleção..."
-                    : "Atualizando a região 3×3 do viewport...");
+                    : "Mostrando o tile alvo e completando a região 3×3...");
 
             if (_fullMapMode)
             {
@@ -23593,18 +23591,12 @@ public sealed partial class MainWindow : Window
             }
 
             StatusText.Text =
-                $"Carregando região 3×3 em {tileX},{tileY}...";
+                $"Preparando região 3×3 em {tileX},{tileY}...";
 
             var region =
-                await _session
-                    .LoadRegionAsync(
-                        tileX,
-                        tileY,
-                        radius: 1);
-
-            await ApplyMapSnapshotAsync(
-                region,
-                focusActiveTile: true);
+                await LoadPerformanceRegionProgressivelyAsync(
+                    tileX,
+                    tileY);
 
             StatusText.Text =
                 $"Região 3×3 carregada em {tileX},{tileY}.";
@@ -23621,6 +23613,93 @@ public sealed partial class MainWindow : Window
 
             EndLoading();
         }
+    }
+
+    private async Task<NativeMapSnapshot>
+        LoadPerformanceRegionProgressivelyAsync(
+            int tileX,
+            int tileY)
+    {
+        var current =
+            _session.CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        var targetAlreadyLoaded =
+            current.Tiles.Any(
+                tile =>
+                    tile.Reference.X == tileX &&
+                    tile.Reference.Y == tileY);
+
+        var focusedExistingTarget =
+            false;
+
+        if (targetAlreadyLoaded)
+        {
+            var activeSnapshot =
+                _session.SetActiveTile(
+                    tileX,
+                    tileY);
+
+            UpdateMapSummary(
+                activeSnapshot);
+
+            TileNavigatorXBox.Value =
+                tileX;
+
+            TileNavigatorYBox.Value =
+                tileY;
+
+            focusedExistingTarget =
+                Viewport.FocusTile(
+                    tileX,
+                    tileY);
+
+            if (focusedExistingTarget)
+            {
+                UpdateLoading(
+                    "Tile alvo pronto",
+                    $"Tile {tileX},{tileY} já estava carregado · completando o novo entorno 3×3...");
+
+                StatusText.Text =
+                    $"Tile {tileX},{tileY} visível · carregando apenas o entorno necessário...";
+            }
+        }
+
+        if (!focusedExistingTarget)
+        {
+            UpdateLoading(
+                "Carregando tile central",
+                $"Priorizando {tileX},{tileY} antes dos tiles vizinhos...");
+
+            var core =
+                await _session
+                    .LoadRegionAsync(
+                        tileX,
+                        tileY,
+                        radius: 0);
+
+            await ApplyMapSnapshotAsync(
+                core,
+                focusActiveTile: true);
+
+            UpdateLoading(
+                "Tile central pronto",
+                $"Tile {tileX},{tileY} renderizado · completando até 8 vizinhos...");
+        }
+
+        var region =
+            await _session
+                .LoadRegionAsync(
+                    tileX,
+                    tileY,
+                    radius: 1);
+
+        await ApplyMapSnapshotAsync(
+            region,
+            focusActiveTile: false);
+
+        return region;
     }
 
     private async Task ApplyMapSnapshotAsync(
