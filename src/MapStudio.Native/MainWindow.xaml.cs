@@ -2937,17 +2937,38 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (_session.OmsiRootPath is null)
+        {
+            StatusText.Text =
+                "Construção: nenhum Workspace/OMSI ativo. Abra um mapa antes de posicionar assets.";
+            return;
+        }
+
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Construção: nenhum mapa está aberto.";
+            return;
+        }
+
         if (
-            _session.OmsiRootPath is null ||
-            _session.CurrentMap is null ||
             GetSelectedAssetLibraryEntry() is not
-                { } asset ||
+                { } asset)
+        {
+            StatusText.Text =
+                "Construção: selecione primeiro um asset na Biblioteca.";
+            return;
+        }
+
+        if (
             asset.Kind is not
                 (
                     OmsiAssetKind.SceneryObject or
                     OmsiAssetKind.Spline
                 ))
         {
+            StatusText.Text =
+                $"Construção: {asset.RelativePath} não é um SCO/SLI posicionável.";
             return;
         }
 
@@ -3043,7 +3064,10 @@ public sealed partial class MainWindow : Window
             if (!started)
             {
                 StatusText.Text =
-                    $"Não foi possível preparar o asset: {asset.RelativePath}.";
+                    asset.Kind ==
+                        OmsiAssetKind.Spline
+                        ? $"Não foi possível iniciar a construção da SLI: {asset.RelativePath}. Verifique se o arquivo existe e é uma spline válida."
+                        : $"Não foi possível preparar o asset: {asset.RelativePath}.";
 
                 return;
             }
