@@ -270,8 +270,10 @@ public static class ProtonBusOmsiTrafficLightConverter
         }
 
         var quantum =
-            intervals.Aggregate(
-                GreatestCommonDivisor);
+            Math.Min(
+                intervals.Aggregate(
+                    GreatestCommonDivisor),
+                MicrosecondsPerSecond);
 
         if (quantum <= 0)
         {
