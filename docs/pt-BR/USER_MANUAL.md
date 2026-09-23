@@ -1,7 +1,7 @@
 # OMSI Map Studio — Manual do Usuário
 
 > Manual inicial da arquitetura nativa WinUI 3 + Direct3D 11.  
-> Atualizado para a série **0.2.0-alpha.5-test.10.7-native**.
+> Atualizado para a série **0.2.0-alpha.5-test.10.9-native**.
 
 O OMSI Map Studio ainda está em desenvolvimento Alpha. Antes de editar mapas importantes, mantenha cópias de segurança. Diversas operações do editor já criam backup automaticamente, mas mapas e assets compartilhados podem afetar mais de um projeto.
 
@@ -14,7 +14,13 @@ A janela principal é dividida em quatro áreas:
 - **Viewport 3D**: área central onde o mapa é visualizado e editado.
 - **Projeto / Explorer**: navegação pelo mapa, tiles, objetos, splines e recursos do projeto.
 - **Biblioteca de Assets**: busca e seleção de objetos, splines e outros itens disponíveis.
-- **Inspector**: ajustes avançados do item selecionado. Para criação comum de ruas, ele não é obrigatório.
+- **Inspector**: ajustes avançados e numéricos do item selecionado.
+
+### Regra de uso do editor
+
+**Nenhuma função principal depende do Inspector.** O Inspector é opcional e serve para ajuste fino.
+
+Criação, seleção, movimentação, rotação, duplicação, divisão, curvas, elevação, nivelamento, substituição e demais operações principais devem ser executáveis diretamente no viewport, pelas barras rápidas ou pela roda contextual.
 
 O modo **Creator Focus / F11** amplia o espaço do viewport. Os painéis podem ser minimizados e o painel Projeto pode ser redimensionado.
 
@@ -116,6 +122,10 @@ As ações principais incluem:
 - Excluir;
 - Inspector;
 - Focar.
+
+**Girar sem Inspector:** selecione o item, ative **Girar** (atalho **E**) e arraste o próprio item no viewport. O anel de rotação continua disponível para controle visual mais preciso. Solte o mouse para aplicar. Com Snap ativo, a rotação usa os incrementos configurados.
+
+**Mover sem Inspector:** selecione o item, ative **Mover** (atalho **W**) e use o gizmo diretamente no viewport.
 
 ### Para splines/ruas
 
