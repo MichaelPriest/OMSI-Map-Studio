@@ -586,6 +586,290 @@ public sealed class ProtonBusOmsiFunctionalConverterTests
                 "trafficLightControllerConversionPending");
     }
 
+    [Fact]
+    public void ConverterMergesLinkedSplinePathsIntoOneContinuousPath()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile.map");
+
+        var first =
+            new OmsiPlacedSpline(
+                HeaderValue:
+                    "spline",
+                SplinePath:
+                    @"Splines\Test\road.sli",
+                SplineId:
+                    1,
+                PreviousSplineId:
+                    -1,
+                NextSplineId:
+                    2,
+                X:
+                    0,
+                Z:
+                    0,
+                Y:
+                    0,
+                Rotation:
+                    0,
+                Length:
+                    10,
+                Radius:
+                    0,
+                GradientStart:
+                    0,
+                GradientEnd:
+                    0,
+                IsHeightSpline:
+                    false,
+                ExtraValues:
+                    []);
+
+        var second =
+            first with
+            {
+                SplineId =
+                    2,
+                PreviousSplineId =
+                    1,
+                NextSplineId =
+                    -1,
+                Y =
+                    10
+            };
+
+        var definition =
+            CreateVehicleSplineDefinition();
+
+        var result =
+            ProtonBusOmsiFunctionalConverter
+                .Convert(
+                    tile,
+                    new OmsiTileContent(
+                        new(
+                            true,
+                            ObjectCount:
+                                0,
+                            SplineCount:
+                                2,
+                            SplineAttachmentCount:
+                                0),
+                        [],
+                        [
+                            first,
+                            second
+                        ]),
+                    new Dictionary<
+                        string,
+                        OmsiSplineDefinition>
+                    {
+                        [
+                            first.SplinePath
+                        ] =
+                            definition
+                    },
+                    new Dictionary<
+                        string,
+                        ProtonBusResolvedSceneryAsset>(),
+                    new(
+                        WaypointSpacing:
+                            5));
+
+        var path =
+            Assert.Single(
+                result.VehiclePaths);
+
+        Assert.Equal(
+            "pv_t0_0_c1_p0_f",
+            path.Prefix);
+
+        Assert.Equal(
+            5,
+            path.MaxPathsToCheck);
+
+        Assert.Equal(
+            5,
+            result
+                .MarkerScene
+                .Meshes
+                .Count);
+
+        Assert.DoesNotContain(
+            result.Issues,
+            issue =>
+                issue.Code ==
+                "splineChainPathFallback");
+
+        AssertVectorClose(
+            new(
+                0,
+                0.1f,
+                0),
+            GetMarkerCenter(
+                result
+                    .MarkerScene
+                    .Meshes[0]));
+
+        AssertVectorClose(
+            new(
+                0,
+                0.1f,
+                20),
+            GetMarkerCenter(
+                result
+                    .MarkerScene
+                    .Meshes[^1]));
+    }
+
+    [Fact]
+    public void ConverterFallsBackWhenLinkedSplineEndpointsAreTooFarApart()
+    {
+        var tile =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile.map");
+
+        var first =
+            new OmsiPlacedSpline(
+                HeaderValue:
+                    "spline",
+                SplinePath:
+                    @"Splines\Test\road.sli",
+                SplineId:
+                    1,
+                PreviousSplineId:
+                    -1,
+                NextSplineId:
+                    2,
+                X:
+                    0,
+                Z:
+                    0,
+                Y:
+                    0,
+                Rotation:
+                    0,
+                Length:
+                    10,
+                Radius:
+                    0,
+                GradientStart:
+                    0,
+                GradientEnd:
+                    0,
+                IsHeightSpline:
+                    false,
+                ExtraValues:
+                    []);
+
+        var second =
+            first with
+            {
+                SplineId =
+                    2,
+                PreviousSplineId =
+                    1,
+                NextSplineId =
+                    -1,
+                Y =
+                    15
+            };
+
+        var definition =
+            CreateVehicleSplineDefinition();
+
+        var result =
+            ProtonBusOmsiFunctionalConverter
+                .Convert(
+                    tile,
+                    new OmsiTileContent(
+                        new(
+                            true,
+                            ObjectCount:
+                                0,
+                            SplineCount:
+                                2,
+                            SplineAttachmentCount:
+                                0),
+                        [],
+                        [
+                            first,
+                            second
+                        ]),
+                    new Dictionary<
+                        string,
+                        OmsiSplineDefinition>
+                    {
+                        [
+                            first.SplinePath
+                        ] =
+                            definition
+                    },
+                    new Dictionary<
+                        string,
+                        ProtonBusResolvedSceneryAsset>(),
+                    new(
+                        WaypointSpacing:
+                            5,
+                        SplineChainJoinTolerance:
+                            1));
+
+        Assert.Equal(
+            2,
+            result
+                .VehiclePaths
+                .Count);
+
+        Assert.Contains(
+            result.VehiclePaths,
+            path =>
+                path.Prefix ==
+                "pv_t0_0_s1_p0_f");
+
+        Assert.Contains(
+            result.VehiclePaths,
+            path =>
+                path.Prefix ==
+                "pv_t0_0_s2_p0_f");
+
+        Assert.Contains(
+            result.Issues,
+            issue =>
+                issue.Code ==
+                    "splineChainPathFallback" &&
+                issue.Detail is not null &&
+                issue.Detail.Contains(
+                    "5",
+                    StringComparison.Ordinal));
+    }
+
+    private static OmsiSplineDefinition
+        CreateVehicleSplineDefinition() =>
+        new(
+            true,
+            [],
+            [])
+        {
+            Paths =
+            [
+                new(
+                    Type:
+                        0,
+                    X:
+                        0,
+                    Z:
+                        0.1,
+                    Width:
+                        3,
+                    Direction:
+                        0)
+            ]
+        };
+
     private static OmsiPlacedSpline CreateSpline(
         int id,
         double length) =>
