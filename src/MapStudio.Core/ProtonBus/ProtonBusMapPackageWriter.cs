@@ -13,7 +13,14 @@ public sealed record ProtonBusMapPackageRequest(
     IReadOnlyList<ProtonBusModelExport>
         Models,
     IReadOnlyList<ProtonBusTextureExport>?
-        Textures = null);
+        Textures = null)
+{
+    public IReadOnlyList<
+        ProtonBusBusStopDefinition>
+        BusStops { get; init; } =
+        Array.Empty<
+            ProtonBusBusStopDefinition>();
+}
 
 public sealed record ProtonBusMapPackageResult(
     string OutputRoot,
@@ -21,7 +28,12 @@ public sealed record ProtonBusMapPackageResult(
     IReadOnlyList<string>
         ModelPaths,
     IReadOnlyList<string>
-        TexturePaths);
+        TexturePaths)
+{
+    public IReadOnlyList<string>
+        BusStopPaths { get; init; } =
+        Array.Empty<string>();
+}
 
 public static class ProtonBusMapPackageWriter
 {
@@ -161,11 +173,84 @@ public static class ProtonBusMapPackageWriter
                 targetPath);
         }
 
+        var busStopPaths =
+            WriteBusStops(
+                root,
+                layout,
+                request.BusStops);
+
         return new(
             root,
             mapDefinitionPath,
             modelPaths.ToArray(),
-            texturePaths.ToArray());
+            texturePaths.ToArray())
+        {
+            BusStopPaths =
+                busStopPaths
+        };
+    }
+
+    private static IReadOnlyList<string>
+        WriteBusStops(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<
+                ProtonBusBusStopDefinition>
+                busStops)
+    {
+        var duplicate =
+            busStops
+                .GroupBy(
+                    stop =>
+                        stop.Prefix,
+                    StringComparer
+                        .OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (
+            duplicate is
+                not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate Proton Bus bus-stop prefix '{duplicate.Key}'.",
+                nameof(busStops));
+        }
+
+        var output =
+            new List<string>(
+                busStops.Count);
+
+        foreach (
+            var stop
+            in busStops)
+        {
+            ProtonBusBusStopDefinitionWriter
+                .Validate(
+                    stop);
+
+            var targetPath =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout
+                            .BusStopsDirectoryPath,
+                        stop
+                            .SuggestedFileName));
+
+            File.WriteAllText(
+                targetPath,
+                ProtonBusBusStopDefinitionWriter
+                    .Serialize(
+                        stop));
+
+            output.Add(
+                targetPath);
+        }
+
+        return output;
     }
 
     private static IEnumerable<string>
