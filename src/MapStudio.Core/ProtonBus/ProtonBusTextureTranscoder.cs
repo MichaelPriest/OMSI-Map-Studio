@@ -1,3 +1,4 @@
+#pragma warning disable CA1416 // Runtime guarded: System.Drawing path is Windows-only.
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -218,3 +219,5 @@ public static class ProtonBusTextureTranscoder
         }
     }
 }
+
+#pragma warning restore CA1416
