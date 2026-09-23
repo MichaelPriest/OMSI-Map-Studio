@@ -105,13 +105,12 @@ public sealed class OmsiGlobalTileCatalogEditorTests
         var tile =
             Assert.Single(
                 OmsiMapCatalog
-                    .ReadTiles(parsed)
-                    .Where(
-                        item =>
-                            item.X ==
-                                -1 &&
-                            item.Y ==
-                                -1));
+                    .ReadTiles(parsed),
+                item =>
+                    item.X ==
+                        -1 &&
+                    item.Y ==
+                        -1);
 
         Assert.Equal(
             "tile_-1_-1.map",
