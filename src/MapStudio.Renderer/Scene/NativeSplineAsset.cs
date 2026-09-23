@@ -10,8 +10,13 @@ public sealed record NativeSplineAsset(
         TexturePaths,
     string? ErrorCode)
 {
+    public bool CanPlace =>
+        Definition.Exists &&
+        !string.IsNullOrWhiteSpace(
+            FullPath);
+
     public bool IsLoaded =>
         ErrorCode is null &&
-        Definition.Exists &&
+        CanPlace &&
         Definition.Surfaces.Count > 0;
 }
