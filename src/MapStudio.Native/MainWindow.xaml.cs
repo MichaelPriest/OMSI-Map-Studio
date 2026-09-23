@@ -467,7 +467,7 @@ public sealed partial class MainWindow : Window
     private bool _resizingTileNavigatorWindow;
     private bool _tileNavigatorWindowMinimized;
     private double _tileNavigatorRestoreHeight =
-        205;
+        500;
     private uint _tileNavigatorResizePointerId;
     private double _tileNavigatorResizeStartX;
     private double _tileNavigatorResizeStartY;
@@ -20872,10 +20872,325 @@ public sealed partial class MainWindow : Window
                 active.Y;
         }
 
+        if (show)
+        {
+            RefreshTileNavigatorList();
+        }
+
         StatusText.Text =
             show
                 ? "Navegador Tile X/Y aberto · arraste e redimensione dentro do editor."
                 : "Navegador Tile X/Y fechado.";
+    }
+
+    private void RefreshTileNavigatorList()
+    {
+        if (
+            TileNavigatorListView is null ||
+            TileNavigatorStatusText is null ||
+            TileNavigatorPropertiesText is null)
+        {
+            return;
+        }
+
+        var snapshot =
+            _session.CurrentMap;
+
+        if (snapshot is null)
+        {
+            TileNavigatorListView.ItemsSource =
+                Array.Empty<TileManagerViewItem>();
+
+            TileNavigatorStatusText.Text =
+                "Abra ou crie um mapa para listar os tiles.";
+
+            TileNavigatorPropertiesText.Text =
+                "Nenhum mapa aberto.";
+
+            return;
+        }
+
+        var previous =
+            TileNavigatorListView.SelectedItem as
+                TileManagerViewItem;
+
+        var loaded =
+            snapshot.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.Reference.X,
+                            tile.Reference.Y
+                        ))
+                .ToDictionary(
+                    group =>
+                        group.Key,
+                    group =>
+                        group.First());
+
+        var active =
+            snapshot.ActiveTile;
+
+        var items =
+            snapshot.Map.Tiles
+                .GroupBy(
+                    tile =>
+                        (
+                            tile.X,
+                            tile.Y
+                        ))
+                .OrderBy(
+                    group =>
+                        group.Key.Y)
+                .ThenBy(
+                    group =>
+                        group.Key.X)
+                .Select(
+                    group =>
+                    {
+                        var isLoaded =
+                            loaded.TryGetValue(
+                                group.Key,
+                                out var loadedTile);
+
+                        var isActive =
+                            active?.X ==
+                                group.Key.X &&
+                            active?.Y ==
+                                group.Key.Y;
+
+                        var detail =
+                            isLoaded
+                                ? $"objetos {loadedTile!.Content.Objects.Count} · splines {loadedTile.Content.Splines.Count}"
+                                : "não carregado no viewport";
+
+                        return
+                            new TileManagerViewItem(
+                                group.Key.X,
+                                group.Key.Y,
+                                $"{(isActive ? "●" : "○")} Tile {group.Key.X},{group.Key.Y} · {detail}",
+                                isActive,
+                                isLoaded);
+                    })
+                .ToArray();
+
+        TileNavigatorListView.ItemsSource =
+            items;
+
+        var selected =
+            previous is not null
+                ? items.FirstOrDefault(
+                    item =>
+                        item.X ==
+                            previous.X &&
+                        item.Y ==
+                            previous.Y)
+                : null;
+
+        selected ??=
+            items.FirstOrDefault(
+                item =>
+                    item.IsActive);
+
+        TileNavigatorListView.SelectedItem =
+            selected;
+
+        TileNavigatorStatusText.Text =
+            $"{items.Length} tile(s) no mapa · {items.Count(item => item.IsLoaded)} carregado(s) no viewport · " +
+            (_fullMapMode
+                ? "modo mapa completo"
+                : "modo desempenho 3×3");
+
+        UpdateTileNavigatorProperties(
+            selected);
+    }
+
+    private void OnTileNavigatorSelectionChanged(
+        object sender,
+        SelectionChangedEventArgs e)
+    {
+        var selected =
+            TileNavigatorListView.SelectedItem as
+                TileManagerViewItem;
+
+        if (selected is not null)
+        {
+            TileNavigatorXBox.Value =
+                selected.X;
+
+            TileNavigatorYBox.Value =
+                selected.Y;
+        }
+
+        UpdateTileNavigatorProperties(
+            selected);
+    }
+
+    private void UpdateTileNavigatorProperties(
+        TileManagerViewItem? selected)
+    {
+        if (
+            TileNavigatorPropertiesText is null)
+        {
+            return;
+        }
+
+        if (
+            selected is null ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            TileNavigatorPropertiesText.Text =
+                "Selecione um tile para ver propriedades.";
+
+            return;
+        }
+
+        var reference =
+            snapshot.Map.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.X ==
+                            selected.X &&
+                        tile.Y ==
+                            selected.Y);
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            selected.X &&
+                        tile.Reference.Y ==
+                            selected.Y);
+
+        var references =
+            snapshot.Map.Tiles
+                .Count(
+                    tile =>
+                        tile.X ==
+                            selected.X &&
+                        tile.Y ==
+                            selected.Y);
+
+        var path =
+            reference?.RelativeMapPath ??
+            "—";
+
+        var content =
+            loaded is null
+                ? "conteúdo fora da região carregada"
+                : $"{loaded.Content.Objects.Count} objeto(s) · {loaded.Content.Splines.Count} spline(s)";
+
+        TileNavigatorPropertiesText.Text =
+            $"Tile {selected.X},{selected.Y} · " +
+            $"{(selected.IsActive ? "ativo" : "inativo")} · " +
+            $"{(selected.IsLoaded ? "carregado" : "não carregado")} · " +
+            $"{references} referência(s) · {content}\n{path}";
+    }
+
+    private async void OnTileNavigatorListDoubleTapped(
+        object sender,
+        DoubleTappedRoutedEventArgs e)
+    {
+        if (
+            TileNavigatorListView.SelectedItem is
+                TileManagerViewItem selected)
+        {
+            await NavigateToTileAsync(
+                selected.X,
+                selected.Y);
+
+            RefreshTileNavigatorList();
+        }
+    }
+
+    private void OnTileNavigatorFocusSelectedClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TileNavigatorListView.SelectedItem is not
+                TileManagerViewItem selected)
+        {
+            StatusText.Text =
+                "Tile XY: selecione um tile para focar.";
+
+            return;
+        }
+
+        if (
+            !selected.IsLoaded ||
+            !Viewport.FocusTile(
+                selected.X,
+                selected.Y))
+        {
+            StatusText.Text =
+                $"Tile {selected.X},{selected.Y} não está carregado no viewport; use Carregar.";
+
+            return;
+        }
+
+        StatusText.Text =
+            $"Tile {selected.X},{selected.Y} focado sem recarregar a região.";
+    }
+
+    private async void OnTileNavigatorLoadSelectedClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TileNavigatorListView.SelectedItem is not
+                TileManagerViewItem selected)
+        {
+            StatusText.Text =
+                "Tile XY: selecione um tile para carregar.";
+
+            return;
+        }
+
+        await NavigateToTileAsync(
+            selected.X,
+            selected.Y);
+
+        RefreshTileNavigatorList();
+    }
+
+    private async void OnTileNavigatorDeleteSelectedClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TileNavigatorListView.SelectedItem is not
+                TileManagerViewItem selected)
+        {
+            StatusText.Text =
+                "Tile XY: selecione um tile para excluir.";
+
+            return;
+        }
+
+        await NavigateToTileAsync(
+            selected.X,
+            selected.Y);
+
+        if (
+            _session.CurrentMap?.ActiveTile is not
+                { } active ||
+            active.X !=
+                selected.X ||
+            active.Y !=
+                selected.Y)
+        {
+            StatusText.Text =
+                $"Tile {selected.X},{selected.Y} não pôde ser ativado para exclusão.";
+
+            return;
+        }
+
+        OnDeleteActiveMapTileClick(
+            sender,
+            e);
     }
 
     private void OnCloseTileNavigatorWindowClick(
@@ -20912,7 +21227,7 @@ public sealed partial class MainWindow : Window
         {
             _tileNavigatorRestoreHeight =
                 Math.Max(
-                    170,
+                    300,
                     TileNavigatorWindow
                         .ActualHeight);
         }
@@ -20934,7 +21249,7 @@ public sealed partial class MainWindow : Window
             minimized
                 ? 54
                 : Math.Max(
-                    170,
+                    300,
                     _tileNavigatorRestoreHeight);
 
         TileNavigatorMinimizeButton.Content =
@@ -21138,9 +21453,9 @@ public sealed partial class MainWindow : Window
                 _tileNavigatorResizeOriginWidth +
                     position.X -
                     _tileNavigatorResizeStartX,
-                270,
+                360,
                 Math.Max(
-                    270,
+                    360,
                     WorkspaceGrid.ActualWidth -
                         32));
 
@@ -21149,9 +21464,9 @@ public sealed partial class MainWindow : Window
                 _tileNavigatorResizeOriginHeight +
                     position.Y -
                     _tileNavigatorResizeStartY,
-                170,
+                300,
                 Math.Max(
-                    170,
+                    300,
                     WorkspaceGrid.ActualHeight -
                         32));
 
@@ -23053,6 +23368,14 @@ public sealed partial class MainWindow : Window
         {
             RefreshMapExplorer();
         }
+
+        if (
+            TileNavigatorWindow is not null &&
+            TileNavigatorWindow.Visibility ==
+                Visibility.Visible)
+        {
+            RefreshTileNavigatorList();
+        }
     }
 
     private async void OnTileManagerClick(
@@ -23501,6 +23824,41 @@ public sealed partial class MainWindow : Window
                 .FindInitialTile(
                     snapshot.Map.Tiles);
 
+        var suggestedX =
+            (baseTile?.X ?? 0) +
+            1;
+
+        var suggestedY =
+            baseTile?.Y ??
+            0;
+
+        if (
+            TileNavigatorWindow.Visibility ==
+                Visibility.Visible &&
+            double.IsFinite(
+                TileNavigatorXBox.Value) &&
+            double.IsFinite(
+                TileNavigatorYBox.Value) &&
+            Math.Truncate(
+                TileNavigatorXBox.Value) ==
+                TileNavigatorXBox.Value &&
+            Math.Truncate(
+                TileNavigatorYBox.Value) ==
+                TileNavigatorYBox.Value &&
+            TileNavigatorXBox.Value is >=
+                int.MinValue and <=
+                int.MaxValue &&
+            TileNavigatorYBox.Value is >=
+                int.MinValue and <=
+                int.MaxValue)
+        {
+            suggestedX =
+                (int)TileNavigatorXBox.Value;
+
+            suggestedY =
+                (int)TileNavigatorYBox.Value;
+        }
+
         var tileXBox =
             new NumberBox
             {
@@ -23511,8 +23869,7 @@ public sealed partial class MainWindow : Window
                 Maximum =
                     100000,
                 Value =
-                    (baseTile?.X ?? 0) +
-                    1,
+                    suggestedX,
                 SmallChange =
                     1,
                 SpinButtonPlacementMode =
@@ -23530,8 +23887,7 @@ public sealed partial class MainWindow : Window
                 Maximum =
                     100000,
                 Value =
-                    baseTile?.Y ??
-                    0,
+                    suggestedY,
                 SmallChange =
                     1,
                 SpinButtonPlacementMode =
