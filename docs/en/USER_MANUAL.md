@@ -1,7 +1,7 @@
 # OMSI Map Studio — User Manual
 
 > Initial user manual for the native WinUI 3 + Direct3D 11 architecture.  
-> Updated for the **0.2.0-alpha.5-test.10.9-native** series.
+> Updated for the **0.2.0-alpha.5-test.10.10-native** series.
 
 OMSI Map Studio is still an Alpha project. Keep external backups of important maps before editing them. Several operations already create automatic backups, but shared assets can affect more than one map.
 
@@ -91,6 +91,16 @@ If selection is still difficult:
 3. temporarily filter to **Objects** or **Roads / splines**;
 4. verify visibility;
 5. click the same point again to cycle candidates.
+
+### 4.1 Move and rotate with a visual ghost
+
+When **Move** or **Rotate** is active, the selected item shows a **filled ghost of its own geometry** following the pointer in real time. The original remains at its starting position until release.
+
+- **Move (W)**: drag the selected object or spline itself.
+- **Rotate (E)**: drag the item itself or use the rotation ring.
+- Releasing applies the transform.
+- Ctrl+Z / Ctrl+Y remain available.
+- Inspector is not required.
 
 ---
 
@@ -298,6 +308,20 @@ Snap distance is configurable.
 
 ---
 
+## 10.1 Auto-connect and repair links
+
+The Roads bar includes **Auto connect** for the selected spline.
+
+It searches compatible endpoints inside the snap distance and:
+
+- fills missing Previous/Next links;
+- repairs links pointing to spline IDs that no longer exist;
+- updates the reciprocal neighbor link;
+- preserves valid links;
+- creates a backup before writing.
+
+Inspector is not required.
+
 # 11. Split spline
 
 1. select a spline;
@@ -450,6 +474,22 @@ Current AI-assisted functionality includes object/spline classification, referen
 API keys are stored in Windows Credential Manager and are not written into map or asset files.
 
 ---
+
+## 26.1 Selecting the active profile
+
+The top toolbar includes an **AI Profile** selector. Choosing a profile there makes it active immediately and persists the selection.
+
+Use **AI: connect/test** to validate the active connection.
+
+## 26.2 Map reference
+
+Under **Map → Map reference over terrain...**:
+
+- **OpenStreetMap** is the default and requires no API key;
+- **Google Maps** uses the Maps Static API and requires the user's key;
+- the Google key can be stored in Windows Credential Manager;
+- the saved key can also be reused by Google Elevation;
+- map reference opacity is configurable.
 
 # 27. Testing Alpha builds
 
