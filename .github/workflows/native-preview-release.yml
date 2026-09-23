@@ -709,6 +709,7 @@ jobs:
             'LoadPerformanceRegionProgressivelyAsync',
             'targetAlreadyLoaded',
             'focusedExistingTarget',
+            'PendingTransformCount',
             'radius: 0',
             'radius: 1',
             'focusActiveTile: false',

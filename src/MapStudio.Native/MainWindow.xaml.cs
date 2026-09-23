@@ -23625,6 +23625,12 @@ public sealed partial class MainWindow : Window
             throw new InvalidOperationException(
                 "Nenhum mapa OMSI está aberto.");
 
+        if (_session.PendingTransformCount > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeMapLoadModeChange");
+        }
+
         var targetAlreadyLoaded =
             current.Tiles.Any(
                 tile =>
