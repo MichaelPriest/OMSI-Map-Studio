@@ -11,7 +11,11 @@ public sealed record ProtonBusOmsiMapTileExportResult(
     OmsiTileReference Tile,
     ProtonBusOmsiAssetResolutionResult Assets,
     ProtonBusOmsiTileExportResult? Geometry,
-    ProtonBusOmsiFunctionalConversionResult? Functional);
+    ProtonBusOmsiFunctionalConversionResult? Functional)
+{
+    public ProtonBusOmsiTrafficLightConversionResult?
+        TrafficLights { get; init; }
+}
 
 public sealed record ProtonBusOmsiMapExportIssue(
     int? TileX,
@@ -30,6 +34,12 @@ public sealed record ProtonBusOmsiMapExportOptions(
 {
     public ProtonBusOmsiTimetableExportSource?
         Timetable { get; init; }
+
+    public bool ConvertTrafficLights { get; init; } =
+        true;
+
+    public ProtonBusOmsiTrafficLightConversionOptions?
+        TrafficLightOptions { get; init; }
 
     public IReadOnlyList<ProtonBusBusStopDefinition>
         BusStops { get; init; } =
@@ -146,6 +156,10 @@ public sealed class ProtonBusOmsiMapPackageExporter
 
         var streetLights =
             new List<ProtonBusStreetLightDefinition>();
+
+        var trafficLights =
+            new List<ProtonBusTrafficLightDefinition>(
+                options.TrafficLights);
 
         var assetsByTile =
             new Dictionary<
@@ -346,6 +360,39 @@ public sealed class ProtonBusOmsiMapPackageExporter
                         issue.Detail));
             }
 
+            ProtonBusOmsiTrafficLightConversionResult?
+                traffic =
+                    null;
+
+            if (
+                options.ConvertTrafficLights)
+            {
+                traffic =
+                    ProtonBusOmsiTrafficLightConverter
+                        .Convert(
+                            tile,
+                            source.Content,
+                            assets.SceneryAssets,
+                            options
+                                .TrafficLightOptions);
+
+                foreach (
+                    var issue
+                    in traffic.Issues)
+                {
+                    issues.Add(
+                        new(
+                            tile.X,
+                            tile.Y,
+                            issue.Code,
+                            issue.Source,
+                            issue.Detail));
+                }
+
+                trafficLights.AddRange(
+                    traffic.TrafficLights);
+            }
+
             var combinedScene =
                 new ProtonBusExportScene(
                     geometry
@@ -355,6 +402,12 @@ public sealed class ProtonBusOmsiMapPackageExporter
                             functional
                                 .MarkerScene
                                 .Meshes)
+                        .Concat(
+                            traffic?
+                                .MarkerScene
+                                .Meshes ??
+                            Array.Empty<
+                                ProtonBusExportMesh>())
                         .ToArray());
 
             models.Add(
@@ -379,7 +432,11 @@ public sealed class ProtonBusOmsiMapPackageExporter
                     tile,
                     assets,
                     geometry,
-                    functional));
+                    functional)
+                {
+                    TrafficLights =
+                        traffic
+                });
         }
 
         if (
@@ -395,6 +452,10 @@ public sealed class ProtonBusOmsiMapPackageExporter
 
         streetLights.AddRange(
             options.AdditionalStreetLights);
+
+        ValidateTrafficLightPrefixes(
+            trafficLights,
+            issues);
 
         ProtonBusOmsiTimetableConversionResult?
             timetableResult =
@@ -498,7 +559,7 @@ public sealed class ProtonBusOmsiMapPackageExporter
                 Entrypoints =
                     entrypoints,
                 TrafficLights =
-                    options.TrafficLights,
+                    trafficLights,
                 StreetLights =
                     streetLights,
                 VehiclePaths =
@@ -527,6 +588,37 @@ public sealed class ProtonBusOmsiMapPackageExporter
             Timetable =
                 timetableResult
         };
+    }
+
+    private static void ValidateTrafficLightPrefixes(
+        IReadOnlyList<ProtonBusTrafficLightDefinition>
+            trafficLights,
+        ICollection<ProtonBusOmsiMapExportIssue>
+            issues)
+    {
+        var duplicate =
+            trafficLights
+                .GroupBy(
+                    light =>
+                        light.Prefix,
+                    StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(
+                    group =>
+                        group.Count() >
+                        1);
+
+        if (
+            duplicate is
+                not null)
+        {
+            issues.Add(
+                new(
+                    null,
+                    null,
+                    "duplicateTrafficLightPrefix",
+                    duplicate.Key,
+                    "Generated and explicit Proton Bus traffic lights must use unique prefixes."));
+        }
     }
 
     private static void ValidateGeneratedTimetableNames(
@@ -642,5 +734,15 @@ public sealed class ProtonBusOmsiMapPackageExporter
             "busStopTileIndexOutOfRange" or
             "busStopTileMissing" or
             "busStopObjectMissing" or
-            "tripFirstStopMissing";
+            "tripFirstStopMissing" or
+            "duplicateTrafficLightPrefix" or
+            "trafficLightControllerAmbiguous" or
+            "trafficLightProgramsMissing" or
+            "trafficLightProgramDurationInvalid" or
+            "trafficLightProgramExceedsCycle" or
+            "trafficLightTimingPrecisionUnsupported" or
+            "trafficLightTimelineEmpty" or
+            "trafficLightTickIntervalInvalid" or
+            "trafficLightRepeatOverflow" or
+            "trafficLightMultipleTriggerPaths";
 }
