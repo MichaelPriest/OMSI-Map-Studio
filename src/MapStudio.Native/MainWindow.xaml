@@ -28,8 +28,10 @@
                              Color="{ThemeResource MapStudioAccentColor}" />
             <Style x:Key="MapToolButtonStyle"
                    TargetType="Button">
-                <Setter Property="Width"\n                        Value="64" />
-                <Setter Property="Height"\n                        Value="54" />
+                <Setter Property="Width"
+                        Value="64" />
+                <Setter Property="Height"
+                        Value="54" />
                 <Setter Property="Padding"
                         Value="5" />
                 <Setter Property="Background"
@@ -47,9 +49,12 @@
             </Style>
             <Style x:Key="EditorToolbarButtonStyle"
                    TargetType="Button">
-                <Setter Property="MinHeight"\n                        Value="27" />
-                <Setter Property="Padding"\n                        Value="8,3" />
-                <Setter Property="FontSize"\n                        Value="10.5" />
+                <Setter Property="MinHeight"
+                        Value="27" />
+                <Setter Property="Padding"
+                        Value="8,3" />
+                <Setter Property="FontSize"
+                        Value="10.5" />
                 <Setter Property="Background"
                         Value="{ThemeResource MapStudioSurfaceRaisedBrush}" />
                 <Setter Property="BorderBrush"
@@ -61,7 +66,8 @@
             </Style>
             <Style x:Key="ExplorerModeButtonStyle"
                    TargetType="Button">
-                <Setter Property="MinHeight"\n                        Value="36" />
+                <Setter Property="MinHeight"
+                        Value="36" />
                 <Setter Property="Padding"
                         Value="6,5" />
                 <Setter Property="FontSize"
@@ -81,9 +87,10 @@
             </Style>
             <Style x:Key="MapToolGroupBadgeStyle"
                    TargetType="Border">
-                <Setter Property="Width"\n                        Value="42" />
+                <Setter Property="Width"
+                        Value="42" />
                 <Setter Property="Height"
-                        Value="64" />
+                        Value="54" />
                 <Setter Property="Margin"
                         Value="3,0" />
                 <Setter Property="Padding"
