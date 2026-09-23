@@ -18,6 +18,7 @@ using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
 using MapStudio.Core.Workspace;
+using MapStudio.Native.Controls;
 using MapStudio.Native.Dialogs;
 using MapStudio.Native.Services;
 using MapStudio.Native.ViewModels;
