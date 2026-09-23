@@ -6,6 +6,8 @@ on:
       - feature/protonbus-map-export
     paths:
       - "src/MapStudio.Core/ProtonBus/**"
+      - "src/MapStudio.Core/MapStudio.Core.csproj"
+      - "src/MapStudio.Native/**"
       - "tests/MapStudio.ProtonBus.Tests/**"
       - "docs/pt-BR/PROTON_BUS_EXPORT.md"
       - "docs/en/PROTON_BUS_EXPORT.md"
@@ -13,6 +15,8 @@ on:
   pull_request:
     paths:
       - "src/MapStudio.Core/ProtonBus/**"
+      - "src/MapStudio.Core/MapStudio.Core.csproj"
+      - "src/MapStudio.Native/**"
       - "tests/MapStudio.ProtonBus.Tests/**"
       - ".github/workflows/protonbus-export-ci.yml"
   workflow_dispatch:
@@ -39,3 +43,19 @@ jobs:
 
       - name: Test Proton Bus export core
         run: dotnet test tests/MapStudio.ProtonBus.Tests/MapStudio.ProtonBus.Tests.csproj --configuration Release --arch x64
+
+
+  validate-native-export-ui:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build native WinUI host
+        run: dotnet build src/MapStudio.Native/MapStudio.Native.csproj --configuration Release -p:Platform=x64
