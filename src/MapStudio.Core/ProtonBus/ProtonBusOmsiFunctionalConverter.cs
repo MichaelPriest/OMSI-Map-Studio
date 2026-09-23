@@ -1070,7 +1070,8 @@ public static class ProtonBusMarkerMeshBuilder
                     new Vector3(
                         0,
                         0,
-                        size),
+                        size *
+                        2.0f),
                     Vector2.UnitY)
             ],
             [
