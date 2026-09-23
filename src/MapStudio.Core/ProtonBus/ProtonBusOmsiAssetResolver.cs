@@ -295,7 +295,7 @@ public sealed class ProtonBusOmsiAssetResolver
                 new List<
                     ProtonBusResolvedSceneryMesh>();
 
-            var selectedLod =
+            var lodThresholds =
                 metadata
                     .MeshLodThresholds
                     .Where(
@@ -308,8 +308,13 @@ public sealed class ProtonBusOmsiAssetResolver
                     .OrderByDescending(
                         value =>
                             value)
-                    .Cast<double?>()
-                    .FirstOrDefault();
+                    .ToArray();
+
+            double? selectedLod =
+                lodThresholds.Length >
+                    0
+                    ? lodThresholds[0]
+                    : null;
 
             for (
                 var meshIndex = 0;
