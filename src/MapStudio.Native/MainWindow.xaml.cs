@@ -64,6 +64,10 @@ public sealed partial class MainWindow : Window
         string MapDirectory,
         string BackupDirectory);
 
+    private sealed record DeletionUndoEntry(
+        string Label,
+        IReadOnlyList<NativeDeleteBackupEntry> Backups);
+
     private sealed record TrafficRuleExplorerItem(
         PickingKind OwnerKind,
         int EntityId,
@@ -247,6 +251,9 @@ public sealed partial class MainWindow : Window
     private readonly List<
         ConstructionHistoryEntry>
         _constructionRedoStack = [];
+
+    private DeletionUndoEntry?
+        _deletionUndoEntry;
 
     private string?
         _constructionHistoryMapDirectory;
@@ -694,6 +701,9 @@ public sealed partial class MainWindow : Window
         Viewport.TransformEditPending +=
             edit =>
             {
+                _deletionUndoEntry =
+                    null;
+
                 _session.StageTransformEdit(
                     edit);
 
@@ -7207,6 +7217,12 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var deleteBackups =
+            new Dictionary<
+                string,
+                NativeDeleteBackupEntry>(
+                    StringComparer.OrdinalIgnoreCase);
+
         try
         {
             DeleteSelectionButton.IsEnabled =
@@ -7238,6 +7254,17 @@ public sealed partial class MainWindow : Window
                     await _session
                         .DeleteSelectionAsync(
                             selection);
+
+                foreach (
+                    var backup in
+                        _session
+                            .LastDeleteBackupEntries)
+                {
+                    deleteBackups.TryAdd(
+                        Path.GetFullPath(
+                            backup.TargetPath),
+                        backup);
+                }
             }
 
             if (
@@ -7256,8 +7283,19 @@ public sealed partial class MainWindow : Window
             ClearInspectorSelectionState();
             RefreshExplorer();
 
+            _deletionUndoEntry =
+                deleteBackups.Count >
+                    0
+                    ? new DeletionUndoEntry(
+                        label,
+                        deleteBackups
+                            .Values
+                            .ToArray())
+                    : null;
+
             UndoButton.IsEnabled =
-                false;
+                _deletionUndoEntry is not
+                    null;
 
             RedoButton.IsEnabled =
                 false;
@@ -7268,11 +7306,26 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 selections.Length >
                     1
-                    ? $"{selections.Length} itens excluídos com backup · {objectCount} objeto(s) · {splineCount} spline(s)."
-                    : $"{(single!.Kind == PickingKind.Object ? "Objeto" : "Spline")} #{single.EntityId} excluído(a) com backup.";
+                    ? $"{selections.Length} itens excluídos com backup · {objectCount} objeto(s) · {splineCount} spline(s) · Ctrl+Z restaura o lote."
+                    : $"{(single!.Kind == PickingKind.Object ? "Objeto" : "Spline")} #{single.EntityId} excluído(a) com backup · Ctrl+Z restaura.";
         }
         catch (Exception exception)
         {
+            if (
+                deleteBackups.Count >
+                    0)
+            {
+                _deletionUndoEntry =
+                    new DeletionUndoEntry(
+                        "exclusão parcial",
+                        deleteBackups
+                            .Values
+                            .ToArray());
+
+                UndoButton.IsEnabled =
+                    true;
+            }
+
             DeleteSelectionButton.IsEnabled =
                 _selectionInfo is not
                     null;
@@ -7629,15 +7682,79 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    private void OnUndoClick(
+    private async void OnUndoClick(
         object sender,
         RoutedEventArgs e) =>
-        UndoTransform();
+        await UndoLatestAsync();
 
     private void OnRedoClick(
         object sender,
         RoutedEventArgs e) =>
         RedoTransform();
+
+    private async Task UndoLatestAsync()
+    {
+        if (
+            _deletionUndoEntry is not
+                { } deletion)
+        {
+            UndoTransform();
+            return;
+        }
+
+        try
+        {
+            UndoButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Restaurando {deletion.Label} pelo backup...";
+
+            var snapshot =
+                await _session
+                    .RestoreDeleteBackupsAsync(
+                        deletion.Backups);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Raiz do conteúdo não disponível após restaurar exclusão.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            _deletionUndoEntry =
+                null;
+
+            UndoButton.IsEnabled =
+                Viewport.CanUndo;
+
+            RedoButton.IsEnabled =
+                false;
+
+            SaveChangesButton.IsEnabled =
+                _session.PendingTransformCount >
+                    0;
+
+            StatusText.Text =
+                $"Exclusão desfeita: {deletion.Label}.";
+        }
+        catch (Exception exception)
+        {
+            UndoButton.IsEnabled =
+                true;
+
+            StatusText.Text =
+                "Falha ao desfazer exclusão: " +
+                exception.Message;
+        }
+    }
 
     private void UndoTransform()
     {
@@ -18871,7 +18988,7 @@ public sealed partial class MainWindow : Window
         await SavePendingChangesAsync();
     }
 
-    private void OnUndoAcceleratorInvoked(
+    private async void OnUndoAcceleratorInvoked(
         KeyboardAccelerator sender,
         KeyboardAcceleratorInvokedEventArgs args)
     {
@@ -18880,8 +18997,9 @@ public sealed partial class MainWindow : Window
             return;
         }
 
-        UndoTransform();
         args.Handled = true;
+
+        await UndoLatestAsync();
     }
 
     private void OnRedoAcceleratorInvoked(
