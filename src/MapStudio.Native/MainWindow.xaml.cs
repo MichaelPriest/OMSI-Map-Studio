@@ -19596,7 +19596,7 @@ public sealed partial class MainWindow : Window
             NativeGizmoMode.Move);
 
         StatusText.Text =
-            "Mover ativo: arraste os eixos do gizmo diretamente no mapa. Inspector não é necessário.";
+            "Mover ativo: arraste o próprio item no mapa para mover no plano, ou use os eixos do gizmo para ajuste preciso. Inspector não é necessário.";
     }
 
     private void OnRotateGizmoClick(
