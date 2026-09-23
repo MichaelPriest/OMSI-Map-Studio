@@ -85,4 +85,69 @@ public sealed class OmsiTileGridTests
             }
         }
     }
+
+    [Theory]
+    [InlineData(1, 0, 150.0)]
+    [InlineData(2, -1, 0.0)]
+    [InlineData(3, -1, 150.0)]
+    [InlineData(4, -2, 0.0)]
+    [InlineData(5, -2, 150.0)]
+    public void CenteredAreaKeepsGeographicCenterOnGrid(
+        int tileCount,
+        int expectedMinimumOffset,
+        double expectedAnchorLocalCoordinate)
+    {
+        var minimumOffset =
+            OmsiTileGrid
+                .GetCenteredAreaMinimumOffset(
+                    tileCount);
+
+        var anchorLocalCoordinate =
+            OmsiTileGrid
+                .GetCenteredAreaAnchorLocalCoordinate(
+                    tileCount);
+
+        Assert.Equal(
+            expectedMinimumOffset,
+            minimumOffset);
+
+        Assert.Equal(
+            expectedAnchorLocalCoordinate,
+            anchorLocalCoordinate);
+
+        var areaMinimumWorld =
+            minimumOffset *
+            OmsiTileGrid.TileSize;
+
+        var areaMaximumWorld =
+            (
+                minimumOffset +
+                tileCount
+            ) *
+            OmsiTileGrid.TileSize;
+
+        Assert.Equal(
+            (
+                areaMinimumWorld +
+                areaMaximumWorld
+            ) /
+            2.0,
+            anchorLocalCoordinate);
+    }
+
+    [Fact]
+    public void CenteredAreaRejectsInvalidTileCount()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                OmsiTileGrid
+                    .GetCenteredAreaMinimumOffset(
+                        0));
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () =>
+                OmsiTileGrid
+                    .GetCenteredAreaAnchorLocalCoordinate(
+                        -1));
+    }
 }
