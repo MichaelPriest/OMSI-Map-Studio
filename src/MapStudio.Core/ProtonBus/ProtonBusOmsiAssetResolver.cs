@@ -46,6 +46,8 @@ public sealed record ProtonBusOmsiAssetResolutionResult(
                     "meshPathInvalid" or
                     "meshMissing" or
                     "meshGeometryInvalid" or
+                    "splineTextureMissing" or
+                    "sceneryTextureMissing" or
                     "textureTargetCollision");
 }
 
