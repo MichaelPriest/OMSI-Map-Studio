@@ -21676,6 +21676,12 @@ public sealed partial class MainWindow : Window
             _activeGoogleMapReference =
                 reference;
 
+            MapReferenceAttributionText.Text =
+                reference.Attribution;
+
+            MapReferenceAttributionBorder.Visibility =
+                Visibility.Visible;
+
             StatusText.Text =
                 $"Referência ativa: {reference.Attribution} · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
@@ -21859,6 +21865,12 @@ public sealed partial class MainWindow : Window
             _activeGoogleMapReference =
                 reference;
 
+            MapReferenceAttributionText.Text =
+                reference.Attribution;
+
+            MapReferenceAttributionBorder.Visibility =
+                Visibility.Visible;
+
             StatusText.Text =
                 $"Referência Google ativa · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
@@ -21889,6 +21901,12 @@ public sealed partial class MainWindow : Window
 
         _activeGoogleMapReference =
             null;
+
+        MapReferenceAttributionText.Text =
+            string.Empty;
+
+        MapReferenceAttributionBorder.Visibility =
+            Visibility.Collapsed;
     }
 
     private async void OnImportLocalElevationGridClick(
