@@ -28702,31 +28702,49 @@ public sealed partial class MainWindow : Window
         object sender,
         RoutedEventArgs e) =>
         OpenUserManual(
+            "Manual-pt-BR.pdf",
             "Manual-pt-BR.md");
 
     private void OnOpenUserManualEnClick(
         object sender,
         RoutedEventArgs e) =>
         OpenUserManual(
+            "Manual-en.pdf",
             "Manual-en.md");
 
     private void OpenUserManual(
-        string fileName)
+        string pdfFileName,
+        string fallbackFileName)
     {
         try
         {
-            var manualPath =
+            var docsDirectory =
                 Path.Combine(
                     AppContext.BaseDirectory,
-                    "Docs",
-                    fileName);
+                    "Docs");
+
+            var pdfPath =
+                Path.Combine(
+                    docsDirectory,
+                    pdfFileName);
+
+            var fallbackPath =
+                Path.Combine(
+                    docsDirectory,
+                    fallbackFileName);
+
+            var manualPath =
+                File.Exists(
+                    pdfPath)
+                    ? pdfPath
+                    : fallbackPath;
 
             if (
                 !File.Exists(
                     manualPath))
             {
                 StatusText.Text =
-                    $"Manual não encontrado: {manualPath}";
+                    $"Manual não encontrado em {docsDirectory}.";
                 return;
             }
 
@@ -28740,7 +28758,12 @@ public sealed partial class MainWindow : Window
                 });
 
             StatusText.Text =
-                "Manual do Usuário aberto.";
+                manualPath.EndsWith(
+                    ".pdf",
+                    StringComparison
+                        .OrdinalIgnoreCase)
+                    ? "Manual do Usuário em PDF aberto."
+                    : "Manual do Usuário aberto em formato de texto porque o PDF não está disponível nesta build.";
         }
         catch (Exception exception)
         {
