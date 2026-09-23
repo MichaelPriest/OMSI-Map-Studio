@@ -476,6 +476,22 @@ public sealed partial class MainWindow : Window
 
     private bool _mapExplorerCollapsed;
 
+    private bool _draggingAiToolWindow;
+    private uint _aiToolDragPointerId;
+    private double _aiToolDragStartX;
+    private double _aiToolDragStartY;
+    private double _aiToolDragOriginX;
+    private double _aiToolDragOriginY;
+    private bool _resizingAiToolWindow;
+    private bool _aiToolWindowMinimized;
+    private double _aiToolRestoreHeight =
+        330;
+    private uint _aiToolResizePointerId;
+    private double _aiToolResizeStartX;
+    private double _aiToolResizeStartY;
+    private double _aiToolResizeOriginWidth;
+    private double _aiToolResizeOriginHeight;
+
     private Panel? _assetLibraryPanelHome;
     private int _assetLibraryPanelHomeIndex =
         -1;
@@ -21165,6 +21181,339 @@ public sealed partial class MainWindow : Window
             true;
     }
 
+    private void OnToggleAiToolWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var show =
+            AiToolWindow.Visibility !=
+                Visibility.Visible;
+
+        AiToolWindow.Visibility =
+            show
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (
+            show &&
+            _aiToolWindowMinimized)
+        {
+            SetAiToolWindowMinimized(
+                false);
+        }
+
+        if (show)
+        {
+            RefreshAiConnectionUi();
+        }
+
+        StatusText.Text =
+            show
+                ? "Painel de IA aberto."
+                : "Painel de IA fechado.";
+    }
+
+    private void OnCloseAiToolWindowClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        AiToolWindow.Visibility =
+            Visibility.Collapsed;
+
+        _draggingAiToolWindow =
+            false;
+
+        _resizingAiToolWindow =
+            false;
+    }
+
+    private void OnToggleAiToolMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetAiToolWindowMinimized(
+            !_aiToolWindowMinimized);
+
+    private void SetAiToolWindowMinimized(
+        bool minimized)
+    {
+        if (
+            _aiToolWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _aiToolRestoreHeight =
+                Math.Max(
+                    260,
+                    AiToolWindow
+                        .ActualHeight);
+        }
+
+        _aiToolWindowMinimized =
+            minimized;
+
+        AiToolBody.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        AiToolResizeGrip.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        AiToolWindow.Height =
+            minimized
+                ? 58
+                : Math.Max(
+                    260,
+                    _aiToolRestoreHeight);
+
+        AiToolMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+    }
+
+    private void OnAiToolWindowDragPressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _draggingAiToolWindow =
+            true;
+
+        _aiToolDragPointerId =
+            e.Pointer.PointerId;
+
+        _aiToolDragStartX =
+            position.X;
+
+        _aiToolDragStartY =
+            position.Y;
+
+        _aiToolDragOriginX =
+            AiToolWindowTranslate.X;
+
+        _aiToolDragOriginY =
+            AiToolWindowTranslate.Y;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAiToolWindowDragMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_draggingAiToolWindow ||
+            e.Pointer.PointerId !=
+                _aiToolDragPointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        var baseLeft =
+            AiToolWindow.Margin.Left;
+
+        var baseTop =
+            AiToolWindow.Margin.Top;
+
+        var maximumX =
+            Math.Max(
+                -baseLeft +
+                    4,
+                WorkspaceGrid.ActualWidth -
+                    baseLeft -
+                    AiToolWindow.ActualWidth -
+                    4);
+
+        var maximumY =
+            Math.Max(
+                -baseTop +
+                    4,
+                WorkspaceGrid.ActualHeight -
+                    baseTop -
+                    AiToolWindow.ActualHeight -
+                    4);
+
+        AiToolWindowTranslate.X =
+            Math.Clamp(
+                _aiToolDragOriginX +
+                    position.X -
+                    _aiToolDragStartX,
+                -baseLeft +
+                    4,
+                maximumX);
+
+        AiToolWindowTranslate.Y =
+            Math.Clamp(
+                _aiToolDragOriginY +
+                    position.Y -
+                    _aiToolDragStartY,
+                -baseTop +
+                    4,
+                maximumY);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAiToolWindowDragReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _aiToolDragPointerId)
+        {
+            return;
+        }
+
+        _draggingAiToolWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAiToolResizePressed(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            sender is not UIElement element)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        _resizingAiToolWindow =
+            true;
+
+        _aiToolResizePointerId =
+            e.Pointer.PointerId;
+
+        _aiToolResizeStartX =
+            position.X;
+
+        _aiToolResizeStartY =
+            position.Y;
+
+        _aiToolResizeOriginWidth =
+            AiToolWindow.ActualWidth;
+
+        _aiToolResizeOriginHeight =
+            AiToolWindow.ActualHeight;
+
+        element.CapturePointer(
+            e.Pointer);
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAiToolResizeMoved(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            !_resizingAiToolWindow ||
+            e.Pointer.PointerId !=
+                _aiToolResizePointerId)
+        {
+            return;
+        }
+
+        var position =
+            e.GetCurrentPoint(
+                WorkspaceGrid)
+                .Position;
+
+        AiToolWindow.Width =
+            Math.Clamp(
+                _aiToolResizeOriginWidth +
+                    position.X -
+                    _aiToolResizeStartX,
+                330,
+                Math.Max(
+                    330,
+                    WorkspaceGrid.ActualWidth -
+                        24));
+
+        AiToolWindow.Height =
+            Math.Clamp(
+                _aiToolResizeOriginHeight +
+                    position.Y -
+                    _aiToolResizeStartY,
+                260,
+                Math.Max(
+                    260,
+                    WorkspaceGrid.ActualHeight -
+                        24));
+
+        e.Handled =
+            true;
+    }
+
+    private void OnAiToolResizeReleased(
+        object sender,
+        PointerRoutedEventArgs e)
+    {
+        if (
+            e.Pointer.PointerId !=
+                _aiToolResizePointerId)
+        {
+            return;
+        }
+
+        _resizingAiToolWindow =
+            false;
+
+        if (
+            sender is UIElement element)
+        {
+            element.ReleasePointerCapture(
+                e.Pointer);
+        }
+
+        e.Handled =
+            true;
+    }
+
     private void SetAssetLibraryPanelProjectVisibility(
         bool visible)
     {
@@ -29483,14 +29832,7 @@ setTimeout(postBounds, 250);
 
         try
         {
-            AiProfileSelectorBox.ItemsSource =
-                profiles;
-
-            AiProfileSelectorBox.DisplayMemberPath =
-                nameof(
-                    AiProfileOption.Label);
-
-            AiProfileSelectorBox.SelectedItem =
+            var selectedOption =
                 profiles.FirstOrDefault(
                     option =>
                         string.Equals(
@@ -29499,6 +29841,26 @@ setTimeout(postBounds, 250);
                                 .ActiveProfileId,
                             StringComparison
                                 .OrdinalIgnoreCase));
+
+            AiProfileSelectorBox.ItemsSource =
+                profiles;
+
+            AiProfileSelectorBox.DisplayMemberPath =
+                nameof(
+                    AiProfileOption.Label);
+
+            AiProfileSelectorBox.SelectedItem =
+                selectedOption;
+
+            FloatingAiProfileSelectorBox.ItemsSource =
+                profiles;
+
+            FloatingAiProfileSelectorBox.DisplayMemberPath =
+                nameof(
+                    AiProfileOption.Label);
+
+            FloatingAiProfileSelectorBox.SelectedItem =
+                selectedOption;
         }
         finally
         {
@@ -29525,6 +29887,18 @@ setTimeout(postBounds, 250);
             AiActiveProfileMenuItem.Text =
                 "Nenhum perfil ativo";
 
+            FloatingAiConnectionStatusText.Text =
+                "Nenhum perfil ativo";
+
+            FloatingAiProviderText.Text =
+                "Provedor: —";
+
+            FloatingAiModelText.Text =
+                "Modelo: —";
+
+            FloatingAiCredentialText.Text =
+                "Credencial: —";
+
             return;
         }
 
@@ -29547,6 +29921,20 @@ setTimeout(postBounds, 250);
 
         AiActiveProfileMenuItem.Text =
             $"Ativa: {activeProfile.DisplayName} · {activeProfile.AdapterId}";
+
+        FloatingAiConnectionStatusText.Text =
+            $"Perfil ativo: {activeProfile.DisplayName}";
+
+        FloatingAiProviderText.Text =
+            $"Provedor: {activeProfile.AdapterId}";
+
+        FloatingAiModelText.Text =
+            $"Modelo: {activeProfile.Model}";
+
+        FloatingAiCredentialText.Text =
+            hasCredential
+                ? "Credencial: salva e protegida no Windows"
+                : "Credencial: não salva";
     }
 
     private void OnAiProfileSelectorChanged(
@@ -29560,6 +29948,12 @@ setTimeout(postBounds, 250);
         }
 
         var selected =
+            (
+                sender as
+                    ComboBox
+            )
+                ?.SelectedItem as
+                AiProfileOption ??
             AiProfileSelectorBox
                 .SelectedItem as
                 AiProfileOption;
@@ -29601,6 +29995,9 @@ setTimeout(postBounds, 250);
             StatusText.Text =
                 "IA: escolha um provedor, salve a credencial e marque o perfil como ativo.";
 
+            FloatingAiConnectionStatusText.Text =
+                "Nenhum perfil ativo · configure um provedor.";
+
             OnAiProvidersClick(
                 sender,
                 e);
@@ -29625,6 +30022,9 @@ setTimeout(postBounds, 250);
             AiStatusButton.Content =
                 "IA: testando...";
 
+            FloatingAiConnectionStatusText.Text =
+                $"Testando {activeProfile.DisplayName}...";
+
             StatusText.Text =
                 $"IA: testando {activeProfile.DisplayName} para as ferramentas do mapa...";
 
@@ -29638,6 +30038,9 @@ setTimeout(postBounds, 250);
             AiStatusButton.Content =
                 $"IA: {activeProfile.DisplayName} · conectada";
 
+            FloatingAiConnectionStatusText.Text =
+                $"Conectada: {activeProfile.DisplayName}";
+
             StatusText.Text =
                 $"IA conectada: {activeProfile.DisplayName} · {activeProfile.AdapterId} · {activeProfile.Model}. Esse perfil será usado pelas ferramentas de IA do mapa.";
         }
@@ -29645,6 +30048,9 @@ setTimeout(postBounds, 250);
         {
             AiStatusButton.Content =
                 $"IA: {activeProfile.DisplayName} · erro";
+
+            FloatingAiConnectionStatusText.Text =
+                $"Erro: {exception.Message}";
 
             StatusText.Text =
                 $"IA: falha ao conectar {activeProfile.DisplayName}: {exception.Message}";
