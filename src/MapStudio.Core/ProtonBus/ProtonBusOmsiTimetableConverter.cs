@@ -17,11 +17,21 @@ public sealed record ProtonBusOmsiTimetableIssue(
     string Source,
     string? Detail = null);
 
+public sealed record ProtonBusOmsiTripEntrypoint(
+    string TripName,
+    string EntrypointName,
+    int FirstBusStopId);
+
 public sealed record ProtonBusOmsiTimetableConversionResult(
     IReadOnlyList<ProtonBusBusStopDefinition> BusStops,
     IReadOnlyList<ProtonBusEntrypointDefinition> Entrypoints,
     ProtonBusExportScene MarkerScene,
-    IReadOnlyList<ProtonBusOmsiTimetableIssue> Issues);
+    IReadOnlyList<ProtonBusOmsiTimetableIssue> Issues)
+{
+    public IReadOnlyList<ProtonBusOmsiTripEntrypoint>
+        TripEntrypoints { get; init; } =
+        Array.Empty<ProtonBusOmsiTripEntrypoint>();
+}
 
 public static class ProtonBusOmsiTimetableConverter
 {
@@ -51,6 +61,9 @@ public static class ProtonBusOmsiTimetableConverter
 
         var markers =
             new List<ProtonBusExportMesh>();
+
+        var tripEntrypoints =
+            new List<ProtonBusOmsiTripEntrypoint>();
 
         var issues =
             new List<ProtonBusOmsiTimetableIssue>();
@@ -241,6 +254,7 @@ public static class ProtonBusOmsiTimetableConverter
                 timetable,
                 resolvedStops,
                 entrypoints,
+                tripEntrypoints,
                 issues);
         }
 
@@ -249,13 +263,19 @@ public static class ProtonBusOmsiTimetableConverter
             entrypoints.ToArray(),
             new(
                 markers.ToArray()),
-            issues.ToArray());
+            issues.ToArray())
+        {
+            TripEntrypoints =
+                tripEntrypoints
+                    .ToArray()
+        };
     }
 
     private static void CreateEntrypoints(
         OmsiTimetableCatalog timetable,
         IReadOnlyDictionary<int, ResolvedStop> resolvedStops,
         ICollection<ProtonBusEntrypointDefinition> output,
+        ICollection<ProtonBusOmsiTripEntrypoint> tripMappings,
         ICollection<ProtonBusOmsiTimetableIssue> issues)
     {
         var usedNames =
@@ -338,6 +358,11 @@ public static class ProtonBusOmsiTimetableConverter
                         candidate.Position) <
                     0.01f)
                 {
+                    tripMappings.Add(
+                        new(
+                            trip.Name,
+                            existing.Name,
+                            firstStation.Id));
                     continue;
                 }
 
@@ -360,6 +385,12 @@ public static class ProtonBusOmsiTimetableConverter
 
             output.Add(
                 candidate);
+
+            tripMappings.Add(
+                new(
+                    trip.Name,
+                    candidate.Name,
+                    firstStation.Id));
         }
     }
 
