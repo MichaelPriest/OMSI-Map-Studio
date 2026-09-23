@@ -94,6 +94,114 @@ public sealed class NativeGizmoManipulationMathTests
     }
 
     [Fact]
+    public void MoveXZDraggingScreenRightMovesRightForForwardFacingCamera()
+    {
+        var delta =
+            NativeGizmoManipulationMath
+                .GetMoveDelta(
+                    NativeGizmoHandle.MoveXZ,
+                    new Vector3(
+                        0,
+                        100,
+                        -100),
+                    Vector3.Zero,
+                    100,
+                    1000,
+                    25,
+                    0);
+
+        Assert.True(
+            delta.X >
+            0);
+
+        Assert.Equal(
+            0,
+            delta.Y);
+
+        Assert.True(
+            MathF.Abs(
+                delta.Z) <
+            0.0001f);
+    }
+
+    [Fact]
+    public void MoveXZDraggingScreenUpMovesForwardForForwardFacingCamera()
+    {
+        var delta =
+            NativeGizmoManipulationMath
+                .GetMoveDelta(
+                    NativeGizmoHandle.MoveXZ,
+                    new Vector3(
+                        0,
+                        100,
+                        -100),
+                    Vector3.Zero,
+                    100,
+                    1000,
+                    0,
+                    -25);
+
+        Assert.True(
+            delta.Z >
+            0);
+
+        Assert.Equal(
+            0,
+            delta.Y);
+
+        Assert.True(
+            MathF.Abs(
+                delta.X) <
+            0.0001f);
+    }
+
+    [Fact]
+    public void PointerPlaneMoveFollowsPointerWorldDirection()
+    {
+        var delta =
+            NativeGizmoManipulationMath
+                .GetPointerPlaneMoveDelta(
+                    new Vector3(
+                        10,
+                        3,
+                        20),
+                    new Vector3(
+                        16,
+                        3,
+                        27));
+
+        Assert.Equal(
+            new Vector3(
+                6,
+                0,
+                7),
+            delta);
+    }
+
+    [Fact]
+    public void GrabPanMovesCameraTargetOppositeToPointerWorldDirection()
+    {
+        var delta =
+            NativeGizmoManipulationMath
+                .GetGrabPanTargetDelta(
+                    new Vector3(
+                        10,
+                        3,
+                        20),
+                    new Vector3(
+                        16,
+                        3,
+                        27));
+
+        Assert.Equal(
+            new Vector3(
+                -6,
+                0,
+                -7),
+            delta);
+    }
+
+    [Fact]
     public void SnapTranslationRoundsEachWorldAxis()
     {
         var snapped =
