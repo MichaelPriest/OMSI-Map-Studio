@@ -508,27 +508,43 @@
                                     HorizontalAlignment="Left">
                             <Button x:Name="SaveChangesButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
-                                    Content="Salvar"
                                     IsEnabled="False"
-                                    Click="OnSaveChangesClick" />
+                                    ToolTipService.ToolTip="Salvar alterações (Ctrl+S)"
+                                    Click="OnSaveChangesClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <SymbolIcon Symbol="Save" />
+                                    <TextBlock Text="Salvar" />
+                                </StackPanel>
+                            </Button>
                             <Button x:Name="UndoButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
-                                    Content="Desfazer"
                                     IsEnabled="False"
-                                    Click="OnUndoClick" />
+                                    ToolTipService.ToolTip="Desfazer (Ctrl+Z)"
+                                    Click="OnUndoClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <SymbolIcon Symbol="Undo" />
+                                    <TextBlock Text="Desfazer" />
+                                </StackPanel>
+                            </Button>
                             <Button x:Name="RedoButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
-                                    Content="Refazer"
                                     IsEnabled="False"
-                                    Click="OnRedoClick" />
+                                    ToolTipService.ToolTip="Refazer (Ctrl+Y)"
+                                    Click="OnRedoClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <SymbolIcon Symbol="Redo" />
+                                    <TextBlock Text="Refazer" />
+                                </StackPanel>
+                            </Button>
                             <Rectangle Width="1"
                                        Height="24"
                                        Fill="{ThemeResource MapStudioBorderBrush}"
                                        VerticalAlignment="Center" />
                             <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                    Content="F11"
-                                    ToolTipService.ToolTip="Modo Criador em tela cheia"
-                                    Click="OnFullscreenClick" />
+                                    ToolTipService.ToolTip="Modo Criador em tela cheia (F11)"
+                                    Click="OnFullscreenClick">
+                                <SymbolIcon Symbol="FullScreen" />
+                            </Button>
                         </StackPanel>
 
                         <Border Grid.Column="1"
@@ -702,7 +718,7 @@
                                     Height="28"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
-                                    ToolTipService.ToolTip="Arraste para mover no F11"
+                                    ToolTipService.ToolTip="Arraste para mover o painel"
                                     PointerPressed="OnExplorerFloatingDragPressed"
                                     PointerMoved="OnExplorerFloatingDragMoved"
                                     PointerReleased="OnExplorerFloatingDragReleased"
@@ -2315,8 +2331,13 @@
                                 Content="Abrir OMSI"
                                 Click="OnOpenOmsiClick" />
                         <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                Content="Sair F11"
-                                Click="OnFullscreenClick" />
+                                ToolTipService.ToolTip="Sair da tela cheia (F11)"
+                                Click="OnFullscreenClick">
+                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                <SymbolIcon Symbol="BackToWindow" />
+                                <TextBlock Text="Sair" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>
@@ -2384,17 +2405,29 @@
                                         ToolTipService.ToolTip="Snap para mover/girar a seleção"
                                         Click="OnSnapClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Mover"
-                                        ToolTipService.ToolTip="Mover item selecionado"
-                                        Click="OnMoveGizmoClick" />
+                                        ToolTipService.ToolTip="Mover item selecionado diretamente no mapa (W)"
+                                        Click="OnMoveGizmoClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="↔" FontSize="14" />
+                                        <TextBlock Text="Mover" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Girar"
-                                        ToolTipService.ToolTip="Girar item selecionado"
-                                        Click="OnRotateGizmoClick" />
+                                        ToolTipService.ToolTip="Girar item selecionado: arraste o próprio item ou o anel (E)"
+                                        Click="OnRotateGizmoClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <SymbolIcon Symbol="Rotate" />
+                                        <TextBlock Text="Girar" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Focar"
-                                        ToolTipService.ToolTip="Centralizar a câmera no item selecionado"
-                                        Click="OnFocusSelectionClick" />
+                                        ToolTipService.ToolTip="Centralizar a câmera no item selecionado (F)"
+                                        Click="OnFocusSelectionClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <SymbolIcon Symbol="Target" />
+                                        <TextBlock Text="Focar" />
+                                    </StackPanel>
+                                </Button>
                                 <Border Padding="9,4"
                                         Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                         BorderBrush="{ThemeResource MapStudioBorderBrush}"
@@ -2429,20 +2462,37 @@
                                         Orientation="Horizontal"
                                         Spacing="6">
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Arrastar"
                                         ToolTipService.ToolTip="Clique no início, arraste a prévia e solte no fim"
-                                        Click="OnRoadPresetEasyClick" />
+                                        Click="OnRoadPresetEasyClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="✥" FontSize="13" />
+                                        <TextBlock Text="Arrastar" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Reta"
-                                        Click="OnRoadPresetStraightClick" />
+                                        ToolTipService.ToolTip="Criar trecho reto diretamente no mapa"
+                                        Click="OnRoadPresetStraightClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="━" FontSize="14" />
+                                        <TextBlock Text="Reta" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Curva"
-                                        ToolTipService.ToolTip="Modo de curva visual sem coordenadas no Inspector"
-                                        Click="OnRoadPresetCurveClick" />
+                                        ToolTipService.ToolTip="Criar curva visual diretamente no mapa"
+                                        Click="OnRoadPresetCurveClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="⌒" FontSize="15" />
+                                        <TextBlock Text="Curva" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Editar curva"
                                         ToolTipService.ToolTip="Curvar ou endireitar a spline selecionada usando uma alça no mapa"
-                                        Click="OnRoadEditCurveClick" />
+                                        Click="OnRoadEditCurveClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <SymbolIcon Symbol="Edit" />
+                                        <TextBlock Text="Editar curva" />
+                                    </StackPanel>
+                                </Button>
 
                                 <Border Width="1"
                                         Height="24"
@@ -2450,13 +2500,21 @@
                                         Background="{ThemeResource MapStudioBorderBrush}" />
 
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Duplicar"
                                         ToolTipService.ToolTip="Duplicar a spline selecionada e reposicionar"
-                                        Click="OnRoadDuplicateClick" />
+                                        Click="OnRoadDuplicateClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <SymbolIcon Symbol="Copy" />
+                                        <TextBlock Text="Duplicar" />
+                                    </StackPanel>
+                                </Button>
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Dividir"
                                         ToolTipService.ToolTip="Clique em um ponto da spline selecionada para dividir o trecho"
-                                        Click="OnRoadSplitClick" />
+                                        Click="OnRoadSplitClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <SymbolIcon Symbol="Cut" />
+                                        <TextBlock Text="Dividir" />
+                                    </StackPanel>
+                                </Button>
 
                                 <NumberBox x:Name="RoadParallelOffsetBox"
                                            Width="74"
@@ -3082,7 +3140,7 @@
                                     Height="28"
                                     Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
                                     CornerRadius="6"
-                                    ToolTipService.ToolTip="Arraste para mover no F11"
+                                    ToolTipService.ToolTip="Arraste para mover o painel"
                                     PointerPressed="OnInspectorFloatingDragPressed"
                                     PointerMoved="OnInspectorFloatingDragMoved"
                                     PointerReleased="OnInspectorFloatingDragReleased"
