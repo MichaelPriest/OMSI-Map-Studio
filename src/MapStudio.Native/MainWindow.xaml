@@ -649,6 +649,14 @@
                                 </StackPanel>
                             </Button>
                             <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    ToolTipService.ToolTip="Abrir Biblioteca em janela flutuante"
+                                    Click="OnToggleAssetLibraryWindowClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="▦" FontSize="13" />
+                                    <TextBlock Text="Biblioteca" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                     ToolTipService.ToolTip="Abrir Route Studio / Transporte em janela flutuante"
                                     Click="OnToggleTransportWindowClick">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
@@ -2529,6 +2537,108 @@
                             PointerMoved="OnTrafficPathsResizeMoved"
                             PointerReleased="OnTrafficPathsResizeReleased"
                             PointerCanceled="OnTrafficPathsResizeReleased">
+                        <Grid Width="18" Height="18">
+                            <Line X1="7" Y1="17" X2="17" Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12" Y1="17" X2="17" Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <Border x:Name="AssetLibraryToolWindow"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    Width="620"
+                    Height="680"
+                    Margin="350,84,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="110"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="AssetLibraryToolWindowTranslate" />
+                </Border.RenderTransform>
+
+                <Grid Padding="10"
+                      RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Background="Transparent"
+                          ColumnSpacing="8"
+                          PointerPressed="OnAssetLibraryToolWindowDragPressed"
+                          PointerMoved="OnAssetLibraryToolWindowDragMoved"
+                          PointerReleased="OnAssetLibraryToolWindowDragReleased"
+                          PointerCanceled="OnAssetLibraryToolWindowDragReleased">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="7">
+                            <FontIcon Glyph="▦"
+                                      FontSize="15"
+                                      Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <StackPanel>
+                                <TextBlock Text="BIBLIOTECA"
+                                           FontSize="12"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="Assets · favoritos · coleções · classificação IA"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="4">
+                            <Button x:Name="AssetLibraryToolMinimizeButton"
+                                    Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="—"
+                                    ToolTipService.ToolTip="Minimizar/restaurar"
+                                    Click="OnToggleAssetLibraryToolMinimizeClick" />
+                            <Button Width="28"
+                                    Height="28"
+                                    Padding="0"
+                                    Content="×"
+                                    ToolTipService.ToolTip="Fechar e devolver Biblioteca ao painel Projeto"
+                                    Click="OnCloseAssetLibraryToolWindowClick" />
+                        </StackPanel>
+                    </Grid>
+
+                    <ContentControl x:Name="AssetLibraryFloatingHost"
+                                    Grid.Row="1"
+                                    HorizontalContentAlignment="Stretch"
+                                    VerticalContentAlignment="Stretch" />
+
+                    <Border x:Name="AssetLibraryToolResizeGrip"
+                            Width="28"
+                            Height="28"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para redimensionar"
+                            PointerPressed="OnAssetLibraryToolResizePressed"
+                            PointerMoved="OnAssetLibraryToolResizeMoved"
+                            PointerReleased="OnAssetLibraryToolResizeReleased"
+                            PointerCanceled="OnAssetLibraryToolResizeReleased">
                         <Grid Width="18" Height="18">
                             <Line X1="7" Y1="17" X2="17" Y2="7"
                                   Stroke="{ThemeResource MapStudioAccentTextBrush}"
