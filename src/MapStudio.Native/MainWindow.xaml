@@ -541,7 +541,7 @@
                                        Fill="{ThemeResource MapStudioBorderBrush}"
                                        VerticalAlignment="Center" />
                             <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                    ToolTipService.ToolTip="Modo Criador em tela cheia (F11)"
+                                    ToolTipService.ToolTip="Modo Criador em tela cheia"
                                     Click="OnFullscreenClick">
                                 <SymbolIcon Symbol="FullScreen" />
                             </Button>
@@ -2331,7 +2331,7 @@
                                 Content="Abrir OMSI"
                                 Click="OnOpenOmsiClick" />
                         <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                ToolTipService.ToolTip="Sair da tela cheia (F11)"
+                                ToolTipService.ToolTip="Sair da tela cheia"
                                 Click="OnFullscreenClick">
                             <StackPanel Orientation="Horizontal" Spacing="5">
                                 <SymbolIcon Symbol="BackToWindow" />
