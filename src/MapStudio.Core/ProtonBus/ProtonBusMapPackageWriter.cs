@@ -32,6 +32,18 @@ public sealed record ProtonBusMapPackageRequest(
         PedestrianPaths { get; init; } =
         Array.Empty<
             ProtonBusPedestrianPathDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusVehiclePathDefinition>
+        VehiclePaths { get; init; } =
+        Array.Empty<
+            ProtonBusVehiclePathDefinition>();
+
+    public IReadOnlyList<
+        ProtonBusTrainPathDefinition>
+        TrainPaths { get; init; } =
+        Array.Empty<
+            ProtonBusTrainPathDefinition>();
 }
 
 public sealed record ProtonBusMapPackageResult(
@@ -59,6 +71,16 @@ public sealed record ProtonBusMapPackageResult(
 
     public IReadOnlyList<string>
         PedestrianPathPaths
+        { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string>
+        VehiclePathPaths
+        { get; init; } =
+        Array.Empty<string>();
+
+    public IReadOnlyList<string>
+        TrainPathPaths
         { get; init; } =
         Array.Empty<string>();
 }
@@ -213,11 +235,28 @@ public static class ProtonBusMapPackageWriter
                 layout,
                 request.Entrypoints);
 
+        ValidateMovingPathPrefixes(
+            request.PedestrianPaths,
+            request.VehiclePaths,
+            request.TrainPaths);
+
         var pedestrianPathPaths =
             WritePedestrianPaths(
                 root,
                 layout,
                 request.PedestrianPaths);
+
+        var vehiclePathPaths =
+            WriteVehiclePaths(
+                root,
+                layout,
+                request.VehiclePaths);
+
+        var trainPathPaths =
+            WriteTrainPaths(
+                root,
+                layout,
+                request.TrainPaths);
 
         return new(
             root,
@@ -237,8 +276,91 @@ public static class ProtonBusMapPackageWriter
                 entrypointFiles
                     .DestinationDirectories,
             PedestrianPathPaths =
-                pedestrianPathPaths
+                pedestrianPathPaths,
+            VehiclePathPaths =
+                vehiclePathPaths,
+            TrainPathPaths =
+                trainPathPaths
         };
+    }
+
+    private static void ValidateMovingPathPrefixes(
+        IReadOnlyList<ProtonBusPedestrianPathDefinition> pedestrians,
+        IReadOnlyList<ProtonBusVehiclePathDefinition> vehicles,
+        IReadOnlyList<ProtonBusTrainPathDefinition> trains)
+    {
+        var names =
+            pedestrians.Select(item => item.Prefix)
+                .Concat(vehicles.Select(item => item.Prefix))
+                .Concat(trains.Select(item => item.Prefix))
+                .GroupBy(value => value, StringComparer.OrdinalIgnoreCase);
+
+        var duplicate =
+            names.FirstOrDefault(group => group.Count() > 1);
+
+        if (duplicate is not null)
+        {
+            throw new ArgumentException(
+                $"Duplicate Proton Bus moving-path prefix '{duplicate.Key}' across AI categories.");
+        }
+    }
+
+    private static IReadOnlyList<string>
+        WriteVehiclePaths(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<ProtonBusVehiclePathDefinition> paths)
+    {
+        var output = new List<string>(paths.Count);
+
+        foreach (var path in paths)
+        {
+            ProtonBusVehiclePathDefinitionWriter.Validate(path);
+
+            var target =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout.AiVehiclesDirectoryPath,
+                        path.SuggestedFileName));
+
+            File.WriteAllText(
+                target,
+                ProtonBusVehiclePathDefinitionWriter.Serialize(path));
+
+            output.Add(target);
+        }
+
+        return output;
+    }
+
+    private static IReadOnlyList<string>
+        WriteTrainPaths(
+            string root,
+            ProtonBusMapPackageLayout layout,
+            IReadOnlyList<ProtonBusTrainPathDefinition> paths)
+    {
+        var output = new List<string>(paths.Count);
+
+        foreach (var path in paths)
+        {
+            ProtonBusTrainPathDefinitionWriter.Validate(path);
+
+            var target =
+                ResolveOutputPath(
+                    root,
+                    CombineRelative(
+                        layout.AiTrainsDirectoryPath,
+                        path.SuggestedFileName));
+
+            File.WriteAllText(
+                target,
+                ProtonBusTrainPathDefinitionWriter.Serialize(path));
+
+            output.Add(target);
+        }
+
+        return output;
     }
 
     private static IReadOnlyList<string>
