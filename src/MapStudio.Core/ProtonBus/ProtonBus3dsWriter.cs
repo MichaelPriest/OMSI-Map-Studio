@@ -239,12 +239,17 @@ public static class ProtonBus3dsWriter
                     var vertex
                     in chunk.Vertices)
                 {
+                    var protonPosition =
+                        ProtonBusCoordinateSpace
+                            .ToProton3ds(
+                                vertex.Position);
+
                     vertexWriter.Write(
-                        vertex.Position.X);
+                        protonPosition.X);
                     vertexWriter.Write(
-                        vertex.Position.Y);
+                        protonPosition.Y);
                     vertexWriter.Write(
-                        vertex.Position.Z);
+                        protonPosition.Z);
                 }
             });
     }
@@ -269,18 +274,23 @@ public static class ProtonBus3dsWriter
                     var triangle
                     in chunk.Triangles)
                 {
+                    var protonTriangle =
+                        ProtonBusCoordinateSpace
+                            .ToProton3ds(
+                                triangle);
+
                     faceWriter.Write(
                         checked(
                             (ushort)
-                                triangle.A));
+                                protonTriangle.A));
                     faceWriter.Write(
                         checked(
                             (ushort)
-                                triangle.B));
+                                protonTriangle.B));
                     faceWriter.Write(
                         checked(
                             (ushort)
-                                triangle.C));
+                                protonTriangle.C));
 
                     faceWriter.Write(
                         (ushort)0);
