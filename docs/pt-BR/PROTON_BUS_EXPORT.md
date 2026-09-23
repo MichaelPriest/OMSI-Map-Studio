@@ -250,22 +250,39 @@ Esses recursos serão adicionados somente após analisarmos os arquivos de ajuda
 - tags básicas;
 - testes.
 
-### P1 — próximo
+### P1 — em andamento
+
+Concluído:
 
 - modelo intermediário `ProtonBusExportScene`;
-- sistema de transformação de coordenadas;
+- planejamento e divisão automática de chunks 3DS;
+- remapeamento local de índices para os limites do 3DS.
+
+Pendente:
+
+- sistema explícito de transformação de coordenadas;
 - tesselação de ruas/splines;
 - triangulação do terreno;
-- conversão de materiais;
-- planejamento de chunks 3DS.
+- conversão completa de materiais.
 
-### P2
+### P2 — iniciada
 
-- writer binário `.3ds`;
-- PNG/material pipeline;
-- colisores;
-- transparência/emissivo/additive;
-- divisão de meshes grandes.
+Concluído:
+
+- writer binário `.3ds` nativo para meshes estáticas;
+- chunks de material, objeto, vértices, faces, associação de material e UV;
+- nomes completos de objetos/texturas, sem o truncamento legado de 12 caracteres;
+- textura difusa;
+- transparência e self-illumination básicas;
+- divisão automática de meshes grandes.
+
+Pendente:
+
+- validar o arquivo gerado diretamente na build alvo do Proton Bus;
+- PNG/material pipeline completo;
+- colisores gerados a partir das propriedades do Map Studio;
+- regras finais para emissive/additive;
+- transformação de eixos validada contra fixture real.
 
 ### P3
 
