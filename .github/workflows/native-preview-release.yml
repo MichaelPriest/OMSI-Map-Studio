@@ -335,6 +335,10 @@ jobs:
             throw "Floating-panel pointer tooltip still contains F11."
           }
 
+          if ($xaml.Contains('Use o Inspector e a Biblioteca para configurar esta ferramenta.')) {
+            throw "Primary tool guidance must not require Inspector."
+          }
+
           if (-not (Test-Path docs/pt-BR/USER_MANUAL.md) -or
               -not (Get-Content docs/pt-BR/USER_MANUAL.md -Raw).Contains('Nenhuma função principal depende do Inspector')) {
             throw "Portuguese manual must document Inspector as optional."
