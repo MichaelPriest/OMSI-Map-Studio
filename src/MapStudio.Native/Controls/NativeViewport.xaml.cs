@@ -56,6 +56,12 @@ public sealed partial class NativeViewport : UserControl
     private double _selectionBoxStartY;
     private double _lastPanX;
     private double _lastPanY;
+    private bool _navigationRenderingHooked;
+    private bool _navigationFramePending;
+    private uint _pendingNavigationPixelX;
+    private uint _pendingNavigationPixelY;
+    private double _pendingOrbitDeltaX;
+    private double _pendingOrbitDeltaY;
     private long _lastHoverTick;
     private uint _lastHoverPixelX =
         uint.MaxValue;
@@ -1798,6 +1804,8 @@ public sealed partial class NativeViewport : UserControl
         object sender,
         RoutedEventArgs e)
     {
+        StopNavigationRendering();
+
         try
         {
             UnbindSwapChain();
@@ -2675,13 +2683,13 @@ public sealed partial class NativeViewport : UserControl
 
             if (_isOrbiting)
             {
-                _runtime.Orbit(
+                QueueOrbitFrame(
                     deltaX,
                     deltaY);
             }
             else
             {
-                _runtime.UpdatePointerPan(
+                QueuePanFrame(
                     pixelX,
                     pixelY);
             }
@@ -3131,6 +3139,13 @@ public sealed partial class NativeViewport : UserControl
                 e.Pointer);
         }
 
+        if (
+            _isPanning ||
+            _isOrbiting)
+        {
+            FlushPendingNavigationFrame();
+        }
+
         if (_isPanning)
         {
             _runtime
@@ -3141,6 +3156,8 @@ public sealed partial class NativeViewport : UserControl
             _runtime
                 ?.EndOrbit();
         }
+
+        StopNavigationRendering();
 
         _leftPressed = false;
         _isPanning = false;
@@ -3153,6 +3170,148 @@ public sealed partial class NativeViewport : UserControl
 
         ProtectedCursor =
             _defaultCursor;
+    }
+
+    private void QueuePanFrame(
+        uint pixelX,
+        uint pixelY)
+    {
+        _pendingNavigationPixelX =
+            pixelX;
+
+        _pendingNavigationPixelY =
+            pixelY;
+
+        _navigationFramePending =
+            true;
+
+        EnsureNavigationRendering();
+    }
+
+    private void QueueOrbitFrame(
+        double deltaX,
+        double deltaY)
+    {
+        _pendingOrbitDeltaX +=
+            deltaX;
+
+        _pendingOrbitDeltaY +=
+            deltaY;
+
+        _navigationFramePending =
+            true;
+
+        EnsureNavigationRendering();
+    }
+
+    private void EnsureNavigationRendering()
+    {
+        if (_navigationRenderingHooked)
+        {
+            return;
+        }
+
+        Microsoft.UI.Xaml.Media
+            .CompositionTarget.Rendering +=
+            OnNavigationRendering;
+
+        _navigationRenderingHooked =
+            true;
+    }
+
+    private void OnNavigationRendering(
+        object? sender,
+        object args)
+    {
+        if (!_navigationFramePending)
+        {
+            if (
+                !_isPanning &&
+                !_isOrbiting)
+            {
+                StopNavigationRendering();
+            }
+
+            return;
+        }
+
+        FlushPendingNavigationFrame();
+    }
+
+    private void FlushPendingNavigationFrame()
+    {
+        if (
+            !_navigationFramePending ||
+            _runtime is null)
+        {
+            return;
+        }
+
+        _navigationFramePending =
+            false;
+
+        if (_isOrbiting)
+        {
+            var deltaX =
+                _pendingOrbitDeltaX;
+
+            var deltaY =
+                _pendingOrbitDeltaY;
+
+            _pendingOrbitDeltaX =
+                0;
+
+            _pendingOrbitDeltaY =
+                0;
+
+            if (
+                Math.Abs(deltaX) >
+                    0.0001 ||
+                Math.Abs(deltaY) >
+                    0.0001)
+            {
+                _runtime.Orbit(
+                    deltaX,
+                    deltaY);
+            }
+
+            return;
+        }
+
+        _pendingOrbitDeltaX =
+            0;
+
+        _pendingOrbitDeltaY =
+            0;
+
+        if (_isPanning)
+        {
+            _runtime.UpdatePointerPan(
+                _pendingNavigationPixelX,
+                _pendingNavigationPixelY);
+        }
+    }
+
+    private void StopNavigationRendering()
+    {
+        if (_navigationRenderingHooked)
+        {
+            Microsoft.UI.Xaml.Media
+                .CompositionTarget.Rendering -=
+                OnNavigationRendering;
+
+            _navigationRenderingHooked =
+                false;
+        }
+
+        _navigationFramePending =
+            false;
+
+        _pendingOrbitDeltaX =
+            0;
+
+        _pendingOrbitDeltaY =
+            0;
     }
 
     private void UpdateSelectionBoxVisual(
