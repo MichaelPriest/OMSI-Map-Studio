@@ -555,6 +555,17 @@ A janela **Criar mapa real por área** segue o mesmo padrão: pode ser movida, r
 
 **Ações do projeto**, **Assets · Filtros** e **Paths · Visualização** podem ser recolhidos para liberar espaço. O Map Studio salva o estado aberto/fechado dessas seções no perfil local e o restaura na próxima execução.
 
+## Janelas internas destacáveis
+
+A barra superior também permite abrir ferramentas como janelas internas independentes:
+
+- **Paths** — filtros dos paths OMSI em tempo real;
+- **Transporte** — Route Studio completo;
+- **Biblioteca** — o mesmo painel real de assets, favoritos, coleções e classificação por IA;
+- **IA painel** — perfil ativo, provedor, modelo, credencial e teste de conexão.
+
+Essas janelas podem ser movidas, redimensionadas, minimizadas e fechadas. **Transporte** e **Biblioteca** não criam uma segunda cópia dos controles: o painel real é movido para a janela flutuante e volta para Projeto ao fechar.
+
 ## Multi-seleção
 
 Use **Ctrl+clique** ou **Shift+clique** para adicionar/remover objetos e splines da seleção. Para selecionar vários itens visualmente, comece o arrasto em uma área vazia do viewport e desenhe uma caixa sobre os itens desejados. Com **Ctrl** ou **Shift** pressionado, a caixa adiciona itens ao grupo atual; sem modificador, ela substitui a seleção.
