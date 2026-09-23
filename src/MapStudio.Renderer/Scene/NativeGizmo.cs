@@ -17,7 +17,8 @@ public enum NativeGizmoHandle
     MoveZ = 3,
     RotateX = 4,
     RotateY = 5,
-    RotateZ = 6
+    RotateZ = 6,
+    MoveXZ = 7
 }
 
 public sealed record NativeGizmoGeometry(
