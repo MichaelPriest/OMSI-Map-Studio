@@ -216,15 +216,6 @@ public static class ProtonBusMapPackageWriter
                     texture.SourcePath);
             }
 
-            if (
-                !IsPngSource(
-                    texture.SourcePath))
-            {
-                throw new ArgumentException(
-                    "Proton Bus texture sources must already be valid PNG files until the texture transcoder is enabled.",
-                    nameof(request));
-            }
-
             var fileName =
                 NormalizePngFileName(
                     texture.FileName);
@@ -236,10 +227,22 @@ public static class ProtonBusMapPackageWriter
                         layout.TexturesDirectoryPath,
                         fileName));
 
-            File.Copy(
-                texture.SourcePath,
-                targetPath,
-                overwrite: true);
+            if (
+                IsPngSource(
+                    texture.SourcePath))
+            {
+                File.Copy(
+                    texture.SourcePath,
+                    targetPath,
+                    overwrite: true);
+            }
+            else
+            {
+                ProtonBusTextureTranscoder
+                    .WritePng(
+                        texture.SourcePath,
+                        targetPath);
+            }
 
             texturePaths.Add(
                 targetPath);
