@@ -8000,6 +8000,79 @@ public sealed partial class MainWindow : Window
             1.0);
     }
 
+    private async void OnRoadReplaceTypeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione no mapa o trecho que será substituído.";
+            return;
+        }
+
+        var replacement =
+            GetSelectedAssetLibraryEntry();
+
+        if (
+            replacement?.Kind !=
+                OmsiAssetKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: escolha na Biblioteca a SLI que substituirá o trecho selecionado.";
+            return;
+        }
+
+        if (
+            string.Equals(
+                replacement.RelativePath,
+                _selectionInfo.AssetPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText.Text =
+                "Ruas: o trecho já usa essa SLI.";
+            return;
+        }
+
+        try
+        {
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            var snapshot =
+                await _session
+                    .ReplacePlacedSplinePathAsync(
+                        _selectionInfo,
+                        replacement.RelativePath);
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath!);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            StatusText.Text =
+                $"Ruas: tipo substituído por {replacement.RelativePath}. Geometria e links foram preservados.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Ruas: falha ao substituir tipo: {exception.Message}";
+        }
+    }
+
     private async void OnRoadMirrorClick(
         object sender,
         RoutedEventArgs e)

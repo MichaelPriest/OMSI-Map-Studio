@@ -8071,6 +8071,150 @@ public sealed class OmsiNativeSession
         return CurrentMap;
     }
 
+    public async Task<NativeMapSnapshot>
+        ReplacePlacedSplinePathAsync(
+            NativeSelectionInfo selection,
+            string replacementPath,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            selection);
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            replacementPath);
+
+        if (
+            selection.Kind !=
+                PickingKind.Spline ||
+            selection.PreviousSplineId is
+                not int previousSplineId ||
+            selection.NextSplineId is
+                not int nextSplineId ||
+            selection.IsHeightSpline is
+                not bool isHeightSpline)
+        {
+            throw new InvalidDataException(
+                "splinePathSelectionInvalid");
+        }
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeSplinePathReplace");
+        }
+
+        var loaded =
+            snapshot.Tiles
+                .FirstOrDefault(
+                    tile =>
+                        tile.Reference.X ==
+                            selection.TileX &&
+                        tile.Reference.Y ==
+                            selection.TileY)
+            ?? throw new InvalidDataException(
+                "splinePathTileNotLoaded");
+
+        var source =
+            loaded.Content.Splines
+                .FirstOrDefault(
+                    spline =>
+                        spline.SplineId ==
+                            selection.EntityId &&
+                        string.Equals(
+                            spline.SplinePath,
+                            selection.AssetPath,
+                            StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidDataException(
+                "splineSourceChanged");
+
+        if (
+            source.IsHeightSpline !=
+                isHeightSpline)
+        {
+            throw new InvalidDataException(
+                "splineSourceChanged");
+        }
+
+        if (
+            !OmsiMapPathResolver
+                .TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    loaded.Reference
+                        .RelativeMapPath,
+                    out var tilePath) ||
+            !File.Exists(
+                tilePath))
+        {
+            throw new InvalidDataException(
+                "splinePathTilePathInvalid");
+        }
+
+        var document =
+            await OmsiConfigParser
+                .ParseFileAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var result =
+            OmsiPlacedSplinePathEditor
+                .ReplacePath(
+                    document,
+                    source.SourceSectionOrdinal,
+                    source.SplinePath,
+                    replacementPath,
+                    source.SplineId,
+                    previousSplineId,
+                    nextSplineId,
+                    isHeightSpline);
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                [
+                    new PendingFileWrite(
+                        tilePath,
+                        CreateNativeBackupPath(
+                            snapshot.Map.DirectoryPath,
+                            tilePath),
+                        result.Bytes)
+                ],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshed =
+            await _tileReader
+                .ReadContentAsync(
+                    tilePath,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            tile =>
+                                string.Equals(
+                                    tile.Reference.RelativeMapPath,
+                                    loaded.Reference.RelativeMapPath,
+                                    StringComparison.OrdinalIgnoreCase)
+                                    ? new NativeLoadedTile(
+                                        tile.Reference,
+                                        refreshed)
+                                    : tile)
+                        .ToArray()
+            };
+
+        return CurrentMap;
+    }
+
     public async Task<NativeSplineAdvancedUpdateResult>
         UpdateSplineAdvancedAsync(
             NativeSelectionInfo selection,

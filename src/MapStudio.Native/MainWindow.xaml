@@ -2430,6 +2430,10 @@
                                         ToolTipService.ToolTip="Alternar o campo mirror da spline OMSI selecionada"
                                         Click="OnRoadMirrorClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Substituir tipo"
+                                        ToolTipService.ToolTip="Trocar a SLI do trecho pela SLI selecionada na Biblioteca"
+                                        Click="OnRoadReplaceTypeClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="↑ 1 m"
                                         ToolTipService.ToolTip="Elevar a próxima rua em 1 metro"
                                         Click="OnRoadElevationUpClick" />
