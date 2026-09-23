@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.8: spline drag fix + easy selection + map AI connection + PDF manual.
+# Test 10.9: direct viewport rotation + tool icons + F11 pointer-label fix.
 
 on:
   push:
@@ -19,8 +19,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.8-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.8-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.9-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.9-native.md"
   workflow_dispatch:
 
 permissions:
@@ -31,8 +31,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.8-native
-  TAG: v0.2.0-alpha.5-test.10.8-native
+  VERSION: 0.2.0-alpha.5-test.10.9-native
+  TAG: v0.2.0-alpha.5-test.10.9-native
 
 jobs:
   build-native-preview:
@@ -292,6 +292,61 @@ jobs:
 
           Write-Host "Verified road elevation, drag spline finalization, easy selection, map AI connection and manuals."
 
+      - name: Verify direct viewport manipulation and tool icons
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          if (-not $runtime.Contains('TryBeginDirectRotation')) {
+            throw "Direct selected-item rotation is missing from the viewport runtime."
+          }
+
+          if (-not $viewport.Contains('TryBeginDirectRotation')) {
+            throw "NativeViewport does not start direct selected-item rotation."
+          }
+
+          if (-not $main.Contains('arraste o próprio item selecionado')) {
+            throw "Rotate tool does not explain direct viewport interaction."
+          }
+
+          foreach ($symbol in @(
+            'Symbol="Save"',
+            'Symbol="Undo"',
+            'Symbol="Redo"',
+            'Symbol="FullScreen"',
+            'Symbol="Rotate"',
+            'Symbol="Target"',
+            'Symbol="Copy"',
+            'Symbol="Cut"'
+          )) {
+            if (-not $xaml.Contains($symbol)) {
+              throw "Expected tool icon is missing: $symbol"
+            }
+          }
+
+          if ($xaml.Contains('Content="F11"')) {
+            throw "Loose textual F11 toolbar button must not return."
+          }
+
+          if ($xaml.Contains('ToolTipService.ToolTip="Arraste para mover no F11"')) {
+            throw "Floating-panel pointer tooltip still contains F11."
+          }
+
+          if (-not (Test-Path docs/pt-BR/USER_MANUAL.md) -or
+              -not (Get-Content docs/pt-BR/USER_MANUAL.md -Raw).Contains('Nenhuma função principal depende do Inspector')) {
+            throw "Portuguese manual must document Inspector as optional."
+          }
+
+          if (-not (Test-Path docs/en/USER_MANUAL.md) -or
+              -not (Get-Content docs/en/USER_MANUAL.md -Raw).Contains('No primary editor function depends on the Inspector')) {
+            throw "English manual must document Inspector as optional."
+          }
+
+          Write-Host "Verified direct rotation, optional Inspector rule, tool icons and F11 pointer-label cleanup."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -404,11 +459,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.8-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.9-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.8-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.9-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
