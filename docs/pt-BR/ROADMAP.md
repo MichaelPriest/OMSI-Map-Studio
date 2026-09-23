@@ -111,7 +111,7 @@ O índice não substitui os arquivos OMSI. Ele é derivado deles e pode ser reco
 
 A base persistente usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
 
-O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. O primeiro estágio de cache derivado em memória reutiliza parsing de SCO, SLI, O3D e X enquanto o fingerprint do arquivo permanece válido. O renderer também passou a manter um warm cache GPU limitado a 64 texturas antigas ou 128 MiB, descartando o excedente por LRU. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e gerenciamento/LOD GPU por orçamento global para concluir a Fase A.
+O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. O primeiro estágio de cache derivado em memória reutiliza parsing de SCO, SLI, O3D e X enquanto o fingerprint do arquivo permanece válido. O renderer também mantém um warm cache GPU limitado a 64 texturas antigas ou 128 MiB. O conteúdo completo dos tiles usados no streaming agora possui cache LRU de 32 entradas com fingerprint dos arquivos dependentes, permitindo reaproveitar os tiles sobrepostos ao mover a janela 3×3 sem reler tudo do disco. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e gerenciamento/LOD GPU por orçamento global para concluir a Fase A.
 
 ### 3.2 Cache derivado
 
@@ -292,7 +292,7 @@ Estado atual da Fase A:
 - ⬜ métricas internas completas de tempo de abertura;
 - 🟡 diagnóstico de cache: progresso e contagens do Asset Index já aparecem na tela da instalação OMSI.
 
-Já existem cache derivado inicial e retenção LRU GPU limitada. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e descarte/LOD GPU por orçamento global para marcar a Fase A como ✅.
+Já existem cache derivado inicial, cache LRU de conteúdo de tiles e retenção LRU GPU limitada. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e descarte/LOD GPU por orçamento global para marcar a Fase A como ✅.
 
 Critério de conclusão:
 

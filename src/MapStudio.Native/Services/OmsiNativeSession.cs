@@ -107,6 +107,11 @@ public sealed class OmsiNativeSession
     private readonly OmsiTileReader _tileReader =
         new();
 
+    private readonly OmsiTileContentCache
+        _tileContentCache =
+            new(
+                capacity: 32);
+
     private readonly Dictionary<
         string,
         NativePendingTransformEdit>
@@ -11716,7 +11721,7 @@ public sealed class OmsiNativeSession
         }
 
         var content =
-            await _tileReader
+            await _tileContentCache
                 .ReadContentAsync(
                     tilePath,
                     cancellationToken)

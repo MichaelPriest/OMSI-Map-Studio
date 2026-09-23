@@ -111,7 +111,7 @@ The index never replaces OMSI files. It is derived data and can be rebuilt.
 
 The persistent foundation uses one local SQLite database per OMSI installation. Refresh runs in the background and does not block editing. On an installation that has already been indexed, unchanged files are reused; an index failure never prevents direct reading of OMSI files.
 
-Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. The first in-memory derived-cache stage reuses SCO, SLI, O3D, and X parsing while each file fingerprint remains valid. The renderer now also keeps a bounded GPU warm cache of up to 64 stale textures or 128 MiB, evicting overflow by LRU. Persistent/broader caching, a complete priority queue, and global-budget GPU resource management/LOD are still required to finish Phase A.
+Automatic tile streaming is now the default when opening maps: rings 0–1 receive full content, ring 2 receives lightweight summary/metadata, heavy terrain outside the active region is evicted from UI state, and stale regional responses are invalidated by generation so they cannot overwrite the camera's current area. **Full map** remains available as an explicit diagnostics mode. The first in-memory derived-cache stage reuses SCO, SLI, O3D, and X parsing while each file fingerprint remains valid. The renderer also keeps a bounded GPU warm cache of up to 64 stale textures or 128 MiB. Full tile content used by streaming now has a 32-entry LRU cache fingerprinted across its dependent files, allowing overlapping tiles in a moving 3×3 window to be reused without rereading all of them from disk. Persistent/broader caching, a complete priority queue, and global-budget GPU resource management/LOD are still required to finish Phase A.
 
 ### 3.2 Derived cache
 
@@ -292,7 +292,7 @@ Current Phase A status:
 - ⬜ complete internal map-opening metrics;
 - 🟡 cache diagnostics: Asset Index progress and counts are already shown on the OMSI installation screen.
 
-Initial derived caching and bounded GPU LRU retention are now in place. Persistent/broader caching, a complete priority queue, and global-budget GPU eviction/LOD are still required before Phase A can be marked ✅.
+Initial derived caching, LRU tile-content caching, and bounded GPU LRU retention are now in place. Persistent/broader caching, a complete priority queue, and global-budget GPU eviction/LOD are still required before Phase A can be marked ✅.
 
 Completion criteria:
 
