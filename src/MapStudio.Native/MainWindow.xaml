@@ -2419,8 +2419,7 @@
                                 Click="OnReloadRealMapAreaClick" />
                     </Grid>
 
-                    <Grid Grid.Row="2"
-                          ClipToBounds="True">
+                    <Grid Grid.Row="2">
                         <WebView2 x:Name="RealMapAreaWebView"
                                   HorizontalAlignment="Stretch"
                                   VerticalAlignment="Stretch" />
@@ -2450,14 +2449,16 @@
                                             Height="12"
                                             CornerRadius="6"
                                             Background="{ThemeResource MapStudioAccentBrush}" />
-                                    <TextBlock Text="ÁREA DO MAPA"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Top"
-                                               Margin="0,7,0,0"
-                                               Padding="7,3"
-                                               FontSize="10"
-                                               FontWeight="SemiBold"
-                                               Background="{ThemeResource MapStudioTranslucentRaisedBrush}" />
+                                    <Border HorizontalAlignment="Center"
+                                            VerticalAlignment="Top"
+                                            Margin="0,7,0,0"
+                                            Padding="7,3"
+                                            Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
+                                            CornerRadius="4">
+                                        <TextBlock Text="ÁREA DO MAPA"
+                                                   FontSize="10"
+                                                   FontWeight="SemiBold" />
+                                    </Border>
                                 </Grid>
                             </Border>
                         </Grid>
