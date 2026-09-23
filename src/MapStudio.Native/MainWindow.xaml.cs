@@ -7109,7 +7109,33 @@ public sealed partial class MainWindow : Window
 
     private async Task StartSelectionCopyPlacementAsync()
     {
+        var selections =
+            Viewport
+                .GetSelectedSelectionInfos()
+                .GroupBy(
+                    selection =>
+                        (
+                            selection.Kind,
+                            selection.EntityId,
+                            selection.TileX,
+                            selection.TileY,
+                            selection.AssetPath
+                        ))
+                .Select(
+                    group =>
+                        group.First())
+                .ToArray();
+
+        if (selections.Length > 1)
+        {
+            await DuplicateSelectedGroupAsync(
+                selections);
+
+            return;
+        }
+
         var selection =
+            selections.FirstOrDefault() ??
             _selectionInfo;
 
         if (selection is null)
@@ -7193,6 +7219,325 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Falha ao iniciar cópia: {exception.Message}";
+        }
+    }
+
+    private async Task DuplicateSelectedGroupAsync(
+        IReadOnlyList<NativeSelectionInfo>
+            selections)
+    {
+        if (
+            _session.OmsiRootPath is null ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Duplicar grupo: abra um mapa antes de duplicar itens.";
+
+            return;
+        }
+
+        if (
+            snapshot.Map
+                .UsesWorldCoordinates)
+        {
+            StatusText.Text =
+                "Duplicar grupo em mapa com worldcoordinates ainda não está habilitado no host nativo.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Duplicar grupo: salve as transformações pendentes antes de duplicar.";
+
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Duplicar grupo: cancele a ferramenta de posicionamento atual primeiro.";
+
+            return;
+        }
+
+        if (
+            !Viewport
+                .TryBuildSelectedGroupDuplicateRequests(
+                    new Vector3(
+                        2.0f,
+                        0,
+                        0),
+                    out var objectRequests,
+                    out var splineRequests,
+                    out var preparationStatus))
+        {
+            StatusText.Text =
+                preparationStatus;
+
+            return;
+        }
+
+        var originalObjectIds =
+            snapshot.Tiles
+                .SelectMany(
+                    tile =>
+                        tile.Content.Objects)
+                .Select(
+                    item =>
+                        item.ObjectId)
+                .ToHashSet();
+
+        var insertedObjectIds =
+            new HashSet<int>();
+
+        var insertedSplineIds =
+            new HashSet<int>();
+
+        string? objectBackup =
+            null;
+
+        NativeMapSnapshot finalSnapshot =
+            snapshot;
+
+        try
+        {
+            BeginLoading(
+                "Duplicando seleção",
+                $"{selections.Count} item(ns) · deslocamento inicial +2 m");
+
+            if (objectRequests.Count > 0)
+            {
+                var groups =
+                    objectRequests
+                        .GroupBy(
+                            request =>
+                                request.SceneryObjectPath,
+                            StringComparer.OrdinalIgnoreCase)
+                        .Select(
+                            group =>
+                                new NativeSceneryPlacementBatchGroup(
+                                    group.Key,
+                                    group.ToArray()))
+                        .ToArray();
+
+                finalSnapshot =
+                    await _session
+                        .InsertSceneryObjectMultiBatchAsync(
+                            groups);
+
+                objectBackup =
+                    _session
+                        .LastBackupDirectory;
+
+                var expectedPaths =
+                    objectRequests
+                        .Select(
+                            request =>
+                                request.SceneryObjectPath)
+                        .ToHashSet(
+                            StringComparer.OrdinalIgnoreCase);
+
+                foreach (
+                    var item in
+                        finalSnapshot.Tiles
+                            .SelectMany(
+                                tile =>
+                                    tile.Content.Objects))
+                {
+                    if (
+                        !originalObjectIds.Contains(
+                            item.ObjectId) &&
+                        expectedPaths.Contains(
+                            item.SceneryObjectPath))
+                    {
+                        insertedObjectIds.Add(
+                            item.ObjectId);
+                    }
+                }
+
+                if (
+                    insertedObjectIds.Count !=
+                        objectRequests.Count)
+                {
+                    throw new InvalidDataException(
+                        "duplicateObjectIdentityMismatch");
+                }
+            }
+
+            if (splineRequests.Count > 0)
+            {
+                try
+                {
+                    var splineResult =
+                        await _session
+                            .InsertSplineBatchAsync(
+                                splineRequests);
+
+                    finalSnapshot =
+                        splineResult.Snapshot;
+
+                    insertedSplineIds
+                        .UnionWith(
+                            splineResult.SplineIds);
+                }
+                catch
+                {
+                    if (
+                        objectRequests.Count >
+                            0 &&
+                        !string.IsNullOrWhiteSpace(
+                            objectBackup))
+                    {
+                        var rollback =
+                            await _session
+                                .RestoreMapStudioBackupAsync(
+                                    objectBackup);
+
+                        await ApplyMapSnapshotAsync(
+                            rollback.Snapshot,
+                            focusActiveTile:
+                                false);
+                    }
+
+                    throw;
+                }
+            }
+
+            await ApplyMapSnapshotAsync(
+                finalSnapshot,
+                focusActiveTile:
+                    false);
+
+            var duplicatedSelections =
+                new List<NativeSelectionInfo>(
+                    selections.Count);
+
+            foreach (
+                var tile in
+                    finalSnapshot.Tiles)
+            {
+                foreach (
+                    var item in
+                        tile.Content.Objects)
+                {
+                    if (
+                        !insertedObjectIds.Contains(
+                            item.ObjectId))
+                    {
+                        continue;
+                    }
+
+                    duplicatedSelections.Add(
+                        new NativeSelectionInfo(
+                            PickingKind.Object,
+                            item.ObjectId,
+                            tile.Reference.X,
+                            tile.Reference.Y,
+                            item.SceneryObjectPath,
+                            item.X,
+                            item.Y,
+                            item.Z,
+                            item.Rotation,
+                            item.Pitch,
+                            item.Bank,
+                            null,
+                            null,
+                            null,
+                            null));
+                }
+
+                foreach (
+                    var item in
+                        tile.Content.Splines)
+                {
+                    if (
+                        !insertedSplineIds.Contains(
+                            item.SplineId))
+                    {
+                        continue;
+                    }
+
+                    duplicatedSelections.Add(
+                        new NativeSelectionInfo(
+                            PickingKind.Spline,
+                            item.SplineId,
+                            tile.Reference.X,
+                            tile.Reference.Y,
+                            item.SplinePath,
+                            item.X,
+                            item.Y,
+                            item.Z,
+                            item.Rotation,
+                            null,
+                            null,
+                            item.Length,
+                            item.Radius,
+                            item.GradientStart,
+                            item.GradientEnd,
+                            item.PreviousSplineId,
+                            item.NextSplineId,
+                            item.IsHeightSpline));
+                }
+            }
+
+            if (
+                duplicatedSelections.Count !=
+                    selections.Count)
+            {
+                throw new InvalidDataException(
+                    "duplicateSelectionReloadMismatch");
+            }
+
+            var selectedCount =
+                Viewport
+                    .SelectSelectionInfos(
+                        duplicatedSelections,
+                        focus:
+                            false);
+
+            Viewport.SetGizmoMode(
+                NativeGizmoMode.Move);
+
+            _deletionUndoEntry =
+                null;
+
+            RefreshExplorer();
+            UpdateContentRootSummary();
+
+            StatusText.Text =
+                selectedCount ==
+                    selections.Count
+                    ? $"{selectedCount} item(ns) duplicado(s) · cópias selecionadas e prontas para mover."
+                    : $"{duplicatedSelections.Count} item(ns) duplicado(s); {selectedCount} reselecionado(s) no viewport.";
+        }
+        catch (Exception exception)
+        {
+            var message =
+                exception.Message switch
+                {
+                    "duplicateObjectIdentityMismatch" =>
+                        "as cópias de objetos foram gravadas, mas não puderam ser identificadas com segurança após o reload",
+
+                    "duplicateSelectionReloadMismatch" =>
+                        "as cópias foram gravadas, mas nem todas ficaram disponíveis na região carregada",
+
+                    _ =>
+                        exception.Message
+                };
+
+            StatusText.Text =
+                $"Falha ao duplicar grupo: {message}";
+        }
+        finally
+        {
+            EndLoading();
         }
     }
 
