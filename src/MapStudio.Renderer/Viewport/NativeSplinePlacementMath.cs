@@ -17,6 +17,42 @@ public static class NativeSplinePlacementMath
     private const double Epsilon =
         0.0001;
 
+    public static float ResolveRoadEndpointHeight(
+        float terrainHeight,
+        float startHeight,
+        NativeRoadElevationMode mode,
+        double elevationValue)
+    {
+        var safeValue =
+            double.IsFinite(
+                elevationValue)
+                ? Math.Clamp(
+                    elevationValue,
+                    -100.0,
+                    300.0)
+                : 0.0;
+
+        return mode switch
+        {
+            NativeRoadElevationMode.Elevate =>
+                startHeight +
+                (float)Math.Abs(
+                    safeValue),
+
+            NativeRoadElevationMode.Level =>
+                startHeight,
+
+            NativeRoadElevationMode.Lower =>
+                startHeight -
+                (float)Math.Abs(
+                    safeValue),
+
+            _ =>
+                terrainHeight +
+                (float)safeValue
+        };
+    }
+
     public static bool TryCreateStraight(
         Vector3 start,
         Vector3 end,
