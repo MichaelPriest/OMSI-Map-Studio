@@ -42,6 +42,14 @@ public sealed class NativeViewportRuntime : IDisposable
                 StringComparer
                     .OrdinalIgnoreCase);
 
+    private readonly NativeSceneryAssetLoader
+        _sceneryAssetLoader =
+            new();
+
+    private readonly NativeSplineAssetLoader
+        _splineAssetLoader =
+            new();
+
     private readonly Stack<
         NativeTransformHistoryEntry>
         _undoStack =
@@ -1523,7 +1531,7 @@ public sealed class NativeViewportRuntime : IDisposable
         CancelSplinePlacement();
 
         var asset =
-            await new NativeSplineAssetLoader()
+            await _splineAssetLoader
                 .LoadAssetAsync(
                     omsiRoot,
                     splinePath,
@@ -2356,7 +2364,7 @@ public sealed class NativeViewportRuntime : IDisposable
         CancelSplinePlacement();
 
         var asset =
-            await new NativeSceneryAssetLoader()
+            await _sceneryAssetLoader
                 .LoadAssetAsync(
                     omsiRoot,
                     sceneryObjectPath,
@@ -2893,7 +2901,7 @@ public sealed class NativeViewportRuntime : IDisposable
             OmsiAssetKind.SceneryObject)
         {
             var asset =
-                await new NativeSceneryAssetLoader()
+                await _sceneryAssetLoader
                     .LoadAssetAsync(
                         omsiRoot,
                         relativePath,
@@ -2909,7 +2917,7 @@ public sealed class NativeViewportRuntime : IDisposable
             OmsiAssetKind.Spline)
         {
             var asset =
-                await new NativeSplineAssetLoader()
+                await _splineAssetLoader
                     .LoadAssetAsync(
                         omsiRoot,
                         relativePath,
@@ -4632,7 +4640,7 @@ public sealed class NativeViewportRuntime : IDisposable
         UpdateCameraTransform();
 
         _sceneryAssets =
-            await new NativeSceneryAssetLoader()
+            await _sceneryAssetLoader
                 .LoadAsync(
                     omsiRoot,
                     Scene,
@@ -4640,7 +4648,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .ConfigureAwait(false);
 
         _splineAssets =
-            await new NativeSplineAssetLoader()
+            await _splineAssetLoader
                 .LoadAsync(
                     omsiRoot,
                     Scene,
