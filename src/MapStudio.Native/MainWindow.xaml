@@ -1153,6 +1153,13 @@
                                                     Click="OnCollectionAssetClick" />
                                         </Grid>
 
+                                        <Button x:Name="AiClassifyAssetButton"
+                                                Content="✦ IA: classificar asset"
+                                                IsEnabled="False"
+                                                HorizontalAlignment="Stretch"
+                                                ToolTipService.ToolTip="Usar o provedor de IA ativo para revisar categoria e subcategoria"
+                                                Click="OnAiClassifyAssetClick" />
+
                                         <Button x:Name="RepairDependencyButton"
                                                 Content="Usar como substituição"
                                                 Visibility="Collapsed"

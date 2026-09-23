@@ -1986,6 +1986,9 @@ public sealed partial class MainWindow : Window
         CollectionAssetButton.IsEnabled =
             hasSelection;
 
+        AiClassifyAssetButton.IsEnabled =
+            placeable;
+
         if (selected is not null)
         {
             FavoriteAssetButton.Content =
@@ -2352,6 +2355,132 @@ public sealed partial class MainWindow : Window
 
             StatusText.Text =
                 $"Falha ao reparar dependência: {exception.Message}";
+        }
+    }
+
+    private async void OnAiClassifyAssetClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            !EnsureCommercialFeature(
+                MapStudioEntitlementKeys
+                    .AiAssistance,
+                "Classificação de assets por IA"))
+        {
+            return;
+        }
+
+        if (
+            GetSelectedAssetLibraryEntry() is not
+                { } asset ||
+            asset.Kind is not
+                (
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Spline
+                ))
+        {
+            StatusText.Text =
+                "IA: selecione um objeto SCO ou spline SLI.";
+            return;
+        }
+
+        var activeProfile =
+            _aiConnectionSettings
+                .GetActiveProfile();
+
+        if (activeProfile is null)
+        {
+            StatusText.Text =
+                "IA: configure e ative um perfil em IA → Configurar provedores.";
+            return;
+        }
+
+        try
+        {
+            AiClassifyAssetButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"IA: classificando {asset.RelativePath} com {activeProfile.DisplayName}...";
+
+            var provider =
+                NativeAiProviderFactory
+                    .Create(
+                        activeProfile);
+
+            if (
+                provider is not
+                    IMapStudioAssetClassificationProvider
+                    classifier)
+            {
+                StatusText.Text =
+                    $"IA: o adapter {activeProfile.AdapterId} ainda não oferece classificação de assets. Use o adapter OpenAI nesta build.";
+                return;
+            }
+
+            var heuristicGroup =
+                OmsiAssetLibraryClassifier
+                    .Classify(
+                        asset);
+
+            var heuristicSubcategory =
+                OmsiAssetLibraryClassifier
+                    .GetSubcategory(
+                        asset);
+
+            var result =
+                await classifier
+                    .AnalyzeAssetClassificationAsync(
+                        new MapStudioAssetClassificationRequest(
+                            asset.RelativePath,
+                            asset.Kind,
+                            heuristicGroup,
+                            heuristicSubcategory));
+
+            if (result.Confidence < 0.45)
+            {
+                StatusText.Text =
+                    $"IA: sugestão ignorada por baixa confiança ({result.Confidence:P0}). Classificação local mantida.";
+                return;
+            }
+
+            _assetLibraryState
+                .AiClassifications[
+                    asset.RelativePath] =
+                new NativeAssetAiClassification(
+                    result.Group,
+                    result.Subcategory,
+                    result.Confidence,
+                    activeProfile.DisplayName,
+                    activeProfile.Model,
+                    DateTimeOffset.UtcNow);
+
+            SaveAssetLibraryState();
+
+            _assetLibraryViewItemCache
+                .Clear();
+
+            RefreshLibraryGroupOptions(
+                GetSelectedLibraryKind());
+
+            RefreshLibraryFilter();
+
+            StatusText.Text =
+                $"IA: {asset.RelativePath} → {OmsiAssetLibraryClassifier.GetDisplayName(result.Group)} / {result.Subcategory} · confiança {result.Confidence:P0}.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"IA: falha ao classificar asset: {exception.Message}";
+        }
+        finally
+        {
+            AiClassifyAssetButton.IsEnabled =
+                GetSelectedAssetLibraryEntry()
+                    ?.Kind is
+                    OmsiAssetKind.SceneryObject or
+                    OmsiAssetKind.Spline;
         }
     }
 
@@ -4038,6 +4167,49 @@ public sealed partial class MainWindow : Window
             ".bmp");
     }
 
+    private OmsiAssetLibraryGroup
+        GetEffectiveAssetGroup(
+            OmsiAssetIndexEntry asset)
+    {
+        if (
+            _assetLibraryState
+                .AiClassifications
+                .TryGetValue(
+                    asset.RelativePath,
+                    out var classification) &&
+            classification.Confidence >=
+                0.45)
+        {
+            return classification.Group;
+        }
+
+        return OmsiAssetLibraryClassifier
+            .Classify(
+                asset);
+    }
+
+    private string GetEffectiveAssetSubcategory(
+        OmsiAssetIndexEntry asset)
+    {
+        if (
+            _assetLibraryState
+                .AiClassifications
+                .TryGetValue(
+                    asset.RelativePath,
+                    out var classification) &&
+            classification.Confidence >=
+                0.45 &&
+            !string.IsNullOrWhiteSpace(
+                classification.Subcategory))
+        {
+            return classification.Subcategory;
+        }
+
+        return OmsiAssetLibraryClassifier
+            .GetSubcategory(
+                asset);
+    }
+
     private AssetLibraryViewItem
         CreateAssetLibraryViewItem(
             OmsiAssetIndexEntry asset)
@@ -4064,8 +4236,7 @@ public sealed partial class MainWindow : Window
         }
 
         var group =
-            OmsiAssetLibraryClassifier
-                .Classify(
+            GetEffectiveAssetGroup(
                     asset);
 
         var groupName =
@@ -4074,8 +4245,7 @@ public sealed partial class MainWindow : Window
                     group);
 
         var subcategory =
-            OmsiAssetLibraryClassifier
-                .GetSubcategory(
+            GetEffectiveAssetSubcategory(
                     asset);
 
         var detail =
@@ -4472,13 +4642,11 @@ public sealed partial class MainWindow : Window
                             item.Kind is
                                 OmsiAssetKind.SceneryObject or
                                 OmsiAssetKind.Spline &&
-                            OmsiAssetLibraryClassifier
-                                .Classify(
+                            GetEffectiveAssetGroup(
                                     item) ==
                                 option.Group)
                     .Select(
-                        OmsiAssetLibraryClassifier
-                            .GetSubcategory)
+                        GetEffectiveAssetSubcategory)
                     .Where(
                         value =>
                             !string.IsNullOrWhiteSpace(
@@ -4682,8 +4850,7 @@ public sealed partial class MainWindow : Window
             items =
                 items.Where(
                     item =>
-                        OmsiAssetLibraryClassifier
-                            .Classify(item) ==
+                        GetEffectiveAssetGroup(item) ==
                         option.Group);
         }
 
@@ -4695,8 +4862,7 @@ public sealed partial class MainWindow : Window
                             OmsiAssetKind.SceneryObject or
                             OmsiAssetKind.Spline)
                 .Select(
-                    OmsiAssetLibraryClassifier
-                        .GetSubcategory)
+                    GetEffectiveAssetSubcategory)
                 .Where(
                     value =>
                         !string.IsNullOrWhiteSpace(
@@ -4857,8 +5023,7 @@ public sealed partial class MainWindow : Window
             items =
                 items.Where(
                     item =>
-                        OmsiAssetLibraryClassifier
-                            .Classify(
+                        GetEffectiveAssetGroup(
                                 item) ==
                         option.Group);
         }
@@ -4877,8 +5042,7 @@ public sealed partial class MainWindow : Window
                 items.Where(
                     item =>
                         string.Equals(
-                            OmsiAssetLibraryClassifier
-                                .GetSubcategory(item),
+                            GetEffectiveAssetSubcategory(item),
                             subcategory,
                             StringComparison.OrdinalIgnoreCase));
         }
@@ -25409,8 +25573,7 @@ public sealed partial class MainWindow : Window
             sceneryAssets
                 .Where(
                     asset =>
-                        OmsiAssetLibraryClassifier
-                            .Classify(
+                        GetEffectiveAssetGroup(
                                 asset) ==
                         OmsiAssetLibraryGroup
                             .Vegetation)
@@ -25666,8 +25829,7 @@ public sealed partial class MainWindow : Window
                 currentAsset.Kind ==
                     OmsiAssetKind
                         .SceneryObject &&
-                OmsiAssetLibraryClassifier
-                    .Classify(
+                GetEffectiveAssetGroup(
                         currentAsset) ==
                     OmsiAssetLibraryGroup
                         .Vegetation

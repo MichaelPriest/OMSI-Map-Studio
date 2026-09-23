@@ -10,7 +10,8 @@ namespace MapStudio.Core.AI;
 /// OpenAI-compatible chat/completions servers such as Ollama and LM Studio.
 /// </summary>
 public sealed class MapStudioOpenAiResponsesProvider
-    : IMapStudioAiProvider
+    : IMapStudioAiProvider,
+      IMapStudioAssetClassificationProvider
 {
     private readonly HttpClient _httpClient;
     private readonly Uri _endpoint;
@@ -71,7 +72,8 @@ public sealed class MapStudioOpenAiResponsesProvider
                 MapStudioAiCapability.BuildingReferenceAnalysis |
                 MapStudioAiCapability.RoadReferenceAnalysis |
                 MapStudioAiCapability.SceneReferenceAnalysis |
-                MapStudioAiCapability.StructuredOutput,
+                MapStudioAiCapability.StructuredOutput |
+                MapStudioAiCapability.AssetClassification,
                 IsLocal:
                     false);
     }
@@ -181,6 +183,174 @@ public sealed class MapStudioOpenAiResponsesProvider
         return MapStudioAiStructuredAnalysis
             .ParseRoads(
                 result);
+    }
+
+    public async Task<MapStudioAssetClassificationAnalysis>
+        AnalyzeAssetClassificationAsync(
+            MapStudioAssetClassificationRequest request,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            request);
+
+        var allowedGroups =
+            OmsiAssetLibraryClassifier
+                .GetGroupsForKind(
+                    request.Kind)
+                .Where(
+                    group =>
+                        group !=
+                            OmsiAssetLibraryGroup.All)
+                .ToArray();
+
+        if (allowedGroups.Length == 0)
+        {
+            return new MapStudioAssetClassificationAnalysis(
+                OmsiAssetLibraryGroup.Other,
+                "Outros",
+                1,
+                "Tipo de asset não usa categorias visuais.");
+        }
+
+        var allowed =
+            string.Join(
+                ", ",
+                allowedGroups);
+
+        var prompt =
+            "Classify one OMSI Map Studio asset into the editor library. " +
+            "Return ONLY one JSON object with fields group, subcategory, confidence, notes. " +
+            "group MUST be one of: " +
+            allowed +
+            ". confidence must be 0..1. " +
+            "Use filename/path semantics in Portuguese, English and German. " +
+            "Do not invent a group outside the allowed list. " +
+            "Asset kind: " +
+            request.Kind +
+            ". Relative path: " +
+            request.RelativePath +
+            ". Local heuristic currently says group=" +
+            request.HeuristicGroup +
+            ", subcategory=" +
+            request.HeuristicSubcategory +
+            ". Improve the heuristic only when there is enough evidence.";
+
+        var payload =
+            JsonSerializer.Serialize(
+                new
+                {
+                    model =
+                        _model,
+                    input =
+                        prompt
+                });
+
+        using var response =
+            await SendAsync(
+                    payload,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var body =
+            await response.Content
+                .ReadAsStringAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        EnsureSuccess(
+            response,
+            body);
+
+        var output =
+            ExtractOutputText(
+                body);
+
+        if (
+            string.IsNullOrWhiteSpace(
+                output))
+        {
+            throw new InvalidDataException(
+                "openAiAssetClassificationOutputMissing");
+        }
+
+        using var document =
+            JsonDocument.Parse(
+                MapStudioAiStructuredAnalysis
+                    .ExtractJsonObject(
+                        output,
+                        "openAiAssetClassificationJsonMissing"));
+
+        var root =
+            document.RootElement;
+
+        var groupText =
+            root.TryGetProperty(
+                "group",
+                out var groupElement) &&
+            groupElement.ValueKind ==
+                JsonValueKind.String
+                ? groupElement.GetString()
+                : null;
+
+        var group =
+            Enum.TryParse<
+                OmsiAssetLibraryGroup>(
+                    groupText,
+                    ignoreCase:
+                        true,
+                    out var parsedGroup) &&
+            allowedGroups.Contains(
+                parsedGroup)
+                ? parsedGroup
+                : OmsiAssetLibraryGroup.Other;
+
+        var subcategory =
+            root.TryGetProperty(
+                "subcategory",
+                out var subcategoryElement) &&
+            subcategoryElement.ValueKind ==
+                JsonValueKind.String &&
+            !string.IsNullOrWhiteSpace(
+                subcategoryElement.GetString())
+                ? subcategoryElement
+                    .GetString()!
+                    .Trim()
+                : OmsiAssetLibraryClassifier
+                    .GetDisplayName(
+                        group);
+
+        var confidence =
+            root.TryGetProperty(
+                "confidence",
+                out var confidenceElement) &&
+            confidenceElement.ValueKind ==
+                JsonValueKind.Number &&
+            confidenceElement.TryGetDouble(
+                out var confidenceValue)
+                ? Math.Clamp(
+                    confidenceValue,
+                    0,
+                    1)
+                : 0;
+
+        var notes =
+            root.TryGetProperty(
+                "notes",
+                out var notesElement) &&
+            notesElement.ValueKind ==
+                JsonValueKind.String
+                ? notesElement.GetString()
+                : null;
+
+        return new MapStudioAssetClassificationAnalysis(
+            group,
+            subcategory,
+            confidence,
+            string.IsNullOrWhiteSpace(
+                notes)
+                ? null
+                : notes.Trim());
     }
 
     private async Task<string> SendVisionRequestAsync(

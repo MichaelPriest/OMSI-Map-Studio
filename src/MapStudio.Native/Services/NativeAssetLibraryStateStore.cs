@@ -1,7 +1,16 @@
 using MapStudio.Renderer.Viewport;
+using MapStudio.Core.Omsi.Indexing;
 using System.Text.Json;
 
 namespace MapStudio.Native.Services;
+
+public sealed record NativeAssetAiClassification(
+    OmsiAssetLibraryGroup Group,
+    string Subcategory,
+    double Confidence,
+    string? Provider,
+    string? Model,
+    DateTimeOffset ClassifiedAtUtc);
 
 public sealed class NativeAssetLibraryState
 {
@@ -23,6 +32,11 @@ public sealed class NativeAssetLibraryState
 
     public List<NativeConstructionSetDefinition>
         ConstructionSets { get; init; } = [];
+
+    public Dictionary<string, NativeAssetAiClassification>
+        AiClassifications { get; init; } =
+            new(
+                StringComparer.OrdinalIgnoreCase);
 
     public double ToolPaletteOffsetX { get; init; }
 
@@ -187,6 +201,54 @@ public static class NativeAssetLibraryStateStore
                 [];
         }
 
+        var aiClassifications =
+            new Dictionary<
+                string,
+                NativeAssetAiClassification>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        foreach (
+            var pair in
+                state.AiClassifications ??
+                new Dictionary<
+                    string,
+                    NativeAssetAiClassification>())
+        {
+            var value =
+                pair.Value;
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    pair.Key) ||
+                value is null ||
+                value.Group is
+                    OmsiAssetLibraryGroup.All ||
+                !double.IsFinite(
+                    value.Confidence))
+            {
+                continue;
+            }
+
+            aiClassifications[
+                pair.Key] =
+                value with
+                {
+                    Subcategory =
+                        string.IsNullOrWhiteSpace(
+                            value.Subcategory)
+                            ? OmsiAssetLibraryClassifier
+                                .GetDisplayName(
+                                    value.Group)
+                            : value.Subcategory
+                                .Trim(),
+                    Confidence =
+                        Math.Clamp(
+                            value.Confidence,
+                            0,
+                            1)
+                };
+        }
+
         return new NativeAssetLibraryState
         {
             Favorites =
@@ -197,6 +259,8 @@ public static class NativeAssetLibraryStateStore
                 usage,
             Collections =
                 collections,
+            AiClassifications =
+                aiClassifications,
             ConstructionSets =
                 state.ConstructionSets
                     .Where(

@@ -96,6 +96,51 @@ public sealed class MapStudioOpenAiResponsesProviderTests
             handler.LastRequestBody);
     }
 
+    [Fact]
+    public async Task AssetClassificationUsesAllowedLibraryGroup()
+    {
+        var handler =
+            new FakeHandler(
+                "{\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"group\\\":\\\"Vegetation\\\",\\\"subcategory\\\":\\\"Árvores\\\",\\\"confidence\\\":0.93,\\\"notes\\\":\\\"tree asset\\\"}\"}]}]}");
+
+        using var client =
+            new HttpClient(
+                handler);
+
+        var provider =
+            new MapStudioOpenAiResponsesProvider(
+                client,
+                "https://api.openai.com/v1/responses",
+                "gpt-5.6-terra",
+                "secret");
+
+        var result =
+            await provider
+                .AnalyzeAssetClassificationAsync(
+                    new MapStudioAssetClassificationRequest(
+                        "Sceneryobjects/Vegetation/tree_oak.sco",
+                        OmsiAssetKind.SceneryObject,
+                        OmsiAssetLibraryGroup.Other,
+                        "Outros"));
+
+        Assert.Equal(
+            OmsiAssetLibraryGroup.Vegetation,
+            result.Group);
+
+        Assert.Equal(
+            "Árvores",
+            result.Subcategory);
+
+        Assert.Equal(
+            0.93,
+            result.Confidence,
+            2);
+
+        Assert.Contains(
+            "tree_oak.sco",
+            handler.LastRequestBody);
+    }
+
     private sealed class FakeHandler(
         string response)
         : HttpMessageHandler

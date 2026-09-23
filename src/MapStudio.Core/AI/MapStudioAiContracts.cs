@@ -1,3 +1,5 @@
+using MapStudio.Core.Omsi.Indexing;
+
 namespace MapStudio.Core.AI;
 
 [Flags]
@@ -8,7 +10,8 @@ public enum MapStudioAiCapability
     BuildingReferenceAnalysis = 1 << 1,
     RoadReferenceAnalysis = 1 << 2,
     SceneReferenceAnalysis = 1 << 3,
-    StructuredOutput = 1 << 4
+    StructuredOutput = 1 << 4,
+    AssetClassification = 1 << 5
 }
 
 public sealed record MapStudioAiProviderDescriptor(
@@ -138,6 +141,27 @@ public sealed record MapStudioRoadReferenceAnalysis(
         MapStudioRoadReferenceCoordinateSpace.NormalizedImage,
     int? ImageWidth = null,
     int? ImageHeight = null);
+
+public sealed record MapStudioAssetClassificationRequest(
+    string RelativePath,
+    OmsiAssetKind Kind,
+    OmsiAssetLibraryGroup HeuristicGroup,
+    string HeuristicSubcategory);
+
+public sealed record MapStudioAssetClassificationAnalysis(
+    OmsiAssetLibraryGroup Group,
+    string Subcategory,
+    double Confidence,
+    string? Notes = null);
+
+public interface IMapStudioAssetClassificationProvider
+{
+    Task<MapStudioAssetClassificationAnalysis>
+        AnalyzeAssetClassificationAsync(
+            MapStudioAssetClassificationRequest request,
+            CancellationToken cancellationToken =
+                default);
+}
 
 public interface IMapStudioAiProvider
 {
