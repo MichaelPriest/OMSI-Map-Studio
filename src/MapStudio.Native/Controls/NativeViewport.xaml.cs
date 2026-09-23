@@ -2177,13 +2177,19 @@ public sealed partial class NativeViewport : UserControl
             ) !=
             0;
 
+        var pickingId =
+            PickingId.None;
+
+        object? selected =
+            null;
+
         var picked =
             _runtime is not null &&
             _runtime.TryPick(
                 pixelX,
                 pixelY,
-                out var pickingId,
-                out var selected,
+                out pickingId,
+                out selected,
                 additiveSelection:
                     additiveSelection);
 
