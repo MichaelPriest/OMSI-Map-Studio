@@ -2810,6 +2810,38 @@ public sealed class OmsiNativeSession
                         1)
                 .ConfigureAwait(false);
 
+        var negativeXNegativeY =
+            await ReadNeighborAsync(
+                    tileX -
+                        1,
+                    tileY -
+                        1)
+                .ConfigureAwait(false);
+
+        var positiveXNegativeY =
+            await ReadNeighborAsync(
+                    tileX +
+                        1,
+                    tileY -
+                        1)
+                .ConfigureAwait(false);
+
+        var negativeXPositiveY =
+            await ReadNeighborAsync(
+                    tileX -
+                        1,
+                    tileY +
+                        1)
+                .ConfigureAwait(false);
+
+        var positiveXPositiveY =
+            await ReadNeighborAsync(
+                    tileX +
+                        1,
+                    tileY +
+                        1)
+                .ConfigureAwait(false);
+
         var stitched =
             OmsiTerrainBorderStitcher
                 .StitchToNeighbors(
@@ -2817,7 +2849,11 @@ public sealed class OmsiNativeSession
                     negativeX,
                     positiveX,
                     negativeY,
-                    positiveY);
+                    positiveY,
+                    negativeXNegativeY,
+                    positiveXNegativeY,
+                    negativeXPositiveY,
+                    positiveXPositiveY);
 
         if (
             stitched.ChangedSamples ==

@@ -14,13 +14,25 @@ public static class OmsiTerrainBorderStitcher
         Bottom
     }
 
+    private enum Corner
+    {
+        TopLeft,
+        TopRight,
+        BottomLeft,
+        BottomRight
+    }
+
     public static OmsiTerrainBorderStitchResult
         StitchToNeighbors(
             OmsiTerrainGrid target,
             OmsiTerrainGrid? negativeX,
             OmsiTerrainGrid? positiveX,
             OmsiTerrainGrid? negativeY,
-            OmsiTerrainGrid? positiveY)
+            OmsiTerrainGrid? positiveY,
+            OmsiTerrainGrid? negativeXNegativeY = null,
+            OmsiTerrainGrid? positiveXNegativeY = null,
+            OmsiTerrainGrid? negativeXPositiveY = null,
+            OmsiTerrainGrid? positiveXPositiveY = null)
     {
         Validate(
             target);
@@ -74,6 +86,62 @@ public static class OmsiTerrainBorderStitcher
                     Edge.Bottom,
                     positiveY,
                     Edge.Top);
+        }
+
+        if (
+            negativeX is null &&
+            negativeY is null &&
+            negativeXNegativeY is not null)
+        {
+            changed +=
+                CopyCorner(
+                    heights,
+                    target.CellCount,
+                    Corner.TopLeft,
+                    negativeXNegativeY,
+                    Corner.BottomRight);
+        }
+
+        if (
+            positiveX is null &&
+            negativeY is null &&
+            positiveXNegativeY is not null)
+        {
+            changed +=
+                CopyCorner(
+                    heights,
+                    target.CellCount,
+                    Corner.TopRight,
+                    positiveXNegativeY,
+                    Corner.BottomLeft);
+        }
+
+        if (
+            negativeX is null &&
+            positiveY is null &&
+            negativeXPositiveY is not null)
+        {
+            changed +=
+                CopyCorner(
+                    heights,
+                    target.CellCount,
+                    Corner.BottomLeft,
+                    negativeXPositiveY,
+                    Corner.TopRight);
+        }
+
+        if (
+            positiveX is null &&
+            positiveY is null &&
+            positiveXPositiveY is not null)
+        {
+            changed +=
+                CopyCorner(
+                    heights,
+                    target.CellCount,
+                    Corner.BottomRight,
+                    positiveXPositiveY,
+                    Corner.TopLeft);
         }
 
         return new OmsiTerrainBorderStitchResult(
@@ -188,6 +256,44 @@ public static class OmsiTerrainBorderStitcher
         return changed;
     }
 
+    private static int CopyCorner(
+        float[] targetHeights,
+        int targetCellCount,
+        Corner targetCorner,
+        OmsiTerrainGrid source,
+        Corner sourceCorner)
+    {
+        Validate(
+            source);
+
+        var targetIndex =
+            GetCornerIndex(
+                targetCellCount,
+                targetCorner);
+
+        var sourceValue =
+            source.Heights[
+                GetCornerIndex(
+                    source.CellCount,
+                    sourceCorner)];
+
+        if (
+            Math.Abs(
+                targetHeights[
+                    targetIndex] -
+                sourceValue) <=
+            0.000001f)
+        {
+            return 0;
+        }
+
+        targetHeights[
+            targetIndex] =
+            sourceValue;
+
+        return 1;
+    }
+
     private static int GetIndex(
         int cellCount,
         Edge edge,
@@ -215,6 +321,33 @@ public static class OmsiTerrainBorderStitcher
             _ =>
                 throw new ArgumentOutOfRangeException(
                     nameof(edge))
+        };
+    }
+
+    private static int GetCornerIndex(
+        int cellCount,
+        Corner corner)
+    {
+        var sampleCount =
+            cellCount +
+            1;
+
+        return corner switch
+        {
+            Corner.TopLeft =>
+                0,
+            Corner.TopRight =>
+                cellCount,
+            Corner.BottomLeft =>
+                cellCount *
+                sampleCount,
+            Corner.BottomRight =>
+                sampleCount *
+                    sampleCount -
+                1,
+            _ =>
+                throw new ArgumentOutOfRangeException(
+                    nameof(corner))
         };
     }
 

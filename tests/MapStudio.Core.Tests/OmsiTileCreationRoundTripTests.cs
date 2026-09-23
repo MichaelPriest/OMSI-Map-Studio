@@ -293,6 +293,18 @@ public sealed class OmsiTileCreationRoundTripTests
                         tileY - 1),
                     await ReadNeighborAsync(
                         tileX,
+                        tileY + 1),
+                    await ReadNeighborAsync(
+                        tileX - 1,
+                        tileY - 1),
+                    await ReadNeighborAsync(
+                        tileX + 1,
+                        tileY - 1),
+                    await ReadNeighborAsync(
+                        tileX - 1,
+                        tileY + 1),
+                    await ReadNeighborAsync(
+                        tileX + 1,
                         tileY + 1));
 
         await File.WriteAllBytesAsync(

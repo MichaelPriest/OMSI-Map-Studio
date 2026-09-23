@@ -103,6 +103,45 @@ public sealed class OmsiTerrainBorderStitcherTests
         Assert.Equal(20f, result.Terrain.Heights[6]);
     }
 
+
+    [Fact]
+    public void StitchUsesDiagonalNeighborForUnconstrainedCorner()
+    {
+        var target =
+            new OmsiTerrainGrid(
+                2,
+                new float[9]);
+
+        var positiveXPositiveY =
+            new OmsiTerrainGrid(
+                2,
+                new float[]
+                {
+                    42, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0
+                });
+
+        var result =
+            OmsiTerrainBorderStitcher
+                .StitchToNeighbors(
+                    target,
+                    negativeX: null,
+                    positiveX: null,
+                    negativeY: null,
+                    positiveY: null,
+                    positiveXPositiveY:
+                        positiveXPositiveY);
+
+        Assert.Equal(
+            42f,
+            result.Terrain.Heights[8]);
+
+        Assert.Equal(
+            1,
+            result.ChangedSamples);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
