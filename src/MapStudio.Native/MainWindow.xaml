@@ -1016,13 +1016,17 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <ScrollViewer Grid.Row="0"
-                                          MaxHeight="340"
-                                          VerticalScrollMode="Auto"
-                                          VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollMode="Disabled"
-                                          HorizontalScrollBarVisibility="Disabled">
-                                <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                            <Expander x:Name="AssetFiltersExpander"
+                                      Grid.Row="0"
+                                      Header="ASSETS · FILTROS"
+                                      IsExpanded="False"
+                                      HorizontalAlignment="Stretch">
+                                <ScrollViewer MaxHeight="340"
+                                              VerticalScrollMode="Auto"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollMode="Disabled"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
                                         BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                         BorderThickness="1"
                                         CornerRadius="8"
@@ -1158,8 +1162,9 @@
                                         </Grid>
                                     </StackPanel>
                                     </StackPanel>
-                                </Border>
-                            </ScrollViewer>
+                                    </Border>
+                                </ScrollViewer>
+                            </Expander>
 
                             <StackPanel Grid.Row="1"
                                         Spacing="6">
@@ -1616,17 +1621,17 @@
                                            TextWrapping="Wrap"
                                            Foreground="{ThemeResource MapStudioTextSecondaryBrush}" />
 
-                                <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
-                                        BorderBrush="{ThemeResource MapStudioBorderBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="7"
-                                        Padding="7">
-                                    <StackPanel Spacing="5">
-                                        <TextBlock Text="Visualização de paths"
-                                                   FontSize="11"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                        <ScrollViewer HorizontalScrollMode="Enabled"
+                                <Expander x:Name="TransportPathsExpander"
+                                          Header="PATHS · VISUALIZAÇÃO"
+                                          IsExpanded="False"
+                                          HorizontalAlignment="Stretch">
+                                    <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
+                                            BorderBrush="{ThemeResource MapStudioBorderBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="7"
+                                            Padding="7">
+                                        <StackPanel Spacing="5">
+                                            <ScrollViewer HorizontalScrollMode="Enabled"
                                                       HorizontalScrollBarVisibility="Hidden"
                                                       VerticalScrollMode="Disabled"
                                                       VerticalScrollBarVisibility="Disabled">
@@ -1670,9 +1675,10 @@
                                                           Content="Só selecionado"
                                                           Click="OnTrafficPathIsolationChanged" />
                                             </StackPanel>
-                                        </ScrollViewer>
-                                    </StackPanel>
-                                </Border>
+                                            </ScrollViewer>
+                                        </StackPanel>
+                                    </Border>
+                                </Expander>
                             </StackPanel>
 
                             <ScrollViewer Grid.Row="3"
