@@ -21124,7 +21124,7 @@ public sealed partial class MainWindow : Window
                 Content =
                     panel,
                 PrimaryButtonText =
-                    "Escolher destino",
+                    "Analisar",
                 CloseButtonText =
                     "Cancelar",
                 DefaultButton =
@@ -21145,33 +21145,229 @@ public sealed partial class MainWindow : Window
                 baseDirectoryBox.Text.Trim(),
                 modelsDirectoryBox.Text.Trim());
 
-        var validation =
-            ProtonBusMapDefinitionValidator
-                .Validate(
-                    definition);
+        var exportOptions =
+            new ProtonBusOmsiDirectoryExportOptions(
+                IncludeTimetable:
+                    timetableCheckBox.IsChecked ==
+                    true);
 
-        var validationErrors =
-            validation
-                .Where(
-                    issue =>
-                        issue.Severity ==
-                        ProtonBusValidationSeverity
-                            .Error)
-                .ToArray();
+        ProtonBusOmsiDirectoryPreflightResult
+            preflight;
 
-        if (
-            validationErrors.Length >
-            0)
+        try
         {
             StatusText.Text =
-                "Proton Bus: " +
-                string.Join(
-                    " · ",
-                    validationErrors
-                        .Take(3)
-                        .Select(
-                            issue =>
-                                issue.Message));
+                "Proton Bus: analisando mapa antes da exportação...";
+
+            var preflightProgress =
+                new Progress<
+                    ProtonBusOmsiDirectoryExportProgress>(
+                        item =>
+                        {
+                            StatusText.Text =
+                                item.Stage switch
+                                {
+                                    "preflight-tiles" =>
+                                        $"Proton Bus: analisando tiles {item.CompletedTiles}/{item.TotalTiles}" +
+                                        (
+                                            string.IsNullOrWhiteSpace(
+                                                item.CurrentTile)
+                                                ? "..."
+                                                : $" · {item.CurrentTile}"
+                                        ),
+                                    "preflight-assets" =>
+                                        $"Proton Bus: validando assets {item.CompletedTiles}/{item.TotalTiles}" +
+                                        (
+                                            string.IsNullOrWhiteSpace(
+                                                item.CurrentTile)
+                                                ? "..."
+                                                : $" · {item.CurrentTile}"
+                                        ),
+                                    "preflight-timetable" =>
+                                        "Proton Bus: analisando TTData, paradas e GPS...",
+                                    "preflight-complete" =>
+                                        "Proton Bus: análise concluída.",
+                                    _ =>
+                                        "Proton Bus: analisando..."
+                                };
+                        });
+
+            preflight =
+                await new ProtonBusOmsiDirectoryPreflightAnalyzer()
+                    .AnalyzeAsync(
+                        contentRoot,
+                        snapshot.Map.DirectoryPath,
+                        definition,
+                        exportOptions,
+                        preflightProgress);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Proton Bus: falha na análise pré-exportação · {exception.Message}";
+
+            return;
+        }
+
+        var summary =
+            preflight.Summary;
+
+        var reportBuilder =
+            new StringBuilder();
+
+        reportBuilder.AppendLine(
+            preflight.CanExport
+                ? "PRONTO PARA EXPORTAR"
+                : "EXPORTAÇÃO BLOQUEADA");
+
+        reportBuilder.AppendLine();
+        reportBuilder.AppendLine(
+            $"Mapa: {preflight.Descriptor?.DisplayName ?? snapshot.Map.DisplayName}");
+        reportBuilder.AppendLine(
+            $"Tiles: {summary.TileCount} · Objetos: {summary.ObjectCount} · Splines: {summary.SplineCount}");
+        reportBuilder.AppendLine(
+            $"Meshes: terreno {summary.TerrainMeshCount} · splines {summary.SplineMeshCount} · cenário {summary.SceneryMeshCount}");
+        reportBuilder.AppendLine(
+            $"Texturas: {summary.TextureCount}");
+        reportBuilder.AppendLine(
+            $"Paths: veículos {summary.VehiclePathCount} · pedestres {summary.PedestrianPathCount} · trens {summary.TrainPathCount}");
+        reportBuilder.AppendLine(
+            $"Transporte: paradas {summary.BusStopCount} · entrypoints {summary.EntrypointCount} · GPS {summary.GpsRouteCount} rota(s) / {summary.GpsMeshCount} mesh(es)");
+        reportBuilder.AppendLine(
+            $"Sinalização: semáforos {summary.TrafficLightCount} · street lights {summary.StreetLightCount}");
+        reportBuilder.AppendLine(
+            $"Markers 3D: {summary.MarkerMeshCount}");
+        reportBuilder.AppendLine();
+        reportBuilder.AppendLine(
+            $"Erros: {preflight.ErrorCount} · Avisos: {preflight.WarningCount}");
+
+        if (
+            preflight.Issues.Count >
+            0)
+        {
+            reportBuilder.AppendLine();
+            reportBuilder.AppendLine(
+                "DIAGNÓSTICO");
+
+            foreach (
+                var issue
+                in preflight.Issues
+                    .Take(50))
+            {
+                var severity =
+                    issue.Severity switch
+                    {
+                        ProtonBusOmsiPreflightSeverity.Error =>
+                            "ERRO",
+                        ProtonBusOmsiPreflightSeverity.Warning =>
+                            "AVISO",
+                        _ =>
+                            "INFO"
+                    };
+
+                var tileLabel =
+                    issue.TileX.HasValue &&
+                    issue.TileY.HasValue
+                        ? $" tile {issue.TileX},{issue.TileY}"
+                        : string.Empty;
+
+                reportBuilder.Append(
+                    $"[{severity}] {issue.Code}{tileLabel} · {issue.Source}");
+
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        issue.Detail))
+                {
+                    reportBuilder.Append(
+                        $" · {issue.Detail}");
+                }
+
+                reportBuilder.AppendLine();
+            }
+
+            if (
+                preflight.Issues.Count >
+                50)
+            {
+                reportBuilder.AppendLine(
+                    $"... e mais {preflight.Issues.Count - 50} diagnóstico(s).");
+            }
+        }
+
+        var reportText =
+            new TextBox
+            {
+                Text =
+                    reportBuilder.ToString(),
+                IsReadOnly =
+                    true,
+                AcceptsReturn =
+                    true,
+                TextWrapping =
+                    TextWrapping.Wrap,
+                MinHeight =
+                    320,
+                MaxHeight =
+                    520
+            };
+
+        var reportPanel =
+            new StackPanel
+            {
+                Spacing =
+                    10,
+                Width =
+                    660
+            };
+
+        reportPanel.Children.Add(
+            new TextBlock
+            {
+                Text =
+                    preflight.CanExport
+                        ? "A análise não encontrou bloqueios. Revise as contagens e avisos antes de gerar o pacote."
+                        : "Corrija os erros abaixo antes de exportar. Nenhum arquivo Proton Bus foi gravado por esta análise.",
+                TextWrapping =
+                    TextWrapping.Wrap
+            });
+
+        reportPanel.Children.Add(
+            reportText);
+
+        var reportDialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Relatório pré-exportação · Proton Bus",
+                Content =
+                    reportPanel,
+                PrimaryButtonText =
+                    preflight.CanExport
+                        ? "Escolher destino"
+                        : string.Empty,
+                CloseButtonText =
+                    "Fechar",
+                DefaultButton =
+                    preflight.CanExport
+                        ? ContentDialogButton.Primary
+                        : ContentDialogButton.Close
+            };
+
+        var reportAnswer =
+            await reportDialog
+                .ShowAdaptiveAsync();
+
+        if (
+            !preflight.CanExport ||
+            reportAnswer !=
+                ContentDialogResult.Primary)
+        {
+            StatusText.Text =
+                preflight.CanExport
+                    ? "Exportação Proton Bus cancelada após a análise."
+                    : $"Proton Bus: exportação bloqueada · {preflight.ErrorCount} erro(s) e {preflight.WarningCount} aviso(s).";
 
             return;
         }
@@ -21228,10 +21424,7 @@ public sealed partial class MainWindow : Window
                         snapshot.Map.DirectoryPath,
                         destination,
                         definition,
-                        new(
-                            IncludeTimetable:
-                                timetableCheckBox.IsChecked ==
-                                true),
+                        exportOptions,
                         exportProgress);
 
             if (
