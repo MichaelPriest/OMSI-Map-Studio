@@ -547,7 +547,13 @@ A opção de ruas automáticas consulta as vias OSM da área, projeta as coorden
 
 ## Tile X/Y
 
-Tile X/Y não ocupa mais o card Projeto. Use o botão **Tile XY** na barra superior. A janela pode ser movida e redimensionada dentro do editor.
+Tile X/Y não ocupa mais o card Projeto. Use o botão **Tile XY** na barra superior. A janela pode ser movida, redimensionada e minimizada dentro do editor. Ao minimizar, somente a barra de título permanece visível; o mesmo botão restaura a janela sem perder sua posição.
+
+A janela **Criar mapa real por área** segue o mesmo padrão: pode ser movida, redimensionada e minimizada sem fechar o seletor de área.
+
+## Painéis recolhíveis
+
+**Ações do projeto**, **Assets · Filtros** e **Paths · Visualização** podem ser recolhidos para liberar espaço. O Map Studio salva o estado aberto/fechado dessas seções no perfil local e o restaura na próxima execução.
 
 ## Multi-seleção
 
