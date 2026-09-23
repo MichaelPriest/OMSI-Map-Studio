@@ -51,21 +51,18 @@ public sealed class NativeTileAdjacencyTests
                 .Build(scene);
 
         Assert.Equal(
-            tiles.Length,
-            geometry.MaterialBatches.Count);
+            tiles.Length * 6,
+            geometry.Vertices.Length);
 
         var extents =
             tiles
                 .Select(
                     (tile, index) =>
                     {
-                        var batch =
-                            geometry.MaterialBatches[index];
-
                         var vertices =
                             geometry.Vertices
-                                .Skip(batch.StartVertex)
-                                .Take(batch.VertexCount)
+                                .Skip(index * 6)
+                                .Take(6)
                                 .ToArray();
 
                         return new
