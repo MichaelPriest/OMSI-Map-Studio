@@ -361,15 +361,24 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
-        TransformEditPending
-            ?.Invoke(
-                edit);
+        foreach (
+            var pendingEdit in
+                _runtime!
+                    .LastTransformEdits)
+        {
+            TransformEditPending
+                ?.Invoke(
+                    pendingEdit);
+        }
 
         PublishSelectionInfo();
 
         SelectionStatusChanged?.Invoke(
             this,
-            "Última transformação desfeita.");
+            _runtime.LastTransformEdits.Count >
+                1
+                ? $"Transformação de {_runtime.LastTransformEdits.Count} itens desfeita."
+                : "Última transformação desfeita.");
 
         return true;
     }
@@ -443,15 +452,24 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
-        TransformEditPending
-            ?.Invoke(
-                edit);
+        foreach (
+            var pendingEdit in
+                _runtime!
+                    .LastTransformEdits)
+        {
+            TransformEditPending
+                ?.Invoke(
+                    pendingEdit);
+        }
 
         PublishSelectionInfo();
 
         SelectionStatusChanged?.Invoke(
             this,
-            "Transformação refeita.");
+            _runtime.LastTransformEdits.Count >
+                1
+                ? $"Transformação de {_runtime.LastTransformEdits.Count} itens refeita."
+                : "Transformação refeita.");
 
         return true;
     }
@@ -2943,17 +2961,25 @@ public sealed partial class NativeViewport : UserControl
 
             if (edit is not null)
             {
-                TransformEditPending
-                    ?.Invoke(
-                        edit);
+                foreach (
+                    var pendingEdit in
+                        _runtime.LastTransformEdits)
+                {
+                    TransformEditPending
+                        ?.Invoke(
+                            pendingEdit);
+                }
 
                 PublishSelectionInfo();
 
                 SelectionStatusChanged?.Invoke(
                     this,
-                    edit.IsObject
-                        ? "Transformação de objeto OMSI pendente de salvamento."
-                        : "Transformação de spline OMSI pendente de salvamento.");
+                    _runtime.LastTransformEdits.Count >
+                        1
+                        ? $"{_runtime.LastTransformEdits.Count} itens transformados em grupo · alterações pendentes de salvamento."
+                        : edit.IsObject
+                            ? "Transformação de objeto OMSI pendente de salvamento."
+                            : "Transformação de spline OMSI pendente de salvamento.");
             }
         }
 
