@@ -1898,54 +1898,6 @@ public sealed partial class NativeViewport : UserControl
 
         if (
             _runtime is not null &&
-            _runtime
-                .IsSelectedSplineCurveEditActive)
-        {
-            var scaleX =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleX);
-
-            var scaleY =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleY);
-
-            var pixelX =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.X *
-                        scaleX));
-
-            var pixelY =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.Y *
-                        scaleY));
-
-            if (
-                _runtime
-                    .UpdateSelectedSplineCurveEdit(
-                        pixelX,
-                        pixelY))
-            {
-                PointerStatusChanged?.Invoke(
-                    this,
-                    "Curva: mova a alça visual e clique para aplicar.");
-            }
-
-            e.Handled =
-                true;
-
-            return;
-        }
-
-        if (
-            _runtime is not null &&
             _runtime.IsSplinePlacementActive)
         {
             var dragCreation =
@@ -2133,6 +2085,54 @@ public sealed partial class NativeViewport : UserControl
 
         PointerText.Text =
             $"x: {point.Position.X:F0} · y: {point.Position.Y:F0}";
+
+        if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineCurveEditActive)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                _runtime
+                    .UpdateSelectedSplineCurveEdit(
+                        pixelX,
+                        pixelY))
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Curva: mova a alça visual e clique para aplicar.");
+            }
+
+            e.Handled =
+                true;
+
+            return;
+        }
 
         if (
             _isSplineDragCreating &&
