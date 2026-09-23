@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Numerics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -28551,6 +28552,57 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 $"Building Studio falhou: {exception.Message}";
+        }
+    }
+
+    private void OnOpenUserManualPtBrClick(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenUserManual(
+            "Manual-pt-BR.md");
+
+    private void OnOpenUserManualEnClick(
+        object sender,
+        RoutedEventArgs e) =>
+        OpenUserManual(
+            "Manual-en.md");
+
+    private void OpenUserManual(
+        string fileName)
+    {
+        try
+        {
+            var manualPath =
+                Path.Combine(
+                    AppContext.BaseDirectory,
+                    "Docs",
+                    fileName);
+
+            if (
+                !File.Exists(
+                    manualPath))
+            {
+                StatusText.Text =
+                    $"Manual não encontrado: {manualPath}";
+                return;
+            }
+
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName =
+                        manualPath,
+                    UseShellExecute =
+                        true
+                });
+
+            StatusText.Text =
+                "Manual do Usuário aberto.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Não foi possível abrir o manual: {exception.Message}";
         }
     }
 
