@@ -125,7 +125,7 @@ As ações principais incluem:
 
 **Girar sem Inspector:** selecione o item, ative **Girar** (atalho **E**) e arraste o próprio item no viewport. O anel de rotação continua disponível para controle visual mais preciso. Solte o mouse para aplicar. Com Snap ativo, a rotação usa os incrementos configurados.
 
-**Mover sem Inspector:** selecione o item, ative **Mover** (atalho **W**) e use o gizmo diretamente no viewport.
+**Mover sem Inspector:** selecione o item, ative **Mover** (atalho **W**) e arraste o próprio objeto ou spline no viewport para mover no plano do mapa. Os eixos do gizmo continuam disponíveis para ajuste preciso e movimento vertical.
 
 ### Para splines/ruas
 
