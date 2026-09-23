@@ -180,6 +180,8 @@ public sealed class ProtonBusOmsiTilePackageExporter
                     "meshPathInvalid" or
                     "meshMissing" or
                     "meshGeometryInvalid" or
+                    "splineTextureMissing" or
+                    "sceneryTextureMissing" or
                     "textureTargetCollision" or
                     "textureConversionRequired" or
                     "splineDefinitionMissingAfterResolution" or
