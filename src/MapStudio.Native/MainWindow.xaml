@@ -840,7 +840,9 @@
                               Grid.Row="3"
                               Header="Ações do projeto"
                               IsExpanded="True"
-                              HorizontalAlignment="Stretch">
+                              HorizontalAlignment="Stretch"
+                              Expanded="OnPanelExpanderStateChanged"
+                              Collapsed="OnPanelExpanderStateChanged">
                         <StackPanel Spacing="5"
                                     Padding="0,5,0,0">
                             <!-- Mantidos somente para compatibilidade com o estado atual;
@@ -1020,7 +1022,9 @@
                                       Grid.Row="0"
                                       Header="ASSETS · FILTROS"
                                       IsExpanded="False"
-                                      HorizontalAlignment="Stretch">
+                                      HorizontalAlignment="Stretch"
+                                      Expanded="OnPanelExpanderStateChanged"
+                                      Collapsed="OnPanelExpanderStateChanged">
                                 <ScrollViewer MaxHeight="340"
                                               VerticalScrollMode="Auto"
                                               VerticalScrollBarVisibility="Auto"
@@ -1624,7 +1628,9 @@
                                 <Expander x:Name="TransportPathsExpander"
                                           Header="PATHS · VISUALIZAÇÃO"
                                           IsExpanded="False"
-                                          HorizontalAlignment="Stretch">
+                                          HorizontalAlignment="Stretch"
+                                          Expanded="OnPanelExpanderStateChanged"
+                                          Collapsed="OnPanelExpanderStateChanged">
                                     <Border Background="{ThemeResource MapStudioSurfaceAltBrush}"
                                             BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                             BorderThickness="1"
