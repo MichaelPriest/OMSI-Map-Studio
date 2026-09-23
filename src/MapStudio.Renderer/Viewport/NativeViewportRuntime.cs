@@ -4054,20 +4054,27 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             _selectedPickingId.IsNone ||
-            !TryGetSelectionAnchor(
-                out var anchor))
+            !TryGetSelectionFocus(
+                out var anchor,
+                out var groupSpan))
         {
             return false;
         }
 
+        var preferredDistance =
+            Math.Clamp(
+                Math.Max(
+                    Navigation.Distance *
+                    0.35f,
+                    groupSpan *
+                    1.15f),
+                35.0f,
+                900.0f);
+
         Navigation.FocusOn(
             anchor,
             preferredDistance:
-                Math.Clamp(
-                    Navigation.Distance *
-                    0.35f,
-                    35.0f,
-                    180.0f));
+                preferredDistance);
 
         UpdateCameraTransform();
         RenderInitialFrame();
@@ -6645,7 +6652,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .FirstOrDefault(
                     entity =>
                         entity.PickingId ==
-                        _selectedPickingId);
+                        pickingId);
 
         if (splineEntity is null)
         {
@@ -7149,6 +7156,13 @@ public sealed class NativeViewportRuntime : IDisposable
     }
 
     private bool TryGetSelectionAnchor(
+        out Vector3 anchor) =>
+        TryGetSelectionAnchor(
+            _selectedPickingId,
+            out anchor);
+
+    private bool TryGetSelectionAnchor(
+        PickingId pickingId,
         out Vector3 anchor)
     {
         anchor =
@@ -7156,7 +7170,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             Scene is null ||
-            _selectedPickingId.IsNone)
+            pickingId.IsNone)
         {
             return false;
         }
@@ -7166,7 +7180,7 @@ public sealed class NativeViewportRuntime : IDisposable
                 .FirstOrDefault(
                     entity =>
                         entity.PickingId ==
-                        _selectedPickingId);
+                        pickingId);
 
         if (objectEntity is not null)
         {
@@ -7214,6 +7228,81 @@ public sealed class NativeViewportRuntime : IDisposable
                 splineEntity.WorldX,
                 splineEntity.WorldY,
                 splineEntity.WorldZ);
+
+        return true;
+    }
+
+    private bool TryGetSelectionFocus(
+        out Vector3 center,
+        out float span)
+    {
+        center =
+            Vector3.Zero;
+
+        span =
+            0;
+
+        var selectedIds =
+            _selectedPickingIds.Count >
+                0
+                ? _selectedPickingIds
+                : _selectedPickingId.IsNone
+                    ? []
+                    : [_selectedPickingId];
+
+        var hasPoint =
+            false;
+
+        var minimum =
+            new Vector3(
+                float.MaxValue);
+
+        var maximum =
+            new Vector3(
+                float.MinValue);
+
+        foreach (
+            var id in
+                selectedIds)
+        {
+            if (
+                !TryGetSelectionAnchor(
+                    id,
+                    out var point))
+            {
+                continue;
+            }
+
+            minimum =
+                Vector3.Min(
+                    minimum,
+                    point);
+
+            maximum =
+                Vector3.Max(
+                    maximum,
+                    point);
+
+            hasPoint =
+                true;
+        }
+
+        if (!hasPoint)
+        {
+            return false;
+        }
+
+        center =
+            (
+                minimum +
+                maximum
+            ) *
+            0.5f;
+
+        span =
+            Vector3.Distance(
+                minimum,
+                maximum);
 
         return true;
     }
