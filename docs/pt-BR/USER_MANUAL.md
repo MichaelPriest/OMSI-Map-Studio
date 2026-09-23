@@ -530,20 +530,28 @@ As operações de terreno são diferentes da elevação de uma spline: alterar a
 
 Use **Mapa > Criar mapa real por área...** para criar um mapa sem precisar digitar manualmente latitude/longitude.
 
-1. Escolha **OpenStreetMap** ou **Google Maps**.
-2. Mova e dê zoom no mapa por baixo do retângulo central.
-3. Confira o tamanho estimado e a quantidade de tiles OMSI de 300 m.
-4. Informe pasta/nome.
-5. Escolha se deseja preparar/gerar ruas OSM, Google Elevation e referência visual no terreno.
-6. Clique **Criar área**.
+1. Pesquise uma **cidade, endereço ou local**. A busca usa OpenStreetMap/Nominatim sob ação explícita do usuário e não exige chave.
+2. Escolha **OpenStreetMap** ou **Google Maps** para visualizar a área.
+3. Mova e dê zoom no mapa.
+4. Ajuste **Largura área %** e **Altura área %** para aumentar ou reduzir o retângulo central. O cálculo dos limites geográficos acompanha o retângulo em tempo real.
+5. Confira o tamanho físico estimado e a quantidade de tiles OMSI de 300 m.
+6. Informe pasta/nome.
+7. Em **Vias OpenStreetMap**, escolha:
+   - **Criar apenas terreno / referência**;
+   - **Importar vias como guias** — mostra o grafo no viewport sem gravar splines;
+   - **Gerar ruas automaticamente após preview** — classifica as vias, prepara splines/junctions e exige confirmação depois da prévia antes de gravar.
+8. Opcionalmente ative **Google Elevation** e/ou **Referência visual no terreno**.
+9. Clique **Criar área**.
 
-A janela pode ser movida e redimensionada dentro do editor.
+A janela pode ser movida, redimensionada e minimizada dentro do editor.
 
-**OpenStreetMap:** não exige chave e é usado para navegação interativa e dados vetoriais. O Map Studio não faz download em massa/offline dos tiles do servidor público.
+**OpenStreetMap:** não exige chave e é usado para navegação interativa, busca de locais e dados vetoriais. O Map Studio não faz download em massa/offline dos tiles do servidor público. Consultas de busca são limitadas e identificam o aplicativo.
 
 **Google Maps:** usa a API key salva pelo próprio usuário no Windows Credential Manager. Para o seletor interativo, a chave precisa ter Maps JavaScript API habilitada. Google Elevation pode gerar cobrança e por isso fica desativado por padrão.
 
-A opção de ruas automáticas consulta as vias OSM da área, projeta as coordenadas para o mapa e inicia a geração procedural das splines/junctions.
+As vias OSM são projetadas para a georreferência do mapa e classificadas por tipo/largura/faixas quando os dados estiverem disponíveis. Mesmo no modo automático, o Map Studio mostra **Preview antes de gravar** e só persiste as splines/junctions após confirmação.
+
+Para elevação sem Google, use **Mapa → Importar grade local de elevação**. CSV/TXT/ASC são aplicados ao tile ativo pelo mesmo pipeline seguro de terreno, com backup; essa importação local é por tile e não é tratada como DEM global da área inteira.
 
 ## Tile X/Y
 
