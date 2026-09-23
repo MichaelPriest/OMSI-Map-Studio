@@ -463,6 +463,9 @@ public sealed partial class MainWindow : Window
     private double _tileNavigatorDragOriginY;
 
     private bool _resizingTileNavigatorWindow;
+    private bool _tileNavigatorWindowMinimized;
+    private double _tileNavigatorRestoreHeight =
+        205;
     private uint _tileNavigatorResizePointerId;
     private double _tileNavigatorResizeStartX;
     private double _tileNavigatorResizeStartY;
@@ -480,6 +483,9 @@ public sealed partial class MainWindow : Window
     private double _realMapAreaDragOriginX;
     private double _realMapAreaDragOriginY;
     private bool _resizingRealMapAreaWindow;
+    private bool _realMapAreaWindowMinimized;
+    private double _realMapAreaRestoreHeight =
+        650;
     private uint _realMapAreaResizePointerId;
     private double _realMapAreaResizeStartX;
     private double _realMapAreaResizeStartY;
@@ -20578,6 +20584,14 @@ public sealed partial class MainWindow : Window
 
         if (
             show &&
+            _tileNavigatorWindowMinimized)
+        {
+            SetTileNavigatorMinimized(
+                false);
+        }
+
+        if (
+            show &&
             _session.CurrentMap
                 ?.ActiveTile is
                 { } active)
@@ -20607,6 +20621,62 @@ public sealed partial class MainWindow : Window
 
         _resizingTileNavigatorWindow =
             false;
+    }
+
+    private void OnToggleTileNavigatorMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetTileNavigatorMinimized(
+            !_tileNavigatorWindowMinimized);
+
+    private void SetTileNavigatorMinimized(
+        bool minimized)
+    {
+        if (
+            _tileNavigatorWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _tileNavigatorRestoreHeight =
+                Math.Max(
+                    170,
+                    TileNavigatorWindow
+                        .ActualHeight);
+        }
+
+        _tileNavigatorWindowMinimized =
+            minimized;
+
+        TileNavigatorBody.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TileNavigatorResizeGrip.Visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        TileNavigatorWindow.Height =
+            minimized
+                ? 54
+                : Math.Max(
+                    170,
+                    _tileNavigatorRestoreHeight);
+
+        TileNavigatorMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+
+        StatusText.Text =
+            minimized
+                ? "Navegador Tile X/Y minimizado."
+                : "Navegador Tile X/Y restaurado.";
     }
 
     private void OnTileNavigatorWindowDragPressed(
@@ -21805,6 +21875,12 @@ public sealed partial class MainWindow : Window
         RealMapAreaWindow.Visibility =
             Visibility.Visible;
 
+        if (_realMapAreaWindowMinimized)
+        {
+            SetRealMapAreaMinimized(
+                false);
+        }
+
         await InitializeRealMapAreaPickerAsync();
     }
 
@@ -22281,6 +22357,69 @@ setTimeout(postBounds, 250);
         RoutedEventArgs e) =>
         RealMapAreaWindow.Visibility =
             Visibility.Collapsed;
+
+    private void OnToggleRealMapAreaMinimizeClick(
+        object sender,
+        RoutedEventArgs e) =>
+        SetRealMapAreaMinimized(
+            !_realMapAreaWindowMinimized);
+
+    private void SetRealMapAreaMinimized(
+        bool minimized)
+    {
+        if (
+            _realMapAreaWindowMinimized ==
+                minimized)
+        {
+            return;
+        }
+
+        if (minimized)
+        {
+            _realMapAreaRestoreHeight =
+                Math.Max(
+                    480,
+                    RealMapAreaWindow
+                        .ActualHeight);
+        }
+
+        _realMapAreaWindowMinimized =
+            minimized;
+
+        var visibility =
+            minimized
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        RealMapAreaOptionsRow.Visibility =
+            visibility;
+
+        RealMapAreaMapRow.Visibility =
+            visibility;
+
+        RealMapAreaFooterRow.Visibility =
+            visibility;
+
+        RealMapAreaResizeGrip.Visibility =
+            visibility;
+
+        RealMapAreaWindow.Height =
+            minimized
+                ? 70
+                : Math.Max(
+                    480,
+                    _realMapAreaRestoreHeight);
+
+        RealMapAreaMinimizeButton.Content =
+            minimized
+                ? "□"
+                : "—";
+
+        StatusText.Text =
+            minimized
+                ? "Janela de mapa real minimizada."
+                : "Janela de mapa real restaurada.";
+    }
 
     private async void OnCreateRealMapAreaClick(
         object sender,
