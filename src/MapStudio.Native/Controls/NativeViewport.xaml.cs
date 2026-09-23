@@ -2419,10 +2419,6 @@ public sealed partial class NativeViewport : UserControl
                     _runtime
                         .GetSplinePlacementControlState();
 
-                SplinePlacementControlStateChanged
-                    ?.Invoke(
-                        controlState);
-
                 if (
                     controlState is not null &&
                     controlState.Length >
@@ -2478,6 +2474,10 @@ public sealed partial class NativeViewport : UserControl
                                     "Construindo rua..."
                             });
                 }
+
+                SplinePlacementControlStateChanged
+                    ?.Invoke(
+                        controlState);
             }
 
             e.Handled = true;
@@ -2775,9 +2775,45 @@ public sealed partial class NativeViewport : UserControl
                 RadialUpperLeftButton,
                 "Paralela",
                 NativeSelectionContextAction.Parallel);
+
+            ConfigureRadialButton(
+                RadialTopRightButton,
+                "Elevar",
+                NativeSelectionContextAction.Elevate);
+
+            ConfigureRadialButton(
+                RadialRightButton,
+                "Nivelar",
+                NativeSelectionContextAction.Level);
+
+            ConfigureRadialButton(
+                RadialBottomRightButton,
+                "Baixar",
+                NativeSelectionContextAction.Lower);
+
+            ConfigureRadialButton(
+                RadialBottomLeftButton,
+                "Substituir",
+                NativeSelectionContextAction.Replace);
+
+            ConfigureRadialButton(
+                RadialLeftButton,
+                "Espelhar",
+                NativeSelectionContextAction.Mirror);
+
+            ConfigureRadialButton(
+                RadialTopLeftButton,
+                "Fluxo",
+                NativeSelectionContextAction.Flow);
+
+            SetSplineRadialExtraVisibility(
+                Visibility.Visible);
         }
         else
         {
+            SetSplineRadialExtraVisibility(
+                Visibility.Collapsed);
+
             ConfigureRadialButton(
                 RadialTopButton,
                 "Mover",
@@ -2812,22 +2848,22 @@ public sealed partial class NativeViewport : UserControl
         var left =
             Math.Clamp(
                 x -
-                140,
+                190,
                 4,
                 Math.Max(
                     4,
                     InputSurface.ActualWidth -
-                    284));
+                    384));
 
         var top =
             Math.Clamp(
                 y -
-                140,
+                190,
                 4,
                 Math.Max(
                     4,
                     InputSurface.ActualHeight -
-                    284));
+                    384));
 
         Canvas.SetLeft(
             SelectionRadialMenu,
@@ -2843,6 +2879,28 @@ public sealed partial class NativeViewport : UserControl
         PointerStatusChanged?.Invoke(
             this,
             "Ações rápidas da seleção abertas.");
+    }
+
+    private void SetSplineRadialExtraVisibility(
+        Visibility visibility)
+    {
+        RadialTopRightButton.Visibility =
+            visibility;
+
+        RadialRightButton.Visibility =
+            visibility;
+
+        RadialBottomRightButton.Visibility =
+            visibility;
+
+        RadialBottomLeftButton.Visibility =
+            visibility;
+
+        RadialLeftButton.Visibility =
+            visibility;
+
+        RadialTopLeftButton.Visibility =
+            visibility;
     }
 
     private static void ConfigureRadialButton(
