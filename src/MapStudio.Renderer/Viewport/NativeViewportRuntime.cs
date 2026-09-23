@@ -4091,24 +4091,13 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
-        pickingId =
-            MapRenderer.Pick(
-                pixelX,
-                pixelY);
-
-        var selectable =
-            (
-                pickingId.Kind is
-                    PickingKind.Object or
-                    PickingKind.Spline
-            ) &&
-            IsSelectionKindEnabled(
-                    pickingId.Kind);
-
         var resolved =
-            selectable &&
-            Picking.TryResolve(
-                pickingId,
+            TryResolveSelectablePick(
+                pixelX,
+                pixelY,
+                radius:
+                    7,
+                out pickingId,
                 out item);
 
         if (!resolved)
@@ -4482,24 +4471,13 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
-        var pickingId =
-            MapRenderer.Pick(
-                pixelX,
-                pixelY);
-
-        var selectable =
-            (
-                pickingId.Kind is
-                    PickingKind.Object or
-                    PickingKind.Spline
-            ) &&
-            IsSelectionKindEnabled(
-                    pickingId.Kind);
-
         var resolved =
-            selectable &&
-            Picking.TryResolve(
-                pickingId,
+            TryResolveSelectablePick(
+                pixelX,
+                pixelY,
+                radius:
+                    3,
+                out var pickingId,
                 out _);
 
         var changed =
@@ -4526,6 +4504,154 @@ public sealed class NativeViewportRuntime : IDisposable
         {
             RenderInitialFrame();
         }
+    }
+
+    private bool TryResolveSelectablePick(
+        uint pixelX,
+        uint pixelY,
+        int radius,
+        out PickingId pickingId,
+        out object? item)
+    {
+        pickingId =
+            PickingId.None;
+
+        item =
+            null;
+
+        if (
+            Surface is null ||
+            Surface.Width == 0 ||
+            Surface.Height == 0)
+        {
+            return false;
+        }
+
+        static IEnumerable<(int X, int Y)>
+            Offsets(
+                int maximumRadius)
+        {
+            yield return (
+                0,
+                0);
+
+            for (
+                var distance = 2;
+                distance <=
+                    maximumRadius;
+                distance += 2)
+            {
+                yield return (
+                    distance,
+                    0);
+                yield return (
+                    -distance,
+                    0);
+                yield return (
+                    0,
+                    distance);
+                yield return (
+                    0,
+                    -distance);
+
+                yield return (
+                    distance,
+                    distance);
+                yield return (
+                    distance,
+                    -distance);
+                yield return (
+                    -distance,
+                    distance);
+                yield return (
+                    -distance,
+                    -distance);
+            }
+
+            if (
+                maximumRadius >
+                0 &&
+                maximumRadius %
+                    2 !=
+                0)
+            {
+                var distance =
+                    maximumRadius;
+
+                yield return (
+                    distance,
+                    0);
+                yield return (
+                    -distance,
+                    0);
+                yield return (
+                    0,
+                    distance);
+                yield return (
+                    0,
+                    -distance);
+            }
+        }
+
+        foreach (
+            var offset in
+                Offsets(
+                    Math.Clamp(
+                        radius,
+                        0,
+                        12)))
+        {
+            var candidateX =
+                (long)pixelX +
+                offset.X;
+
+            var candidateY =
+                (long)pixelY +
+                offset.Y;
+
+            if (
+                candidateX <
+                    0 ||
+                candidateY <
+                    0 ||
+                candidateX >=
+                    Surface.Width ||
+                candidateY >=
+                    Surface.Height)
+            {
+                continue;
+            }
+
+            var candidate =
+                MapRenderer.Pick(
+                    (uint)candidateX,
+                    (uint)candidateY);
+
+            if (
+                candidate.Kind is not
+                    (
+                        PickingKind.Object or
+                        PickingKind.Spline
+                    ) ||
+                !IsSelectionKindEnabled(
+                    candidate.Kind) ||
+                !Picking.TryResolve(
+                    candidate,
+                    out item))
+            {
+                continue;
+            }
+
+            pickingId =
+                candidate;
+
+            return true;
+        }
+
+        item =
+            null;
+
+        return false;
     }
 
     private bool IsSelectionKindEnabled(
