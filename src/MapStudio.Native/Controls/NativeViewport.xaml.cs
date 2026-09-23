@@ -2051,6 +2051,27 @@ public sealed partial class NativeViewport : UserControl
             return;
         }
 
+        if (
+            _runtime is not null &&
+            _runtime.TryBeginDirectRotation(
+                pixelX,
+                pixelY,
+                out var directRotationHandle))
+        {
+            _isManipulatingGizmo =
+                true;
+
+            InputSurface.CapturePointer(
+                e.Pointer);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                "Girar: arraste o próprio item para rotacionar · solte para aplicar.");
+
+            e.Handled = true;
+            return;
+        }
+
         var message =
             $"Clique nativo: X={point.Position.X:F1} Y={point.Position.Y:F1} · " +
             $"pixel {pixelX},{pixelY}";
