@@ -177,6 +177,12 @@ public sealed class D3D11NativeMapRenderer :
         _selectionTriangleVertexCount;
 
     private ID3D11Buffer?
+        _selectionGhostBuffer;
+
+    private int
+        _selectionGhostVertexCount;
+
+    private ID3D11Buffer?
         _gizmoTriangleBuffer;
 
     private int
@@ -1160,6 +1166,11 @@ public sealed class D3D11NativeMapRenderer :
         _selectionTriangleBuffer = null;
         _selectionTriangleVertexCount = 0;
 
+        _selectionGhostBuffer
+            ?.Dispose();
+        _selectionGhostBuffer = null;
+        _selectionGhostVertexCount = 0;
+
         _gizmoTriangleBuffer
             ?.Dispose();
         _gizmoTriangleBuffer = null;
@@ -1631,6 +1642,54 @@ public sealed class D3D11NativeMapRenderer :
                         (uint)
                             _hoverTriangleVertexCount,
                         0);
+                }
+
+                if (
+                    _selectionGhostBuffer
+                        is not null &&
+                    _selectionGhostVertexCount >
+                        0)
+                {
+                    context
+                        .IASetPrimitiveTopology(
+                            PrimitiveTopology
+                                .TriangleList);
+
+                    context
+                        .IASetVertexBuffer(
+                            0,
+                            _selectionGhostBuffer,
+                            NativeMapVertex
+                                .SizeInBytes);
+
+                    context
+                        .OMSetDepthStencilState(
+                            _depthReadState);
+
+                    context
+                        .OMSetBlendState(
+                            _alphaBlendState);
+
+                    ApplyViewProjection(
+                        context,
+                        _selectionPreviewTransform *
+                        _viewProjection);
+
+                    context.Draw(
+                        (uint)
+                            _selectionGhostVertexCount,
+                        0);
+
+                    ApplyViewProjection(
+                        context);
+
+                    context
+                        .OMSetBlendState(
+                            null);
+
+                    context
+                        .OMSetDepthStencilState(
+                            null);
                 }
 
                 if (
@@ -3177,19 +3236,84 @@ public sealed class D3D11NativeMapRenderer :
             }
         }
 
-        if (vertices.Length == 0)
+        if (vertices.Length > 0)
+        {
+            _selectionTriangleBuffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        vertices.AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _selectionTriangleVertexCount =
+                vertices.Length;
+        }
+
+        RebuildSelectionGhost();
+    }
+
+    private void RebuildSelectionGhost()
+    {
+        _selectionGhostBuffer
+            ?.Dispose();
+
+        _selectionGhostBuffer =
+            null;
+
+        _selectionGhostVertexCount =
+            0;
+
+        if (
+            _selectionPreviewTransform ==
+                Matrix4x4.Identity ||
+            _selectionPickingId
+                .IsNone ||
+            !TryGetHighlightSource(
+                _selectionPickingId,
+                out var sourceVertices,
+                out var range) ||
+            range.VertexCount <=
+                0)
         {
             return;
         }
 
-        _selectionTriangleBuffer =
+        var vertices =
+            new NativeMapVertex[
+                range.VertexCount];
+
+        var ghostColor =
+            new Vector4(
+                0.10f,
+                0.72f,
+                1.0f,
+                0.48f);
+
+        for (
+            var index = 0;
+            index <
+                vertices.Length;
+            index++)
+        {
+            var source =
+                sourceVertices[
+                    range.StartVertex +
+                    index];
+
+            vertices[index] =
+                new NativeMapVertex(
+                    source.Position,
+                    ghostColor);
+        }
+
+        _selectionGhostBuffer =
             _deviceHost.Device
                 .CreateBuffer(
                     vertices.AsSpan(),
                     BindFlags
                         .VertexBuffer);
 
-        _selectionTriangleVertexCount =
+        _selectionGhostVertexCount =
             vertices.Length;
     }
 
@@ -3454,6 +3578,9 @@ public sealed class D3D11NativeMapRenderer :
             ?.Dispose();
 
         _selectionTriangleBuffer
+            ?.Dispose();
+
+        _selectionGhostBuffer
             ?.Dispose();
 
         _gizmoTriangleBuffer
