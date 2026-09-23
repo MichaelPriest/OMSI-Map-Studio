@@ -1014,6 +1014,14 @@ public sealed partial class MainWindow : Window
         Button activeButton,
         string subtitle)
     {
+        var libraryWorkspace =
+            ReferenceEquals(
+                activeButton,
+                LibraryExplorerModeButton);
+
+        SetLibraryWorkspaceChrome(
+            libraryWorkspace);
+
         ExplorerModeSubtitleText.Text =
             subtitle;
 
@@ -1085,6 +1093,52 @@ public sealed partial class MainWindow : Window
             _mapMode
                 ? Visibility.Visible
                 : Visibility.Collapsed;
+    }
+
+    private void SetLibraryWorkspaceChrome(
+        bool libraryWorkspace)
+    {
+        ExplorerPanelTitleText.Text =
+            libraryWorkspace
+                ? "BIBLIOTECA"
+                : "PROJETO";
+
+        ExplorerModeGrid.Visibility =
+            libraryWorkspace
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        ExplorerSearchGrid.Visibility =
+            libraryWorkspace
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        ProjectSummaryCard.Visibility =
+            libraryWorkspace
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+    }
+
+    private void OnAssetLibrarySearchTextChanged(
+        object sender,
+        TextChangedEventArgs e)
+    {
+        if (!_libraryMode)
+        {
+            return;
+        }
+
+        _libraryFilterDebounceTimer.Stop();
+        _libraryFilterDebounceTimer.Start();
+    }
+
+    private void OnCloseAssetLibraryModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnSceneExplorerModeClick(
+            sender,
+            e);
     }
 
     private void OnExplorerSearchTextChanged(
@@ -1593,7 +1647,7 @@ public sealed partial class MainWindow : Window
 
         UpdateExplorerModeVisual(
             LibraryExplorerModeButton,
-            "Biblioteca, favoritos e coleções");
+            "Assets, categorias, IA, favoritos e coleções");
 
         await LoadAssetLibraryAsync();
     }
@@ -4918,7 +4972,7 @@ public sealed partial class MainWindow : Window
     private void RefreshLibraryFilter()
     {
         var query =
-            ExplorerSearchBox.Text
+            AssetLibrarySearchBox.Text
                 .Trim();
 
         IEnumerable<
