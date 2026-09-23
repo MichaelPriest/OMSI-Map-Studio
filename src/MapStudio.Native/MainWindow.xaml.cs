@@ -19,6 +19,7 @@ using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
+using MapStudio.Core.ProtonBus;
 using MapStudio.Core.Workspace;
 using MapStudio.Native.Controls;
 using MapStudio.Native.Dialogs;
@@ -21007,6 +21008,318 @@ public sealed partial class MainWindow : Window
             StatusText.Text =
                 $"Exportar pacote OMSI falhou: {exception.Message}";
         }
+    }
+
+    private async void OnExportProtonBusPackageClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _session.OmsiRootPath is not
+                { } contentRoot ||
+            _session.CurrentMap is not
+                { } snapshot)
+        {
+            StatusText.Text =
+                "Proton Bus: abra um mapa antes de exportar.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Proton Bus: salve as alterações pendentes antes de exportar.";
+
+            return;
+        }
+
+        var defaultName =
+            MakePortableProtonBusName(
+                snapshot.Map.DirectoryName,
+                "MapStudioMap");
+
+        var mapNameBox =
+            new TextBox
+            {
+                Header =
+                    "Nome do mapa",
+                Text =
+                    defaultName,
+                PlaceholderText =
+                    "Ex.: SaoPaulo"
+            };
+
+        var baseDirectoryBox =
+            new TextBox
+            {
+                Header =
+                    "Pasta base do mapa",
+                Text =
+                    defaultName,
+                PlaceholderText =
+                    "Ex.: SaoPaulo"
+            };
+
+        var modelsDirectoryBox =
+            new TextBox
+            {
+                Header =
+                    "Conjunto / rota de modelos",
+                Text =
+                    "base",
+                PlaceholderText =
+                    "Ex.: base"
+            };
+
+        var timetableCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Incluir TTData, paradas, entrypoints e GPS",
+                IsChecked =
+                    true
+            };
+
+        var note =
+            new TextBlock
+            {
+                Text =
+                    "O Map Studio converterá terreno, splines, objetos, texturas, paths, luzes e semáforos para o pacote Proton Bus. O mapa OMSI original não será alterado.",
+                TextWrapping =
+                    TextWrapping.Wrap,
+                Opacity =
+                    0.78
+            };
+
+        var panel =
+            new StackPanel
+            {
+                Spacing =
+                    10,
+                Width =
+                    440
+            };
+
+        panel.Children.Add(
+            mapNameBox);
+        panel.Children.Add(
+            baseDirectoryBox);
+        panel.Children.Add(
+            modelsDirectoryBox);
+        panel.Children.Add(
+            timetableCheckBox);
+        panel.Children.Add(
+            note);
+
+        var dialog =
+            new ContentDialog
+            {
+                XamlRoot =
+                    MainRoot.XamlRoot,
+                Title =
+                    "Exportar para Proton Bus",
+                Content =
+                    panel,
+                PrimaryButtonText =
+                    "Escolher destino",
+                CloseButtonText =
+                    "Cancelar",
+                DefaultButton =
+                    ContentDialogButton
+                        .Primary
+            };
+
+        if (
+            await dialog.ShowAdaptiveAsync() !=
+                ContentDialogResult.Primary)
+        {
+            return;
+        }
+
+        var definition =
+            new ProtonBusMapDefinition(
+                mapNameBox.Text.Trim(),
+                baseDirectoryBox.Text.Trim(),
+                modelsDirectoryBox.Text.Trim());
+
+        var validation =
+            ProtonBusMapDefinitionValidator
+                .Validate(
+                    definition);
+
+        var validationErrors =
+            validation
+                .Where(
+                    issue =>
+                        issue.Severity ==
+                        ProtonBusValidationSeverity
+                            .Error)
+                .ToArray();
+
+        if (
+            validationErrors.Length >
+            0)
+        {
+            StatusText.Text =
+                "Proton Bus: " +
+                string.Join(
+                    " · ",
+                    validationErrors
+                        .Take(3)
+                        .Select(
+                            issue =>
+                                issue.Message));
+
+            return;
+        }
+
+        var destination =
+            await PickFolderAsync();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                destination))
+        {
+            StatusText.Text =
+                "Exportação Proton Bus cancelada.";
+
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                "Proton Bus: preparando exportação...";
+
+            var exportProgress =
+                new Progress<
+                    ProtonBusOmsiDirectoryExportProgress>(
+                        item =>
+                        {
+                            StatusText.Text =
+                                item.Stage switch
+                                {
+                                    "tiles" =>
+                                        $"Proton Bus: carregando tiles {item.CompletedTiles}/{item.TotalTiles}" +
+                                        (
+                                            string.IsNullOrWhiteSpace(
+                                                item.CurrentTile)
+                                                ? "..."
+                                                : $" · {item.CurrentTile}"
+                                        ),
+                                    "timetable" =>
+                                        "Proton Bus: lendo timetable e paradas...",
+                                    "export" =>
+                                        "Proton Bus: convertendo geometria, paths, GPS, semáforos e texturas...",
+                                    "complete" =>
+                                        "Proton Bus: finalizando pacote...",
+                                    _ =>
+                                        "Proton Bus: exportando..."
+                                };
+                        });
+
+            var result =
+                await new ProtonBusOmsiDirectoryPackageExporter()
+                    .ExportAsync(
+                        contentRoot,
+                        snapshot.Map.DirectoryPath,
+                        destination,
+                        definition,
+                        new(
+                            IncludeTimetable:
+                                timetableCheckBox.IsChecked ==
+                                true),
+                        exportProgress);
+
+            if (
+                !result.IsExported ||
+                result.MapExport?
+                    .Package is not
+                    { } package)
+            {
+                var detail =
+                    string.Join(
+                        " · ",
+                        result.Issues
+                            .Take(3)
+                            .Select(
+                                issue =>
+                                    string.IsNullOrWhiteSpace(
+                                        issue.Detail)
+                                        ? issue.Code
+                                        : $"{issue.Code}: {issue.Detail}"));
+
+                StatusText.Text =
+                    string.IsNullOrWhiteSpace(
+                        detail)
+                        ? "Proton Bus: a exportação não foi concluída."
+                        : $"Proton Bus: exportação bloqueada · {detail}";
+
+                return;
+            }
+
+            var warnings =
+                result.Issues.Count;
+
+            StatusText.Text =
+                $"Proton Bus exportado: {package.ModelPaths.Count} modelo(s), " +
+                $"{package.TexturePaths.Count} textura(s), " +
+                $"{package.VehiclePathPaths.Count} path(s) de veículos, " +
+                $"{package.BusStopPaths.Count} parada(s), " +
+                $"{package.TrafficLightPaths.Count} semáforo(s)" +
+                (
+                    warnings >
+                    0
+                        ? $" · {warnings} aviso(s)"
+                        : string.Empty
+                ) +
+                $" · {package.MapDefinitionPath}";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Exportar para Proton Bus falhou: {exception.Message}";
+        }
+    }
+
+    private static string MakePortableProtonBusName(
+        string value,
+        string fallback)
+    {
+        var normalized =
+            new string(
+                value
+                    .Trim()
+                    .Select(
+                        character =>
+                            char.IsAsciiLetterOrDigit(
+                                character) ||
+                            character is
+                                '_' or
+                                '-'
+                                ? character
+                                : '_')
+                    .ToArray());
+
+        normalized =
+            string.Join(
+                "_",
+                normalized
+                    .Split(
+                        '_',
+                        StringSplitOptions
+                            .RemoveEmptyEntries |
+                        StringSplitOptions
+                            .TrimEntries));
+
+        return
+            string.IsNullOrWhiteSpace(
+                normalized)
+                ? fallback
+                : normalized;
     }
 
     private async void OnOpenOmsiClick(
