@@ -2409,6 +2409,12 @@
                                         Content="Editar curva"
                                         ToolTipService.ToolTip="Curvar ou endireitar a spline selecionada usando uma alça no mapa"
                                         Click="OnRoadEditCurveClick" />
+
+                                <Border Width="1"
+                                        Height="24"
+                                        Margin="2,0"
+                                        Background="{ThemeResource MapStudioBorderBrush}" />
+
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Duplicar"
                                         ToolTipService.ToolTip="Duplicar a spline selecionada e reposicionar"
@@ -2417,8 +2423,9 @@
                                         Content="Dividir"
                                         ToolTipService.ToolTip="Clique em um ponto da spline selecionada para dividir o trecho"
                                         Click="OnRoadSplitClick" />
+
                                 <NumberBox x:Name="RoadParallelOffsetBox"
-                                           Width="78"
+                                           Width="74"
                                            Value="3.5"
                                            Minimum="0.5"
                                            Maximum="30"
@@ -2426,37 +2433,38 @@
                                            SpinButtonPlacementMode="Compact"
                                            ToolTipService.ToolTip="Distância da rua paralela em metros" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Paralela ←"
+                                        Content="← Paralela"
                                         ToolTipService.ToolTip="Criar uma cópia paralela para um lado"
                                         Click="OnRoadParallelLeftClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Paralela →"
                                         ToolTipService.ToolTip="Criar uma cópia paralela para o outro lado"
                                         Click="OnRoadParallelRightClick" />
+
+                                <Border Width="1"
+                                        Height="24"
+                                        Margin="2,0"
+                                        Background="{ThemeResource MapStudioBorderBrush}" />
+
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Espelhar"
-                                        ToolTipService.ToolTip="Alternar o campo mirror da spline OMSI selecionada"
-                                        Click="OnRoadMirrorClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Substituir tipo"
-                                        ToolTipService.ToolTip="Trocar a SLI do trecho pela SLI selecionada na Biblioteca"
-                                        Click="OnRoadReplaceTypeClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="↑ 1 m"
+                                        Content="↑"
                                         ToolTipService.ToolTip="Elevar a próxima rua em 1 metro"
                                         Click="OnRoadElevationUpClick" />
+                                <TextBlock x:Name="RoadElevationText"
+                                           Text="0 m"
+                                           MinWidth="36"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="↓ 1 m"
+                                        Content="↓"
                                         ToolTipService.ToolTip="Abaixar a próxima rua em 1 metro"
                                         Click="OnRoadElevationDownClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Nível 0"
+                                        Content="0"
                                         ToolTipService.ToolTip="Voltar a rua para a elevação do terreno"
                                         Click="OnRoadElevationResetClick" />
-                                <TextBlock x:Name="RoadElevationText"
-                                           Text="0 m"
-                                           VerticalAlignment="Center"
-                                           Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+
                                 <Button x:Name="RoadSnapButton"
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Snap: on"
@@ -2465,15 +2473,25 @@
                                         Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Contínuo: on"
                                         Click="OnRoadContinuousToggleClick" />
+
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="[spline_h]"
-                                        Click="OnRoadPresetHeightClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Road Kit"
-                                        Click="OnInstallRoadKitClick" />
-                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Gerador"
-                                        Click="OnStartProceduralRoadTraceClick" />
+                                        Content="Mais ▾">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="Bottom">
+                                            <MenuFlyoutItem Text="Espelhar spline"
+                                                            Click="OnRoadMirrorClick" />
+                                            <MenuFlyoutItem Text="Substituir tipo pela SLI da Biblioteca"
+                                                            Click="OnRoadReplaceTypeClick" />
+                                            <MenuFlyoutSeparator />
+                                            <MenuFlyoutItem Text="Modo [spline_h]"
+                                                            Click="OnRoadPresetHeightClick" />
+                                            <MenuFlyoutItem Text="Instalar/atualizar Road Kit"
+                                                            Click="OnInstallRoadKitClick" />
+                                            <MenuFlyoutItem Text="Gerador procedural de ruas"
+                                                            Click="OnStartProceduralRoadTraceClick" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                </Button>
                             </StackPanel>
 
                             <StackPanel x:Name="BridgeContextPanel"
