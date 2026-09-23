@@ -592,6 +592,38 @@ public sealed partial class MainWindow : Window
                             1.0);
                         break;
 
+                    case NativeSelectionContextAction.Elevate:
+                        ShiftSelectedRoadElevation(
+                            GetRoadElevationStep());
+                        break;
+
+                    case NativeSelectionContextAction.Level:
+                        LevelSelectedRoadAtCurrentHeight();
+                        break;
+
+                    case NativeSelectionContextAction.Lower:
+                        ShiftSelectedRoadElevation(
+                            -GetRoadElevationStep());
+                        break;
+
+                    case NativeSelectionContextAction.Replace:
+                        OnRoadReplaceTypeClick(
+                            sender,
+                            new RoutedEventArgs());
+                        break;
+
+                    case NativeSelectionContextAction.Mirror:
+                        OnRoadMirrorClick(
+                            sender,
+                            new RoutedEventArgs());
+                        break;
+
+                    case NativeSelectionContextAction.Flow:
+                        OnRoadReverseFlowClick(
+                            sender,
+                            new RoutedEventArgs());
+                        break;
+
                     case NativeSelectionContextAction.Inspector:
                         var inspectorVisible =
                             InspectorPanel.Visibility ==
@@ -8393,6 +8425,69 @@ public sealed partial class MainWindow : Window
         }
 
         await StartSelectionCopyPlacementAsync();
+    }
+
+    private void ShiftSelectedRoadElevation(
+        double delta)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para alterar a elevação.";
+            return;
+        }
+
+        var target =
+            Math.Clamp(
+                _selectionInfo.Z +
+                delta,
+                -1000.0,
+                3000.0);
+
+        if (
+            !Viewport.ApplySelectionInfo(
+                _selectionInfo with
+                {
+                    Z = target
+                }))
+        {
+            StatusText.Text =
+                "Ruas: não foi possível alterar a elevação da spline selecionada.";
+            return;
+        }
+
+        StatusText.Text =
+            $"Ruas: spline #{_selectionInfo.EntityId} deslocada verticalmente para {target:F2} m.";
+    }
+
+    private void LevelSelectedRoadAtCurrentHeight()
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para nivelar.";
+            return;
+        }
+
+        if (
+            !Viewport.ApplySelectionInfo(
+                _selectionInfo with
+                {
+                    GradientStart = 0.0,
+                    GradientEnd = 0.0
+                }))
+        {
+            StatusText.Text =
+                "Ruas: não foi possível nivelar a spline selecionada.";
+            return;
+        }
+
+        StatusText.Text =
+            $"Ruas: spline #{_selectionInfo.EntityId} nivelada na cota atual {_selectionInfo.Z:F2} m.";
     }
 
     private double GetRoadElevationStep() =>
