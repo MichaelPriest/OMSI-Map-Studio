@@ -424,6 +424,17 @@ The **Create real map by area** window follows the same pattern: it can be moved
 
 **Project actions**, **Assets · Filters** and **Paths · Visualization** can be collapsed to free workspace. Map Studio saves the expanded/collapsed state in the local profile and restores it on the next run.
 
+## Detachable internal windows
+
+The top toolbar can also open tools as independent internal windows:
+
+- **Paths** — live OMSI path display filters;
+- **Transport** — the full Route Studio;
+- **Library** — the same real asset, favorites, collections and AI-classification panel;
+- **AI panel** — active profile, provider, model, credential status and connection test.
+
+These windows can be moved, resized, minimized and closed. **Transport** and **Library** do not create duplicate controls: the real panel is moved into the floating window and returned to Project when the window is closed.
+
 ## Multi-selection
 
 Use **Ctrl+click** or **Shift+click** to add/remove objects and splines. To select several items visually, start dragging from an empty area of the viewport and draw a box over the desired items. With **Ctrl** or **Shift** held, the box adds items to the current group; without a modifier, it replaces the selection.
