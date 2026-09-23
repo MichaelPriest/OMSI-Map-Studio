@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.16: direct pointer movement + multi-selection + floating tools + real-map area picker.
+# Test 10.17: derived OMSI asset cache + persistent loaders; carries Test 10.16 UX.
 
 on:
   push:
@@ -27,14 +27,18 @@ on:
       - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
+      - "src/MapStudio.Renderer/Scene/NativeDerivedFileCache.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSceneryAssetLoader.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineAssetLoader.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeDerivedFileCacheTests.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
       - "src/MapStudio.Renderer/Scene/NativePickingProxyGeometryBuilder.cs"
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.16-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.16-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.17-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.17-native.md"
   workflow_dispatch:
 
 permissions:
@@ -45,8 +49,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.16-native
-  TAG: v0.2.0-alpha.5-test.10.16-native
+  VERSION: 0.2.0-alpha.5-test.10.17-native
+  TAG: v0.2.0-alpha.5-test.10.17-native
 
 jobs:
   build-native-preview:
@@ -845,11 +849,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.16-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.17-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.16-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.17-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
