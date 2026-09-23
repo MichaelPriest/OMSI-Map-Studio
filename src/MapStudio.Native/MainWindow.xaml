@@ -637,6 +637,14 @@
                                             Click="OnTileNavigateClick" />
                                 </StackPanel>
                             </Border>
+                            <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                    ToolTipService.ToolTip="Abrir navegador Tile X/Y em janela flutuante"
+                                    Click="OnToggleTileNavigatorWindowClick">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <FontIcon Glyph="⌖" FontSize="13" />
+                                    <TextBlock Text="Tile XY" />
+                                </StackPanel>
+                            </Button>
                             <Button x:Name="OpenMapButton"
                                     Style="{StaticResource EditorToolbarButtonStyle}"
                                     Content="Mapas"
@@ -825,68 +833,52 @@
                                 Click="OnFocusSelectionClick" />
                     </Grid>
 
-                    <StackPanel x:Name="ProjectSummaryCard"
-                                Grid.Row="3"
-                                Spacing="5">
-                        <!-- Mantidos somente para compatibilidade com o estado atual;
-                             o cartão/resumo do nome do mapa não ocupa mais o painel Projeto. -->
-                        <TextBlock x:Name="MapText"
-                                   Visibility="Collapsed"
-                                   Text="Nenhum mapa aberto." />
-                        <TextBlock x:Name="RootText"
-                                   Visibility="Collapsed"
-                                   Text="Inicializando Workspace Map Studio..." />
-                        <TextBlock x:Name="MapLoadModeText"
-                                   Visibility="Collapsed"
-                                   Text="mapa completo" />
+                    <Expander x:Name="ProjectSummaryCard"
+                              Grid.Row="3"
+                              Header="Ações do projeto"
+                              IsExpanded="True"
+                              HorizontalAlignment="Stretch">
+                        <StackPanel Spacing="5"
+                                    Padding="0,5,0,0">
+                            <!-- Mantidos somente para compatibilidade com o estado atual;
+                                 o cartão/resumo do nome do mapa não ocupa mais o painel Projeto. -->
+                            <TextBlock x:Name="MapText"
+                                       Visibility="Collapsed"
+                                       Text="Nenhum mapa aberto." />
+                            <TextBlock x:Name="RootText"
+                                       Visibility="Collapsed"
+                                       Text="Inicializando Workspace Map Studio..." />
+                            <TextBlock x:Name="MapLoadModeText"
+                                       Visibility="Collapsed"
+                                       Text="mapa completo" />
 
-                        <Grid ColumnSpacing="5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <NumberBox x:Name="TileNavigatorXBox"
-                                       Grid.Column="0"
-                                       Header="Tile X"
-                                       SpinButtonPlacementMode="Compact" />
-                            <NumberBox x:Name="TileNavigatorYBox"
-                                       Grid.Column="1"
-                                       Header="Tile Y"
-                                       SpinButtonPlacementMode="Compact" />
-                            <Button Grid.Column="2"
-                                    VerticalAlignment="Bottom"
-                                    Content="Ir"
-                                    Click="OnTileNavigatorGoClick" />
-                        </Grid>
-
-                        <Grid ColumnSpacing="5">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <Button Grid.Column="0"
-                                    Content="Novo"
-                                    ToolTipService.ToolTip="Criar um novo mapa no Workspace"
-                                    Click="OnCreateStandaloneMapClick" />
-                            <Button Grid.Column="1"
-                                    Content="Abrir"
-                                    ToolTipService.ToolTip="Abrir um mapa do catálogo"
-                                    IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}"
-                                    Click="OnOpenMapCatalogClick" />
-                            <Button Grid.Column="2"
-                                    Content="Importar"
-                                    ToolTipService.ToolTip="Importar mapa existente para o Workspace"
-                                    Click="OnImportStandaloneMapClick" />
-                            <Button Grid.Column="3"
-                                    Content="+ Assets"
-                                    ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
-                                    Click="OnAddAssetFolderClick" />
-                        </Grid>
-                    </StackPanel>
+                            <Grid ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Content="Novo"
+                                        ToolTipService.ToolTip="Criar um novo mapa no Workspace"
+                                        Click="OnCreateStandaloneMapClick" />
+                                <Button Grid.Column="1"
+                                        Content="Abrir"
+                                        ToolTipService.ToolTip="Abrir um mapa do catálogo"
+                                        IsEnabled="{x:Bind OpenMapButton.IsEnabled, Mode=OneWay}"
+                                        Click="OnOpenMapCatalogClick" />
+                                <Button Grid.Column="2"
+                                        Content="Importar"
+                                        ToolTipService.ToolTip="Importar mapa existente para o Workspace"
+                                        Click="OnImportStandaloneMapClick" />
+                                <Button Grid.Column="3"
+                                        Content="+ Assets"
+                                        ToolTipService.ToolTip="Adicionar pasta de itens ao Workspace"
+                                        Click="OnAddAssetFolderClick" />
+                            </Grid>
+                        </StackPanel>
+                    </Expander>
 
                     <Grid Grid.Row="4">
                         <ListView x:Name="ExplorerListView"
@@ -956,18 +948,32 @@
                                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                                     BorderThickness="1"
                                     CornerRadius="8">
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="MAPA / TILES"
-                                               FontSize="11"
-                                               FontWeight="SemiBold"
-                                               CharacterSpacing="40"
-                                               Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
-                                    <TextBlock x:Name="MapExplorerStatusText"
-                                               Text="Abra um mapa para visualizar os tiles."
-                                               FontSize="10"
-                                               TextWrapping="Wrap"
-                                               Foreground="{ThemeResource MapStudioTextMutedBrush}" />
-                                </StackPanel>
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Spacing="3">
+                                        <TextBlock Text="MAPA / TILES"
+                                                   FontSize="11"
+                                                   FontWeight="SemiBold"
+                                                   CharacterSpacing="40"
+                                                   Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                                        <TextBlock x:Name="MapExplorerStatusText"
+                                                   Text="Abra um mapa para visualizar os tiles."
+                                                   FontSize="10"
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                    </StackPanel>
+                                    <Button x:Name="MapExplorerCollapseButton"
+                                            Grid.Column="1"
+                                            Width="28"
+                                            Height="28"
+                                            Padding="0"
+                                            Content="−"
+                                            ToolTipService.ToolTip="Recolher/expandir card Mapa / Tiles"
+                                            Click="OnMapExplorerCollapseClick" />
+                                </Grid>
                             </Border>
 
                             <ListView x:Name="MapTileListView"
@@ -2177,6 +2183,145 @@
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     Click="OnRestoreInspectorPanelClick" />
+
+            <Border x:Name="TileNavigatorWindow"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="5"
+                    Width="320"
+                    Height="205"
+                    Margin="390,92,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Top"
+                    Visibility="Collapsed"
+                    Canvas.ZIndex="105"
+                    Background="{ThemeResource MapStudioPanelBackgroundBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <Border.RenderTransform>
+                    <TranslateTransform x:Name="TileNavigatorWindowTranslate" />
+                </Border.RenderTransform>
+                <Grid Padding="10"
+                      RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Background="Transparent"
+                          ColumnSpacing="8"
+                          PointerPressed="OnTileNavigatorWindowDragPressed"
+                          PointerMoved="OnTileNavigatorWindowDragMoved"
+                          PointerReleased="OnTileNavigatorWindowDragReleased"
+                          PointerCanceled="OnTileNavigatorWindowDragReleased">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6">
+                            <FontIcon Glyph="⌖"
+                                      FontSize="14"
+                                      Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                            <TextBlock Text="NAVEGADOR TILE X/Y"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Width="28"
+                                Height="28"
+                                Padding="0"
+                                Content="×"
+                                ToolTipService.ToolTip="Fechar"
+                                Click="OnCloseTileNavigatorWindowClick" />
+                    </Grid>
+
+                    <Grid Grid.Row="1"
+                          ColumnSpacing="6"
+                          RowSpacing="8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <NumberBox x:Name="TileNavigatorXBox"
+                                   Grid.Row="0"
+                                   Grid.Column="0"
+                                   Header="Tile X"
+                                   SpinButtonPlacementMode="Compact" />
+                        <NumberBox x:Name="TileNavigatorYBox"
+                                   Grid.Row="0"
+                                   Grid.Column="1"
+                                   Header="Tile Y"
+                                   SpinButtonPlacementMode="Compact" />
+                        <Button Grid.Row="0"
+                                Grid.Column="2"
+                                VerticalAlignment="Bottom"
+                                Content="Ir"
+                                Click="OnTileNavigatorGoClick" />
+
+                        <Grid Grid.Row="1"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="3"
+                              ColumnSpacing="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0"
+                                    Content="Focar tile"
+                                    Click="OnTileNavigatorGoClick" />
+                            <Button Grid.Column="1"
+                                    Content="Criar tile"
+                                    Click="OnCreateMapTileClick" />
+                            <Button Grid.Column="2"
+                                    Content="Excluir tile"
+                                    Click="OnDeleteActiveMapTileClick" />
+                        </Grid>
+
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   Grid.ColumnSpan="3"
+                                   Text="Arraste pelo cabeçalho para mover · arraste o canto inferior direito para redimensionar."
+                                   FontSize="10"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                    </Grid>
+
+                    <Border x:Name="TileNavigatorResizeGrip"
+                            Width="28"
+                            Height="28"
+                            Margin="0,0,-7,-7"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Bottom"
+                            Background="{ThemeResource MapStudioSurfaceRaisedBrush}"
+                            BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                            BorderThickness="1"
+                            CornerRadius="7"
+                            ToolTipService.ToolTip="Arraste para redimensionar"
+                            PointerPressed="OnTileNavigatorResizePressed"
+                            PointerMoved="OnTileNavigatorResizeMoved"
+                            PointerReleased="OnTileNavigatorResizeReleased"
+                            PointerCanceled="OnTileNavigatorResizeReleased">
+                        <Grid Width="18" Height="18">
+                            <Line X1="7" Y1="17" X2="17" Y2="7"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                            <Line X1="12" Y1="17" X2="17" Y2="12"
+                                  Stroke="{ThemeResource MapStudioAccentTextBrush}"
+                                  StrokeThickness="1.5" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
 
             <Grid x:Name="LoadingOverlay"
                   Grid.Column="0"
