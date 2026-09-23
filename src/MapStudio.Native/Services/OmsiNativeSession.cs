@@ -68,6 +68,29 @@ public sealed class OmsiNativeSession
                         30)
             };
 
+    private static readonly HttpClient
+        OpenStreetMapHttpClient =
+            CreateOpenStreetMapHttpClient();
+
+    private static HttpClient
+        CreateOpenStreetMapHttpClient()
+    {
+        var client =
+            new HttpClient
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        30)
+            };
+
+        client.DefaultRequestHeaders
+            .UserAgent
+            .ParseAdd(
+                "OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)");
+
+        return client;
+    }
+
     private readonly OmsiTileReader _tileReader =
         new();
 
@@ -358,6 +381,223 @@ public sealed class OmsiNativeSession
             georeference.Zoom,
             mapType,
             "Google Maps");
+    }
+
+    public async Task<NativeGoogleMapReference>
+        LoadOpenStreetMapReferenceAsync(
+            CancellationToken cancellationToken =
+                default)
+    {
+        var georeference =
+            await LoadMapGeoreferenceAsync(
+                    cancellationToken)
+                .ConfigureAwait(false)
+            ?? throw new InvalidDataException(
+                "mapGeoreferenceRequired");
+
+        ValidateGeoreference(
+            georeference);
+
+        var latitude =
+            Math.Clamp(
+                georeference.Latitude,
+                -85.05112878,
+                85.05112878);
+
+        var longitude =
+            Math.Clamp(
+                georeference.Longitude,
+                -180.0,
+                180.0);
+
+        var zoom =
+            Math.Clamp(
+                georeference.Zoom,
+                0,
+                19);
+
+        var tileCount =
+            Math.Pow(
+                2,
+                zoom);
+
+        var worldPixels =
+            256.0 *
+            tileCount;
+
+        var latitudeRadians =
+            latitude *
+            Math.PI /
+            180.0;
+
+        var pixelX =
+            (
+                longitude +
+                180.0
+            ) /
+            360.0 *
+            worldPixels;
+
+        var mercator =
+            Math.Log(
+                Math.Tan(
+                    latitudeRadians) +
+                1.0 /
+                Math.Cos(
+                    latitudeRadians));
+
+        var pixelY =
+            (
+                1.0 -
+                mercator /
+                Math.PI
+            ) /
+            2.0 *
+            worldPixels;
+
+        var tileX =
+            Math.Clamp(
+                (int)Math.Floor(
+                    pixelX /
+                    256.0),
+                0,
+                checked(
+                    (int)tileCount -
+                    1));
+
+        var tileY =
+            Math.Clamp(
+                (int)Math.Floor(
+                    pixelY /
+                    256.0),
+                0,
+                checked(
+                    (int)tileCount -
+                    1));
+
+        var cacheRoot =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder
+                        .LocalApplicationData),
+                "OMSI Map Studio",
+                "reference-cache",
+                "openstreetmap");
+
+        Directory.CreateDirectory(
+            cacheRoot);
+
+        var path =
+            Path.Combine(
+                cacheRoot,
+                $"osm-{zoom}-{tileX}-{tileY}.png");
+
+        var cacheValid =
+            File.Exists(
+                path) &&
+            DateTime.UtcNow -
+                File.GetLastWriteTimeUtc(
+                    path) <
+            TimeSpan.FromDays(
+                7);
+
+        if (!cacheValid)
+        {
+            var uri =
+                $"https://tile.openstreetmap.org/{zoom}/{tileX}/{tileY}.png";
+
+            using var response =
+                await OpenStreetMapHttpClient
+                    .GetAsync(
+                        uri,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new HttpRequestException(
+                    $"openStreetMapReferenceHttp:{(int)response.StatusCode}");
+            }
+
+            var bytes =
+                await response.Content
+                    .ReadAsByteArrayAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            if (
+                bytes.Length <
+                    64 ||
+                bytes.LongLength >
+                    8L *
+                    1024L *
+                    1024L)
+            {
+                throw new InvalidDataException(
+                    "openStreetMapReferenceInvalidPayload");
+            }
+
+            await File.WriteAllBytesAsync(
+                    path,
+                    bytes,
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        var metersPerPixel =
+            156543.03392804097 *
+            Math.Cos(
+                latitudeRadians) /
+            Math.Pow(
+                2,
+                zoom);
+
+        var anchorWorldX =
+            georeference.AnchorTileX *
+                300.0 +
+            georeference.AnchorX;
+
+        var anchorWorldZ =
+            georeference.AnchorTileY *
+                300.0 +
+            georeference.AnchorY;
+
+        var tileCenterPixelX =
+            tileX *
+                256.0 +
+            128.0;
+
+        var tileCenterPixelY =
+            tileY *
+                256.0 +
+            128.0;
+
+        anchorWorldX +=
+            (
+                tileCenterPixelX -
+                pixelX
+            ) *
+            metersPerPixel;
+
+        anchorWorldZ +=
+            (
+                tileCenterPixelY -
+                pixelY
+            ) *
+            metersPerPixel;
+
+        return new NativeGoogleMapReference(
+            path,
+            256,
+            256,
+            metersPerPixel,
+            anchorWorldX,
+            anchorWorldZ,
+            latitude,
+            longitude,
+            zoom,
+            "roadmap",
+            "© OpenStreetMap contributors");
     }
 
     public async Task<NativeGoogleElevationGrid>
