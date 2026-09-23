@@ -676,8 +676,8 @@ jobs:
           }
 
           foreach ($required in @(
-            'Width="64"',
-            'Height="54"',
+            'Value="64"',
+            'Value="54"',
             'Width="560"',
             'Height="600"',
             'Width="800"',
