@@ -5891,6 +5891,138 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private async void OnRoadAutoConnectClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Auto conectar: selecione primeiro uma rua/spline.";
+            return;
+        }
+
+        if (
+            Viewport.IsSceneryPlacementActive ||
+            Viewport.IsSplinePlacementActive)
+        {
+            StatusText.Text =
+                "Auto conectar: finalize ou cancele o posicionamento atual.";
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Auto conectar: salvando transformações pendentes...";
+
+            await _session
+                .SavePendingTransformsAsync();
+
+            SaveChangesButton.IsEnabled =
+                false;
+        }
+
+        var distance =
+            double.IsFinite(
+                SplineEndpointSnapDistanceBox
+                    .Value)
+                ? SplineEndpointSnapDistanceBox
+                    .Value
+                : 5.0;
+
+        if (
+            !Viewport
+                .TryGetAutoConnectLinksForSelectedSpline(
+                    distance,
+                    out var desiredPrevious,
+                    out var desiredNext,
+                    out var detectionStatus))
+        {
+            StatusText.Text =
+                detectionStatus;
+            return;
+        }
+
+        if (
+            desiredPrevious ==
+                selection.PreviousSplineId &&
+            desiredNext ==
+                selection.NextSplineId)
+        {
+            StatusText.Text =
+                detectionStatus;
+            return;
+        }
+
+        try
+        {
+            StatusText.Text =
+                $"Auto conectar: corrigindo vínculos da spline #{selection.EntityId}...";
+
+            var snapshot =
+                await _session
+                    .UpdateSplineLinksAsync(
+                        selection,
+                        desiredPrevious,
+                        desiredNext);
+
+            RegisterConstructionHistory(
+                "Auto conectar spline");
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            RefreshExplorer();
+
+            var refreshedItem =
+                _explorerItems
+                    .FirstOrDefault(
+                        item =>
+                            item.Kind ==
+                                PickingKind.Spline &&
+                            item.EntityId ==
+                                selection.EntityId);
+
+            if (refreshedItem is not null)
+            {
+                Viewport.SelectExplorerItem(
+                    refreshedItem,
+                    focus: false);
+            }
+
+            StatusText.Text =
+                $"Auto conectar concluído: spline #{selection.EntityId} · Previous {desiredPrevious} · Next {desiredNext}." +
+                (
+                    string.IsNullOrWhiteSpace(
+                        _session.LastBackupDirectory)
+                        ? string.Empty
+                        : $" · backup {_session.LastBackupDirectory}"
+                );
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Auto conectar falhou: {exception.Message}";
+        }
+    }
+
     private async void OnSaveSplineLinksClick(
         object sender,
         RoutedEventArgs e)
