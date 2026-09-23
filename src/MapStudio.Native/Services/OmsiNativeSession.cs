@@ -8566,7 +8566,9 @@ public sealed class OmsiNativeSession
             int desiredPreviousSplineId,
             int desiredNextSplineId,
             CancellationToken cancellationToken =
-                default)
+                default,
+            bool repairBrokenLinks =
+                false)
     {
         ArgumentNullException.ThrowIfNull(
             selection);
@@ -8682,15 +8684,140 @@ public sealed class OmsiNativeSession
                             .Spline
                             .NextSplineId));
 
+        var plannerStates =
+            states;
+
+        var plannerOriginalPrevious =
+            originalPrevious;
+
+        var plannerOriginalNext =
+            originalNext;
+
+        if (repairBrokenLinks)
+        {
+            var repairedStates =
+                states.ToDictionary(
+                    pair =>
+                        pair.Key,
+                    pair =>
+                        pair.Value);
+
+            var sourceState =
+                repairedStates[
+                    source.Spline.SplineId];
+
+            if (
+                plannerOriginalPrevious !=
+                    -1 &&
+                !states.ContainsKey(
+                    plannerOriginalPrevious))
+            {
+                plannerOriginalPrevious =
+                    -1;
+
+                sourceState =
+                    sourceState with
+                    {
+                        PreviousSplineId =
+                            -1
+                    };
+            }
+
+            if (
+                plannerOriginalNext !=
+                    -1 &&
+                !states.ContainsKey(
+                    plannerOriginalNext))
+            {
+                plannerOriginalNext =
+                    -1;
+
+                sourceState =
+                    sourceState with
+                    {
+                        NextSplineId =
+                            -1
+                    };
+            }
+
+            repairedStates[
+                source.Spline.SplineId] =
+                sourceState;
+
+            if (
+                desiredPreviousSplineId !=
+                    -1 &&
+                repairedStates.TryGetValue(
+                    desiredPreviousSplineId,
+                    out var previousTarget) &&
+                previousTarget.NextSplineId !=
+                    -1 &&
+                !states.ContainsKey(
+                    previousTarget.NextSplineId))
+            {
+                repairedStates[
+                    desiredPreviousSplineId] =
+                    previousTarget with
+                    {
+                        NextSplineId =
+                            -1
+                    };
+            }
+
+            if (
+                desiredNextSplineId !=
+                    -1 &&
+                repairedStates.TryGetValue(
+                    desiredNextSplineId,
+                    out var nextTarget) &&
+                nextTarget.PreviousSplineId !=
+                    -1 &&
+                !states.ContainsKey(
+                    nextTarget.PreviousSplineId))
+            {
+                repairedStates[
+                    desiredNextSplineId] =
+                    nextTarget with
+                    {
+                        PreviousSplineId =
+                            -1
+                    };
+            }
+
+            plannerStates =
+                repairedStates;
+        }
+
         var plan =
             OmsiSplineLinkPlanner
                 .Plan(
-                    states,
+                    plannerStates,
                     source.Spline.SplineId,
-                    originalPrevious,
-                    originalNext,
+                    plannerOriginalPrevious,
+                    plannerOriginalNext,
+                    desiredPreviousSplineId,
+                    desiredNextSplineId)
+                .ToDictionary(
+                    pair =>
+                        pair.Key,
+                    pair =>
+                        pair.Value);
+
+        if (
+            repairBrokenLinks &&
+            (
+                source.Spline.PreviousSplineId !=
+                    desiredPreviousSplineId ||
+                source.Spline.NextSplineId !=
+                    desiredNextSplineId
+            ))
+        {
+            plan[
+                source.Spline.SplineId] =
+                new OmsiSplineLinkTarget(
                     desiredPreviousSplineId,
                     desiredNextSplineId);
+        }
 
         if (plan.Count == 0)
         {
