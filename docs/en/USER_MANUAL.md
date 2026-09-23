@@ -146,7 +146,7 @@ Road-only actions are hidden for normal objects.
 
 ## 6. Project and Asset Library
 
-Project and Asset Library are separate areas.
+Project and Asset Library are separate areas. Dense tool sections use collapsible panels; **Asset Filters** and **Paths / Visualization** can stay collapsed to free editor space.
 
 **Project** navigates content already in the map.
 
@@ -420,7 +420,11 @@ Tile X/Y no longer occupies the Project card. Use the **Tile XY** top-bar shortc
 
 ## Multi-selection
 
-Use **Ctrl+click** or **Shift+click** to add/remove objects and splines. To select several items visually, start dragging from an empty area of the viewport and draw a box over the desired items. With **Ctrl** or **Shift** held, the box adds items to the current group; without a modifier, it replaces the selection. Press **Delete** to remove the selected group with one confirmation and safe backup.
+Use **Ctrl+click** or **Shift+click** to add/remove objects and splines. To select several items visually, start dragging from an empty area of the viewport and draw a box over the desired items. With **Ctrl** or **Shift** held, the box adds items to the current group; without a modifier, it replaces the selection.
+
+The selected group can be **moved**, **rotated** and **focused** directly in the viewport. The preview/filled ghost follows the group during manipulation, and transform history treats it as one visual action. None of these operations depends on the Inspector.
+
+Press **Delete** to remove the selected group with one confirmation and safe backup. After deletion, **Ctrl+Z** restores the batch from the real map-file backups.
 
 ## Natural movement
 
