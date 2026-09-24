@@ -26312,13 +26312,13 @@ setTimeout(postBounds, 250);
         }
 
         StatusText.Text =
-            $"Mapa criado · preview OSM pronto com {_proceduralRoadTraces.Count} via(s), " +
-            $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s). " +
-            "Confirme a geração após revisar a prévia.";
+            $"Mapa criado · {_proceduralRoadTraces.Count} via(s) OSM detectada(s), " +
+            $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s) · " +
+            "gerando automaticamente...";
 
-        OnAnalyzeProceduralRoadGraphClick(
-            this,
-            new RoutedEventArgs());
+        await AnalyzeProceduralRoadGraphAsync(
+            requireConfirmation:
+                false);
     }
 
     private void OnRealMapAreaWindowDragPressed(
@@ -30745,6 +30745,14 @@ setTimeout(postBounds, 250);
         object sender,
         RoutedEventArgs e)
     {
+        await AnalyzeProceduralRoadGraphAsync(
+            requireConfirmation:
+                true);
+    }
+
+    private async Task AnalyzeProceduralRoadGraphAsync(
+        bool requireConfirmation)
+    {
         if (
             _proceduralRoadTraces.Count ==
             0)
@@ -30775,8 +30783,10 @@ setTimeout(postBounds, 250);
                 .PreviewProceduralRoadGraph(
                     graph);
 
-        var details =
-            graph.Junctions.Count ==
+        if (requireConfirmation)
+        {
+            var details =
+                graph.Junctions.Count ==
                 0
                 ? "Nenhum cruzamento foi detectado."
                 : string.Join(
@@ -30859,11 +30869,12 @@ setTimeout(postBounds, 250);
                         .Close
             };
 
-        if (
-            await dialog.ShowAdaptiveAsync() !=
-                ContentDialogResult.Primary)
-        {
-            return;
+            if (
+                await dialog.ShowAdaptiveAsync() !=
+                    ContentDialogResult.Primary)
+            {
+                return;
+            }
         }
 
         var root =
