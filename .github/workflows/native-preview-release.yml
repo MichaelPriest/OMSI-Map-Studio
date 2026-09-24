@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.20: visible-first tile navigation with progressive 3×3 completion.
+# Test 10.21: CARTO Basemaps API key support and safe OSM picker fallback.
 
 on:
   push:
@@ -42,8 +42,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.20-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.20-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.21-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.21-native.md"
   workflow_dispatch:
 
 permissions:
@@ -54,8 +54,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.20-native
-  TAG: v0.2.0-alpha.5-test.10.20-native
+  VERSION: 0.2.0-alpha.5-test.10.21-native
+  TAG: v0.2.0-alpha.5-test.10.21-native
 
 jobs:
   build-native-preview:
@@ -700,7 +700,7 @@ jobs:
 
           Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
 
-      - name: Verify test 10.20 progressive region navigation
+      - name: Verify test 10.21 progressive region navigation
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -716,7 +716,7 @@ jobs:
             'Tile alvo pronto'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.20 progressive navigation wiring is missing: $required"
+              throw "Test 10.21 progressive navigation wiring is missing: $required"
             }
           }
 
@@ -731,6 +731,55 @@ jobs:
           }
 
           Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
+
+      - name: Verify test 10.21 CARTO key integration
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $credentials = Get-Content src/MapStudio.Native/Services/NativeMapCredentialStore.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealMapCartoKeyBox"',
+            'x:Name="SaveRealMapCartoKeyButton"',
+            'Click="OnSaveRealMapCartoKeyClick"',
+            'Click="OnOpenCartoKeyHelpClick"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.21 CARTO credential UI is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TryGetCartoBasemapsApiKey',
+            'SaveCartoBasemapsApiKey',
+            'CartoBasemapsAccount'
+          )) {
+            if (-not $credentials.Contains($required)) {
+              throw "Test 10.21 CARTO credential storage is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('carto.com/basemaps/apikey/')) {
+            throw "CARTO key help URL is missing from the UI."
+          }
+
+          if (-not $main.Contains('tile.openstreetmap.org/{z}/{x}/{y}.png')) {
+            throw "OSM interactive fallback is missing when the CARTO key is absent."
+          }
+
+          if (-not $session.Contains('LoadCartoReferenceAsync') -or
+              -not $session.Contains('/rastertiles/light_all/') -or
+              -not $session.Contains('?key=')) {
+            throw "Keyed CARTO reference loading is missing."
+          }
+
+          if ($session.Contains('"carto-osm"')) {
+            throw "Old unkeyed CARTO cache namespace must not be reused."
+          }
+
+          Write-Host "Verified CARTO Basemaps API key UI, secure storage, keyed URLs and OSM picker fallback."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -886,11 +935,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.20-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.21-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.20-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.21-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
