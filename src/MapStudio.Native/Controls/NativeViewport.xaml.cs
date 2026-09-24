@@ -1572,14 +1572,31 @@ public sealed partial class NativeViewport : UserControl
         NativeReferenceOverlayDefinition?
             overlay)
     {
-        _runtime?.SetReferenceOverlay(
-            overlay);
+        SetReferenceOverlays(
+            overlay is null
+                ? null
+                : [
+                    overlay
+                ]);
+    }
+
+    public void SetReferenceOverlays(
+        IReadOnlyList<
+            NativeReferenceOverlayDefinition>?
+            overlays)
+    {
+        _runtime?.SetReferenceOverlays(
+            overlays);
+
+        var first =
+            overlays?
+                .FirstOrDefault();
 
         PointerStatusChanged?.Invoke(
             this,
-            overlay is null
+            first is null
                 ? "Referência geográfica removida."
-                : $"Referência geográfica ativa · {overlay.Attribution} · opacidade {overlay.Opacity:P0}.");
+                : $"Referência geográfica ativa · {first.Attribution} · {overlays!.Count} textura(s) · opacidade {first.Opacity:P0}.");
     }
 
     public async Task SetMapSnapshotAsync(
