@@ -777,7 +777,7 @@ jobs:
           }
 
           if (-not $session.Contains('LoadCartoReferenceAsync') -or
-              -not $session.Contains('/rastertiles/light_all/') -or
+              -not $session.Contains('/rastertiles/voyager/') -or
               -not $session.Contains('?key=')) {
             throw "Keyed CARTO reference loading is missing."
           }
