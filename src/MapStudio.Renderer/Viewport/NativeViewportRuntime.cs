@@ -134,6 +134,8 @@ public sealed class NativeViewportRuntime : IDisposable
     private Vector3? _selectedSplineCurveStart;
     private Vector3? _selectedSplineCurveEnd;
     private NativeSplinePlacementShape? _selectedSplineCurveShape;
+    private bool _selectedSplineCurveDragging;
+    private double _selectedSplineCurveOffset;
 
     private bool _selectedSplineEndpointEditActive;
     private bool _selectedSplineEndpointDragging;
@@ -268,6 +270,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool IsSelectedSplineCurveEditActive =>
         _selectedSplineCurveEditActive;
+
+    public bool IsSelectedSplineCurveDragging =>
+        _selectedSplineCurveDragging;
 
     public bool IsSelectedSplineEndpointEditActive =>
         _selectedSplineEndpointEditActive;
@@ -3199,11 +3204,28 @@ public sealed class NativeViewportRuntime : IDisposable
                     entity.Spline.Radius) >
                     0.001);
 
+        _selectedSplineCurveDragging =
+            false;
+
+        _selectedSplineCurveOffset =
+            NativeSplineEndpointEditMath
+                .EstimateCurveOffset(
+                    _selectedSplineCurveShape);
+
+        var markerSize =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.012f,
+                1.25f,
+                4.0f);
+
         var preview =
-            new NativeSplinePlacementGeometryBuilder()
+            new NativeSplineCurveEditGeometryBuilder()
                 .Build(
                     asset,
-                    _selectedSplineCurveShape);
+                    _selectedSplineCurveShape,
+                    _selectedSplineCurveOffset,
+                    markerSize);
 
         MapRenderer
             .SetPlacementPreview(
@@ -3215,9 +3237,89 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
 
         status =
-            "Curva: mova o mouse lateralmente para ajustar e clique para aplicar.";
+            "Curva: arraste a alça amarela lateralmente para ajustar o raio.";
 
         return true;
+    }
+
+    public bool TryBeginSelectedSplineCurveDrag(
+        uint pixelX,
+        uint pixelY,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            !_selectedSplineCurveEditActive ||
+            _selectedSplineCurveStart is
+                not { } start ||
+            _selectedSplineCurveEnd is
+                not { } end ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var point))
+        {
+            status =
+                "Curva: modo de edição não está pronto.";
+            return false;
+        }
+
+        var handle =
+            NativeSplineCurveHandleMath
+                .CreateHandlePoint(
+                    start,
+                    end,
+                    _selectedSplineCurveOffset);
+
+        var distance =
+            NativeSplineEndpointEditMath
+                .HorizontalDistance(
+                    point,
+                    handle);
+
+        var maximumDistance =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.02,
+                1.5,
+                8.0);
+
+        if (
+            distance >
+                maximumDistance)
+        {
+            status =
+                "Curva: clique e arraste a alça amarela.";
+            return false;
+        }
+
+        _selectedSplineCurveDragging =
+            true;
+
+        status =
+            GetSelectedSplineCurveEditStatus();
+
+        return true;
+    }
+
+    public string GetSelectedSplineCurveEditStatus()
+    {
+        var shape =
+            _selectedSplineCurveShape;
+
+        if (shape is null)
+        {
+            return
+                "Curva: edição visual inativa.";
+        }
+
+        return shape.IsCurved
+            ? $"Curva: raio {Math.Abs(shape.Radius):F1} m · offset {_selectedSplineCurveOffset:F2} m · solte para aplicar."
+            : $"Curva: trecho reto · offset {_selectedSplineCurveOffset:F2} m · arraste lateralmente.";
     }
 
     public bool UpdateSelectedSplineCurveEdit(
@@ -3228,6 +3330,7 @@ public sealed class NativeViewportRuntime : IDisposable
 
         if (
             !_selectedSplineCurveEditActive ||
+            !_selectedSplineCurveDragging ||
             _selectedSplineCurveEntity is
                 not { } entity ||
             _selectedSplineCurveStart is
@@ -3242,24 +3345,54 @@ public sealed class NativeViewportRuntime : IDisposable
                 entity.Spline.SplinePath,
                 out var asset) ||
             !NativeSplinePlacementMath
-                .TryCreateArc(
+                .TryGetCurveOffsetFromControlPoint(
                     start,
                     end,
                     control,
+                    out var rawOffset))
+        {
+            return false;
+        }
+
+        var curveOffset =
+            NativeSplineCurveHandleMath
+                .SnapOffset(
+                    rawOffset,
+                    SnapEnabled,
+                    MoveSnapMeters);
+
+        if (
+            !NativeSplinePlacementMath
+                .TryCreateArcFromOffset(
+                    start,
+                    end,
+                    curveOffset,
                     out var shape) ||
             shape is null)
         {
             return false;
         }
 
+        _selectedSplineCurveOffset =
+            curveOffset;
+
         _selectedSplineCurveShape =
             shape;
 
+        var markerSize =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.012f,
+                1.25f,
+                4.0f);
+
         var preview =
-            new NativeSplinePlacementGeometryBuilder()
+            new NativeSplineCurveEditGeometryBuilder()
                 .Build(
                     asset,
-                    shape);
+                    shape,
+                    curveOffset,
+                    markerSize);
 
         MapRenderer
             .SetPlacementPreview(
@@ -3288,10 +3421,11 @@ public sealed class NativeViewportRuntime : IDisposable
             string.Empty;
 
         if (
-            !_selectedSplineCurveEditActive)
+            !_selectedSplineCurveEditActive ||
+            !_selectedSplineCurveDragging)
         {
             status =
-                "Curva: modo de edição não está ativo.";
+                "Curva: arraste a alça amarela antes de aplicar.";
             return false;
         }
 
@@ -3382,6 +3516,12 @@ public sealed class NativeViewportRuntime : IDisposable
 
         _selectedSplineCurveShape =
             null;
+
+        _selectedSplineCurveDragging =
+            false;
+
+        _selectedSplineCurveOffset =
+            0.0;
 
         MapRenderer
             .SetPlacementPreview(

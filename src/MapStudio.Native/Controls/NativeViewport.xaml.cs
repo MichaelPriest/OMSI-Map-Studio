@@ -2032,25 +2032,23 @@ public sealed partial class NativeViewport : UserControl
             _runtime
                 .IsSelectedSplineCurveEditActive)
         {
-            if (
+            var started =
                 _runtime
-                    .TryFinishSelectedSplineCurveEdit(
+                    .TryBeginSelectedSplineCurveDrag(
                         pixelX,
                         pixelY,
-                        out var curveEdit,
-                        out var curveStatus) &&
-                curveEdit is not null)
-            {
-                TransformEditPending
-                    ?.Invoke(
-                        curveEdit);
-
-                PublishSelectionInfo();
-            }
+                        out var curveStatus);
 
             PointerStatusChanged?.Invoke(
                 this,
                 curveStatus);
+
+            if (started)
+            {
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    curveStatus);
+            }
 
             e.Handled =
                 true;
@@ -2526,43 +2524,45 @@ public sealed partial class NativeViewport : UserControl
         if (
             _runtime is not null &&
             _runtime
-                .IsSelectedSplineCurveEditActive)
+                .IsSelectedSplineCurveDragging &&
+            _leftPressed)
         {
-            var scaleX =
+            var curveScaleX =
                 Math.Max(
                     0.01,
                     SwapChainSurface
                         .CompositionScaleX);
 
-            var scaleY =
+            var curveScaleY =
                 Math.Max(
                     0.01,
                     SwapChainSurface
                         .CompositionScaleY);
 
-            var pixelX =
+            var curvePixelX =
                 (uint)Math.Max(
                     0,
                     Math.Round(
                         point.Position.X *
-                        scaleX));
+                        curveScaleX));
 
-            var pixelY =
+            var curvePixelY =
                 (uint)Math.Max(
                     0,
                     Math.Round(
                         point.Position.Y *
-                        scaleY));
+                        curveScaleY));
 
             if (
                 _runtime
                     .UpdateSelectedSplineCurveEdit(
-                        pixelX,
-                        pixelY))
+                        curvePixelX,
+                        curvePixelY))
             {
                 PointerStatusChanged?.Invoke(
                     this,
-                    "Curva: mova a alça visual e clique para aplicar.");
+                    _runtime
+                        .GetSelectedSplineCurveEditStatus());
             }
 
             e.Handled =
@@ -3115,6 +3115,62 @@ public sealed partial class NativeViewport : UserControl
             PointerStatusChanged?.Invoke(
                 this,
                 endpointStatus);
+        }
+
+        if (
+            selectionRuntime is not null &&
+            selectionRuntime
+                .IsSelectedSplineCurveDragging)
+        {
+            var curveScaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var curveScaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var curvePixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        curveScaleX));
+
+            var curvePixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        curveScaleY));
+
+            if (
+                selectionRuntime
+                    .TryFinishSelectedSplineCurveEdit(
+                        curvePixelX,
+                        curvePixelY,
+                        out var curveEdit,
+                        out var curveStatus) &&
+                curveEdit is not null)
+            {
+                TransformEditPending
+                    ?.Invoke(
+                        curveEdit);
+
+                PublishSelectionInfo();
+
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    curveStatus);
+            }
+
+            PointerStatusChanged?.Invoke(
+                this,
+                curveStatus);
         }
 
         if (

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.29: clearer map reference and direct visual spline endpoint editing.
+# Test 10.30: draggable visual curve/radius handle.
 
 on:
   push:
@@ -25,6 +25,9 @@ on:
       - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointEditMath.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineEndpointEditGeometryBuilder.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointEditMathTests.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeSplineCurveHandleMath.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineCurveEditGeometryBuilder.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplineCurveHandleMathTests.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
@@ -49,8 +52,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.29-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.29-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.30-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.30-native.md"
   workflow_dispatch:
 
 permissions:
@@ -61,8 +64,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.29-native
-  TAG: v0.2.0-alpha.5-test.10.29-native
+  VERSION: 0.2.0-alpha.5-test.10.30-native
+  TAG: v0.2.0-alpha.5-test.10.30-native
 
 jobs:
   build-native-preview:
@@ -710,7 +713,7 @@ jobs:
 
           Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
 
-      - name: Verify test 10.29 progressive region navigation
+      - name: Verify test 10.30 progressive region navigation
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -726,7 +729,7 @@ jobs:
             'Tile alvo pronto'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.29 progressive navigation wiring is missing: $required"
+              throw "Test 10.30 progressive navigation wiring is missing: $required"
             }
           }
 
@@ -742,7 +745,7 @@ jobs:
 
           Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
 
-      - name: Verify test 10.29 CARTO key integration
+      - name: Verify test 10.30 CARTO key integration
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -757,7 +760,7 @@ jobs:
             'Click="OnOpenCartoKeyHelpClick"'
           )) {
             if (-not $xaml.Contains($required)) {
-              throw "Test 10.29 CARTO credential UI is missing: $required"
+              throw "Test 10.30 CARTO credential UI is missing: $required"
             }
           }
 
@@ -767,7 +770,7 @@ jobs:
             'CartoBasemapsAccount'
           )) {
             if (-not $credentials.Contains($required)) {
-              throw "Test 10.29 CARTO credential storage is missing: $required"
+              throw "Test 10.30 CARTO credential storage is missing: $required"
             }
           }
 
@@ -791,7 +794,7 @@ jobs:
 
           Write-Host "Verified CARTO Basemaps API key UI, secure storage, keyed URLs and OSM picker fallback."
 
-      - name: Verify test 10.29 CARTO ground-reference decode fix
+      - name: Verify test 10.30 CARTO ground-reference decode fix
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -805,7 +808,7 @@ jobs:
             'cartoReferenceInvalidPngPayload'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.29 CARTO download validation is missing: $required"
+              throw "Test 10.30 CARTO download validation is missing: $required"
             }
           }
 
@@ -821,20 +824,20 @@ jobs:
             'CreateRgbaTexture'
           )) {
             if (-not $loader.Contains($required) -and -not $png.Contains($required)) {
-              throw "Test 10.29 direct PNG renderer path is missing: $required"
+              throw "Test 10.30 direct PNG renderer path is missing: $required"
             }
           }
 
           if (-not $tests.Contains('DecodesNonInterlacedRgbaPngWithoutWic') -or
               -not $tests.Contains('RejectsNonPngPayload')) {
-            throw "Test 10.29 PNG decoder regression coverage is missing."
+            throw "Test 10.30 PNG decoder regression coverage is missing."
           }
 
           if (-not $main.Contains('failureStage') -or
               -not $main.Contains('download/conversão da referência CARTO') -or
               -not $main.Contains('envio da textura para o viewport') -or
               -not $main.Contains('carto-reference.log')) {
-            throw "Test 10.29 staged map-reference diagnostics are missing."
+            throw "Test 10.30 staged map-reference diagnostics are missing."
           }
 
           Write-Host "Verified CARTO PNG validation, direct native PNG decoding and staged viewport diagnostics."
@@ -933,7 +936,7 @@ jobs:
 
           Write-Host "Verified saved georeference loading, streamed CARTO mosaic, coplanar terrain decal, transparent border sampling, D3D11 depth bias and WIC null safety."
 
-      - name: Verify test 10.29 reference visibility and visual spline endpoints
+      - name: Verify test 10.30 reference visibility and visual spline endpoints
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -998,6 +1001,48 @@ jobs:
           }
 
           Write-Host "Verified 80% reference default and direct draggable spline endpoint workflow."
+
+      - name: Verify test 10.30 visual curve radius handle
+        shell: pwsh
+        run: |
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $math = Get-Content src/MapStudio.Renderer/Viewport/NativeSplineCurveHandleMath.cs -Raw
+          $geometry = Get-Content src/MapStudio.Renderer/Scene/NativeSplineCurveEditGeometryBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplineCurveHandleMathTests.cs -Raw
+
+          foreach ($required in @(
+            'IsSelectedSplineCurveDragging',
+            'TryBeginSelectedSplineCurveDrag',
+            'TryFinishSelectedSplineCurveEdit',
+            'GetSelectedSplineCurveEditStatus'
+          )) {
+            if (-not $viewport.Contains($required) -and -not $runtime.Contains($required)) {
+              throw "Curve handle interaction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'CreateHandlePoint',
+            'SnapOffset'
+          )) {
+            if (-not $math.Contains($required)) {
+              throw "Curve handle math marker is missing: $required"
+            }
+          }
+
+          if (-not $geometry.Contains('HandleColor') -or
+              -not $geometry.Contains('NativeSplineCurveHandleMath') -or
+              -not $tests.Contains('HandlePointRoundTripsThroughCurveOffsetMath')) {
+            throw "Curve handle geometry/regression coverage is incomplete."
+          }
+
+          if (-not $runtime.Contains('TryGetCurveOffsetFromControlPoint') -or
+              -not $runtime.Contains('TryCreateArcFromOffset')) {
+            throw "Curve edit must use lateral sagitta/offset math."
+          }
+
+          Write-Host "Verified draggable yellow curve handle with live radius/offset math."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -1153,11 +1198,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.29-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.30-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.29-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.30-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
