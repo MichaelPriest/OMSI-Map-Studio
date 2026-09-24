@@ -49,6 +49,9 @@ public sealed partial class NativeViewport : UserControl
     private double _rightPressY;
     private bool _isSplineDragCreating;
     private bool _splineSplitPickActive;
+    private bool _splineJoinPickActive;
+    private int _splineJoinSourceId = -1;
+    private double _splineJoinMaximumRadius = 200.0;
     private bool _isManipulatingGizmo;
     private bool _selectionBoxPending;
     private bool _isSelectionBoxDragging;
@@ -1194,6 +1197,8 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
+        CancelSplineJoinPick();
+
         _splineSplitPickActive =
             true;
 
@@ -1208,6 +1213,93 @@ public sealed partial class NativeViewport : UserControl
     {
         _splineSplitPickActive =
             false;
+    }
+
+    public bool BeginSplineJoinPick(
+        double maximumRadius,
+        out string status)
+    {
+        status =
+            string.Empty;
+
+        var selection =
+            _runtime
+                ?.GetSelectionInfo();
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                MapStudio.Renderer.Picking
+                    .PickingKind.Spline)
+        {
+            status =
+                "Unir: selecione a spline de origem.";
+            return false;
+        }
+
+        if (
+            selection.NextSplineId >=
+                0)
+        {
+            status =
+                $"Unir: o fim da spline #{selection.EntityId} já possui vínculo Next.";
+            return false;
+        }
+
+        if (
+            !double.IsFinite(
+                maximumRadius) ||
+            maximumRadius <=
+                0)
+        {
+            status =
+                "Unir: raio máximo inválido.";
+            return false;
+        }
+
+        _runtime
+            ?.CancelSelectedSplineCurveEdit();
+
+        _runtime
+            ?.CancelSelectedSplineEndpointEdit();
+
+        _runtime
+            ?.CancelSplinePlacement();
+
+        _runtime
+            ?.CancelSceneryPlacement();
+
+        CancelSplineSplitPick();
+
+        _splineJoinPickActive =
+            true;
+
+        _splineJoinSourceId =
+            selection.EntityId;
+
+        _splineJoinMaximumRadius =
+            maximumRadius;
+
+        status =
+            $"Unir: origem #{selection.EntityId}. Clique na spline destino com início livre.";
+
+        PointerStatusChanged?.Invoke(
+            this,
+            status);
+
+        return true;
+    }
+
+    public void CancelSplineJoinPick()
+    {
+        _splineJoinPickActive =
+            false;
+
+        _splineJoinSourceId =
+            -1;
+
+        _splineJoinMaximumRadius =
+            200.0;
     }
 
     public bool TryCreateParallelSplineRequest(
@@ -2049,6 +2141,94 @@ public sealed partial class NativeViewport : UserControl
                     this,
                     curveStatus);
             }
+
+            e.Handled =
+                true;
+
+            return;
+        }
+
+        if (
+            _splineJoinPickActive &&
+            _runtime is not null)
+        {
+            if (
+                !_runtime.TryPick(
+                    pixelX,
+                    pixelY,
+                    out _,
+                    out var joinTarget,
+                    cycleCandidates:
+                        false) ||
+                joinTarget is not
+                    OmsiPlacedSpline targetSpline)
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Unir: clique em uma spline destino.");
+
+                e.Handled =
+                    true;
+
+                return;
+            }
+
+            if (
+                targetSpline.SplineId ==
+                    _splineJoinSourceId)
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    "Unir: escolha outra spline como destino.");
+
+                e.Handled =
+                    true;
+
+                return;
+            }
+
+            if (
+                !_runtime
+                    .TryBuildSplineCompleteToRequest(
+                        _splineJoinSourceId,
+                        targetSpline.SplineId,
+                        _splineJoinMaximumRadius,
+                        out var joinRequest,
+                        out var joinStatus) ||
+                joinRequest is null)
+            {
+                PointerStatusChanged?.Invoke(
+                    this,
+                    joinStatus +
+                    " Escolha outra spline ou use Complete to avançado.");
+
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    joinStatus);
+
+                e.Handled =
+                    true;
+
+                return;
+            }
+
+            var sourceId =
+                _splineJoinSourceId;
+
+            CancelSplineJoinPick();
+
+            SplinePlacementRequested
+                ?.Invoke(
+                    joinRequest);
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                $"Unir: #{sourceId} → nova ligação → #{targetSpline.SplineId}.");
+
+            PointerStatusChanged?.Invoke(
+                this,
+                joinStatus +
+                " Inserindo ligação...");
 
             e.Handled =
                 true;

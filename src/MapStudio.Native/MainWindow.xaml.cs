@@ -3463,7 +3463,10 @@ public sealed partial class MainWindow : Window
                 insertion.Snapshot;
 
             RegisterConstructionHistory(
-                "Inserir spline");
+                request.PreviousSplineId >= 0 &&
+                request.NextSplineId >= 0
+                    ? "Unir trechos"
+                    : "Inserir spline");
 
             await Viewport
                 .SetMapSnapshotAsync(
@@ -3532,7 +3535,10 @@ public sealed partial class MainWindow : Window
                     : string.Empty;
 
             StatusText.Text =
-                $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}{linkStatus}.";
+                request.PreviousSplineId >= 0 &&
+                request.NextSplineId >= 0
+                    ? $"Trechos unidos: #{request.PreviousSplineId} → #{insertion.SplineId} → #{request.NextSplineId} · comprimento {request.Length:F1} m · raio {request.Radius:F1}."
+                    : $"Spline inserida: {request.Length:F1} m · raio {request.Radius:F1} · tile {request.Tile.X},{request.Tile.Y}{linkStatus}.";
         }
         catch (Exception exception)
         {
@@ -9082,6 +9088,44 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Ruas: Dividir ativo. Clique no ponto exato do trecho onde deseja cortar.";
+    }
+
+    private void OnRoadJoinClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione a spline de origem antes de unir.";
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Ruas: salve as transformações pendentes antes de unir trechos.";
+            return;
+        }
+
+        if (
+            !Viewport
+                .BeginSplineJoinPick(
+                    200.0,
+                    out var status))
+        {
+            StatusText.Text =
+                status;
+            return;
+        }
+
+        StatusText.Text =
+            status +
+            " Raio máximo visual: 200 m; para outro valor use Complete to avançado.";
     }
 
     private async Task HandleSplineSplitAsync(

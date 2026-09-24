@@ -3718,6 +3718,14 @@
                                         <TextBlock Text="Dividir" />
                                     </StackPanel>
                                 </Button>
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        ToolTipService.ToolTip="Unir visualmente o fim da spline selecionada ao início livre de outra spline; usa conexão reta ou curva tangente"
+                                        Click="OnRoadJoinClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <FontIcon Glyph="⛓" FontSize="13" />
+                                        <TextBlock Text="Unir" />
+                                    </StackPanel>
+                                </Button>
 
                                 <NumberBox x:Name="RoadParallelOffsetBox"
                                            Width="74"
