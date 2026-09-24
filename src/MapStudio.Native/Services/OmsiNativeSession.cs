@@ -457,225 +457,342 @@ public sealed class OmsiNativeSession
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(
             apiKey);
-        var georeference =
-            await LoadMapGeoreferenceAsync(
-                    cancellationToken)
-                .ConfigureAwait(false)
-            ?? throw new InvalidDataException(
-                "mapGeoreferenceRequired");
 
-        ValidateGeoreference(
-            georeference);
+        var stage =
+            "georeference-load";
 
-        var latitude =
-            Math.Clamp(
-                georeference.Latitude,
-                -85.05112878,
-                85.05112878);
-
-        var longitude =
-            Math.Clamp(
-                georeference.Longitude,
-                -180.0,
-                180.0);
-
-        var zoom =
-            Math.Clamp(
-                georeference.Zoom,
-                0,
-                19);
-
-        var tileCount =
-            Math.Pow(
-                2,
-                zoom);
-
-        var worldPixels =
-            256.0 *
-            tileCount;
-
-        var latitudeRadians =
-            latitude *
-            Math.PI /
-            180.0;
-
-        var pixelX =
-            (
-                longitude +
-                180.0
-            ) /
-            360.0 *
-            worldPixels;
-
-        var mercator =
-            Math.Log(
-                Math.Tan(
-                    latitudeRadians) +
-                1.0 /
-                Math.Cos(
-                    latitudeRadians));
-
-        var pixelY =
-            (
-                1.0 -
-                mercator /
-                Math.PI
-            ) /
-            2.0 *
-            worldPixels;
-
-        var tileX =
-            Math.Clamp(
-                (int)Math.Floor(
-                    pixelX /
-                    256.0),
-                0,
-                checked(
-                    (int)tileCount -
-                    1));
-
-        var tileY =
-            Math.Clamp(
-                (int)Math.Floor(
-                    pixelY /
-                    256.0),
-                0,
-                checked(
-                    (int)tileCount -
-                    1));
-
-        var cacheRoot =
-            Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder
-                        .LocalApplicationData),
-                "OMSI Map Studio",
-                "reference-cache",
-                "carto-keyed-v1");
-
-        Directory.CreateDirectory(
-            cacheRoot);
-
-        var path =
-            Path.Combine(
-                cacheRoot,
-                $"carto-keyed-{zoom}-{tileX}-{tileY}.png");
-
-        var cacheValid =
-            File.Exists(
-                path) &&
-            DateTime.UtcNow -
-                File.GetLastWriteTimeUtc(
-                    path) <
-            TimeSpan.FromDays(
-                7) &&
-            HasPngSignature(
-                path);
-
-        if (!cacheValid)
+        try
         {
-            var uri =
-                $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{tileX}/{tileY}.png?key={Uri.EscapeDataString(apiKey.Trim())}";
+            var georeference =
+                await LoadMapGeoreferenceAsync(
+                        cancellationToken)
+                    .ConfigureAwait(false)
+                ?? throw new InvalidDataException(
+                    "mapGeoreferenceRequired");
 
-            using var response =
-                await OpenStreetMapHttpClient
-                    .GetAsync(
-                        uri,
+            stage =
+                "georeference-validation";
+
+            ValidateGeoreference(
+                georeference);
+
+            var latitude =
+                Math.Clamp(
+                    georeference.Latitude,
+                    -85.05112878,
+                    85.05112878);
+
+            var longitude =
+                Math.Clamp(
+                    georeference.Longitude,
+                    -180.0,
+                    180.0);
+
+            var zoom =
+                Math.Clamp(
+                    georeference.Zoom,
+                    0,
+                    19);
+
+            stage =
+                "mercator-position";
+
+            var tileCount =
+                Math.Pow(
+                    2,
+                    zoom);
+
+            var worldPixels =
+                256.0 *
+                tileCount;
+
+            var latitudeRadians =
+                latitude *
+                Math.PI /
+                180.0;
+
+            var pixelX =
+                (
+                    longitude +
+                    180.0
+                ) /
+                360.0 *
+                worldPixels;
+
+            var mercator =
+                Math.Log(
+                    Math.Tan(
+                        latitudeRadians) +
+                    1.0 /
+                    Math.Cos(
+                        latitudeRadians));
+
+            var pixelY =
+                (
+                    1.0 -
+                    mercator /
+                    Math.PI
+                ) /
+                2.0 *
+                worldPixels;
+
+            var tileX =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        pixelX /
+                        256.0),
+                    0,
+                    checked(
+                        (int)tileCount -
+                        1));
+
+            var tileY =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        pixelY /
+                        256.0),
+                    0,
+                    checked(
+                        (int)tileCount -
+                        1));
+
+            stage =
+                "cache-path";
+
+            var cacheRoot =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder
+                            .LocalApplicationData),
+                    "OMSI Map Studio",
+                    "reference-cache",
+                    "carto-keyed-v2");
+
+            Directory.CreateDirectory(
+                cacheRoot);
+
+            var path =
+                Path.Combine(
+                    cacheRoot,
+                    $"carto-keyed-{zoom}-{tileX}-{tileY}.png");
+
+            stage =
+                "cache-check";
+
+            var cacheValid =
+                File.Exists(
+                    path) &&
+                DateTime.UtcNow -
+                    File.GetLastWriteTimeUtc(
+                        path) <
+                TimeSpan.FromDays(
+                    7) &&
+                HasPngSignature(
+                    path);
+
+            if (!cacheValid)
+            {
+                stage =
+                    "request-uri";
+
+                var normalizedKey =
+                    apiKey.Trim();
+
+                var uri =
+                    new Uri(
+                        $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{tileX}/{tileY}.png?key={Uri.EscapeDataString(normalizedKey)}",
+                        UriKind.Absolute);
+
+                stage =
+                    "http-download";
+
+                byte[] bytes;
+
+                try
+                {
+                    using var cartoClient =
+                        CreateOpenStreetMapHttpClient();
+
+                    bytes =
+                        await cartoClient
+                            .GetByteArrayAsync(
+                                uri,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                }
+                catch (NullReferenceException)
+                {
+                    stage =
+                        "http-download-fallback";
+
+                    using var fallbackHandler =
+                        new HttpClientHandler();
+
+                    using var fallbackClient =
+                        new HttpClient(
+                            fallbackHandler,
+                            disposeHandler:
+                                true)
+                        {
+                            Timeout =
+                                TimeSpan.FromSeconds(
+                                    30)
+                        };
+
+                    fallbackClient
+                        .DefaultRequestHeaders
+                        .UserAgent
+                        .ParseAdd(
+                            "OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)");
+
+                    bytes =
+                        await fallbackClient
+                            .GetByteArrayAsync(
+                                uri,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+                }
+
+                stage =
+                    "png-validation";
+
+                if (
+                    bytes is null ||
+                    bytes.Length <
+                        64 ||
+                    bytes.LongLength >
+                        8L *
+                        1024L *
+                        1024L ||
+                    !HasPngSignature(
+                        bytes))
+                {
+                    throw new InvalidDataException(
+                        "cartoReferenceInvalidPngPayload");
+                }
+
+                stage =
+                    "cache-write";
+
+                await File.WriteAllBytesAsync(
+                        path,
+                        bytes,
                         cancellationToken)
                     .ConfigureAwait(false);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new HttpRequestException(
-                    $"cartoReferenceHttp:{(int)response.StatusCode}");
             }
 
-            var content =
-                response.Content ??
-                throw new InvalidDataException(
-                    "cartoReferenceMissingContent");
+            stage =
+                "reference-metadata";
 
-            var bytes =
-                await content
-                    .ReadAsByteArrayAsync(
-                        cancellationToken)
-                    .ConfigureAwait(false);
+            var metersPerPixel =
+                156543.03392804097 *
+                Math.Cos(
+                    latitudeRadians) /
+                Math.Pow(
+                    2,
+                    zoom);
 
-            if (
-                bytes.Length <
-                    64 ||
-                bytes.LongLength >
-                    8L *
-                    1024L *
-                    1024L ||
-                !HasPngSignature(
-                    bytes))
-            {
-                throw new InvalidDataException(
-                    "cartoReferenceInvalidPngPayload");
-            }
+            var anchorWorldX =
+                georeference.AnchorTileX *
+                    OmsiTileGrid.TileSize +
+                georeference.AnchorX;
 
-            await File.WriteAllBytesAsync(
-                    path,
-                    bytes,
-                    cancellationToken)
-                .ConfigureAwait(false);
+            var anchorWorldZ =
+                georeference.AnchorTileY *
+                    OmsiTileGrid.TileSize +
+                georeference.AnchorY;
+
+            var tileCenterPixelX =
+                tileX *
+                    256.0 +
+                128.0;
+
+            var tileCenterPixelY =
+                tileY *
+                    256.0 +
+                128.0;
+
+            anchorWorldX +=
+                (
+                    tileCenterPixelX -
+                    pixelX
+                ) *
+                metersPerPixel;
+
+            anchorWorldZ +=
+                (
+                    tileCenterPixelY -
+                    pixelY
+                ) *
+                metersPerPixel;
+
+            return new NativeGoogleMapReference(
+                path,
+                256,
+                256,
+                metersPerPixel,
+                anchorWorldX,
+                anchorWorldZ,
+                latitude,
+                longitude,
+                zoom,
+                "roadmap",
+                "© OpenStreetMap contributors · © CARTO");
         }
+        catch (NullReferenceException exception)
+        {
+            TryWriteCartoReferenceDiagnostic(
+                stage,
+                exception);
 
-        var metersPerPixel =
-            156543.03392804097 *
-            Math.Cos(
-                latitudeRadians) /
-            Math.Pow(
-                2,
-                zoom);
+            throw new InvalidOperationException(
+                $"cartoReferenceNull:{stage}",
+                exception);
+        }
+        catch (Exception exception)
+        {
+            TryWriteCartoReferenceDiagnostic(
+                stage,
+                exception);
 
-        var anchorWorldX =
-            georeference.AnchorTileX *
-                OmsiTileGrid.TileSize +
-            georeference.AnchorX;
+            throw;
+        }
+    }
 
-        var anchorWorldZ =
-            georeference.AnchorTileY *
-                OmsiTileGrid.TileSize +
-            georeference.AnchorY;
+    private static void
+        TryWriteCartoReferenceDiagnostic(
+            string stage,
+            Exception exception)
+    {
+        try
+        {
+            var logDirectory =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder
+                            .LocalApplicationData),
+                    "OMSI Map Studio",
+                    "logs");
 
-        var tileCenterPixelX =
-            tileX *
-                256.0 +
-            128.0;
+            Directory.CreateDirectory(
+                logDirectory);
 
-        var tileCenterPixelY =
-            tileY *
-                256.0 +
-            128.0;
+            var logPath =
+                Path.Combine(
+                    logDirectory,
+                    "carto-reference.log");
 
-        anchorWorldX +=
-            (
-                tileCenterPixelX -
-                pixelX
-            ) *
-            metersPerPixel;
-
-        anchorWorldZ +=
-            (
-                tileCenterPixelY -
-                pixelY
-            ) *
-            metersPerPixel;
-
-        return new NativeGoogleMapReference(
-            path,
-            256,
-            256,
-            metersPerPixel,
-            anchorWorldX,
-            anchorWorldZ,
-            latitude,
-            longitude,
-            zoom,
-            "roadmap",
-            "© OpenStreetMap contributors · © CARTO");
+            File.AppendAllText(
+                logPath,
+                $"[{DateTimeOffset.Now:O}] stage={stage}{Environment.NewLine}" +
+                exception +
+                Environment.NewLine +
+                Environment.NewLine);
+        }
+        catch
+        {
+            // Diagnostics must never replace the original CARTO failure.
+        }
     }
 
     public async Task<NativeGoogleElevationGrid>
