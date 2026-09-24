@@ -1,0 +1,196 @@
+name: Proton Bus Native Preview Release
+
+on:
+  push:
+    branches:
+      - feature/protonbus-map-export
+    paths:
+      - ".github/workflows/protonbus-preview-release.yml"
+      - "installer/MapStudio.NativePreview.iss"
+      - "src/MapStudio.Core/ProtonBus/**"
+      - "src/MapStudio.Core/MapStudio.Core.csproj"
+      - "src/MapStudio.Native/MainWindow.xaml"
+      - "src/MapStudio.Native/MainWindow.xaml.cs"
+      - "tests/MapStudio.ProtonBus.Tests/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: protonbus-native-preview-release
+  cancel-in-progress: true
+
+env:
+  VERSION: 0.2.0-alpha.5-test.10.12-protonbus
+  TAG: v0.2.0-alpha.5-test.10.12-protonbus
+
+jobs:
+  build-protonbus-preview:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test Proton Bus export core
+        run: dotnet test tests/MapStudio.ProtonBus.Tests/MapStudio.ProtonBus.Tests.csproj --configuration Release --arch x64
+
+      - name: Build native WinUI host
+        run: dotnet build src/MapStudio.Native/MapStudio.Native.csproj --configuration Release -p:Platform=x64
+
+      - name: Publish native WinUI x64
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64 | Out-Null
+
+          dotnet publish src/MapStudio.Native/MapStudio.Native.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:Platform=x64 `
+            -p:PublishReadyToRun=false `
+            -p:PublishTrimmed=false `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -p:Version=$env:VERSION `
+            -p:InformationalVersion="$env:VERSION+$env:GITHUB_SHA" `
+            --output artifacts/publish/win-x64
+
+          if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.exe")) {
+            throw "MapStudio.Native.exe was not produced."
+          }
+
+          if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.pri")) {
+            throw "MapStudio.Native.pri was not published."
+          }
+
+          New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64/Docs | Out-Null
+          Copy-Item docs/pt-BR/PROTON_BUS_EXPORT.md artifacts/publish/win-x64/Docs/Proton-Bus-Export-pt-BR.md -Force
+          Copy-Item docs/en/PROTON_BUS_EXPORT.md artifacts/publish/win-x64/Docs/Proton-Bus-Export-en.md -Force
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: |
+          $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
+          Compress-Archive -Path "artifacts/publish/win-x64/*" -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $zip)" | Set-Content "$zip.sha256" -Encoding ascii
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build preview installer
+        shell: pwsh
+        run: |
+          $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+          $iscc = Join-Path $programFilesX86 "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = Join-Path $env:ProgramFiles "Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup 6 not found."
+          }
+
+          & $iscc `
+            "/DAppVersion=$env:VERSION" `
+            "/DSourceDir=$env:GITHUB_WORKSPACE\artifacts\publish\win-x64" `
+            "/DOutputDir=$env:GITHUB_WORKSPACE\artifacts" `
+            "$env:GITHUB_WORKSPACE\installer\MapStudio.NativePreview.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+          $setup = "artifacts/OMSI-Map-Studio-Native-Preview-Setup-$env:VERSION-win-x64.exe"
+          if (-not (Test-Path $setup)) {
+            throw "Native preview installer was not produced."
+          }
+
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $setup)" | Set-Content "$setup.sha256" -Encoding ascii
+
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          @"
+          # OMSI Map Studio — Proton Bus Preview
+
+          Build experimental para validar o exportador Proton Bus da PR #6.
+
+          Inclui:
+          - Arquivo > Exportar para Proton Bus
+          - análise pré-exportação sem gravar arquivos
+          - perfil Map Mods Phase 3 e perfil personalizado
+          - exportação opcional do pacote em ZIP
+          - terreno, splines, scenery objects e texturas
+          - DDS/TGA/BMP/JPG/GIF para PNG
+          - paths de veículos, pedestres e trens
+          - TTData, paradas, entrypoints e GPS
+          - semáforos e street lights
+          - exportação multi-tile e de diretório OMSI completo
+
+          Esta build é experimental. O formato ainda precisa ser validado dentro de uma build real do Proton Bus antes de ser anunciado como compatibilidade final.
+
+          ---
+
+          # OMSI Map Studio — Proton Bus Preview
+
+          Experimental build for validating the Proton Bus exporter from PR #6.
+
+          Includes:
+          - File > Export to Proton Bus
+          - non-writing pre-export analysis
+          - Map Mods Phase 3 and custom target profiles
+          - optional ZIP package output
+          - terrain, splines, scenery objects and textures
+          - DDS/TGA/BMP/JPG/GIF to PNG conversion
+          - vehicle, pedestrian and train paths
+          - TTData, bus stops, entrypoints and GPS
+          - traffic lights and street lights
+          - multi-tile and full OMSI map-directory export
+
+          This build is experimental. The format still needs validation in an actual Proton Bus build before final compatibility is claimed.
+          "@ | Set-Content artifacts/release-notes.md -Encoding utf8
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-win-x64
+          path: |
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-portable-win-x64.zip
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-portable-win-x64.zip.sha256
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.12-protonbus-win-x64.exe
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.12-protonbus-win-x64.exe.sha256
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $setup = "artifacts/OMSI-Map-Studio-Native-Preview-Setup-$env:VERSION-win-x64.exe"
+          $setupHash = "$setup.sha256"
+          $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
+          $zipHash = "$zip.sha256"
+
+          gh release view "$env:TAG" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash --clobber
+          }
+          else {
+            gh release create "$env:TAG" $setup $setupHash $zip $zipHash `
+              --target "$env:GITHUB_SHA" `
+              --title "OMSI Map Studio $env:TAG — Proton Bus Preview" `
+              --notes-file artifacts/release-notes.md `
+              --prerelease
+          }
