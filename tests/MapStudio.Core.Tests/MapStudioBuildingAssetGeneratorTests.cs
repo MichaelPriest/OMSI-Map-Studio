@@ -200,6 +200,20 @@ public sealed class MapStudioBuildingAssetGeneratorTests
             Assert.True(
                 mesh.IsLoaded);
 
+            Assert.NotNull(
+                first.FacadeTexturePath);
+
+            Assert.True(
+                File.Exists(
+                    first.FacadeTexturePath!));
+
+            Assert.All(
+                mesh.Materials,
+                material =>
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            material.TextureName)));
+
             var second =
                 await generator
                     .GenerateAsync(
