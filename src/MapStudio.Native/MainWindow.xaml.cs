@@ -273,6 +273,13 @@ public sealed partial class MainWindow : Window
     private NativeGoogleMapReference?
         _activeGoogleMapReference;
 
+    private float
+        _referenceOverlayOpacity =
+            0.62f;
+
+    private string?
+        _activeCartoBasemapsApiKey;
+
     private string?
         _terrainLayerVisibilityMapDirectory;
 
@@ -23738,6 +23745,9 @@ public sealed partial class MainWindow : Window
                 snapshot,
                 _session.OmsiRootPath);
 
+        await RefreshActiveReferenceOverlayAsync(
+            snapshot);
+
         RefreshTerrainLayerVisibilityMenu(
             snapshot);
 
@@ -25887,6 +25897,8 @@ setTimeout(postBounds, 250);
     private async Task ApplyRealMapCenterReferenceAsync()
     {
         NativeGoogleMapReference reference;
+        string? cartoApiKey =
+            null;
 
         var google =
             RealMapProviderBox.SelectedIndex ==
@@ -25925,36 +25937,22 @@ setTimeout(postBounds, 250);
                 return;
             }
 
+            cartoApiKey =
+                key;
+
             reference =
                 await _session
                     .LoadCartoReferenceAsync(
                         key);
         }
 
-        Viewport.SetReferenceOverlay(
-            new NativeReferenceOverlayDefinition(
-                reference.ImagePath,
-                reference.Width,
-                reference.Height,
-                reference.MetersPerPixel,
-                reference.AnchorWorldX,
-                reference.AnchorWorldZ,
-                0.62f,
-                reference.Attribution));
-
-        _referenceOverlayMapDirectory =
+        ApplyReferenceOverlay(
+            reference,
+            0.62f,
             _session.CurrentMap
                 ?.Map
-                .DirectoryPath;
-
-        _activeGoogleMapReference =
-            reference;
-
-        MapReferenceAttributionText.Text =
-            reference.Attribution;
-
-        MapReferenceAttributionBorder.Visibility =
-            Visibility.Visible;
+                .DirectoryPath,
+            cartoApiKey);
     }
 
     private async Task PrepareOsmRoadsForRealMapAreaAsync(
@@ -26749,6 +26747,9 @@ setTimeout(postBounds, 250);
         var failureStage =
             "preparação";
 
+        string? cartoApiKey =
+            null;
+
         try
         {
             NativeGoogleMapReference reference;
@@ -26831,6 +26832,9 @@ setTimeout(postBounds, 250);
                 StatusText.Text =
                     "Carregando referência CARTO/OpenStreetMap...";
 
+                cartoApiKey =
+                    apiKey;
+
                 reference =
                     await _session
                         .LoadCartoReferenceAsync(
@@ -26864,31 +26868,14 @@ setTimeout(postBounds, 250);
             failureStage =
                 "envio da textura para o viewport";
 
-            Viewport.SetReferenceOverlay(
-                new NativeReferenceOverlayDefinition(
-                    reference.ImagePath,
-                    reference.Width,
-                    reference.Height,
-                    reference.MetersPerPixel,
-                    reference.AnchorWorldX,
-                    reference.AnchorWorldZ,
-                    opacity,
-                    reference.Attribution));
-
-            _referenceOverlayMapDirectory =
-                snapshot.Map.DirectoryPath;
-
-            _activeGoogleMapReference =
-                reference;
-
-            MapReferenceAttributionText.Text =
-                reference.Attribution;
-
-            MapReferenceAttributionBorder.Visibility =
-                Visibility.Visible;
+            ApplyReferenceOverlay(
+                reference,
+                opacity,
+                snapshot.Map.DirectoryPath,
+                cartoApiKey);
 
             StatusText.Text =
-                $"Referência ativa: {reference.Attribution} · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
+                $"Referência ativa: {reference.Attribution} · zoom {reference.Zoom} · {reference.TileCount} textura(s) · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
         catch (Exception exception)
         {
@@ -27059,32 +27046,14 @@ setTimeout(postBounds, 250);
                     0.05,
                     1.0);
 
-            Viewport.SetReferenceOverlay(
-                new NativeReferenceOverlayDefinition(
-                    reference.ImagePath,
-                    reference.Width,
-                    reference.Height,
-                    reference.MetersPerPixel,
-                    reference.AnchorWorldX,
-                    reference.AnchorWorldZ,
-                    opacity,
-                    reference.Attribution));
-
-            _referenceOverlayMapDirectory =
+            ApplyReferenceOverlay(
+                reference,
+                opacity,
                 snapshot.Map
-                    .DirectoryPath;
-
-            _activeGoogleMapReference =
-                reference;
-
-            MapReferenceAttributionText.Text =
-                reference.Attribution;
-
-            MapReferenceAttributionBorder.Visibility =
-                Visibility.Visible;
+                    .DirectoryPath);
 
             StatusText.Text =
-                $"Referência Google ativa · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
+                $"Referência Google ativa · zoom {reference.Zoom} · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
         catch (Exception exception)
         {
@@ -27105,7 +27074,7 @@ setTimeout(postBounds, 250);
 
     private void ClearReferenceOverlay()
     {
-        Viewport.SetReferenceOverlay(
+        Viewport.SetReferenceOverlays(
             null);
 
         _referenceOverlayMapDirectory =
@@ -27114,11 +27083,183 @@ setTimeout(postBounds, 250);
         _activeGoogleMapReference =
             null;
 
+        _activeCartoBasemapsApiKey =
+            null;
+
+        _referenceOverlayOpacity =
+            0.62f;
+
         MapReferenceAttributionText.Text =
             string.Empty;
 
         MapReferenceAttributionBorder.Visibility =
             Visibility.Collapsed;
+    }
+
+    private void ApplyReferenceOverlay(
+        NativeGoogleMapReference reference,
+        float opacity,
+        string? mapDirectory,
+        string? cartoApiKey = null)
+    {
+        ArgumentNullException.ThrowIfNull(
+            reference);
+
+        var safeOpacity =
+            Math.Clamp(
+                opacity,
+                0.05f,
+                1.0f);
+
+        var overlays =
+            BuildReferenceOverlayDefinitions(
+                reference,
+                safeOpacity);
+
+        Viewport.SetReferenceOverlays(
+            overlays);
+
+        _referenceOverlayMapDirectory =
+            mapDirectory;
+
+        _activeGoogleMapReference =
+            reference;
+
+        _referenceOverlayOpacity =
+            safeOpacity;
+
+        _activeCartoBasemapsApiKey =
+            reference.IsTiledMosaic
+                ? cartoApiKey ??
+                    _activeCartoBasemapsApiKey
+                : null;
+
+        MapReferenceAttributionText.Text =
+            reference.Attribution;
+
+        MapReferenceAttributionBorder.Visibility =
+            Visibility.Visible;
+    }
+
+    private static IReadOnlyList<
+        NativeReferenceOverlayDefinition>
+        BuildReferenceOverlayDefinitions(
+            NativeGoogleMapReference reference,
+            float opacity)
+    {
+        if (!reference.IsTiledMosaic)
+        {
+            return
+                [
+                    new NativeReferenceOverlayDefinition(
+                        reference.ImagePath,
+                        reference.Width,
+                        reference.Height,
+                        reference.MetersPerPixel,
+                        reference.AnchorWorldX,
+                        reference.AnchorWorldZ,
+                        opacity,
+                        reference.Attribution)
+                ];
+        }
+
+        return reference.Tiles
+            .Select(
+                tile =>
+                    new NativeReferenceOverlayDefinition(
+                        tile.ImagePath,
+                        tile.Width,
+                        tile.Height,
+                        tile.MetersPerPixel,
+                        tile.AnchorWorldX,
+                        tile.AnchorWorldZ,
+                        opacity,
+                        reference.Attribution))
+            .ToArray();
+    }
+
+    private async Task
+        RefreshActiveReferenceOverlayAsync(
+            NativeMapSnapshot snapshot)
+    {
+        var currentReference =
+            _activeGoogleMapReference;
+
+        if (
+            currentReference is null ||
+            !currentReference
+                .IsTiledMosaic ||
+            !string.Equals(
+                _referenceOverlayMapDirectory,
+                snapshot.Map.DirectoryPath,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var apiKey =
+            _activeCartoBasemapsApiKey ??
+            NativeMapCredentialStore
+                .TryGetCartoBasemapsApiKey();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                apiKey))
+        {
+            return;
+        }
+
+        try
+        {
+            var refreshed =
+                await _session
+                    .LoadCartoReferenceAsync(
+                        apiKey);
+
+            var previousPaths =
+                currentReference.Tiles
+                    .Select(
+                        tile =>
+                            tile.ImagePath)
+                    .OrderBy(
+                        path =>
+                            path,
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .ToArray();
+
+            var refreshedPaths =
+                refreshed.Tiles
+                    .Select(
+                        tile =>
+                            tile.ImagePath)
+                    .OrderBy(
+                        path =>
+                            path,
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .ToArray();
+
+            if (
+                previousPaths.SequenceEqual(
+                    refreshedPaths,
+                    StringComparer
+                        .OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            ApplyReferenceOverlay(
+                refreshed,
+                _referenceOverlayOpacity,
+                snapshot.Map.DirectoryPath,
+                apiKey);
+        }
+        catch
+        {
+            // A reference refresh must never block map navigation.
+            // CARTO failures are already written to carto-reference.log.
+        }
     }
 
     private async void OnImportLocalElevationGridClick(
