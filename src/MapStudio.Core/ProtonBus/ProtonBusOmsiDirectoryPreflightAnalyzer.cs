@@ -93,9 +93,39 @@ public sealed class ProtonBusOmsiDirectoryPreflightAnalyzer
         options ??=
             new();
 
+        definition =
+            ProtonBusTargetProfiles
+                .Apply(
+                    definition,
+                    options
+                        .TargetProfile);
+
         var issues =
             new List<
                 ProtonBusOmsiPreflightIssue>();
+
+        foreach (
+            var validation
+            in ProtonBusTargetProfiles
+                .Validate(
+                    options
+                        .TargetProfile))
+        {
+            issues.Add(
+                new(
+                    validation.Severity switch
+                    {
+                        ProtonBusValidationSeverity.Error =>
+                            ProtonBusOmsiPreflightSeverity.Error,
+                        ProtonBusValidationSeverity.Warning =>
+                            ProtonBusOmsiPreflightSeverity.Warning,
+                        _ =>
+                            ProtonBusOmsiPreflightSeverity.Info
+                    },
+                    validation.Code,
+                    "target profile",
+                    validation.Message));
+        }
 
         foreach (
             var validation
