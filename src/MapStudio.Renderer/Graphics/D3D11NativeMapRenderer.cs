@@ -787,6 +787,15 @@ public sealed class D3D11NativeMapRenderer :
     public int LoadedTextureCount =>
         _textureCache.Count;
 
+    public int ReferenceOverlayBatchCount =>
+        _referenceOverlayBatches.Count;
+
+    public int ReferenceOverlayTriangleCount =>
+        _referenceOverlayBatches.Sum(
+            batch =>
+                batch.VertexCount) /
+        3;
+
     public bool HasSkyTexture =>
         _skyTexture is not null;
 
