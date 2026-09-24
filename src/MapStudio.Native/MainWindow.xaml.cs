@@ -277,6 +277,9 @@ public sealed partial class MainWindow : Window
         _referenceOverlayOpacity =
             0.62f;
 
+    private bool
+        _referenceOverlayVisible;
+
     private string?
         _activeCartoBasemapsApiKey;
 
@@ -27062,6 +27065,57 @@ setTimeout(postBounds, 250);
         }
     }
 
+    private void OnToggleMapReferenceVisibilityClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _activeGoogleMapReference is not
+                { } reference)
+        {
+            _referenceOverlayVisible =
+                false;
+
+            MapReferenceVisibilityMenuItem
+                .IsChecked =
+                false;
+
+            StatusText.Text =
+                "Referência de mapa: carregue uma camada antes de ligar/desligar.";
+
+            return;
+        }
+
+        _referenceOverlayVisible =
+            MapReferenceVisibilityMenuItem
+                .IsChecked;
+
+        if (_referenceOverlayVisible)
+        {
+            Viewport.SetReferenceOverlays(
+                BuildReferenceOverlayDefinitions(
+                    reference,
+                    _referenceOverlayOpacity));
+
+            MapReferenceAttributionBorder.Visibility =
+                Visibility.Visible;
+
+            StatusText.Text =
+                $"Referência de mapa ligada · zoom {reference.Zoom} · {reference.TileCount} textura(s) · opacidade {_referenceOverlayOpacity:P0}.";
+        }
+        else
+        {
+            Viewport.SetReferenceOverlays(
+                null);
+
+            MapReferenceAttributionBorder.Visibility =
+                Visibility.Collapsed;
+
+            StatusText.Text =
+                "Referência de mapa oculta. A camada continua carregada e pode ser ligada novamente.";
+        }
+    }
+
     private void OnClearGoogleMapReferenceClick(
         object sender,
         RoutedEventArgs e)
@@ -27089,6 +27143,13 @@ setTimeout(postBounds, 250);
         _referenceOverlayOpacity =
             0.62f;
 
+        _referenceOverlayVisible =
+            false;
+
+        MapReferenceVisibilityMenuItem
+            .IsChecked =
+            false;
+
         MapReferenceAttributionText.Text =
             string.Empty;
 
@@ -27100,7 +27161,8 @@ setTimeout(postBounds, 250);
         NativeGoogleMapReference reference,
         float opacity,
         string? mapDirectory,
-        string? cartoApiKey = null)
+        string? cartoApiKey = null,
+        bool makeVisible = true)
     {
         ArgumentNullException.ThrowIfNull(
             reference);
@@ -27116,8 +27178,20 @@ setTimeout(postBounds, 250);
                 reference,
                 safeOpacity);
 
+        if (makeVisible)
+        {
+            _referenceOverlayVisible =
+                true;
+
+            MapReferenceVisibilityMenuItem
+                .IsChecked =
+                true;
+        }
+
         Viewport.SetReferenceOverlays(
-            overlays);
+            _referenceOverlayVisible
+                ? overlays
+                : null);
 
         _referenceOverlayMapDirectory =
             mapDirectory;
@@ -27138,7 +27212,9 @@ setTimeout(postBounds, 250);
             reference.Attribution;
 
         MapReferenceAttributionBorder.Visibility =
-            Visibility.Visible;
+            _referenceOverlayVisible
+                ? Visibility.Visible
+                : Visibility.Collapsed;
     }
 
     private static IReadOnlyList<
@@ -27253,7 +27329,9 @@ setTimeout(postBounds, 250);
                 refreshed,
                 _referenceOverlayOpacity,
                 snapshot.Map.DirectoryPath,
-                apiKey);
+                apiKey,
+                makeVisible:
+                    false);
         }
         catch
         {
