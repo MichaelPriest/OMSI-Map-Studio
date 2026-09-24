@@ -545,7 +545,7 @@ Use **Mapa > Criar mapa real por área...** para criar um mapa sem precisar digi
 
 A janela pode ser movida, redimensionada e minimizada dentro do editor.
 
-**OpenStreetMap:** não exige chave e é usado para navegação interativa, busca de locais e dados vetoriais. O Map Studio não faz download em massa/offline dos tiles do servidor público. Consultas de busca são limitadas e identificam o aplicativo.
+**CARTO / OpenStreetMap:** o mapa CARTO usado como base visual agora exige uma **CARTO Basemaps API key**. No painel **Criar mapa real por área**, selecione CARTO e cole a chave em **Chave CARTO Basemaps**. Use **Como obter** para abrir a página oficial da CARTO, informe seu e-mail e o uso do projeto e aguarde a chave enviada por e-mail. A chave é salva localmente no Windows Credential Manager. Enquanto nenhuma chave CARTO estiver salva, o seletor interativo usa OpenStreetMap como fallback; busca de locais e dados vetoriais continuam usando OpenStreetMap/Nominatim/Overpass conforme a função.
 
 **Open-Meteo / Copernicus GLO-90:** pode ser escolhido como provedor de elevação. A chave é do próprio usuário e fica no Windows Credential Manager. O Map Studio usa o endpoint comercial do usuário e não incorpora chave do projeto. Mantenha a atribuição a Open-Meteo e ao programa Copernicus conforme os termos do provedor.
 
