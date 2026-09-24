@@ -27036,7 +27036,11 @@ setTimeout(postBounds, 250);
                 cartoApiKey);
 
             StatusText.Text =
-                $"Referência ativa: {reference.Attribution} · zoom {reference.Zoom} · {reference.TileCount} textura(s) · {reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · {reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
+                $"Referência ativa: {reference.Attribution} · zoom {reference.Zoom} · " +
+                $"{Viewport.ReferenceOverlayBatchCount}/{reference.TileCount} textura(s) GPU · " +
+                $"{Viewport.ReferenceOverlayTriangleCount} triângulos · " +
+                $"{reference.WidthMeters:F1} × {reference.HeightMeters:F1} m · " +
+                $"{reference.MetersPerPixel:F3} m/pixel · opacidade {opacity:P0}.";
         }
         catch (Exception exception)
         {
@@ -27250,16 +27254,41 @@ setTimeout(postBounds, 250);
 
         if (_referenceOverlayVisible)
         {
-            Viewport.SetReferenceOverlays(
+            var overlays =
                 BuildReferenceOverlayDefinitions(
                     reference,
-                    _referenceOverlayOpacity));
+                    _referenceOverlayOpacity);
+
+            Viewport.SetReferenceOverlays(
+                overlays);
+
+            if (
+                Viewport.ReferenceOverlayBatchCount <=
+                    0)
+            {
+                _referenceOverlayVisible =
+                    false;
+
+                MapReferenceVisibilityMenuItem
+                    .IsChecked =
+                    false;
+
+                MapReferenceAttributionBorder.Visibility =
+                    Visibility.Collapsed;
+
+                StatusText.Text =
+                    $"Referência de mapa não pôde ser renderizada: {overlays.Count} textura(s) preparadas, 0 batch(es) chegaram à GPU.";
+
+                return;
+            }
 
             MapReferenceAttributionBorder.Visibility =
                 Visibility.Visible;
 
             StatusText.Text =
-                $"Referência de mapa ligada · zoom {reference.Zoom} · {reference.TileCount} textura(s) · opacidade {_referenceOverlayOpacity:P0}.";
+                $"Referência de mapa ligada · zoom {reference.Zoom} · " +
+                $"{Viewport.ReferenceOverlayBatchCount}/{reference.TileCount} textura(s) GPU · " +
+                $"{Viewport.ReferenceOverlayTriangleCount} triângulos · opacidade {_referenceOverlayOpacity:P0}.";
         }
         else
         {
@@ -27350,6 +27379,28 @@ setTimeout(postBounds, 250);
             _referenceOverlayVisible
                 ? overlays
                 : null);
+
+        if (
+            _referenceOverlayVisible &&
+            Viewport.ReferenceOverlayBatchCount <=
+                0)
+        {
+            _referenceOverlayVisible =
+                false;
+
+            MapReferenceVisibilityMenuItem
+                .IsChecked =
+                false;
+
+            Viewport.SetReferenceOverlays(
+                null);
+
+            MapReferenceAttributionBorder.Visibility =
+                Visibility.Collapsed;
+
+            throw new InvalidOperationException(
+                $"referenceOverlayRenderEmpty: {overlays.Count} textura(s) preparadas, 0 batch(es) GPU. Verifique cobertura do terreno e PNGs CARTO.");
+        }
 
         _referenceOverlayMapDirectory =
             mapDirectory;
