@@ -429,7 +429,7 @@ jobs:
           }
 
           if (-not $session.Contains('LoadCartoReferenceAsync') -or
-              -not $session.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+              -not $session.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
               -not $session.Contains('?key=')) {
             throw "Keyed CARTO/OpenStreetMap reference provider is missing."
           }
@@ -659,12 +659,12 @@ jobs:
             throw "OpenStreetMap interactive fallback is missing when no CARTO key is saved."
           }
 
-          if (-not $main.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+          if (-not $main.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
               -not $main.Contains('?key={cartoKey}')) {
             throw "Embedded keyed CARTO/OSM basemap is missing."
           }
 
-          if (-not $session.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+          if (-not $session.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
               -not $session.Contains('?key=')) {
             throw "Terrain map-reference keyed CARTO/OSM source is missing."
           }
