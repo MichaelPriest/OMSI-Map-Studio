@@ -24,6 +24,47 @@ public sealed class D3D11NativeMapRenderer :
             CameraPosition;
     }
 
+    private sealed class
+        ReferenceOverlayGpuBatch :
+        IDisposable
+    {
+        public ReferenceOverlayGpuBatch(
+            ID3D11Buffer buffer,
+            int vertexCount,
+            NativeGpuTexture texture)
+        {
+            Buffer =
+                buffer;
+
+            VertexCount =
+                vertexCount;
+
+            Texture =
+                texture;
+        }
+
+        public ID3D11Buffer Buffer
+        {
+            get;
+        }
+
+        public int VertexCount
+        {
+            get;
+        }
+
+        public NativeGpuTexture Texture
+        {
+            get;
+        }
+
+        public void Dispose()
+        {
+            Buffer.Dispose();
+            Texture.Dispose();
+        }
+    }
+
 
     private static readonly Color4 ClearColor =
         new(
@@ -157,14 +198,10 @@ public sealed class D3D11NativeMapRenderer :
     private int
         _waterTriangleVertexCount;
 
-    private ID3D11Buffer?
-        _referenceOverlayBuffer;
-
-    private int
-        _referenceOverlayVertexCount;
-
-    private NativeGpuTexture?
-        _referenceOverlayTexture;
+    private readonly List<
+        ReferenceOverlayGpuBatch>
+        _referenceOverlayBatches =
+            [];
 
     private ID3D11Buffer?
         _objectTriangleBuffer;
@@ -1131,20 +1168,7 @@ public sealed class D3D11NativeMapRenderer :
         _sceneryLightBuffer = null;
         _sceneryLightVertexCount = 0;
 
-        _referenceOverlayBuffer
-            ?.Dispose();
-
-        _referenceOverlayBuffer =
-            null;
-
-        _referenceOverlayVertexCount =
-            0;
-
-        _referenceOverlayTexture
-            ?.Dispose();
-
-        _referenceOverlayTexture =
-            null;
+        ClearReferenceOverlayBatches();
 
         _terrainTriangleBuffer
             ?.Dispose();
@@ -2056,11 +2080,7 @@ public sealed class D3D11NativeMapRenderer :
         ID3D11DeviceContext context)
     {
         if (
-            _referenceOverlayBuffer is
-                null ||
-            _referenceOverlayTexture is
-                null ||
-            _referenceOverlayVertexCount <=
+            _referenceOverlayBatches.Count ==
                 0)
         {
             return;
@@ -2075,26 +2095,13 @@ public sealed class D3D11NativeMapRenderer :
                     .TriangleList);
 
         context
-            .IASetVertexBuffer(
-                0,
-                _referenceOverlayBuffer,
-                NativeMapVertex
-                    .SizeInBytes);
-
-        context
             .PSSetSampler(
                 0,
-                _textureSampler);
+                _maskSampler);
 
         context
             .PSSetShader(
                 _alphaBlendPixelShader);
-
-        context
-            .PSSetShaderResource(
-                0,
-                _referenceOverlayTexture
-                    .View);
 
         context
             .OMSetBlendState(
@@ -2108,14 +2115,32 @@ public sealed class D3D11NativeMapRenderer :
             .RSSetState(
                 _terrainRasterizerState);
 
-        context.Draw(
-            (uint)
-                _referenceOverlayVertexCount,
-            0);
+        foreach (
+            var batch in
+                _referenceOverlayBatches)
+        {
+            context
+                .IASetVertexBuffer(
+                    0,
+                    batch.Buffer,
+                    NativeMapVertex
+                        .SizeInBytes);
 
-        context
-            .PSUnsetShaderResource(
+            context
+                .PSSetShaderResource(
+                    0,
+                    batch.Texture
+                        .View);
+
+            context.Draw(
+                (uint)
+                    batch.VertexCount,
                 0);
+
+            context
+                .PSUnsetShaderResource(
+                    0);
+        }
 
         context
             .OMSetBlendState(
@@ -2932,56 +2957,85 @@ public sealed class D3D11NativeMapRenderer :
         NativeReferenceOverlayGeometry?
             geometry)
     {
-        _referenceOverlayBuffer
-            ?.Dispose();
+        SetReferenceOverlays(
+            geometry is null
+                ? null
+                : [
+                    geometry
+                ]);
+    }
 
-        _referenceOverlayBuffer =
-            null;
-
-        _referenceOverlayVertexCount =
-            0;
-
-        _referenceOverlayTexture
-            ?.Dispose();
-
-        _referenceOverlayTexture =
-            null;
+    public void SetReferenceOverlays(
+        IReadOnlyList<
+            NativeReferenceOverlayGeometry>?
+            geometries)
+    {
+        ClearReferenceOverlayBatches();
 
         if (
-            geometry is null ||
-            geometry.Vertices.Length ==
-                0 ||
-            string.IsNullOrWhiteSpace(
-                geometry.TexturePath) ||
-            !File.Exists(
-                geometry.TexturePath))
+            geometries is null ||
+            geometries.Count ==
+                0)
         {
             return;
         }
 
-        var texture =
-            _textureLoader
-                .TryLoad(
-                    geometry.TexturePath);
-
-        if (texture is null)
+        foreach (
+            var geometry in
+                geometries)
         {
-            return;
+            if (
+                geometry is null ||
+                geometry.Vertices.Length ==
+                    0 ||
+                string.IsNullOrWhiteSpace(
+                    geometry.TexturePath) ||
+                !File.Exists(
+                    geometry.TexturePath))
+            {
+                continue;
+            }
+
+            var texture =
+                _textureLoader
+                    .TryLoad(
+                        geometry.TexturePath);
+
+            if (texture is null)
+            {
+                continue;
+            }
+
+            var buffer =
+                _deviceHost.Device
+                    .CreateBuffer(
+                        geometry.Vertices
+                            .AsSpan(),
+                        BindFlags
+                            .VertexBuffer);
+
+            _referenceOverlayBatches
+                .Add(
+                    new ReferenceOverlayGpuBatch(
+                        buffer,
+                        geometry.Vertices
+                            .Length,
+                        texture));
+        }
+    }
+
+    private void
+        ClearReferenceOverlayBatches()
+    {
+        foreach (
+            var batch in
+                _referenceOverlayBatches)
+        {
+            batch.Dispose();
         }
 
-        _referenceOverlayTexture =
-            texture;
-
-        _referenceOverlayBuffer =
-            _deviceHost.Device
-                .CreateBuffer(
-                    geometry.Vertices
-                        .AsSpan(),
-                    BindFlags
-                        .VertexBuffer);
-
-        _referenceOverlayVertexCount =
-            geometry.Vertices.Length;
+        _referenceOverlayBatches
+            .Clear();
     }
 
     public void SetPlacementPreview(
@@ -3789,11 +3843,7 @@ public sealed class D3D11NativeMapRenderer :
         _splineTriangleBuffer
             ?.Dispose();
 
-        _referenceOverlayBuffer
-            ?.Dispose();
-
-        _referenceOverlayTexture
-            ?.Dispose();
+        ClearReferenceOverlayBatches();
 
         _terrainTriangleBuffer
             ?.Dispose();
