@@ -848,7 +848,7 @@ jobs:
             'JsonSerializerDefaults.Web',
             'PropertyNameCaseInsensitive',
             'georeference.MapType',
-            'carto-keyed-v3',
+            'carto-keyed-v4',
             'mosaic-coverage',
             'mosaic-download',
             'maximumResidentTiles',
