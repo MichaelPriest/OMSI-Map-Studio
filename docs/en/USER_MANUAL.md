@@ -414,7 +414,7 @@ Use **Map > Create real map by area...** to build a map without manually typing 
 
 The window can be moved, resized and minimized inside the editor.
 
-**OpenStreetMap:** requires no key and is used for interactive browsing, place search and vector data. Map Studio does not bulk-download/offline-cache the public tile service. Search requests are rate-limited and identify the application.
+**CARTO / OpenStreetMap:** the CARTO basemap used as the visual background now requires a **CARTO Basemaps API key**. In **Create real map by area**, select CARTO and paste the key into **CARTO Basemaps key**. Use **How to get** to open CARTO's official request page, provide your email and project use, and use the key sent by email. The key is stored locally in Windows Credential Manager. Until a CARTO key is saved, the interactive picker uses OpenStreetMap as a fallback; place search and vector data continue to use OpenStreetMap/Nominatim/Overpass as applicable.
 
 **Open-Meteo / Copernicus GLO-90:** can be selected as the elevation provider. The API key belongs to the user and is stored in Windows Credential Manager. Map Studio uses the user's commercial endpoint and does not embed a project key. Keep attribution to Open-Meteo and the Copernicus programme according to the provider terms.
 
