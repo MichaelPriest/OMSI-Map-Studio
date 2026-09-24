@@ -13,6 +13,9 @@ public static class NativeMapCredentialStore
     private const string OpenMeteoAccount =
         "open-meteo-api-key";
 
+    private const string CartoBasemapsAccount =
+        "carto-basemaps-api-key";
+
     public static bool HasGoogleMapsApiKey() =>
         !string.IsNullOrWhiteSpace(
             TryGetGoogleMapsApiKey());
@@ -67,6 +70,70 @@ public static class NativeMapCredentialStore
                 vault.Retrieve(
                     ResourceName,
                     GoogleMapsAccount);
+
+            vault.Remove(
+                credential);
+        }
+        catch
+        {
+            // Missing credential is already the desired state.
+        }
+    }
+
+    public static bool HasCartoBasemapsApiKey() =>
+        !string.IsNullOrWhiteSpace(
+            TryGetCartoBasemapsApiKey());
+
+    public static string? TryGetCartoBasemapsApiKey()
+    {
+        try
+        {
+            var credential =
+                new PasswordVault()
+                    .Retrieve(
+                        ResourceName,
+                        CartoBasemapsAccount);
+
+            credential.RetrievePassword();
+
+            return string.IsNullOrWhiteSpace(
+                credential.Password)
+                ? null
+                : credential.Password;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static void SaveCartoBasemapsApiKey(
+        string apiKey)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            apiKey);
+
+        DeleteCartoBasemapsApiKey();
+
+        new PasswordVault()
+            .Add(
+                new PasswordCredential(
+                    ResourceName,
+                    CartoBasemapsAccount,
+                    apiKey.Trim()));
+    }
+
+    public static void DeleteCartoBasemapsApiKey()
+    {
+        try
+        {
+            var vault =
+                new PasswordVault();
+
+            var credential =
+                vault.Retrieve(
+                    ResourceName,
+                    CartoBasemapsAccount);
 
             vault.Remove(
                 credential);
