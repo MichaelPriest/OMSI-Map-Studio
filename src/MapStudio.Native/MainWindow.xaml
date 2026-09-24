@@ -3263,7 +3263,7 @@
                                           HorizontalAlignment="Stretch">
                                     <ComboBoxItem Content="Criar apenas terreno / referência" />
                                     <ComboBoxItem Content="Importar vias como guias" />
-                                    <ComboBoxItem Content="Gerar ruas automaticamente após preview" />
+                                    <ComboBoxItem Content="Gerar ruas + cruzamentos automaticamente" />
                                 </ComboBox>
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
