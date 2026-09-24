@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Junctions;
 
@@ -189,8 +190,61 @@ public sealed class MapStudioJunctionAssetGenerator
                     temporaryDirectory,
                     "model");
 
+            var textureDirectory =
+                Path.Combine(
+                    temporaryDirectory,
+                    "Texture");
+
             Directory.CreateDirectory(
                 modelDirectory);
+
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_junction_asphalt.bmp",
+                    128,
+                    128,
+                    static (x, y) =>
+                    {
+                        var aggregate =
+                            (
+                                x * 19 +
+                                y * 23 +
+                                (
+                                    x ^
+                                    y
+                                )
+                            ) %
+                            21;
+
+                        var seam =
+                            x %
+                                32 ==
+                            0 ||
+                            y %
+                                32 ==
+                            0;
+
+                        var value =
+                            (byte)(
+                                seam
+                                    ? 46
+                                    : 58 +
+                                        aggregate);
+
+                        return new MapStudioGeneratedRgb(
+                            value,
+                            value,
+                            (byte)Math.Min(
+                                255,
+                                value +
+                                2));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             var geometry =
                 BuildGeometry(
@@ -437,7 +491,7 @@ public sealed class MapStudioJunctionAssetGenerator
                     0,
                     0,
                     8,
-                    null)
+                    "ms_junction_asphalt.bmp")
             ]);
     }
 
