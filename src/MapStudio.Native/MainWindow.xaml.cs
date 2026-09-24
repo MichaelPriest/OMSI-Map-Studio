@@ -21074,6 +21074,59 @@ public sealed partial class MainWindow : Window
                     "Ex.: base"
             };
 
+        var targetProfileComboBox =
+            new ComboBox
+            {
+                Header =
+                    "Perfil Proton Bus",
+                SelectedIndex =
+                    0
+            };
+
+        targetProfileComboBox.Items.Add(
+            new ComboBoxItem
+            {
+                Content =
+                    "Map Mods Phase 3 (recomendado)",
+                Tag =
+                    ProtonBusTargetProfiles
+                        .Phase3Id
+            });
+
+        targetProfileComboBox.Items.Add(
+            new ComboBoxItem
+            {
+                Content =
+                    "Personalizado / outra build",
+                Tag =
+                    ProtonBusTargetProfiles
+                        .CustomId
+            });
+
+        var customMapModVersionBox =
+            new NumberBox
+            {
+                Header =
+                    "mapModVersion personalizado",
+                Value =
+                    3,
+                Minimum =
+                    1,
+                Maximum =
+                    999,
+                SmallChange =
+                    1
+            };
+
+        var zipCheckBox =
+            new CheckBox
+            {
+                Content =
+                    "Também gerar arquivo ZIP do pacote",
+                IsChecked =
+                    true
+            };
+
         var timetableCheckBox =
             new CheckBox
             {
@@ -21110,7 +21163,13 @@ public sealed partial class MainWindow : Window
         panel.Children.Add(
             modelsDirectoryBox);
         panel.Children.Add(
+            targetProfileComboBox);
+        panel.Children.Add(
+            customMapModVersionBox);
+        panel.Children.Add(
             timetableCheckBox);
+        panel.Children.Add(
+            zipCheckBox);
         panel.Children.Add(
             note);
 
@@ -21139,17 +21198,68 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        var selectedProfileId =
+            (
+                targetProfileComboBox
+                    .SelectedItem as
+                    ComboBoxItem
+            )?
+            .Tag?
+            .ToString() ??
+            ProtonBusTargetProfiles
+                .Phase3Id;
+
+        var customMapModVersion =
+            double.IsFinite(
+                customMapModVersionBox
+                    .Value)
+                ? Math.Max(
+                    1,
+                    (int)Math.Round(
+                        customMapModVersionBox
+                            .Value))
+                : 3;
+
+        ProtonBusTargetProfile
+            targetProfile;
+
+        try
+        {
+            targetProfile =
+                ProtonBusTargetProfiles
+                    .Resolve(
+                        selectedProfileId,
+                        customMapModVersion);
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Proton Bus: perfil inválido · {exception.Message}";
+
+            return;
+        }
+
         var definition =
             new ProtonBusMapDefinition(
                 mapNameBox.Text.Trim(),
                 baseDirectoryBox.Text.Trim(),
-                modelsDirectoryBox.Text.Trim());
+                modelsDirectoryBox.Text.Trim(),
+                MapModVersion:
+                    targetProfile
+                        .MapModVersion);
 
         var exportOptions =
             new ProtonBusOmsiDirectoryExportOptions(
                 IncludeTimetable:
                     timetableCheckBox.IsChecked ==
-                    true);
+                    true)
+            {
+                TargetProfile =
+                    targetProfile,
+                CreateZipArchive =
+                    zipCheckBox.IsChecked ==
+                    true
+            };
 
         ProtonBusOmsiDirectoryPreflightResult
             preflight;
@@ -21223,6 +21333,10 @@ public sealed partial class MainWindow : Window
         reportBuilder.AppendLine();
         reportBuilder.AppendLine(
             $"Mapa: {preflight.Descriptor?.DisplayName ?? snapshot.Map.DisplayName}");
+        reportBuilder.AppendLine(
+            $"Perfil: {targetProfile.DisplayName} · mapModVersion={targetProfile.MapModVersion}");
+        reportBuilder.AppendLine(
+            $"Saída ZIP: {(exportOptions.CreateZipArchive ? "sim" : "não")}");
         reportBuilder.AppendLine(
             $"Tiles: {summary.TileCount} · Objetos: {summary.ObjectCount} · Splines: {summary.SplineCount}");
         reportBuilder.AppendLine(
@@ -21469,7 +21583,13 @@ public sealed partial class MainWindow : Window
                         ? $" · {warnings} aviso(s)"
                         : string.Empty
                 ) +
-                $" · {package.MapDefinitionPath}";
+                $" · {package.MapDefinitionPath}" +
+                (
+                    string.IsNullOrWhiteSpace(
+                        result.ArchivePath)
+                        ? string.Empty
+                        : $" · ZIP: {result.ArchivePath}"
+                );
         }
         catch (Exception exception)
         {
