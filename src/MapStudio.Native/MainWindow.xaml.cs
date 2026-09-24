@@ -24859,7 +24859,7 @@ function initMap() {
 
         var tileUrl =
             hasCartoKey
-                ? $"https://{{s}}.basemaps.cartocdn.com/rastertiles/light_all/{{z}}/{{x}}/{{y}}{{r}}.png?key={cartoKey}"
+                ? $"https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png?key={cartoKey}"
                 : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
         var attribution =
