@@ -3423,8 +3423,13 @@ public sealed class OmsiNativeSession
                 .DeserializeAsync<
                     NativeMapGeoreference>(
                         stream,
-                        cancellationToken:
-                            cancellationToken)
+                        new JsonSerializerOptions(
+                            JsonSerializerDefaults.Web)
+                        {
+                            PropertyNameCaseInsensitive =
+                                true
+                        },
+                        cancellationToken)
                 .ConfigureAwait(false);
 
         if (georeference is null)
