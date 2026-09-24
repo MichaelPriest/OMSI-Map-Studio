@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.31.1: real-map/CARTO hotfix over the visual join-segments workflow.
+# Test 10.32: automatic OSM roads/junctions plus textured Map Studio generated assets.
 
 on:
   push:
@@ -32,6 +32,18 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
+      - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
+      - "src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs"
+      - "src/MapStudio.Core/Workspace/MapStudioWorkspaceBootstrapper.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStarterPropGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStarterTrafficGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioBuildingAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioFootprintBuildingAssetGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
@@ -52,8 +64,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.31.1-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.31.1-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.32-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.32-native.md"
   workflow_dispatch:
 
 permissions:
@@ -64,8 +76,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.31.1-native
-  TAG: v0.2.0-alpha.5-test.10.31.1-native
+  VERSION: 0.2.0-alpha.5-test.10.32-native
+  TAG: v0.2.0-alpha.5-test.10.32-native
 
 jobs:
   build-native-preview:
@@ -1247,11 +1259,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.31.1-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.32-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.31.1-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.32-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
