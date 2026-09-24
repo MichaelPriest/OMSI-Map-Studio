@@ -311,6 +311,27 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
 
             Assert.True(
                 geometry.IsLoaded);
+
+            Assert.All(
+                geometry.Materials,
+                material =>
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            material.TextureName)));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        result.ObjectDirectory,
+                        "Texture",
+                        "ms_osm_facade.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        result.ObjectDirectory,
+                        "Texture",
+                        "ms_osm_roof.bmp")));
         }
         finally
         {
