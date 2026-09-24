@@ -148,6 +148,19 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             Assert.True(
                 mesh.Indices.Length >
                 0);
+
+            Assert.Equal(
+                "ms_junction_asphalt.bmp",
+                Assert.Single(
+                    mesh.Materials)
+                    .TextureName);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        result.ObjectDirectory,
+                        "Texture",
+                        "ms_junction_asphalt.bmp")));
         }
         finally
         {
