@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Text;
 using MapStudio.Core.AI;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Buildings;
 
@@ -272,6 +273,11 @@ public sealed class MapStudioBuildingAssetGenerator
             Directory.CreateDirectory(
                 textureDirectory);
 
+            await EnsureGeneratedTexturesAsync(
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             string? facadeTextureName =
                 null;
 
@@ -317,6 +323,19 @@ public sealed class MapStudioBuildingAssetGenerator
                         facadeTexturePath,
                         overwrite: true);
                 }
+            }
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    facadeTextureName))
+            {
+                facadeTextureName =
+                    "ms_building_facade.bmp";
+
+                facadeTexturePath =
+                    Path.Combine(
+                        textureDirectory,
+                        facadeTextureName);
             }
 
             var geometry =
@@ -413,6 +432,218 @@ public sealed class MapStudioBuildingAssetGenerator
         }
     }
 
+    private static async Task
+        EnsureGeneratedTexturesAsync(
+            string textureDirectory,
+            CancellationToken cancellationToken)
+    {
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_building_facade.bmp",
+                128,
+                128,
+                static (x, y) =>
+                {
+                    var mortar =
+                        x %
+                            32 <=
+                            1 ||
+                        y %
+                            16 <=
+                            1;
+
+                    if (mortar)
+                    {
+                        return new MapStudioGeneratedRgb(
+                            178,
+                            174,
+                            166);
+                    }
+
+                    var rowShift =
+                        (
+                            y /
+                            16
+                        ) %
+                            2 ==
+                        0
+                            ? 0
+                            : 16;
+
+                    var brickEdge =
+                        (
+                            x +
+                            rowShift
+                        ) %
+                            32 <=
+                        1;
+
+                    if (brickEdge)
+                    {
+                        return new MapStudioGeneratedRgb(
+                            172,
+                            166,
+                            156);
+                    }
+
+                    var noise =
+                        (
+                            x * 7 +
+                            y * 13
+                        ) %
+                            12;
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)(
+                            205 +
+                            noise),
+                        (byte)(
+                            198 +
+                            noise /
+                                2),
+                        (byte)(
+                            184 +
+                            noise /
+                                3));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_building_roof.bmp",
+                128,
+                128,
+                static (x, y) =>
+                {
+                    var seam =
+                        y %
+                            12 <=
+                            1 ||
+                        (
+                            x +
+                            (
+                                y /
+                                12
+                            ) *
+                                7
+                        ) %
+                            28 <=
+                            1;
+
+                    return seam
+                        ? new MapStudioGeneratedRgb(
+                            78,
+                            62,
+                            54)
+                        : new MapStudioGeneratedRgb(
+                            112,
+                            88,
+                            72);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_building_window.bmp",
+                64,
+                64,
+                static (x, y) =>
+                {
+                    var frame =
+                        x <
+                            5 ||
+                        y <
+                            5 ||
+                        x >=
+                            59 ||
+                        y >=
+                            59 ||
+                        Math.Abs(
+                            x -
+                            32) <=
+                            2;
+
+                    if (frame)
+                    {
+                        return new MapStudioGeneratedRgb(
+                            42,
+                            48,
+                            52);
+                    }
+
+                    var reflection =
+                        Math.Clamp(
+                            24 -
+                            Math.Abs(
+                                x -
+                                y),
+                            0,
+                            24);
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)(
+                            70 +
+                            reflection),
+                        (byte)(
+                            112 +
+                            reflection),
+                        (byte)(
+                            138 +
+                            reflection));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_building_door.bmp",
+                64,
+                128,
+                static (x, y) =>
+                {
+                    var groove =
+                        x %
+                            16 <=
+                            1 ||
+                        y %
+                            32 <=
+                            1;
+
+                    var noise =
+                        (
+                            x * 5 +
+                            y * 3
+                        ) %
+                            10;
+
+                    return groove
+                        ? new MapStudioGeneratedRgb(
+                            74,
+                            42,
+                            24)
+                        : new MapStudioGeneratedRgb(
+                            (byte)(
+                                112 +
+                                noise),
+                            (byte)(
+                                65 +
+                                noise /
+                                    2),
+                            (byte)(
+                                34 +
+                                noise /
+                                    3));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public OmsiO3dGeometry BuildGeometry(
         MapStudioBuildingSpec spec,
         string? facadeTextureName =
@@ -423,6 +654,12 @@ public sealed class MapStudioBuildingAssetGenerator
 
         var normalized =
             spec.Normalize();
+
+        var resolvedFacadeTextureName =
+            string.IsNullOrWhiteSpace(
+                facadeTextureName)
+                ? "ms_building_facade.bmp"
+                : facadeTextureName;
 
         var positions =
             new List<float>();
@@ -690,7 +927,7 @@ public sealed class MapStudioBuildingAssetGenerator
                     0,
                     0,
                     8,
-                    facadeTextureName),
+                    resolvedFacadeTextureName),
                 new OmsiO3dMaterial(
                     0.34f,
                     0.30f,
@@ -703,7 +940,7 @@ public sealed class MapStudioBuildingAssetGenerator
                     0,
                     0,
                     8,
-                    null),
+                    "ms_building_roof.bmp"),
                 new OmsiO3dMaterial(
                     0.16f,
                     0.32f,
@@ -716,7 +953,7 @@ public sealed class MapStudioBuildingAssetGenerator
                     0,
                     0,
                     24,
-                    null),
+                    "ms_building_window.bmp"),
                 new OmsiO3dMaterial(
                     0.30f,
                     0.16f,
@@ -729,7 +966,7 @@ public sealed class MapStudioBuildingAssetGenerator
                     0,
                     0,
                     8,
-                    null)
+                    "ms_building_door.bmp")
             };
 
         return new OmsiO3dGeometry(
