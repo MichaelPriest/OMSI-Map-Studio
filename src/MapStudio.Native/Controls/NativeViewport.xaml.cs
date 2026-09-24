@@ -554,6 +554,16 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public int ReferenceOverlayBatchCount =>
+        _runtime
+            ?.ReferenceOverlayBatchCount ??
+        0;
+
+    public int ReferenceOverlayTriangleCount =>
+        _runtime
+            ?.ReferenceOverlayTriangleCount ??
+        0;
+
     public bool IsSplineJoinPickActive =>
         _splineJoinPickActive;
 
