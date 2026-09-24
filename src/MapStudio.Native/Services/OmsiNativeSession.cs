@@ -590,8 +590,13 @@ public sealed class OmsiNativeSession
                     $"cartoReferenceHttp:{(int)response.StatusCode}");
             }
 
+            var content =
+                response.Content ??
+                throw new InvalidDataException(
+                    "cartoReferenceMissingContent");
+
             var bytes =
-                await response.Content
+                await content
                     .ReadAsByteArrayAsync(
                         cancellationToken)
                     .ConfigureAwait(false);
@@ -3296,13 +3301,33 @@ public sealed class OmsiNativeSession
         await using var stream =
             File.OpenRead(path);
 
-        return await JsonSerializer
-            .DeserializeAsync<
-                NativeMapGeoreference>(
-                    stream,
-                    cancellationToken:
-                        cancellationToken)
-            .ConfigureAwait(false);
+        var georeference =
+            await JsonSerializer
+                .DeserializeAsync<
+                    NativeMapGeoreference>(
+                        stream,
+                        cancellationToken:
+                            cancellationToken)
+                .ConfigureAwait(false);
+
+        if (georeference is null)
+        {
+            return null;
+        }
+
+        return georeference with
+        {
+            MapType =
+                string.IsNullOrWhiteSpace(
+                    georeference.MapType)
+                    ? "roadmap"
+                    : georeference.MapType,
+            Provider =
+                string.IsNullOrWhiteSpace(
+                    georeference.Provider)
+                    ? "CARTO / OpenStreetMap"
+                    : georeference.Provider
+        };
     }
 
     private static async Task<string>
@@ -3395,6 +3420,8 @@ public sealed class OmsiNativeSession
                 < 0 or > 300 ||
             value.Zoom is
                 < 0 or > 22 ||
+            string.IsNullOrWhiteSpace(
+                value.MapType) ||
             value.MapType.Trim()
                 .ToLowerInvariant() is not
                 (
