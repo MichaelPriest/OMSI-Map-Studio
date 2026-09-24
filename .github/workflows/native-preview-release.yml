@@ -842,6 +842,8 @@ jobs:
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $overlayBuilder = Get-Content src/MapStudio.Renderer/Scene/NativeReferenceOverlayGeometryBuilder.cs -Raw
+          $overlayTests = Get-Content tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs -Raw
           $loader = Get-Content src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs -Raw
 
           foreach ($required in @(
@@ -849,6 +851,7 @@ jobs:
             'PropertyNameCaseInsensitive',
             'georeference.MapType',
             'carto-keyed-v4',
+            'rastertiles/voyager',
             'mosaic-coverage',
             'mosaic-download',
             'maximumResidentTiles',
@@ -883,6 +886,23 @@ jobs:
             if (-not $renderer.Contains($required)) {
               throw "CARTO tiled renderer marker is missing: $required"
             }
+          }
+
+          foreach ($required in @(
+            'scene.Tiles',
+            'minimumOverlayX',
+            'GetHeightAtLocalPoint',
+            'minimumTileX',
+            'maximumTileX'
+          )) {
+            if (-not $overlayBuilder.Contains($required)) {
+              throw "Terrain-clipped reference overlay marker is missing: $required"
+            }
+          }
+
+          if (-not $overlayTests.Contains('BuildClipsOverlayToLoadedTerrain') -or
+              -not $overlayTests.Contains('BuildSkipsReferenceOutsideLoadedTerrain')) {
+            throw "Terrain-clipped reference overlay regression coverage is missing."
           }
 
           if (-not $session.Contains('value.MapType.Trim()') -or
