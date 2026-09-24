@@ -26892,8 +26892,15 @@ setTimeout(postBounds, 250);
         }
         catch (Exception exception)
         {
+            var diagnosticHint =
+                failureStage.Contains(
+                    "CARTO",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? " · diagnóstico: %LocalAppData%\\OMSI Map Studio\\logs\\carto-reference.log"
+                    : string.Empty;
+
             StatusText.Text =
-                $"Falha ao carregar referência de mapa ({failureStage}): {exception.GetType().Name}: {exception.Message}";
+                $"Falha ao carregar referência de mapa ({failureStage}): {exception.GetType().Name}: {exception.Message}{diagnosticHint}";
         }
     }
 
