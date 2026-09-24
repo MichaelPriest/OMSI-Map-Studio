@@ -93,6 +93,20 @@ public sealed class MapStudioStarterTrafficGeneratorTests
                 geometry.Indices.Length >
                 0);
 
+            Assert.All(
+                geometry.Materials,
+                material =>
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            material.TextureName)));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        directory,
+                        "Texture",
+                        "ms_traffic_red.bmp")));
+
             Assert.False(
                 await generator
                     .EnsureAsync(
