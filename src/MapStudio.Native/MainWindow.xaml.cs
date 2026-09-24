@@ -20943,9 +20943,6 @@ public sealed partial class MainWindow : Window
             _fullMapMode =
                 true;
 
-            creationStage =
-                "carregamento do mapa criado no viewport";
-
             await ApplyMapSnapshotAsync(
                 snapshot,
                 focusActiveTile:
