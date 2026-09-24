@@ -94,12 +94,12 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
                     0.501f);
 
                 Assert.InRange(
-                    vertex.TextureCoordinate.X,
+                    vertex.TexCoord.X,
                     0,
                     1);
 
                 Assert.InRange(
-                    vertex.TextureCoordinate.Y,
+                    vertex.TexCoord.Y,
                     0,
                     1);
             });
