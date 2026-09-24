@@ -135,6 +135,17 @@ public sealed class NativeViewportRuntime : IDisposable
     private Vector3? _selectedSplineCurveEnd;
     private NativeSplinePlacementShape? _selectedSplineCurveShape;
 
+    private bool _selectedSplineEndpointEditActive;
+    private bool _selectedSplineEndpointDragging;
+    private NativeSplineEntity? _selectedSplineEndpointEntity;
+    private NativeSplinePlacementShape? _selectedSplineEndpointShape;
+    private NativeSplineEndpointEditHandle
+        _selectedSplineEndpointHandle =
+            NativeSplineEndpointEditHandle.None;
+    private double _selectedSplineEndpointCurveOffset;
+    private float _selectedSplineEndpointStartHeightOffset;
+    private float _selectedSplineEndpointEndHeightOffset;
+
     private OmsiMapDescriptor? _mapDescriptor;
     private string? _omsiRoot;
     private bool _nightPreviewEnabled;
@@ -257,6 +268,12 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool IsSelectedSplineCurveEditActive =>
         _selectedSplineCurveEditActive;
+
+    public bool IsSelectedSplineEndpointEditActive =>
+        _selectedSplineEndpointEditActive;
+
+    public bool IsSelectedSplineEndpointDragging =>
+        _selectedSplineEndpointDragging;
 
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
@@ -3135,6 +3152,10 @@ public sealed class NativeViewportRuntime : IDisposable
             return false;
         }
 
+        CancelSelectedSplineEndpointEdit(
+            render:
+                false);
+
         CancelGizmoDrag();
         CancelSplinePlacement();
         CancelSceneryPlacement();
@@ -3366,6 +3387,578 @@ public sealed class NativeViewportRuntime : IDisposable
             .SetPlacementPreview(
                 null,
                 Matrix4x4.Identity);
+
+        if (render)
+        {
+            RenderInitialFrame();
+        }
+    }
+
+    public bool BeginSelectedSplineEndpointEdit(
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            Scene is null ||
+            _selectedPickingId.Kind !=
+                PickingKind.Spline)
+        {
+            status =
+                "Pontas: selecione uma spline.";
+            return false;
+        }
+
+        var entity =
+            Scene.Splines
+                .FirstOrDefault(
+                    item =>
+                        item.PickingId ==
+                        _selectedPickingId);
+
+        if (
+            entity is null ||
+            entity.Spline.Length <=
+                0.5 ||
+            entity.Spline.IsHeightSpline)
+        {
+            status =
+                "Pontas: esta spline não pode ser editada visualmente.";
+            return false;
+        }
+
+        if (
+            !_splineAssets.TryGetValue(
+                entity.Spline.SplinePath,
+                out var asset))
+        {
+            status =
+                "Pontas: asset SLI da seleção não está carregado.";
+            return false;
+        }
+
+        CancelSelectedSplineCurveEdit(
+            render:
+                false);
+
+        CancelGizmoDrag();
+        CancelSplinePlacement();
+        CancelSceneryPlacement();
+
+        var start =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    0)
+                .Center;
+
+        var end =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    entity.Spline.Length)
+                .Center;
+
+        var shape =
+            new NativeSplinePlacementShape(
+                start,
+                end,
+                entity.Spline.Rotation,
+                entity.Spline.Length,
+                entity.Spline.Radius,
+                entity.Spline.GradientStart,
+                entity.Spline.GradientEnd,
+                Math.Abs(
+                    entity.Spline.Radius) >
+                    0.001);
+
+        _selectedSplineEndpointEditActive =
+            true;
+
+        _selectedSplineEndpointDragging =
+            false;
+
+        _selectedSplineEndpointEntity =
+            entity;
+
+        _selectedSplineEndpointShape =
+            shape;
+
+        _selectedSplineEndpointHandle =
+            NativeSplineEndpointEditHandle
+                .None;
+
+        _selectedSplineEndpointCurveOffset =
+            NativeSplineEndpointEditMath
+                .EstimateCurveOffset(
+                    shape);
+
+        var startTerrain =
+            NativeTerrainSampler
+                .GetHeightAtWorldPoint(
+                    Scene,
+                    start.X,
+                    start.Z);
+
+        var endTerrain =
+            NativeTerrainSampler
+                .GetHeightAtWorldPoint(
+                    Scene,
+                    end.X,
+                    end.Z);
+
+        _selectedSplineEndpointStartHeightOffset =
+            start.Y -
+            (float)startTerrain;
+
+        _selectedSplineEndpointEndHeightOffset =
+            end.Y -
+            (float)endTerrain;
+
+        var markerSize =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.012f,
+                1.25f,
+                4.0f);
+
+        var preview =
+            new NativeSplineEndpointEditGeometryBuilder()
+                .Build(
+                    asset,
+                    shape,
+                    markerSize);
+
+        MapRenderer
+            .SetPlacementPreview(
+                preview.IsRenderable
+                    ? preview
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        status =
+            "Pontas: arraste o marcador verde (início) ou laranja (fim). Snap em endpoints livres está ativo.";
+
+        return true;
+    }
+
+    public bool TryBeginSelectedSplineEndpointDrag(
+        uint pixelX,
+        uint pixelY,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            !_selectedSplineEndpointEditActive ||
+            _selectedSplineEndpointShape is
+                not { } shape ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var point))
+        {
+            status =
+                "Pontas: edição visual não está pronta.";
+            return false;
+        }
+
+        var startDistance =
+            NativeSplineEndpointEditMath
+                .HorizontalDistance(
+                    point,
+                    shape.Start);
+
+        var endDistance =
+            NativeSplineEndpointEditMath
+                .HorizontalDistance(
+                    point,
+                    shape.End);
+
+        var maximumDistance =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.02,
+                1.5,
+                8.0);
+
+        var handle =
+            startDistance <=
+                endDistance
+                ? NativeSplineEndpointEditHandle
+                    .Start
+                : NativeSplineEndpointEditHandle
+                    .End;
+
+        var nearestDistance =
+            Math.Min(
+                startDistance,
+                endDistance);
+
+        if (
+            nearestDistance >
+                maximumDistance)
+        {
+            status =
+                "Pontas: clique e arraste o marcador verde ou laranja.";
+            return false;
+        }
+
+        _selectedSplineEndpointHandle =
+            handle;
+
+        _selectedSplineEndpointDragging =
+            true;
+
+        status =
+            handle ==
+                NativeSplineEndpointEditHandle
+                    .Start
+                ? "Pontas: arrastando início (verde)."
+                : "Pontas: arrastando fim (laranja).";
+
+        return true;
+    }
+
+    public bool UpdateSelectedSplineEndpointDrag(
+        uint pixelX,
+        uint pixelY,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        status =
+            string.Empty;
+
+        if (
+            !_selectedSplineEndpointEditActive ||
+            !_selectedSplineEndpointDragging ||
+            Scene is null ||
+            _selectedSplineEndpointEntity is
+                not { } entity ||
+            _selectedSplineEndpointShape is
+                not { } current ||
+            _selectedSplineEndpointHandle ==
+                NativeSplineEndpointEditHandle
+                    .None ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var point) ||
+            !_splineAssets.TryGetValue(
+                entity.Spline.SplinePath,
+                out var asset))
+        {
+            status =
+                "Pontas: não foi possível atualizar a alça.";
+            return false;
+        }
+
+        var targetKind =
+            _selectedSplineEndpointHandle ==
+                NativeSplineEndpointEditHandle
+                    .Start
+                ? NativeSplineEndpointKind
+                    .End
+                : NativeSplineEndpointKind
+                    .Start;
+
+        var endpointSnapDistance =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.01,
+                0.75,
+                4.0);
+
+        var snap =
+            NativeSplineEndpointSnapFinder
+                .FindFreeEndpoint(
+                    Scene,
+                    point,
+                    targetKind,
+                    endpointSnapDistance,
+                    entity.Spline.SplineId);
+
+        var snapped =
+            snap is not null;
+
+        if (snap is not null)
+        {
+            point =
+                snap.WorldPoint;
+        }
+        else
+        {
+            point.Y +=
+                _selectedSplineEndpointHandle ==
+                    NativeSplineEndpointEditHandle
+                        .Start
+                    ? _selectedSplineEndpointStartHeightOffset
+                    : _selectedSplineEndpointEndHeightOffset;
+        }
+
+        if (
+            _selectedSplineEndpointHandle ==
+                NativeSplineEndpointEditHandle
+                    .Start)
+        {
+            var tileX =
+                (int)Math.Floor(
+                    point.X /
+                    (float)
+                        OmsiTileGrid.TileSize);
+
+            var tileY =
+                (int)Math.Floor(
+                    point.Z /
+                    (float)
+                        OmsiTileGrid.TileSize);
+
+            if (
+                tileX !=
+                    entity.Tile.X ||
+                tileY !=
+                    entity.Tile.Y)
+            {
+                status =
+                    "Pontas: o início ainda deve permanecer no tile de origem; mover entre tiles será tratado pela próxima etapa.";
+                return false;
+            }
+        }
+
+        var start =
+            _selectedSplineEndpointHandle ==
+                NativeSplineEndpointEditHandle
+                    .Start
+                ? point
+                : current.Start;
+
+        var end =
+            _selectedSplineEndpointHandle ==
+                NativeSplineEndpointEditHandle
+                    .End
+                ? point
+                : current.End;
+
+        if (
+            !NativeSplineEndpointEditMath
+                .TryCreateShape(
+                    start,
+                    end,
+                    preserveCurve:
+                        Math.Abs(
+                            entity.Spline.Radius) >
+                        0.001,
+                    _selectedSplineEndpointCurveOffset,
+                    out var shape) ||
+            shape is null)
+        {
+            status =
+                "Pontas: posição inválida para o trecho.";
+            return false;
+        }
+
+        _selectedSplineEndpointShape =
+            shape;
+
+        var markerSize =
+            Math.Clamp(
+                Navigation.Distance *
+                    0.012f,
+                1.25f,
+                4.0f);
+
+        var preview =
+            new NativeSplineEndpointEditGeometryBuilder()
+                .Build(
+                    asset,
+                    shape,
+                    markerSize);
+
+        MapRenderer
+            .SetPlacementPreview(
+                preview.IsRenderable
+                    ? preview
+                    : null,
+                Matrix4x4.Identity);
+
+        RenderInitialFrame();
+
+        status =
+            snapped
+                ? $"Pontas: snap no endpoint da spline #{snap!.SplineId}."
+                : _selectedSplineEndpointHandle ==
+                    NativeSplineEndpointEditHandle
+                        .Start
+                    ? $"Pontas: início {shape.Start.X:F1}, {shape.Start.Z:F1}."
+                    : $"Pontas: fim {shape.End.X:F1}, {shape.End.Z:F1}.";
+
+        return true;
+    }
+
+    public bool TryFinishSelectedSplineEndpointDrag(
+        uint pixelX,
+        uint pixelY,
+        out NativePendingTransformEdit? edit,
+        out string status)
+    {
+        ThrowIfDisposed();
+
+        edit =
+            null;
+
+        status =
+            string.Empty;
+
+        if (
+            !_selectedSplineEndpointEditActive ||
+            !_selectedSplineEndpointDragging)
+        {
+            status =
+                "Pontas: nenhuma alça está sendo arrastada.";
+            return false;
+        }
+
+        UpdateSelectedSplineEndpointDrag(
+            pixelX,
+            pixelY,
+            out _);
+
+        var entity =
+            _selectedSplineEndpointEntity;
+
+        var shape =
+            _selectedSplineEndpointShape;
+
+        var selection =
+            GetSelectionInfo();
+
+        if (
+            entity is null ||
+            shape is null ||
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline)
+        {
+            CancelSelectedSplineEndpointEdit();
+
+            status =
+                "Pontas: prévia inválida.";
+            return false;
+        }
+
+        var tileOriginX =
+            OmsiTileGrid
+                .GetOriginX(
+                    entity.Tile.X);
+
+        var tileOriginZ =
+            OmsiTileGrid
+                .GetOriginZ(
+                    entity.Tile.Y);
+
+        var values =
+            selection with
+            {
+                X =
+                    shape.Start.X -
+                    tileOriginX,
+                Y =
+                    shape.Start.Z -
+                    tileOriginZ,
+                Z =
+                    shape.Start.Y,
+                Rotation =
+                    shape.Rotation,
+                Length =
+                    shape.Length,
+                Radius =
+                    shape.Radius,
+                GradientStart =
+                    shape.GradientStart,
+                GradientEnd =
+                    shape.GradientEnd
+            };
+
+        var movedHandle =
+            _selectedSplineEndpointHandle;
+
+        CancelSelectedSplineEndpointEdit(
+            render:
+                false);
+
+        edit =
+            ApplySelectionInfo(
+                values);
+
+        if (edit is null)
+        {
+            status =
+                "Pontas: não foi possível aplicar a transformação.";
+            return false;
+        }
+
+        status =
+            movedHandle ==
+                NativeSplineEndpointEditHandle
+                    .Start
+                ? $"Ponta inicial aplicada · comprimento {shape.Length:F1} m · raio {shape.Radius:F1} m."
+                : $"Ponta final aplicada · comprimento {shape.Length:F1} m · raio {shape.Radius:F1} m.";
+
+        return true;
+    }
+
+    public void CancelSelectedSplineEndpointEdit(
+        bool render =
+            true)
+    {
+        if (
+            !_selectedSplineEndpointEditActive &&
+            _selectedSplineEndpointEntity is
+                null)
+        {
+            return;
+        }
+
+        _selectedSplineEndpointEditActive =
+            false;
+
+        _selectedSplineEndpointDragging =
+            false;
+
+        _selectedSplineEndpointEntity =
+            null;
+
+        _selectedSplineEndpointShape =
+            null;
+
+        _selectedSplineEndpointHandle =
+            NativeSplineEndpointEditHandle
+                .None;
+
+        _selectedSplineEndpointCurveOffset =
+            0.0;
+
+        _selectedSplineEndpointStartHeightOffset =
+            0.0f;
+
+        _selectedSplineEndpointEndHeightOffset =
+            0.0f;
+
+        MapRenderer
+            .SetPlacementPreview(
+                null,
+                Matrix4x4.Identity);
+
+        UpdateGizmoGeometry();
 
         if (render)
         {

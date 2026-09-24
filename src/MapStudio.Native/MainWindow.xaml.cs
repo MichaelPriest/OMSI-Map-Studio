@@ -273,9 +273,13 @@ public sealed partial class MainWindow : Window
     private NativeGoogleMapReference?
         _activeGoogleMapReference;
 
+    private const float
+        DefaultReferenceOverlayOpacity =
+            0.80f;
+
     private float
         _referenceOverlayOpacity =
-            0.62f;
+            DefaultReferenceOverlayOpacity;
 
     private bool
         _referenceOverlayVisible;
@@ -747,6 +751,22 @@ public sealed partial class MainWindow : Window
                         {
                             StatusText.Text =
                                 curveStatus;
+                        }
+                        break;
+
+                    case NativeSelectionContextAction.EditEndpoints:
+                        if (
+                            Viewport
+                                .BeginSelectedSplineEndpointEdit(
+                                    out var endpointStatus))
+                        {
+                            StatusText.Text =
+                                endpointStatus;
+                        }
+                        else
+                        {
+                            StatusText.Text =
+                                endpointStatus;
                         }
                         break;
 
@@ -8998,6 +9018,33 @@ public sealed partial class MainWindow : Window
         if (
             !Viewport
                 .BeginSelectedSplineCurveEdit(
+                    out var status))
+        {
+            StatusText.Text =
+                status;
+            return;
+        }
+
+        StatusText.Text =
+            status;
+    }
+
+    private void OnRoadEditEndpointsClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _selectionInfo?.Kind !=
+                PickingKind.Spline)
+        {
+            StatusText.Text =
+                "Ruas: selecione uma spline para editar as pontas.";
+            return;
+        }
+
+        if (
+            !Viewport
+                .BeginSelectedSplineEndpointEdit(
                     out var status))
         {
             StatusText.Text =
@@ -25951,7 +25998,7 @@ setTimeout(postBounds, 250);
 
         ApplyReferenceOverlay(
             reference,
-            0.62f,
+            _referenceOverlayOpacity,
             _session.CurrentMap
                 ?.Map
                 .DirectoryPath,
@@ -26630,7 +26677,7 @@ setTimeout(postBounds, 250);
                 Maximum =
                     1.0,
                 Value =
-                    0.55,
+                    _referenceOverlayOpacity,
                 SmallChange =
                     0.05
             };
@@ -26951,7 +26998,7 @@ setTimeout(postBounds, 250);
                 Maximum =
                     1.0,
                 Value =
-                    0.55,
+                    _referenceOverlayOpacity,
                 SmallChange =
                     0.05
             };
@@ -27141,7 +27188,7 @@ setTimeout(postBounds, 250);
             null;
 
         _referenceOverlayOpacity =
-            0.62f;
+            DefaultReferenceOverlayOpacity;
 
         _referenceOverlayVisible =
             false;

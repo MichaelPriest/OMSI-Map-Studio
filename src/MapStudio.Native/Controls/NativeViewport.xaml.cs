@@ -27,6 +27,7 @@ public enum NativeSelectionContextAction
     Focus,
     Inspector,
     EditCurve,
+    EditEndpoints,
     Split,
     Parallel,
     Elevate,
@@ -1166,6 +1167,22 @@ public sealed partial class NativeViewport : UserControl
         _runtime
             ?.CancelSelectedSplineCurveEdit();
 
+    public bool BeginSelectedSplineEndpointEdit(
+        out string status)
+    {
+        status =
+            "Pontas indisponíveis.";
+
+        return _runtime
+            ?.BeginSelectedSplineEndpointEdit(
+                out status) ??
+            false;
+    }
+
+    public void CancelSelectedSplineEndpointEdit() =>
+        _runtime
+            ?.CancelSelectedSplineEndpointEdit();
+
     public bool BeginSplineSplitPick()
     {
         if (
@@ -1980,6 +1997,83 @@ public sealed partial class NativeViewport : UserControl
                 Math.Round(
                     point.Position.Y *
                     scaleY));
+
+        if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineEndpointEditActive)
+        {
+            var started =
+                _runtime
+                    .TryBeginSelectedSplineEndpointDrag(
+                        pixelX,
+                        pixelY,
+                        out var endpointStatus);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                endpointStatus);
+
+            e.Handled =
+                true;
+
+            if (started)
+            {
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    endpointStatus);
+            }
+
+            return;
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineEndpointDragging &&
+            _leftPressed)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            _runtime
+                .UpdateSelectedSplineEndpointDrag(
+                    pixelX,
+                    pixelY,
+                    out var endpointStatus);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                endpointStatus);
+
+            e.Handled =
+                true;
+
+            return;
+        }
 
         if (
             _runtime is not null &&
@@ -2968,6 +3062,62 @@ public sealed partial class NativeViewport : UserControl
             _runtime;
 
         if (
+            selectionRuntime is not null &&
+            selectionRuntime
+                .IsSelectedSplineEndpointDragging)
+        {
+            var scaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var scaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var pixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        scaleX));
+
+            var pixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        scaleY));
+
+            if (
+                selectionRuntime
+                    .TryFinishSelectedSplineEndpointDrag(
+                        pixelX,
+                        pixelY,
+                        out var endpointEdit,
+                        out var endpointStatus) &&
+                endpointEdit is not null)
+            {
+                TransformEditPending
+                    ?.Invoke(
+                        endpointEdit);
+
+                PublishSelectionInfo();
+
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    endpointStatus);
+            }
+
+            PointerStatusChanged?.Invoke(
+                this,
+                endpointStatus);
+        }
+
+        if (
             _isSelectionBoxDragging &&
             selectionRuntime is not null)
         {
@@ -3477,8 +3627,8 @@ public sealed partial class NativeViewport : UserControl
 
             ConfigureRadialButton(
                 RadialUpperLeftButton,
-                "Paralela",
-                NativeSelectionContextAction.Parallel);
+                "Pontas",
+                NativeSelectionContextAction.EditEndpoints);
 
             ConfigureRadialButton(
                 RadialTopRightButton,
@@ -3675,6 +3825,8 @@ public sealed partial class NativeViewport : UserControl
                 "⚙",
             NativeSelectionContextAction.EditCurve =>
                 "⌒",
+            NativeSelectionContextAction.EditEndpoints =>
+                "↔",
             NativeSelectionContextAction.Split =>
                 "✂",
             NativeSelectionContextAction.Parallel =>
