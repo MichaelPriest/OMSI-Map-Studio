@@ -139,8 +139,11 @@ public sealed class NativeViewportRuntime : IDisposable
     private string? _omsiRoot;
     private bool _nightPreviewEnabled;
 
-    private NativeReferenceOverlayDefinition?
-        _referenceOverlay;
+    private IReadOnlyList<
+        NativeReferenceOverlayDefinition>
+        _referenceOverlays =
+            Array.Empty<
+                NativeReferenceOverlayDefinition>();
 
     private NativeSceneVisibility
         _sceneVisibility =
@@ -5065,10 +5068,29 @@ public sealed class NativeViewportRuntime : IDisposable
         NativeReferenceOverlayDefinition?
             overlay)
     {
+        SetReferenceOverlays(
+            overlay is null
+                ? null
+                : [
+                    overlay
+                ]);
+    }
+
+    public void SetReferenceOverlays(
+        IReadOnlyList<
+            NativeReferenceOverlayDefinition>?
+            overlays)
+    {
         ThrowIfDisposed();
 
-        _referenceOverlay =
-            overlay;
+        _referenceOverlays =
+            overlays?
+                .Where(
+                    overlay =>
+                        overlay is not null)
+                .ToArray() ??
+            Array.Empty<
+                NativeReferenceOverlayDefinition>();
 
         UploadReferenceOverlay();
         RenderInitialFrame();
@@ -6945,25 +6967,32 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         if (
             Scene is null ||
-            _referenceOverlay is null ||
+            _referenceOverlays.Count ==
+                0 ||
             _assetPreviewActive)
         {
             MapRenderer
-                .SetReferenceOverlay(
+                .SetReferenceOverlays(
                     null);
 
             return;
         }
 
-        var geometry =
-            new NativeReferenceOverlayGeometryBuilder()
-                .Build(
-                    Scene,
-                    _referenceOverlay);
+        var builder =
+            new NativeReferenceOverlayGeometryBuilder();
+
+        var geometries =
+            _referenceOverlays
+                .Select(
+                    overlay =>
+                        builder.Build(
+                            Scene,
+                            overlay))
+                .ToArray();
 
         MapRenderer
-            .SetReferenceOverlay(
-                geometry);
+            .SetReferenceOverlays(
+                geometries);
     }
 
     private NativeTransformHistoryEntry?
