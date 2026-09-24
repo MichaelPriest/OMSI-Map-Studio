@@ -3057,6 +3057,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="1.2*" />
@@ -3081,7 +3082,7 @@
                                   Header="Mapa para escolher a área"
                                   SelectedIndex="0"
                                   SelectionChanged="OnRealMapProviderChanged">
-                            <ComboBoxItem Content="CARTO / OpenStreetMap · sem chave" />
+                            <ComboBoxItem Content="CARTO / OpenStreetMap · API key CARTO" />
                             <ComboBoxItem Content="Google Maps · chave do usuário" />
                         </ComboBox>
                         <Button Grid.Row="0"
@@ -3139,6 +3140,43 @@
                                        Value="58"
                                        SpinButtonPlacementMode="Compact"
                                        ValueChanged="OnRealMapAreaSelectionSizeChanged" />
+                        </Grid>
+
+                        <Grid x:Name="RealMapCartoKeyPanel"
+                              Grid.Row="2"
+                              Grid.Column="0"
+                              Grid.ColumnSpan="4"
+                              ColumnSpacing="7">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.4*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="1.2*" />
+                            </Grid.ColumnDefinitions>
+
+                            <PasswordBox x:Name="RealMapCartoKeyBox"
+                                         Grid.Column="0"
+                                         Header="Chave CARTO Basemaps"
+                                         PlaceholderText="Cole aqui a chave enviada pela CARTO" />
+
+                            <Button x:Name="SaveRealMapCartoKeyButton"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Bottom"
+                                    Content="Salvar chave"
+                                    Click="OnSaveRealMapCartoKeyClick" />
+
+                            <Button Grid.Column="2"
+                                    VerticalAlignment="Bottom"
+                                    Content="Como obter"
+                                    Click="OnOpenCartoKeyHelpClick" />
+
+                            <TextBlock Grid.Column="3"
+                                       VerticalAlignment="Bottom"
+                                       Margin="2,0,0,4"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"
+                                       Foreground="{ThemeResource MapStudioTextMutedBrush}"
+                                       Text="A CARTO envia a chave por e-mail. Ela fica salva somente no Windows Credential Manager deste PC." />
                         </Grid>
                     </Grid>
 
