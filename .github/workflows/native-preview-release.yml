@@ -834,32 +834,58 @@ jobs:
 
           Write-Host "Verified CARTO PNG validation, direct native PNG decoding and staged viewport diagnostics."
 
-      - name: Verify test 10.25 CARTO null-reference hardening
+      - name: Verify CARTO mosaic and georeference hardening
         shell: pwsh
         run: |
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
           $loader = Get-Content src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs -Raw
 
           foreach ($required in @(
-            'string.IsNullOrWhiteSpace(',
+            'JsonSerializerDefaults.Web',
+            'PropertyNameCaseInsensitive',
             'georeference.MapType',
-            '? "roadmap"',
-            'carto-keyed-v2',
-            'http-download',
-            'http-download-fallback',
-            'GetByteArrayAsync',
+            'carto-keyed-v3',
+            'mosaic-coverage',
+            'mosaic-download',
+            'maximumResidentTiles',
+            'SemaphoreSlim',
+            'cartoReferenceInvalidPngPayload:',
             'TryWriteCartoReferenceDiagnostic',
             'carto-reference.log',
             'cartoReferenceNull:'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.25 georeference/CARTO hardening marker is missing: $required"
+              throw "CARTO mosaic/georeference hardening marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetReferenceOverlays',
+            'BuildReferenceOverlayDefinitions',
+            'RefreshActiveReferenceOverlayAsync',
+            'reference.TileCount',
+            '_activeCartoBasemapsApiKey'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "CARTO streamed overlay marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            '_referenceOverlayBatches',
+            'SetReferenceOverlays',
+            '_maskSampler'
+          )) {
+            if (-not $renderer.Contains($required)) {
+              throw "CARTO tiled renderer marker is missing: $required"
             }
           }
 
           if (-not $session.Contains('value.MapType.Trim()') -or
               -not $session.Contains('string.IsNullOrWhiteSpace(')) {
-            throw "Test 10.25 ValidateGeoreference null guard is missing."
+            throw "ValidateGeoreference null guard is missing."
           }
 
           foreach ($required in @(
@@ -869,11 +895,11 @@ jobs:
             'NullReferenceException'
           )) {
             if (-not $loader.Contains($required)) {
-              throw "Test 10.25 WIC null guard is missing: $required"
+              throw "WIC null guard is missing: $required"
             }
           }
 
-          Write-Host "Verified legacy georeference normalization, CARTO response guard and WIC null safety."
+          Write-Host "Verified saved georeference loading, streamed CARTO mosaic, clamped sampling and WIC null safety."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
