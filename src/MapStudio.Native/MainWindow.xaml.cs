@@ -26746,6 +26746,9 @@ setTimeout(postBounds, 250);
             return;
         }
 
+        var failureStage =
+            "preparação";
+
         try
         {
             NativeGoogleMapReference reference;
@@ -26754,12 +26757,16 @@ setTimeout(postBounds, 250);
                 providerBox.SelectedIndex ==
                     1)
             {
+                var enteredApiKey =
+                    apiKeyBox.Password
+                        ?.Trim();
+
                 var apiKey =
                     string.IsNullOrWhiteSpace(
-                        apiKeyBox.Password)
+                        enteredApiKey)
                         ? NativeMapCredentialStore
                             .TryGetGoogleMapsApiKey()
-                        : apiKeyBox.Password.Trim();
+                        : enteredApiKey;
 
                 if (
                     string.IsNullOrWhiteSpace(
@@ -26770,6 +26777,9 @@ setTimeout(postBounds, 250);
                     return;
                 }
 
+                failureStage =
+                    "download da referência Google";
+
                 StatusText.Text =
                     "Carregando referência Google Maps...";
 
@@ -26779,10 +26789,15 @@ setTimeout(postBounds, 250);
                             apiKey);
 
                 if (
+                    !string.IsNullOrWhiteSpace(
+                        enteredApiKey) &&
                     saveKeyCheckBox
                         .IsChecked ==
                     true)
                 {
+                    failureStage =
+                        "salvamento da chave Google";
+
                     NativeMapCredentialStore
                         .SaveGoogleMapsApiKey(
                             apiKey);
@@ -26790,12 +26805,16 @@ setTimeout(postBounds, 250);
             }
             else
             {
+                var enteredApiKey =
+                    apiKeyBox.Password
+                        ?.Trim();
+
                 var apiKey =
                     string.IsNullOrWhiteSpace(
-                        apiKeyBox.Password)
+                        enteredApiKey)
                         ? NativeMapCredentialStore
                             .TryGetCartoBasemapsApiKey()
-                        : apiKeyBox.Password.Trim();
+                        : enteredApiKey;
 
                 if (
                     string.IsNullOrWhiteSpace(
@@ -26806,6 +26825,9 @@ setTimeout(postBounds, 250);
                     return;
                 }
 
+                failureStage =
+                    "download/conversão da referência CARTO";
+
                 StatusText.Text =
                     "Carregando referência CARTO/OpenStreetMap...";
 
@@ -26815,21 +26837,32 @@ setTimeout(postBounds, 250);
                             apiKey);
 
                 if (
+                    !string.IsNullOrWhiteSpace(
+                        enteredApiKey) &&
                     saveKeyCheckBox
                         .IsChecked ==
                     true)
                 {
+                    failureStage =
+                        "salvamento da chave CARTO";
+
                     NativeMapCredentialStore
                         .SaveCartoBasemapsApiKey(
                             apiKey);
                 }
             }
 
+            failureStage =
+                "montagem da textura sobre o terreno";
+
             var opacity =
                 (float)Math.Clamp(
                     opacityBox.Value,
                     0.05,
                     1.0);
+
+            failureStage =
+                "envio da textura para o viewport";
 
             Viewport.SetReferenceOverlay(
                 new NativeReferenceOverlayDefinition(
@@ -26860,7 +26893,7 @@ setTimeout(postBounds, 250);
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao carregar referência de mapa: {exception.Message}";
+                $"Falha ao carregar referência de mapa ({failureStage}): {exception.GetType().Name}: {exception.Message}";
         }
     }
 
