@@ -25833,13 +25833,24 @@ setTimeout(postBounds, 250);
             Viewport.SetTopView();
             Viewport.FitScene();
 
+            var postCreateWarnings =
+                new List<string>();
+
             if (
                 RealMapApplyElevationCheckBox
                     .IsChecked ==
                 true)
             {
-                await ApplyRealMapAreaElevationAsync(
-                    finalSnapshot);
+                try
+                {
+                    await ApplyRealMapAreaElevationAsync(
+                        finalSnapshot);
+                }
+                catch (Exception exception)
+                {
+                    postCreateWarnings.Add(
+                        $"elevação: {exception.Message}");
+                }
             }
 
             if (
@@ -25847,15 +25858,19 @@ setTimeout(postBounds, 250);
                     .IsChecked ==
                 true)
             {
-                await ApplyRealMapCenterReferenceAsync();
+                try
+                {
+                    await ApplyRealMapCenterReferenceAsync();
+                }
+                catch (Exception exception)
+                {
+                    postCreateWarnings.Add(
+                        $"referência visual: {exception.Message}");
+                }
             }
 
             RealMapAreaWindow.Visibility =
                 Visibility.Collapsed;
-
-            StatusText.Text =
-                $"Mapa real criado: {displayName} · {totalTiles} tiles · " +
-                $"{centerLatitude:F6}, {centerLongitude:F6}.";
 
             var roadImportMode =
                 Math.Clamp(
@@ -25866,14 +25881,22 @@ setTimeout(postBounds, 250);
 
             if (roadImportMode > 0)
             {
-                await PrepareOsmRoadsForRealMapAreaAsync(
-                    _realMapSouth,
-                    _realMapWest,
-                    _realMapNorth,
-                    _realMapEast,
-                    generateAutomatically:
-                        roadImportMode ==
-                        2);
+                try
+                {
+                    await PrepareOsmRoadsForRealMapAreaAsync(
+                        _realMapSouth,
+                        _realMapWest,
+                        _realMapNorth,
+                        _realMapEast,
+                        generateAutomatically:
+                            roadImportMode ==
+                            2);
+                }
+                catch (Exception exception)
+                {
+                    postCreateWarnings.Add(
+                        $"vias OSM: {exception.Message}");
+                }
             }
 
             if (
@@ -25881,20 +25904,37 @@ setTimeout(postBounds, 250);
                     .IsChecked ==
                 true)
             {
-                OpenAssetLibraryToolWindow();
+                try
+                {
+                    OpenAssetLibraryToolWindow();
 
-                OnLibraryModeClick(
-                    this,
-                    new RoutedEventArgs());
-
-                StatusText.Text +=
-                    " · Biblioteca aberta: selecione um item e use “+ Posicionar no mapa”.";
+                    OnLibraryModeClick(
+                        this,
+                        new RoutedEventArgs());
+                }
+                catch (Exception exception)
+                {
+                    postCreateWarnings.Add(
+                        $"biblioteca: {exception.Message}");
+                }
             }
+
+            StatusText.Text =
+                postCreateWarnings.Count ==
+                    0
+                    ? $"Mapa real criado: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6}."
+                    : $"Mapa real criado: {displayName} · {totalTiles} tiles · {centerLatitude:F6}, {centerLongitude:F6} · " +
+                      $"atenção: {postCreateWarnings.Count} etapa(s) opcional(is) falharam: {string.Join(" | ", postCreateWarnings)}.";
         }
         catch (Exception exception)
         {
             StatusText.Text =
-                $"Falha ao criar mapa real por área: {exception.Message}";
+                string.Equals(
+                    exception.Message,
+                    "coordinateMapAlreadyExists",
+                    StringComparison.Ordinal)
+                    ? "Mapa real: já existe uma pasta com esse nome. A tentativa anterior pode ter criado o mapa antes de uma etapa opcional falhar. Escolha outro nome de pasta ou abra o mapa existente."
+                    : $"Falha ao criar mapa real por área: {exception.Message}";
         }
         finally
         {
