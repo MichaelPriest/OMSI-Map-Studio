@@ -705,46 +705,74 @@ public sealed class OmsiNativeSession
                     webTileCount -
                         1);
 
-            var activeTile =
-                snapshot.ActiveTile ??
-                coverageTiles[0];
+            var fullMapCoverage =
+                snapshot.Map.Tiles.Count >
+                    1 &&
+                snapshot.Tiles.Count >=
+                    snapshot.Map.Tiles.Count;
 
-            var activeWorldX =
-                (
-                    activeTile.X +
-                    0.5
-                ) *
-                OmsiTileGrid.TileSize;
+            double referenceFocusWorldX;
+            double referenceFocusWorldZ;
 
-            var activeWorldZ =
-                (
-                    activeTile.Y +
-                    0.5
-                ) *
-                OmsiTileGrid.TileSize;
+            if (fullMapCoverage)
+            {
+                referenceFocusWorldX =
+                    (
+                        minimumWorldX +
+                        maximumWorldX
+                    ) *
+                    0.5;
 
-            var activePixelX =
+                referenceFocusWorldZ =
+                    (
+                        minimumWorldZ +
+                        maximumWorldZ
+                    ) *
+                    0.5;
+            }
+            else
+            {
+                var activeTile =
+                    snapshot.ActiveTile ??
+                    coverageTiles[0];
+
+                referenceFocusWorldX =
+                    (
+                        activeTile.X +
+                        0.5
+                    ) *
+                    OmsiTileGrid.TileSize;
+
+                referenceFocusWorldZ =
+                    (
+                        activeTile.Y +
+                        0.5
+                    ) *
+                    OmsiTileGrid.TileSize;
+            }
+
+            var referenceFocusPixelX =
                 anchorPixelX +
                 (
-                    activeWorldX -
+                    referenceFocusWorldX -
                     georeferenceWorldX
                 ) /
                 metersPerPixel;
 
-            var activePixelY =
+            var referenceFocusPixelY =
                 anchorPixelY +
                 (
-                    activeWorldZ -
+                    referenceFocusWorldZ -
                     georeferenceWorldZ
                 ) /
                 metersPerPixel;
 
             var activeWebTileX =
-                activePixelX /
+                referenceFocusPixelX /
                 256.0;
 
             var activeWebTileY =
-                activePixelY /
+                referenceFocusPixelY /
                 256.0;
 
             const int maximumResidentTiles =
