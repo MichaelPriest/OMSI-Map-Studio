@@ -5560,6 +5560,12 @@ public sealed class NativeViewportRuntime : IDisposable
     public bool HasSkyTexture =>
         MapRenderer.HasSkyTexture;
 
+    public int ReferenceOverlayBatchCount =>
+        MapRenderer.ReferenceOverlayBatchCount;
+
+    public int ReferenceOverlayTriangleCount =>
+        MapRenderer.ReferenceOverlayTriangleCount;
+
     public void SetNightPreview(
         bool enabled)
     {
