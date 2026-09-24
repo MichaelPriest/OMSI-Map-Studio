@@ -135,6 +135,14 @@ public sealed class NativeViewportRuntime : IDisposable
     private Vector3? _selectedSplineCurveEnd;
     private NativeSplinePlacementShape? _selectedSplineCurveShape;
 
+    private bool _selectedSplineEndpointEditActive;
+    private NativeSplineEntity? _selectedSplineEndpointEntity;
+    private NativeSplinePlacementShape? _selectedSplineEndpointShape;
+    private double _selectedSplineEndpointCurveOffset;
+    private NativeSplineEndpointEditHandle _selectedSplineEndpointHandle =
+        NativeSplineEndpointEditHandle.None;
+    private float _selectedSplineEndpointHeightOffset;
+
     private OmsiMapDescriptor? _mapDescriptor;
     private string? _omsiRoot;
     private bool _nightPreviewEnabled;
@@ -257,6 +265,9 @@ public sealed class NativeViewportRuntime : IDisposable
 
     public bool IsSelectedSplineCurveEditActive =>
         _selectedSplineCurveEditActive;
+
+    public bool IsSelectedSplineEndpointEditActive =>
+        _selectedSplineEndpointEditActive;
 
     public NativeSplinePlacementStage SplinePlacementStage =>
         _splinePlacementStage;
