@@ -424,9 +424,10 @@ jobs:
             throw "Filled selection ghost preview is missing."
           }
 
-          if (-not $session.Contains('LoadOpenStreetMapReferenceAsync') -or
-              -not $session.Contains('basemaps.cartocdn.com/light_all')) {
-            throw "CARTO/OpenStreetMap reference provider is missing."
+          if (-not $session.Contains('LoadCartoReferenceAsync') -or
+              -not $session.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+              -not $session.Contains('?key=')) {
+            throw "Keyed CARTO/OpenStreetMap reference provider is missing."
           }
 
           if (-not $session.Contains('TimeSpan.FromDays') -or
