@@ -1,16 +1,27 @@
 namespace MapStudio.Core.ProtonBus;
 
+public enum ProtonBusTargetPlatform
+{
+    Pc,
+    Mobile
+}
+
 public sealed record ProtonBusTargetProfile(
     string Id,
     string DisplayName,
     string Description,
     int MapModVersion,
+    ProtonBusTargetPlatform Platform = ProtonBusTargetPlatform.Pc,
+    int? MaxTextureDimension = null,
     bool IsCustom = false);
 
 public static class ProtonBusTargetProfiles
 {
     public const string Phase3Id =
         "map-mods-phase-3";
+
+    public const string Phase3MobileId =
+        "map-mods-phase-3-mobile";
 
     public const string CustomId =
         "custom";
@@ -23,6 +34,19 @@ public static class ProtonBusTargetProfiles
             "Perfil documentado para mapModVersion=3 e para os recursos funcionais implementados pelo Map Studio.",
             MapModVersion:
                 3);
+
+    public static ProtonBusTargetProfile
+        Phase3Mobile { get; } =
+        new(
+            Phase3MobileId,
+            "Map Mods Phase 3 · Mobile",
+            "Perfil Phase 3 para Android/mobile. Mantém mapModVersion=3 e limita texturas a no máximo 2048 px por eixo.",
+            MapModVersion:
+                3,
+            Platform:
+                ProtonBusTargetPlatform.Mobile,
+            MaxTextureDimension:
+                2048);
 
     public static ProtonBusTargetProfile
         Custom(
@@ -57,11 +81,16 @@ public static class ProtonBusTargetProfiles
             ? Phase3
             : string.Equals(
                 profileId,
-                CustomId,
+                Phase3MobileId,
                 StringComparison.OrdinalIgnoreCase)
-                ? Custom(
-                    customMapModVersion)
-                : throw new ArgumentException(
+                ? Phase3Mobile
+                : string.Equals(
+                    profileId,
+                    CustomId,
+                    StringComparison.OrdinalIgnoreCase)
+                    ? Custom(
+                        customMapModVersion)
+                    : throw new ArgumentException(
                     $"Unknown Proton Bus target profile '{profileId}'.",
                     nameof(profileId));
 
@@ -86,6 +115,17 @@ public static class ProtonBusTargetProfiles
                     ProtonBusValidationSeverity.Error,
                     "PBPROFILE_VERSION_INVALID",
                     "The target profile must use a positive mapModVersion."));
+        }
+
+        if (
+            profile.MaxTextureDimension is
+                <= 0)
+        {
+            issues.Add(
+                new(
+                    ProtonBusValidationSeverity.Error,
+                    "PBPROFILE_TEXTURE_LIMIT_INVALID",
+                    "MaxTextureDimension must be greater than zero when configured."));
         }
 
         if (

@@ -62,6 +62,9 @@ public sealed record ProtonBusOmsiMapExportOptions(
     public IReadOnlyList<ProtonBusStreetLightDefinition>
         AdditionalStreetLights { get; init; } =
         Array.Empty<ProtonBusStreetLightDefinition>();
+
+    public int? MaxTextureDimension
+        { get; init; }
 }
 
 public sealed record ProtonBusOmsiMapPackageExportResult(
@@ -241,6 +244,28 @@ public sealed class ProtonBusOmsiMapPackageExporter
                             "textureTranscodeUnsupported",
                             texture.DeclaredName,
                             $"Source '{texture.SourcePath}' cannot currently be converted to PNG."));
+
+                    continue;
+                }
+
+                if (
+                    options.MaxTextureDimension is
+                        { } maxTextureDimension &&
+                    ProtonBusTextureMetadataReader
+                        .TryRead(
+                            texture.SourcePath,
+                            out var metadata,
+                            out _) &&
+                    metadata.MaxDimension >
+                        maxTextureDimension)
+                {
+                    issues.Add(
+                        new(
+                            tile.X,
+                            tile.Y,
+                            "textureDimensionExceeded",
+                            texture.DeclaredName,
+                            $"{metadata.Width}x{metadata.Height} exceeds the configured {maxTextureDimension}px limit."));
 
                     continue;
                 }
@@ -794,6 +819,7 @@ public sealed class ProtonBusOmsiMapPackageExporter
             "textureTargetCollision" or
             "textureTargetCollisionAcrossTiles" or
             "textureTranscodeUnsupported" or
+            "textureDimensionExceeded" or
             "splineDefinitionMissingAfterResolution" or
             "sceneryAssetMissingAfterResolution" or
             "duplicateBusStopPrefix" or

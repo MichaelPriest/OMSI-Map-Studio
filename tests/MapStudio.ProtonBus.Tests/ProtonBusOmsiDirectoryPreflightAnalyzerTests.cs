@@ -277,6 +277,107 @@ public sealed class ProtonBusOmsiDirectoryPreflightAnalyzerTests
         }
     }
 
+    [Fact]
+    public async Task MobileProfileBlocksTextureAbove2048Pixels()
+    {
+        var root =
+            CreateRoot();
+
+        var mapDirectory =
+            CreateSingleTileMap(
+                root,
+                @"Splines\Test\road.sli");
+
+        try
+        {
+            CreateSplineFixture(
+                root,
+                @"Splines\Test\road.sli");
+
+            var texturePath =
+                Path.Combine(
+                    root,
+                    "Splines",
+                    "Test",
+                    "Texture",
+                    "road.png");
+
+            var header =
+                new byte[24];
+
+            new byte[]
+            {
+                137,
+                80,
+                78,
+                71,
+                13,
+                10,
+                26,
+                10
+            }
+            .CopyTo(
+                header,
+                0);
+
+            System.Buffers.Binary
+                .BinaryPrimitives
+                .WriteInt32BigEndian(
+                    header.AsSpan(
+                        16,
+                        4),
+                    4096);
+
+            System.Buffers.Binary
+                .BinaryPrimitives
+                .WriteInt32BigEndian(
+                    header.AsSpan(
+                        20,
+                        4),
+                    1024);
+
+            File.WriteAllBytes(
+                texturePath,
+                header);
+
+            var result =
+                await new ProtonBusOmsiDirectoryPreflightAnalyzer()
+                    .AnalyzeAsync(
+                        root,
+                        mapDirectory,
+                        new(
+                            "Mapa",
+                            "Mapa",
+                            "Rota"),
+                        new()
+                        {
+                            TargetProfile =
+                                ProtonBusTargetProfiles
+                                    .Phase3Mobile
+                        });
+
+            Assert.False(
+                result.CanExport);
+
+            Assert.Contains(
+                result.Issues,
+                issue =>
+                    issue.Severity ==
+                        ProtonBusOmsiPreflightSeverity.Error &&
+                    issue.Code ==
+                        "PBPROFILE_TEXTURE_TOO_LARGE" &&
+                    issue.Detail is not null &&
+                    issue.Detail.Contains(
+                        "4096x1024",
+                        StringComparison.Ordinal));
+        }
+        finally
+        {
+            DeleteRoot(
+                root);
+        }
+    }
+
     private static string CreateSingleTileMap(
         string root,
         string splinePath)

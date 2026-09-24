@@ -31,6 +31,46 @@ public sealed class ProtonBusTargetProfileTests
     }
 
     [Fact]
+    public void Phase3MobileKeepsVersionAndLimitsTextureSize()
+    {
+        var profile =
+            ProtonBusTargetProfiles
+                .Phase3Mobile;
+
+        Assert.Equal(
+            ProtonBusTargetProfiles
+                .Phase3MobileId,
+            profile.Id);
+
+        Assert.Equal(
+            3,
+            profile.MapModVersion);
+
+        Assert.Equal(
+            ProtonBusTargetPlatform.Mobile,
+            profile.Platform);
+
+        Assert.Equal(
+            2048,
+            profile.MaxTextureDimension);
+
+        Assert.False(
+            profile.IsCustom);
+
+        Assert.Empty(
+            ProtonBusTargetProfiles
+                .Validate(
+                    profile));
+
+        Assert.Same(
+            profile,
+            ProtonBusTargetProfiles
+                .Resolve(
+                    ProtonBusTargetProfiles
+                        .Phase3MobileId));
+    }
+
+    [Fact]
     public void CustomProfileWarnsWhenNotPhase3()
     {
         var profile =

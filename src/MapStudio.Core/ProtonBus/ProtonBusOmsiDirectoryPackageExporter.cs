@@ -277,8 +277,15 @@ public sealed class ProtonBusOmsiDirectoryPackageExporter
                 null;
 
         var mapOptions =
-            options.MapOptions ??
-            new ProtonBusOmsiMapExportOptions();
+            (
+                options.MapOptions ??
+                new ProtonBusOmsiMapExportOptions()
+            ) with
+            {
+                MaxTextureDimension =
+                    options.TargetProfile
+                        .MaxTextureDimension
+            };
 
         if (
             options.IncludeTimetable)

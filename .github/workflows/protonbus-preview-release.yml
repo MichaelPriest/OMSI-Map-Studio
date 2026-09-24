@@ -23,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.13-protonbus
-  TAG: v0.2.0-alpha.5-test.10.13-protonbus
+  VERSION: 0.2.0-alpha.5-test.10.14-protonbus
+  TAG: v0.2.0-alpha.5-test.10.14-protonbus
 
 jobs:
   build-protonbus-preview:
@@ -180,12 +180,12 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-win-x64
+          name: OMSI-Map-Studio-0.2.0-alpha.5-test.10.14-protonbus-win-x64
           path: |
-            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-portable-win-x64.zip
-            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-portable-win-x64.zip.sha256
-            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.13-protonbus-win-x64.exe
-            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.13-protonbus-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.14-protonbus-portable-win-x64.zip
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.14-protonbus-portable-win-x64.zip.sha256
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.14-protonbus-win-x64.exe
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.14-protonbus-win-x64.exe.sha256
             artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip
             artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip.sha256
             artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture-README.txt

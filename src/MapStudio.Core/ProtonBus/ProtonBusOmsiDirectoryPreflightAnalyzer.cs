@@ -491,6 +491,45 @@ public sealed class ProtonBusOmsiDirectoryPreflightAnalyzer
                 }
 
                 if (
+                    options.TargetProfile
+                        .MaxTextureDimension is
+                        { } maxTextureDimension)
+                {
+                    if (
+                        ProtonBusTextureMetadataReader
+                            .TryRead(
+                                texture.SourcePath,
+                                out var metadata,
+                                out var metadataError))
+                    {
+                        if (
+                            metadata.MaxDimension >
+                            maxTextureDimension)
+                        {
+                            issues.Add(
+                                new(
+                                    ProtonBusOmsiPreflightSeverity.Error,
+                                    "PBPROFILE_TEXTURE_TOO_LARGE",
+                                    texture.DeclaredName,
+                                    $"{metadata.Width}x{metadata.Height} exceeds {maxTextureDimension}px for profile '{options.TargetProfile.DisplayName}'.",
+                                    tile.X,
+                                    tile.Y));
+                        }
+                    }
+                    else
+                    {
+                        issues.Add(
+                            new(
+                                ProtonBusOmsiPreflightSeverity.Warning,
+                                "PBPROFILE_TEXTURE_DIMENSIONS_UNKNOWN",
+                                texture.DeclaredName,
+                                metadataError,
+                                tile.X,
+                                tile.Y));
+                    }
+                }
+
+                if (
                     textureTargets.TryGetValue(
                         texture.TargetFileName,
                         out var existing) &&

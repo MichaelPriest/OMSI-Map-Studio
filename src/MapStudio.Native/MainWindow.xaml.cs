@@ -21097,6 +21097,16 @@ public sealed partial class MainWindow : Window
             new ComboBoxItem
             {
                 Content =
+                    "Map Mods Phase 3 · Mobile (texturas até 2048 px)",
+                Tag =
+                    ProtonBusTargetProfiles
+                        .Phase3MobileId
+            });
+
+        targetProfileComboBox.Items.Add(
+            new ComboBoxItem
+            {
+                Content =
                     "Personalizado / outra build",
                 Tag =
                     ProtonBusTargetProfiles
