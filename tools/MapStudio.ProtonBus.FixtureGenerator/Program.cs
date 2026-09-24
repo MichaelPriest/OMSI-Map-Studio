@@ -102,8 +102,7 @@ File.WriteAllText(
     Este fixture é experimental e serve para diagnóstico. Se algo não aparecer ou não funcionar, registre exatamente o item afetado (geometria, colisão, path, parada, GPS, semáforo ou luz) e a build do Proton Bus usada.
     """
     .Replace(
-        "
-",
+        "\n",
         Environment.NewLine));
 
 Console.WriteLine(
