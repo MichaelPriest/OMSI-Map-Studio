@@ -4,6 +4,7 @@ using MapStudio.Core.AI;
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Buildings;
 
@@ -93,8 +94,21 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     temporaryDirectory,
                     "model");
 
+            var textureDirectory =
+                Path.Combine(
+                    temporaryDirectory,
+                    "Texture");
+
             Directory.CreateDirectory(
                 modelDirectory);
+
+            Directory.CreateDirectory(
+                textureDirectory);
+
+            await EnsureGeneratedTexturesAsync(
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             var geometry =
                 BuildGeometry(
@@ -178,6 +192,106 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     recursive: true);
             }
         }
+    }
+
+    private static async Task
+        EnsureGeneratedTexturesAsync(
+            string textureDirectory,
+            CancellationToken cancellationToken)
+    {
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_osm_facade.bmp",
+                128,
+                128,
+                static (x, y) =>
+                {
+                    var floorBand =
+                        y %
+                            32 <=
+                            2;
+
+                    var window =
+                        y %
+                            32 >=
+                            9 &&
+                        y %
+                            32 <=
+                            22 &&
+                        x %
+                            32 >=
+                            8 &&
+                        x %
+                            32 <=
+                            23;
+
+                    if (floorBand)
+                    {
+                        return new MapStudioGeneratedRgb(
+                            150,
+                            146,
+                            138);
+                    }
+
+                    if (window)
+                    {
+                        return new MapStudioGeneratedRgb(
+                            78,
+                            112,
+                            132);
+                    }
+
+                    var noise =
+                        (
+                            x * 11 +
+                            y * 5
+                        ) %
+                            10;
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)(
+                            184 +
+                            noise),
+                        (byte)(
+                            180 +
+                            noise),
+                        (byte)(
+                            170 +
+                            noise /
+                                2));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_osm_roof.bmp",
+                128,
+                128,
+                static (x, y) =>
+                {
+                    var seam =
+                        x %
+                            24 <=
+                            1 ||
+                        y %
+                            24 <=
+                            1;
+
+                    return seam
+                        ? new MapStudioGeneratedRgb(
+                            72,
+                            64,
+                            58)
+                        : new MapStudioGeneratedRgb(
+                            98,
+                            88,
+                            80);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public OmsiO3dGeometry BuildGeometry(
@@ -469,7 +583,7 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     0,
                     0,
                     8,
-                    null),
+                    "ms_osm_facade.bmp"),
                 new OmsiO3dMaterial(
                     0.30f,
                     0.27f,
@@ -482,7 +596,7 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                     0,
                     0,
                     8,
-                    null)
+                    "ms_osm_roof.bmp")
             ]);
     }
 
