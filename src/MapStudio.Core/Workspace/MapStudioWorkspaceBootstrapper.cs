@@ -920,8 +920,14 @@ public sealed class MapStudioWorkspaceBootstrapper
                     .RootFolderName,
                 "Starter_4Way");
 
-        if (!Directory.Exists(
-                junctionDirectory))
+        if (
+            !Directory.Exists(
+                junctionDirectory) ||
+            !File.Exists(
+                Path.Combine(
+                    junctionDirectory,
+                    "Texture",
+                    "ms_junction_asphalt.bmp")))
         {
             await new MapStudioJunctionAssetGenerator()
                 .GenerateAsync(
@@ -994,8 +1000,19 @@ public sealed class MapStudioWorkspaceBootstrapper
                     .RootFolderName,
                 "Starter_House");
 
-        if (!Directory.Exists(
-                buildingDirectory))
+        if (
+            !Directory.Exists(
+                buildingDirectory) ||
+            !File.Exists(
+                Path.Combine(
+                    buildingDirectory,
+                    "Texture",
+                    "ms_building_facade.bmp")) ||
+            !File.Exists(
+                Path.Combine(
+                    buildingDirectory,
+                    "Texture",
+                    "ms_building_roof.bmp")))
         {
             await new MapStudioBuildingAssetGenerator()
                 .GenerateAsync(
