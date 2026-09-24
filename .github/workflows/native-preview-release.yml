@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.24: legacy georeference normalization and hardened CARTO reference loading.
+# Test 10.25: isolated CARTO HTTP download, exact failure stages and persistent diagnostics.
 
 on:
   push:
@@ -44,8 +44,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.24-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.24-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.25-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.25-native.md"
   workflow_dispatch:
 
 permissions:
@@ -56,8 +56,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.24-native
-  TAG: v0.2.0-alpha.5-test.10.24-native
+  VERSION: 0.2.0-alpha.5-test.10.25-native
+  TAG: v0.2.0-alpha.5-test.10.25-native
 
 jobs:
   build-native-preview:
@@ -705,7 +705,7 @@ jobs:
 
           Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
 
-      - name: Verify test 10.24 progressive region navigation
+      - name: Verify test 10.25 progressive region navigation
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -721,7 +721,7 @@ jobs:
             'Tile alvo pronto'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.24 progressive navigation wiring is missing: $required"
+              throw "Test 10.25 progressive navigation wiring is missing: $required"
             }
           }
 
@@ -737,7 +737,7 @@ jobs:
 
           Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
 
-      - name: Verify test 10.24 CARTO key integration
+      - name: Verify test 10.25 CARTO key integration
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -752,7 +752,7 @@ jobs:
             'Click="OnOpenCartoKeyHelpClick"'
           )) {
             if (-not $xaml.Contains($required)) {
-              throw "Test 10.24 CARTO credential UI is missing: $required"
+              throw "Test 10.25 CARTO credential UI is missing: $required"
             }
           }
 
@@ -762,7 +762,7 @@ jobs:
             'CartoBasemapsAccount'
           )) {
             if (-not $credentials.Contains($required)) {
-              throw "Test 10.24 CARTO credential storage is missing: $required"
+              throw "Test 10.25 CARTO credential storage is missing: $required"
             }
           }
 
@@ -786,7 +786,7 @@ jobs:
 
           Write-Host "Verified CARTO Basemaps API key UI, secure storage, keyed URLs and OSM picker fallback."
 
-      - name: Verify test 10.24 CARTO ground-reference decode fix
+      - name: Verify test 10.25 CARTO ground-reference decode fix
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -800,7 +800,7 @@ jobs:
             'cartoReferenceInvalidPngPayload'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.24 CARTO download validation is missing: $required"
+              throw "Test 10.25 CARTO download validation is missing: $required"
             }
           }
 
@@ -816,24 +816,25 @@ jobs:
             'CreateRgbaTexture'
           )) {
             if (-not $loader.Contains($required) -and -not $png.Contains($required)) {
-              throw "Test 10.24 direct PNG renderer path is missing: $required"
+              throw "Test 10.25 direct PNG renderer path is missing: $required"
             }
           }
 
           if (-not $tests.Contains('DecodesNonInterlacedRgbaPngWithoutWic') -or
               -not $tests.Contains('RejectsNonPngPayload')) {
-            throw "Test 10.24 PNG decoder regression coverage is missing."
+            throw "Test 10.25 PNG decoder regression coverage is missing."
           }
 
           if (-not $main.Contains('failureStage') -or
               -not $main.Contains('download/conversão da referência CARTO') -or
-              -not $main.Contains('envio da textura para o viewport')) {
-            throw "Test 10.24 staged map-reference diagnostics are missing."
+              -not $main.Contains('envio da textura para o viewport') -or
+              -not $main.Contains('carto-reference.log')) {
+            throw "Test 10.25 staged map-reference diagnostics are missing."
           }
 
           Write-Host "Verified CARTO PNG validation, direct native PNG decoding and staged viewport diagnostics."
 
-      - name: Verify test 10.24 CARTO null-reference hardening
+      - name: Verify test 10.25 CARTO null-reference hardening
         shell: pwsh
         run: |
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
@@ -843,16 +844,22 @@ jobs:
             'string.IsNullOrWhiteSpace(',
             'georeference.MapType',
             '? "roadmap"',
-            'cartoReferenceMissingContent'
+            'carto-keyed-v2',
+            'http-download',
+            'http-download-fallback',
+            'GetByteArrayAsync',
+            'TryWriteCartoReferenceDiagnostic',
+            'carto-reference.log',
+            'cartoReferenceNull:'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.24 georeference/CARTO hardening marker is missing: $required"
+              throw "Test 10.25 georeference/CARTO hardening marker is missing: $required"
             }
           }
 
           if (-not $session.Contains('value.MapType.Trim()') -or
               -not $session.Contains('string.IsNullOrWhiteSpace(')) {
-            throw "Test 10.24 ValidateGeoreference null guard is missing."
+            throw "Test 10.25 ValidateGeoreference null guard is missing."
           }
 
           foreach ($required in @(
@@ -862,7 +869,7 @@ jobs:
             'NullReferenceException'
           )) {
             if (-not $loader.Contains($required)) {
-              throw "Test 10.24 WIC null guard is missing: $required"
+              throw "Test 10.25 WIC null guard is missing: $required"
             }
           }
 
@@ -1022,11 +1029,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.24-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.25-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.24-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.25-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
