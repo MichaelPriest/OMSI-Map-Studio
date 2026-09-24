@@ -20095,6 +20095,17 @@ public sealed partial class MainWindow : Window
     {
         Viewport.CancelSelectedSplineCurveEdit();
 
+        if (Viewport.IsSplineJoinPickActive)
+        {
+            Viewport.CancelSplineJoinPick();
+
+            StatusText.Text =
+                "Ruas: operação Unir cancelada.";
+
+            args.Handled = true;
+            return;
+        }
+
         if (
             Viewport.IsSceneryPlacementActive ||
             Viewport.IsSplinePlacementActive)
