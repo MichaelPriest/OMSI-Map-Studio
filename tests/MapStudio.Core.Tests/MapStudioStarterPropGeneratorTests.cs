@@ -98,6 +98,21 @@ public sealed class MapStudioStarterPropGeneratorTests
                 mesh.Indices.Length >
                 0);
 
+            Assert.All(
+                mesh.Materials,
+                material =>
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            material.TextureName)));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        propRoot,
+                        "Starter_Lamp",
+                        "Texture",
+                        "ms_prop_metal.bmp")));
+
             Assert.False(
                 await generator
                     .EnsureAsync(
