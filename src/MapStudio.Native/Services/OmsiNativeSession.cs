@@ -240,6 +240,46 @@ public sealed class OmsiNativeSession
             edit;
     }
 
+    private static bool HasPngSignature(
+        string path)
+    {
+        try
+        {
+            using var stream =
+                new FileStream(
+                    path,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.ReadWrite);
+
+            Span<byte> signature =
+                stackalloc byte[8];
+
+            return
+                stream.Read(
+                    signature) ==
+                    signature.Length &&
+                HasPngSignature(
+                    signature);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool HasPngSignature(
+        ReadOnlySpan<byte> bytes) =>
+        bytes.Length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4E &&
+        bytes[3] == 0x47 &&
+        bytes[4] == 0x0D &&
+        bytes[5] == 0x0A &&
+        bytes[6] == 0x1A &&
+        bytes[7] == 0x0A;
+
     private static async Task<string>
         EnsureReferenceTgaAsync(
             string sourcePath,
@@ -698,7 +738,9 @@ public sealed class OmsiNativeSession
                 File.GetLastWriteTimeUtc(
                     path) <
             TimeSpan.FromDays(
-                7);
+                7) &&
+            HasPngSignature(
+                path);
 
         if (!cacheValid)
         {
@@ -730,10 +772,12 @@ public sealed class OmsiNativeSession
                 bytes.LongLength >
                     8L *
                     1024L *
-                    1024L)
+                    1024L ||
+                !HasPngSignature(
+                    bytes))
             {
                 throw new InvalidDataException(
-                    "cartoReferenceInvalidPayload");
+                    "cartoReferenceInvalidPngPayload");
             }
 
             await File.WriteAllBytesAsync(
