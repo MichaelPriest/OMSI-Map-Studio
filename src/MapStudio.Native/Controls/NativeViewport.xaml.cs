@@ -554,6 +554,9 @@ public sealed partial class NativeViewport : UserControl
             ?.IsSplinePlacementActive ??
         false;
 
+    public bool IsSplineJoinPickActive =>
+        _splineJoinPickActive;
+
     public NativeSplinePlacementControlState?
         SplinePlacementControlState =>
         _runtime
@@ -726,6 +729,8 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
+        CancelSplineJoinPick();
+
         var started =
             await _runtime
                 .BeginSplinePlacementAsync(
@@ -761,6 +766,8 @@ public sealed partial class NativeViewport : UserControl
         {
             return false;
         }
+
+        CancelSplineJoinPick();
 
         _runtime.SetSplineEndpointSnapOptions(
             enabled: false,
@@ -804,6 +811,7 @@ public sealed partial class NativeViewport : UserControl
     public void CancelSplinePlacement()
     {
         _runtime?.CancelSplinePlacement();
+        CancelSplineJoinPick();
 
         SplinePlacementControlStateChanged
             ?.Invoke(
@@ -833,6 +841,8 @@ public sealed partial class NativeViewport : UserControl
         {
             return false;
         }
+
+        CancelSplineJoinPick();
 
         var started =
             await _runtime
@@ -870,6 +880,8 @@ public sealed partial class NativeViewport : UserControl
             return false;
         }
 
+        CancelSplineJoinPick();
+
         _runtime
             .SetSceneryRoadSnapOptions(
                 enabled: false,
@@ -901,6 +913,7 @@ public sealed partial class NativeViewport : UserControl
 
     public void BeginTerrainPointPick()
     {
+        CancelSplineJoinPick();
         _runtime?.CancelSceneryPlacement();
         _runtime?.CancelSplinePlacement();
 
@@ -917,6 +930,7 @@ public sealed partial class NativeViewport : UserControl
 
     public void BeginTerrainSelectionMode()
     {
+        CancelSplineJoinPick();
         _runtime?.CancelSceneryPlacement();
         _runtime?.CancelSplinePlacement();
 
@@ -944,6 +958,8 @@ public sealed partial class NativeViewport : UserControl
     {
         _runtime
             ?.CancelSceneryPlacement();
+
+        CancelSplineJoinPick();
     }
 
     public async Task<NativeAssetPreviewResult?>
