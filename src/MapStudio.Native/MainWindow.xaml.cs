@@ -26226,6 +26226,14 @@ setTimeout(postBounds, 250);
             var geoTrace in
                 imported.Traces)
         {
+            if (
+                generateAutomatically &&
+                !IsAutomaticRoadHighway(
+                    geoTrace.Highway))
+            {
+                continue;
+            }
+
             var points =
                 new List<MapStudioRoadPoint>(
                     geoTrace.Points.Count);
@@ -29687,6 +29695,33 @@ setTimeout(postBounds, 250);
                 false,
                 3.0)
         ];
+
+    private static bool IsAutomaticRoadHighway(
+        string? highway)
+    {
+        var normalized =
+            highway?
+                .Trim()
+                .ToLowerInvariant();
+
+        return normalized is
+            "motorway" or
+            "motorway_link" or
+            "trunk" or
+            "trunk_link" or
+            "primary" or
+            "primary_link" or
+            "secondary" or
+            "secondary_link" or
+            "tertiary" or
+            "tertiary_link" or
+            "unclassified" or
+            "residential" or
+            "living_street" or
+            "service" or
+            "road" or
+            "track";
+    }
 
     private static RoadProfileOption
         SelectProceduralRoadProfile(
