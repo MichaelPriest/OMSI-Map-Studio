@@ -221,7 +221,8 @@ internal sealed class NativeGpuTextureLoader
                     UnauthorizedAccessException or
                     ArgumentException or
                     NotSupportedException or
-                    OverflowException ||
+                    OverflowException or
+                    NullReferenceException ||
                 exception.GetType()
                     .Namespace?
                     .StartsWith(
@@ -256,6 +257,26 @@ internal sealed class NativeGpuTextureLoader
             if (tga is not null)
             {
                 return tga;
+            }
+        }
+
+        if (
+            string.Equals(
+                Path.GetExtension(path),
+                ".png",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var png =
+                NativePngDecoder
+                    .TryDecodeFile(
+                        path);
+
+            if (png is not null)
+            {
+                return CreateRgbaTexture(
+                    png.Rgba,
+                    png.Width,
+                    png.Height);
             }
         }
 
