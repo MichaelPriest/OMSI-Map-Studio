@@ -25837,8 +25837,9 @@ setTimeout(postBounds, 250);
             }
 
             var finalSnapshot =
-                _session.CurrentMap ??
-                created.Snapshot;
+                _session.SetActiveTile(
+                    anchor.X,
+                    anchor.Y);
 
             _fullMapMode =
                 true;
