@@ -18,6 +18,8 @@ public sealed class NativeReferenceOverlayGeometryBuilder
         ArgumentNullException.ThrowIfNull(
             overlay);
 
+        _ = segments;
+
         if (
             string.IsNullOrWhiteSpace(
                 overlay.ImagePath) ||
@@ -34,12 +36,6 @@ public sealed class NativeReferenceOverlayGeometryBuilder
             throw new InvalidDataException(
                 "invalidReferenceOverlay");
         }
-
-        var safeSegments =
-            Math.Clamp(
-                segments,
-                1,
-                64);
 
         var widthMeters =
             overlay.Width *
@@ -85,9 +81,7 @@ public sealed class NativeReferenceOverlayGeometryBuilder
         var vertices =
             new List<
                 NativeMapVertex>(
-                    safeSegments *
-                    safeSegments *
-                    6);
+                    32_768);
 
         foreach (
             var tile in
@@ -103,8 +97,11 @@ public sealed class NativeReferenceOverlayGeometryBuilder
                 continue;
             }
 
+            var cellCount =
+                terrain.CellCount;
+
             var sampleCount =
-                terrain.CellCount +
+                cellCount +
                 1;
 
             if (
@@ -115,196 +112,124 @@ public sealed class NativeReferenceOverlayGeometryBuilder
                 continue;
             }
 
-            var minimumTileX =
+            var originX =
                 tile.Reference.X *
                 OmsiTileGrid.TileSize;
 
-            var maximumTileX =
-                (
-                    tile.Reference.X +
-                    1
-                ) *
-                OmsiTileGrid.TileSize;
-
-            var minimumTileZ =
+            var originZ =
                 tile.Reference.Y *
                 OmsiTileGrid.TileSize;
 
-            var maximumTileZ =
-                (
-                    tile.Reference.Y +
-                    1
-                ) *
+            var tileMaximumX =
+                originX +
                 OmsiTileGrid.TileSize;
 
-            var minimumX =
-                Math.Max(
-                    minimumOverlayX,
-                    minimumTileX);
-
-            var maximumX =
-                Math.Min(
-                    maximumOverlayX,
-                    maximumTileX);
-
-            var minimumZ =
-                Math.Max(
-                    minimumOverlayZ,
-                    minimumTileZ);
-
-            var maximumZ =
-                Math.Min(
-                    maximumOverlayZ,
-                    maximumTileZ);
-
-            var spanX =
-                maximumX -
-                minimumX;
-
-            var spanZ =
-                maximumZ -
-                minimumZ;
+            var tileMaximumZ =
+                originZ +
+                OmsiTileGrid.TileSize;
 
             if (
-                spanX <= 0.0001 ||
-                spanZ <= 0.0001)
+                maximumOverlayX <=
+                    originX ||
+                minimumOverlayX >=
+                    tileMaximumX ||
+                maximumOverlayZ <=
+                    originZ ||
+                minimumOverlayZ >=
+                    tileMaximumZ)
             {
                 continue;
             }
 
-            var segmentsX =
+            var spacing =
+                OmsiTileGrid.TileSize /
+                cellCount;
+
+            var minimumX =
+                Math.Max(
+                    minimumOverlayX,
+                    originX);
+
+            var maximumX =
+                Math.Min(
+                    maximumOverlayX,
+                    tileMaximumX);
+
+            var minimumZ =
+                Math.Max(
+                    minimumOverlayZ,
+                    originZ);
+
+            var maximumZ =
+                Math.Min(
+                    maximumOverlayZ,
+                    tileMaximumZ);
+
+            var firstColumn =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        (
+                            minimumX -
+                            originX
+                        ) /
+                        spacing),
+                    0,
+                    cellCount -
+                        1);
+
+            var lastColumn =
                 Math.Clamp(
                     (int)Math.Ceiling(
-                        safeSegments *
-                        spanX /
-                        widthMeters),
+                        (
+                            maximumX -
+                            originX
+                        ) /
+                        spacing) -
                     1,
-                    safeSegments);
+                    0,
+                    cellCount -
+                        1);
 
-            var segmentsZ =
+            var firstRow =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        (
+                            minimumZ -
+                            originZ
+                        ) /
+                        spacing),
+                    0,
+                    cellCount -
+                        1);
+
+            var lastRow =
                 Math.Clamp(
                     (int)Math.Ceiling(
-                        safeSegments *
-                        spanZ /
-                        heightMeters),
+                        (
+                            maximumZ -
+                            originZ
+                        ) /
+                        spacing) -
                     1,
-                    safeSegments);
-
-            var columns =
-                segmentsX +
-                1;
-
-            var rows =
-                segmentsZ +
-                1;
-
-            var points =
-                new Vector3[
-                    columns *
-                    rows];
-
-            var uvs =
-                new Vector2[
-                    points.Length];
+                    0,
+                    cellCount -
+                        1);
 
             for (
-                var row = 0;
-                row < rows;
-                row++)
-            {
-                var fractionZ =
-                    (double)row /
-                    segmentsZ;
-
-                var worldZ =
-                    minimumZ +
-                    spanZ *
-                    fractionZ;
-
-                for (
-                    var column = 0;
-                    column < columns;
-                    column++)
-                {
-                    var fractionX =
-                        (double)column /
-                        segmentsX;
-
-                    var worldX =
-                        minimumX +
-                        spanX *
-                        fractionX;
-
-                    var localX =
-                        worldX -
-                        minimumTileX;
-
-                    var localZ =
-                        worldZ -
-                        minimumTileZ;
-
-                    var height =
-                        NativeTerrainSampler
-                            .GetHeightAtLocalPoint(
-                                tile,
-                                localX,
-                                localZ) +
-                        0.08;
-
-                    var u =
-                        (
-                            worldX -
-                            minimumOverlayX
-                        ) /
-                        widthMeters;
-
-                    var v =
-                        (
-                            worldZ -
-                            minimumOverlayZ
-                        ) /
-                        heightMeters;
-
-                    var index =
-                        row *
-                        columns +
-                        column;
-
-                    points[index] =
-                        new Vector3(
-                            (float)worldX,
-                            (float)height,
-                            (float)worldZ);
-
-                    // CARTO/Web Mercator raster rows already run north -> south.
-                    // Map Studio maps north toward -Z, so +Z is south and
-                    // texture V must increase together with world Z.
-                    uvs[index] =
-                        new Vector2(
-                            (float)Math.Clamp(
-                                u,
-                                0.0,
-                                1.0),
-                            (float)Math.Clamp(
-                                v,
-                                0.0,
-                                1.0));
-                }
-            }
-
-            for (
-                var row = 0;
-                row < segmentsZ;
+                var row = firstRow;
+                row <= lastRow;
                 row++)
             {
                 for (
-                    var column = 0;
-                    column < segmentsX;
+                    var column =
+                        firstColumn;
+                    column <=
+                        lastColumn;
                     column++)
                 {
                     var topLeft =
                         row *
-                        columns +
+                        sampleCount +
                         column;
 
                     var topRight =
@@ -313,29 +238,130 @@ public sealed class NativeReferenceOverlayGeometryBuilder
 
                     var bottomLeft =
                         topLeft +
-                        columns;
+                        sampleCount;
 
                     var bottomRight =
                         bottomLeft +
                         1;
 
+                    var h00 =
+                        terrain.Heights[
+                            topLeft];
+
+                    var h10 =
+                        terrain.Heights[
+                            topRight];
+
+                    var h01 =
+                        terrain.Heights[
+                            bottomLeft];
+
+                    var h11 =
+                        terrain.Heights[
+                            bottomRight];
+
+                    if (
+                        !float.IsFinite(
+                            h00) ||
+                        !float.IsFinite(
+                            h10) ||
+                        !float.IsFinite(
+                            h01) ||
+                        !float.IsFinite(
+                            h11))
+                    {
+                        continue;
+                    }
+
+                    var x0 =
+                        originX +
+                        column *
+                        spacing;
+
+                    var x1 =
+                        x0 +
+                        spacing;
+
+                    var z0 =
+                        originZ +
+                        row *
+                        spacing;
+
+                    var z1 =
+                        z0 +
+                        spacing;
+
+                    var uv00 =
+                        CreateReferenceUv(
+                            x0,
+                            z0,
+                            minimumOverlayX,
+                            minimumOverlayZ,
+                            widthMeters,
+                            heightMeters);
+
+                    var uv10 =
+                        CreateReferenceUv(
+                            x1,
+                            z0,
+                            minimumOverlayX,
+                            minimumOverlayZ,
+                            widthMeters,
+                            heightMeters);
+
+                    var uv01 =
+                        CreateReferenceUv(
+                            x0,
+                            z1,
+                            minimumOverlayX,
+                            minimumOverlayZ,
+                            widthMeters,
+                            heightMeters);
+
+                    var uv11 =
+                        CreateReferenceUv(
+                            x1,
+                            z1,
+                            minimumOverlayX,
+                            minimumOverlayZ,
+                            widthMeters,
+                            heightMeters);
+
+                    // Keep the overlay physically coplanar with the exact
+                    // terrain triangles. The D3D11 reference rasterizer
+                    // applies a visual depth bias, so no world-space lift
+                    // is required and elevated/deformed terrain stays exact.
                     AppendTriangle(
                         vertices,
-                        points,
-                        uvs,
-                        color,
-                        topLeft,
-                        bottomRight,
-                        topRight);
+                        x0,
+                        h00,
+                        z0,
+                        uv00,
+                        x1,
+                        h11,
+                        z1,
+                        uv11,
+                        x1,
+                        h10,
+                        z0,
+                        uv10,
+                        color);
 
                     AppendTriangle(
                         vertices,
-                        points,
-                        uvs,
-                        color,
-                        topLeft,
-                        bottomLeft,
-                        bottomRight);
+                        x0,
+                        h00,
+                        z0,
+                        uv00,
+                        x0,
+                        h01,
+                        z1,
+                        uv01,
+                        x1,
+                        h11,
+                        z1,
+                        uv11,
+                        color);
                 }
             }
         }
@@ -345,31 +371,69 @@ public sealed class NativeReferenceOverlayGeometryBuilder
             overlay.ImagePath);
     }
 
+    private static Vector2
+        CreateReferenceUv(
+            double worldX,
+            double worldZ,
+            double minimumOverlayX,
+            double minimumOverlayZ,
+            double widthMeters,
+            double heightMeters) =>
+        new(
+            (float)(
+                (
+                    worldX -
+                    minimumOverlayX
+                ) /
+                widthMeters),
+            (float)(
+                (
+                    worldZ -
+                    minimumOverlayZ
+                ) /
+                heightMeters));
+
     private static void AppendTriangle(
         List<NativeMapVertex> output,
-        IReadOnlyList<Vector3> points,
-        IReadOnlyList<Vector2> uvs,
-        Vector4 color,
-        int a,
-        int b,
-        int c)
+        double x0,
+        float height0,
+        double z0,
+        Vector2 uv0,
+        double x1,
+        float height1,
+        double z1,
+        Vector2 uv1,
+        double x2,
+        float height2,
+        double z2,
+        Vector2 uv2,
+        Vector4 color)
     {
         output.Add(
             new NativeMapVertex(
-                points[a],
+                new Vector3(
+                    (float)x0,
+                    height0,
+                    (float)z0),
                 color,
-                uvs[a]));
+                uv0));
 
         output.Add(
             new NativeMapVertex(
-                points[b],
+                new Vector3(
+                    (float)x1,
+                    height1,
+                    (float)z1),
                 color,
-                uvs[b]));
+                uv1));
 
         output.Add(
             new NativeMapVertex(
-                points[c],
+                new Vector3(
+                    (float)x2,
+                    height2,
+                    (float)z2),
                 color,
-                uvs[c]));
+                uv2));
     }
 }

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.27: terrain-clipped CARTO ground-reference mosaic.
+# Test 10.28: coplanar CARTO terrain decal with D3D11 depth bias.
 
 on:
   push:
@@ -46,8 +46,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.27-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.27-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.28-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.28-native.md"
   workflow_dispatch:
 
 permissions:
@@ -58,8 +58,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.27-native
-  TAG: v0.2.0-alpha.5-test.10.27-native
+  VERSION: 0.2.0-alpha.5-test.10.28-native
+  TAG: v0.2.0-alpha.5-test.10.28-native
 
 jobs:
   build-native-preview:
@@ -707,7 +707,7 @@ jobs:
 
           Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
 
-      - name: Verify test 10.27 progressive region navigation
+      - name: Verify test 10.28 progressive region navigation
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -723,7 +723,7 @@ jobs:
             'Tile alvo pronto'
           )) {
             if (-not $main.Contains($required)) {
-              throw "Test 10.27 progressive navigation wiring is missing: $required"
+              throw "Test 10.28 progressive navigation wiring is missing: $required"
             }
           }
 
@@ -739,7 +739,7 @@ jobs:
 
           Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
 
-      - name: Verify test 10.27 CARTO key integration
+      - name: Verify test 10.28 CARTO key integration
         shell: pwsh
         run: |
           $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
@@ -754,7 +754,7 @@ jobs:
             'Click="OnOpenCartoKeyHelpClick"'
           )) {
             if (-not $xaml.Contains($required)) {
-              throw "Test 10.27 CARTO credential UI is missing: $required"
+              throw "Test 10.28 CARTO credential UI is missing: $required"
             }
           }
 
@@ -764,7 +764,7 @@ jobs:
             'CartoBasemapsAccount'
           )) {
             if (-not $credentials.Contains($required)) {
-              throw "Test 10.27 CARTO credential storage is missing: $required"
+              throw "Test 10.28 CARTO credential storage is missing: $required"
             }
           }
 
@@ -788,7 +788,7 @@ jobs:
 
           Write-Host "Verified CARTO Basemaps API key UI, secure storage, keyed URLs and OSM picker fallback."
 
-      - name: Verify test 10.27 CARTO ground-reference decode fix
+      - name: Verify test 10.28 CARTO ground-reference decode fix
         shell: pwsh
         run: |
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
@@ -802,7 +802,7 @@ jobs:
             'cartoReferenceInvalidPngPayload'
           )) {
             if (-not $session.Contains($required)) {
-              throw "Test 10.27 CARTO download validation is missing: $required"
+              throw "Test 10.28 CARTO download validation is missing: $required"
             }
           }
 
@@ -818,20 +818,20 @@ jobs:
             'CreateRgbaTexture'
           )) {
             if (-not $loader.Contains($required) -and -not $png.Contains($required)) {
-              throw "Test 10.27 direct PNG renderer path is missing: $required"
+              throw "Test 10.28 direct PNG renderer path is missing: $required"
             }
           }
 
           if (-not $tests.Contains('DecodesNonInterlacedRgbaPngWithoutWic') -or
               -not $tests.Contains('RejectsNonPngPayload')) {
-            throw "Test 10.27 PNG decoder regression coverage is missing."
+            throw "Test 10.28 PNG decoder regression coverage is missing."
           }
 
           if (-not $main.Contains('failureStage') -or
               -not $main.Contains('download/conversão da referência CARTO') -or
               -not $main.Contains('envio da textura para o viewport') -or
               -not $main.Contains('carto-reference.log')) {
-            throw "Test 10.27 staged map-reference diagnostics are missing."
+            throw "Test 10.28 staged map-reference diagnostics are missing."
           }
 
           Write-Host "Verified CARTO PNG validation, direct native PNG decoding and staged viewport diagnostics."
@@ -881,28 +881,35 @@ jobs:
           foreach ($required in @(
             '_referenceOverlayBatches',
             'SetReferenceOverlays',
-            '_maskSampler'
+            '_referenceOverlaySampler',
+            '_referenceOverlayRasterizerState',
+            'ReferenceOverlayDepthBias',
+            'ReferenceOverlaySlopeScaledDepthBias',
+            'TextureAddressMode.Border'
           )) {
             if (-not $renderer.Contains($required)) {
-              throw "CARTO tiled renderer marker is missing: $required"
+              throw "CARTO terrain-decal renderer marker is missing: $required"
             }
           }
 
           foreach ($required in @(
             'scene.Tiles',
             'minimumOverlayX',
-            'GetHeightAtLocalPoint',
-            'minimumTileX',
-            'maximumTileX'
+            'terrain.Heights',
+            'spacing',
+            'CreateReferenceUv',
+            'physically coplanar'
           )) {
             if (-not $overlayBuilder.Contains($required)) {
-              throw "Terrain-clipped reference overlay marker is missing: $required"
+              throw "Coplanar terrain-reference overlay marker is missing: $required"
             }
           }
 
           if (-not $overlayTests.Contains('BuildClipsOverlayToLoadedTerrain') -or
+              -not $overlayTests.Contains('BuildUsesTerrainSurfaceWithoutPhysicalLift') -or
+              -not $overlayTests.Contains('BuildKeepsBoundaryUvOutsideForTransparentBorderSampling') -or
               -not $overlayTests.Contains('BuildSkipsReferenceOutsideLoadedTerrain')) {
-            throw "Terrain-clipped reference overlay regression coverage is missing."
+            throw "Coplanar terrain-reference overlay regression coverage is missing."
           }
 
           if (-not $session.Contains('value.MapType.Trim()') -or
@@ -921,7 +928,7 @@ jobs:
             }
           }
 
-          Write-Host "Verified saved georeference loading, streamed CARTO mosaic, clamped sampling and WIC null safety."
+          Write-Host "Verified saved georeference loading, streamed CARTO mosaic, coplanar terrain decal, transparent border sampling, D3D11 depth bias and WIC null safety."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -1077,11 +1084,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.27-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.28-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.27-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.28-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

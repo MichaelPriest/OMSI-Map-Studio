@@ -27,27 +27,9 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
                 ]);
 
         var scene =
-            new NativeSceneSnapshot(
-                [
-                    new NativeSceneTile(
-                        reference,
-                        new OmsiTileContent(
-                            new OmsiTileSummary(
-                                true,
-                                0,
-                                0,
-                                0),
-                            [],
-                            [],
-                            terrain))
-                ],
-                [],
-                [],
-                [
-                    new NativeTerrainEntity(
-                        reference,
-                        terrain)
-                ]);
+            CreateScene(
+                reference,
+                terrain);
 
         var overlay =
             new NativeReferenceOverlayDefinition(
@@ -85,24 +67,69 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
 
                 Assert.InRange(
                     vertex.Position.Y,
-                    4.079f,
-                    4.081f);
+                    3.999f,
+                    4.001f);
 
                 Assert.InRange(
                     vertex.Color.W,
                     0.499f,
                     0.501f);
-
-                Assert.InRange(
-                    vertex.TexCoord.X,
-                    0,
-                    1);
-
-                Assert.InRange(
-                    vertex.TexCoord.Y,
-                    0,
-                    1);
             });
+    }
+
+    [Fact]
+    public void BuildUsesTerrainSurfaceWithoutPhysicalLift()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    1,
+                    2,
+                    3,
+                    4
+                ]);
+
+        var geometry =
+            new NativeReferenceOverlayGeometryBuilder()
+                .Build(
+                    CreateScene(
+                        reference,
+                        terrain),
+                    new NativeReferenceOverlayDefinition(
+                        "reference.png",
+                        300,
+                        300,
+                        1,
+                        150,
+                        150,
+                        0.55f,
+                        "CARTO / OpenStreetMap"));
+
+        Assert.Equal(
+            6,
+            geometry.Vertices.Length);
+
+        Assert.Equal(
+            [
+                1.0f,
+                4.0f,
+                2.0f,
+                1.0f,
+                3.0f,
+                4.0f
+            ],
+            geometry.Vertices
+                .Select(
+                    vertex =>
+                        vertex.Position.Y)
+                .ToArray());
     }
 
     [Fact]
@@ -124,45 +151,21 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
                     0
                 ]);
 
-        var scene =
-            new NativeSceneSnapshot(
-                [
-                    new NativeSceneTile(
-                        reference,
-                        new OmsiTileContent(
-                            new OmsiTileSummary(
-                                true,
-                                0,
-                                0,
-                                0),
-                            [],
-                            [],
-                            terrain))
-                ],
-                [],
-                [],
-                [
-                    new NativeTerrainEntity(
-                        reference,
-                        terrain)
-                ]);
-
-        var overlay =
-            new NativeReferenceOverlayDefinition(
-                "reference.png",
-                256,
-                256,
-                1,
-                128,
-                128,
-                0.55f,
-                "CARTO / OpenStreetMap");
-
         var geometry =
             new NativeReferenceOverlayGeometryBuilder()
                 .Build(
-                    scene,
-                    overlay,
+                    CreateScene(
+                        reference,
+                        terrain),
+                    new NativeReferenceOverlayDefinition(
+                        "reference.png",
+                        300,
+                        300,
+                        1,
+                        150,
+                        150,
+                        0.55f,
+                        "CARTO / OpenStreetMap"),
                     segments:
                         1);
 
@@ -199,6 +202,50 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
     }
 
     [Fact]
+    public void BuildKeepsBoundaryUvOutsideForTransparentBorderSampling()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var geometry =
+            new NativeReferenceOverlayGeometryBuilder()
+                .Build(
+                    CreateScene(
+                        reference,
+                        terrain),
+                    new NativeReferenceOverlayDefinition(
+                        "reference.png",
+                        256,
+                        256,
+                        1,
+                        128,
+                        128,
+                        0.55f,
+                        "CARTO / OpenStreetMap"));
+
+        Assert.Contains(
+            geometry.Vertices,
+            vertex =>
+                vertex.TexCoord.X >
+                    1.0f ||
+                vertex.TexCoord.Y >
+                    1.0f);
+    }
+
+    [Fact]
     public void BuildSkipsReferenceOutsideLoadedTerrain()
     {
         var scene =
@@ -232,4 +279,30 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
             0,
             geometry.TriangleCount);
     }
+
+    private static NativeSceneSnapshot
+        CreateScene(
+            OmsiTileReference reference,
+            OmsiTerrainGrid terrain) =>
+        new(
+            [
+                new NativeSceneTile(
+                    reference,
+                    new OmsiTileContent(
+                        new OmsiTileSummary(
+                            true,
+                            0,
+                            0,
+                            0),
+                        [],
+                        [],
+                        terrain))
+            ],
+            [],
+            [],
+            [
+                new NativeTerrainEntity(
+                    reference,
+                    terrain)
+            ]);
 }

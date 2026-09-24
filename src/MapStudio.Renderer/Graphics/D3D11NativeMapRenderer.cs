@@ -94,6 +94,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11Buffer _materialPreviewBuffer;
     private readonly ID3D11SamplerState _textureSampler;
     private readonly ID3D11SamplerState _maskSampler;
+    private readonly ID3D11SamplerState _referenceOverlaySampler;
     private readonly ID3D11SamplerState _skySampler;
     private readonly ID3D11DepthStencilState _skyDepthState;
     private readonly ID3D11DepthStencilState _depthReadState;
@@ -101,6 +102,7 @@ public sealed class D3D11NativeMapRenderer :
     private readonly ID3D11BlendState _alphaBlendState;
     private readonly ID3D11BlendState _additiveBlendState;
     private readonly ID3D11RasterizerState _terrainRasterizerState;
+    private readonly ID3D11RasterizerState _referenceOverlayRasterizerState;
     private readonly NativeGpuTextureLoader _textureLoader;
     private readonly ID3D11Buffer _skyTriangleBuffer;
     private readonly int _skyTriangleVertexCount;
@@ -132,6 +134,14 @@ public sealed class D3D11NativeMapRenderer :
                     .OrdinalIgnoreCase);
 
     private long _textureAccessCounter;
+
+    private const int
+        ReferenceOverlayDepthBias =
+            -2;
+
+    private const float
+        ReferenceOverlaySlopeScaledDepthBias =
+            -1.0f;
 
     private const int
         MaxRetainedStaleTextureCount =
@@ -651,6 +661,26 @@ public sealed class D3D11NativeMapRenderer :
                     SamplerDescription
                         .LinearClamp);
 
+        var referenceOverlaySamplerDescription =
+            new SamplerDescription(
+                Filter.MinMagMipLinear,
+                TextureAddressMode.Border,
+                TextureAddressMode.Border,
+                TextureAddressMode.Border);
+
+        referenceOverlaySamplerDescription
+            .BorderColor =
+                new Color4(
+                    0,
+                    0,
+                    0,
+                    0);
+
+        _referenceOverlaySampler =
+            _deviceHost.Device
+                .CreateSamplerState(
+                    referenceOverlaySamplerDescription);
+
         _skySampler =
             _deviceHost.Device
                 .CreateSamplerState(
@@ -695,6 +725,27 @@ public sealed class D3D11NativeMapRenderer :
                 .CreateRasterizerState(
                     RasterizerDescription
                         .CullNone);
+
+        var referenceOverlayRasterizerDescription =
+            RasterizerDescription
+                .CullNone;
+
+        referenceOverlayRasterizerDescription
+            .DepthBias =
+                ReferenceOverlayDepthBias;
+
+        referenceOverlayRasterizerDescription
+            .DepthBiasClamp =
+                0.0f;
+
+        referenceOverlayRasterizerDescription
+            .SlopeScaledDepthBias =
+                ReferenceOverlaySlopeScaledDepthBias;
+
+        _referenceOverlayRasterizerState =
+            _deviceHost.Device
+                .CreateRasterizerState(
+                    referenceOverlayRasterizerDescription);
 
         _textureLoader =
             new NativeGpuTextureLoader(
@@ -2097,7 +2148,7 @@ public sealed class D3D11NativeMapRenderer :
         context
             .PSSetSampler(
                 0,
-                _maskSampler);
+                _referenceOverlaySampler);
 
         context
             .PSSetShader(
@@ -2113,7 +2164,7 @@ public sealed class D3D11NativeMapRenderer :
 
         context
             .RSSetState(
-                _terrainRasterizerState);
+                _referenceOverlayRasterizerState);
 
         foreach (
             var batch in
@@ -3874,6 +3925,7 @@ public sealed class D3D11NativeMapRenderer :
         _skyTexture?.Dispose();
         _skyTexture = null;
         _skyTriangleBuffer.Dispose();
+        _referenceOverlayRasterizerState.Dispose();
         _terrainRasterizerState.Dispose();
         _additiveBlendState.Dispose();
         _alphaBlendState.Dispose();
@@ -3881,6 +3933,7 @@ public sealed class D3D11NativeMapRenderer :
         _depthReadState.Dispose();
         _skyDepthState.Dispose();
         _skySampler.Dispose();
+        _referenceOverlaySampler.Dispose();
         _maskSampler.Dispose();
         _textureSampler.Dispose();
         _inputLayout.Dispose();
