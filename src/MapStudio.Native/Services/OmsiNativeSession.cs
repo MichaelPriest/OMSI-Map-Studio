@@ -11,8 +11,6 @@ using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
 using System.Text.Json;
-using Windows.Graphics.Imaging;
-using Windows.Storage;
 
 namespace MapStudio.Native.Services;
 
@@ -280,175 +278,7 @@ public sealed class OmsiNativeSession
         bytes[6] == 0x1A &&
         bytes[7] == 0x0A;
 
-    private static async Task<string>
-        EnsureReferenceTgaAsync(
-            string sourcePath,
-            CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(
-            sourcePath);
-
-        cancellationToken
-            .ThrowIfCancellationRequested();
-
-        if (!File.Exists(sourcePath))
-        {
-            throw new FileNotFoundException(
-                "referenceSourceMissing",
-                sourcePath);
-        }
-
-        var targetPath =
-            Path.ChangeExtension(
-                sourcePath,
-                ".tga");
-
-        if (
-            File.Exists(targetPath) &&
-            File.GetLastWriteTimeUtc(
-                targetPath) >=
-            File.GetLastWriteTimeUtc(
-                sourcePath))
-        {
-            return targetPath;
-        }
-
-        try
-        {
-            var file =
-                await StorageFile
-                    .GetFileFromPathAsync(
-                        sourcePath);
-
-            using var stream =
-                await file
-                    .OpenAsync(
-                        FileAccessMode.Read);
-
-            var decoder =
-                await BitmapDecoder
-                    .CreateAsync(
-                        stream);
-
-            var width =
-                checked(
-                    (int)decoder.PixelWidth);
-
-            var height =
-                checked(
-                    (int)decoder.PixelHeight);
-
-            if (
-                width <= 0 ||
-                height <= 0 ||
-                width > 16_384 ||
-                height > 16_384)
-            {
-                throw new InvalidDataException(
-                    "referenceImageDimensionsInvalid");
-            }
-
-            var pixelData =
-                await decoder
-                    .GetPixelDataAsync(
-                        BitmapPixelFormat.Bgra8,
-                        BitmapAlphaMode.Straight,
-                        new BitmapTransform(),
-                        ExifOrientationMode
-                            .IgnoreExifOrientation,
-                        ColorManagementMode
-                            .DoNotColorManage);
-
-            cancellationToken
-                .ThrowIfCancellationRequested();
-
-            var pixels =
-                pixelData
-                    .DetachPixelData();
-
-            var expectedLength =
-                checked(
-                    width *
-                    height *
-                    4);
-
-            if (
-                pixels is null ||
-                pixels.Length !=
-                    expectedLength)
-            {
-                throw new InvalidDataException(
-                    "referenceImagePixelDataInvalid");
-            }
-
-            var output =
-                new byte[
-                    18 +
-                    expectedLength];
-
-            output[2] =
-                2;
-
-            output[12] =
-                (byte)(
-                    width &
-                    0xFF);
-
-            output[13] =
-                (byte)(
-                    (
-                        width >>
-                        8
-                    ) &
-                    0xFF);
-
-            output[14] =
-                (byte)(
-                    height &
-                    0xFF);
-
-            output[15] =
-                (byte)(
-                    (
-                        height >>
-                        8
-                    ) &
-                    0xFF);
-
-            output[16] =
-                32;
-
-            output[17] =
-                0x28;
-
-            Buffer.BlockCopy(
-                pixels,
-                0,
-                output,
-                18,
-                expectedLength);
-
-            await File
-                .WriteAllBytesAsync(
-                    targetPath,
-                    output,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-            return targetPath;
-        }
-        catch (Exception exception)
-            when (
-                exception is not
-                    OperationCanceledException)
-        {
-            throw new InvalidDataException(
-                $"referenceImageDecodeFailed:{exception.GetType().Name}:{exception.Message}",
-                exception);
-        }
-    }
-
-    public async Task<NativeGoogleMapReference>
+        public async Task<NativeGoogleMapReference>
         LoadGoogleMapReferenceAsync(
             string apiKey,
             int width = 640,
@@ -829,14 +659,8 @@ public sealed class OmsiNativeSession
             ) *
             metersPerPixel;
 
-        var renderPath =
-            await EnsureReferenceTgaAsync(
-                    path,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
         return new NativeGoogleMapReference(
-            renderPath,
+            path,
             256,
             256,
             metersPerPixel,
