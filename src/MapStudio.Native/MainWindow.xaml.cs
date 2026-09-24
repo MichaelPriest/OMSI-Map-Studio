@@ -20943,6 +20943,9 @@ public sealed partial class MainWindow : Window
             _fullMapMode =
                 true;
 
+            creationStage =
+                "carregamento do mapa criado no viewport";
+
             await ApplyMapSnapshotAsync(
                 snapshot,
                 focusActiveTile:
@@ -25711,11 +25714,17 @@ setTimeout(postBounds, 250);
         CreateRealMapAreaButton.IsEnabled =
             false;
 
+        var creationStage =
+            "inicialização";
+
         try
         {
             BeginLoading(
                 "Criando mapa real",
                 $"{_realMapAreaColumns} × {_realMapAreaRows} tiles · {totalTiles} total");
+
+            creationStage =
+                "criação da pasta e do tile inicial";
 
             var created =
                 await _session
@@ -25725,6 +25734,9 @@ setTimeout(postBounds, 250);
                         centerLatitude,
                         centerLongitude);
 
+            creationStage =
+                "definição do tile âncora";
+
             var anchor =
                 created.Snapshot.ActiveTile ??
                 OmsiTileRegionSelector
@@ -25732,6 +25744,9 @@ setTimeout(postBounds, 250);
                         created.Snapshot.Map.Tiles)
                 ?? throw new InvalidDataException(
                     "Mapa real criado sem tile inicial.");
+
+            creationStage =
+                "salvamento da georreferência";
 
             await _session
                 .SaveMapGeoreferenceAsync(
@@ -25808,6 +25823,9 @@ setTimeout(postBounds, 250);
                     UpdateLoading(
                         "Criando tiles do mapa real",
                         $"{createdCount + 1}/{totalTiles} · tile {tileX},{tileY}");
+
+                    creationStage =
+                        $"criação do tile {tileX},{tileY}";
 
                     await _session
                         .CreateTileFromTemplateAsync(
@@ -25934,7 +25952,7 @@ setTimeout(postBounds, 250);
                     "coordinateMapAlreadyExists",
                     StringComparison.Ordinal)
                     ? "Mapa real: já existe uma pasta com esse nome. A tentativa anterior pode ter criado o mapa antes de uma etapa opcional falhar. Escolha outro nome de pasta ou abra o mapa existente."
-                    : $"Falha ao criar mapa real por área: {exception.Message}";
+                    : $"Falha ao criar mapa real por área ({creationStage}): {exception.Message}";
         }
         finally
         {
