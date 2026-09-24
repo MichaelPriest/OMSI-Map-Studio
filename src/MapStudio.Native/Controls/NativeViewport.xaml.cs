@@ -2030,54 +2030,6 @@ public sealed partial class NativeViewport : UserControl
         if (
             _runtime is not null &&
             _runtime
-                .IsSelectedSplineEndpointDragging &&
-            _leftPressed)
-        {
-            var scaleX =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleX);
-
-            var scaleY =
-                Math.Max(
-                    0.01,
-                    SwapChainSurface
-                        .CompositionScaleY);
-
-            var pixelX =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.X *
-                        scaleX));
-
-            var pixelY =
-                (uint)Math.Max(
-                    0,
-                    Math.Round(
-                        point.Position.Y *
-                        scaleY));
-
-            _runtime
-                .UpdateSelectedSplineEndpointDrag(
-                    pixelX,
-                    pixelY,
-                    out var endpointStatus);
-
-            PointerStatusChanged?.Invoke(
-                this,
-                endpointStatus);
-
-            e.Handled =
-                true;
-
-            return;
-        }
-
-        if (
-            _runtime is not null &&
-            _runtime
                 .IsSelectedSplineCurveEditActive)
         {
             if (
@@ -2521,6 +2473,54 @@ public sealed partial class NativeViewport : UserControl
 
                 return;
             }
+        }
+
+        if (
+            _runtime is not null &&
+            _runtime
+                .IsSelectedSplineEndpointDragging &&
+            _leftPressed)
+        {
+            var endpointScaleX =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleX);
+
+            var endpointScaleY =
+                Math.Max(
+                    0.01,
+                    SwapChainSurface
+                        .CompositionScaleY);
+
+            var endpointPixelX =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.X *
+                        endpointScaleX));
+
+            var endpointPixelY =
+                (uint)Math.Max(
+                    0,
+                    Math.Round(
+                        point.Position.Y *
+                        endpointScaleY));
+
+            _runtime
+                .UpdateSelectedSplineEndpointDrag(
+                    endpointPixelX,
+                    endpointPixelY,
+                    out var endpointStatus);
+
+            PointerStatusChanged?.Invoke(
+                this,
+                endpointStatus);
+
+            e.Handled =
+                true;
+
+            return;
         }
 
         if (
