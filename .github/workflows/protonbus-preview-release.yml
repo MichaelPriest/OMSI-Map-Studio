@@ -11,6 +11,7 @@ on:
       - "src/MapStudio.Core/MapStudio.Core.csproj"
       - "src/MapStudio.Native/MainWindow.xaml"
       - "src/MapStudio.Native/MainWindow.xaml.cs"
+      - "tools/MapStudio.ProtonBus.FixtureGenerator/**"
       - "tests/MapStudio.ProtonBus.Tests/**"
   workflow_dispatch:
 
@@ -22,8 +23,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.12-protonbus
-  TAG: v0.2.0-alpha.5-test.10.12-protonbus
+  VERSION: 0.2.0-alpha.5-test.10.13-protonbus
+  TAG: v0.2.0-alpha.5-test.10.13-protonbus
 
 jobs:
   build-protonbus-preview:
@@ -75,6 +76,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64/Docs | Out-Null
           Copy-Item docs/pt-BR/PROTON_BUS_EXPORT.md artifacts/publish/win-x64/Docs/Proton-Bus-Export-pt-BR.md -Force
           Copy-Item docs/en/PROTON_BUS_EXPORT.md artifacts/publish/win-x64/Docs/Proton-Bus-Export-en.md -Force
+
+      - name: Generate Proton Bus validation fixture
+        shell: pwsh
+        run: |
+          dotnet run --project tools/MapStudio.ProtonBus.FixtureGenerator/MapStudio.ProtonBus.FixtureGenerator.csproj --configuration Release -- artifacts/fixture
+
+          if (-not (Test-Path "artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip")) {
+            throw "Validation fixture ZIP was not produced."
+          }
+
+          if (-not (Test-Path "artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip.sha256")) {
+            throw "Validation fixture SHA256 was not produced."
+          }
 
       - name: Create portable ZIP
         shell: pwsh
@@ -137,6 +151,7 @@ jobs:
           - TTData, paradas, entrypoints e GPS
           - semáforos e street lights
           - exportação multi-tile e de diretório OMSI completo
+          - fixture pequeno de validação Proton Bus para testar formato/paths/parada/GPS/semáforo/luz sem depender de um mapa OMSI grande
 
           Esta build é experimental. O formato ainda precisa ser validado dentro de uma build real do Proton Bus antes de ser anunciado como compatibilidade final.
 
@@ -157,6 +172,7 @@ jobs:
           - TTData, bus stops, entrypoints and GPS
           - traffic lights and street lights
           - multi-tile and full OMSI map-directory export
+          - small Proton Bus validation fixture for testing format/paths/stop/GPS/traffic-light/light behavior without a large OMSI map
 
           This build is experimental. The format still needs validation in an actual Proton Bus build before final compatibility is claimed.
           "@ | Set-Content artifacts/release-notes.md -Encoding utf8
@@ -164,12 +180,15 @@ jobs:
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-win-x64
+          name: OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-win-x64
           path: |
-            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-portable-win-x64.zip
-            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.12-protonbus-portable-win-x64.zip.sha256
-            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.12-protonbus-win-x64.exe
-            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.12-protonbus-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-portable-win-x64.zip
+            artifacts/OMSI-Map-Studio-0.2.0-alpha.5-test.10.13-protonbus-portable-win-x64.zip.sha256
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.13-protonbus-win-x64.exe
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-0.2.0-alpha.5-test.10.13-protonbus-win-x64.exe.sha256
+            artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip
+            artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip.sha256
+            artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture-README.txt
           compression-level: 0
           if-no-files-found: error
 
@@ -182,13 +201,16 @@ jobs:
           $setupHash = "$setup.sha256"
           $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
           $zipHash = "$zip.sha256"
+          $fixture = "artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture.zip"
+          $fixtureHash = "$fixture.sha256"
+          $fixtureReadme = "artifacts/fixture/MapStudio-ProtonBus-Validation-Fixture-README.txt"
 
           gh release view "$env:TAG" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash --clobber
+            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash $fixture $fixtureHash $fixtureReadme --clobber
           }
           else {
-            gh release create "$env:TAG" $setup $setupHash $zip $zipHash `
+            gh release create "$env:TAG" $setup $setupHash $zip $zipHash $fixture $fixtureHash $fixtureReadme `
               --target "$env:GITHUB_SHA" `
               --title "OMSI Map Studio $env:TAG — Proton Bus Preview" `
               --notes-file artifacts/release-notes.md `
