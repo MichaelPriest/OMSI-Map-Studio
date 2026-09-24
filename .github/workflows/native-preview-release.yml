@@ -1105,6 +1105,57 @@ jobs:
 
           Write-Host "Verified visual source-to-target spline join using the safe tangent solver and real OMSI links."
 
+      - name: Verify test 10.32 automatic OSM roads and generated textures
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $props = Get-Content src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs -Raw
+          $traffic = Get-Content src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $building = Get-Content src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs -Raw
+          $footprint = Get-Content src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs -Raw
+          $textures = Get-Content src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealMapRoadImportModeBox"',
+            'SelectedIndex="2"',
+            'Gerar ruas + cruzamentos automaticamente'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.32 automatic OSM UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'way["highway"]',
+            'BuildProceduralRoadGraph()',
+            'AnalyzeProceduralRoadGraphAsync(',
+            'requireConfirmation:',
+            'false',
+            'BuildProceduralJunctionPlan(',
+            'InsertSplineBatchAsync('
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.32 automatic OSM generation marker is missing: $required"
+            }
+          }
+
+          foreach ($pair in @(
+            @($props, 'ms_prop_metal.bmp'),
+            @($traffic, 'ms_traffic_red.bmp'),
+            @($junction, 'ms_junction_asphalt.bmp'),
+            @($building, 'ms_building_facade.bmp'),
+            @($footprint, 'ms_osm_facade.bmp'),
+            @($textures, 'CreateBmp24')
+          )) {
+            if (-not $pair[0].Contains($pair[1])) {
+              throw "Test 10.32 generated texture marker is missing: $($pair[1])"
+            }
+          }
+
+          Write-Host "Verified automatic OSM road/junction generation and procedural textures for Map Studio assets."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
