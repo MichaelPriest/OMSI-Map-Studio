@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Props;
 
@@ -109,8 +110,22 @@ public sealed class MapStudioStarterPropGenerator
                 directory,
                 "model");
 
+        var textureDirectory =
+            Path.Combine(
+                directory,
+                "Texture");
+
         Directory.CreateDirectory(
             modelDirectory);
+
+        Directory.CreateDirectory(
+            textureDirectory);
+
+        var texturesCreated =
+            await EnsureTexturesAsync(
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
         var meshPath =
             Path.Combine(
@@ -126,8 +141,10 @@ public sealed class MapStudioStarterPropGenerator
         var created =
             false;
 
-        if (!File.Exists(
-                meshPath))
+        if (
+            !File.Exists(
+                meshPath) ||
+            texturesCreated)
         {
             await new OmsiO3dGeometryWriter()
                 .WriteAsync(
@@ -436,6 +453,191 @@ public sealed class MapStudioStarterPropGenerator
             Materials);
     }
 
+    private static async Task<bool>
+        EnsureTexturesAsync(
+            string textureDirectory,
+            CancellationToken cancellationToken)
+    {
+        var created =
+            false;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_prop_metal.bmp",
+                    64,
+                    64,
+                    static (x, y) =>
+                    {
+                        var noise =
+                            (
+                                x * 17 +
+                                y * 29
+                            ) %
+                            15;
+
+                        var value =
+                            (byte)(
+                                48 +
+                                noise);
+
+                        return new MapStudioGeneratedRgb(
+                            value,
+                            (byte)(
+                                value +
+                                3),
+                            (byte)(
+                                value +
+                                6));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_prop_lamp.bmp",
+                    32,
+                    32,
+                    static (x, y) =>
+                    {
+                        var glow =
+                            Math.Max(
+                                0,
+                                18 -
+                                Math.Abs(
+                                    x -
+                                    16) -
+                                Math.Abs(
+                                    y -
+                                    16));
+
+                        return new MapStudioGeneratedRgb(
+                            (byte)(
+                                220 +
+                                glow),
+                            (byte)(
+                                172 +
+                                glow *
+                                    2),
+                            (byte)(
+                                72 +
+                                glow *
+                                    2));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_prop_wood.bmp",
+                    64,
+                    64,
+                    static (x, y) =>
+                    {
+                        var grain =
+                            (
+                                x * 5 +
+                                y * 19 +
+                                (
+                                    y %
+                                    8 ==
+                                    0
+                                        ? 18
+                                        : 0
+                                )
+                            ) %
+                            28;
+
+                        return new MapStudioGeneratedRgb(
+                            (byte)(
+                                104 +
+                                grain),
+                            (byte)(
+                                62 +
+                                grain /
+                                    2),
+                            (byte)(
+                                30 +
+                                grain /
+                                    3));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_prop_blue.bmp",
+                    64,
+                    64,
+                    static (x, y) =>
+                    {
+                        var edge =
+                            x %
+                                16 ==
+                            0 ||
+                            y %
+                                16 ==
+                            0;
+
+                        return edge
+                            ? new MapStudioGeneratedRgb(
+                                18,
+                                64,
+                                112)
+                            : new MapStudioGeneratedRgb(
+                                34,
+                                112,
+                                184);
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_prop_utility.bmp",
+                    64,
+                    64,
+                    static (x, y) =>
+                    {
+                        var noise =
+                            (
+                                x * 7 +
+                                y * 11
+                            ) %
+                            13;
+
+                        return new MapStudioGeneratedRgb(
+                            (byte)(
+                                72 +
+                                noise),
+                            (byte)(
+                                92 +
+                                noise),
+                            (byte)(
+                                70 +
+                                noise /
+                                    2));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        return created;
+    }
+
     private static readonly
         IReadOnlyList<OmsiO3dMaterial>
         Materials =
@@ -452,7 +654,7 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 24,
-                null),
+                "ms_prop_metal.bmp"),
             new OmsiO3dMaterial(
                 1.0f,
                 0.83f,
@@ -465,7 +667,7 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 16,
-                null),
+                "ms_prop_lamp.bmp"),
             new OmsiO3dMaterial(
                 0.43f,
                 0.24f,
@@ -478,7 +680,7 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 8,
-                null),
+                "ms_prop_wood.bmp"),
             new OmsiO3dMaterial(
                 0.10f,
                 0.34f,
@@ -491,7 +693,7 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 20,
-                null),
+                "ms_prop_blue.bmp"),
             new OmsiO3dMaterial(
                 0.34f,
                 0.43f,
@@ -504,7 +706,7 @@ public sealed class MapStudioStarterPropGenerator
                 0,
                 0,
                 18,
-                null)
+                "ms_prop_utility.bmp")
         ];
 
     private sealed class GeometryBuilder
