@@ -651,16 +651,18 @@ jobs:
           $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
 
-          if ($main.Contains('https://tile.openstreetmap.org/')) {
-            throw "Direct OpenStreetMap public raster tiles must not be used by the embedded picker."
+          if (-not $main.Contains('https://tile.openstreetmap.org/{z}/{x}/{y}.png')) {
+            throw "OpenStreetMap interactive fallback is missing when no CARTO key is saved."
           }
 
-          if (-not $main.Contains('basemaps.cartocdn.com/light_all')) {
-            throw "Embedded CARTO/OSM basemap is missing."
+          if (-not $main.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+              -not $main.Contains('?key={cartoKey}')) {
+            throw "Embedded keyed CARTO/OSM basemap is missing."
           }
 
-          if (-not $session.Contains('basemaps.cartocdn.com/light_all')) {
-            throw "Terrain map-reference CARTO/OSM source is missing."
+          if (-not $session.Contains('basemaps.cartocdn.com/rastertiles/light_all') -or
+              -not $session.Contains('?key=')) {
+            throw "Terrain map-reference keyed CARTO/OSM source is missing."
           }
 
           foreach ($required in @(
