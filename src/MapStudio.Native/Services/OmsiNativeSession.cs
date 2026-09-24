@@ -463,6 +463,11 @@ public sealed class OmsiNativeSession
 
         try
         {
+            var snapshot =
+                CurrentMap ??
+                throw new InvalidOperationException(
+                    "Nenhum mapa OMSI está aberto.");
+
             var georeference =
                 await LoadMapGeoreferenceAsync(
                         cancellationToken)
@@ -497,21 +502,20 @@ public sealed class OmsiNativeSession
             stage =
                 "mercator-position";
 
-            var tileCount =
-                Math.Pow(
-                    2,
-                    zoom);
+            var webTileCount =
+                1 <<
+                zoom;
 
             var worldPixels =
                 256.0 *
-                tileCount;
+                webTileCount;
 
             var latitudeRadians =
                 latitude *
                 Math.PI /
                 180.0;
 
-            var pixelX =
+            var anchorPixelX =
                 (
                     longitude +
                     180.0
@@ -527,7 +531,7 @@ public sealed class OmsiNativeSession
                     Math.Cos(
                         latitudeRadians));
 
-            var pixelY =
+            var anchorPixelY =
                 (
                     1.0 -
                     mercator /
@@ -536,25 +540,269 @@ public sealed class OmsiNativeSession
                 2.0 *
                 worldPixels;
 
-            var tileX =
-                Math.Clamp(
-                    (int)Math.Floor(
-                        pixelX /
-                        256.0),
-                    0,
-                    checked(
-                        (int)tileCount -
-                        1));
+            var metersPerPixel =
+                156543.03392804097 *
+                Math.Cos(
+                    latitudeRadians) /
+                Math.Pow(
+                    2,
+                    zoom);
 
-            var tileY =
+            var georeferenceWorldX =
+                georeference.AnchorTileX *
+                    OmsiTileGrid.TileSize +
+                georeference.AnchorX;
+
+            var georeferenceWorldZ =
+                georeference.AnchorTileY *
+                    OmsiTileGrid.TileSize +
+                georeference.AnchorY;
+
+            var coverageTiles =
+                snapshot.Tiles
+                    .Select(
+                        tile =>
+                            tile.Reference)
+                    .ToArray();
+
+            if (
+                coverageTiles.Length ==
+                    0 &&
+                snapshot.ActiveTile is
+                    { } activeOnly)
+            {
+                coverageTiles =
+                    [
+                        activeOnly
+                    ];
+            }
+
+            if (
+                coverageTiles.Length ==
+                0)
+            {
+                coverageTiles =
+                    snapshot.Map.Tiles
+                        .Take(
+                            1)
+                        .ToArray();
+            }
+
+            if (
+                coverageTiles.Length ==
+                0)
+            {
+                throw new InvalidDataException(
+                    "mapReferenceCoverageRequired");
+            }
+
+            stage =
+                "mosaic-coverage";
+
+            var minimumWorldX =
+                coverageTiles.Min(
+                    tile =>
+                        tile.X *
+                        OmsiTileGrid.TileSize);
+
+            var maximumWorldX =
+                coverageTiles.Max(
+                    tile =>
+                        (
+                            tile.X +
+                            1
+                        ) *
+                        OmsiTileGrid.TileSize);
+
+            var minimumWorldZ =
+                coverageTiles.Min(
+                    tile =>
+                        tile.Y *
+                        OmsiTileGrid.TileSize);
+
+            var maximumWorldZ =
+                coverageTiles.Max(
+                    tile =>
+                        (
+                            tile.Y +
+                            1
+                        ) *
+                        OmsiTileGrid.TileSize);
+
+            var minimumPixelX =
+                anchorPixelX +
+                (
+                    minimumWorldX -
+                    georeferenceWorldX
+                ) /
+                metersPerPixel;
+
+            var maximumPixelX =
+                anchorPixelX +
+                (
+                    maximumWorldX -
+                    georeferenceWorldX
+                ) /
+                metersPerPixel;
+
+            var minimumPixelY =
+                anchorPixelY +
+                (
+                    minimumWorldZ -
+                    georeferenceWorldZ
+                ) /
+                metersPerPixel;
+
+            var maximumPixelY =
+                anchorPixelY +
+                (
+                    maximumWorldZ -
+                    georeferenceWorldZ
+                ) /
+                metersPerPixel;
+
+            var minimumTileX =
                 Math.Clamp(
                     (int)Math.Floor(
-                        pixelY /
+                        Math.Min(
+                            minimumPixelX,
+                            maximumPixelX) /
                         256.0),
                     0,
-                    checked(
-                        (int)tileCount -
-                        1));
+                    webTileCount -
+                        1);
+
+            var maximumTileX =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        Math.Max(
+                            minimumPixelX,
+                            maximumPixelX) /
+                        256.0),
+                    0,
+                    webTileCount -
+                        1);
+
+            var minimumTileY =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        Math.Min(
+                            minimumPixelY,
+                            maximumPixelY) /
+                        256.0),
+                    0,
+                    webTileCount -
+                        1);
+
+            var maximumTileY =
+                Math.Clamp(
+                    (int)Math.Floor(
+                        Math.Max(
+                            minimumPixelY,
+                            maximumPixelY) /
+                        256.0),
+                    0,
+                    webTileCount -
+                        1);
+
+            var activeTile =
+                snapshot.ActiveTile ??
+                coverageTiles[0];
+
+            var activeWorldX =
+                (
+                    activeTile.X +
+                    0.5
+                ) *
+                OmsiTileGrid.TileSize;
+
+            var activeWorldZ =
+                (
+                    activeTile.Y +
+                    0.5
+                ) *
+                OmsiTileGrid.TileSize;
+
+            var activePixelX =
+                anchorPixelX +
+                (
+                    activeWorldX -
+                    georeferenceWorldX
+                ) /
+                metersPerPixel;
+
+            var activePixelY =
+                anchorPixelY +
+                (
+                    activeWorldZ -
+                    georeferenceWorldZ
+                ) /
+                metersPerPixel;
+
+            var activeWebTileX =
+                activePixelX /
+                256.0;
+
+            var activeWebTileY =
+                activePixelY /
+                256.0;
+
+            const int maximumResidentTiles =
+                81;
+
+            var candidates =
+                new List<(
+                    int TileX,
+                    int TileY,
+                    double DistanceSquared)>();
+
+            for (
+                var tileY = minimumTileY;
+                tileY <= maximumTileY;
+                tileY++)
+            {
+                for (
+                    var tileX = minimumTileX;
+                    tileX <= maximumTileX;
+                    tileX++)
+                {
+                    var dx =
+                        tileX +
+                        0.5 -
+                        activeWebTileX;
+
+                    var dy =
+                        tileY +
+                        0.5 -
+                        activeWebTileY;
+
+                    candidates.Add(
+                        (
+                            tileX,
+                            tileY,
+                            dx *
+                                dx +
+                            dy *
+                                dy
+                        ));
+                }
+            }
+
+            var selected =
+                candidates
+                    .OrderBy(
+                        candidate =>
+                            candidate
+                                .DistanceSquared)
+                    .Take(
+                        maximumResidentTiles)
+                    .ToArray();
+
+            if (selected.Length == 0)
+            {
+                throw new InvalidDataException(
+                    "cartoReferenceEmptyMosaic");
+            }
 
             stage =
                 "cache-path";
@@ -566,178 +814,257 @@ public sealed class OmsiNativeSession
                             .LocalApplicationData),
                     "OMSI Map Studio",
                     "reference-cache",
-                    "carto-keyed-v2");
+                    "carto-keyed-v3",
+                    zoom.ToString(
+                        CultureInfo.InvariantCulture));
 
             Directory.CreateDirectory(
                 cacheRoot);
 
-            var path =
-                Path.Combine(
-                    cacheRoot,
-                    $"carto-keyed-{zoom}-{tileX}-{tileY}.png");
-
             stage =
-                "cache-check";
+                "mosaic-download";
 
-            var cacheValid =
-                File.Exists(
-                    path) &&
-                DateTime.UtcNow -
-                    File.GetLastWriteTimeUtc(
-                        path) <
-                TimeSpan.FromDays(
-                    7) &&
-                HasPngSignature(
-                    path);
+            using var cartoClient =
+                CreateOpenStreetMapHttpClient();
 
-            if (!cacheValid)
-            {
-                stage =
-                    "request-uri";
+            using var downloadGate =
+                new SemaphoreSlim(
+                    initialCount:
+                        8,
+                    maxCount:
+                        8);
 
-                var normalizedKey =
-                    apiKey.Trim();
+            var normalizedKey =
+                apiKey.Trim();
 
-                var uri =
-                    new Uri(
-                        $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{tileX}/{tileY}.png?key={Uri.EscapeDataString(normalizedKey)}",
-                        UriKind.Absolute);
-
-                stage =
-                    "http-download";
-
-                byte[] bytes;
-
-                try
-                {
-                    using var cartoClient =
-                        CreateOpenStreetMapHttpClient();
-
-                    bytes =
-                        await cartoClient
-                            .GetByteArrayAsync(
-                                uri,
+            var tasks =
+                selected.Select(
+                    async candidate =>
+                    {
+                        await downloadGate
+                            .WaitAsync(
                                 cancellationToken)
                             .ConfigureAwait(false);
-                }
-                catch (NullReferenceException)
-                {
-                    stage =
-                        "http-download-fallback";
 
-                    using var fallbackHandler =
-                        new HttpClientHandler();
-
-                    using var fallbackClient =
-                        new HttpClient(
-                            fallbackHandler,
-                            disposeHandler:
-                                true)
+                        try
                         {
-                            Timeout =
-                                TimeSpan.FromSeconds(
-                                    30)
-                        };
+                            var tileDirectory =
+                                Path.Combine(
+                                    cacheRoot,
+                                    candidate.TileX
+                                        .ToString(
+                                            CultureInfo.InvariantCulture));
 
-                    fallbackClient
-                        .DefaultRequestHeaders
-                        .UserAgent
-                        .ParseAdd(
-                            "OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)");
+                            Directory.CreateDirectory(
+                                tileDirectory);
 
-                    bytes =
-                        await fallbackClient
-                            .GetByteArrayAsync(
-                                uri,
-                                cancellationToken)
-                            .ConfigureAwait(false);
-                }
+                            var path =
+                                Path.Combine(
+                                    tileDirectory,
+                                    $"{candidate.TileY}.png");
 
-                stage =
-                    "png-validation";
+                            var cacheValid =
+                                File.Exists(
+                                    path) &&
+                                DateTime.UtcNow -
+                                    File.GetLastWriteTimeUtc(
+                                        path) <
+                                TimeSpan.FromDays(
+                                    7) &&
+                                HasPngSignature(
+                                    path);
 
-                if (
-                    bytes is null ||
-                    bytes.Length <
-                        64 ||
-                    bytes.LongLength >
-                        8L *
-                        1024L *
-                        1024L ||
-                    !HasPngSignature(
-                        bytes))
-                {
-                    throw new InvalidDataException(
-                        "cartoReferenceInvalidPngPayload");
-                }
+                            if (!cacheValid)
+                            {
+                                var uri =
+                                    new Uri(
+                                        $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{candidate.TileX}/{candidate.TileY}.png?key={Uri.EscapeDataString(normalizedKey)}",
+                                        UriKind.Absolute);
 
-                stage =
-                    "cache-write";
+                                byte[] bytes;
 
-                await File.WriteAllBytesAsync(
-                        path,
-                        bytes,
-                        cancellationToken)
+                                try
+                                {
+                                    bytes =
+                                        await cartoClient
+                                            .GetByteArrayAsync(
+                                                uri,
+                                                cancellationToken)
+                                            .ConfigureAwait(false);
+                                }
+                                catch (
+                                    NullReferenceException)
+                                {
+                                    using var fallbackClient =
+                                        CreateOpenStreetMapHttpClient();
+
+                                    bytes =
+                                        await fallbackClient
+                                            .GetByteArrayAsync(
+                                                uri,
+                                                cancellationToken)
+                                            .ConfigureAwait(false);
+                                }
+
+                                if (
+                                    bytes is null ||
+                                    bytes.Length <
+                                        64 ||
+                                    bytes.LongLength >
+                                        8L *
+                                        1024L *
+                                        1024L ||
+                                    !HasPngSignature(
+                                        bytes))
+                                {
+                                    throw new InvalidDataException(
+                                        $"cartoReferenceInvalidPngPayload:{zoom}/{candidate.TileX}/{candidate.TileY}");
+                                }
+
+                                await File.WriteAllBytesAsync(
+                                        path,
+                                        bytes,
+                                        cancellationToken)
+                                    .ConfigureAwait(false);
+                            }
+
+                            var centerPixelX =
+                                candidate.TileX *
+                                    256.0 +
+                                128.0;
+
+                            var centerPixelY =
+                                candidate.TileY *
+                                    256.0 +
+                                128.0;
+
+                            return new NativeMapReferenceTile(
+                                path,
+                                256,
+                                256,
+                                metersPerPixel,
+                                georeferenceWorldX +
+                                    (
+                                        centerPixelX -
+                                        anchorPixelX
+                                    ) *
+                                    metersPerPixel,
+                                georeferenceWorldZ +
+                                    (
+                                        centerPixelY -
+                                        anchorPixelY
+                                    ) *
+                                    metersPerPixel,
+                                candidate.TileX,
+                                candidate.TileY);
+                        }
+                        finally
+                        {
+                            downloadGate
+                                .Release();
+                        }
+                    })
+                    .ToArray();
+
+            var tiles =
+                await Task.WhenAll(
+                        tasks)
                     .ConfigureAwait(false);
-            }
 
             stage =
                 "reference-metadata";
 
-            var metersPerPixel =
-                156543.03392804097 *
-                Math.Cos(
-                    latitudeRadians) /
-                Math.Pow(
-                    2,
-                    zoom);
+            var selectedMinimumX =
+                selected.Min(
+                    candidate =>
+                        candidate.TileX);
 
-            var anchorWorldX =
-                georeference.AnchorTileX *
-                    OmsiTileGrid.TileSize +
-                georeference.AnchorX;
+            var selectedMaximumX =
+                selected.Max(
+                    candidate =>
+                        candidate.TileX);
 
-            var anchorWorldZ =
-                georeference.AnchorTileY *
-                    OmsiTileGrid.TileSize +
-                georeference.AnchorY;
+            var selectedMinimumY =
+                selected.Min(
+                    candidate =>
+                        candidate.TileY);
 
-            var tileCenterPixelX =
-                tileX *
-                    256.0 +
-                128.0;
+            var selectedMaximumY =
+                selected.Max(
+                    candidate =>
+                        candidate.TileY);
 
-            var tileCenterPixelY =
-                tileY *
-                    256.0 +
-                128.0;
+            var mosaicWidth =
+                checked(
+                    (
+                        selectedMaximumX -
+                        selectedMinimumX +
+                        1
+                    ) *
+                    256);
 
-            anchorWorldX +=
+            var mosaicHeight =
+                checked(
+                    (
+                        selectedMaximumY -
+                        selectedMinimumY +
+                        1
+                    ) *
+                    256);
+
+            var mosaicCenterPixelX =
                 (
-                    tileCenterPixelX -
-                    pixelX
+                    selectedMinimumX *
+                        256.0 +
+                    (
+                        selectedMaximumX +
+                        1
+                    ) *
+                        256.0
                 ) *
-                metersPerPixel;
+                0.5;
 
-            anchorWorldZ +=
+            var mosaicCenterPixelY =
                 (
-                    tileCenterPixelY -
-                    pixelY
+                    selectedMinimumY *
+                        256.0 +
+                    (
+                        selectedMaximumY +
+                        1
+                    ) *
+                        256.0
                 ) *
-                metersPerPixel;
+                0.5;
+
+            var primary =
+                tiles[0];
 
             return new NativeGoogleMapReference(
-                path,
-                256,
-                256,
+                primary.ImagePath,
+                mosaicWidth,
+                mosaicHeight,
                 metersPerPixel,
-                anchorWorldX,
-                anchorWorldZ,
+                georeferenceWorldX +
+                    (
+                        mosaicCenterPixelX -
+                        anchorPixelX
+                    ) *
+                    metersPerPixel,
+                georeferenceWorldZ +
+                    (
+                        mosaicCenterPixelY -
+                        anchorPixelY
+                    ) *
+                    metersPerPixel,
                 latitude,
                 longitude,
                 zoom,
                 "roadmap",
-                "© OpenStreetMap contributors · © CARTO");
+                "© OpenStreetMap contributors · © CARTO")
+            {
+                Tiles =
+                    tiles
+            };
         }
         catch (NullReferenceException exception)
         {
