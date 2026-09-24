@@ -297,7 +297,7 @@ Pendente:
 - validar o arquivo gerado diretamente na build alvo do Proton Bus;
 - refinar regras finais de colisores conforme comportamento observado no jogo;
 - validar regras finais de emissive/additive no renderer Proton;
-- fixture real para validar visualmente eixos, winding, UV e materiais.
+- usar o fixture gerado pela preview para validar visualmente eixos, winding, UV e materiais dentro do Proton Bus.
 
 ### P3 — concluída no Core
 
@@ -335,7 +335,7 @@ Pendente:
 - otimizações específicas;
 - perfil PC/mobile.
 
-### P6 — iniciada
+### P6 — concluída para preview técnica
 
 Concluído:
 
@@ -343,15 +343,33 @@ Concluído:
 - exportação direta do mapa atualmente aberto, sem depender do Inspector;
 - campos para nome do mapa, pasta base e conjunto/rota;
 - opção para incluir TTData, paradas, entrypoints e GPS;
+- relatório pré-exportação detalhado em janela própria;
+- preflight sem gravação, com bloqueios/avisos e contagem de tiles, meshes, texturas, paths, paradas, entrypoints, GPS, semáforos e luzes;
+- perfil explícito **Map Mods Phase 3** (`mapModVersion=3`);
+- perfil personalizado com aviso de compatibilidade não validada;
+- exportação ZIP opcional;
 - progresso e erros principais exibidos no status do app;
-- CI da branch compila o host WinUI além de executar a suíte Proton Bus.
+- CI da branch compila o host WinUI além de executar a suíte Proton Bus;
+- fixture Proton Bus pequeno, determinístico e redistribuível, gerado pelo próprio Core;
+- ferramenta CLI para gerar o fixture;
+- preview release específica da branch com portable, instalador, SHA-256 e fixture.
+
+Preview atual:
+
+`v0.2.0-alpha.5-test.10.13-protonbus`
+
+Inclui também:
+
+- `MapStudio-ProtonBus-Validation-Fixture.zip`;
+- SHA-256 do fixture;
+- README de instalação/diagnóstico do fixture.
 
 Pendente:
 
-- relatório pré-exportação detalhado em janela própria;
-- seleção/perfil explícito da versão Proton Bus alvo;
-- exportação ZIP;
-- teste contra mapa exemplo real e contra uma instalação real do Proton Bus.
+- validar a preview e o fixture dentro de uma build real do Proton Bus;
+- validar um mapa OMSI real convertido;
+- refinar diferenças visuais/funcionais encontradas no jogo;
+- avaliar geração automática opcional de posições de passageiros.
 
 ## Critério para marcar Proton Bus como suportado
 
@@ -364,6 +382,28 @@ O adapter Proton Bus só deve ser registrado como funcional no `MapStudioSimulat
 5. pelo menos uma rota com parada funcionar;
 6. tráfego/pedestres essenciais forem validados;
 7. os testes automatizados passarem;
-8. houver um mapa de fixture pequeno e redistribuível ou gerado pelo próprio teste.
+8. houver um mapa de fixture pequeno e redistribuível ou gerado pelo próprio teste — **concluído nesta branch**.
 
 Até a validação em jogo ser concluída, `MapStudioSimulatorIds.ProtonBus` permanece como alvo experimental e não deve ser anunciado como compatibilidade final.
+
+
+## Preview técnica atual
+
+Tag:
+
+`v0.2.0-alpha.5-test.10.13-protonbus`
+
+Release:
+
+https://github.com/MichaelPriest/OMSI-Map-Studio/releases/tag/v0.2.0-alpha.5-test.10.13-protonbus
+
+Assets principais:
+
+- portable win-x64;
+- instalador win-x64;
+- arquivos SHA-256;
+- `MapStudio-ProtonBus-Validation-Fixture.zip`;
+- SHA-256 do fixture;
+- README do fixture.
+
+O fixture cobre chão/colisor, veículo, pedestre, trem, parada, entrypoint, GPS, semáforo e street light. Ele existe para separar erros do formato Proton Bus de erros de conversão de mapas OMSI grandes.
