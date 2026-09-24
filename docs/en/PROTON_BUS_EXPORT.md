@@ -327,13 +327,25 @@ Pending:
 - validate timing, triggers, lights, GPS, and traffic behavior in the target Proton Bus build;
 - refine map-specific edge cases discovered through real-map testing.
 
-### P5
+### P5 — started
+
+Completed:
+
+- **Phase 3 · PC** profile;
+- **Phase 3 · Mobile** profile while keeping `mapModVersion=3`;
+- Mobile preflight blocks textures larger than **2048 px** on either axis;
+- lightweight dimension reader for PNG, DDS, TGA, BMP, GIF, and JPEG without decoding the whole image;
+- the same limit is enforced in the multi-tile Core export path, not only in UI.
+
+Pending:
 
 - Phase 4 features;
 - prefabs;
 - automatic vegetation;
-- target-specific optimization;
-- PC/mobile profiles.
+- additional PC/mobile-specific optimization;
+- obtain/validate the exact Phase 4 tutorial syntax before automatically emitting any new file format.
+
+Official Phase 4 material describes automatic vegetation, prefabs, and optimization grids, but still presents that generation as an experimental preview. Map Studio will not invent `mapModVersion=4` or prefab/vegetation syntax without the corresponding specification.
 
 ### P6 — completed for technical preview
 
@@ -345,7 +357,8 @@ Completed:
 - option to include TTData, bus stops, entrypoints, and GPS;
 - detailed pre-export report in a dedicated dialog;
 - non-writing preflight with blockers/warnings and counts for tiles, meshes, textures, paths, stops, entrypoints, GPS, traffic lights, and street lights;
-- explicit **Map Mods Phase 3** target profile (`mapModVersion=3`);
+- explicit **Map Mods Phase 3 · PC** and **Phase 3 · Mobile** target profiles (`mapModVersion=3`);
+- Mobile profile with a 2048 px texture limit;
 - custom profile with unvalidated-compatibility warning;
 - optional ZIP output;
 - progress and primary errors surfaced through app status;
@@ -356,7 +369,7 @@ Completed:
 
 Current preview:
 
-`v0.2.0-alpha.5-test.10.13-protonbus`
+`v0.2.0-alpha.5-test.10.14-protonbus`
 
 Also includes:
 
