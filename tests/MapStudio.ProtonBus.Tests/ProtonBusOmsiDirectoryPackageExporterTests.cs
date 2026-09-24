@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using MapStudio.Core.ProtonBus;
 using Xunit;
 
@@ -84,6 +85,15 @@ public sealed class ProtonBusOmsiDirectoryPackageExporterTests
                             "Mapa",
                             "Mapa",
                             "Rota"),
+                        options:
+                            new()
+                            {
+                                TargetProfile =
+                                    ProtonBusTargetProfiles
+                                        .Phase3,
+                                CreateZipArchive =
+                                    true
+                            },
                         progress:
                             new ProgressCollector(
                                 progress));
@@ -129,6 +139,45 @@ public sealed class ProtonBusOmsiDirectoryPackageExporterTests
                 result.MapExport
                     .Package
                     .VehiclePathPaths);
+
+            Assert.NotNull(
+                result.ArchivePath);
+
+            Assert.True(
+                File.Exists(
+                    result.ArchivePath!));
+
+            using (
+                var archive =
+                    ZipFile.OpenRead(
+                        result.ArchivePath!))
+            {
+                Assert.Contains(
+                    archive.Entries,
+                    entry =>
+                        entry.FullName ==
+                        "maps/Mapa.map.txt");
+
+                Assert.Contains(
+                    archive.Entries,
+                    entry =>
+                        entry.FullName.EndsWith(
+                            ".3ds",
+                            StringComparison.OrdinalIgnoreCase));
+
+                Assert.Contains(
+                    archive.Entries,
+                    entry =>
+                        entry.FullName ==
+                        "maps/Mapa/textures/road.png");
+
+                Assert.Contains(
+                    archive.Entries,
+                    entry =>
+                        entry.FullName.Contains(
+                            "/aivehicles/",
+                            StringComparison.OrdinalIgnoreCase));
+            }
 
             Assert.Contains(
                 progress,
