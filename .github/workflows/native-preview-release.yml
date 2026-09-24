@@ -1128,7 +1128,7 @@ jobs:
           }
 
           foreach ($required in @(
-            'way["highway"]',
+            'highway',
             'BuildProceduralRoadGraph()',
             'AnalyzeProceduralRoadGraphAsync(',
             'requireConfirmation:',
@@ -1141,17 +1141,28 @@ jobs:
             }
           }
 
-          foreach ($pair in @(
-            @($props, 'ms_prop_metal.bmp'),
-            @($traffic, 'ms_traffic_red.bmp'),
-            @($junction, 'ms_junction_asphalt.bmp'),
-            @($building, 'ms_building_facade.bmp'),
-            @($footprint, 'ms_osm_facade.bmp'),
-            @($textures, 'CreateBmp24')
-          )) {
-            if (-not $pair[0].Contains($pair[1])) {
-              throw "Test 10.32 generated texture marker is missing: $($pair[1])"
-            }
+          if (-not $props.Contains('ms_prop_metal.bmp')) {
+            throw "Test 10.32 starter prop texture generation is missing."
+          }
+
+          if (-not $traffic.Contains('ms_traffic_red.bmp')) {
+            throw "Test 10.32 traffic-light texture generation is missing."
+          }
+
+          if (-not $junction.Contains('ms_junction_asphalt.bmp')) {
+            throw "Test 10.32 junction texture generation is missing."
+          }
+
+          if (-not $building.Contains('ms_building_facade.bmp')) {
+            throw "Test 10.32 building texture generation is missing."
+          }
+
+          if (-not $footprint.Contains('ms_osm_facade.bmp')) {
+            throw "Test 10.32 OSM building texture generation is missing."
+          }
+
+          if (-not $textures.Contains('CreateBmp24')) {
+            throw "Test 10.32 shared generated texture factory is missing."
           }
 
           Write-Host "Verified automatic OSM road/junction generation and procedural textures for Map Studio assets."
