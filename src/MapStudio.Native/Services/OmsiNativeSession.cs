@@ -410,10 +410,13 @@ public sealed class OmsiNativeSession
     }
 
     public async Task<NativeGoogleMapReference>
-        LoadOpenStreetMapReferenceAsync(
+        LoadCartoReferenceAsync(
+            string apiKey,
             CancellationToken cancellationToken =
                 default)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            apiKey);
         var georeference =
             await LoadMapGeoreferenceAsync(
                     cancellationToken)
@@ -508,7 +511,7 @@ public sealed class OmsiNativeSession
                         .LocalApplicationData),
                 "OMSI Map Studio",
                 "reference-cache",
-                "carto-osm");
+                "carto-keyed-v1");
 
         Directory.CreateDirectory(
             cacheRoot);
@@ -516,7 +519,7 @@ public sealed class OmsiNativeSession
         var path =
             Path.Combine(
                 cacheRoot,
-                $"carto-{zoom}-{tileX}-{tileY}.png");
+                $"carto-keyed-{zoom}-{tileX}-{tileY}.png");
 
         var cacheValid =
             File.Exists(
@@ -530,7 +533,7 @@ public sealed class OmsiNativeSession
         if (!cacheValid)
         {
             var uri =
-                $"https://a.basemaps.cartocdn.com/light_all/{zoom}/{tileX}/{tileY}.png";
+                $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{tileX}/{tileY}.png?key={Uri.EscapeDataString(apiKey.Trim())}";
 
             using var response =
                 await OpenStreetMapHttpClient
@@ -542,7 +545,7 @@ public sealed class OmsiNativeSession
             if (!response.IsSuccessStatusCode)
             {
                 throw new HttpRequestException(
-                    $"cartoOpenStreetMapReferenceHttp:{(int)response.StatusCode}");
+                    $"cartoReferenceHttp:{(int)response.StatusCode}");
             }
 
             var bytes =
@@ -560,7 +563,7 @@ public sealed class OmsiNativeSession
                     1024L)
             {
                 throw new InvalidDataException(
-                    "cartoOpenStreetMapReferenceInvalidPayload");
+                    "cartoReferenceInvalidPayload");
             }
 
             await File.WriteAllBytesAsync(
