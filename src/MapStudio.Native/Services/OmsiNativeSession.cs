@@ -814,7 +814,7 @@ public sealed class OmsiNativeSession
                             .LocalApplicationData),
                     "OMSI Map Studio",
                     "reference-cache",
-                    "carto-keyed-v3",
+                    "carto-keyed-v4",
                     zoom.ToString(
                         CultureInfo.InvariantCulture));
 
@@ -878,7 +878,7 @@ public sealed class OmsiNativeSession
                             {
                                 var uri =
                                     new Uri(
-                                        $"https://a.basemaps.cartocdn.com/rastertiles/light_all/{zoom}/{candidate.TileX}/{candidate.TileY}.png?key={Uri.EscapeDataString(normalizedKey)}",
+                                        $"https://basemaps.cartocdn.com/rastertiles/voyager/{zoom}/{candidate.TileX}/{candidate.TileY}.png?key={Uri.EscapeDataString(normalizedKey)}",
                                         UriKind.Absolute);
 
                                 byte[] bytes;
