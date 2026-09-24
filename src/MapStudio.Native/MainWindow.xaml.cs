@@ -24571,6 +24571,7 @@ public sealed partial class MainWindow : Window
             zoom;
 
         UpdateRealMapAreaSelectionVisual();
+        RefreshRealMapProviderCredentialUi();
 
         await RealMapAreaWebView
             .EnsureCoreWebView2Async();
@@ -24682,6 +24683,12 @@ public sealed partial class MainWindow : Window
                     .TryGetGoogleMapsApiKey()
                 : null;
 
+        var cartoKey =
+            google
+                ? null
+                : NativeMapCredentialStore
+                    .TryGetCartoBasemapsApiKey();
+
         if (
             google &&
             string.IsNullOrWhiteSpace(
@@ -24693,8 +24700,20 @@ public sealed partial class MainWindow : Window
             google =
                 false;
 
+            cartoKey =
+                NativeMapCredentialStore
+                    .TryGetCartoBasemapsApiKey();
+
             StatusText.Text =
-                "Google Maps: salve primeiro uma API key em Mapa > Referência de mapa. O seletor voltou para OpenStreetMap.";
+                "Google Maps: salve primeiro uma API key. O seletor voltou para CARTO/OpenStreetMap.";
+        }
+        else if (
+            !google &&
+            string.IsNullOrWhiteSpace(
+                cartoKey))
+        {
+            StatusText.Text =
+                "CARTO: informe a API key no campo acima. Enquanto isso, o seletor usa OpenStreetMap como fallback.";
         }
 
         RealMapAreaWebView.NavigateToString(
@@ -24704,6 +24723,7 @@ public sealed partial class MainWindow : Window
                 zoom,
                 google,
                 googleKey,
+                cartoKey,
                 _realMapSelectionFractionX,
                 _realMapSelectionFractionY));
     }
@@ -24714,6 +24734,7 @@ public sealed partial class MainWindow : Window
         int zoom,
         bool google,
         string? googleKey,
+        string? cartoApiKey,
         double selectionFractionX,
         double selectionFractionY)
     {
@@ -24814,6 +24835,25 @@ function initMap() {
 """;
         }
 
+        var hasCartoKey =
+            !string.IsNullOrWhiteSpace(
+                cartoApiKey);
+
+        var cartoKey =
+            Uri.EscapeDataString(
+                cartoApiKey ??
+                string.Empty);
+
+        var tileUrl =
+            hasCartoKey
+                ? $"https://{{s}}.basemaps.cartocdn.com/rastertiles/light_all/{{z}}/{{x}}/{{y}}{{r}}.png?key={cartoKey}"
+                : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+
+        var attribution =
+            hasCartoKey
+                ? "&copy; OpenStreetMap contributors &copy; CARTO"
+                : "&copy; OpenStreetMap contributors";
+
         return $$"""
 <!doctype html>
 <html>
@@ -24831,10 +24871,10 @@ html,body,#map { width:100%; height:100%; margin:0; overflow:hidden; background:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const map = L.map('map', { zoomControl:true }).setView([{{lat}}, {{lon}}], {{zoom}});
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+L.tileLayer('{{tileUrl}}', {
   subdomains:'abcd',
   maxZoom:20,
-  attribution:'&copy; OpenStreetMap contributors &copy; CARTO'
+  attribution:'{{attribution}}'
 }).addTo(map);
 
 let selectionFx = {{selectionX}}, selectionFy = {{selectionY}};
@@ -25282,10 +25322,116 @@ setTimeout(postBounds, 250);
             "Open-Meteo: chave salva com segurança no Windows Credential Manager.";
     }
 
+    private void RefreshRealMapProviderCredentialUi()
+    {
+        if (
+            RealMapCartoKeyPanel is null ||
+            RealMapCartoKeyBox is null ||
+            SaveRealMapCartoKeyButton is null ||
+            RealMapProviderBox is null)
+        {
+            return;
+        }
+
+        var carto =
+            RealMapProviderBox.SelectedIndex ==
+                0;
+
+        RealMapCartoKeyPanel.Visibility =
+            carto
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        if (!carto)
+        {
+            return;
+        }
+
+        var hasKey =
+            NativeMapCredentialStore
+                .HasCartoBasemapsApiKey();
+
+        RealMapCartoKeyBox.PlaceholderText =
+            hasKey
+                ? "Chave CARTO já salva · digite para substituir"
+                : "Cole aqui a chave enviada pela CARTO";
+
+        SaveRealMapCartoKeyButton.Content =
+            hasKey
+                ? "Atualizar chave"
+                : "Salvar chave";
+    }
+
+    private void OnSaveRealMapCartoKeyClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var key =
+            RealMapCartoKeyBox.Password
+                .Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                key))
+        {
+            StatusText.Text =
+                "CARTO: cole a API key recebida por e-mail antes de salvar.";
+            return;
+        }
+
+        NativeMapCredentialStore
+            .SaveCartoBasemapsApiKey(
+                key);
+
+        RealMapCartoKeyBox.Password =
+            string.Empty;
+
+        RefreshRealMapProviderCredentialUi();
+
+        StatusText.Text =
+            "CARTO: chave salva com segurança no Windows Credential Manager. Recarregando o mapa...";
+
+        if (
+            _realMapAreaInitialized &&
+            RealMapAreaWindow.Visibility ==
+                Visibility.Visible)
+        {
+            OnReloadRealMapAreaClick(
+                sender,
+                new RoutedEventArgs());
+        }
+    }
+
+    private void OnOpenCartoKeyHelpClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName =
+                        "https://carto.com/basemaps/apikey/",
+                    UseShellExecute =
+                        true
+                });
+
+            StatusText.Text =
+                "CARTO: abriu a página oficial para solicitar a chave. Informe seu e-mail e o uso do projeto; a chave é enviada por e-mail.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Não foi possível abrir a página da CARTO: {exception.Message}";
+        }
+    }
+
     private void OnRealMapProviderChanged(
         object sender,
         SelectionChangedEventArgs e)
     {
+        RefreshRealMapProviderCredentialUi();
+
         if (
             !_realMapAreaInitialized ||
             RealMapAreaWindow.Visibility !=
@@ -25496,7 +25642,7 @@ setTimeout(postBounds, 250);
                         RealMapProviderBox.SelectedIndex ==
                             1
                             ? "Google Maps"
-                            : "CARTO / OpenStreetMap"));
+                            : "CARTO Positron / OpenStreetMap"));
 
             var minimumDx =
                 OmsiTileGrid
@@ -25766,9 +25912,23 @@ setTimeout(postBounds, 250);
         }
         else
         {
+            var key =
+                NativeMapCredentialStore
+                    .TryGetCartoBasemapsApiKey();
+
+            if (
+                string.IsNullOrWhiteSpace(
+                    key))
+            {
+                StatusText.Text =
+                    "Referência visual CARTO não aplicada: salve uma chave CARTO Basemaps no painel de criação do mapa real.";
+                return;
+            }
+
             reference =
                 await _session
-                    .LoadOpenStreetMapReferenceAsync();
+                    .LoadCartoReferenceAsync(
+                        key);
         }
 
         Viewport.SetReferenceOverlay(
@@ -26429,7 +26589,7 @@ setTimeout(postBounds, 250);
             };
 
         providerBox.Items.Add(
-            "OpenStreetMap · sem chave");
+            "CARTO / OpenStreetMap · API key CARTO");
 
         providerBox.Items.Add(
             "Google Maps · API key");
@@ -26438,23 +26598,23 @@ setTimeout(postBounds, 250);
             new PasswordBox
             {
                 Header =
-                    "Google Maps Platform API key",
+                    "CARTO Basemaps API key",
                 PlaceholderText =
                     NativeMapCredentialStore
-                        .HasGoogleMapsApiKey()
-                        ? "Chave já salva no Windows · deixe vazio para reutilizar"
-                        : "Necessária somente para Google Maps",
+                        .HasCartoBasemapsApiKey()
+                        ? "Chave CARTO já salva · deixe vazio para reutilizar"
+                        : "Solicite em carto.com/basemaps/apikey",
                 IsEnabled =
-                    false
+                    true
             };
 
         var saveKeyCheckBox =
             new CheckBox
             {
                 Content =
-                    "Salvar chave Google com segurança no Windows",
+                    "Salvar chave CARTO com segurança no Windows",
                 IsEnabled =
-                    false,
+                    true,
                 IsChecked =
                     true
             };
@@ -26478,7 +26638,7 @@ setTimeout(postBounds, 250);
             new TextBlock
             {
                 Text =
-                    "OpenStreetMap usa o tile necessário da posição atual, com atribuição e cache local. Google Maps usa Maps Static API e requer chave/billing.",
+                    "CARTO Basemaps exige API key própria e mantém atribuição OpenStreetMap/CARTO. A chave pode ser solicitada em carto.com/basemaps/apikey. Google Maps usa Maps Static API e requer a chave Google do usuário.",
                 TextWrapping =
                     TextWrapping.Wrap,
                 Opacity =
@@ -26493,10 +26653,31 @@ setTimeout(postBounds, 250);
                         1;
 
                 apiKeyBox.IsEnabled =
-                    google;
+                    true;
+
+                apiKeyBox.Header =
+                    google
+                        ? "Google Maps Platform API key"
+                        : "CARTO Basemaps API key";
+
+                apiKeyBox.PlaceholderText =
+                    google
+                        ? NativeMapCredentialStore
+                            .HasGoogleMapsApiKey()
+                            ? "Chave Google já salva · deixe vazio para reutilizar"
+                            : "Informe a chave Google Maps Platform"
+                        : NativeMapCredentialStore
+                            .HasCartoBasemapsApiKey()
+                            ? "Chave CARTO já salva · deixe vazio para reutilizar"
+                            : "Solicite em carto.com/basemaps/apikey";
 
                 saveKeyCheckBox.IsEnabled =
-                    google;
+                    true;
+
+                saveKeyCheckBox.Content =
+                    google
+                        ? "Salvar chave Google com segurança no Windows"
+                        : "Salvar chave CARTO com segurança no Windows";
             };
 
         var panel =
@@ -26609,12 +26790,39 @@ setTimeout(postBounds, 250);
             }
             else
             {
+                var apiKey =
+                    string.IsNullOrWhiteSpace(
+                        apiKeyBox.Password)
+                        ? NativeMapCredentialStore
+                            .TryGetCartoBasemapsApiKey()
+                        : apiKeyBox.Password.Trim();
+
+                if (
+                    string.IsNullOrWhiteSpace(
+                        apiKey))
+                {
+                    StatusText.Text =
+                        "CARTO: informe uma API key. Use o botão “Como obter” em Criar mapa real por área ou acesse carto.com/basemaps/apikey.";
+                    return;
+                }
+
                 StatusText.Text =
-                    "Carregando referência OpenStreetMap...";
+                    "Carregando referência CARTO/OpenStreetMap...";
 
                 reference =
                     await _session
-                        .LoadOpenStreetMapReferenceAsync();
+                        .LoadCartoReferenceAsync(
+                            apiKey);
+
+                if (
+                    saveKeyCheckBox
+                        .IsChecked ==
+                    true)
+                {
+                    NativeMapCredentialStore
+                        .SaveCartoBasemapsApiKey(
+                            apiKey);
+                }
             }
 
             var opacity =
