@@ -386,6 +386,11 @@
                     <MenuFlyoutItem
                         Text="Referência de mapa sobre o terreno..."
                         Click="OnMapReferenceClick" />
+                    <ToggleMenuFlyoutItem
+                        x:Name="MapReferenceVisibilityMenuItem"
+                        Text="Mostrar referência de mapa"
+                        IsChecked="False"
+                        Click="OnToggleMapReferenceVisibilityClick" />
                     <MenuFlyoutItem
                         Text="Remover referência de mapa"
                         Click="OnClearGoogleMapReferenceClick" />
