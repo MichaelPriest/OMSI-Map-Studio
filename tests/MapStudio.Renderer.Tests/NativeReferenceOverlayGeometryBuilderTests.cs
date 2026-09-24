@@ -106,6 +106,99 @@ public sealed class NativeReferenceOverlayGeometryBuilderTests
     }
 
     [Fact]
+    public void BuildKeepsRasterNorthAtNegativeWorldZ()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var overlay =
+            new NativeReferenceOverlayDefinition(
+                "reference.png",
+                256,
+                256,
+                1,
+                128,
+                128,
+                0.55f,
+                "CARTO / OpenStreetMap");
+
+        var geometry =
+            new NativeReferenceOverlayGeometryBuilder()
+                .Build(
+                    scene,
+                    overlay,
+                    segments:
+                        1);
+
+        Assert.NotEmpty(
+            geometry.Vertices);
+
+        var north =
+            geometry.Vertices
+                .OrderBy(
+                    vertex =>
+                        vertex.Position.Z)
+                .First();
+
+        var south =
+            geometry.Vertices
+                .OrderByDescending(
+                    vertex =>
+                        vertex.Position.Z)
+                .First();
+
+        Assert.Equal(
+            0.0f,
+            north.TexCoord.Y,
+            4);
+
+        Assert.Equal(
+            1.0f,
+            south.TexCoord.Y,
+            4);
+
+        Assert.True(
+            north.Position.Z <
+            south.Position.Z);
+    }
+
+    [Fact]
     public void BuildSkipsReferenceOutsideLoadedTerrain()
     {
         var scene =

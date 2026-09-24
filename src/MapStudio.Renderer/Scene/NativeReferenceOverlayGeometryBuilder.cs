@@ -276,19 +276,19 @@ public sealed class NativeReferenceOverlayGeometryBuilder
                             (float)height,
                             (float)worldZ);
 
+                    // CARTO/Web Mercator raster rows already run north -> south.
+                    // Map Studio maps north toward -Z, so +Z is south and
+                    // texture V must increase together with world Z.
                     uvs[index] =
                         new Vector2(
                             (float)Math.Clamp(
                                 u,
                                 0.0,
                                 1.0),
-                            (float)(
-                                1.0 -
-                                Math.Clamp(
-                                    v,
-                                    0.0,
-                                    1.0)
-                            ));
+                            (float)Math.Clamp(
+                                v,
+                                0.0,
+                                1.0));
                 }
             }
 
