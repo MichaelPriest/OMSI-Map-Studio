@@ -1054,7 +1054,7 @@ jobs:
 
           foreach ($required in @(
             'OnRoadJoinClick',
-            '>Unir<'
+            'Text="Unir"'
           )) {
             if (-not $xaml.Contains($required)) {
               throw "Visual join toolbar marker is missing: $required"
