@@ -290,11 +290,26 @@ internal sealed class NativeGpuTextureLoader
                     .CreateDecoderFromFileName(
                         path);
 
+            if (decoder is null)
+            {
+                return null;
+            }
+
             using var frame =
                 decoder.GetFrame(0);
 
+            if (frame is null)
+            {
+                return null;
+            }
+
             using var converter =
                 factory.CreateFormatConverter();
+
+            if (converter is null)
+            {
+                return null;
+            }
 
             converter
                 .Initialize(
@@ -343,7 +358,8 @@ internal sealed class NativeGpuTextureLoader
                     UnauthorizedAccessException or
                     ArgumentException or
                     NotSupportedException or
-                    OverflowException ||
+                    OverflowException or
+                    NullReferenceException ||
                 exception.GetType()
                     .Namespace?
                     .StartsWith(
