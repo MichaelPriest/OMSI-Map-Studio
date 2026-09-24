@@ -26280,8 +26280,18 @@ setTimeout(postBounds, 250);
             _proceduralRoadTraces.Count ==
                 0)
         {
+            const string message =
+                "Nenhuma via OSM utilizável foi encontrada na área selecionada.";
+
             StatusText.Text =
-                "Mapa criado, mas nenhuma via OSM utilizável foi encontrada na área.";
+                "Mapa criado, mas " +
+                message.ToLowerInvariant();
+
+            if (generateAutomatically)
+            {
+                throw new InvalidDataException(
+                    message);
+            }
 
             return;
         }
@@ -30775,6 +30785,13 @@ setTimeout(postBounds, 250);
             StatusText.Text =
                 $"Falha ao analisar traçado: {exception.Message}";
 
+            if (!requireConfirmation)
+            {
+                throw new InvalidOperationException(
+                    StatusText.Text,
+                    exception);
+            }
+
             return;
         }
 
@@ -30887,6 +30904,12 @@ setTimeout(postBounds, 250);
             StatusText.Text =
                 "Gerador de vias: OMSI/mapa não está disponível.";
 
+            if (!requireConfirmation)
+            {
+                throw new InvalidOperationException(
+                    StatusText.Text);
+            }
+
             return;
         }
 
@@ -30907,6 +30930,12 @@ setTimeout(postBounds, 250);
             StatusText.Text =
                 $"Geração cancelada: {junctionPlan.SkippedJunctions} cruzamento(s) ficaram fora do terreno carregado.";
 
+            if (!requireConfirmation)
+            {
+                throw new InvalidOperationException(
+                    StatusText.Text);
+            }
+
             return;
         }
 
@@ -30918,6 +30947,12 @@ setTimeout(postBounds, 250);
         {
             StatusText.Text =
                 $"Geração cancelada: {placement.SkippedSegments} segmento(s) ficaram fora do terreno carregado. Use Mapa completo e revise o traçado.";
+
+            if (!requireConfirmation)
+            {
+                throw new InvalidOperationException(
+                    StatusText.Text);
+            }
 
             return;
         }
@@ -31147,6 +31182,13 @@ setTimeout(postBounds, 250);
         {
             StatusText.Text =
                 $"Falha ao gerar vias procedurais: {exception.Message}";
+
+            if (!requireConfirmation)
+            {
+                throw new InvalidOperationException(
+                    StatusText.Text,
+                    exception);
+            }
         }
     }
 
