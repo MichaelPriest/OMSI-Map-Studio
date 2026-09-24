@@ -1,4 +1,5 @@
 using System.Numerics;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Renderer.Viewport;
 
 namespace MapStudio.Renderer.Scene;
@@ -40,10 +41,6 @@ public sealed class NativeReferenceOverlayGeometryBuilder
                 1,
                 64);
 
-        var sampleCount =
-            safeSegments +
-            1;
-
         var widthMeters =
             overlay.Width *
             overlay.MetersPerPixel;
@@ -52,82 +49,31 @@ public sealed class NativeReferenceOverlayGeometryBuilder
             overlay.Height *
             overlay.MetersPerPixel;
 
+        var minimumOverlayX =
+            overlay.AnchorWorldX -
+            widthMeters *
+            0.5;
+
+        var maximumOverlayX =
+            overlay.AnchorWorldX +
+            widthMeters *
+            0.5;
+
+        var minimumOverlayZ =
+            overlay.AnchorWorldZ -
+            heightMeters *
+            0.5;
+
+        var maximumOverlayZ =
+            overlay.AnchorWorldZ +
+            heightMeters *
+            0.5;
+
         var opacity =
             Math.Clamp(
                 overlay.Opacity,
                 0.05f,
                 1.0f);
-
-        var points =
-            new Vector3[
-                sampleCount *
-                sampleCount];
-
-        var uvs =
-            new Vector2[
-                points.Length];
-
-        for (
-            var row = 0;
-            row < sampleCount;
-            row++)
-        {
-            var v =
-                (double)row /
-                safeSegments;
-
-            for (
-                var column = 0;
-                column < sampleCount;
-                column++)
-            {
-                var u =
-                    (double)column /
-                    safeSegments;
-
-                var worldX =
-                    overlay.AnchorWorldX +
-                    (
-                        u -
-                        0.5
-                    ) *
-                    widthMeters;
-
-                var worldZ =
-                    overlay.AnchorWorldZ +
-                    (
-                        v -
-                        0.5
-                    ) *
-                    heightMeters;
-
-                var height =
-                    NativeTerrainSampler
-                        .GetHeightAtWorldPoint(
-                            scene,
-                            worldX,
-                            worldZ) +
-                    0.08;
-
-                var index =
-                    row *
-                    sampleCount +
-                    column;
-
-                points[index] =
-                    new Vector3(
-                        (float)worldX,
-                        (float)height,
-                        (float)worldZ);
-
-                uvs[index] =
-                    new Vector2(
-                        (float)u,
-                        (float)(
-                            1.0 -
-                            v));
-            }
-        }
 
         var color =
             new Vector4(
@@ -143,50 +89,254 @@ public sealed class NativeReferenceOverlayGeometryBuilder
                     safeSegments *
                     6);
 
-        for (
-            var row = 0;
-            row < safeSegments;
-            row++)
+        foreach (
+            var tile in
+                scene.Tiles)
         {
-            for (
-                var column = 0;
-                column < safeSegments;
-                column++)
+            var terrain =
+                tile.Content.Terrain;
+
+            if (
+                terrain is null ||
+                terrain.CellCount <= 0)
             {
-                var topLeft =
-                    row *
-                    sampleCount +
-                    column;
+                continue;
+            }
 
-                var topRight =
-                    topLeft +
-                    1;
+            var sampleCount =
+                terrain.CellCount +
+                1;
 
-                var bottomLeft =
-                    topLeft +
-                    sampleCount;
+            if (
+                terrain.Heights.Count !=
+                sampleCount *
+                sampleCount)
+            {
+                continue;
+            }
 
-                var bottomRight =
-                    bottomLeft +
-                    1;
+            var minimumTileX =
+                tile.Reference.X *
+                OmsiTileGrid.TileSize;
 
-                AppendTriangle(
-                    vertices,
-                    points,
-                    uvs,
-                    color,
-                    topLeft,
-                    bottomRight,
-                    topRight);
+            var maximumTileX =
+                (
+                    tile.Reference.X +
+                    1
+                ) *
+                OmsiTileGrid.TileSize;
 
-                AppendTriangle(
-                    vertices,
-                    points,
-                    uvs,
-                    color,
-                    topLeft,
-                    bottomLeft,
-                    bottomRight);
+            var minimumTileZ =
+                tile.Reference.Y *
+                OmsiTileGrid.TileSize;
+
+            var maximumTileZ =
+                (
+                    tile.Reference.Y +
+                    1
+                ) *
+                OmsiTileGrid.TileSize;
+
+            var minimumX =
+                Math.Max(
+                    minimumOverlayX,
+                    minimumTileX);
+
+            var maximumX =
+                Math.Min(
+                    maximumOverlayX,
+                    maximumTileX);
+
+            var minimumZ =
+                Math.Max(
+                    minimumOverlayZ,
+                    minimumTileZ);
+
+            var maximumZ =
+                Math.Min(
+                    maximumOverlayZ,
+                    maximumTileZ);
+
+            var spanX =
+                maximumX -
+                minimumX;
+
+            var spanZ =
+                maximumZ -
+                minimumZ;
+
+            if (
+                spanX <= 0.0001 ||
+                spanZ <= 0.0001)
+            {
+                continue;
+            }
+
+            var segmentsX =
+                Math.Clamp(
+                    (int)Math.Ceiling(
+                        safeSegments *
+                        spanX /
+                        widthMeters),
+                    1,
+                    safeSegments);
+
+            var segmentsZ =
+                Math.Clamp(
+                    (int)Math.Ceiling(
+                        safeSegments *
+                        spanZ /
+                        heightMeters),
+                    1,
+                    safeSegments);
+
+            var columns =
+                segmentsX +
+                1;
+
+            var rows =
+                segmentsZ +
+                1;
+
+            var points =
+                new Vector3[
+                    columns *
+                    rows];
+
+            var uvs =
+                new Vector2[
+                    points.Length];
+
+            for (
+                var row = 0;
+                row < rows;
+                row++)
+            {
+                var fractionZ =
+                    (double)row /
+                    segmentsZ;
+
+                var worldZ =
+                    minimumZ +
+                    spanZ *
+                    fractionZ;
+
+                for (
+                    var column = 0;
+                    column < columns;
+                    column++)
+                {
+                    var fractionX =
+                        (double)column /
+                        segmentsX;
+
+                    var worldX =
+                        minimumX +
+                        spanX *
+                        fractionX;
+
+                    var localX =
+                        worldX -
+                        minimumTileX;
+
+                    var localZ =
+                        worldZ -
+                        minimumTileZ;
+
+                    var height =
+                        NativeTerrainSampler
+                            .GetHeightAtLocalPoint(
+                                tile,
+                                localX,
+                                localZ) +
+                        0.08;
+
+                    var u =
+                        (
+                            worldX -
+                            minimumOverlayX
+                        ) /
+                        widthMeters;
+
+                    var v =
+                        (
+                            worldZ -
+                            minimumOverlayZ
+                        ) /
+                        heightMeters;
+
+                    var index =
+                        row *
+                        columns +
+                        column;
+
+                    points[index] =
+                        new Vector3(
+                            (float)worldX,
+                            (float)height,
+                            (float)worldZ);
+
+                    uvs[index] =
+                        new Vector2(
+                            (float)Math.Clamp(
+                                u,
+                                0.0,
+                                1.0),
+                            (float)(
+                                1.0 -
+                                Math.Clamp(
+                                    v,
+                                    0.0,
+                                    1.0)
+                            ));
+                }
+            }
+
+            for (
+                var row = 0;
+                row < segmentsZ;
+                row++)
+            {
+                for (
+                    var column = 0;
+                    column < segmentsX;
+                    column++)
+                {
+                    var topLeft =
+                        row *
+                        columns +
+                        column;
+
+                    var topRight =
+                        topLeft +
+                        1;
+
+                    var bottomLeft =
+                        topLeft +
+                        columns;
+
+                    var bottomRight =
+                        bottomLeft +
+                        1;
+
+                    AppendTriangle(
+                        vertices,
+                        points,
+                        uvs,
+                        color,
+                        topLeft,
+                        bottomRight,
+                        topRight);
+
+                    AppendTriangle(
+                        vertices,
+                        points,
+                        uvs,
+                        color,
+                        topLeft,
+                        bottomLeft,
+                        bottomRight);
+                }
             }
         }
 
