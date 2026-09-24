@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Props;
 
@@ -33,8 +34,22 @@ public sealed class MapStudioStarterTrafficGenerator
                 objectDirectory,
                 "model");
 
+        var textureDirectory =
+            Path.Combine(
+                objectDirectory,
+                "Texture");
+
         Directory.CreateDirectory(
             modelDirectory);
+
+        Directory.CreateDirectory(
+            textureDirectory);
+
+        var texturesCreated =
+            await EnsureTexturesAsync(
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
         var meshPath =
             Path.Combine(
@@ -49,8 +64,10 @@ public sealed class MapStudioStarterTrafficGenerator
         var created =
             false;
 
-        if (!File.Exists(
-                meshPath))
+        if (
+            !File.Exists(
+                meshPath) ||
+            texturesCreated)
         {
             await new OmsiO3dGeometryWriter()
                 .WriteAsync(
@@ -224,6 +241,155 @@ public sealed class MapStudioStarterTrafficGenerator
                 ""
             ]);
 
+    private static async Task<bool>
+        EnsureTexturesAsync(
+            string textureDirectory,
+            CancellationToken cancellationToken)
+    {
+        var created =
+            false;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_traffic_housing.bmp",
+                    64,
+                    64,
+                    static (x, y) =>
+                    {
+                        var noise =
+                            (
+                                x * 13 +
+                                y * 17
+                            ) %
+                            12;
+
+                        var value =
+                            (byte)(
+                                28 +
+                                noise);
+
+                        return new MapStudioGeneratedRgb(
+                            value,
+                            (byte)(
+                                value +
+                                2),
+                            (byte)(
+                                value +
+                                3));
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_traffic_red.bmp",
+                    32,
+                    32,
+                    static (x, y) =>
+                    SignalColor(
+                        x,
+                        y,
+                        222,
+                        38,
+                        24),
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_traffic_amber.bmp",
+                    32,
+                    32,
+                    static (x, y) =>
+                    SignalColor(
+                        x,
+                        y,
+                        238,
+                        150,
+                        18),
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        created =
+            await MapStudioGeneratedTextureFactory
+                .EnsureBmpAsync(
+                    textureDirectory,
+                    "ms_traffic_green.bmp",
+                    32,
+                    32,
+                    static (x, y) =>
+                    SignalColor(
+                        x,
+                        y,
+                        28,
+                        190,
+                        62),
+                    cancellationToken)
+                .ConfigureAwait(false) ||
+            created;
+
+        return created;
+    }
+
+    private static MapStudioGeneratedRgb SignalColor(
+        int x,
+        int y,
+        byte r,
+        byte g,
+        byte b)
+    {
+        var dx =
+            x -
+            16;
+
+        var dy =
+            y -
+            16;
+
+        var distanceSquared =
+            dx *
+                dx +
+            dy *
+                dy;
+
+        if (distanceSquared > 190)
+        {
+            return new MapStudioGeneratedRgb(
+                18,
+                18,
+                18);
+        }
+
+        var highlight =
+            distanceSquared <
+                45
+                ? 24
+                : 0;
+
+        return new MapStudioGeneratedRgb(
+            (byte)Math.Min(
+                255,
+                r +
+                highlight),
+            (byte)Math.Min(
+                255,
+                g +
+                highlight),
+            (byte)Math.Min(
+                255,
+                b +
+                highlight));
+    }
+
     private static readonly
         IReadOnlyList<OmsiO3dMaterial>
         Materials =
@@ -240,7 +406,7 @@ public sealed class MapStudioStarterTrafficGenerator
                 0,
                 0,
                 16,
-                null),
+                "ms_traffic_housing.bmp"),
             new OmsiO3dMaterial(
                 0.90f,
                 0.08f,
@@ -253,7 +419,7 @@ public sealed class MapStudioStarterTrafficGenerator
                 0,
                 0,
                 12,
-                null),
+                "ms_traffic_red.bmp"),
             new OmsiO3dMaterial(
                 0.95f,
                 0.62f,
@@ -266,7 +432,7 @@ public sealed class MapStudioStarterTrafficGenerator
                 0,
                 0,
                 12,
-                null),
+                "ms_traffic_amber.bmp"),
             new OmsiO3dMaterial(
                 0.06f,
                 0.72f,
@@ -279,7 +445,7 @@ public sealed class MapStudioStarterTrafficGenerator
                 0,
                 0,
                 12,
-                null)
+                "ms_traffic_green.bmp")
         ];
 
     private sealed class GeometryBuilder
