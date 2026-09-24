@@ -7,7 +7,19 @@ public sealed record ProtonBusOmsiDirectoryExportOptions(
     ProtonBusOmsiMapExportOptions? MapOptions = null,
     bool IncludeTimetable = true,
     ProtonBusOmsiTimetableConversionOptions?
-        TimetableOptions = null);
+        TimetableOptions = null)
+{
+    public ProtonBusTargetProfile
+        TargetProfile { get; init; } =
+        ProtonBusTargetProfiles
+            .Phase3;
+
+    public bool CreateZipArchive
+        { get; init; }
+
+    public string? ArchiveFileName
+        { get; init; }
+}
 
 public sealed record ProtonBusOmsiDirectoryExportProgress(
     string Stage,
@@ -20,7 +32,11 @@ public sealed record ProtonBusOmsiDirectoryPackageExportResult(
     OmsiMapDescriptor? Descriptor,
     OmsiTimetableCatalog? Timetable,
     ProtonBusOmsiMapPackageExportResult? MapExport,
-    IReadOnlyList<ProtonBusOmsiMapExportIssue> Issues);
+    IReadOnlyList<ProtonBusOmsiMapExportIssue> Issues)
+{
+    public string? ArchivePath
+        { get; init; }
+}
 
 public sealed class ProtonBusOmsiDirectoryPackageExporter
 {
@@ -61,6 +77,13 @@ public sealed class ProtonBusOmsiDirectoryPackageExporter
 
         options ??=
             new();
+
+        definition =
+            ProtonBusTargetProfiles
+                .Apply(
+                    definition,
+                    options
+                        .TargetProfile);
 
         var issues =
             new List<ProtonBusOmsiMapExportIssue>();
@@ -336,11 +359,88 @@ public sealed class ProtonBusOmsiDirectoryPackageExporter
                 descriptor.Tiles.Count,
                 descriptor.Tiles.Count));
 
+        string? archivePath =
+            null;
+
+        if (
+            mapResult.IsExported &&
+            options.CreateZipArchive &&
+            mapResult.Package is
+                { } package)
+        {
+            try
+            {
+                var archiveFileName =
+                    string.IsNullOrWhiteSpace(
+                        options.ArchiveFileName)
+                        ? definition.MapName +
+                          "-ProtonBus.zip"
+                        : options
+                            .ArchiveFileName!
+                            .Trim();
+
+                if (
+                    !archiveFileName.EndsWith(
+                        ".zip",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    archiveFileName +=
+                        ".zip";
+                }
+
+                if (
+                    !string.Equals(
+                        Path.GetFileName(
+                            archiveFileName),
+                        archiveFileName,
+                        StringComparison.Ordinal))
+                {
+                    throw new ArgumentException(
+                        "Archive file name must not contain a directory path.");
+                }
+
+                archivePath =
+                    ProtonBusPackageArchiveWriter
+                        .Write(
+                            package,
+                            Path.Combine(
+                                outputRoot,
+                                archiveFileName));
+            }
+            catch (Exception exception) when (
+                exception is
+                    ArgumentException or
+                    InvalidDataException or
+                    IOException or
+                    UnauthorizedAccessException or
+                    NotSupportedException)
+            {
+                issues.Add(
+                    new(
+                        null,
+                        null,
+                        "archiveWriteFailed",
+                        outputRoot,
+                        exception.Message));
+
+                return new(
+                    false,
+                    descriptor,
+                    timetable,
+                    mapResult,
+                    issues.ToArray());
+            }
+        }
+
         return new(
             mapResult.IsExported,
             descriptor,
             timetable,
             mapResult,
-            issues.ToArray());
+            issues.ToArray())
+        {
+            ArchivePath =
+                archivePath
+        };
     }
 }
