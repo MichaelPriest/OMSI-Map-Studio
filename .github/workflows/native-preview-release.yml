@@ -36,6 +36,7 @@ on:
       - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs"
       - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
@@ -54,6 +55,7 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
@@ -1287,6 +1289,8 @@ jobs:
           $clipper = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs -Raw
           $smoother = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs -Raw
           $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $osmImporter = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $osmImporterTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
           $clipperTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs -Raw
           $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs -Raw
           $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
@@ -1428,11 +1432,18 @@ jobs:
             throw "Test 10.36 Road Kit 1.2 detailed texture generation is missing."
           }
 
-          if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh')) {
-            throw "Test 10.36 generated junction texture/render coverage is missing."
+          if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh') -or
+              -not $junction.Contains('builder.AppendLine(') -or
+              -not $junction.Contains('"junction.o3d"')) {
+            throw "Test 10.36 generated junction texture/mesh loader coverage is missing."
           }
 
-          Write-Host "Verified complete OSM import, native curved splines, fitted junction geometry, physical width normalization and Road Kit 1.2 textures."
+          if (-not $osmImporter.Contains('implicitJunctionOneWay') -or
+              -not $osmImporterTests.Contains('ImporterTreatsRoundaboutAsImplicitOneWay')) {
+            throw "Test 10.36 implicit OSM roundabout one-way handling is missing."
+          }
+
+          Write-Host "Verified complete OSM import, native curved splines, fitted/renderable junction geometry, roundabout topology, physical width normalization and Road Kit 1.2 textures."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
