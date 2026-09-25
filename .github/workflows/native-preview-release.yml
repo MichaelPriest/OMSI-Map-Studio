@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.38: terrain-relative junction placement and shared Road Kit asphalt.
+# Test 10.39: non-blocking post-road reload and loading-overlay completion.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.38-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.38-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.39-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.39-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.38-native
-  TAG: v0.2.0-alpha.5-test.10.38-native
+  VERSION: 0.2.0-alpha.5-test.10.39-native
+  TAG: v0.2.0-alpha.5-test.10.39-native
 
 jobs:
   build-native-preview:
@@ -1576,6 +1576,43 @@ jobs:
 
           Write-Host "Verified terrain-relative junction Z, single terrain-height application, surface alignment and shared Road Kit asphalt."
 
+      - name: Verify test 10.39 non-blocking post-road reload
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'refreshReferenceOverlay',
+            'refreshExplorer',
+            'ApplyMapSnapshot begin',
+            'viewport-ready elapsedMs=',
+            'reference-refresh skipped',
+            'explorer-ready elapsedMs=',
+            'ApplyMapSnapshot complete elapsedMs=',
+            'Procedural roads final viewport reload begin.',
+            'Procedural roads final viewport reload complete.',
+            'Procedural roads closed active loading overlay after viewport reload.'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.39 post-road reload marker is missing: $required"
+            }
+          }
+
+          if ($main -notmatch 'ApplyMapSnapshotAsync\(\s*finalSnapshot,[\s\S]*?refreshReferenceOverlay:\s*false,[\s\S]*?refreshExplorer:\s*false') {
+            throw "Test 10.39 road generation must skip redundant reference and Explorer refresh work."
+          }
+
+          if (-not $main.Contains('_explorerRefreshPending') -or
+              -not $main.Contains('IsExplorerPanelActuallyVisible')) {
+            throw "Test 10.39 lazy Explorer refresh is missing."
+          }
+
+          if ($main -notmatch 'if \(_loadingOperationDepth > 0\)[\s\S]*?EndLoading\(\)') {
+            throw "Test 10.39 must close the active loading overlay immediately after the final road viewport reload."
+          }
+
+          Write-Host "Verified post-road reload skips redundant CARTO/Explorer work, records timings and closes loading promptly."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1730,11 +1767,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.38-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.39-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.38-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.39-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
