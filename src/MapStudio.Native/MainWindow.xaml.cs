@@ -26374,10 +26374,34 @@ setTimeout(postBounds, 250);
         }
 
         StatusText.Text =
-            "Buscando vias OpenStreetMap da área selecionada · consultas divididas com fallback...";
+            "Buscando vias OpenStreetMap da área selecionada · consultas divididas com fallback limitado...";
+
+        NativeStartupDiagnostics.Write(
+            $"RealMap OSM download begin south={south:F6} west={west:F6} north={north:F6} east={east:F6}");
+
+        var overpassClient =
+            new MapStudioOverpassRoadClient(
+                message =>
+                {
+                    NativeStartupDiagnostics.Write(
+                        "Overpass " +
+                        message);
+
+                    DispatcherQueue.TryEnqueue(
+                        () =>
+                        {
+                            StatusText.Text =
+                                "OSM · " +
+                                message;
+
+                            UpdateLoading(
+                                "Buscando vias OpenStreetMap",
+                                message);
+                        });
+                });
 
         var imported =
-            await new MapStudioOverpassRoadClient()
+            await overpassClient
                 .DownloadAsync(
                     south,
                     west,

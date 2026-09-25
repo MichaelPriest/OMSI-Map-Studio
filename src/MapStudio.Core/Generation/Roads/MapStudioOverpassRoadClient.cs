@@ -23,7 +23,17 @@ public sealed class MapStudioOverpassRoadClient
         6;
 
     private const int MaximumRecoveryDepth =
-        3;
+        1;
+
+    private static readonly TimeSpan
+        EndpointAttemptTimeout =
+            TimeSpan.FromSeconds(
+                18);
+
+    private static readonly TimeSpan
+        MaximumDownloadDuration =
+            TimeSpan.FromMinutes(
+                2);
 
     private static readonly HttpClient
         SharedHttpClient =
@@ -46,16 +56,42 @@ public sealed class MapStudioOverpassRoadClient
     private readonly IReadOnlyList<Uri>
         _endpoints;
 
+    private readonly Action<string>?
+        _diagnostic;
+
+    private int _endpointRotation;
+
     public MapStudioOverpassRoadClient()
         : this(
             SharedHttpClient,
-            DefaultEndpoints)
+            DefaultEndpoints,
+            null)
+    {
+    }
+
+    public MapStudioOverpassRoadClient(
+        Action<string> diagnostic)
+        : this(
+            SharedHttpClient,
+            DefaultEndpoints,
+            diagnostic)
     {
     }
 
     public MapStudioOverpassRoadClient(
         HttpClient httpClient,
         IReadOnlyList<Uri> endpoints)
+        : this(
+            httpClient,
+            endpoints,
+            null)
+    {
+    }
+
+    public MapStudioOverpassRoadClient(
+        HttpClient httpClient,
+        IReadOnlyList<Uri> endpoints,
+        Action<string>? diagnostic)
     {
         ArgumentNullException.ThrowIfNull(
             httpClient);
@@ -83,6 +119,9 @@ public sealed class MapStudioOverpassRoadClient
 
         _endpoints =
             endpoints.ToArray();
+
+        _diagnostic =
+            diagnostic;
     }
 
     public async Task<
@@ -94,6 +133,58 @@ public sealed class MapStudioOverpassRoadClient
             double east,
             CancellationToken cancellationToken =
                 default)
+    {
+        using var budgetCancellation =
+            CancellationTokenSource
+                .CreateLinkedTokenSource(
+                    cancellationToken);
+
+        budgetCancellation.CancelAfter(
+            MaximumDownloadDuration);
+
+        WriteDiagnostic(
+            $"download begin bounds={south:F6},{west:F6},{north:F6},{east:F6} maxSeconds={MaximumDownloadDuration.TotalSeconds:0} recoveryDepth={MaximumRecoveryDepth}");
+
+        try
+        {
+            var result =
+                await DownloadCoreAsync(
+                        south,
+                        west,
+                        north,
+                        east,
+                        budgetCancellation.Token)
+                    .ConfigureAwait(false);
+
+            WriteDiagnostic(
+                $"download complete traces={result.Traces.Count} chunksOk={result.SuccessfulChunkCount} attempts={result.RequestAttemptCount}");
+
+            return result;
+        }
+        catch (OperationCanceledException)
+            when (
+                !cancellationToken
+                    .IsCancellationRequested &&
+                budgetCancellation
+                    .IsCancellationRequested)
+        {
+            WriteDiagnostic(
+                $"download budget-exceeded maxSeconds={MaximumDownloadDuration.TotalSeconds:0}");
+
+            throw new HttpRequestException(
+                $"Importação OpenStreetMap excedeu o limite de {MaximumDownloadDuration.TotalSeconds:0} segundos. " +
+                "A geração foi interrompida para evitar ficar presa em retries dos servidores Overpass.");
+        }
+    }
+
+    private async Task<
+        MapStudioOverpassRoadDownloadResult>
+        DownloadCoreAsync(
+            double south,
+            double west,
+            double north,
+            double east,
+            CancellationToken cancellationToken)
     {
         ValidateBounds(
             south,
@@ -158,6 +249,9 @@ public sealed class MapStudioOverpassRoadClient
                         ) /
                         (double)columns);
 
+                WriteDiagnostic(
+                    $"chunk start row={row + 1}/{rows} column={column + 1}/{columns} bounds={chunkSouth:F6},{chunkWest:F6},{chunkNorth:F6},{chunkEast:F6}");
+
                 var recovered =
                     await DownloadChunkWithRecoveryAsync(
                             new Bounds(
@@ -171,6 +265,9 @@ public sealed class MapStudioOverpassRoadClient
 
                 aggregate.Add(
                     recovered);
+
+                WriteDiagnostic(
+                    $"chunk complete row={row + 1}/{rows} column={column + 1}/{columns} ok={recovered.SuccessfulChunkCount} failed={recovered.FailedChunkCount} attempts={recovered.RequestAttemptCount}");
             }
         }
 
@@ -237,6 +334,9 @@ public sealed class MapStudioOverpassRoadClient
         cancellationToken
             .ThrowIfCancellationRequested();
 
+        WriteDiagnostic(
+            $"recovery attempt depth={depth} bounds={bounds.South:F6},{bounds.West:F6},{bounds.North:F6},{bounds.East:F6}");
+
         var fetched =
             await TryDownloadChunkAsync(
                     bounds.South,
@@ -257,10 +357,16 @@ public sealed class MapStudioOverpassRoadClient
             depth >=
             MaximumRecoveryDepth)
         {
+            WriteDiagnostic(
+                $"recovery exhausted depth={depth} error={fetched.Error}");
+
             return RecoveryResult
                 .FromFailure(
                     fetched);
         }
+
+        WriteDiagnostic(
+            $"recovery subdivide depth={depth} nextDepth={depth + 1} error={fetched.Error}");
 
         var middleLatitude =
             (
@@ -352,14 +458,43 @@ public sealed class MapStudioOverpassRoadClient
         var attemptCount =
             0;
 
-        foreach (
-            var endpoint in
-                _endpoints)
+        var endpointStart =
+            Math.Abs(
+                System.Threading.Interlocked
+                    .Increment(
+                        ref _endpointRotation) -
+                1) %
+            _endpoints.Count;
+
+        for (
+            var endpointOffset = 0;
+            endpointOffset <
+                _endpoints.Count;
+            endpointOffset++)
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
 
+            var endpoint =
+                _endpoints[
+                    (
+                        endpointStart +
+                        endpointOffset
+                    ) %
+                    _endpoints.Count];
+
             attemptCount++;
+
+            using var attemptCancellation =
+                CancellationTokenSource
+                    .CreateLinkedTokenSource(
+                        cancellationToken);
+
+            attemptCancellation.CancelAfter(
+                EndpointAttemptTimeout);
+
+            WriteDiagnostic(
+                $"endpoint attempt={attemptCount}/{_endpoints.Count} host={endpoint.Host} timeoutSeconds={EndpointAttemptTimeout.TotalSeconds:0}");
 
             try
             {
@@ -378,13 +513,19 @@ public sealed class MapStudioOverpassRoadClient
                         .PostAsync(
                             endpoint,
                             content,
-                            cancellationToken)
+                            attemptCancellation.Token)
                         .ConfigureAwait(false);
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    var error =
+                        $"{endpoint.Host}: HTTP {(int)response.StatusCode}";
+
                     errors.Add(
-                        $"{endpoint.Host}: HTTP {(int)response.StatusCode}");
+                        error);
+
+                    WriteDiagnostic(
+                        $"endpoint failed {error}");
 
                     continue;
                 }
@@ -392,7 +533,7 @@ public sealed class MapStudioOverpassRoadClient
                 var xml =
                     await response.Content
                         .ReadAsStringAsync(
-                            cancellationToken)
+                            attemptCancellation.Token)
                         .ConfigureAwait(false);
 
                 if (
@@ -407,10 +548,16 @@ public sealed class MapStudioOverpassRoadClient
 
                 try
                 {
-                    return new ChunkFetchResult(
+                    var imported =
                         new MapStudioOsmRoadImporter()
                             .Parse(
-                                xml),
+                                xml);
+
+                    WriteDiagnostic(
+                        $"endpoint success host={endpoint.Host} traces={imported.Traces.Count} ignoredWays={imported.IgnoredWayCount} missingNodes={imported.MissingNodeReferenceCount}");
+
+                    return new ChunkFetchResult(
+                        imported,
                         endpoint
                             .GetLeftPart(
                                 UriPartial
@@ -444,8 +591,19 @@ public sealed class MapStudioOverpassRoadClient
                     throw;
                 }
 
+                var error =
+                    exception is
+                        TaskCanceledException &&
+                    attemptCancellation
+                        .IsCancellationRequested
+                        ? $"{endpoint.Host}: timeout após {EndpointAttemptTimeout.TotalSeconds:0}s"
+                        : $"{endpoint.Host}: {exception.Message}";
+
                 errors.Add(
-                    $"{endpoint.Host}: {exception.Message}");
+                    error);
+
+                WriteDiagnostic(
+                    $"endpoint failed {error}");
             }
         }
 
@@ -469,7 +627,7 @@ public sealed class MapStudioOverpassRoadClient
 
         return string.Create(
             invariant,
-            $"[out:xml][timeout:40];way[\"highway\"]({south:G17},{west:G17},{north:G17},{east:G17});out body;>;out skel qt;");
+            $"[out:xml][timeout:16];way[\"highway\"]({south:G17},{west:G17},{north:G17},{east:G17});out body;>;out skel qt;");
     }
 
     private static (
@@ -578,6 +736,19 @@ public sealed class MapStudioOverpassRoadClient
         }
     }
 
+    private void WriteDiagnostic(
+        string message)
+    {
+        try
+        {
+            _diagnostic?.Invoke(
+                message);
+        }
+        catch
+        {
+        }
+    }
+
     private static HttpClient
         CreateSharedHttpClient()
     {
@@ -585,8 +756,8 @@ public sealed class MapStudioOverpassRoadClient
             new HttpClient
             {
                 Timeout =
-                    TimeSpan.FromSeconds(
-                        50)
+                    System.Threading.Timeout
+                        .InfiniteTimeSpan
             };
 
         client.DefaultRequestHeaders

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.40: serialized snapshot reload and atomic viewport scene commit.
+# Test 10.41: bounded Overpass recovery and visible OSM download progress.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.40-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.40-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.41-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.41-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.40-native
-  TAG: v0.2.0-alpha.5-test.10.40-native
+  VERSION: 0.2.0-alpha.5-test.10.41-native
+  TAG: v0.2.0-alpha.5-test.10.41-native
 
 jobs:
   build-native-preview:
@@ -1654,6 +1654,40 @@ jobs:
 
           Write-Host "Verified latest-wins snapshot serialization, atomic scene commit and detailed reload diagnostics."
 
+      - name: Verify test 10.41 bounded Overpass recovery
+        shell: pwsh
+        run: |
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumRecoveryDepth =',
+            'TimeSpan.FromMinutes(',
+            'EndpointAttemptTimeout',
+            'timeout após',
+            'recovery subdivide',
+            'recovery exhausted',
+            'download budget-exceeded',
+            '_endpointRotation',
+            'RealMap OSM download begin',
+            'DownloaderBoundsFailedRecoveryFanout'
+          )) {
+            if (-not ($overpass.Contains($required) -or $main.Contains($required) -or $tests.Contains($required))) {
+              throw "Test 10.41 bounded Overpass marker is missing: $required"
+            }
+          }
+
+          if ($overpass -notmatch 'MaximumRecoveryDepth\s*=\s*1') {
+            throw "Test 10.41 must keep failed-chunk recovery to one subdivision level."
+          }
+
+          if ($tests -notmatch 'Assert\.Equal\(\s*5,\s*requestCount\s*\)') {
+            throw "Test 10.41 must guard the five-request single-endpoint recovery ceiling."
+          }
+
+          Write-Host "Verified bounded Overpass retry fan-out, download budget, endpoint timeout/rotation and progress diagnostics."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1808,11 +1842,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.40-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.41-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.40-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.41-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

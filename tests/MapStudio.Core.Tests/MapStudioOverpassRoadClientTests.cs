@@ -248,6 +248,69 @@ public sealed class MapStudioOverpassRoadClientTests
             requestCount);
     }
 
+    [Fact]
+    public async Task DownloaderBoundsFailedRecoveryFanout()
+    {
+        var requestCount =
+            0;
+
+        var diagnostics =
+            new List<string>();
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    _ =>
+                    {
+                        requestCount++;
+
+                        return new HttpResponseMessage(
+                            HttpStatusCode
+                                .GatewayTimeout);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        5)
+            };
+
+        var client =
+            new MapStudioOverpassRoadClient(
+                httpClient,
+                [
+                    new Uri(
+                        "https://primary.test/api/interpreter")
+                ],
+                diagnostics.Add);
+
+        await Assert.ThrowsAsync<
+            HttpRequestException>(
+                () =>
+                    client.DownloadAsync(
+                        -23.551,
+                        -46.634,
+                        -23.549,
+                        -46.632));
+
+        Assert.Equal(
+            5,
+            requestCount);
+
+        Assert.Contains(
+            diagnostics,
+            message =>
+                message.Contains(
+                    "recovery subdivide",
+                    StringComparison.Ordinal));
+
+        Assert.Contains(
+            diagnostics,
+            message =>
+                message.Contains(
+                    "recovery exhausted",
+                    StringComparison.Ordinal));
+    }
+
     private static HttpResponseMessage
         XmlResponse(
             string xml) =>
