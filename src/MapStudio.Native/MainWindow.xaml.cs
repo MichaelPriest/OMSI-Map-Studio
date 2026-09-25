@@ -323,6 +323,7 @@ public sealed partial class MainWindow : Window
                 NativeExplorerItem>();
 
     private bool _synchronizingExplorer;
+    private bool _explorerRefreshPending;
 
     private IReadOnlyList<
         OmsiAssetIndexEntry>
@@ -1575,7 +1576,16 @@ public sealed partial class MainWindow : Window
             SceneExplorerModeButton,
             "Cena e conteúdo do mapa");
 
-        RefreshExplorerFilter();
+        if (_explorerRefreshPending)
+        {
+            RefreshExplorer(
+                force:
+                    IsExplorerPanelActuallyVisible());
+        }
+        else
+        {
+            RefreshExplorerFilter();
+        }
     }
 
     private void OnMapExplorerModeClick(
@@ -4548,13 +4558,36 @@ public sealed partial class MainWindow : Window
             "Selecione um item ou escolha uma ferramenta";
     }
 
-    private void RefreshExplorer()
+    private void RefreshExplorer(
+        bool force = false)
     {
+        if (
+            !force &&
+            !IsExplorerPanelActuallyVisible())
+        {
+            _explorerRefreshPending =
+                true;
+
+            return;
+        }
+
         _explorerItems =
             Viewport.GetExplorerItems();
 
+        _explorerRefreshPending =
+            false;
+
         RefreshExplorerFilter();
     }
+
+    private bool IsExplorerPanelActuallyVisible() =>
+        ExplorerPanel.Visibility ==
+            Visibility.Visible &&
+        (
+            IsFullscreen() ||
+            ExplorerColumn.Width.Value >
+                0
+        );
 
     private void RefreshExplorerFilter()
     {
@@ -18920,6 +18953,16 @@ public sealed partial class MainWindow : Window
                     ? "Explorer flutuante visível."
                     : "Explorer flutuante oculto.";
 
+            if (
+                ExplorerPanel.Visibility ==
+                    Visibility.Visible &&
+                _explorerRefreshPending)
+            {
+                RefreshExplorer(
+                    force:
+                        true);
+            }
+
             UpdatePanelRestoreButtons();
             return;
         }
@@ -18966,6 +19009,13 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Explorer restaurado.";
+
+        if (_explorerRefreshPending)
+        {
+            RefreshExplorer(
+                force:
+                    true);
+        }
 
         UpdatePanelRestoreButtons();
     }
@@ -23847,7 +23897,11 @@ public sealed partial class MainWindow : Window
 
     private async Task ApplyMapSnapshotAsync(
         NativeMapSnapshot snapshot,
-        bool focusActiveTile)
+        bool focusActiveTile,
+        bool refreshReferenceOverlay =
+            true,
+        bool refreshExplorer =
+            true)
     {
         if (
             _referenceOverlayMapDirectory is
@@ -23870,13 +23924,38 @@ public sealed partial class MainWindow : Window
             "Renderizando mapa",
             $"{snapshot.Tiles.Count} tile(s) · {snapshot.ObjectCount} objeto(s) · {snapshot.SplineCount} spline(s)");
 
+        var reloadStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
+
+        NativeStartupDiagnostics.Write(
+            $"ApplyMapSnapshot begin tiles={snapshot.Tiles.Count} objects={snapshot.ObjectCount} splines={snapshot.SplineCount} refreshReference={refreshReferenceOverlay} refreshExplorer={refreshExplorer}");
+
         await Viewport
             .SetMapSnapshotAsync(
                 snapshot,
                 _session.OmsiRootPath);
 
-        await RefreshActiveReferenceOverlayAsync(
-            snapshot);
+        NativeStartupDiagnostics.Write(
+            $"ApplyMapSnapshot viewport-ready elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+
+        if (refreshReferenceOverlay)
+        {
+            var referenceStopwatch =
+                System.Diagnostics.Stopwatch
+                    .StartNew();
+
+            await RefreshActiveReferenceOverlayAsync(
+                snapshot);
+
+            NativeStartupDiagnostics.Write(
+                $"ApplyMapSnapshot reference-ready elapsedMs={referenceStopwatch.ElapsedMilliseconds}");
+        }
+        else
+        {
+            NativeStartupDiagnostics.Write(
+                "ApplyMapSnapshot reference-refresh skipped.");
+        }
 
         RefreshTerrainLayerVisibilityMenu(
             snapshot);
@@ -23895,7 +23974,23 @@ public sealed partial class MainWindow : Window
         TerrainPointText.Text =
             "Nenhum ponto selecionado.";
 
-        RefreshExplorer();
+        var explorerStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
+
+        if (refreshExplorer)
+        {
+            RefreshExplorer();
+        }
+        else
+        {
+            _explorerRefreshPending =
+                true;
+        }
+
+        NativeStartupDiagnostics.Write(
+            $"ApplyMapSnapshot explorer-ready elapsedMs={explorerStopwatch.ElapsedMilliseconds} deferred={_explorerRefreshPending}");
+
         UpdateMapSummary(
             snapshot);
 
@@ -23917,6 +24012,9 @@ public sealed partial class MainWindow : Window
                 active.X,
                 active.Y);
         }
+
+        NativeStartupDiagnostics.Write(
+            $"ApplyMapSnapshot complete elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
     }
 
     private void UpdateMapSummary(
@@ -31157,10 +31255,24 @@ setTimeout(postBounds, 250);
             RegisterConstructionHistory(
                 "Gerar vias procedurais");
 
+            UpdateLoading(
+                "Finalizando vias",
+                $"{insertion.SplineIds.Count} splines · {insertedJunctionCount} junctions · atualizando apenas o viewport...");
+
+            NativeStartupDiagnostics.Write(
+                "Procedural roads final viewport reload begin.");
+
             await ApplyMapSnapshotAsync(
                 finalSnapshot,
                 focusActiveTile:
+                    false,
+                refreshReferenceOverlay:
+                    false,
+                refreshExplorer:
                     false);
+
+            NativeStartupDiagnostics.Write(
+                "Procedural roads final viewport reload complete.");
 
             Viewport
                 .ClearProceduralRoadPreview();
