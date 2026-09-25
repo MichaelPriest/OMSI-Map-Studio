@@ -135,7 +135,7 @@ public sealed class MapStudioOverpassRoadClientTests
     }
 
     [Fact]
-    public async Task DownloaderKeepsPartialResultsWhenOneChunkFails()
+    public async Task DownloaderRejectsIncompleteAreaAfterRecoveryFails()
     {
         var requestCount =
             0;
@@ -169,23 +169,83 @@ public sealed class MapStudioOverpassRoadClientTests
                         "https://primary.test/api/interpreter")
                 ]);
 
+        var exception =
+            await Assert.ThrowsAsync<
+                HttpRequestException>(
+                    () =>
+                        client.DownloadAsync(
+                            -23.57,
+                            -46.66,
+                            -23.53,
+                            -46.61));
+
+        Assert.Contains(
+            "incompleta",
+            exception.Message,
+            StringComparison
+                .OrdinalIgnoreCase);
+
+        Assert.True(
+            requestCount >
+            2);
+    }
+
+    [Fact]
+    public async Task DownloaderRecoversFailedParentBySubdividingArea()
+    {
+        var requestCount =
+            0;
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    _ =>
+                    {
+                        requestCount++;
+
+                        return requestCount ==
+                            1
+                            ? new HttpResponseMessage(
+                                HttpStatusCode
+                                    .GatewayTimeout)
+                            : XmlResponse(
+                                SampleOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(
+                        5)
+            };
+
+        var client =
+            new MapStudioOverpassRoadClient(
+                httpClient,
+                [
+                    new Uri(
+                        "https://primary.test/api/interpreter")
+                ]);
+
         var result =
             await client.DownloadAsync(
-                -23.57,
-                -46.66,
-                -23.53,
-                -46.61);
+                -23.551,
+                -46.634,
+                -23.549,
+                -46.632);
 
         Assert.Single(
             result.Traces);
 
         Assert.Equal(
-            1,
+            4,
             result.SuccessfulChunkCount);
 
-        Assert.True(
-            result.FailedChunkCount >
-            0);
+        Assert.Equal(
+            0,
+            result.FailedChunkCount);
+
+        Assert.Equal(
+            5,
+            requestCount);
     }
 
     private static HttpResponseMessage
