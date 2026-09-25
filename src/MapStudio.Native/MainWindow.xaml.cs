@@ -26270,9 +26270,6 @@ setTimeout(postBounds, 250);
                         georeference.AnchorTileY) +
                 georeference.AnchorY);
 
-        var profiles =
-            GetProceduralRoadProfiles();
-
         _proceduralRoadTraces
             .Clear();
 
@@ -26330,12 +26327,9 @@ setTimeout(postBounds, 250);
                     $"area-osm-{++_proceduralRoadTraceSequence}-{geoTrace.Id}",
                     points,
                     profile.ProfileId,
-                    geoTrace.LaneCount ??
-                        profile.LaneCount,
-                    geoTrace.OneWay ??
-                        profile.OneWay,
-                    geoTrace.WidthMeters ??
-                        profile.WidthMeters));
+                    profile.LaneCount,
+                    profile.OneWay,
+                    profile.WidthMeters));
         }
 
         if (
@@ -30032,8 +30026,7 @@ setTimeout(postBounds, 250);
 
                 var roadProfile =
                     SelectProceduralRoadProfile(
-                        road,
-                        profiles);
+                        road);
 
                 _proceduralRoadTraces.Add(
                     new MapStudioRoadTrace(
@@ -30244,8 +30237,7 @@ setTimeout(postBounds, 250);
 
                 var profile =
                     SelectProceduralRoadProfile(
-                        geoTrace,
-                        profiles);
+                        geoTrace);
 
                 var traceId =
                     $"geo-{++_proceduralRoadTraceSequence}-{geoTrace.Id}";
@@ -30460,8 +30452,7 @@ setTimeout(postBounds, 250);
 
                 var profile =
                     SelectProceduralRoadProfile(
-                        geoTrace,
-                        profiles);
+                        geoTrace);
 
                 _proceduralRoadTraces.Add(
                     new MapStudioRoadTrace(
@@ -30541,9 +30532,6 @@ setTimeout(postBounds, 250);
 
             return;
         }
-
-        var profiles =
-            GetProceduralRoadProfiles();
 
         var combo =
             new ComboBox
