@@ -205,6 +205,216 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
     }
 
     [Fact]
+    public void BuilderConvertsSmoothThreePointBendIntoOmsiArc()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "curve",
+                            [
+                                new(20, 30),
+                                new(60, 30),
+                                new(90, 60)
+                            ],
+                            @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
+                            2,
+                            false,
+                            7)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        var request =
+            Assert.Single(
+                result.Requests);
+
+        Assert.True(
+            request.IsCurved);
+
+        Assert.True(
+            Math.Abs(
+                request.Radius) >
+            4);
+
+        Assert.Equal(
+            1,
+            result.CurvedRequestCount);
+
+        Assert.InRange(
+            request.EndWorld.X,
+            89.99f,
+            90.01f);
+
+        Assert.InRange(
+            request.EndWorld.Z,
+            59.99f,
+            60.01f);
+    }
+
+    [Fact]
+    public void BuilderTrimsRoadEndsAwayFromJunctionCenter()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "horizontal",
+                            [
+                                new(10, 50),
+                                new(90, 50)
+                            ],
+                            @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
+                            2,
+                            false,
+                            7),
+                        new MapStudioRoadTrace(
+                            "vertical",
+                            [
+                                new(50, 10),
+                                new(50, 90)
+                            ],
+                            @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
+                            2,
+                            false,
+                            7)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            4,
+            result.Requests.Count);
+
+        Assert.All(
+            result.Requests,
+            request =>
+            {
+                var startDistance =
+                    Math.Sqrt(
+                        Math.Pow(
+                            request.StartWorld.X -
+                            50,
+                            2) +
+                        Math.Pow(
+                            request.StartWorld.Z -
+                            50,
+                            2));
+
+                var endDistance =
+                    Math.Sqrt(
+                        Math.Pow(
+                            request.EndWorld.X -
+                            50,
+                            2) +
+                        Math.Pow(
+                            request.EndWorld.Z -
+                            50,
+                            2));
+
+                Assert.True(
+                    startDistance >
+                        2 ||
+                    endDistance >
+                        2);
+
+                Assert.False(
+                    startDistance <
+                        0.5 ||
+                    endDistance <
+                        0.5);
+            });
+    }
+
+    [Fact]
     public void BuilderSkipsSegmentsOutsideLoadedTerrain()
     {
         var scene =
