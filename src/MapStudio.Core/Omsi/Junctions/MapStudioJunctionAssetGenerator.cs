@@ -10,7 +10,8 @@ public sealed record MapStudioJunctionArm(
     double AngleDegrees,
     double WidthMeters,
     int LaneCount = 2,
-    bool OneWay = false);
+    bool OneWay = false,
+    double LaneWidthMeters = 3.5);
 
 public sealed record MapStudioJunctionSpec(
     string Name,
@@ -49,7 +50,15 @@ public sealed record MapStudioJunctionSpec(
                                 Math.Clamp(
                                     arm.LaneCount,
                                     1,
-                                    8)
+                                    8),
+                            LaneWidthMeters =
+                                Math.Clamp(
+                                    double.IsFinite(
+                                        arm.LaneWidthMeters)
+                                        ? arm.LaneWidthMeters
+                                        : 3.5,
+                                    2.0,
+                                    4.5)
                         })
                 .OrderBy(
                     arm =>
@@ -783,16 +792,11 @@ public sealed class MapStudioJunctionAssetGenerator
                 var laneWidth =
                     Math.Clamp(
                         Math.Min(
-                            from.WidthMeters /
-                                Math.Max(
-                                    1,
-                                    from.LaneCount),
-                            to.WidthMeters /
-                                Math.Max(
-                                    1,
-                                    to.LaneCount)),
-                        2.5,
-                        4.5);
+                            from.LaneWidthMeters,
+                            to.LaneWidthMeters) -
+                        0.3,
+                        2.0,
+                        4.2);
 
                 paths.Add(
                     new JunctionPath(
