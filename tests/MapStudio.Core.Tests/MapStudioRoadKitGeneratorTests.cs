@@ -29,7 +29,7 @@ public sealed class MapStudioRoadKitGeneratorTests
                         root);
 
             Assert.Equal(
-                8,
+                10,
                 first
                     .SplineRelativePaths
                     .Count);
@@ -137,6 +137,92 @@ public sealed class MapStudioRoadKitGeneratorTests
                 Directory.Delete(
                     root,
                     recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LocalRoadProfilesUsePhysicalOmsiMeterWidths()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var reader =
+                new OmsiSplineDefinitionReader();
+
+            var narrow =
+                await reader.ReadAsync(
+                    Path.Combine(
+                        result.PackDirectory,
+                        "ms_road_local_5_5m.sli"));
+
+            var narrowMin =
+                narrow.Surfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.From.X,
+                            surface.To.X));
+
+            var narrowMax =
+                narrow.Surfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.X,
+                            surface.To.X));
+
+            Assert.Equal(
+                5.5,
+                narrowMax -
+                    narrowMin,
+                3);
+
+            var sidewalk =
+                await reader.ReadAsync(
+                    Path.Combine(
+                        result.PackDirectory,
+                        "ms_road_local_5_5m_sidewalk.sli"));
+
+            var sidewalkMin =
+                sidewalk.Surfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.From.X,
+                            surface.To.X));
+
+            var sidewalkMax =
+                sidewalk.Surfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.X,
+                            surface.To.X));
+
+            Assert.Equal(
+                8.5,
+                sidewalkMax -
+                    sidewalkMin,
+                3);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
             }
         }
     }
