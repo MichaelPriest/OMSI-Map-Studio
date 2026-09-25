@@ -26319,8 +26319,7 @@ setTimeout(postBounds, 250);
 
             var profile =
                 SelectProceduralRoadProfile(
-                    geoTrace,
-                    profiles);
+                    geoTrace);
 
             _proceduralRoadTraces.Add(
                 new MapStudioRoadTrace(
@@ -29982,9 +29981,6 @@ setTimeout(postBounds, 250);
                 return;
             }
 
-            var profiles =
-                GetProceduralRoadProfiles();
-
             var added =
                 0;
 
@@ -30033,12 +30029,9 @@ setTimeout(postBounds, 250);
                         $"ai-{++_proceduralRoadTraceSequence}",
                         points,
                         roadProfile.ProfileId,
-                        road.LaneCount ??
-                            roadProfile.LaneCount,
-                        road.OneWay ??
-                            roadProfile.OneWay,
-                        road.WidthMeters ??
-                            roadProfile.WidthMeters));
+                        roadProfile.LaneCount,
+                        roadProfile.OneWay,
+                        roadProfile.WidthMeters));
 
                 added++;
             }
@@ -30188,9 +30181,6 @@ setTimeout(postBounds, 250);
                         georeference.AnchorTileY) +
                     georeference.AnchorY);
 
-            var profiles =
-                GetProceduralRoadProfiles();
-
             var added =
                 0;
 
@@ -30247,12 +30237,9 @@ setTimeout(postBounds, 250);
                         traceId,
                         points,
                         profile.ProfileId,
-                        geoTrace.LaneCount ??
-                            profile.LaneCount,
-                        geoTrace.OneWay ??
-                            profile.OneWay,
-                        geoTrace.WidthMeters ??
-                            profile.WidthMeters));
+                        profile.LaneCount,
+                        profile.OneWay,
+                        profile.WidthMeters));
 
                 added++;
             }
@@ -30403,9 +30390,6 @@ setTimeout(postBounds, 250);
                         georeference.AnchorTileY) +
                     georeference.AnchorY);
 
-            var profiles =
-                GetProceduralRoadProfiles();
-
             var added =
                 0;
 
@@ -30459,12 +30443,9 @@ setTimeout(postBounds, 250);
                         $"osm-{++_proceduralRoadTraceSequence}-{geoTrace.Id}",
                         points,
                         profile.ProfileId,
-                        geoTrace.LaneCount ??
-                            profile.LaneCount,
-                        geoTrace.OneWay ??
-                            profile.OneWay,
-                        geoTrace.WidthMeters ??
-                            profile.WidthMeters));
+                        profile.LaneCount,
+                        profile.OneWay,
+                        profile.WidthMeters));
 
                 added++;
             }
@@ -30532,6 +30513,9 @@ setTimeout(postBounds, 250);
 
             return;
         }
+
+        var profiles =
+            GetProceduralRoadProfiles();
 
         var combo =
             new ComboBox
