@@ -464,6 +464,19 @@ public sealed class MapStudioRoadGraphBuilder
         double tolerance)
     {
         if (
+            !string.Equals(
+                left.Trace.Id,
+                right.Trace.Id,
+                StringComparison.OrdinalIgnoreCase) &&
+            (
+                left.Trace.SourceTopologyAuthoritative ||
+                right.Trace.SourceTopologyAuthoritative
+            ))
+        {
+            return;
+        }
+
+        if (
             CanCreateInteriorIntersection(
                 left,
                 right) &&
