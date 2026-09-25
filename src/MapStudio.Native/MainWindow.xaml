@@ -3948,6 +3948,11 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Biblioteca"
                                         Click="OnToolVegetationClick" />
+                                <ComboBox x:Name="VegetationPresetComboBox"
+                                          Width="160"
+                                          MinHeight="28"
+                                          PlaceholderText="Preset de vegetação"
+                                          ToolTipService.ToolTip="Coleção usada como preset misto de árvores/arbustos; somente SCO classificados como Vegetação entram no sorteio" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Pincel / área"
                                         ToolTipService.ToolTip="Ativa o posicionamento por pincel/área usando os assets de vegetação selecionados"

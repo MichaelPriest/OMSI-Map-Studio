@@ -2969,6 +2969,32 @@ public sealed partial class MainWindow : Window
         LibraryCollectionComboBox.ItemsSource =
             names;
 
+        if (VegetationPresetComboBox is not null)
+        {
+            var vegetationPrevious =
+                VegetationPresetComboBox
+                    .SelectedItem
+                    ?.ToString() ??
+                previous;
+
+            VegetationPresetComboBox.ItemsSource =
+                names;
+
+            var vegetationIndex =
+                Array.FindIndex(
+                    names,
+                    name =>
+                        string.Equals(
+                            name,
+                            vegetationPrevious,
+                            StringComparison.OrdinalIgnoreCase));
+
+            VegetationPresetComboBox.SelectedIndex =
+                vegetationIndex >= 0
+                    ? vegetationIndex
+                    : 0;
+        }
+
         var index =
             Array.FindIndex(
                 names,
@@ -3591,6 +3617,85 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private IReadOnlyList<
+        OmsiAssetIndexEntry>
+        GetActiveVegetationPresetAssets()
+    {
+        var presetName =
+            VegetationPresetComboBox
+                ?.SelectedItem
+                ?.ToString();
+
+        if (
+            string.IsNullOrWhiteSpace(
+                presetName) ||
+            !_assetLibraryState
+                .Collections
+                .TryGetValue(
+                    presetName,
+                    out var paths) ||
+            paths.Count ==
+                0)
+        {
+            return Array.Empty<
+                OmsiAssetIndexEntry>();
+        }
+
+        var pathSet =
+            new HashSet<string>(
+                paths,
+                StringComparer.OrdinalIgnoreCase);
+
+        return _assetLibraryItems
+            .Where(
+                asset =>
+                    asset.Kind ==
+                        OmsiAssetKind
+                            .SceneryObject &&
+                    pathSet.Contains(
+                        asset.RelativePath) &&
+                    GetEffectiveAssetGroup(
+                        asset) ==
+                        OmsiAssetLibraryGroup
+                            .Vegetation)
+            .OrderBy(
+                asset =>
+                    asset.RelativePath,
+                StringComparer.OrdinalIgnoreCase)
+            .Take(
+                64)
+            .ToArray();
+    }
+
+    private bool ShouldUseVegetationPreset(
+        int placementMode,
+        IReadOnlyList<
+            OmsiAssetIndexEntry>
+            presetAssets)
+    {
+        if (
+            placementMode is not
+                (2 or 3) ||
+            presetAssets.Count <
+                2)
+        {
+            return false;
+        }
+
+        var selected =
+            GetSelectedAssetLibraryEntry();
+
+        return
+            selected is not null &&
+            selected.Kind ==
+                OmsiAssetKind
+                    .SceneryObject &&
+            GetEffectiveAssetGroup(
+                selected) ==
+                OmsiAssetLibraryGroup
+                    .Vegetation;
+    }
+
     private async Task HandleSceneryPlacementAsync(
         NativeSceneryPlacementRequest
             request)
@@ -3787,14 +3892,50 @@ public sealed partial class MainWindow : Window
                     ? "Inserindo objeto com backup..."
                     : $"Inserindo {requests.Count} objetos em lote com backup...";
 
+            var vegetationPresetAssets =
+                GetActiveVegetationPresetAssets();
+
+            var useVegetationPreset =
+                ShouldUseVegetationPreset(
+                    mode,
+                    vegetationPresetAssets);
+
+            if (useVegetationPreset)
+            {
+                requests =
+                    NativeVegetationPresetDistributor
+                        .Distribute(
+                            requests,
+                            vegetationPresetAssets
+                                .Select(
+                                    asset =>
+                                        asset.RelativePath)
+                                .ToArray());
+            }
+
             var snapshot =
-                requests.Count == 1
+                useVegetationPreset
                     ? await _session
-                        .InsertSceneryObjectAsync(
-                            requests[0])
-                    : await _session
-                        .InsertSceneryObjectBatchAsync(
-                            requests);
+                        .InsertSceneryObjectMultiBatchAsync(
+                            requests
+                                .GroupBy(
+                                    placement =>
+                                        placement
+                                            .SceneryObjectPath,
+                                    StringComparer.OrdinalIgnoreCase)
+                                .Select(
+                                    group =>
+                                        new NativeSceneryPlacementBatchGroup(
+                                            group.Key,
+                                            group.ToArray()))
+                                .ToArray())
+                    : requests.Count == 1
+                        ? await _session
+                            .InsertSceneryObjectAsync(
+                                requests[0])
+                        : await _session
+                            .InsertSceneryObjectBatchAsync(
+                                requests);
 
             await Viewport
                 .SetMapSnapshotAsync(
@@ -3817,12 +3958,24 @@ public sealed partial class MainWindow : Window
                         .SceneryObject;
 
             StatusText.Text =
-                requests.Count == 1
-                    ? $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro."
-                    : $"{requests.Count} objetos inseridos em lote com backup seguro.";
+                useVegetationPreset
+                    ? $"{requests.Count} itens de vegetação inseridos com preset misto · {requests.Select(item => item.SceneryObjectPath).Distinct(StringComparer.OrdinalIgnoreCase).Count()} espécie(s)/asset(s) · backup seguro."
+                    : requests.Count == 1
+                        ? $"Objeto inserido em tile {request.Tile.X},{request.Tile.Y} com backup seguro."
+                        : $"{requests.Count} objetos inseridos em lote com backup seguro.";
 
-            RecordAssetUsage(
-                request.SceneryObjectPath);
+            foreach (
+                var usedPath in
+                    requests
+                        .Select(
+                            item =>
+                                item.SceneryObjectPath)
+                        .Distinct(
+                            StringComparer.OrdinalIgnoreCase))
+            {
+                RecordAssetUsage(
+                    usedPath);
+            }
 
             RegisterConstructionHistory(
                 requests.Count == 1
