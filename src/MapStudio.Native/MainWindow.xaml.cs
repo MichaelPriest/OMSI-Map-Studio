@@ -25913,12 +25913,21 @@ setTimeout(postBounds, 250);
             RealMapAreaWindow.Visibility =
                 Visibility.Collapsed;
 
+            var selectedRoadImportMode =
+                RealMapRoadImportModeBox
+                    .SelectedIndex;
+
             var roadImportMode =
-                Math.Clamp(
-                    RealMapRoadImportModeBox
-                        .SelectedIndex,
-                    0,
-                    2);
+                selectedRoadImportMode <
+                    0
+                    ? 2
+                    : Math.Clamp(
+                        selectedRoadImportMode,
+                        0,
+                        2);
+
+            NativeStartupDiagnostics.Write(
+                $"RealMap road import mode selected={selectedRoadImportMode} effective={roadImportMode}");
 
             if (roadImportMode > 0)
             {
