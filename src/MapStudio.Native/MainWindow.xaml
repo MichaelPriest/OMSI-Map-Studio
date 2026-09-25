@@ -3326,7 +3326,8 @@
                                               HorizontalAlignment="Right"
                                               VerticalAlignment="Center"
                                               Content="Abrir Biblioteca após criar"
-                                              IsChecked="True" />
+                                              ToolTipService.ToolTip="Opcional. No modo automático de ruas, deixe desmarcado para terminar diretamente no mapa."
+                                              IsChecked="False" />
                                 </Grid>
                             </StackPanel>
                             <TextBlock Text="OpenStreetMap é usado de forma interativa e para dados vetoriais; não é feito download em massa dos tiles públicos. Open-Meteo/Copernicus e Google usam credenciais do próprio usuário; nenhuma chave privada é distribuída pelo Map Studio."
@@ -4776,9 +4777,10 @@
                        VerticalAlignment="Center"
                        Text="Runtime nativo pronto para inicialização" />
 
-            <TextBlock Grid.Column="1"
+            <TextBlock x:Name="BuildVersionText"
+                       Grid.Column="1"
                        VerticalAlignment="Center"
-                       Text="WinUI 3 · Direct3D 11 · .NET 10"
+                       Text="v— · WinUI 3 · Direct3D 11 · .NET 10"
                        Foreground="{ThemeResource MapStudioTextMutedBrush}" />
         </Grid>
     </Grid>
