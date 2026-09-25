@@ -153,7 +153,7 @@ public sealed class NativeProceduralJunctionPlanBuilder
                     canonical.Arms
                         .Select(
                             arm =>
-                                $"{arm.AngleDegrees:0.0}:{arm.WidthMeters:0.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{arm.OneWay}"));
+                                $"{arm.AngleDegrees:0.0}:{arm.WidthMeters:0.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{arm.InboundLaneCount}:{arm.OutboundLaneCount}:{arm.OneWay}"));
 
             var hash =
                 Convert.ToHexString(
@@ -270,14 +270,118 @@ public sealed class NativeProceduralJunctionPlanBuilder
                 2.0,
                 4.5);
 
+        var oneWay =
+            profile?.OneWay ??
+            segment.OneWay ??
+                false;
+
+        var (
+            forwardLanes,
+            backwardLanes
+        ) =
+            ResolveDirectionalLanes(
+                lanes,
+                oneWay,
+                segment.ForwardLaneCount,
+                segment.BackwardLaneCount);
+
+        var inboundLanes =
+            atStart
+                ? backwardLanes
+                : forwardLanes;
+
+        var outboundLanes =
+            atStart
+                ? forwardLanes
+                : backwardLanes;
+
         return new MapStudioJunctionArm(
             angle,
             physicalWidth,
             lanes,
-            profile?.OneWay ??
-            segment.OneWay ??
-                false,
-            laneWidth);
+            oneWay,
+            laneWidth,
+            inboundLanes,
+            outboundLanes);
+    }
+
+    private static (
+        int Forward,
+        int Backward
+    ) ResolveDirectionalLanes(
+        int visualLaneCount,
+        bool oneWay,
+        int? sourceForward,
+        int? sourceBackward)
+    {
+        if (oneWay)
+        {
+            return
+                (
+                    visualLaneCount,
+                    0
+                );
+        }
+
+        if (
+            visualLaneCount <=
+                1)
+        {
+            return
+                (
+                    1,
+                    1
+                );
+        }
+
+        var sourceTotal =
+            (
+                sourceForward ??
+                0
+            ) +
+            (
+                sourceBackward ??
+                0
+            );
+
+        if (sourceTotal > 0)
+        {
+            var forward =
+                (int)Math.Round(
+                    visualLaneCount *
+                    (
+                        sourceForward ??
+                        0
+                    ) /
+                    (double)sourceTotal,
+                    MidpointRounding
+                        .AwayFromZero);
+
+            forward =
+                Math.Clamp(
+                    forward,
+                    1,
+                    visualLaneCount -
+                        1);
+
+            return
+                (
+                    forward,
+                    visualLaneCount -
+                        forward
+                );
+        }
+
+        var backward =
+            visualLaneCount /
+            2;
+
+        return
+            (
+                visualLaneCount -
+                    backward,
+                backward
+            );
     }
 
     private static CanonicalJunction
@@ -322,7 +426,7 @@ public sealed class NativeProceduralJunctionPlanBuilder
                                 string.Create(
                                     CultureInfo
                                         .InvariantCulture,
-                                    $"{arm.AngleDegrees:000.0}:{arm.WidthMeters:00.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{(arm.OneWay ? 1 : 0)}")));
+                                    $"{arm.AngleDegrees:000.0}:{arm.WidthMeters:00.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{arm.InboundLaneCount}:{arm.OutboundLaneCount}:{(arm.OneWay ? 1 : 0)}")));
 
             if (
                 bestSignature is null ||
