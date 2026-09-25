@@ -16,7 +16,7 @@ public sealed class MapStudioRoadKitGenerator
         "MapStudio_RoadKit";
 
     public const string PackVersion =
-        "1.0.0";
+        "1.1.0";
 
     private static readonly Encoding
         SplineEncoding =
@@ -314,50 +314,46 @@ public sealed class MapStudioRoadKitGenerator
 
     private static IReadOnlyList<RoadVariant>
         CreateVariants() =>
-        [
-            RoadVariant.CreateRoad(
-                "ms_road_oneway_3_5m.sli",
-                laneCount: 1,
-                laneWidth: 3.5,
-                sidewalkWidth: 0,
-                oneWay: true),
-            RoadVariant.CreateRoad(
-                "ms_road_oneway_2lane_7m.sli",
-                laneCount: 2,
-                laneWidth: 3.5,
-                sidewalkWidth: 0,
-                oneWay: true),
-            RoadVariant.CreateRoad(
-                "ms_road_oneway_3lane_10_5m.sli",
-                laneCount: 3,
-                laneWidth: 3.5,
-                sidewalkWidth: 0,
-                oneWay: true),
-            RoadVariant.CreateRoad(
-                "ms_road_2lane_7m.sli",
-                laneCount: 2,
-                laneWidth: 3.5,
-                sidewalkWidth: 0),
-            RoadVariant.CreateRoad(
-                "ms_road_2lane_7m_sidewalk.sli",
-                laneCount: 2,
-                laneWidth: 3.5,
-                sidewalkWidth: 2.0),
-            RoadVariant.CreateRoad(
-                "ms_avenue_4lane_14m_sidewalk.sli",
-                laneCount: 4,
-                laneWidth: 3.5,
-                sidewalkWidth: 2.0),
-            RoadVariant.CreateDividedRoad(
-                "ms_avenue_divided_4lane.sli",
-                lanesPerDirection: 2,
-                laneWidth: 3.5,
-                medianWidth: 2.0,
-                sidewalkWidth: 2.0),
-            RoadVariant.CreatePedestrian(
-                "ms_pedestrian_3m.sli",
-                width: 3.0)
-        ];
+        MapStudioStandardRoadCatalog
+            .Profiles
+            .Select(
+                profile =>
+                {
+                    if (profile.IsPedestrian)
+                    {
+                        return RoadVariant
+                            .CreatePedestrian(
+                                profile.FileName,
+                                profile
+                                    .CarriagewayWidthMeters);
+                    }
+
+                    if (profile.IsDivided)
+                    {
+                        return RoadVariant
+                            .CreateDividedRoad(
+                                profile.FileName,
+                                profile
+                                    .LanesPerDirection,
+                                profile
+                                    .LaneWidthMeters,
+                                profile
+                                    .MedianWidthMeters,
+                                profile
+                                    .SidewalkWidthMeters);
+                    }
+
+                    return RoadVariant
+                        .CreateRoad(
+                            profile.FileName,
+                            profile.LaneCount,
+                            profile
+                                .LaneWidthMeters,
+                            profile
+                                .SidewalkWidthMeters,
+                            profile.OneWay);
+                })
+            .ToArray();
 
     private static string BuildSpline(
         RoadVariant variant)
