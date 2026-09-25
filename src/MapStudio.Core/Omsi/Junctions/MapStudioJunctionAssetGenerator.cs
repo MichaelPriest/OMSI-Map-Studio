@@ -342,103 +342,124 @@ public sealed class MapStudioJunctionAssetGenerator
         var normalized =
             spec.Normalize();
 
-        var radius =
-            (float)Math.Clamp(
-                normalized.Arms
-                    .Max(
-                        arm =>
-                            arm.WidthMeters) *
-                0.75 +
-                3.0,
-                4.0,
-                24.0);
+        var extent =
+            MapStudioJunctionGeometrySizing
+                .ResolveSurfaceExtentMeters(
+                    normalized.Arms
+                        .Select(
+                            arm =>
+                                arm.WidthMeters));
 
-        const int segments =
-            24;
+        var outline =
+            BuildJunctionOutline(
+                normalized,
+                extent);
+
+        if (outline.Count < 3)
+        {
+            throw new InvalidDataException(
+                "junctionOutlineInvalid");
+        }
+
+        var centerX =
+            outline.Average(
+                point =>
+                    point.X);
+
+        var centerZ =
+            outline.Average(
+                point =>
+                    point.Z);
 
         var positions =
             new List<float>(
-                (segments + 1) *
+                (
+                    outline.Count +
+                    1
+                ) *
                 3);
 
         var normals =
             new List<float>(
-                (segments + 1) *
+                (
+                    outline.Count +
+                    1
+                ) *
                 3);
 
         var uvs =
             new List<float>(
-                (segments + 1) *
+                (
+                    outline.Count +
+                    1
+                ) *
                 2);
 
         var indices =
             new List<uint>(
-                segments *
+                outline.Count *
                 3);
 
         var triangleMaterials =
             new List<ushort>(
-                segments);
+                outline.Count);
 
         AddVertex(
             positions,
             normals,
             uvs,
             new Vector3(
-                0,
+                (float)centerX,
                 (float)normalized
                     .SurfaceHeightMeters,
-                0),
-            0.5f,
-            0.5f);
+                (float)centerZ),
+            (float)(
+                0.5 +
+                centerX /
+                (
+                    extent *
+                    2.0
+                )),
+            (float)(
+                0.5 -
+                centerZ /
+                (
+                    extent *
+                    2.0
+                )));
 
-        for (
-            var index = 0;
-            index < segments;
-            index++)
+        foreach (
+            var point in
+                outline)
         {
-            var angle =
-                index *
-                Math.PI *
-                2.0 /
-                segments;
-
-            var x =
-                (float)(
-                    Math.Sin(angle) *
-                    radius);
-
-            var z =
-                (float)(
-                    Math.Cos(angle) *
-                    radius);
-
             AddVertex(
                 positions,
                 normals,
                 uvs,
                 new Vector3(
-                    x,
+                    (float)point.X,
                     (float)normalized
                         .SurfaceHeightMeters,
-                    z),
-                0.5f +
-                    x /
+                    (float)point.Z),
+                (float)(
+                    0.5 +
+                    point.X /
                     (
-                        radius *
-                        2.0f
-                    ),
-                0.5f -
-                    z /
+                        extent *
+                        2.0
+                    )),
+                (float)(
+                    0.5 -
+                    point.Z /
                     (
-                        radius *
-                        2.0f
-                    ));
+                        extent *
+                        2.0
+                    )));
         }
 
         for (
             var index = 0;
-            index < segments;
+            index < outline.Count;
             index++)
         {
             var current =
@@ -454,7 +475,7 @@ public sealed class MapStudioJunctionAssetGenerator
                             index +
                             1
                         ) %
-                        segments +
+                        outline.Count +
                         1));
 
             indices.Add(
@@ -495,20 +516,199 @@ public sealed class MapStudioJunctionAssetGenerator
             ]);
     }
 
+    private static IReadOnlyList<
+        JunctionOutlinePoint>
+        BuildJunctionOutline(
+            MapStudioJunctionSpec spec,
+            double extent)
+    {
+        var candidates =
+            new List<
+                JunctionOutlinePoint>(
+                    spec.Arms.Count *
+                    2);
+
+        foreach (
+            var arm in
+                spec.Arms)
+        {
+            var radians =
+                arm.AngleDegrees *
+                Math.PI /
+                180.0;
+
+            var forwardX =
+                Math.Sin(
+                    radians);
+
+            var forwardZ =
+                Math.Cos(
+                    radians);
+
+            var lateralX =
+                Math.Cos(
+                    radians);
+
+            var lateralZ =
+                -Math.Sin(
+                    radians);
+
+            var halfWidth =
+                arm.WidthMeters /
+                2.0;
+
+            candidates.Add(
+                new JunctionOutlinePoint(
+                    forwardX *
+                        extent +
+                    lateralX *
+                        halfWidth,
+                    forwardZ *
+                        extent +
+                    lateralZ *
+                        halfWidth));
+
+            candidates.Add(
+                new JunctionOutlinePoint(
+                    forwardX *
+                        extent -
+                    lateralX *
+                        halfWidth,
+                    forwardZ *
+                        extent -
+                    lateralZ *
+                        halfWidth));
+        }
+
+        return ConvexHull(
+            candidates);
+    }
+
+    private static IReadOnlyList<
+        JunctionOutlinePoint>
+        ConvexHull(
+            IEnumerable<
+                JunctionOutlinePoint>
+                points)
+    {
+        var ordered =
+            points
+                .Distinct()
+                .OrderBy(
+                    point =>
+                        point.X)
+                .ThenBy(
+                    point =>
+                        point.Z)
+                .ToArray();
+
+        if (ordered.Length <= 3)
+        {
+            return ordered;
+        }
+
+        var lower =
+            new List<
+                JunctionOutlinePoint>();
+
+        foreach (
+            var point in
+                ordered)
+        {
+            while (
+                lower.Count >= 2 &&
+                Cross(
+                    lower[^2],
+                    lower[^1],
+                    point) <=
+                0)
+            {
+                lower.RemoveAt(
+                    lower.Count -
+                    1);
+            }
+
+            lower.Add(
+                point);
+        }
+
+        var upper =
+            new List<
+                JunctionOutlinePoint>();
+
+        for (
+            var index =
+                ordered.Length -
+                1;
+            index >= 0;
+            index--)
+        {
+            var point =
+                ordered[index];
+
+            while (
+                upper.Count >= 2 &&
+                Cross(
+                    upper[^2],
+                    upper[^1],
+                    point) <=
+                0)
+            {
+                upper.RemoveAt(
+                    upper.Count -
+                    1);
+            }
+
+            upper.Add(
+                point);
+        }
+
+        lower.RemoveAt(
+            lower.Count -
+            1);
+
+        upper.RemoveAt(
+            upper.Count -
+            1);
+
+        lower.AddRange(
+            upper);
+
+        return lower;
+    }
+
+    private static double Cross(
+        JunctionOutlinePoint origin,
+        JunctionOutlinePoint a,
+        JunctionOutlinePoint b) =>
+        (
+            a.X -
+            origin.X
+        ) *
+        (
+            b.Z -
+            origin.Z
+        ) -
+        (
+            a.Z -
+            origin.Z
+        ) *
+        (
+            b.X -
+            origin.X
+        );
+
     private static List<JunctionPath>
         BuildInternalPaths(
             MapStudioJunctionSpec spec)
     {
         var radius =
-            Math.Clamp(
-                spec.Arms
-                    .Max(
-                        arm =>
-                            arm.WidthMeters) *
-                0.55 +
-                1.5,
-                3.0,
-                18.0);
+            MapStudioJunctionGeometrySizing
+                .ResolvePathRadiusMeters(
+                    spec.Arms
+                        .Select(
+                            arm =>
+                                arm.WidthMeters));
 
         var paths =
             new List<JunctionPath>();
@@ -846,6 +1046,10 @@ public sealed class MapStudioJunctionAssetGenerator
                     true);
         }
     }
+
+    private readonly record struct JunctionOutlinePoint(
+        double X,
+        double Z);
 
     private sealed record JunctionPath(
         double X,
