@@ -22,6 +22,9 @@ public sealed class MapStudioOverpassRoadClient
     private const int MaximumChunksPerAxis =
         6;
 
+    private const int MaximumRecoveryDepth =
+        3;
+
     private static readonly HttpClient
         SharedHttpClient =
             CreateSharedHttpClient();
@@ -31,6 +34,8 @@ public sealed class MapStudioOverpassRoadClient
         [
             new(
                 "https://overpass-api.de/api/interpreter"),
+            new(
+                "https://overpass.kumi.systems/api/interpreter"),
             new(
                 "https://overpass.private.coffee/api/interpreter")
         ];
@@ -77,8 +82,7 @@ public sealed class MapStudioOverpassRoadClient
             httpClient;
 
         _endpoints =
-            endpoints
-                .ToArray();
+            endpoints.ToArray();
     }
 
     public async Task<
@@ -107,35 +111,8 @@ public sealed class MapStudioOverpassRoadClient
                 north,
                 east);
 
-        var traces =
-            new Dictionary<
-                string,
-                MapStudioGeoRoadTrace>(
-                    StringComparer
-                        .OrdinalIgnoreCase);
-
-        var usedEndpoints =
-            new HashSet<string>(
-                StringComparer
-                    .OrdinalIgnoreCase);
-
-        var ignoredWays =
-            0;
-
-        var missingNodeReferences =
-            0;
-
-        var successfulChunks =
-            0;
-
-        var failedChunks =
-            0;
-
-        var requestAttempts =
-            0;
-
-        var failures =
-            new List<string>();
+        var aggregate =
+            new RecoveryAccumulator();
 
         for (
             var row = 0;
@@ -164,9 +141,6 @@ public sealed class MapStudioOverpassRoadClient
                 column < columns;
                 column++)
             {
-                cancellationToken
-                    .ThrowIfCancellationRequested();
-
                 var chunkWest =
                     Interpolate(
                         west,
@@ -184,102 +158,177 @@ public sealed class MapStudioOverpassRoadClient
                         ) /
                         (double)columns);
 
-                var fetched =
-                    await TryDownloadChunkAsync(
-                            chunkSouth,
-                            chunkWest,
-                            chunkNorth,
-                            chunkEast,
+                var recovered =
+                    await DownloadChunkWithRecoveryAsync(
+                            new Bounds(
+                                chunkSouth,
+                                chunkWest,
+                                chunkNorth,
+                                chunkEast),
+                            0,
                             cancellationToken)
                         .ConfigureAwait(false);
 
-                requestAttempts +=
-                    fetched.AttemptCount;
-
-                if (fetched.Result is null)
-                {
-                    failedChunks++;
-
-                    if (
-                        !string.IsNullOrWhiteSpace(
-                            fetched.Error))
-                    {
-                        failures.Add(
-                            fetched.Error);
-                    }
-
-                    continue;
-                }
-
-                successfulChunks++;
-
-                ignoredWays +=
-                    fetched.Result
-                        .IgnoredWayCount;
-
-                missingNodeReferences +=
-                    fetched.Result
-                        .MissingNodeReferenceCount;
-
-                if (
-                    fetched.Endpoint is
-                    not null)
-                {
-                    usedEndpoints.Add(
-                        fetched.Endpoint);
-                }
-
-                foreach (
-                    var trace in
-                        fetched.Result
-                            .Traces)
-                {
-                    traces[
-                        trace.Id] =
-                        trace;
-                }
+                aggregate.Add(
+                    recovered);
             }
         }
 
         if (
-            successfulChunks ==
+            aggregate.FailedChunkCount >
                 0)
         {
             throw new HttpRequestException(
-                failures.Count ==
-                    0
-                    ? "Nenhuma consulta Overpass pôde ser concluída."
-                    : "Falha em todas as consultas Overpass: " +
-                      string.Join(
-                          " | ",
-                          failures
-                              .Distinct(
-                                  StringComparer
-                                      .OrdinalIgnoreCase)
-                              .Take(
-                                  4)));
+                "Importação OpenStreetMap incompleta: " +
+                $"{aggregate.FailedChunkCount} subárea(s) falharam mesmo após subdivisão e fallback. " +
+                "A geração foi cancelada para não criar uma malha parcial." +
+                (
+                    aggregate.Failures.Count ==
+                        0
+                        ? string.Empty
+                        : " " +
+                          string.Join(
+                              " | ",
+                              aggregate.Failures
+                                  .Distinct(
+                                      StringComparer
+                                          .OrdinalIgnoreCase)
+                                  .Take(
+                                      6))
+                ));
+        }
+
+        if (
+            aggregate.SuccessfulChunkCount ==
+                0)
+        {
+            throw new HttpRequestException(
+                "Nenhuma consulta Overpass pôde ser concluída.");
         }
 
         return new MapStudioOverpassRoadDownloadResult(
-            traces.Values
+            aggregate.Traces.Values
                 .OrderBy(
                     trace =>
                         trace.Id,
                     StringComparer
                         .OrdinalIgnoreCase)
                 .ToArray(),
-            ignoredWays,
-            missingNodeReferences,
-            successfulChunks,
-            failedChunks,
-            requestAttempts,
-            usedEndpoints
+            aggregate.IgnoredWayCount,
+            aggregate.MissingNodeReferenceCount,
+            aggregate.SuccessfulChunkCount,
+            0,
+            aggregate.RequestAttemptCount,
+            aggregate.UsedEndpoints
                 .OrderBy(
                     endpoint =>
                         endpoint,
                     StringComparer
                         .OrdinalIgnoreCase)
                 .ToArray());
+    }
+
+    private async Task<RecoveryResult>
+        DownloadChunkWithRecoveryAsync(
+            Bounds bounds,
+            int depth,
+            CancellationToken cancellationToken)
+    {
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        var fetched =
+            await TryDownloadChunkAsync(
+                    bounds.South,
+                    bounds.West,
+                    bounds.North,
+                    bounds.East,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (fetched.Result is not null)
+        {
+            return RecoveryResult
+                .FromSuccess(
+                    fetched);
+        }
+
+        if (
+            depth >=
+            MaximumRecoveryDepth)
+        {
+            return RecoveryResult
+                .FromFailure(
+                    fetched);
+        }
+
+        var middleLatitude =
+            (
+                bounds.South +
+                bounds.North
+            ) *
+            0.5;
+
+        var middleLongitude =
+            (
+                bounds.West +
+                bounds.East
+            ) *
+            0.5;
+
+        var result =
+            new RecoveryAccumulator
+            {
+                RequestAttemptCount =
+                    fetched.AttemptCount
+            };
+
+        foreach (
+            var child in
+                new[]
+                {
+                    new Bounds(
+                        bounds.South,
+                        bounds.West,
+                        middleLatitude,
+                        middleLongitude),
+                    new Bounds(
+                        bounds.South,
+                        middleLongitude,
+                        middleLatitude,
+                        bounds.East),
+                    new Bounds(
+                        middleLatitude,
+                        bounds.West,
+                        bounds.North,
+                        middleLongitude),
+                    new Bounds(
+                        middleLatitude,
+                        middleLongitude,
+                        bounds.North,
+                        bounds.East)
+                })
+        {
+            result.Add(
+                await DownloadChunkWithRecoveryAsync(
+                        child,
+                        depth +
+                            1,
+                        cancellationToken)
+                    .ConfigureAwait(false));
+        }
+
+        if (
+            result.FailedChunkCount >
+                0 &&
+            !string.IsNullOrWhiteSpace(
+                fetched.Error))
+        {
+            result.Failures.Add(
+                fetched.Error);
+        }
+
+        return result.ToResult();
     }
 
     private async Task<ChunkFetchResult>
@@ -467,26 +516,20 @@ public sealed class MapStudioOverpassRoadClient
                     Math.Cos(
                         latitudeRadians)));
 
-        var rows =
-            Math.Clamp(
-                (int)Math.Ceiling(
-                    heightMeters /
-                    TargetChunkSpanMeters),
-                1,
-                MaximumChunksPerAxis);
-
-        var columns =
-            Math.Clamp(
-                (int)Math.Ceiling(
-                    widthMeters /
-                    TargetChunkSpanMeters),
-                1,
-                MaximumChunksPerAxis);
-
         return
             (
-                rows,
-                columns
+                Math.Clamp(
+                    (int)Math.Ceiling(
+                        heightMeters /
+                        TargetChunkSpanMeters),
+                    1,
+                    MaximumChunksPerAxis),
+                Math.Clamp(
+                    (int)Math.Ceiling(
+                        widthMeters /
+                        TargetChunkSpanMeters),
+                    1,
+                    MaximumChunksPerAxis)
             );
     }
 
@@ -554,10 +597,161 @@ public sealed class MapStudioOverpassRoadClient
         return client;
     }
 
+    private sealed record Bounds(
+        double South,
+        double West,
+        double North,
+        double East);
+
     private sealed record ChunkFetchResult(
         MapStudioOsmRoadImportResult?
             Result,
         string? Endpoint,
         int AttemptCount,
         string? Error);
+
+    private sealed record RecoveryResult(
+        IReadOnlyList<MapStudioGeoRoadTrace>
+            Traces,
+        int IgnoredWayCount,
+        int MissingNodeReferenceCount,
+        int SuccessfulChunkCount,
+        int FailedChunkCount,
+        int RequestAttemptCount,
+        IReadOnlyList<string> UsedEndpoints,
+        IReadOnlyList<string> Failures)
+    {
+        public static RecoveryResult
+            FromSuccess(
+                ChunkFetchResult fetched) =>
+            new(
+                fetched.Result!.Traces,
+                fetched.Result.IgnoredWayCount,
+                fetched.Result.MissingNodeReferenceCount,
+                1,
+                0,
+                fetched.AttemptCount,
+                fetched.Endpoint is null
+                    ? Array.Empty<string>()
+                    : [fetched.Endpoint],
+                Array.Empty<string>());
+
+        public static RecoveryResult
+            FromFailure(
+                ChunkFetchResult fetched) =>
+            new(
+                Array.Empty<
+                    MapStudioGeoRoadTrace>(),
+                0,
+                0,
+                0,
+                1,
+                fetched.AttemptCount,
+                Array.Empty<string>(),
+                string.IsNullOrWhiteSpace(
+                    fetched.Error)
+                    ? Array.Empty<string>()
+                    : [fetched.Error]);
+    }
+
+    private sealed class RecoveryAccumulator
+    {
+        public Dictionary<
+            string,
+            MapStudioGeoRoadTrace>
+            Traces { get; } =
+            new(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+        public HashSet<string>
+            UsedEndpoints { get; } =
+            new(
+                StringComparer
+                    .OrdinalIgnoreCase);
+
+        public List<string>
+            Failures { get; } =
+            [];
+
+        public int IgnoredWayCount
+        {
+            get;
+            set;
+        }
+
+        public int MissingNodeReferenceCount
+        {
+            get;
+            set;
+        }
+
+        public int SuccessfulChunkCount
+        {
+            get;
+            set;
+        }
+
+        public int FailedChunkCount
+        {
+            get;
+            set;
+        }
+
+        public int RequestAttemptCount
+        {
+            get;
+            set;
+        }
+
+        public void Add(
+            RecoveryResult value)
+        {
+            foreach (
+                var trace in
+                    value.Traces)
+            {
+                Traces[
+                    trace.Id] =
+                    trace;
+            }
+
+            foreach (
+                var endpoint in
+                    value.UsedEndpoints)
+            {
+                UsedEndpoints.Add(
+                    endpoint);
+            }
+
+            Failures.AddRange(
+                value.Failures);
+
+            IgnoredWayCount +=
+                value.IgnoredWayCount;
+
+            MissingNodeReferenceCount +=
+                value.MissingNodeReferenceCount;
+
+            SuccessfulChunkCount +=
+                value.SuccessfulChunkCount;
+
+            FailedChunkCount +=
+                value.FailedChunkCount;
+
+            RequestAttemptCount +=
+                value.RequestAttemptCount;
+        }
+
+        public RecoveryResult ToResult() =>
+            new(
+                Traces.Values.ToArray(),
+                IgnoredWayCount,
+                MissingNodeReferenceCount,
+                SuccessfulChunkCount,
+                FailedChunkCount,
+                RequestAttemptCount,
+                UsedEndpoints.ToArray(),
+                Failures.ToArray());
+    }
 }
