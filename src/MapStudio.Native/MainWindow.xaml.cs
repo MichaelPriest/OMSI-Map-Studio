@@ -1135,6 +1135,9 @@ public sealed partial class MainWindow : Window
                 _selectionInfo =
                     info;
 
+                SynchronizeTrafficProgramFromSelection(
+                    info);
+
                 if (_transportMode)
                 {
                     Viewport
@@ -11578,6 +11581,51 @@ public sealed partial class MainWindow : Window
             next
                 ? "Paths: isolamento visual ativo para a seleção/foco atual."
                 : "Paths: isolamento visual desativado.";
+    }
+
+    private void SynchronizeTrafficProgramFromSelection(
+        NativeSelectionInfo? info)
+    {
+        if (
+            !_trafficMode ||
+            info is null ||
+            info.Kind !=
+                PickingKind.Object ||
+            _trafficPrograms.Count ==
+                0)
+        {
+            return;
+        }
+
+        var program =
+            _trafficPrograms
+                .FirstOrDefault(
+                    candidate =>
+                        candidate.ObjectId ==
+                            info.EntityId &&
+                        candidate.TileX ==
+                            info.TileX &&
+                        candidate.TileY ==
+                            info.TileY);
+
+        if (
+            program is null ||
+            ReferenceEquals(
+                TrafficProgramListView
+                    .SelectedItem,
+                program))
+        {
+            return;
+        }
+
+        TrafficProgramListView.SelectedItem =
+            program;
+
+        TrafficProgramListView.ScrollIntoView(
+            program);
+
+        StatusText.Text =
+            $"Semáforo do objeto #{program.ObjectId} selecionado · programa {program.ProgramName}.";
     }
 
     private void OnLocateTrafficProgramClick(

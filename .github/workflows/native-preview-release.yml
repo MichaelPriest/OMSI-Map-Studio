@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.47: traffic-light viewport focus and contextual locate.
+# Test 10.48: bidirectional traffic-light selection sync.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.47-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.47-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.48-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.48-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.47-native
-  TAG: v0.2.0-alpha.5-test.10.47-native
+  VERSION: 0.2.0-alpha.5-test.10.48-native
+  TAG: v0.2.0-alpha.5-test.10.48-native
 
 jobs:
   build-native-preview:
@@ -1879,6 +1879,26 @@ jobs:
 
           Write-Host "Verified traffic-light program selection can locate and frame its real scene object."
 
+      - name: Verify test 10.48 bidirectional signal selection
+        shell: pwsh
+        run: |
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'SynchronizeTrafficProgramFromSelection',
+            'candidate.ObjectId ==',
+            'candidate.TileX ==',
+            'candidate.TileY ==',
+            'TrafficProgramListView.SelectedItem =',
+            'TrafficProgramListView.ScrollIntoView'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.48 bidirectional signal selection marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified viewport object selection synchronizes the corresponding traffic-light program."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2033,11 +2053,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.47-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.48-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.47-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.48-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
