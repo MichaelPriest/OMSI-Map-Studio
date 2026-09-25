@@ -166,6 +166,35 @@ public sealed class MapStudioRoadTraceSmootherTests
             trace.Points);
     }
 
+
+    [Fact]
+    public void ShortSegmentsAreNotSubdividedOnlyToSatisfyMinimumSampleCount()
+    {
+        var source =
+            new MapStudioRoadTrace(
+                "short",
+                [
+                    new(0, 0),
+                    new(4, 0),
+                    new(8, 0)
+                ],
+                "road.sli");
+
+        var trace =
+            Assert.Single(
+                new MapStudioRoadTraceSmoother()
+                    .Smooth(
+                        [source],
+                        smoothness:
+                            0.65,
+                        maximumSampleSpacingMeters:
+                            8));
+
+        Assert.Equal(
+            source.Points,
+            trace.Points);
+    }
+
     [Fact]
     public void InvalidSmoothingOptionsAreRejected()
     {
