@@ -43,7 +43,13 @@ public sealed record MapStudioRoadTrace(
     string ProfileId,
     int? LaneCount = null,
     bool? OneWay = null,
-    double? WidthMeters = null);
+    double? WidthMeters = null,
+    int? ForwardLaneCount = null,
+    int? BackwardLaneCount = null,
+    int? Layer = null,
+    bool Bridge = false,
+    bool Tunnel = false,
+    bool SourceTopologyAuthoritative = false);
 
 public sealed record MapStudioRoadGraphNode(
     int Id,
@@ -63,7 +69,13 @@ public sealed record MapStudioRoadGraphSegment(
     double LengthMeters,
     int? LaneCount,
     bool? OneWay,
-    double? WidthMeters);
+    double? WidthMeters,
+    int? ForwardLaneCount,
+    int? BackwardLaneCount,
+    int? Layer,
+    bool Bridge,
+    bool Tunnel,
+    bool SourceTopologyAuthoritative);
 
 public sealed record MapStudioRoadJunction(
     int NodeId,
@@ -310,7 +322,25 @@ public sealed class MapStudioRoadGraphBuilder
                                 .OneWay,
                             segment
                                 .Trace
-                                .WidthMeters))
+                                .WidthMeters,
+                            segment
+                                .Trace
+                                .ForwardLaneCount,
+                            segment
+                                .Trace
+                                .BackwardLaneCount,
+                            segment
+                                .Trace
+                                .Layer,
+                            segment
+                                .Trace
+                                .Bridge,
+                            segment
+                                .Trace
+                                .Tunnel,
+                            segment
+                                .Trace
+                                .SourceTopologyAuthoritative))
                 .ToArray();
 
         var junctions =
@@ -434,6 +464,9 @@ public sealed class MapStudioRoadGraphBuilder
         double tolerance)
     {
         if (
+            CanCreateInteriorIntersection(
+                left,
+                right) &&
             TryIntersectSegments(
                 left.Start,
                 left.End,
@@ -485,6 +518,51 @@ public sealed class MapStudioRoadGraphBuilder
             rightSplits,
             isSourceStart: false,
             tolerance);
+    }
+
+    private static bool CanCreateInteriorIntersection(
+        RawSegment left,
+        RawSegment right)
+    {
+        if (
+            string.Equals(
+                left.Trace.Id,
+                right.Trace.Id,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (
+            left.Trace.SourceTopologyAuthoritative ||
+            right.Trace.SourceTopologyAuthoritative)
+        {
+            return false;
+        }
+
+        var leftLayer =
+            left.Trace.Layer ??
+            0;
+
+        var rightLayer =
+            right.Trace.Layer ??
+            0;
+
+        if (leftLayer != rightLayer)
+        {
+            return false;
+        }
+
+        if (
+            left.Trace.Bridge !=
+                right.Trace.Bridge ||
+            left.Trace.Tunnel !=
+                right.Trace.Tunnel)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private static void AddEndpointProjection(
