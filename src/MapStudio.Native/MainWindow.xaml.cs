@@ -201,11 +201,26 @@ public sealed partial class MainWindow : Window
     }
 
     private sealed record RoadProfileOption(
-        string Label,
-        string ProfileId,
-        int LaneCount,
-        bool OneWay,
-        double WidthMeters);
+        MapStudioStandardRoadProfile Profile)
+    {
+        public string Label =>
+            Profile.Label;
+
+        public string ProfileId =>
+            Profile.RelativePath;
+
+        public int LaneCount =>
+            Profile.LaneCount;
+
+        public bool OneWay =>
+            Profile.OneWay;
+
+        public double WidthMeters =>
+            Profile.CarriagewayWidthMeters;
+
+        public double TotalWidthMeters =>
+            Profile.TotalWidthMeters;
+    }
 
     private sealed record AiProfileOption(
         string Label,
@@ -29684,56 +29699,13 @@ setTimeout(postBounds, 250);
 
     private static IReadOnlyList<RoadProfileOption>
         GetProceduralRoadProfiles() =>
-        [
-            new(
-                "Mão única 1 faixa · 3,5 m",
-                @"Splines\MapStudio_RoadKit\ms_road_oneway_3_5m.sli",
-                1,
-                true,
-                3.5),
-            new(
-                "Mão única 2 faixas · 7 m",
-                @"Splines\MapStudio_RoadKit\ms_road_oneway_2lane_7m.sli",
-                2,
-                true,
-                7.0),
-            new(
-                "Mão única 3 faixas · 10,5 m",
-                @"Splines\MapStudio_RoadKit\ms_road_oneway_3lane_10_5m.sli",
-                3,
-                true,
-                10.5),
-            new(
-                "Rua 2 faixas · 7 m",
-                @"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli",
-                2,
-                false,
-                7.0),
-            new(
-                "Rua 2 faixas + calçada",
-                @"Splines\MapStudio_RoadKit\ms_road_2lane_7m_sidewalk.sli",
-                2,
-                false,
-                11.0),
-            new(
-                "Avenida 4 faixas + calçada",
-                @"Splines\MapStudio_RoadKit\ms_avenue_4lane_14m_sidewalk.sli",
-                4,
-                false,
-                18.0),
-            new(
-                "Avenida dividida 4 faixas",
-                @"Splines\MapStudio_RoadKit\ms_avenue_divided_4lane.sli",
-                4,
-                false,
-                20.0),
-            new(
-                "Via de pedestres · 3 m",
-                @"Splines\MapStudio_RoadKit\ms_pedestrian_3m.sli",
-                0,
-                false,
-                3.0)
-        ];
+        MapStudioStandardRoadCatalog
+            .Profiles
+            .Select(
+                profile =>
+                    new RoadProfileOption(
+                        profile))
+            .ToArray();
 
     private static bool IsAutomaticRoadHighway(
         string? highway)
@@ -29764,128 +29736,25 @@ setTimeout(postBounds, 250);
 
     private static RoadProfileOption
         SelectProceduralRoadProfile(
-            MapStudioGeoRoadTrace road,
-            IReadOnlyList<RoadProfileOption> profiles)
-    {
-        var highway =
-            road.Highway
-                ?.Trim()
-                .ToLowerInvariant();
-
-        if (
-            highway is
-                "footway" or
-                "pedestrian" or
-                "path" or
-                "steps" or
-                "cycleway")
-        {
-            return profiles[7];
-        }
-
-        if (road.OneWay == true)
-        {
-            return road.LaneCount switch
-            {
-                >= 3 =>
-                    profiles[2],
-                2 =>
-                    profiles[1],
-                _ =>
-                    profiles[0]
-            };
-        }
-
-        if (
-            highway is
-                "motorway" or
-                "trunk" or
-                "motorway_link" or
-                "trunk_link")
-        {
-            return profiles[6];
-        }
-
-        if (
-            road.LaneCount is >= 4 ||
-            highway is
-                "primary" or
-                "primary_link")
-        {
-            return profiles[5];
-        }
-
-        if (
-            highway is
-                "service")
-        {
-            return profiles[3];
-        }
-
-        return profiles[4];
-    }
+            MapStudioGeoRoadTrace road) =>
+        new(
+            MapStudioStandardRoadProfileSelector
+                .Select(
+                    road.Highway,
+                    road.LaneCount,
+                    road.OneWay,
+                    road.WidthMeters));
 
     private static RoadProfileOption
         SelectProceduralRoadProfile(
-            MapStudioProjectedRoadReference road,
-            IReadOnlyList<RoadProfileOption> profiles)
-    {
-        var kind =
-            road.Kind
-                ?.Trim()
-                .ToLowerInvariant();
-
-        if (
-            kind is
-                "footway" or
-                "pedestrian" or
-                "path" or
-                "steps" or
-                "cycleway")
-        {
-            return profiles[7];
-        }
-
-        if (road.OneWay == true)
-        {
-            return road.LaneCount switch
-            {
-                >= 3 =>
-                    profiles[2],
-                2 =>
-                    profiles[1],
-                _ =>
-                    profiles[0]
-            };
-        }
-
-        if (
-            kind is
-                "motorway" or
-                "trunk" or
-                "motorway_link" or
-                "trunk_link")
-        {
-            return profiles[6];
-        }
-
-        if (
-            road.LaneCount is >= 4 ||
-            kind is
-                "primary" or
-                "primary_link" or
-                "avenue")
-        {
-            return profiles[5];
-        }
-
-        if (kind is "service")
-        {
-            return profiles[3];
-        }
-
-        return profiles[4];
-    }
+            MapStudioProjectedRoadReference road) =>
+        new(
+            MapStudioStandardRoadProfileSelector
+                .Select(
+                    road.Kind,
+                    road.LaneCount,
+                    road.OneWay,
+                    road.WidthMeters));
 
     private async void OnAnalyzeGoogleRoadReferenceWithAiClick(
         object sender,
