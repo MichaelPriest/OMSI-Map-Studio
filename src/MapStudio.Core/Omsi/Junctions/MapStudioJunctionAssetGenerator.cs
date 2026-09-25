@@ -11,7 +11,9 @@ public sealed record MapStudioJunctionArm(
     double WidthMeters,
     int LaneCount = 2,
     bool OneWay = false,
-    double LaneWidthMeters = 3.5);
+    double LaneWidthMeters = 3.5,
+    int InboundLaneCount = -1,
+    int OutboundLaneCount = -1);
 
 public sealed record MapStudioJunctionSpec(
     string Name,
@@ -58,7 +60,21 @@ public sealed record MapStudioJunctionSpec(
                                         ? arm.LaneWidthMeters
                                         : 3.5,
                                     2.0,
-                                    4.5)
+                                    4.5),
+                            InboundLaneCount =
+                                NormalizeDirectionalLaneCount(
+                                    arm.InboundLaneCount,
+                                    arm.LaneCount,
+                                    arm.OneWay,
+                                    inbound:
+                                        true),
+                            OutboundLaneCount =
+                                NormalizeDirectionalLaneCount(
+                                    arm.OutboundLaneCount,
+                                    arm.LaneCount,
+                                    arm.OneWay,
+                                    inbound:
+                                        false)
                         })
                 .OrderBy(
                     arm =>
@@ -83,6 +99,44 @@ public sealed record MapStudioJunctionSpec(
                     0,
                     1)
         };
+    }
+
+    private static int NormalizeDirectionalLaneCount(
+        int value,
+        int laneCount,
+        bool oneWay,
+        bool inbound)
+    {
+        if (value >= 0)
+        {
+            return Math.Clamp(
+                value,
+                0,
+                Math.Max(
+                    1,
+                    laneCount));
+        }
+
+        if (oneWay)
+        {
+            return inbound
+                ? 0
+                : Math.Max(
+                    1,
+                    laneCount);
+        }
+
+        if (laneCount <= 1)
+        {
+            return 1;
+        }
+
+        return inbound
+            ? laneCount /
+                2
+            : laneCount -
+              laneCount /
+                2;
     }
 
     private static double NormalizeAngle(
@@ -732,7 +786,9 @@ public sealed class MapStudioJunctionAssetGenerator
                 spec.Arms[
                     fromIndex];
 
-            if (from.OneWay)
+            if (
+                from.InboundLaneCount <=
+                    0)
             {
                 continue;
             }
@@ -758,6 +814,13 @@ public sealed class MapStudioJunctionAssetGenerator
                 var to =
                     spec.Arms[
                         toIndex];
+
+                if (
+                    to.OutboundLaneCount <=
+                        0)
+                {
+                    continue;
+                }
 
                 var toPoint =
                     PointOnRay(
