@@ -482,6 +482,7 @@ jobs:
           $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
           $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
           $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
 
           foreach ($required in @(
             'x:Name="TileNavigatorWindow"',
@@ -526,13 +527,25 @@ jobs:
             'OnCreateRealMapAreaClick',
             'BuildRealMapAreaPickerHtml',
             'PrepareOsmRoadsForRealMapAreaAsync',
-            'overpass-api.de/api/interpreter',
+            'MapStudioOverpassRoadClient',
             'OnToggleTileNavigatorWindowClick',
             'OnTileNavigatorResizeMoved',
             'DeleteCurrentSelectionAsync'
           )) {
             if (-not $main.Contains($required)) {
               throw "Test 10.16 MainWindow workflow is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'overpass-api.de/api/interpreter',
+            'overpass.private.coffee/api/interpreter',
+            'TargetChunkSpanMeters',
+            'SuccessfulChunkCount',
+            'FailedChunkCount'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Resilient Overpass road downloader is missing: $required"
             }
           }
 
