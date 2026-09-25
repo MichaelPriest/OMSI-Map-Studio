@@ -70,12 +70,12 @@ public sealed record MapStudioRoadGraphSegment(
     int? LaneCount,
     bool? OneWay,
     double? WidthMeters,
-    int? ForwardLaneCount,
-    int? BackwardLaneCount,
-    int? Layer,
-    bool Bridge,
-    bool Tunnel,
-    bool SourceTopologyAuthoritative);
+    int? ForwardLaneCount = null,
+    int? BackwardLaneCount = null,
+    int? Layer = null,
+    bool Bridge = false,
+    bool Tunnel = false,
+    bool SourceTopologyAuthoritative = false);
 
 public sealed record MapStudioRoadJunction(
     int NodeId,
