@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Numerics;
 using System.Text;
 using MapStudio.Core.Omsi.Models;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Textures;
 
 namespace MapStudio.Core.Omsi.Junctions;
@@ -18,7 +19,7 @@ public sealed record MapStudioJunctionArm(
 public sealed record MapStudioJunctionSpec(
     string Name,
     IReadOnlyList<MapStudioJunctionArm> Arms,
-    double SurfaceHeightMeters = 0.08)
+    double SurfaceHeightMeters = 0.102)
 {
     public MapStudioJunctionSpec Normalize()
     {
@@ -95,7 +96,7 @@ public sealed record MapStudioJunctionSpec(
                     double.IsFinite(
                         SurfaceHeightMeters)
                         ? SurfaceHeightMeters
-                        : 0.08,
+                        : 0.102,
                     0,
                     1)
         };
@@ -264,48 +265,9 @@ public sealed class MapStudioJunctionAssetGenerator
             Directory.CreateDirectory(
                 textureDirectory);
 
-            await MapStudioGeneratedTextureFactory
-                .EnsureBmpAsync(
+            await EnsureJunctionAsphaltAsync(
+                    root,
                     textureDirectory,
-                    "ms_junction_asphalt.bmp",
-                    128,
-                    128,
-                    static (x, y) =>
-                    {
-                        var aggregate =
-                            (
-                                x * 19 +
-                                y * 23 +
-                                (
-                                    x ^
-                                    y
-                                )
-                            ) %
-                            21;
-
-                        var seam =
-                            x %
-                                32 ==
-                            0 ||
-                            y %
-                                32 ==
-                            0;
-
-                        var value =
-                            (byte)(
-                                seam
-                                    ? 46
-                                    : 58 +
-                                        aggregate);
-
-                        return new MapStudioGeneratedRgb(
-                            value,
-                            value,
-                            (byte)Math.Min(
-                                255,
-                                value +
-                                2));
-                    },
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -397,6 +359,92 @@ public sealed class MapStudioJunctionAssetGenerator
                     recursive: true);
             }
         }
+    }
+
+    private static async Task EnsureJunctionAsphaltAsync(
+        string omsiRoot,
+        string textureDirectory,
+        CancellationToken cancellationToken)
+    {
+        var target =
+            Path.Combine(
+                textureDirectory,
+                "ms_junction_asphalt.bmp");
+
+        var roadKitAsphalt =
+            Path.Combine(
+                omsiRoot,
+                "Splines",
+                MapStudioRoadKitGenerator
+                    .PackFolderName,
+                "Texture",
+                "ms_asphalt.bmp");
+
+        if (File.Exists(
+                roadKitAsphalt))
+        {
+            File.Copy(
+                roadKitAsphalt,
+                target,
+                overwrite:
+                    true);
+
+            return;
+        }
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_junction_asphalt.bmp",
+                256,
+                256,
+                static (x, y) =>
+                {
+                    var fine =
+                        Math.Abs(
+                            (
+                                x *
+                                    73 ^
+                                y *
+                                    151 ^
+                                x *
+                                    y *
+                                    17
+                            ) %
+                            19);
+
+                    var coarse =
+                        Math.Abs(
+                            (
+                                x /
+                                    4 *
+                                    29 +
+                                y /
+                                    4 *
+                                    43
+                            ) %
+                            17);
+
+                    var value =
+                        Math.Clamp(
+                            48 +
+                            fine /
+                                2 +
+                            coarse /
+                                3,
+                            32,
+                            82);
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)value,
+                        (byte)value,
+                        (byte)Math.Min(
+                            255,
+                            value +
+                                3));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public OmsiO3dGeometry BuildGeometry(
