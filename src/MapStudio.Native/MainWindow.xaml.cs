@@ -26354,7 +26354,13 @@ setTimeout(postBounds, 250);
                     profile.ProfileId,
                     profile.LaneCount,
                     profile.OneWay,
-                    profile.WidthMeters);
+                    profile.WidthMeters,
+                    geoTrace.ForwardLaneCount,
+                    geoTrace.BackwardLaneCount,
+                    geoTrace.Layer,
+                    geoTrace.Bridge,
+                    geoTrace.Tunnel,
+                    true);
 
             var clipped =
                 MapStudioRoadTraceClipper
@@ -30501,7 +30507,13 @@ setTimeout(postBounds, 250);
                         profile.ProfileId,
                         profile.LaneCount,
                         profile.OneWay,
-                        profile.WidthMeters));
+                        profile.WidthMeters,
+                        geoTrace.ForwardLaneCount,
+                        geoTrace.BackwardLaneCount,
+                        geoTrace.Layer,
+                        geoTrace.Bridge,
+                        geoTrace.Tunnel,
+                        true));
 
                 added++;
             }
