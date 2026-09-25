@@ -30960,9 +30960,29 @@ setTimeout(postBounds, 250);
                 .InstallOrUpdateAsync(
                     root);
 
-            var junctionGroups =
-                new List<
-                    NativeSceneryPlacementBatchGroup>();
+            StatusText.Text =
+                $"Gerando {placement.Requests.Count} spline(s) em uma única transação...";
+
+            var insertion =
+                await _session
+                    .InsertSplineBatchAsync(
+                        placement.Requests,
+                        placement.Links);
+
+            NativeStartupDiagnostics.Write(
+                $"Procedural roads inserted splines={insertion.SplineIds.Count} backup={insertion.BackupDirectory}");
+
+            var finalSnapshot =
+                insertion.Snapshot;
+
+            var junctionBackupDirectories =
+                new List<string>();
+
+            var insertedJunctionCount =
+                0;
+
+            var failedJunctionCount =
+                junctionPlan.SkippedJunctions;
 
             if (
                 junctionPlan.Items.Count >
@@ -30990,29 +31010,44 @@ setTimeout(postBounds, 250);
                     var sample =
                         topology.First();
 
-                    var asset =
-                        await new MapStudioJunctionAssetGenerator()
-                            .GenerateAsync(
+                    try
+                    {
+                        var asset =
+                            await new MapStudioJunctionAssetGenerator()
+                                .GenerateAsync(
+                                    root,
+                                    sample.Spec);
+
+                        var sceneryRoot =
+                            Path.Combine(
                                 root,
-                                sample.Spec);
+                                "Sceneryobjects");
 
-                    var sceneryRoot =
-                        Path.Combine(
-                            root,
-                            "Sceneryobjects");
+                        var relativePath =
+                            Path.GetRelativePath(
+                                sceneryRoot,
+                                asset.SceneryObjectPath)
+                                .Replace(
+                                    Path.DirectorySeparatorChar,
+                                    '\\');
 
-                    var relativePath =
-                        Path.GetRelativePath(
-                            sceneryRoot,
-                            asset.SceneryObjectPath)
-                            .Replace(
-                                Path.DirectorySeparatorChar,
-                                '\\');
+                        generatedAssets[
+                            sample.AssetName] =
+                            relativePath;
+                    }
+                    catch (Exception exception)
+                    {
+                        failedJunctionCount +=
+                            topology.Count();
 
-                    generatedAssets[
-                        sample.AssetName] =
-                        relativePath;
+                        NativeStartupDiagnostics.Write(
+                            $"Procedural junction asset failed asset={sample.AssetName} count={topology.Count()} error={exception}");
+                    }
                 }
+
+                var junctionGroups =
+                    new List<
+                        NativeSceneryPlacementBatchGroup>();
 
                 foreach (
                     var topology in
@@ -31023,9 +31058,14 @@ setTimeout(postBounds, 250);
                                 StringComparer
                                     .OrdinalIgnoreCase))
                 {
-                    var sceneryPath =
-                        generatedAssets[
-                            topology.Key];
+                    if (
+                        !generatedAssets
+                            .TryGetValue(
+                                topology.Key,
+                                out var sceneryPath))
+                    {
+                        continue;
+                    }
 
                     var requests =
                         topology
@@ -31055,66 +31095,52 @@ setTimeout(postBounds, 250);
                                 chunk));
                     }
                 }
-            }
 
-            StatusText.Text =
-                $"Gerando {placement.Requests.Count} spline(s) em uma única transação...";
-
-            var insertion =
-                await _session
-                    .InsertSplineBatchAsync(
-                        placement.Requests,
-                        placement.Links);
-
-            NativeStartupDiagnostics.Write(
-                $"Procedural roads inserted splines={insertion.SplineIds.Count} backup={insertion.BackupDirectory}");
-
-            var finalSnapshot =
-                insertion.Snapshot;
-
-            var junctionBackupDirectories =
-                new List<string>();
-
-            try
-            {
                 foreach (
                     var batch in
                         junctionGroups
                             .Chunk(
-                                16))
+                                2))
                 {
+                    var batchPlacementCount =
+                        batch.Sum(
+                            group =>
+                                group.Placements.Count);
+
                     StatusText.Text =
-                        $"Inserindo junctions automáticos · {batch.Sum(group => group.Placements.Count)} objeto(s)...";
+                        $"Inserindo junctions automáticos · {insertedJunctionCount + batchPlacementCount}/{junctionPlan.Items.Count} objeto(s)...";
 
-                    finalSnapshot =
-                        await _session
-                            .InsertSceneryObjectMultiBatchAsync(
-                                batch);
-
-                    if (
-                        !string.IsNullOrWhiteSpace(
-                            _session.LastBackupDirectory))
+                    try
                     {
-                        junctionBackupDirectories.Add(
-                            _session.LastBackupDirectory!);
+                        finalSnapshot =
+                            await _session
+                                .InsertSceneryObjectMultiBatchAsync(
+                                    batch);
+
+                        insertedJunctionCount +=
+                            batchPlacementCount;
+
+                        if (
+                            !string.IsNullOrWhiteSpace(
+                                _session.LastBackupDirectory))
+                        {
+                            junctionBackupDirectories.Add(
+                                _session.LastBackupDirectory!);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        failedJunctionCount +=
+                            batchPlacementCount;
+
+                        NativeStartupDiagnostics.Write(
+                            $"Procedural junction insertion failed placements={batchPlacementCount} error={exception}");
                     }
                 }
             }
-            catch
-            {
-                try
-                {
-                    await _session
-                        .RestoreMapStudioBackupAsync(
-                            insertion.BackupDirectory);
-                }
-                catch
-                {
-                    // Keep the original junction exception as the primary failure.
-                }
 
-                throw;
-            }
+            NativeStartupDiagnostics.Write(
+                $"Procedural junctions inserted={insertedJunctionCount} failed={failedJunctionCount} planned={junctionPlan.Items.Count}");
 
             RegisterConstructionHistory(
                 "Gerar vias procedurais");
@@ -31152,13 +31178,17 @@ setTimeout(postBounds, 250);
                 false;
 
             StatusText.Text =
-                $"{insertion.SplineIds.Count} spline(s) procedurais + {junctionPlan.Items.Count} junction(s) próprios gravados. " +
+                $"{insertion.SplineIds.Count} spline(s) procedurais + {insertedJunctionCount} junction(s) próprios gravados. " +
+                (
+                    failedJunctionCount >
+                        0
+                        ? $"Junctions não inseridos: {failedJunctionCount}. "
+                        : string.Empty
+                ) +
                 (
                     placement.SkippedSegments >
-                        0 ||
-                    junctionPlan.SkippedJunctions >
                         0
-                        ? $"Ignorados na borda: {placement.SkippedSegments} segmento(s) / {junctionPlan.SkippedJunctions} junction(s). "
+                        ? $"Segmentos ignorados na borda: {placement.SkippedSegments}. "
                         : string.Empty
                 ) +
                 $"Backup das vias: {insertion.BackupDirectory}" +
