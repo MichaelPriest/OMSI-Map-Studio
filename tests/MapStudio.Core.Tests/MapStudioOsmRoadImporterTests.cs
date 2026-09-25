@@ -113,6 +113,37 @@ public sealed class MapStudioOsmRoadImporterTests
     }
 
     [Fact]
+    public void ImporterTreatsRoundaboutAsImplicitOneWay()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.55" lon="-46.63" />
+              <node id="2" lat="-23.55" lon="-46.62" />
+              <node id="3" lat="-23.54" lon="-46.62" />
+              <way id="8">
+                <nd ref="1" />
+                <nd ref="2" />
+                <nd ref="3" />
+                <nd ref="1" />
+                <tag k="highway" v="tertiary" />
+                <tag k="junction" v="roundabout" />
+              </way>
+            </osm>
+            """;
+
+        var road =
+            Assert.Single(
+                new MapStudioOsmRoadImporter()
+                    .Parse(
+                        xml)
+                    .Traces);
+
+        Assert.True(
+            road.OneWay);
+    }
+
+    [Fact]
     public void ImporterIgnoresNonRoadWaysAndCountsMissingNodes()
     {
         const string xml =
