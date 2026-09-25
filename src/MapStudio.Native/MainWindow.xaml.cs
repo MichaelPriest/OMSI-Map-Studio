@@ -8783,6 +8783,9 @@ public sealed partial class MainWindow : Window
         ContextToolTitleText.Text =
             title;
 
+        ViewportModuleText.Text =
+            title;
+
         targetPanel.Visibility =
             Visibility.Visible;
 
@@ -10034,6 +10037,56 @@ public sealed partial class MainWindow : Window
             1,
             OmsiAssetLibraryGroup.Vegetation,
             "Vegetação: árvores, arbustos e grama.");
+    }
+
+    private async void OnVegetationBrushClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetActiveMapTool(
+            ToolVegetationButton);
+
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Vegetation,
+            "Vegetação: selecione um asset e pinte uma área diretamente no mapa.");
+
+        ObjectPlacementModeComboBox.SelectedIndex =
+            3;
+
+        PlacementRandomRotationCheckBox.IsChecked =
+            true;
+
+        StatusText.Text =
+            "Vegetação · Pincel/área ativo. Selecione o asset, ajuste raio/quantidade e clique na região do mapa.";
+    }
+
+    private async void OnVegetationLineClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        SetActiveMapTool(
+            ToolVegetationButton);
+
+        SetSelectionModeFromShortcut(
+            1);
+
+        await ActivateLibraryGroupToolAsync(
+            1,
+            OmsiAssetLibraryGroup.Vegetation,
+            "Vegetação: selecione um asset e distribua ao longo de uma linha.");
+
+        ObjectPlacementModeComboBox.SelectedIndex =
+            2;
+
+        PlacementRandomRotationCheckBox.IsChecked =
+            true;
+
+        StatusText.Text =
+            "Vegetação · Linha ativa. Clique no início e no fim; o espaçamento usa as opções de posicionamento.";
     }
 
     private async void OnToolTransitAssetsClick(
@@ -20493,6 +20546,9 @@ public sealed partial class MainWindow : Window
         FullscreenEditorBar.Visibility =
             Visibility.Visible;
 
+        ViewportCommandBar.Visibility =
+            Visibility.Collapsed;
+
         MainRoot.RowDefinitions[2].Height =
             new GridLength(0);
 
@@ -20680,6 +20736,9 @@ public sealed partial class MainWindow : Window
         FullscreenEditorBar.Visibility =
             Visibility.Collapsed;
 
+        ViewportCommandBar.Visibility =
+            Visibility.Visible;
+
         MainRoot.RowDefinitions[2].Height =
             new GridLength(30);
 
@@ -20713,7 +20772,7 @@ public sealed partial class MainWindow : Window
             Visibility.Collapsed;
 
         ExplorerPanel.Margin =
-            new Thickness(8);
+            new Thickness(6);
 
         Canvas.SetZIndex(
             ExplorerPanel,
@@ -20740,7 +20799,7 @@ public sealed partial class MainWindow : Window
             double.PositiveInfinity;
 
         InspectorPanel.Margin =
-            new Thickness(8);
+            new Thickness(6);
 
         Canvas.SetZIndex(
             InspectorPanel,

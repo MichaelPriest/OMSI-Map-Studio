@@ -2211,6 +2211,51 @@
                 DragOver="OnViewportLibraryDragOver"
                 Drop="OnViewportLibraryDrop" />
 
+            <Border x:Name="ViewportCommandBar"
+                    Grid.Column="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Margin="8,14,8,0"
+                    Padding="6,5"
+                    Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="7"
+                    Canvas.ZIndex="57">
+                <StackPanel Orientation="Horizontal"
+                            Spacing="5">
+                    <Border Padding="8,3"
+                            Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                            CornerRadius="5">
+                        <TextBlock x:Name="ViewportModuleText"
+                                   Text="Seleção fácil"
+                                   FontSize="10.5"
+                                   FontWeight="SemiBold"
+                                   Foreground="{ThemeResource MapStudioAccentTextBrush}" />
+                    </Border>
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Perspectiva"
+                            ToolTipService.ToolTip="Câmera em perspectiva"
+                            Click="OnPerspectiveViewClick" />
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Topo"
+                            ToolTipService.ToolTip="Vista superior"
+                            Click="OnTopViewClick" />
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Enquadrar"
+                            ToolTipService.ToolTip="Enquadrar a cena inteira"
+                            Click="OnFitSceneClick" />
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Grade"
+                            ToolTipService.ToolTip="Mostrar/ocultar grade"
+                            Click="OnGridVisibilityClick" />
+                    <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                            Content="Referência"
+                            ToolTipService.ToolTip="Mostrar/ocultar a referência de mapa"
+                            Click="OnToggleMapReferenceVisibilityClick" />
+                </StackPanel>
+            </Border>
+
             <Border x:Name="MapReferenceAttributionBorder"
                     Grid.Column="2"
                     Margin="8,0,8,14"
@@ -3565,8 +3610,8 @@
                     HorizontalAlignment="Center"
                     MaxWidth="1180"
                     VerticalAlignment="Bottom"
-                    Margin="20,20,20,104"
-                    Padding="9,7"
+                    Margin="70,20,20,22"
+                    Padding="8,6"
                     Background="{ThemeResource MapStudioTranslucentRaisedBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
@@ -3666,6 +3711,9 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Biblioteca"
                                         Click="OnLibraryModeClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Prédios"
+                                        Click="OnToolBuildingsClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Sinalização"
                                         Click="OnToolStreetFurnitureClick" />
@@ -3848,6 +3896,14 @@
                                                             Click="OnRoadPresetHeightClick" />
                                             <MenuFlyoutItem Text="Instalar/atualizar Road Kit"
                                                             Click="OnInstallRoadKitClick" />
+                                            <MenuFlyoutSeparator />
+                                            <MenuFlyoutItem Text="Biblioteca de pontes"
+                                                            Click="OnToolBridgesClick" />
+                                            <MenuFlyoutItem Text="Criador de ponte"
+                                                            Click="OnCreateBridgeClick" />
+                                            <MenuFlyoutItem Text="Criador de túnel"
+                                                            Click="OnCreateTunnelClick" />
+                                            <MenuFlyoutSeparator />
                                             <MenuFlyoutItem Text="Gerador procedural de ruas"
                                                             Click="OnStartProceduralRoadTraceClick" />
                                         </MenuFlyout>
@@ -3893,6 +3949,14 @@
                                         Content="Biblioteca"
                                         Click="OnToolVegetationClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Pincel / área"
+                                        ToolTipService.ToolTip="Ativa o posicionamento por pincel/área usando os assets de vegetação selecionados"
+                                        Click="OnVegetationBrushClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Linha"
+                                        ToolTipService.ToolTip="Ativa o posicionamento de vegetação ao longo de uma linha"
+                                        Click="OnVegetationLineClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Importar OSM"
                                         Click="OnImportOsmVegetationClick" />
                             </StackPanel>
@@ -3917,11 +3981,26 @@
                                         Content="Escolher ponto"
                                         Click="OnPickTerrainPointClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="↑ Subir"
+                                        Click="OnRaiseTerrainClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="↓ Baixar"
+                                        Click="OnLowerTerrainClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Nivelar"
+                                        Click="OnApplyTerrainLevelClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Pintar"
+                                        Click="OnApplyTerrainPaintClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Água"
+                                        Click="OnToolWaterClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Mapa real"
                                         Click="OnCreateCoordinateMapClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
-                                        Content="Mapa referência"
-                                        ToolTipService.ToolTip="OpenStreetMap sem chave ou Google Maps com API key do usuário"
+                                        Content="Referência"
+                                        ToolTipService.ToolTip="Abrir/configurar a referência geográfica sobre o terreno"
                                         Click="OnMapReferenceClick" />
                             </StackPanel>
 
@@ -3941,6 +4020,10 @@
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Tráfego"
                                         Click="OnToolTrafficClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Paths"
+                                        ToolTipService.ToolTip="Abrir edição e visualização dos paths OMSI"
+                                        Click="OnToggleTrafficPathsWindowClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Sinalização"
                                         Click="OnToolStreetFurnitureClick" />
@@ -4089,6 +4172,7 @@
 
             <Border x:Name="MapToolPalette"
                     Grid.Column="0"
+                    Visibility="Collapsed"
                     Grid.ColumnSpan="5"
                     HorizontalAlignment="Center"
                     MaxWidth="1480"

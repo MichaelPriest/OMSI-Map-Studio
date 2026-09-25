@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.42: modular 3D-editor workspace and compact tool rail.
+# Test 10.43: nEditor-inspired contextual workspace and viewport command strip.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.42-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.42-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.43-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.43-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.42-native
-  TAG: v0.2.0-alpha.5-test.10.42-native
+  VERSION: 0.2.0-alpha.5-test.10.43-native
+  TAG: v0.2.0-alpha.5-test.10.43-native
 
 jobs:
   build-native-preview:
@@ -1729,6 +1729,40 @@ jobs:
 
           Write-Host "Verified compact module rail, synchronized active state and neutral modern editor palette."
 
+      - name: Verify test 10.43 contextual editor workflow
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'ViewportCommandBar',
+            'ViewportModuleText',
+            'Visibility="Collapsed"',
+            'Pincel / área',
+            'OnVegetationBrushClick',
+            'OnVegetationLineClick',
+            'OnRaiseTerrainClick',
+            'OnLowerTerrainClick',
+            'OnApplyTerrainLevelClick',
+            'OnApplyTerrainPaintClick',
+            'OnToggleTrafficPathsWindowClick'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required))) {
+              throw "Test 10.43 contextual workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $code.Contains('ObjectPlacementModeComboBox.SelectedIndex =')) {
+            throw "Test 10.43 vegetation paint/line workflows must select a real placement mode."
+          }
+
+          if (-not $code.Contains('ViewportModuleText.Text =')) {
+            throw "Test 10.43 viewport module label must follow active editor context."
+          }
+
+          Write-Host "Verified clean viewport workspace, contextual modules and real vegetation/terrain/traffic actions."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1883,11 +1917,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.42-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.43-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.42-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.43-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
