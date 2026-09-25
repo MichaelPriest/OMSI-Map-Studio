@@ -6509,7 +6509,7 @@ public sealed class OmsiNativeSession
     {
         ArgumentNullException.ThrowIfNull(requests);
 
-        if (requests.Count == 0 || requests.Count > 5_000)
+        if (requests.Count == 0 || requests.Count > 50_000)
         {
             throw new ArgumentOutOfRangeException(nameof(requests));
         }
