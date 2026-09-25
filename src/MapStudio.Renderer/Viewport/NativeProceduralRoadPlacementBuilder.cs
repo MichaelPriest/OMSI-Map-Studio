@@ -562,10 +562,22 @@ public sealed class NativeProceduralRoadPlacementBuilder
             return 0;
         }
 
-        return MapStudioJunctionGeometrySizing
-            .ResolveSurfaceExtentMeters(
-                incident.Select(
-                    ResolvePhysicalWidth));
+        var surfaceExtent =
+            MapStudioJunctionGeometrySizing
+                .ResolveSurfaceExtentMeters(
+                    incident.Select(
+                        ResolvePhysicalWidth));
+
+        var overlap =
+            Math.Min(
+                0.45,
+                surfaceExtent *
+                    0.08);
+
+        return Math.Max(
+            0,
+            surfaceExtent -
+            overlap);
     }
 
     private static double ResolveMinimumCurveRadius(
