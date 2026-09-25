@@ -87,6 +87,72 @@ public sealed class MapStudioJunctionAssetGeneratorTests
     }
 
     [Fact]
+    public async Task InternalPathsRespectInboundAndOutboundOneWayArms()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Junction-Direction-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            var result =
+                await new MapStudioJunctionAssetGenerator()
+                    .GenerateAsync(
+                        root,
+                        new MapStudioJunctionSpec(
+                            "Directed T",
+                            [
+                                new(
+                                    0,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    2,
+                                    0),
+                                new(
+                                    120,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    0,
+                                    2),
+                                new(
+                                    240,
+                                    7,
+                                    2,
+                                    false,
+                                    3.5,
+                                    1,
+                                    1)
+                            ]));
+
+            Assert.Equal(
+                3,
+                result.InternalPathCount);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task GeneratorWritesScoO3dAndInternalTrafficPaths()
     {
         var root =
