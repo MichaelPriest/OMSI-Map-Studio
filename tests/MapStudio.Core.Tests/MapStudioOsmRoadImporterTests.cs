@@ -144,6 +144,56 @@ public sealed class MapStudioOsmRoadImporterTests
     }
 
     [Fact]
+    public void ImporterReadsDirectionalLanesAndGradeSeparationTags()
+    {
+        const string xml =
+            """
+            <osm version="0.6">
+              <node id="1" lat="-23.55" lon="-46.63" />
+              <node id="2" lat="-23.55" lon="-46.62" />
+              <way id="9">
+                <nd ref="1" />
+                <nd ref="2" />
+                <tag k="highway" v="primary" />
+                <tag k="lanes:forward" v="2" />
+                <tag k="lanes:backward" v="1" />
+                <tag k="bridge" v="yes" />
+                <tag k="layer" v="1" />
+              </way>
+            </osm>
+            """;
+
+        var road =
+            Assert.Single(
+                new MapStudioOsmRoadImporter()
+                    .Parse(
+                        xml)
+                    .Traces);
+
+        Assert.Equal(
+            3,
+            road.LaneCount);
+
+        Assert.Equal(
+            2,
+            road.ForwardLaneCount);
+
+        Assert.Equal(
+            1,
+            road.BackwardLaneCount);
+
+        Assert.Equal(
+            1,
+            road.Layer);
+
+        Assert.True(
+            road.Bridge);
+
+        Assert.False(
+            road.Tunnel);
+    }
+
+    [Fact]
     public void ImporterIgnoresNonRoadWaysAndCountsMissingNodes()
     {
         const string xml =
