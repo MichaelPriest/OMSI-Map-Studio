@@ -122,6 +122,88 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
     }
 
     [Fact]
+    public void JunctionPlanCarriesTerrainHeightIntoWorldPlacement()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    12,
+                    12,
+                    12,
+                    12
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "horizontal",
+                            [
+                                new(20, 50),
+                                new(80, 50)
+                            ],
+                            "road",
+                            2,
+                            false,
+                            7),
+                        new MapStudioRoadTrace(
+                            "vertical",
+                            [
+                                new(50, 20),
+                                new(50, 80)
+                            ],
+                            "road",
+                            2,
+                            false,
+                            7)
+                    ]);
+
+        var item =
+            Assert.Single(
+                new NativeProceduralJunctionPlanBuilder()
+                    .Build(
+                        scene,
+                        graph)
+                    .Items);
+
+        Assert.Equal(
+            12,
+            item.WorldPoint.Y,
+            3);
+    }
+
+    [Fact]
     public void JunctionOutsideLoadedTerrainIsSkipped()
     {
         var graph =
