@@ -4076,6 +4076,10 @@
                                         ToolTipService.ToolTip="Adicionar um novo path ao SCO/SLI selecionado"
                                         Click="OnAddAssetPathClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Localizar"
+                                        ToolTipService.ToolTip="Selecionar e enquadrar no viewport o objeto do programa de semáforo atual"
+                                        Click="OnLocateTrafficProgramClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Semáforo"
                                         ToolTipService.ToolTip="Editar o programa de semáforo selecionado"
                                         Click="OnEditFocusedTrafficProgramClick" />

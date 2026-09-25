@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.46: viewport-first traffic path and signal editing.
+# Test 10.47: traffic-light viewport focus and contextual locate.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.46-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.46-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.47-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.47-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.46-native
-  TAG: v0.2.0-alpha.5-test.10.46-native
+  VERSION: 0.2.0-alpha.5-test.10.47-native
+  TAG: v0.2.0-alpha.5-test.10.47-native
 
 jobs:
   build-native-preview:
@@ -1853,6 +1853,32 @@ jobs:
 
           Write-Host "Verified viewport-first path navigation/isolation and real SCO/SLI/signal editing actions."
 
+      - name: Verify test 10.47 traffic-light viewport focus
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'Content="Localizar"',
+            'OnLocateTrafficProgramClick',
+            'FocusTrafficProgramInViewport',
+            'program.ObjectId',
+            'program.TileX',
+            'program.TileY',
+            'Viewport.SelectExplorerItem'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required))) {
+              throw "Test 10.47 signal-focus marker is missing: $required"
+            }
+          }
+
+          if (-not $code.Contains('if (_trafficMode)')) {
+            throw "Test 10.47 must auto-focus selected traffic programs only in traffic mode."
+          }
+
+          Write-Host "Verified traffic-light program selection can locate and frame its real scene object."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2007,11 +2033,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.46-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.47-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.46-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.47-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

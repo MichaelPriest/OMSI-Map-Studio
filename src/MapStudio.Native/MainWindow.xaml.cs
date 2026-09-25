@@ -11580,6 +11580,64 @@ public sealed partial class MainWindow : Window
                 : "Paths: isolamento visual desativado.";
     }
 
+    private void OnLocateTrafficProgramClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TrafficProgramListView
+                .SelectedItem is not
+                NativeTrafficLightProgramInfo
+                    program)
+        {
+            StatusText.Text =
+                "Semáforo: selecione um programa para localizar o objeto no mapa.";
+            return;
+        }
+
+        if (
+            !FocusTrafficProgramInViewport(
+                program,
+                focus:
+                    true))
+        {
+            StatusText.Text =
+                $"Semáforo: objeto #{program.ObjectId} não está carregado no Explorer atual.";
+            return;
+        }
+
+        StatusText.Text =
+            $"Semáforo: objeto #{program.ObjectId} localizado no tile {program.TileX},{program.TileY}.";
+    }
+
+    private bool FocusTrafficProgramInViewport(
+        NativeTrafficLightProgramInfo program,
+        bool focus)
+    {
+        var owner =
+            _explorerItems
+                .FirstOrDefault(
+                    item =>
+                        item.Kind ==
+                            PickingKind.Object &&
+                        item.EntityId ==
+                            program.ObjectId &&
+                        item.TileX ==
+                            program.TileX &&
+                        item.TileY ==
+                            program.TileY);
+
+        if (owner is null)
+        {
+            return false;
+        }
+
+        return Viewport
+            .SelectExplorerItem(
+                owner,
+                focus);
+    }
+
     private void OnEditFocusedTrafficProgramClick(
         object sender,
         RoutedEventArgs e)
@@ -13516,6 +13574,14 @@ public sealed partial class MainWindow : Window
             true;
 
         UpdateTrafficPhasePreview();
+
+        if (_trafficMode)
+        {
+            FocusTrafficProgramInViewport(
+                program,
+                focus:
+                    true);
+        }
     }
 
     private async void OnEditTrafficProgramClick(
