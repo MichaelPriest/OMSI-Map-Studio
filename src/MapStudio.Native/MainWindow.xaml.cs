@@ -25935,6 +25935,10 @@ setTimeout(postBounds, 250);
                 }
                 catch (Exception exception)
                 {
+                    NativeStartupDiagnostics.Write(
+                        "RealMap automatic OSM roads failed: " +
+                        exception);
+
                     postCreateWarnings.Add(
                         $"vias OSM: {exception.Message}");
                 }
@@ -26395,6 +26399,9 @@ setTimeout(postBounds, 250);
 
         var graph =
             BuildProceduralRoadGraph();
+
+        NativeStartupDiagnostics.Write(
+            $"RealMap road graph traces={_proceduralRoadTraces.Count} nodes={graph.Nodes.Count} segments={graph.Segments.Count} junctions={graph.Junctions.Count}");
 
         Viewport
             .PreviewProceduralRoadGraph(
@@ -30878,6 +30885,9 @@ setTimeout(postBounds, 250);
                 .BuildProceduralJunctionPlan(
                     graph);
 
+        NativeStartupDiagnostics.Write(
+            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions}");
+
         if (placement.Requests.Count == 0)
         {
             StatusText.Text =
@@ -31047,6 +31057,9 @@ setTimeout(postBounds, 250);
                         placement.Requests,
                         placement.Links);
 
+            NativeStartupDiagnostics.Write(
+                $"Procedural roads inserted splines={insertion.SplineIds.Count} backup={insertion.BackupDirectory}");
+
             var finalSnapshot =
                 insertion.Snapshot;
 
@@ -31149,6 +31162,10 @@ setTimeout(postBounds, 250);
         }
         catch (Exception exception)
         {
+            NativeStartupDiagnostics.Write(
+                "Procedural road generation failed: " +
+                exception);
+
             StatusText.Text =
                 $"Falha ao gerar vias procedurais: {exception.Message}";
 
