@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.36: complete OSM import, native road curves and fitted junctions.
+# Test 10.37: authoritative OSM topology, directional lanes and junction seam fixes.
 
 on:
   push:
@@ -37,6 +37,8 @@ on:
       - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioGeoJsonRoadImporter.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadGraphBuilder.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs"
       - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
@@ -56,6 +58,7 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
@@ -83,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.36-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.36-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.37-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.37-native.md"
   workflow_dispatch:
 
 permissions:
@@ -95,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.36-native
-  TAG: v0.2.0-alpha.5-test.10.36-native
+  VERSION: 0.2.0-alpha.5-test.10.37-native
+  TAG: v0.2.0-alpha.5-test.10.37-native
 
 jobs:
   build-native-preview:
@@ -1447,6 +1450,94 @@ jobs:
 
           Write-Host "Verified complete OSM import, native curved splines, fitted/renderable junction geometry, roundabout topology, physical width normalization and Road Kit 1.2 textures."
 
+      - name: Verify test 10.37 authoritative OSM topology and directional lanes
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $geo = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioGeoJsonRoadImporter.cs -Raw
+          $osm = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $graph = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadGraphBuilder.cs -Raw
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $osmTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
+          $graphTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $junctionPlanTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'ForwardLaneCount',
+            'BackwardLaneCount',
+            'Layer',
+            'Bridge',
+            'Tunnel'
+          )) {
+            if (-not $geo.Contains($required)) {
+              throw "Test 10.37 extended geographic road metadata is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'lanes:forward',
+            'lanes:backward',
+            '"bridge"',
+            '"tunnel"',
+            '"layer"',
+            'SumDirectionalLanes'
+          )) {
+            if (-not $osm.Contains($required)) {
+              throw "Test 10.37 OSM directional/grade metadata parser is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SourceTopologyAuthoritative',
+            'CanCreateInteriorIntersection'
+          )) {
+            if (-not $graph.Contains($required)) {
+              throw "Test 10.37 authoritative graph marker is missing: $required"
+            }
+          }
+
+          if (-not $graphTests.Contains('AuthoritativeOsmCrossingWithoutSharedNodeDoesNotCreateJunction') -or
+              -not $graphTests.Contains('AuthoritativeOsmSharedNodeStillCreatesRealJunction') -or
+              -not $graphTests.Contains('DifferentLayersDoNotCreateSyntheticInteriorJunction')) {
+            throw "Test 10.37 authoritative OSM graph regression coverage is missing."
+          }
+
+          if (-not $main.Contains('geoTrace.ForwardLaneCount') -or
+              -not $main.Contains('geoTrace.BackwardLaneCount') -or
+              -not $main.Contains('geoTrace.Bridge') -or
+              -not $main.Contains('geoTrace.Tunnel') -or
+              -not $main.Contains('authoritative=') -or
+              -not $main.Contains('directional=') -or
+              -not $main.Contains('gradeSeparated=')) {
+            throw "Test 10.37 OSM metadata wiring/diagnostics are missing."
+          }
+
+          if (-not $placement.Contains('surfaceExtent -') -or
+              -not $placement.Contains('0.45')) {
+            throw "Test 10.37 junction seam overlap is missing."
+          }
+
+          foreach ($required in @(
+            'InboundLaneCount',
+            'OutboundLaneCount'
+          )) {
+            if (-not $junction.Contains($required) -or
+                -not $junctionPlan.Contains($required)) {
+              throw "Test 10.37 junction directional lane marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionTests.Contains('InternalPathsRespectInboundAndOutboundOneWayArms') -or
+              -not $junctionPlanTests.Contains('OneWayArmsKeepNodeRelativeInboundAndOutboundDirection') -or
+              -not $osmTests.Contains('ImporterReadsDirectionalLanesAndGradeSeparationTags')) {
+            throw "Test 10.37 directional lane regression coverage is missing."
+          }
+
+          Write-Host "Verified authoritative OSM topology, bridge/tunnel/layer handling, directional lanes, node-relative junction traffic and seam overlap."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1601,11 +1692,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.36-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.37-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.36-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.37-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
