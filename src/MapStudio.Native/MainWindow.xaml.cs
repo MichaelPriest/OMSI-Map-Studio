@@ -31076,7 +31076,7 @@ setTimeout(postBounds, 250);
                                         sceneryPath,
                                         item.X,
                                         item.Y,
-                                        0,
+                                        item.WorldPoint.Y,
                                         item.Rotation,
                                         0,
                                         0,
