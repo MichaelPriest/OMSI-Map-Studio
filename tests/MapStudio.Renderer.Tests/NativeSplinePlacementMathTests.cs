@@ -1,4 +1,7 @@
 using System.Numerics;
+using MapStudio.Core.Omsi.Maps;
+using MapStudio.Renderer.Picking;
+using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
 using Xunit;
 
@@ -133,6 +136,94 @@ public sealed class
         Assert.True(
             shape.Length >
             10);
+    }
+
+    [Fact]
+    public void ArcShapeReachesRequestedEndpointInRendererMath()
+    {
+        var start =
+            new Vector3(
+                10,
+                2,
+                20);
+
+        var end =
+            new Vector3(
+                50,
+                2,
+                60);
+
+        var control =
+            new Vector3(
+                38,
+                2,
+                31);
+
+        Assert.True(
+            NativeSplinePlacementMath
+                .TryCreateArc(
+                    start,
+                    end,
+                    control,
+                    out var shape));
+
+        Assert.NotNull(
+            shape);
+
+        Assert.True(
+            shape!.IsCurved);
+
+        var spline =
+            new OmsiPlacedSpline(
+                "0",
+                "road.sli",
+                1,
+                -1,
+                -1,
+                start.X,
+                start.Z,
+                start.Y,
+                shape.Rotation,
+                shape.Length,
+                shape.Radius,
+                shape.GradientStart,
+                shape.GradientEnd,
+                false,
+                []);
+
+        var entity =
+            new NativeSplineEntity(
+                new PickingId(
+                    PickingKind.Spline,
+                    1),
+                new OmsiTileReference(
+                    0,
+                    0,
+                    "tile_0_0.map"),
+                spline,
+                start.X,
+                start.Y,
+                start.Z);
+
+        var frame =
+            NativeSplinePathMath
+                .GetFrame(
+                    entity,
+                    shape.Length);
+
+        Assert.InRange(
+            frame.Center.X,
+            end.X -
+                0.01f,
+            end.X +
+                0.01f);
+
+        Assert.InRange(
+            frame.Center.Z,
+            end.Z -
+                0.01f,
+            end.Z +
+                0.01f);
     }
 
     [Fact]
