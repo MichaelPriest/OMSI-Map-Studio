@@ -147,7 +147,7 @@ public sealed class MapStudioRoadTraceSmoother
                         (int)Math.Ceiling(
                             segmentLength /
                             maximumSampleSpacingMeters),
-                        2,
+                        1,
                         maximumSubdivisionsPerSegment);
 
                 var tangentScale =
