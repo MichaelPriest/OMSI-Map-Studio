@@ -229,10 +229,42 @@ public sealed class MapStudioOsmRoadImporter
                     "-1",
                     StringComparison.OrdinalIgnoreCase);
 
+            var explicitlyTwoWay =
+                string.Equals(
+                    oneWayText,
+                    "no",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    oneWayText,
+                    "false",
+                    StringComparison.OrdinalIgnoreCase) ||
+                oneWayText ==
+                    "0";
+
+            var junction =
+                tags.GetValueOrDefault(
+                    "junction")
+                    ?.Trim();
+
+            var implicitJunctionOneWay =
+                !explicitlyTwoWay &&
+                junction is not null &&
+                (
+                    string.Equals(
+                        junction,
+                        "roundabout",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        junction,
+                        "circular",
+                        StringComparison.OrdinalIgnoreCase)
+                );
+
             var oneWay =
                 reverse ||
                 IsTrue(
-                    oneWayText);
+                    oneWayText) ||
+                implicitJunctionOneWay;
 
             if (reverse)
             {
@@ -264,7 +296,8 @@ public sealed class MapStudioOsmRoadImporter
                     points,
                     highway,
                     lanes,
-                    oneWayText is null
+                    oneWayText is null &&
+                    !implicitJunctionOneWay
                         ? null
                         : oneWay,
                     width,
