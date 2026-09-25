@@ -85,6 +85,27 @@
                 <Setter Property="VerticalContentAlignment"
                         Value="Center" />
             </Style>
+            <Style x:Key="EditorModuleRailButtonStyle"
+                   TargetType="Button">
+                <Setter Property="Width"
+                        Value="44" />
+                <Setter Property="Height"
+                        Value="44" />
+                <Setter Property="Padding"
+                        Value="7" />
+                <Setter Property="Background"
+                        Value="{StaticResource MapToolDefaultBackgroundBrush}" />
+                <Setter Property="BorderBrush"
+                        Value="{StaticResource MapToolDefaultBorderBrush}" />
+                <Setter Property="BorderThickness"
+                        Value="1" />
+                <Setter Property="CornerRadius"
+                        Value="6" />
+                <Setter Property="HorizontalContentAlignment"
+                        Value="Center" />
+                <Setter Property="VerticalContentAlignment"
+                        Value="Center" />
+            </Style>
             <Style x:Key="MapToolGroupBadgeStyle"
                    TargetType="Border">
                 <Setter Property="Width"
@@ -715,11 +736,11 @@
 
             <Border x:Name="ExplorerPanel"
                     Grid.Column="0"
-                    Margin="8"
+                    Margin="6"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="8">
+                    CornerRadius="6">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenExplorerTranslate" />
                 </Border.RenderTransform>
@@ -3955,18 +3976,129 @@
                 </Grid>
             </Border>
 
+
+            <Border x:Name="EditorModuleRail"
+                    Grid.Column="2"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Margin="8,8,0,86"
+                    Padding="5"
+                    Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
+                    BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Canvas.ZIndex="58">
+                <StackPanel Spacing="4">
+                    <Button x:Name="ModuleSelectionButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Seleção"
+                            Click="OnToolSelectionClick">
+                        <Path Width="22"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 2,2 L 20,10 L 12,12 L 16,20 L 12,22 L 8,14 L 3,19 Z" />
+                    </Button>
+
+                    <Button x:Name="ModuleObjectsButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Objetos e cenário"
+                            Click="OnToolObjectsClick">
+                        <Path Width="23"
+                              Height="21"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.7"
+                              Data="M 12,2 L 21,7 L 21,17 L 12,22 L 3,17 L 3,7 Z M 3,7 L 12,12 L 21,7 M 12,12 L 12,22" />
+                    </Button>
+
+                    <Button x:Name="ModuleRoadsButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Ruas e splines"
+                            Click="OnToolSplinesClick">
+                        <Path Width="23"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 4,22 C 8,16 8,8 12,2 M 20,22 C 16,16 16,8 12,2 M 9,17 L 15,17 M 10.5,11 L 13.5,11" />
+                    </Button>
+
+                    <Button x:Name="ModuleTerrainButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Terreno e água"
+                            Click="OnToolTerrainClick">
+                        <Path Width="24"
+                              Height="21"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 2,20 L 8,10 L 12,15 L 16,6 L 23,20 Z M 5,20 L 20,20" />
+                    </Button>
+
+                    <Button x:Name="ModuleVegetationButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Vegetação"
+                            Click="OnToolVegetationClick">
+                        <Path Width="22"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 12,2 C 7,2 5,7 7,10 C 3,12 5,18 10,17 L 10,22 M 12,2 C 17,2 19,7 17,10 C 21,12 19,18 14,17 L 14,22 M 8,22 L 16,22" />
+                    </Button>
+
+                    <Button x:Name="ModuleCrossingsButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Cruzamentos"
+                            Click="OnToolCrossingsClick">
+                        <Path Width="22"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 9,2 L 15,2 L 15,9 L 22,9 L 22,15 L 15,15 L 15,22 L 9,22 L 9,15 L 2,15 L 2,9 L 9,9 Z M 12,4 L 12,20 M 4,12 L 20,12" />
+                    </Button>
+
+                    <Button x:Name="ModuleTrafficButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Tráfego e semáforos"
+                            Click="OnToolTrafficClick">
+                        <Path Width="20"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 7,2 L 17,2 L 17,22 L 7,22 Z M 12,6 A 2,2 0 1 0 12,6.1 M 12,12 A 2,2 0 1 0 12,12.1 M 12,18 A 2,2 0 1 0 12,18.1" />
+                    </Button>
+
+                    <Button x:Name="ModuleTransportButton"
+                            Style="{StaticResource EditorModuleRailButtonStyle}"
+                            ToolTipService.ToolTip="Transporte e operação"
+                            Click="OnToolTransportClick">
+                        <Path Width="24"
+                              Height="22"
+                              Stretch="Uniform"
+                              Stroke="{ThemeResource MapStudioTextPrimaryBrush}"
+                              StrokeThickness="1.8"
+                              Data="M 4,4 Q 4,2 7,2 L 19,2 Q 22,2 22,5 L 22,18 L 4,18 Z M 7,6 L 19,6 L 19,12 L 7,12 Z M 8,18 L 8,22 M 18,18 L 18,22" />
+                    </Button>
+                </StackPanel>
+            </Border>
+
             <Border x:Name="MapToolPalette"
                     Grid.Column="0"
                     Grid.ColumnSpan="5"
                     HorizontalAlignment="Center"
                     MaxWidth="1480"
                     VerticalAlignment="Bottom"
-                    Margin="20,20,20,28"
-                    Padding="8"
+                    Margin="70,20,20,22"
+                    Padding="6"
                     Background="{ThemeResource MapStudioTranslucentSurfaceBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderStrongBrush}"
                     BorderThickness="1"
-                    CornerRadius="12"
+                    CornerRadius="8"
                     Canvas.ZIndex="50">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="MapToolPaletteTranslate" />
@@ -4307,11 +4439,11 @@
 
             <Border x:Name="InspectorPanel"
                     Grid.Column="4"
-                    Margin="8"
+                    Margin="6"
                     Background="{ThemeResource MapStudioPanelBackgroundBrush}"
                     BorderBrush="{ThemeResource MapStudioBorderBrush}"
                     BorderThickness="1"
-                    CornerRadius="8">
+                    CornerRadius="6">
                 <Border.RenderTransform>
                     <TranslateTransform x:Name="FullscreenInspectorTranslate" />
                 </Border.RenderTransform>

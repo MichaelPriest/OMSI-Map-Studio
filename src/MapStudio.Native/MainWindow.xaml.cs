@@ -8494,6 +8494,108 @@ public sealed partial class MainWindow : Window
         activeButton.Opacity =
             1;
 
+        var moduleButtons =
+            new[]
+            {
+                ModuleSelectionButton,
+                ModuleObjectsButton,
+                ModuleRoadsButton,
+                ModuleTerrainButton,
+                ModuleVegetationButton,
+                ModuleCrossingsButton,
+                ModuleTrafficButton,
+                ModuleTransportButton
+            };
+
+        foreach (var button in moduleButtons)
+        {
+            button.Background =
+                defaultBackground;
+
+            button.BorderBrush =
+                defaultBorder;
+
+            button.BorderThickness =
+                new Thickness(1);
+
+            button.Opacity =
+                0.86;
+        }
+
+        Button? activeModule =
+            ReferenceEquals(
+                activeButton,
+                ToolSelectionButton) ||
+            ReferenceEquals(
+                activeButton,
+                ToolValidationButton)
+                ? ModuleSelectionButton
+                : ReferenceEquals(
+                    activeButton,
+                    ToolObjectsButton) ||
+                  ReferenceEquals(
+                    activeButton,
+                    ToolBuildingsButton) ||
+                  ReferenceEquals(
+                    activeButton,
+                    ToolStreetFurnitureButton) ||
+                  ReferenceEquals(
+                    activeButton,
+                    ToolUtilitiesButton)
+                    ? ModuleObjectsButton
+                    : ReferenceEquals(
+                        activeButton,
+                        ToolSplinesButton) ||
+                      ReferenceEquals(
+                        activeButton,
+                        ToolBridgesButton) ||
+                      ReferenceEquals(
+                        activeButton,
+                        ToolTunnelsButton)
+                        ? ModuleRoadsButton
+                        : ReferenceEquals(
+                            activeButton,
+                            ToolTerrainButton) ||
+                          ReferenceEquals(
+                            activeButton,
+                            ToolWaterButton)
+                            ? ModuleTerrainButton
+                            : ReferenceEquals(
+                                activeButton,
+                                ToolVegetationButton)
+                                ? ModuleVegetationButton
+                                : ReferenceEquals(
+                                    activeButton,
+                                    ToolCrossingsButton)
+                                    ? ModuleCrossingsButton
+                                    : ReferenceEquals(
+                                        activeButton,
+                                        ToolTrafficButton)
+                                        ? ModuleTrafficButton
+                                        : ReferenceEquals(
+                                            activeButton,
+                                            ToolTransportButton) ||
+                                          ReferenceEquals(
+                                            activeButton,
+                                            ToolTransitAssetsButton)
+                                            ? ModuleTransportButton
+                                            : null;
+
+        if (activeModule is not null)
+        {
+            activeModule.Background =
+                activeBackground;
+
+            activeModule.BorderBrush =
+                activeBorder;
+
+            activeModule.BorderThickness =
+                new Thickness(2);
+
+            activeModule.Opacity =
+                1;
+        }
+
         UpdateContextToolPalette(
             activeButton);
     }

@@ -10,55 +10,55 @@
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <Color x:Key="MapStudioSurfaceRaisedColor">#E6EEF4</Color>
-                    <Color x:Key="MapStudioBorderColor">#C9D6E0</Color>
-                    <Color x:Key="MapStudioBorderStrongColor">#A9BECC</Color>
-                    <Color x:Key="MapStudioAccentColor">#0067C0</Color>
-                    <Color x:Key="MapStudioAccentSurfaceColor">#D9ECFA</Color>
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#E7E9ED</Color>
+                    <Color x:Key="MapStudioBorderColor">#D2D6DB</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#AEB6BF</Color>
+                    <Color x:Key="MapStudioAccentColor">#2C73D2</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#DFEBF8</Color>
 
-                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#F4F7FA" />
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#F3F4F6" />
                     <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#F0F4F7" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#E6EEF4" />
-                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#C9D6E0" />
-                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#A9BECC" />
-                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#17242D" />
-                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#3F5B6D" />
-                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#647B8B" />
-                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#0067C0" />
-                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#D9ECFA" />
-                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#005A9E" />
-                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#107C41" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2FFFFFF" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E6EEF4FA" />
-                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#ECFFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#F0F1F3" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#E7E9ED" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#D2D6DB" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#AEB6BF" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#20252B" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#4A535D" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#717B86" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#2C73D2" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#DFEBF8" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#245FAD" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#258552" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F4FFFFFF" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E7E9EDFA" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#F2FFFFFF" />
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Dark">
-                    <Color x:Key="MapStudioSurfaceRaisedColor">#132A39</Color>
-                    <Color x:Key="MapStudioBorderColor">#24485C</Color>
-                    <Color x:Key="MapStudioBorderStrongColor">#315064</Color>
-                    <Color x:Key="MapStudioAccentColor">#2CB7F5</Color>
-                    <Color x:Key="MapStudioAccentSurfaceColor">#185B78</Color>
+                    <Color x:Key="MapStudioSurfaceRaisedColor">#2B3036</Color>
+                    <Color x:Key="MapStudioBorderColor">#343B44</Color>
+                    <Color x:Key="MapStudioBorderStrongColor">#46505B</Color>
+                    <Color x:Key="MapStudioAccentColor">#4FA3FF</Color>
+                    <Color x:Key="MapStudioAccentSurfaceColor">#263E57</Color>
 
-                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#08131D" />
-                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#06111A" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#071722" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#0B202D" />
-                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#132A39" />
-                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#24485C" />
-                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#315064" />
-                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EAF7FC" />
-                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#9FB5C5" />
-                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#7895AD" />
-                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#2CB7F5" />
-                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#185B78" />
-                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#9EDCF4" />
-                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#55D96B" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F2081722" />
-                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#CC102A39" />
-                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#E60B202D" />
+                    <SolidColorBrush x:Key="MapStudioWindowBackgroundBrush" Color="#15181C" />
+                    <SolidColorBrush x:Key="MapStudioChromeBackgroundBrush" Color="#181B20" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceBrush" Color="#1D2126" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceAltBrush" Color="#23282E" />
+                    <SolidColorBrush x:Key="MapStudioSurfaceRaisedBrush" Color="#2B3036" />
+                    <SolidColorBrush x:Key="MapStudioBorderBrush" Color="#343B44" />
+                    <SolidColorBrush x:Key="MapStudioBorderStrongBrush" Color="#46505B" />
+                    <SolidColorBrush x:Key="MapStudioTextPrimaryBrush" Color="#EDF1F5" />
+                    <SolidColorBrush x:Key="MapStudioTextSecondaryBrush" Color="#BBC3CC" />
+                    <SolidColorBrush x:Key="MapStudioTextMutedBrush" Color="#88939F" />
+                    <SolidColorBrush x:Key="MapStudioAccentBrush" Color="#4FA3FF" />
+                    <SolidColorBrush x:Key="MapStudioAccentSurfaceBrush" Color="#263E57" />
+                    <SolidColorBrush x:Key="MapStudioAccentTextBrush" Color="#8CC8FF" />
+                    <SolidColorBrush x:Key="MapStudioSuccessBrush" Color="#64D98A" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentSurfaceBrush" Color="#F21D2126" />
+                    <SolidColorBrush x:Key="MapStudioTranslucentRaisedBrush" Color="#E023282E" />
+                    <SolidColorBrush x:Key="MapStudioPanelBackgroundBrush" Color="#F21D2126" />
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="HighContrast">
