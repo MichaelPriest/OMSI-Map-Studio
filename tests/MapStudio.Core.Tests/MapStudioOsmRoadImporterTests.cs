@@ -84,6 +84,8 @@ public sealed class MapStudioOsmRoadImporterTests
                 <nd ref="1" />
                 <nd ref="2" />
                 <tag k="highway" v="service" />
+                <tag k="lanes" v="2" />
+                <tag k="lanes:backward" v="2" />
                 <tag k="oneway" v="-1" />
               </way>
             </osm>
@@ -98,6 +100,13 @@ public sealed class MapStudioOsmRoadImporterTests
 
         Assert.True(
             road.OneWay);
+
+        Assert.Equal(
+            2,
+            road.ForwardLaneCount);
+
+        Assert.Null(
+            road.BackwardLaneCount);
 
         Assert.Equal(
             -46.62,
