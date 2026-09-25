@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.37: authoritative OSM topology, directional lanes and junction seam fixes.
+# Test 10.38: terrain-relative junction placement and shared Road Kit asphalt.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.37-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.37-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.38-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.38-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.37-native
-  TAG: v0.2.0-alpha.5-test.10.37-native
+  VERSION: 0.2.0-alpha.5-test.10.38-native
+  TAG: v0.2.0-alpha.5-test.10.38-native
 
 jobs:
   build-native-preview:
@@ -1303,8 +1303,7 @@ jobs:
             'MapStudioRoadTraceClipper',
             'failedJunctionCount',
             'Procedural junction insertion failed',
-            'RealMap road import mode selected=',
-            'item.WorldPoint.Y'
+            'RealMap road import mode selected='
           )) {
             if (-not $main.Contains($required)) {
               throw "Test 10.35 automatic-road host marker is missing: $required"
@@ -1538,6 +1537,45 @@ jobs:
 
           Write-Host "Verified authoritative OSM topology, bridge/tunnel/layer handling, directional lanes, node-relative junction traffic and seam overlap."
 
+      - name: Verify test 10.38 terrain-relative junction placement
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionRenderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+
+          if ($main -notmatch 'item\.X,\s*item\.Y,\s*0,\s*item\.Rotation') {
+            throw "Test 10.38 junction placements must use terrain-relative Z=0."
+          }
+
+          if ($junction.Contains('double SurfaceHeightMeters = 0.08') -or
+              -not $junction.Contains('double SurfaceHeightMeters = 0.102')) {
+            throw "Test 10.38 junction surface height alignment is missing."
+          }
+
+          foreach ($required in @(
+            'MapStudioRoadKitGenerator',
+            'ms_asphalt.bmp',
+            'ms_junction_asphalt.bmp',
+            'EnsureJunctionAsphaltAsync'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.38 shared Road Kit asphalt marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionRenderTests.Contains('GeneratedJunctionUsesRoadKitAsphaltTexture') -or
+              -not $junctionRenderTests.Contains('TerrainRelativeGeneratedJunctionIsNotDoubleRaised')) {
+            throw "Test 10.38 junction height/texture regression coverage is missing."
+          }
+
+          if (-not $junctionRenderTests.Contains('12.101f') -or
+              -not $junctionRenderTests.Contains('12.103f')) {
+            throw "Test 10.38 elevated-terrain junction renderer assertion is missing."
+          }
+
+          Write-Host "Verified terrain-relative junction Z, single terrain-height application, surface alignment and shared Road Kit asphalt."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1692,11 +1730,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.37-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.38-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.37-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.38-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
