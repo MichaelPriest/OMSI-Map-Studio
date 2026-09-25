@@ -841,7 +841,7 @@ public sealed class MapStudioJunctionAssetGenerator
             "[mesh]");
 
         builder.AppendLine(
-            @"model\junction.o3d");
+            "junction.o3d");
 
         foreach (
             var path in paths)
