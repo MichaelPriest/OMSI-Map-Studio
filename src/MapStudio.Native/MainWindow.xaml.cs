@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Numerics;
 using System.Globalization;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -592,6 +593,15 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        var versionLabel =
+            GetApplicationVersionLabel();
+
+        BuildVersionText.Text =
+            $"{versionLabel} · WinUI 3 · Direct3D 11 · .NET 10";
+
+        Title =
+            $"OMSI Map Studio — World Creator · {versionLabel}";
 
         _assetLibraryPanelHome =
             AssetLibraryPanel.Parent as
@@ -25934,6 +25944,12 @@ setTimeout(postBounds, 250);
                         $"biblioteca: {exception.Message}");
                 }
             }
+            else if (
+                roadImportMode ==
+                2)
+            {
+                RestoreAutomaticRealMapEditorState();
+            }
 
             StatusText.Text =
                 postCreateWarnings.Count ==
@@ -26114,6 +26130,29 @@ setTimeout(postBounds, 250);
                 ?.Map
                 .DirectoryPath,
             cartoApiKey);
+    }
+
+    private void RestoreAutomaticRealMapEditorState()
+    {
+        if (
+            AssetLibraryToolWindow.Visibility ==
+            Visibility.Visible)
+        {
+            CloseAssetLibraryToolWindow();
+        }
+
+        OnSceneExplorerModeClick(
+            this,
+            new RoutedEventArgs());
+
+        SetActiveMapTool(
+            ToolSelectionButton);
+
+        SetSelectionModeFromShortcut(
+            2);
+
+        Viewport.SetTopView();
+        Viewport.FitScene();
     }
 
     private async Task PrepareOsmRoadsForRealMapAreaAsync(
@@ -35166,6 +35205,45 @@ setTimeout(postBounds, 250);
             StatusText.Text =
                 $"Não foi possível abrir o manual: {exception.Message}";
         }
+    }
+
+    private static string GetApplicationVersionLabel()
+    {
+        var informationalVersion =
+            typeof(MainWindow)
+                .Assembly
+                .GetCustomAttribute<
+                    AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion;
+
+        var rawVersion =
+            string.IsNullOrWhiteSpace(
+                informationalVersion)
+                ? typeof(MainWindow)
+                    .Assembly
+                    .GetName()
+                    .Version
+                    ?.ToString(
+                        3)
+                : informationalVersion
+                    .Split(
+                        '+',
+                        2,
+                        StringSplitOptions
+                            .TrimEntries)[0];
+
+        if (
+            string.IsNullOrWhiteSpace(
+                rawVersion))
+        {
+            return "v—";
+        }
+
+        return rawVersion.StartsWith(
+                'v')
+            ? rawVersion
+            : "v" +
+              rawVersion;
     }
 
     private async void OnCommercialStatusClick(
