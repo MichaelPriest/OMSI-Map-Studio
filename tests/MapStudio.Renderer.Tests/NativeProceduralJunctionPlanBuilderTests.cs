@@ -301,6 +301,134 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
     }
 
     [Fact]
+    public void OneWayArmsKeepNodeRelativeInboundAndOutboundDirection()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .OneWayTwoLane;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "outbound",
+                            [
+                                new(50, 50),
+                                new(80, 50)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            true,
+                            profile.TotalWidthMeters,
+                            ForwardLaneCount:
+                                2,
+                            BackwardLaneCount:
+                                0),
+                        new MapStudioRoadTrace(
+                            "inbound",
+                            [
+                                new(20, 50),
+                                new(50, 50)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            true,
+                            profile.TotalWidthMeters,
+                            ForwardLaneCount:
+                                2,
+                            BackwardLaneCount:
+                                0),
+                        new MapStudioRoadTrace(
+                            "north",
+                            [
+                                new(50, 50),
+                                new(50, 80)
+                            ],
+                            MapStudioStandardRoadCatalog
+                                .RoadTwoLane
+                                .RelativePath,
+                            2,
+                            false,
+                            7)
+                    ]);
+
+        var item =
+            Assert.Single(
+                new NativeProceduralJunctionPlanBuilder()
+                    .Build(
+                        scene,
+                        graph)
+                    .Items);
+
+        var oneWayArms =
+            item.Spec.Arms
+                .Where(
+                    arm =>
+                        arm.OneWay)
+                .ToArray();
+
+        Assert.Equal(
+            2,
+            oneWayArms.Length);
+
+        Assert.Contains(
+            oneWayArms,
+            arm =>
+                arm.InboundLaneCount ==
+                    0 &&
+                arm.OutboundLaneCount ==
+                    2);
+
+        Assert.Contains(
+            oneWayArms,
+            arm =>
+                arm.InboundLaneCount ==
+                    2 &&
+                arm.OutboundLaneCount ==
+                    0);
+    }
+
+    [Fact]
     public void JunctionOutsideLoadedTerrainIsSkipped()
     {
         var graph =
