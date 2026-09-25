@@ -30529,7 +30529,7 @@ setTimeout(postBounds, 250);
                         RoadProfileOption
                             .Label),
                 SelectedIndex =
-                    3,
+                    5,
                 HorizontalAlignment =
                     HorizontalAlignment
                         .Stretch,
