@@ -148,8 +148,10 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                 "Cross 4x",
                 metadata.FriendlyName);
 
-            Assert.Single(
-                metadata.MeshPaths);
+            Assert.Equal(
+                "junction.o3d",
+                Assert.Single(
+                    metadata.MeshPaths));
 
             Assert.True(
                 metadata.Paths.Count ==
