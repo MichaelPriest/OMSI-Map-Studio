@@ -26273,6 +26273,41 @@ setTimeout(postBounds, 250);
         _proceduralRoadTraces
             .Clear();
 
+        var mapTiles =
+            _session.CurrentMap?
+                .Map.Tiles ??
+            Array.Empty<OmsiTileReference>();
+
+        if (mapTiles.Count == 0)
+        {
+            throw new InvalidDataException(
+                "Mapa real não possui tiles para limitar as vias OSM.");
+        }
+
+        var mapBounds =
+            new OmsiTileWorldBounds(
+                mapTiles.Min(
+                    tile =>
+                        OmsiTileGrid.GetOriginX(
+                            tile.X)),
+                mapTiles.Min(
+                    tile =>
+                        OmsiTileGrid.GetOriginZ(
+                            tile.Y)),
+                mapTiles.Max(
+                    tile =>
+                        OmsiTileGrid.GetOriginX(
+                            tile.X) +
+                        OmsiTileGrid.TileSize),
+                mapTiles.Max(
+                    tile =>
+                        OmsiTileGrid.GetOriginZ(
+                            tile.Y) +
+                        OmsiTileGrid.TileSize));
+
+        var clippedRoadFragments =
+            0;
+
         foreach (
             var geoTrace in
                 imported.Traces)
@@ -26321,14 +26356,35 @@ setTimeout(postBounds, 250);
                 SelectProceduralRoadProfile(
                     geoTrace);
 
-            _proceduralRoadTraces.Add(
+            var sourceTrace =
                 new MapStudioRoadTrace(
                     $"area-osm-{++_proceduralRoadTraceSequence}-{geoTrace.Id}",
                     points,
                     profile.ProfileId,
                     profile.LaneCount,
                     profile.OneWay,
-                    profile.WidthMeters));
+                    profile.WidthMeters);
+
+            var clipped =
+                MapStudioRoadTraceClipper
+                    .ClipToBounds(
+                        sourceTrace,
+                        mapBounds);
+
+            if (clipped.Count == 0)
+            {
+                continue;
+            }
+
+            clippedRoadFragments +=
+                Math.Max(
+                    0,
+                    clipped.Count -
+                    1);
+
+            _proceduralRoadTraces
+                .AddRange(
+                    clipped);
         }
 
         if (
@@ -26377,8 +26433,14 @@ setTimeout(postBounds, 250);
         }
 
         StatusText.Text =
-            $"Mapa criado · {_proceduralRoadTraces.Count} via(s) OSM detectada(s), " +
+            $"Mapa criado · {_proceduralRoadTraces.Count} traçado(s) OSM dentro dos tiles, " +
             $"{graph.Segments.Count} segmento(s) e {graph.Junctions.Count} cruzamento(s) · " +
+            (
+                clippedRoadFragments >
+                    0
+                    ? $"{clippedRoadFragments} fragmento(s) adicional(is) após recorte · "
+                    : string.Empty
+            ) +
             "gerando automaticamente...";
 
         await AnalyzeProceduralRoadGraphAsync(
@@ -30838,12 +30900,10 @@ setTimeout(postBounds, 250);
                 .BuildProceduralJunctionPlan(
                     graph);
 
-        if (
-            junctionPlan.SkippedJunctions >
-                0)
+        if (placement.Requests.Count == 0)
         {
             StatusText.Text =
-                $"Geração cancelada: {junctionPlan.SkippedJunctions} cruzamento(s) ficaram fora do terreno carregado.";
+                "Geração cancelada: nenhum segmento válido ficou dentro dos tiles carregados.";
 
             if (!requireConfirmation)
             {
@@ -30855,19 +30915,27 @@ setTimeout(postBounds, 250);
         }
 
         if (
-            placement.SkippedSegments >
-                0 ||
-            placement.Requests.Count !=
-                graph.Segments.Count)
+            requireConfirmation &&
+            junctionPlan.SkippedJunctions >
+                0)
+        {
+            StatusText.Text =
+                $"Geração cancelada: {junctionPlan.SkippedJunctions} cruzamento(s) ficaram fora do terreno carregado.";
+
+            return;
+        }
+
+        if (
+            requireConfirmation &&
+            (
+                placement.SkippedSegments >
+                    0 ||
+                placement.Requests.Count !=
+                    graph.Segments.Count
+            ))
         {
             StatusText.Text =
                 $"Geração cancelada: {placement.SkippedSegments} segmento(s) ficaram fora do terreno carregado. Use Mapa completo e revise o traçado.";
-
-            if (!requireConfirmation)
-            {
-                throw new InvalidOperationException(
-                    StatusText.Text);
-            }
 
             return;
         }
@@ -31085,6 +31153,14 @@ setTimeout(postBounds, 250);
 
             StatusText.Text =
                 $"{insertion.SplineIds.Count} spline(s) procedurais + {junctionPlan.Items.Count} junction(s) próprios gravados. " +
+                (
+                    placement.SkippedSegments >
+                        0 ||
+                    junctionPlan.SkippedJunctions >
+                        0
+                        ? $"Ignorados na borda: {placement.SkippedSegments} segmento(s) / {junctionPlan.SkippedJunctions} junction(s). "
+                        : string.Empty
+                ) +
                 $"Backup das vias: {insertion.BackupDirectory}" +
                 (
                     junctionBackupDirectories.Count >
