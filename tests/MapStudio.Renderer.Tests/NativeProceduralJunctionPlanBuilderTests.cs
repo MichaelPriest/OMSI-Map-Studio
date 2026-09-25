@@ -1,5 +1,6 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
 using Xunit;
@@ -201,6 +202,102 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
             12,
             item.WorldPoint.Y,
             3);
+    }
+
+    [Fact]
+    public void JunctionArmUsesPhysicalRoadKitWidthButKeepsLaneWidth()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .LocalWithSidewalk;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "horizontal",
+                            [
+                                new(20, 50),
+                                new(80, 50)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters),
+                        new MapStudioRoadTrace(
+                            "vertical",
+                            [
+                                new(50, 20),
+                                new(50, 80)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters)
+                    ]);
+
+        var item =
+            Assert.Single(
+                new NativeProceduralJunctionPlanBuilder()
+                    .Build(
+                        scene,
+                        graph)
+                    .Items);
+
+        Assert.All(
+            item.Spec.Arms,
+            arm =>
+            {
+                Assert.Equal(
+                    8.5,
+                    arm.WidthMeters,
+                    3);
+
+                Assert.Equal(
+                    2.75,
+                    arm.LaneWidthMeters,
+                    3);
+            });
     }
 
     [Fact]
