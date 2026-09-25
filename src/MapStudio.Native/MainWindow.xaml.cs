@@ -26416,7 +26416,7 @@ setTimeout(postBounds, 250);
             BuildProceduralRoadGraph();
 
         NativeStartupDiagnostics.Write(
-            $"RealMap road graph traces={_proceduralRoadTraces.Count} nodes={graph.Nodes.Count} segments={graph.Segments.Count} junctions={graph.Junctions.Count}");
+            $"RealMap road graph traces={_proceduralRoadTraces.Count} nodes={graph.Nodes.Count} segments={graph.Segments.Count} junctions={graph.Junctions.Count} authoritative={_proceduralRoadTraces.Count(trace => trace.SourceTopologyAuthoritative)} directional={_proceduralRoadTraces.Count(trace => trace.ForwardLaneCount is not null || trace.BackwardLaneCount is not null)} gradeSeparated={_proceduralRoadTraces.Count(trace => trace.Bridge || trace.Tunnel || (trace.Layer ?? 0) != 0)}");
 
         Viewport
             .PreviewProceduralRoadGraph(
