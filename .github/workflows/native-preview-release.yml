@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.34: physical road scale and shared standard Road Kit profiles.
+# Test 10.35: resilient automatic OSM roads and junction persistence.
 
 on:
   push:
@@ -35,6 +35,9 @@ on:
       - "src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs"
       - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs"
       - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs"
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs"
@@ -49,6 +52,9 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioFootprintBuildingAssetGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
@@ -62,6 +68,7 @@ on:
       - "src/MapStudio.Renderer/Scene/NativeSplineAssetLoader.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
       - "tests/MapStudio.Renderer.Tests/NativeDerivedFileCacheTests.cs"
+      - "tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
       - "src/MapStudio.Renderer/Scene/NativeReferenceOverlayGeometryBuilder.cs"
       - "tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs"
@@ -69,8 +76,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.34-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.34-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.35-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.35-native.md"
   workflow_dispatch:
 
 permissions:
@@ -81,8 +88,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.34-native
-  TAG: v0.2.0-alpha.5-test.10.34-native
+  VERSION: 0.2.0-alpha.5-test.10.35-native
+  TAG: v0.2.0-alpha.5-test.10.35-native
 
 jobs:
   build-native-preview:
@@ -1266,6 +1273,71 @@ jobs:
 
           Write-Host "Verified 300 m tile-compatible physical road profiles and OSM-to-Road-Kit selection."
 
+      - name: Verify test 10.35 resilient automatic road generation
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $clipper = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs -Raw
+          $smoother = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs -Raw
+          $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $clipperTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOverpassRoadClient',
+            'MapStudioRoadTraceClipper',
+            'failedJunctionCount',
+            'Procedural junction insertion failed',
+            'RealMap road import mode selected='
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.35 automatic-road host marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'overpass-api.de/api/interpreter',
+            'overpass.private.coffee/api/interpreter',
+            'TargetChunkSpanMeters',
+            'SuccessfulChunkCount',
+            'FailedChunkCount'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.35 Overpass resilience marker is missing: $required"
+            }
+          }
+
+          if (-not $clipper.Contains('ClipToBounds') -or
+              -not $clipperTests.Contains('CrossingWayIsClippedInsideTileBounds')) {
+            throw "Test 10.35 OSM map-bound clipping regression coverage is missing."
+          }
+
+          if (-not $smoother.Contains('maximumSampleSpacingMeters') -or
+              -not $smoother.Contains('1,')) {
+            throw "Test 10.35 short-segment smoothing fix is missing."
+          }
+
+          if (-not $session.Contains('requests.Count > 50_000')) {
+            throw "Test 10.35 dense automatic spline batch limit is missing."
+          }
+
+          if ($main -match 'RestoreMapStudioBackupAsync\s*\(\s*insertion\.BackupDirectory') {
+            throw "Junction failure must never roll back already-persisted road splines."
+          }
+
+          if ($main -notmatch 'junctionGroups\s*\.Chunk\s*\(\s*2\s*\)') {
+            throw "Junction batches must stay within the 512-placement multi-batch limit."
+          }
+
+          if (-not $overpassTests.Contains('DownloaderFallsBackToSecondEndpoint') -or
+              -not $renderTests.Contains('GeneratedRoadKitSplineLoadsAndBuildsRenderableTriangles')) {
+            throw "Test 10.35 network/render regression coverage is missing."
+          }
+
+          Write-Host "Verified resilient Overpass download, map clipping, dense spline generation, Road Kit rendering and non-destructive junction failures."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1420,11 +1492,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.34-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.35-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.34-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.35-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
