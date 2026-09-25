@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.33: clean automatic real-map completion plus visible app version.
+# Test 10.34: physical road scale and shared standard Road Kit profiles.
 
 on:
   push:
@@ -32,6 +32,9 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
+      - "src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
       - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs"
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs"
@@ -44,6 +47,8 @@ on:
       - "tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioBuildingAssetGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioFootprintBuildingAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
       - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
@@ -64,8 +69,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.33-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.33-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.34-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.34-native.md"
   workflow_dispatch:
 
 permissions:
@@ -76,8 +81,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.33-native
-  TAG: v0.2.0-alpha.5-test.10.33-native
+  VERSION: 0.2.0-alpha.5-test.10.34-native
+  TAG: v0.2.0-alpha.5-test.10.34-native
 
 jobs:
   build-native-preview:
@@ -1199,6 +1204,55 @@ jobs:
 
           Write-Host "Verified clean automatic real-map completion and runtime build-version display."
 
+      - name: Verify test 10.34 standard Road Kit scale
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs -Raw
+          $selector = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs -Raw
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs -Raw
+
+          foreach ($required in @(
+            'ms_road_local_5_5m.sli',
+            'ms_road_local_5_5m_sidewalk.sli',
+            'CarriagewayWidthMeters',
+            'TotalWidthMeters'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.34 road catalog marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'service',
+            'residential',
+            'living_street',
+            'primary',
+            'motorway'
+          )) {
+            if (-not $selector.Contains($required)) {
+              throw "Test 10.34 OSM profile-selection marker is missing: $required"
+            }
+          }
+
+          if (-not $roadKit.Contains('PackVersion =') -or
+              -not $roadKit.Contains('"1.1.0"') -or
+              -not $roadKit.Contains('MapStudioStandardRoadCatalog')) {
+            throw "Test 10.34 Road Kit 1.1 shared catalog wiring is missing."
+          }
+
+          if (-not $main.Contains('profile.WidthMeters') -or
+              -not $main.Contains('MapStudioStandardRoadProfileSelector')) {
+            throw "Test 10.34 standardized road metadata wiring is missing."
+          }
+
+          if (-not $tests.Contains('CatalogKeepsPhysicalWidthsInOmsiMeters')) {
+            throw "Test 10.34 physical road scale regression coverage is missing."
+          }
+
+          Write-Host "Verified 300 m tile-compatible physical road profiles and OSM-to-Road-Kit selection."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1353,11 +1407,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.33-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.34-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.33-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.34-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
