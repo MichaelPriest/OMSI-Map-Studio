@@ -216,7 +216,7 @@ public sealed partial class MainWindow : Window
             Profile.OneWay;
 
         public double WidthMeters =>
-            Profile.CarriagewayWidthMeters;
+            Profile.TotalWidthMeters;
 
         public double TotalWidthMeters =>
             Profile.TotalWidthMeters;
