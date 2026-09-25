@@ -198,6 +198,141 @@ public sealed class MapStudioRoadGraphBuilderTests
     }
 
     [Fact]
+    public void AuthoritativeOsmCrossingWithoutSharedNodeDoesNotCreateJunction()
+    {
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "bridge",
+                            [
+                                new(-10, 0),
+                                new(10, 0)
+                            ],
+                            "road",
+                            Layer:
+                                1,
+                            Bridge:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "ground",
+                            [
+                                new(0, -10),
+                                new(0, 10)
+                            ],
+                            "road",
+                            Layer:
+                                0,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        Assert.Empty(
+            graph.Junctions);
+
+        Assert.Equal(
+            4,
+            graph.Nodes.Count);
+
+        Assert.Equal(
+            2,
+            graph.Segments.Count);
+    }
+
+    [Fact]
+    public void AuthoritativeOsmSharedNodeStillCreatesRealJunction()
+    {
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "main-a",
+                            [
+                                new(-10, 0),
+                                new(0, 0)
+                            ],
+                            "road",
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "main-b",
+                            [
+                                new(0, 0),
+                                new(10, 0)
+                            ],
+                            "road",
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "branch",
+                            [
+                                new(0, 0),
+                                new(0, 10)
+                            ],
+                            "road",
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var junction =
+            Assert.Single(
+                graph.Junctions);
+
+        Assert.Equal(
+            3,
+            junction.Degree);
+
+        Assert.Equal(
+            0,
+            junction.Position.X,
+            6);
+
+        Assert.Equal(
+            0,
+            junction.Position.Z,
+            6);
+    }
+
+    [Fact]
+    public void DifferentLayersDoNotCreateSyntheticInteriorJunction()
+    {
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "upper",
+                            [
+                                new(-10, 0),
+                                new(10, 0)
+                            ],
+                            "road",
+                            Layer:
+                                1),
+                        new MapStudioRoadTrace(
+                            "lower",
+                            [
+                                new(0, -10),
+                                new(0, 10)
+                            ],
+                            "road",
+                            Layer:
+                                0)
+                    ]);
+
+        Assert.Empty(
+            graph.Junctions);
+
+        Assert.Equal(
+            2,
+            graph.Segments.Count);
+    }
+
+    [Fact]
     public void DuplicateTraceIdsAreRejected()
     {
         Assert.Throws<
