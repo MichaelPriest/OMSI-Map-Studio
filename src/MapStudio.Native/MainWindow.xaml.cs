@@ -26193,56 +26193,34 @@ setTimeout(postBounds, 250);
 
         if (georeference is null)
         {
+            const string message =
+                "Mapa real sem georreferência; a geração automática de vias não pode continuar.";
+
+            StatusText.Text =
+                message;
+
+            if (generateAutomatically)
+            {
+                throw new InvalidDataException(
+                    message);
+            }
+
             return;
         }
 
         StatusText.Text =
-            "Buscando vias OpenStreetMap da área selecionada...";
-
-        var invariant =
-            CultureInfo.InvariantCulture;
-
-        var query =
-            string.Create(
-                invariant,
-                $"[out:xml][timeout:45];(way[\"highway\"]({south:G17},{west:G17},{north:G17},{east:G17}););(._;>;);out body;");
-
-        using var client =
-            new HttpClient
-            {
-                Timeout =
-                    TimeSpan.FromSeconds(
-                        60)
-            };
-
-        client.DefaultRequestHeaders
-            .UserAgent
-            .ParseAdd(
-                "OMSI-Map-Studio/0.2 (+https://github.com/MichaelPriest/OMSI-Map-Studio)");
-
-        using var form =
-            new FormUrlEncodedContent(
-                new Dictionary<string, string>
-                {
-                    ["data"] =
-                        query
-                });
-
-        using var response =
-            await client.PostAsync(
-                "https://overpass-api.de/api/interpreter",
-                form);
-
-        response.EnsureSuccessStatusCode();
-
-        var xml =
-            await response.Content
-                .ReadAsStringAsync();
+            "Buscando vias OpenStreetMap da área selecionada · consultas divididas com fallback...";
 
         var imported =
-            new MapStudioOsmRoadImporter()
-                .Parse(
-                    xml);
+            await new MapStudioOverpassRoadClient()
+                .DownloadAsync(
+                    south,
+                    west,
+                    north,
+                    east);
+
+        NativeStartupDiagnostics.Write(
+            $"RealMap OSM download traces={imported.Traces.Count} points={imported.Traces.Sum(trace => trace.Points.Count)} chunksOk={imported.SuccessfulChunkCount} chunksFailed={imported.FailedChunkCount} attempts={imported.RequestAttemptCount} endpoints={string.Join(",", imported.UsedEndpoints)}");
 
         var pointCount =
             imported.Traces.Sum(
