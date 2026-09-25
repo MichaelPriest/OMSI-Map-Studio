@@ -84,10 +84,11 @@ public sealed class MapStudioStandardRoadProfileSelectorTests
             MapStudioStandardRoadCatalog
                 .Profiles,
             profile =>
-                Assert.StartsWith(
-                    @"Splines\MapStudio_RoadKit\",
-                    profile.RelativePath,
-                    StringComparison
-                        .OrdinalIgnoreCase));
+                Assert.True(
+                    profile.RelativePath
+                        .StartsWith(
+                            @"Splines\MapStudio_RoadKit\",
+                            StringComparison
+                                .OrdinalIgnoreCase)));
     }
 }
