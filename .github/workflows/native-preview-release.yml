@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.35: resilient automatic OSM roads and junction persistence.
+# Test 10.36: complete OSM import, native road curves and fitted junctions.
 
 on:
   push:
@@ -42,6 +42,7 @@ on:
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs"
       - "src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs"
       - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionGeometrySizing.cs"
       - "src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs"
       - "src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs"
       - "src/MapStudio.Core/Workspace/MapStudioWorkspaceBootstrapper.cs"
@@ -63,6 +64,8 @@ on:
       - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
       - "src/MapStudio.Renderer/Scene/NativeDerivedFileCache.cs"
       - "src/MapStudio.Renderer/Scene/NativeSceneryAssetLoader.cs"
@@ -70,6 +73,7 @@ on:
       - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
       - "tests/MapStudio.Renderer.Tests/NativeDerivedFileCacheTests.cs"
       - "tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs"
+      - "tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
       - "src/MapStudio.Renderer/Scene/NativeReferenceOverlayGeometryBuilder.cs"
       - "tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs"
@@ -77,8 +81,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.35-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.35-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.36-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.36-native.md"
   workflow_dispatch:
 
 permissions:
@@ -89,8 +93,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.35-native
-  TAG: v0.2.0-alpha.5-test.10.35-native
+  VERSION: 0.2.0-alpha.5-test.10.36-native
+  TAG: v0.2.0-alpha.5-test.10.36-native
 
 jobs:
   build-native-preview:
@@ -1258,9 +1262,9 @@ jobs:
           }
 
           if (-not $roadKit.Contains('PackVersion =') -or
-              -not $roadKit.Contains('"1.1.0"') -or
+              -not $roadKit.Contains('"1.2.0"') -or
               -not $roadKit.Contains('MapStudioStandardRoadCatalog')) {
-            throw "Test 10.34 Road Kit 1.1 shared catalog wiring is missing."
+            throw "Test 10.34+ Road Kit shared catalog wiring is missing."
           }
 
           if (-not $main.Contains('profile.WidthMeters') -or
@@ -1341,6 +1345,94 @@ jobs:
           }
 
           Write-Host "Verified resilient Overpass download, map clipping, dense spline generation, Road Kit rendering and non-destructive junction failures."
+
+      - name: Verify test 10.36 complete OSM curves and fitted junctions
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionSizing = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionGeometrySizing.cs -Raw
+          $junctionPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $placementTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $curveTests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+          $junctionRenderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+          $roadKitTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumRecoveryDepth',
+            'overpass.kumi.systems/api/interpreter',
+            'A geração foi cancelada para não criar uma malha parcial'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.36 complete OSM recovery marker is missing: $required"
+            }
+          }
+
+          if (-not $overpassTests.Contains('DownloaderRejectsIncompleteAreaAfterRecoveryFails') -or
+              -not $overpassTests.Contains('DownloaderRecoversFailedParentBySubdividingArea')) {
+            throw "Test 10.36 complete OSM recovery regression coverage is missing."
+          }
+
+          foreach ($required in @(
+            'TryBuildCurveRequest',
+            'TryCreateArc',
+            'CurvedRequestCount',
+            'ResolveJunctionTrim',
+            'ResolveMinimumCurveRadius'
+          )) {
+            if (-not $placement.Contains($required)) {
+              throw "Test 10.36 native curve/junction-fit placement marker is missing: $required"
+            }
+          }
+
+          if (-not $placementTests.Contains('BuilderConvertsSmoothThreePointBendIntoOmsiArc') -or
+              -not $placementTests.Contains('BuilderTrimsRoadEndsAwayFromJunctionCenter') -or
+              -not $curveTests.Contains('ArcShapeReachesRequestedEndpointInRendererMath')) {
+            throw "Test 10.36 automatic curve regression coverage is missing."
+          }
+
+          foreach ($required in @(
+            'BuildJunctionOutline',
+            'ConvexHull',
+            'MapStudioJunctionGeometrySizing'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.36 fitted junction geometry marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionSizing.Contains('ResolveSurfaceExtentMeters') -or
+              -not $junctionSizing.Contains('ResolvePathRadiusMeters')) {
+            throw "Test 10.36 shared junction sizing is missing."
+          }
+
+          if (-not $junctionPlan.Contains('profile?.TotalWidthMeters') -or
+              -not $junctionPlan.Contains('profile?.LaneWidthMeters') -or
+              -not $junctionTests.Contains('JunctionArmUsesPhysicalRoadKitWidthButKeepsLaneWidth')) {
+            throw "Test 10.36 physical-width/lane-width separation is missing."
+          }
+
+          if (-not $main.Contains('Profile.TotalWidthMeters') -or
+              -not $main.Contains('curvedRequests={placement.CurvedRequestCount}')) {
+            throw "Test 10.36 normalized physical width or curve diagnostics are missing."
+          }
+
+          if (-not $roadKit.Contains('"1.2.0"') -or
+              -not $roadKit.Contains('256,') -or
+              -not $roadKitTests.Contains('BitConverter.ToInt32')) {
+            throw "Test 10.36 Road Kit 1.2 detailed texture generation is missing."
+          }
+
+          if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh')) {
+            throw "Test 10.36 generated junction texture/render coverage is missing."
+          }
+
+          Write-Host "Verified complete OSM import, native curved splines, fitted junction geometry, physical width normalization and Road Kit 1.2 textures."
 
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
@@ -1496,11 +1588,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.35-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.36-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.35-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.36-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
