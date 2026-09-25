@@ -23967,7 +23967,7 @@ public sealed partial class MainWindow : Window
             }
 
             NativeStartupDiagnostics.Write(
-                $"ApplyMapSnapshot viewport-ready id={applyId} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+                $"ApplyMapSnapshot viewport-ready elapsedMs={reloadStopwatch.ElapsedMilliseconds} id={applyId}");
 
             if (refreshReferenceOverlay)
             {
@@ -23992,7 +23992,7 @@ public sealed partial class MainWindow : Window
                 }
 
                 NativeStartupDiagnostics.Write(
-                    $"ApplyMapSnapshot reference-ready id={applyId} elapsedMs={referenceStopwatch.ElapsedMilliseconds}");
+                    $"ApplyMapSnapshot reference-ready elapsedMs={referenceStopwatch.ElapsedMilliseconds} id={applyId}");
             }
             else
             {
@@ -24032,7 +24032,7 @@ public sealed partial class MainWindow : Window
             }
 
             NativeStartupDiagnostics.Write(
-                $"ApplyMapSnapshot explorer-ready id={applyId} elapsedMs={explorerStopwatch.ElapsedMilliseconds} deferred={_explorerRefreshPending}");
+                $"ApplyMapSnapshot explorer-ready elapsedMs={explorerStopwatch.ElapsedMilliseconds} id={applyId} deferred={_explorerRefreshPending}");
 
             UpdateMapSummary(
                 snapshot);
@@ -24057,7 +24057,7 @@ public sealed partial class MainWindow : Window
             }
 
             NativeStartupDiagnostics.Write(
-                $"ApplyMapSnapshot complete id={applyId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+                $"ApplyMapSnapshot complete elapsedMs={reloadStopwatch.ElapsedMilliseconds} id={applyId} caller={caller}");
         }
         finally
         {
