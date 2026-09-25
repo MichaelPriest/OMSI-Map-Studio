@@ -271,15 +271,64 @@ public sealed class MapStudioOsmRoadImporter
                 points.Reverse();
             }
 
+            var forwardLanes =
+                TryPositiveInt(
+                    tags.GetValueOrDefault(
+                        "lanes:forward"));
+
+            var backwardLanes =
+                TryPositiveInt(
+                    tags.GetValueOrDefault(
+                        "lanes:backward"));
+
+            if (reverse)
+            {
+                (
+                    forwardLanes,
+                    backwardLanes
+                ) =
+                    (
+                        backwardLanes,
+                        forwardLanes
+                    );
+            }
+
             var lanes =
                 TryPositiveInt(
                     tags.GetValueOrDefault(
-                        "lanes"));
+                        "lanes")) ??
+                SumDirectionalLanes(
+                    forwardLanes,
+                    backwardLanes);
+
+            if (
+                oneWay &&
+                lanes is > 0 &&
+                forwardLanes is null)
+            {
+                forwardLanes =
+                    lanes;
+            }
 
             var width =
                 TryPositiveDouble(
                     tags.GetValueOrDefault(
                         "width"));
+
+            var layer =
+                TrySignedInt(
+                    tags.GetValueOrDefault(
+                        "layer"));
+
+            var bridge =
+                IsAffirmativeFeature(
+                    tags.GetValueOrDefault(
+                        "bridge"));
+
+            var tunnel =
+                IsAffirmativeFeature(
+                    tags.GetValueOrDefault(
+                        "tunnel"));
 
             var id =
                 way.Attribute(
@@ -302,7 +351,12 @@ public sealed class MapStudioOsmRoadImporter
                         : oneWay,
                     width,
                     tags.GetValueOrDefault(
-                        "name")));
+                        "name"),
+                    forwardLanes,
+                    backwardLanes,
+                    layer,
+                    bridge,
+                    tunnel));
         }
 
         return new MapStudioOsmRoadImportResult(
@@ -323,6 +377,78 @@ public sealed class MapStudioOsmRoadImporter
             StringComparison.OrdinalIgnoreCase) ||
         value ==
             "1";
+
+    private static int? SumDirectionalLanes(
+        int? forward,
+        int? backward)
+    {
+        if (
+            forward is null &&
+            backward is null)
+        {
+            return null;
+        }
+
+        return Math.Clamp(
+            (
+                forward ??
+                0
+            ) +
+            (
+                backward ??
+                0
+            ),
+            1,
+            32);
+    }
+
+    private static int? TrySignedInt(
+        string? value)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                value))
+        {
+            return null;
+        }
+
+        return
+            int.TryParse(
+                value.Trim(),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out var parsed) &&
+            parsed is
+                >= -20 and <= 20
+                ? parsed
+                : null;
+    }
+
+    private static bool IsAffirmativeFeature(
+        string? value)
+    {
+        if (
+            string.IsNullOrWhiteSpace(
+                value))
+        {
+            return false;
+        }
+
+        var normalized =
+            value.Trim();
+
+        return
+            !string.Equals(
+                normalized,
+                "no",
+                StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(
+                normalized,
+                "false",
+                StringComparison.OrdinalIgnoreCase) &&
+            normalized !=
+                "0";
+    }
 
     private static int? TryPositiveInt(
         string? value)
