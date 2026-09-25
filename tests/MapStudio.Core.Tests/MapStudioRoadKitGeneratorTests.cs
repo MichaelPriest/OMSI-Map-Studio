@@ -95,6 +95,18 @@ public sealed class MapStudioRoadKitGeneratorTests
                 (byte)'M',
                 header[1]);
 
+            Assert.Equal(
+                256,
+                BitConverter.ToInt32(
+                    header,
+                    18));
+
+            Assert.Equal(
+                256,
+                BitConverter.ToInt32(
+                    header,
+                    22));
+
             var editedSpline =
                 Path.Combine(
                     first.PackDirectory,
