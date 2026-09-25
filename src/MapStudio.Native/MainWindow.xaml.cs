@@ -11480,6 +11480,130 @@ public sealed partial class MainWindow : Window
             "Tráfego: paths reais e preview de semáforos ativos.";
     }
 
+    private void OnPreviousTrafficPathClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ShiftFocusedTrafficPath(
+            -1);
+
+    private void OnNextTrafficPathClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ShiftFocusedTrafficPath(
+            1);
+
+    private void ShiftFocusedTrafficPath(
+        int delta)
+    {
+        var choices =
+            Viewport
+                .GetTrafficPathChoicesForSelection();
+
+        if (choices.Count == 0)
+        {
+            StatusText.Text =
+                "Paths: selecione um objeto ou spline que possua [path].";
+            return;
+        }
+
+        var current =
+            Viewport
+                .TrafficPathFocusedIndex ??
+            (
+                delta >= 0
+                    ? -1
+                    : 0
+            );
+
+        var next =
+            (
+                current +
+                delta
+            ) %
+            choices.Count;
+
+        if (next < 0)
+        {
+            next +=
+                choices.Count;
+        }
+
+        TrafficPathSelectedOnlyCheckBox.IsChecked =
+            true;
+
+        TransportPathsSelectedOnlyCheckBox.IsChecked =
+            true;
+
+        Viewport
+            .SetTrafficPathSelectedOnly(
+                true);
+
+        Viewport
+            .SetTrafficPathFocusedIndex(
+                next);
+
+        Viewport
+            .RefreshTrafficPathDisplay();
+
+        UpdateTrafficPathStatusText();
+
+        StatusText.Text =
+            $"Path {next} focado · {next + 1}/{choices.Count}. Clique nos nós do path no viewport ou use Editar path.";
+    }
+
+    private void OnToggleFocusedTrafficPathIsolationClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var next =
+            !Viewport
+                .TrafficPathSelectedOnly;
+
+        TrafficPathSelectedOnlyCheckBox.IsChecked =
+            next;
+
+        TransportPathsSelectedOnlyCheckBox.IsChecked =
+            next;
+
+        Viewport
+            .SetTrafficPathSelectedOnly(
+                next);
+
+        Viewport
+            .RefreshTrafficPathDisplay();
+
+        UpdateTrafficPathStatusText();
+
+        StatusText.Text =
+            next
+                ? "Paths: isolamento visual ativo para a seleção/foco atual."
+                : "Paths: isolamento visual desativado.";
+    }
+
+    private void OnEditFocusedTrafficProgramClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            TrafficProgramListView.SelectedItem is not
+                NativeTrafficLightProgramInfo)
+        {
+            if (_trafficPrograms.Count == 0)
+            {
+                StatusText.Text =
+                    "Semáforo: nenhum programa foi encontrado no mapa atual.";
+                return;
+            }
+
+            TrafficProgramListView.SelectedItem =
+                _trafficPrograms[0];
+        }
+
+        OnEditTrafficProgramClick(
+            sender,
+            e);
+    }
+
     private async void OnEditSceneryPathClick(
         object sender,
         RoutedEventArgs e)
