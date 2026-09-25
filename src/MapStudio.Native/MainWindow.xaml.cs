@@ -30895,7 +30895,7 @@ setTimeout(postBounds, 250);
                     graph);
 
         NativeStartupDiagnostics.Write(
-            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions}");
+            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} curvedRequests={placement.CurvedRequestCount} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions}");
 
         if (placement.Requests.Count == 0)
         {
