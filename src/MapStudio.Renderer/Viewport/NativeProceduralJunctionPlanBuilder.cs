@@ -153,7 +153,7 @@ public sealed class NativeProceduralJunctionPlanBuilder
                     canonical.Arms
                         .Select(
                             arm =>
-                                $"{arm.AngleDegrees:0.0}:{arm.WidthMeters:0.0}:{arm.LaneCount}:{arm.OneWay}"));
+                                $"{arm.AngleDegrees:0.0}:{arm.WidthMeters:0.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{arm.OneWay}"));
 
             var hash =
                 Convert.ToHexString(
@@ -322,7 +322,7 @@ public sealed class NativeProceduralJunctionPlanBuilder
                                 string.Create(
                                     CultureInfo
                                         .InvariantCulture,
-                                    $"{arm.AngleDegrees:000.0}:{arm.WidthMeters:00.0}:{arm.LaneCount}:{(arm.OneWay ? 1 : 0)}")));
+                                    $"{arm.AngleDegrees:000.0}:{arm.WidthMeters:00.0}:{arm.LaneCount}:{arm.LaneWidthMeters:0.00}:{(arm.OneWay ? 1 : 0)}")));
 
             if (
                 bestSignature is null ||
