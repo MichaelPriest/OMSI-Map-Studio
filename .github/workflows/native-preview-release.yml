@@ -1361,6 +1361,8 @@ jobs:
           $junctionPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
           $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
           $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $osmImporter = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $osmImporterTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
           $placementTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
           $curveTests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs -Raw
           $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
