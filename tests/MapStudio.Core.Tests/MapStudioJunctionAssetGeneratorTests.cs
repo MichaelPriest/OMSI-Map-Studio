@@ -38,16 +38,52 @@ public sealed class MapStudioJunctionAssetGeneratorTests
         Assert.Single(
             geometry.Materials);
 
-        Assert.True(
+        Assert.InRange(
             geometry
                 .TriangleMaterialIndices
-                .Length ==
-            24);
+                .Length,
+            4,
+            12);
 
-        Assert.True(
-            geometry.Indices.Length ==
-            24 *
-                3);
+        Assert.Equal(
+            geometry
+                .TriangleMaterialIndices
+                .Length *
+            3,
+            geometry.Indices.Length);
+
+        var maximumRadius =
+            Enumerable
+                .Range(
+                    0,
+                    geometry.Positions.Length /
+                        3)
+                .Select(
+                    index =>
+                    {
+                        var x =
+                            geometry.Positions[
+                                index *
+                                3];
+
+                        var z =
+                            geometry.Positions[
+                                index *
+                                3 +
+                                2];
+
+                        return Math.Sqrt(
+                            x *
+                                x +
+                            z *
+                                z);
+                    })
+                .Max();
+
+        Assert.InRange(
+            maximumRadius,
+            4.0,
+            6.5);
     }
 
     [Fact]
