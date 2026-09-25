@@ -238,6 +238,14 @@ public sealed partial class MainWindow : Window
             [];
 
     private bool _proceduralRoadTraceMode;
+
+    private readonly List<MapStudioRoadPoint>
+        _vegetationShapePoints =
+            [];
+
+    private bool
+        _vegetationShapeCaptureMode;
+
     private int _proceduralRoadTraceSequence;
     private RoadProfileOption?
         _activeRoadProfile;
@@ -964,6 +972,47 @@ public sealed partial class MainWindow : Window
         Viewport.TerrainPointSelected +=
             point =>
             {
+                if (_vegetationShapeCaptureMode)
+                {
+                    var shapePoint =
+                        new MapStudioRoadPoint(
+                            point.WorldPoint.X,
+                            point.WorldPoint.Z);
+
+                    if (
+                        _vegetationShapePoints.Count ==
+                            0 ||
+                        _vegetationShapePoints[^1]
+                            .DistanceTo(
+                                shapePoint) >=
+                            0.20)
+                    {
+                        _vegetationShapePoints.Add(
+                            shapePoint);
+                    }
+
+                    VegetationShapeFillButton.IsEnabled =
+                        _vegetationShapePoints.Count >=
+                            3;
+
+                    VegetationShapeClearButton.IsEnabled =
+                        _vegetationShapePoints.Count >
+                            0;
+
+                    UpdateVegetationShapePreview();
+
+                    StatusText.Text =
+                        $"Custom Shape · {_vegetationShapePoints.Count} vértice(s) · " +
+                        (
+                            _vegetationShapePoints.Count >=
+                                3
+                                ? "use Preencher forma ou continue adicionando vértices."
+                                : "adicione pelo menos 3 vértices."
+                        );
+
+                    return;
+                }
+
                 if (_proceduralRoadTraceMode)
                 {
                     var roadPoint =
@@ -8570,6 +8619,17 @@ public sealed partial class MainWindow : Window
     private void SetActiveMapTool(
         Button activeButton)
     {
+        if (
+            !ReferenceEquals(
+                activeButton,
+                ToolVegetationButton) &&
+            _vegetationShapeCaptureMode)
+        {
+            CancelVegetationShapeCapture(
+                clearPoints:
+                    true);
+        }
+
         _mapMode =
             false;
 
@@ -10240,6 +10300,456 @@ public sealed partial class MainWindow : Window
 
         StatusText.Text =
             "Vegetação · Linha ativa. Clique no início e no fim; o espaçamento usa as opções de posicionamento.";
+    }
+
+    private void OnVegetationShapeStartClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (_session.CurrentMap is null)
+        {
+            StatusText.Text =
+                "Custom Shape: abra um mapa primeiro.";
+
+            return;
+        }
+
+        SetActiveMapTool(
+            ToolVegetationButton);
+
+        _proceduralRoadTraceMode =
+            false;
+
+        _activeRoadProfile =
+            null;
+
+        _activeRoadTracePoints
+            .Clear();
+
+        FinishProceduralRoadTraceMenuItem
+            .IsEnabled =
+            false;
+
+        _vegetationShapePoints
+            .Clear();
+
+        _vegetationShapeCaptureMode =
+            true;
+
+        VegetationShapeFillButton.IsEnabled =
+            false;
+
+        VegetationShapeClearButton.IsEnabled =
+            true;
+
+        Viewport
+            .ClearProceduralRoadPreview();
+
+        Viewport
+            .BeginTerrainSelectionMode();
+
+        StatusText.Text =
+            "Custom Shape de vegetação ativa: clique os vértices no terreno. Com 3 ou mais pontos, use Preencher forma.";
+    }
+
+    private void UpdateVegetationShapePreview()
+    {
+        if (
+            _vegetationShapePoints.Count <
+                2)
+        {
+            Viewport
+                .ClearProceduralRoadPreview();
+
+            return;
+        }
+
+        try
+        {
+            var points =
+                _vegetationShapePoints
+                    .ToList();
+
+            if (
+                points.Count >=
+                    3)
+            {
+                points.Add(
+                    points[0]);
+            }
+
+            var graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        [
+                            new MapStudioRoadTrace(
+                                "custom-shape-preview",
+                                points,
+                                "custom-shape-preview")
+                        ],
+                        snapToleranceMeters:
+                            0.05,
+                        minimumSegmentLengthMeters:
+                            0.05);
+
+            Viewport
+                .PreviewProceduralRoadGraph(
+                    graph);
+        }
+        catch
+        {
+            // Keep capture usable even if a temporary self-intersection
+            // cannot be represented by the road-preview helper.
+        }
+    }
+
+    private void RestoreProceduralRoadPreviewAfterShape()
+    {
+        Viewport
+            .ClearProceduralRoadPreview();
+
+        if (
+            _proceduralRoadTraces.Count ==
+                0)
+        {
+            return;
+        }
+
+        try
+        {
+            Viewport
+                .PreviewProceduralRoadGraph(
+                    BuildProceduralRoadGraph());
+        }
+        catch
+        {
+        }
+    }
+
+    private void CancelVegetationShapeCapture(
+        bool clearPoints)
+    {
+        _vegetationShapeCaptureMode =
+            false;
+
+        Viewport
+            .CancelTerrainPointPick();
+
+        if (clearPoints)
+        {
+            _vegetationShapePoints
+                .Clear();
+        }
+
+        VegetationShapeFillButton.IsEnabled =
+            !clearPoints &&
+            _vegetationShapePoints.Count >=
+                3;
+
+        VegetationShapeClearButton.IsEnabled =
+            !clearPoints &&
+            _vegetationShapePoints.Count >
+                0;
+
+        RestoreProceduralRoadPreviewAfterShape();
+    }
+
+    private void OnVegetationShapeClearClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        CancelVegetationShapeCapture(
+            clearPoints:
+                true);
+
+        StatusText.Text =
+            "Custom Shape de vegetação limpa.";
+    }
+
+    private async void OnVegetationShapeFillClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            _vegetationShapePoints.Count <
+                3 ||
+            _session.CurrentMap is not
+                { } snapshot ||
+            GetSelectedAssetLibraryEntry() is not
+                { } selectedAsset ||
+            selectedAsset.Kind !=
+                OmsiAssetKind
+                    .SceneryObject ||
+            GetEffectiveAssetGroup(
+                selectedAsset) !=
+                OmsiAssetLibraryGroup
+                    .Vegetation)
+        {
+            StatusText.Text =
+                "Custom Shape: desenhe ao menos 3 vértices e selecione um SCO de Vegetação na Biblioteca.";
+
+            return;
+        }
+
+        try
+        {
+            var spacing =
+                double.IsFinite(
+                    VegetationShapeSpacingBox
+                        .Value)
+                    ? Math.Clamp(
+                        VegetationShapeSpacingBox
+                            .Value,
+                        1.0,
+                        100.0)
+                    : 8.0;
+
+            var points =
+                new MapStudioWorldPolygonScatterer()
+                    .Scatter(
+                        _vegetationShapePoints,
+                        spacing,
+                        maxPoints:
+                            256);
+
+            if (points.Count == 0)
+            {
+                StatusText.Text =
+                    "Custom Shape: nenhum ponto de preenchimento coube dentro da forma; reduza o espaçamento.";
+
+                return;
+            }
+
+            var mapTiles =
+                snapshot.Map.Tiles
+                    .ToDictionary(
+                        tile =>
+                            (
+                                tile.X,
+                                tile.Y
+                            ));
+
+            var requests =
+                new List<
+                    NativeSceneryPlacementRequest>(
+                        points.Count);
+
+            for (
+                var index = 0;
+                index <
+                    points.Count;
+                index++)
+            {
+                var point =
+                    points[index];
+
+                var tileX =
+                    (int)Math.Floor(
+                        point.X /
+                            OmsiTileGrid.TileSize);
+
+                var tileY =
+                    (int)Math.Floor(
+                        point.Z /
+                            OmsiTileGrid.TileSize);
+
+                if (
+                    !mapTiles.TryGetValue(
+                        (
+                            tileX,
+                            tileY
+                        ),
+                        out var tile))
+                {
+                    continue;
+                }
+
+                requests.Add(
+                    new NativeSceneryPlacementRequest(
+                        tile,
+                        selectedAsset
+                            .RelativePath,
+                        point.X -
+                            OmsiTileGrid.GetOriginX(
+                                tileX),
+                        point.Z -
+                            OmsiTileGrid.GetOriginZ(
+                                tileY),
+                        0,
+                        StableVegetationShapeRotation(
+                            point,
+                            index),
+                        0,
+                        0,
+                        new Vector3(
+                            (float)
+                                point.X,
+                            0,
+                            (float)
+                                point.Z),
+                        false));
+            }
+
+            if (requests.Count == 0)
+            {
+                StatusText.Text =
+                    "Custom Shape: a forma não intersecta nenhum tile do mapa.";
+
+                return;
+            }
+
+            var presetAssets =
+                GetActiveVegetationPresetAssets();
+
+            if (presetAssets.Count > 0)
+            {
+                requests =
+                    NativeVegetationPresetDistributor
+                        .Distribute(
+                            requests,
+                            presetAssets
+                                .Select(
+                                    asset =>
+                                        asset.RelativePath)
+                                .ToArray())
+                        .ToList();
+            }
+
+            if (
+                _session.PendingTransformCount >
+                    0)
+            {
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                $"Custom Shape: inserindo {requests.Count} item(ns) de vegetação...";
+
+            var groups =
+                requests
+                    .GroupBy(
+                        request =>
+                            request
+                                .SceneryObjectPath,
+                        StringComparer.OrdinalIgnoreCase)
+                    .Select(
+                        group =>
+                            new NativeSceneryPlacementBatchGroup(
+                                group.Key,
+                                group.ToArray()))
+                    .ToArray();
+
+            var result =
+                groups.Length >
+                    1
+                    ? await _session
+                        .InsertSceneryObjectMultiBatchAsync(
+                            groups)
+                    : requests.Count ==
+                        1
+                        ? await _session
+                            .InsertSceneryObjectAsync(
+                                requests[0])
+                        : await _session
+                            .InsertSceneryObjectBatchAsync(
+                                requests);
+
+            await ApplyMapSnapshotAsync(
+                result,
+                focusActiveTile:
+                    false,
+                refreshReferenceOverlay:
+                    false);
+
+            foreach (
+                var usedPath in
+                    requests
+                        .Select(
+                            request =>
+                                request
+                                    .SceneryObjectPath)
+                        .Distinct(
+                            StringComparer.OrdinalIgnoreCase))
+            {
+                RecordAssetUsage(
+                    usedPath);
+            }
+
+            RegisterConstructionHistory(
+                "Preencher Custom Shape com vegetação");
+
+            var distinctAssets =
+                requests
+                    .Select(
+                        request =>
+                            request
+                                .SceneryObjectPath)
+                    .Distinct(
+                        StringComparer.OrdinalIgnoreCase)
+                    .Count();
+
+            _vegetationShapePoints
+                .Clear();
+
+            _vegetationShapeCaptureMode =
+                false;
+
+            VegetationShapeFillButton.IsEnabled =
+                false;
+
+            VegetationShapeClearButton.IsEnabled =
+                false;
+
+            Viewport
+                .CancelTerrainPointPick();
+
+            RestoreProceduralRoadPreviewAfterShape();
+
+            StatusText.Text =
+                $"Custom Shape preenchida: {requests.Count} item(ns) · {distinctAssets} asset(s) de vegetação · espaçamento {spacing:0.#} m.";
+        }
+        catch (Exception exception)
+        {
+            StatusText.Text =
+                $"Falha ao preencher Custom Shape: {exception.Message}";
+        }
+    }
+
+    private static double StableVegetationShapeRotation(
+        MapStudioRoadPoint point,
+        int index)
+    {
+        unchecked
+        {
+            var x =
+                (ulong)
+                    BitConverter
+                        .DoubleToInt64Bits(
+                            point.X);
+
+            var z =
+                (ulong)
+                    BitConverter
+                        .DoubleToInt64Bits(
+                            point.Z);
+
+            var hash =
+                x *
+                    11400714819323198485UL ^
+                z *
+                    14029467366897019727UL ^
+                (ulong)index *
+                    1609587929392839161UL;
+
+            return
+                hash %
+                    36000 /
+                100.0;
+        }
     }
 
     private async void OnToolTransitAssetsClick(

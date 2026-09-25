@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.44: mixed vegetation collection presets and multi-batch placement.
+# Test 10.45: interactive custom-shape vegetation fill.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.44-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.44-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.45-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.45-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.44-native
-  TAG: v0.2.0-alpha.5-test.10.44-native
+  VERSION: 0.2.0-alpha.5-test.10.45-native
+  TAG: v0.2.0-alpha.5-test.10.45-native
 
 jobs:
   build-native-preview:
@@ -1790,6 +1790,35 @@ jobs:
 
           Write-Host "Verified library-collection vegetation presets, deterministic distribution and multi-batch insertion."
 
+      - name: Verify test 10.45 custom-shape vegetation fill
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $scatterer = Get-Content src/MapStudio.Core/Generation/Vegetation/MapStudioWorldPolygonScatterer.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioWorldPolygonScattererTests.cs -Raw
+
+          foreach ($required in @(
+            'VegetationShapeSpacingBox',
+            'VegetationShapeFillButton',
+            'OnVegetationShapeStartClick',
+            'OnVegetationShapeFillClick',
+            '_vegetationShapeCaptureMode',
+            'UpdateVegetationShapePreview',
+            'MapStudioWorldPolygonScatterer',
+            'InsertSceneryObjectMultiBatchAsync'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required) -or $scatterer.Contains($required))) {
+              throw "Test 10.45 custom-shape marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('ScatterRespectsConcaveCutout')) {
+            throw "Test 10.45 concave polygon scatter regression test is missing."
+          }
+
+          Write-Host "Verified interactive shape capture, polygon scatter, preview outline and vegetation persistence."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1944,11 +1973,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.44-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.45-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.44-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.45-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
