@@ -31274,6 +31274,14 @@ setTimeout(postBounds, 250);
             NativeStartupDiagnostics.Write(
                 "Procedural roads final viewport reload complete.");
 
+            if (_loadingOperationDepth > 0)
+            {
+                EndLoading();
+
+                NativeStartupDiagnostics.Write(
+                    "Procedural roads closed active loading overlay after viewport reload.");
+            }
+
             Viewport
                 .ClearProceduralRoadPreview();
 
