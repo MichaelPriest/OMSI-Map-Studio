@@ -5,6 +5,7 @@ using System.Text;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Scene;
 
 namespace MapStudio.Renderer.Viewport;
@@ -232,24 +233,51 @@ public sealed class NativeProceduralJunctionPlanBuilder
                 360.0;
         }
 
+        var profile =
+            MapStudioStandardRoadCatalog
+                .Profiles
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.RelativePath,
+                            segment.ProfileId,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
         var lanes =
             Math.Clamp(
+                profile?.LaneCount ??
                 segment.LaneCount ??
                 2,
                 1,
                 8);
 
-        var width =
+        var physicalWidth =
+            profile?.TotalWidthMeters ??
             segment.WidthMeters ??
             lanes *
             3.5;
 
+        var laneWidth =
+            profile?.LaneWidthMeters ??
+            Math.Clamp(
+                (
+                    segment.WidthMeters ??
+                    lanes *
+                    3.5
+                ) /
+                lanes,
+                2.0,
+                4.5);
+
         return new MapStudioJunctionArm(
             angle,
-            width,
+            physicalWidth,
             lanes,
+            profile?.OneWay ??
             segment.OneWay ??
-                false);
+                false,
+            laneWidth);
     }
 
     private static CanonicalJunction
