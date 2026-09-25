@@ -14,7 +14,12 @@ public sealed record MapStudioGeoRoadTrace(
     int? LaneCount,
     bool? OneWay,
     double? WidthMeters,
-    string? Name);
+    string? Name,
+    int? ForwardLaneCount = null,
+    int? BackwardLaneCount = null,
+    int? Layer = null,
+    bool Bridge = false,
+    bool Tunnel = false);
 
 public sealed record MapStudioGeoJsonRoadImportResult(
     IReadOnlyList<MapStudioGeoRoadTrace> Traces,
