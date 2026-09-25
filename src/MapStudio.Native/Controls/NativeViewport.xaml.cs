@@ -41,6 +41,15 @@ public enum NativeSelectionContextAction
 public sealed partial class NativeViewport : UserControl
 {
     private NativeViewportRuntime? _runtime;
+    private readonly System.Threading.SemaphoreSlim
+        _mapSnapshotReloadGate =
+            new(1, 1);
+    private readonly object
+        _mapSnapshotReloadSync =
+            new();
+    private CancellationTokenSource?
+        _mapSnapshotReloadCancellation;
+    private long _mapSnapshotReloadSequence;
     private bool _leftPressed;
     private bool _isPanning;
     private bool _isOrbiting;
@@ -1738,57 +1747,176 @@ public sealed partial class NativeViewport : UserControl
         NativeMapSnapshot snapshot,
         string omsiRoot,
         CancellationToken cancellationToken =
-            default)
+            default,
+        [System.Runtime.CompilerServices.CallerMemberName]
+        string caller =
+            "")
     {
         ArgumentNullException.ThrowIfNull(
             snapshot);
 
-        if (_runtime is null)
-        {
-            SelectionStatusChanged?.Invoke(
-                this,
-                "Viewport Direct3D ainda não inicializado.");
-            return;
-        }
+        var requestId =
+            System.Threading.Interlocked
+                .Increment(
+                    ref _mapSnapshotReloadSequence);
 
-        SelectionStatusChanged?.Invoke(
-            this,
-            "Carregando SCO/O3D reais no renderer nativo...");
-
-        var scene =
-            await _runtime
-                .LoadSceneAsync(
-                    snapshot.Tiles
-                        .Select(
-                            tile =>
-                                new NativeSceneTile(
-                                    tile.Reference,
-                                    tile.Content))
-                        .ToArray(),
-                    snapshot.Map,
-                    omsiRoot,
+        using var linkedCancellation =
+            CancellationTokenSource
+                .CreateLinkedTokenSource(
                     cancellationToken);
 
-        _runtime.RenderInitialFrame();
+        lock (_mapSnapshotReloadSync)
+        {
+            _mapSnapshotReloadCancellation
+                ?.Cancel();
 
-        RuntimeText.Text =
-            $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
-            $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
-            $"{_runtime.MapRenderer.TerrainTriangleVertexCount / 3} triângulos terreno · " +
-            $"{_runtime.MapRenderer.SplineTriangleVertexCount / 3} triângulos spline · " +
-            $"{_runtime.MapRenderer.ObjectTriangleVertexCount / 3} triângulos O3D";
+            _mapSnapshotReloadCancellation =
+                linkedCancellation;
+        }
 
-        SelectionStatusChanged?.Invoke(
-            this,
-            $"Assets nativos: {_runtime.LoadedSceneryAssetCount} SCO · " +
-            $"{_runtime.LoadedObjectMeshCount} meshes · " +
-            $"{_runtime.MapRenderer.LoadedTextureCount} texturas O3D · " +
-            $"{_runtime.LoadedSplineAssetCount} SLI · " +
-            $"{_runtime.LoadedSplineSurfaceCount} superfícies spline · " +
-            $"{_runtime.TrafficPathLineCount} linhas de path · " +
-            $"{_runtime.SceneryLightPointCount} pontos de luz · " +
-            $"{_runtime.TrafficLightProgramCount} programas de semáforo · " +
-            $"{scene.SelectableCount} IDs de seleção.");
+        MapStudio.Native.NativeStartupDiagnostics.Write(
+            $"SetMapSnapshot request id={requestId} caller={caller} tiles={snapshot.Tiles.Count} objects={snapshot.ObjectCount} splines={snapshot.SplineCount}");
+
+        var gateAcquired =
+            false;
+
+        var reloadStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
+
+        try
+        {
+            await _mapSnapshotReloadGate
+                .WaitAsync(
+                    linkedCancellation.Token);
+
+            gateAcquired =
+                true;
+
+            var latestRequestId =
+                System.Threading.Volatile
+                    .Read(
+                        ref _mapSnapshotReloadSequence);
+
+            if (requestId != latestRequestId)
+            {
+                MapStudio.Native.NativeStartupDiagnostics.Write(
+                    $"SetMapSnapshot coalesced-before-load id={requestId} latest={latestRequestId} caller={caller}");
+
+                return;
+            }
+
+            var runtime =
+                _runtime;
+
+            if (runtime is null)
+            {
+                SelectionStatusChanged?.Invoke(
+                    this,
+                    "Viewport Direct3D ainda não inicializado.");
+
+                MapStudio.Native.NativeStartupDiagnostics.Write(
+                    $"SetMapSnapshot skipped-no-runtime id={requestId} caller={caller}");
+
+                return;
+            }
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                "Carregando SCO/O3D reais no renderer nativo...");
+
+            MapStudio.Native.NativeStartupDiagnostics.Write(
+                $"SetMapSnapshot begin id={requestId} caller={caller} thread={Environment.CurrentManagedThreadId}");
+
+            var scene =
+                await runtime
+                    .LoadSceneAsync(
+                        snapshot.Tiles
+                            .Select(
+                                tile =>
+                                    new NativeSceneTile(
+                                        tile.Reference,
+                                        tile.Content))
+                            .ToArray(),
+                        snapshot.Map,
+                        omsiRoot,
+                        linkedCancellation.Token);
+
+            latestRequestId =
+                System.Threading.Volatile
+                    .Read(
+                        ref _mapSnapshotReloadSequence);
+
+            if (requestId != latestRequestId)
+            {
+                MapStudio.Native.NativeStartupDiagnostics.Write(
+                    $"SetMapSnapshot superseded-after-load id={requestId} latest={latestRequestId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+
+                return;
+            }
+
+            runtime.RenderInitialFrame();
+
+            RuntimeText.Text =
+                $"{snapshot.Map.DisplayName} · {scene.Tiles.Count} tiles · " +
+                $"{scene.Objects.Count} objetos · {scene.Splines.Count} splines · " +
+                $"{runtime.MapRenderer.TerrainTriangleVertexCount / 3} triângulos terreno · " +
+                $"{runtime.MapRenderer.SplineTriangleVertexCount / 3} triângulos spline · " +
+                $"{runtime.MapRenderer.ObjectTriangleVertexCount / 3} triângulos O3D";
+
+            SelectionStatusChanged?.Invoke(
+                this,
+                $"Assets nativos: {runtime.LoadedSceneryAssetCount} SCO · " +
+                $"{runtime.LoadedObjectMeshCount} meshes · " +
+                $"{runtime.MapRenderer.LoadedTextureCount} texturas O3D · " +
+                $"{runtime.LoadedSplineAssetCount} SLI · " +
+                $"{runtime.LoadedSplineSurfaceCount} superfícies spline · " +
+                $"{runtime.TrafficPathLineCount} linhas de path · " +
+                $"{runtime.SceneryLightPointCount} pontos de luz · " +
+                $"{runtime.TrafficLightProgramCount} programas de semáforo · " +
+                $"{scene.SelectableCount} IDs de seleção.");
+
+            MapStudio.Native.NativeStartupDiagnostics.Write(
+                $"SetMapSnapshot complete id={requestId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds} loadedScenery={runtime.LoadedSceneryAssetCount} loadedSplines={runtime.LoadedSplineAssetCount} splineTriangles={runtime.MapRenderer.SplineTriangleVertexCount / 3} objectTriangles={runtime.MapRenderer.ObjectTriangleVertexCount / 3}");
+        }
+        catch (OperationCanceledException)
+            when (
+                !cancellationToken
+                    .IsCancellationRequested &&
+                (
+                    requestId !=
+                        System.Threading.Volatile
+                            .Read(
+                                ref _mapSnapshotReloadSequence) ||
+                    !IsLoaded
+                ))
+        {
+            MapStudio.Native.NativeStartupDiagnostics.Write(
+                $"SetMapSnapshot superseded-cancelled id={requestId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+        }
+        finally
+        {
+            if (gateAcquired)
+            {
+                _mapSnapshotReloadGate
+                    .Release();
+            }
+
+            lock (_mapSnapshotReloadSync)
+            {
+                if (
+                    ReferenceEquals(
+                        _mapSnapshotReloadCancellation,
+                        linkedCancellation))
+                {
+                    _mapSnapshotReloadCancellation =
+                        null;
+                }
+            }
+
+            MapStudio.Native.NativeStartupDiagnostics.Write(
+                $"SetMapSnapshot end id={requestId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+        }
     }
 
     private void OnLoaded(
@@ -1799,6 +1927,13 @@ public sealed partial class NativeViewport : UserControl
         {
             _runtime ??=
                 new NativeViewportRuntime();
+
+            _runtime.DiagnosticSink =
+                message =>
+                    MapStudio.Native
+                        .NativeStartupDiagnostics
+                        .Write(
+                            message);
 
             EnsureNativeSurface();
             BindSwapChain();
@@ -1957,6 +2092,12 @@ public sealed partial class NativeViewport : UserControl
         RoutedEventArgs e)
     {
         StopNavigationRendering();
+
+        lock (_mapSnapshotReloadSync)
+        {
+            _mapSnapshotReloadCancellation
+                ?.Cancel();
+        }
 
         try
         {

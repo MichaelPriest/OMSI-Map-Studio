@@ -481,6 +481,8 @@ public sealed partial class MainWindow : Window
     private bool _tileManagerDialogOpen;
     private bool _standaloneWorkspaceInitialized;
     private int _loadingOperationDepth;
+    private long _mapSnapshotApplySequence;
+    private int _mapSnapshotApplyActiveCount;
 
     private double _explorerPanelWidth =
         300;
@@ -23901,120 +23903,172 @@ public sealed partial class MainWindow : Window
         bool refreshReferenceOverlay =
             true,
         bool refreshExplorer =
-            true)
+            true,
+        [System.Runtime.CompilerServices.CallerMemberName]
+        string caller =
+            "")
     {
-        if (
-            _referenceOverlayMapDirectory is
-                { } overlayMap &&
-            !string.Equals(
-                overlayMap,
-                snapshot.Map.DirectoryPath,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            ClearReferenceOverlay();
-        }
+        var applyId =
+            System.Threading.Interlocked
+                .Increment(
+                    ref _mapSnapshotApplySequence);
 
-        if (_session.OmsiRootPath is null)
-        {
-            throw new InvalidOperationException(
-                "Instalação OMSI não selecionada.");
-        }
-
-        UpdateLoading(
-            "Renderizando mapa",
-            $"{snapshot.Tiles.Count} tile(s) · {snapshot.ObjectCount} objeto(s) · {snapshot.SplineCount} spline(s)");
+        var activeApplyCount =
+            System.Threading.Interlocked
+                .Increment(
+                    ref _mapSnapshotApplyActiveCount);
 
         var reloadStopwatch =
             System.Diagnostics.Stopwatch
                 .StartNew();
 
-        NativeStartupDiagnostics.Write(
-            $"ApplyMapSnapshot begin tiles={snapshot.Tiles.Count} objects={snapshot.ObjectCount} splines={snapshot.SplineCount} refreshReference={refreshReferenceOverlay} refreshExplorer={refreshExplorer}");
-
-        await Viewport
-            .SetMapSnapshotAsync(
-                snapshot,
-                _session.OmsiRootPath);
-
-        NativeStartupDiagnostics.Write(
-            $"ApplyMapSnapshot viewport-ready elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
-
-        if (refreshReferenceOverlay)
+        try
         {
-            var referenceStopwatch =
+            if (
+                _referenceOverlayMapDirectory is
+                    { } overlayMap &&
+                !string.Equals(
+                    overlayMap,
+                    snapshot.Map.DirectoryPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                ClearReferenceOverlay();
+            }
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            UpdateLoading(
+                "Renderizando mapa",
+                $"{snapshot.Tiles.Count} tile(s) · {snapshot.ObjectCount} objeto(s) · {snapshot.SplineCount} spline(s)");
+
+            NativeStartupDiagnostics.Write(
+                $"ApplyMapSnapshot begin id={applyId} caller={caller} concurrent={activeApplyCount} fullMap={_fullMapMode} mapModeChanging={_mapLoadModeChanging} tiles={snapshot.Tiles.Count} objects={snapshot.ObjectCount} splines={snapshot.SplineCount} refreshReference={refreshReferenceOverlay} refreshExplorer={refreshExplorer}");
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    snapshot,
+                    _session.OmsiRootPath);
+
+            var latestApplyId =
+                System.Threading.Volatile
+                    .Read(
+                        ref _mapSnapshotApplySequence);
+
+            if (applyId != latestApplyId)
+            {
+                NativeStartupDiagnostics.Write(
+                    $"ApplyMapSnapshot superseded-after-viewport id={applyId} latest={latestApplyId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+
+                return;
+            }
+
+            NativeStartupDiagnostics.Write(
+                $"ApplyMapSnapshot viewport-ready id={applyId} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+
+            if (refreshReferenceOverlay)
+            {
+                var referenceStopwatch =
+                    System.Diagnostics.Stopwatch
+                        .StartNew();
+
+                await RefreshActiveReferenceOverlayAsync(
+                    snapshot);
+
+                latestApplyId =
+                    System.Threading.Volatile
+                        .Read(
+                            ref _mapSnapshotApplySequence);
+
+                if (applyId != latestApplyId)
+                {
+                    NativeStartupDiagnostics.Write(
+                        $"ApplyMapSnapshot superseded-after-reference id={applyId} latest={latestApplyId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
+
+                    return;
+                }
+
+                NativeStartupDiagnostics.Write(
+                    $"ApplyMapSnapshot reference-ready id={applyId} elapsedMs={referenceStopwatch.ElapsedMilliseconds}");
+            }
+            else
+            {
+                NativeStartupDiagnostics.Write(
+                    $"ApplyMapSnapshot reference-refresh skipped id={applyId}.");
+            }
+
+            RefreshTerrainLayerVisibilityMenu(
+                snapshot);
+
+            ClearInspectorSelectionState();
+
+            _terrainEditPoint =
+                null;
+
+            ApplyTerrainLevelButton.IsEnabled =
+                false;
+
+            ApplyTerrainPaintButton.IsEnabled =
+                false;
+
+            TerrainPointText.Text =
+                "Nenhum ponto selecionado.";
+
+            var explorerStopwatch =
                 System.Diagnostics.Stopwatch
                     .StartNew();
 
-            await RefreshActiveReferenceOverlayAsync(
+            if (refreshExplorer)
+            {
+                RefreshExplorer();
+            }
+            else
+            {
+                _explorerRefreshPending =
+                    true;
+            }
+
+            NativeStartupDiagnostics.Write(
+                $"ApplyMapSnapshot explorer-ready id={applyId} elapsedMs={explorerStopwatch.ElapsedMilliseconds} deferred={_explorerRefreshPending}");
+
+            UpdateMapSummary(
                 snapshot);
 
+            SaveChangesButton.IsEnabled =
+                false;
+
+            UndoButton.IsEnabled =
+                false;
+
+            RedoButton.IsEnabled =
+                false;
+
+            if (
+                focusActiveTile &&
+                snapshot.ActiveTile is
+                    { } active)
+            {
+                Viewport.FocusTile(
+                    active.X,
+                    active.Y);
+            }
+
             NativeStartupDiagnostics.Write(
-                $"ApplyMapSnapshot reference-ready elapsedMs={referenceStopwatch.ElapsedMilliseconds}");
+                $"ApplyMapSnapshot complete id={applyId} caller={caller} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
         }
-        else
+        finally
         {
+            var remainingApplyCount =
+                System.Threading.Interlocked
+                    .Decrement(
+                        ref _mapSnapshotApplyActiveCount);
+
             NativeStartupDiagnostics.Write(
-                "ApplyMapSnapshot reference-refresh skipped.");
+                $"ApplyMapSnapshot end id={applyId} caller={caller} remaining={remainingApplyCount} elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
         }
-
-        RefreshTerrainLayerVisibilityMenu(
-            snapshot);
-
-        ClearInspectorSelectionState();
-
-        _terrainEditPoint =
-            null;
-
-        ApplyTerrainLevelButton.IsEnabled =
-            false;
-
-        ApplyTerrainPaintButton.IsEnabled =
-            false;
-
-        TerrainPointText.Text =
-            "Nenhum ponto selecionado.";
-
-        var explorerStopwatch =
-            System.Diagnostics.Stopwatch
-                .StartNew();
-
-        if (refreshExplorer)
-        {
-            RefreshExplorer();
-        }
-        else
-        {
-            _explorerRefreshPending =
-                true;
-        }
-
-        NativeStartupDiagnostics.Write(
-            $"ApplyMapSnapshot explorer-ready elapsedMs={explorerStopwatch.ElapsedMilliseconds} deferred={_explorerRefreshPending}");
-
-        UpdateMapSummary(
-            snapshot);
-
-        SaveChangesButton.IsEnabled =
-            false;
-
-        UndoButton.IsEnabled =
-            false;
-
-        RedoButton.IsEnabled =
-            false;
-
-        if (
-            focusActiveTile &&
-            snapshot.ActiveTile is
-                { } active)
-        {
-            Viewport.FocusTile(
-                active.X,
-                active.Y);
-        }
-
-        NativeStartupDiagnostics.Write(
-            $"ApplyMapSnapshot complete elapsedMs={reloadStopwatch.ElapsedMilliseconds}");
     }
 
     private void UpdateMapSummary(

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.39: non-blocking post-road reload and loading-overlay completion.
+# Test 10.40: serialized snapshot reload and atomic viewport scene commit.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.39-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.39-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.40-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.40-native.md"
   workflow_dispatch:
 
 permissions:
@@ -99,7 +99,7 @@ concurrency:
 
 env:
   VERSION: 0.2.0-alpha.5-test.10.39-native
-  TAG: v0.2.0-alpha.5-test.10.39-native
+  TAG: v0.2.0-alpha.5-test.10.40-native
 
 jobs:
   build-native-preview:
@@ -1613,6 +1613,47 @@ jobs:
 
           Write-Host "Verified post-road reload skips redundant CARTO/Explorer work, records timings and closes loading promptly."
 
+      - name: Verify test 10.40 serialized viewport reload
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          foreach ($required in @(
+            '_mapSnapshotApplySequence',
+            'ApplyMapSnapshot superseded-after-viewport',
+            'CallerMemberName',
+            '_mapSnapshotReloadGate',
+            '_mapSnapshotReloadCancellation',
+            'SetMapSnapshot coalesced-before-load',
+            'SetMapSnapshot superseded-cancelled',
+            'DiagnosticSink',
+            'ViewportRuntime LoadScene scenery-load begin',
+            'ViewportRuntime LoadScene spline-load complete',
+            'ViewportRuntime geometry-rebuild begin',
+            'ViewportRuntime geometry-rebuild gpu-upload',
+            'snapshot-load:'
+          )) {
+            if (-not ($main.Contains($required) -or $viewport.Contains($required) -or $runtime.Contains($required))) {
+              throw "Test 10.40 viewport reload marker is missing: $required"
+            }
+          }
+
+          if ($runtime -match 'LoadSceneAsync[\s\S]*?_sceneryAssetLoader[\s\S]*?ConfigureAwait\(false\)') {
+            throw "Test 10.40 must not resume D3D scene commit on a pool thread after scenery loading."
+          }
+
+          if ($runtime -match 'LoadSceneAsync[\s\S]*?_splineAssetLoader[\s\S]*?ConfigureAwait\(false\)') {
+            throw "Test 10.40 must not resume D3D scene commit on a pool thread after spline loading."
+          }
+
+          if ($runtime -notmatch 'var nextScene[\s\S]*?var nextSceneryAssets[\s\S]*?var nextSplineAssets[\s\S]*?Scene\s*=\s*nextScene') {
+            throw "Test 10.40 must prepare scene/assets before committing the runtime scene."
+          }
+
+          Write-Host "Verified latest-wins snapshot serialization, atomic scene commit and detailed reload diagnostics."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -1767,11 +1808,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.39-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.40-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.39-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.40-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

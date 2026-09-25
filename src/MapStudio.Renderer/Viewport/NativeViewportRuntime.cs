@@ -50,6 +50,9 @@ public sealed class NativeViewportRuntime : IDisposable
         _splineAssetLoader =
             new();
 
+    private long _sceneLoadSequence;
+    private long _geometryUploadSequence;
+
     private readonly Stack<
         NativeTransformHistoryEntry>
         _undoStack =
@@ -206,10 +209,23 @@ public sealed class NativeViewportRuntime : IDisposable
     public NativeViewportNavigation Navigation { get; } =
         new();
 
-    public PickingRegistry<object> Picking { get; } =
+    public PickingRegistry<object> Picking { get; private set; } =
         new();
 
+    public Action<string>? DiagnosticSink
+    {
+        get;
+        set;
+    }
+
     public NativeSceneSnapshot? Scene { get; private set; }
+
+    private void WriteDiagnostic(
+        string message)
+    {
+        DiagnosticSink?.Invoke(
+            message);
+    }
 
     public NativeGizmoMode GizmoMode { get; private set; } =
         NativeGizmoMode.Move;
@@ -5280,130 +5296,257 @@ public sealed class NativeViewportRuntime : IDisposable
     {
         ThrowIfDisposed();
 
-        var previousMapDirectory =
-            _mapDescriptor
-                ?.DirectoryPath;
+        var loadId =
+            System.Threading.Interlocked
+                .Increment(
+                    ref _sceneLoadSequence);
 
-        var preserveNavigation =
-            Scene is not null &&
-            !string.IsNullOrWhiteSpace(
-                previousMapDirectory) &&
-            string.Equals(
-                previousMapDirectory,
-                map.DirectoryPath,
-                StringComparison
-                    .OrdinalIgnoreCase);
+        var loadStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
 
-        var previousNavigation =
-            preserveNavigation
-                ? Navigation
-                    .CaptureState()
-                : null;
+        WriteDiagnostic(
+            $"ViewportRuntime LoadScene begin id={loadId} tiles={tiles.Count} map={map.DisplayName} thread={Environment.CurrentManagedThreadId}");
 
-        _assetPreviewActive =
-            false;
-
-        _sceneryPlacementActive =
-            false;
-
-        _placementSceneryPath =
-            null;
-
-        _placementZOverride =
-            null;
-
-        _placementRotation =
-            0;
-
-        _placementPitch =
-            0;
-
-        _placementBank =
-            0;
-
-        _placementGeometry =
-            null;
-
-        _placementWorldPoint =
-            null;
-
-        _splinePlacementActive = false;
-        _splinePlacementCurved = false;
-        _placementSplinePath = null;
-        _placementSplineAsset = null;
-        _splineStartWorld = null;
-        _splineEndWorld = null;
-        _splinePointerWorld = null;
-        _splinePlacementShape = null;
-        _splinePlacementStage =
-            NativeSplinePlacementStage.AwaitingStart;
-
-        _mapDescriptor =
-            map;
-
-        _omsiRoot =
-            omsiRoot;
-
-        ApplySkyTexture();
-
-        Scene =
-            new NativeSceneBuilder()
-                .Build(
-                    tiles,
-                    Picking);
-
-        _selectedPickingId =
-            PickingId.None;
-
-        _selectedPickingIds
-            .Clear();
-
-        PendingTransformEdit =
-            null;
-
-        _undoStack.Clear();
-        _redoStack.Clear();
-
-        Navigation.FitToScene(
-            Scene);
-
-        if (previousNavigation is not null)
+        try
         {
-            Navigation.RestoreState(
-                previousNavigation);
+            var previousMapDirectory =
+                _mapDescriptor
+                    ?.DirectoryPath;
+
+            var preserveNavigation =
+                Scene is not null &&
+                !string.IsNullOrWhiteSpace(
+                    previousMapDirectory) &&
+                string.Equals(
+                    previousMapDirectory,
+                    map.DirectoryPath,
+                    StringComparison
+                        .OrdinalIgnoreCase);
+
+            var previousNavigation =
+                preserveNavigation
+                    ? Navigation
+                        .CaptureState()
+                    : null;
+
+            var sceneBuildStopwatch =
+                System.Diagnostics.Stopwatch
+                    .StartNew();
+
+            var nextPicking =
+                new PickingRegistry<object>();
+
+            var nextScene =
+                new NativeSceneBuilder()
+                    .Build(
+                        tiles,
+                        nextPicking);
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene scene-built id={loadId} elapsedMs={sceneBuildStopwatch.ElapsedMilliseconds} objects={nextScene.Objects.Count} splines={nextScene.Splines.Count} selectable={nextScene.SelectableCount}");
+
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var sceneryPathCount =
+                nextScene.Objects
+                    .Select(
+                        item =>
+                            item.Object
+                                .SceneryObjectPath)
+                    .Distinct(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .Count();
+
+            var sceneryStopwatch =
+                System.Diagnostics.Stopwatch
+                    .StartNew();
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene scenery-load begin id={loadId} paths={sceneryPathCount}");
+
+            var nextSceneryAssets =
+                await _sceneryAssetLoader
+                    .LoadAsync(
+                        omsiRoot,
+                        nextScene,
+                        cancellationToken);
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene scenery-load complete id={loadId} elapsedMs={sceneryStopwatch.ElapsedMilliseconds} assets={nextSceneryAssets.Count} loaded={nextSceneryAssets.Values.Count(asset => asset.IsLoaded)}");
+
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var splinePathCount =
+                nextScene.Splines
+                    .Select(
+                        item =>
+                            item.Spline
+                                .SplinePath)
+                    .Distinct(
+                        StringComparer
+                            .OrdinalIgnoreCase)
+                    .Count();
+
+            var splineStopwatch =
+                System.Diagnostics.Stopwatch
+                    .StartNew();
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene spline-load begin id={loadId} paths={splinePathCount}");
+
+            var nextSplineAssets =
+                await _splineAssetLoader
+                    .LoadAsync(
+                        omsiRoot,
+                        nextScene,
+                        cancellationToken);
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene spline-load complete id={loadId} elapsedMs={splineStopwatch.ElapsedMilliseconds} assets={nextSplineAssets.Count} loaded={nextSplineAssets.Values.Count(asset => asset.IsLoaded)}");
+
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            _assetPreviewActive =
+                false;
+
+            _sceneryPlacementActive =
+                false;
+
+            _placementSceneryPath =
+                null;
+
+            _placementZOverride =
+                null;
+
+            _placementRotation =
+                0;
+
+            _placementPitch =
+                0;
+
+            _placementBank =
+                0;
+
+            _placementGeometry =
+                null;
+
+            _placementWorldPoint =
+                null;
+
+            _splinePlacementActive =
+                false;
+
+            _splinePlacementCurved =
+                false;
+
+            _placementSplinePath =
+                null;
+
+            _placementSplineAsset =
+                null;
+
+            _splineStartWorld =
+                null;
+
+            _splineEndWorld =
+                null;
+
+            _splinePointerWorld =
+                null;
+
+            _splinePlacementShape =
+                null;
+
+            _splinePlacementStage =
+                NativeSplinePlacementStage
+                    .AwaitingStart;
+
+            _mapDescriptor =
+                map;
+
+            _omsiRoot =
+                omsiRoot;
+
+            Picking =
+                nextPicking;
+
+            Scene =
+                nextScene;
+
+            _sceneryAssets =
+                nextSceneryAssets;
+
+            _splineAssets =
+                nextSplineAssets;
+
+            _selectedPickingId =
+                PickingId.None;
+
+            _selectedPickingIds
+                .Clear();
+
+            PendingTransformEdit =
+                null;
+
+            _undoStack.Clear();
+            _redoStack.Clear();
+
+            Navigation.FitToScene(
+                Scene);
+
+            if (previousNavigation is not null)
+            {
+                Navigation.RestoreState(
+                    previousNavigation);
+            }
+
+            ApplySkyTexture();
+
+            UpdateCameraTransform();
+
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene commit-ready id={loadId} elapsedMs={loadStopwatch.ElapsedMilliseconds} thread={Environment.CurrentManagedThreadId}");
+
+            UploadSceneGeometry(
+                $"snapshot-load:{loadId}");
+
+            LoadedSceneryAssetCount =
+                _sceneryAssets.Values.Count(
+                    asset =>
+                        asset.IsLoaded);
+
+            LoadedSplineAssetCount =
+                _splineAssets.Values.Count(
+                    asset =>
+                        asset.IsLoaded);
+
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene complete id={loadId} elapsedMs={loadStopwatch.ElapsedMilliseconds} scenery={LoadedSceneryAssetCount} splines={LoadedSplineAssetCount} splineSurfaces={LoadedSplineSurfaceCount} thread={Environment.CurrentManagedThreadId}");
+
+            return Scene;
         }
+        catch (OperationCanceledException)
+        {
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene cancelled id={loadId} elapsedMs={loadStopwatch.ElapsedMilliseconds}");
 
-        UpdateCameraTransform();
+            throw;
+        }
+        catch (Exception exception)
+        {
+            WriteDiagnostic(
+                $"ViewportRuntime LoadScene failed id={loadId} elapsedMs={loadStopwatch.ElapsedMilliseconds} type={exception.GetType().FullName} message={exception.Message}");
 
-        _sceneryAssets =
-            await _sceneryAssetLoader
-                .LoadAsync(
-                    omsiRoot,
-                    Scene,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        _splineAssets =
-            await _splineAssetLoader
-                .LoadAsync(
-                    omsiRoot,
-                    Scene,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        UploadSceneGeometry();
-
-        LoadedSceneryAssetCount =
-            _sceneryAssets.Values.Count(
-                asset =>
-                    asset.IsLoaded);
-
-        LoadedSplineAssetCount =
-            _splineAssets.Values.Count(
-                asset =>
-                    asset.IsLoaded);
-
-        return Scene;
+            throw;
+        }
     }
 
     public int LoadedSceneryAssetCount
@@ -7578,12 +7721,30 @@ public sealed class NativeViewportRuntime : IDisposable
         RenderInitialFrame();
     }
 
-    private void UploadSceneGeometry()
+    private void UploadSceneGeometry(
+        string reason =
+            "runtime")
     {
         if (Scene is null)
         {
             return;
         }
+
+        var uploadId =
+            System.Threading.Interlocked
+                .Increment(
+                    ref _geometryUploadSequence);
+
+        var totalStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
+
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild begin id={uploadId} reason={reason} tiles={Scene.Tiles.Count} objects={Scene.Objects.Count} splines={Scene.Splines.Count} thread={Environment.CurrentManagedThreadId}");
+
+        var stageStopwatch =
+            System.Diagnostics.Stopwatch
+                .StartNew();
 
         var objectGeometry =
             new NativeObjectTriangleGeometryBuilder()
@@ -7591,17 +7752,32 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene,
                     _sceneryAssets);
 
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild objects id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} vertices={objectGeometry.Vertices.Length}");
+
+        stageStopwatch.Restart();
+
         var splineGeometry =
             new NativeSplineTriangleGeometryBuilder()
                 .Build(
                     Scene,
                     _splineAssets);
 
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild splines id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} vertices={splineGeometry.Vertices.Length} loadedSplines={splineGeometry.LoadedSplineCount} surfaces={splineGeometry.RenderedSurfaceCount}");
+
+        stageStopwatch.Restart();
+
         var proxyGeometry =
             new NativePickingProxyGeometryBuilder()
                 .Build(
                     Scene,
                     _sceneryAssets);
+
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild picking id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} vertices={proxyGeometry.Vertices.Length}");
+
+        stageStopwatch.Restart();
 
         var terrainGeometry =
             new NativeTerrainTriangleGeometryBuilder()
@@ -7613,6 +7789,9 @@ public sealed class NativeViewportRuntime : IDisposable
                     _omsiRoot ??
                         throw new InvalidOperationException(
                             "OMSI root is not loaded."));
+
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild terrain id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds}");
 
         var trafficScene =
             _trafficPathSelectedOnly
@@ -7641,6 +7820,8 @@ public sealed class NativeViewportRuntime : IDisposable
                     Scene.Terrain)
                 : Scene;
 
+        stageStopwatch.Restart();
+
         var trafficPathGeometry =
             new NativeTrafficPathGeometryBuilder()
                 .Build(
@@ -7666,6 +7847,11 @@ public sealed class NativeViewportRuntime : IDisposable
                 .Build(
                     Scene);
 
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild auxiliary id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds}");
+
+        stageStopwatch.Restart();
+
         MapRenderer.Upload(
             Scene,
             objectGeometry,
@@ -7676,7 +7862,15 @@ public sealed class NativeViewportRuntime : IDisposable
             sceneryLightGeometry,
             waterGeometry);
 
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild gpu-upload id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds} terrainTriangles={MapRenderer.TerrainTriangleVertexCount / 3} splineTriangles={MapRenderer.SplineTriangleVertexCount / 3} objectTriangles={MapRenderer.ObjectTriangleVertexCount / 3}");
+
+        stageStopwatch.Restart();
+
         UploadReferenceOverlay();
+
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild reference id={uploadId} elapsedMs={stageStopwatch.ElapsedMilliseconds}");
 
         LoadedObjectMeshCount =
             objectGeometry
@@ -7700,6 +7894,9 @@ public sealed class NativeViewportRuntime : IDisposable
                     controller =>
                         controller
                             .Programs.Count);
+
+        WriteDiagnostic(
+            $"ViewportRuntime geometry-rebuild complete id={uploadId} reason={reason} elapsedMs={totalStopwatch.ElapsedMilliseconds} loadedMeshes={LoadedObjectMeshCount} loadedSplineSurfaces={LoadedSplineSurfaceCount}");
     }
 
     private void UploadReferenceOverlay()
