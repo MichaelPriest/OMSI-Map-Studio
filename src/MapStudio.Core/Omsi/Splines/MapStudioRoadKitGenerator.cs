@@ -16,7 +16,7 @@ public sealed class MapStudioRoadKitGenerator
         "MapStudio_RoadKit";
 
     public const string PackVersion =
-        "1.1.0";
+        "1.2.0";
 
     private static readonly Encoding
         SplineEncoding =
@@ -110,28 +110,73 @@ public sealed class MapStudioRoadKitGenerator
                             "ms_asphalt.bmp",
                         Data:
                             CreateTexture(
-                                64,
-                                64,
+                                256,
+                                256,
                                 static (x, y) =>
                                 {
-                                    var noise =
+                                    var fine =
+                                        Math.Abs(
+                                            (
+                                                x *
+                                                    73 ^
+                                                y *
+                                                    151 ^
+                                                x *
+                                                    y *
+                                                    17
+                                            ) %
+                                            19);
+
+                                    var coarse =
+                                        Math.Abs(
+                                            (
+                                                x /
+                                                    4 *
+                                                    29 +
+                                                y /
+                                                    4 *
+                                                    43
+                                            ) %
+                                            17);
+
+                                    var aggregate =
                                         (
-                                            x * 17 +
-                                            y * 31
+                                            x *
+                                                37 +
+                                            y *
+                                                61
                                         ) %
-                                        13;
+                                            113 ==
+                                        0
+                                            ? 16
+                                            : 0;
+
+                                    var wear =
+                                        x is
+                                            > 48 and < 76 or
+                                            > 178 and < 206
+                                            ? -5
+                                            : 0;
 
                                     var value =
-                                        (byte)(
-                                            58 +
-                                            noise);
+                                        Math.Clamp(
+                                            48 +
+                                            fine /
+                                                2 +
+                                            coarse /
+                                                3 +
+                                            aggregate +
+                                            wear,
+                                            32,
+                                            82);
 
                                     return new Rgb(
-                                        value,
-                                        value,
-                                        (byte)(
+                                        (byte)value,
+                                        (byte)value,
+                                        (byte)Math.Min(
+                                            255,
                                             value +
-                                            2));
+                                                3));
                                 })
                     ),
                     (
@@ -139,30 +184,61 @@ public sealed class MapStudioRoadKitGenerator
                             "ms_sidewalk.bmp",
                         Data:
                             CreateTexture(
-                                64,
-                                64,
+                                256,
+                                256,
                                 static (x, y) =>
                                 {
+                                    var shiftedX =
+                                        (
+                                            x +
+                                            (
+                                                y /
+                                                32
+                                            ) %
+                                            2 *
+                                            16
+                                        ) %
+                                        32;
+
                                     var joint =
-                                        x %
-                                            16 ==
-                                        0 ||
+                                        shiftedX <
+                                            2 ||
                                         y %
-                                            16 ==
-                                        0;
+                                            32 <
+                                            2;
+
+                                    var grain =
+                                        Math.Abs(
+                                            (
+                                                x *
+                                                    17 +
+                                                y *
+                                                    31
+                                            ) %
+                                            13);
 
                                     var value =
-                                        (byte)(
-                                            joint
-                                                ? 124
-                                                : 162);
+                                        joint
+                                            ? 104 +
+                                              grain /
+                                                  3
+                                            : 150 +
+                                              grain;
 
                                     return new Rgb(
-                                        value,
-                                        value,
-                                        (byte)(
+                                        (byte)Math.Clamp(
+                                            value,
+                                            0,
+                                            255),
+                                        (byte)Math.Clamp(
+                                            value,
+                                            0,
+                                            255),
+                                        (byte)Math.Clamp(
                                             value -
-                                            4));
+                                                6,
+                                            0,
+                                            255));
                                 })
                     ),
                     (
@@ -170,8 +246,8 @@ public sealed class MapStudioRoadKitGenerator
                             "ms_marking.bmp",
                         Data:
                             CreateTexture(
-                                8,
-                                8,
+                                64,
+                                64,
                                 static (_, _) =>
                                     new Rgb(
                                         238,
