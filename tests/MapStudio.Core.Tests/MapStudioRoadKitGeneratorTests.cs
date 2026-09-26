@@ -29,7 +29,7 @@ public sealed class MapStudioRoadKitGeneratorTests
                         root);
 
             Assert.Equal(
-                10,
+                28,
                 first
                     .SplineRelativePaths
                     .Count);
@@ -149,6 +149,91 @@ public sealed class MapStudioRoadKitGeneratorTests
                 Directory.Delete(
                     root,
                     recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GeneratorBuildsBridgeAndTunnelStructuralVariants()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-Structure-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var profile =
+                MapStudioStandardRoadCatalog
+                    .RoadTwoLaneWithSidewalk;
+
+            var reader =
+                new OmsiSplineDefinitionReader();
+
+            var ground =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            profile.FileName));
+
+            var bridge =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            MapStudioStandardRoadCatalog
+                                .GetBridgeFileName(
+                                    profile)));
+
+            var tunnel =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            MapStudioStandardRoadCatalog
+                                .GetTunnelFileName(
+                                    profile)));
+
+            Assert.True(
+                bridge.Exists);
+
+            Assert.True(
+                tunnel.Exists);
+
+            Assert.True(
+                bridge.Surfaces.Count >
+                ground.Surfaces.Count);
+
+            Assert.True(
+                tunnel.Surfaces.Count >
+                ground.Surfaces.Count);
+
+            Assert.Equal(
+                ground.Paths.Count,
+                bridge.Paths.Count);
+
+            Assert.Equal(
+                ground.Paths.Count,
+                tunnel.Paths.Count);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
             }
         }
     }

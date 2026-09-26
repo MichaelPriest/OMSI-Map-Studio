@@ -16,7 +16,7 @@ public sealed class MapStudioRoadKitGenerator
         "MapStudio_RoadKit";
 
     public const string PackVersion =
-        "1.2.0";
+        "1.3.0";
 
     private static readonly Encoding
         SplineEncoding =
@@ -389,47 +389,85 @@ public sealed class MapStudioRoadKitGenerator
     }
 
     private static IReadOnlyList<RoadVariant>
-        CreateVariants() =>
-        MapStudioStandardRoadCatalog
-            .Profiles
-            .Select(
-                profile =>
-                {
-                    if (profile.IsPedestrian)
-                    {
-                        return RoadVariant
-                            .CreatePedestrian(
-                                profile.FileName,
-                                profile
-                                    .CarriagewayWidthMeters);
-                    }
+        CreateVariants()
+    {
+        var variants =
+            new List<RoadVariant>();
 
-                    if (profile.IsDivided)
-                    {
-                        return RoadVariant
-                            .CreateDividedRoad(
-                                profile.FileName,
-                                profile
-                                    .LanesPerDirection,
-                                profile
-                                    .LaneWidthMeters,
-                                profile
-                                    .MedianWidthMeters,
-                                profile
-                                    .SidewalkWidthMeters);
-                    }
+        foreach (
+            var profile in
+                MapStudioStandardRoadCatalog
+                    .Profiles)
+        {
+            var ground =
+                CreateGroundVariant(
+                    profile);
 
-                    return RoadVariant
-                        .CreateRoad(
-                            profile.FileName,
-                            profile.LaneCount,
-                            profile
-                                .LaneWidthMeters,
-                            profile
-                                .SidewalkWidthMeters,
-                            profile.OneWay);
-                })
-            .ToArray();
+            variants.Add(
+                ground);
+
+            if (profile.IsPedestrian)
+            {
+                continue;
+            }
+
+            variants.Add(
+                ground.WithStructure(
+                    MapStudioStandardRoadCatalog
+                        .GetBridgeFileName(
+                            profile),
+                    RoadStructureKind
+                        .Bridge));
+
+            variants.Add(
+                ground.WithStructure(
+                    MapStudioStandardRoadCatalog
+                        .GetTunnelFileName(
+                            profile),
+                    RoadStructureKind
+                        .Tunnel));
+        }
+
+        return variants;
+    }
+
+    private static RoadVariant CreateGroundVariant(
+        MapStudioStandardRoadProfile profile)
+    {
+        if (profile.IsPedestrian)
+        {
+            return RoadVariant
+                .CreatePedestrian(
+                    profile.FileName,
+                    profile
+                        .CarriagewayWidthMeters);
+        }
+
+        if (profile.IsDivided)
+        {
+            return RoadVariant
+                .CreateDividedRoad(
+                    profile.FileName,
+                    profile
+                        .LanesPerDirection,
+                    profile
+                        .LaneWidthMeters,
+                    profile
+                        .MedianWidthMeters,
+                    profile
+                        .SidewalkWidthMeters);
+        }
+
+        return RoadVariant
+            .CreateRoad(
+                profile.FileName,
+                profile.LaneCount,
+                profile
+                    .LaneWidthMeters,
+                profile
+                    .SidewalkWidthMeters,
+                profile.OneWay);
+    }
 
     private static string BuildSpline(
         RoadVariant variant)
@@ -465,6 +503,20 @@ public sealed class MapStudioRoadKitGenerator
                 surface.Right,
                 surface.Height,
                 surface.Stretch);
+        }
+
+        foreach (
+            var segment in
+                variant.StructureSegments)
+        {
+            AppendProfileSegment(
+                builder,
+                segment.TextureIndex,
+                segment.Left,
+                segment.LeftHeight,
+                segment.Right,
+                segment.RightHeight,
+                segment.Stretch);
         }
 
         foreach (
@@ -534,6 +586,49 @@ public sealed class MapStudioRoadKitGenerator
             "0.995");
         builder.AppendLine(
             Format(stretch));
+    }
+
+    private static void AppendProfileSegment(
+        StringBuilder builder,
+        int textureIndex,
+        double left,
+        double leftHeight,
+        double right,
+        double rightHeight,
+        double stretch)
+    {
+        builder.AppendLine(
+            "[profile]");
+        builder.AppendLine(
+            textureIndex.ToString(
+                CultureInfo
+                    .InvariantCulture));
+        builder.AppendLine(
+            "[profilepnt]");
+        builder.AppendLine(
+            Format(
+                left));
+        builder.AppendLine(
+            Format(
+                leftHeight));
+        builder.AppendLine(
+            "0.005");
+        builder.AppendLine(
+            Format(
+                stretch));
+        builder.AppendLine(
+            "[profilepnt]");
+        builder.AppendLine(
+            Format(
+                right));
+        builder.AppendLine(
+            Format(
+                rightHeight));
+        builder.AppendLine(
+            "0.995");
+        builder.AppendLine(
+            Format(
+                stretch));
     }
 
     private static string BuildManifest(
@@ -774,11 +869,131 @@ public sealed class MapStudioRoadKitGenerator
         double Width,
         int Direction);
 
+    private sealed record RoadProfileSegment(
+        int TextureIndex,
+        double Left,
+        double LeftHeight,
+        double Right,
+        double RightHeight,
+        double Stretch);
+
+    private enum RoadStructureKind
+    {
+        Bridge,
+        Tunnel
+    }
+
     private sealed record RoadVariant(
         string FileName,
         IReadOnlyList<RoadSurface> Surfaces,
-        IReadOnlyList<RoadPath> Paths)
+        IReadOnlyList<RoadPath> Paths,
+        IReadOnlyList<RoadProfileSegment>
+            StructureSegments)
     {
+        public RoadVariant WithStructure(
+            string fileName,
+            RoadStructureKind kind)
+        {
+            var minimumX =
+                Surfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.Left,
+                            surface.Right));
+
+            var maximumX =
+                Surfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.Left,
+                            surface.Right));
+
+            var roadHeight =
+                Surfaces
+                    .Where(
+                        surface =>
+                            surface.TextureIndex ==
+                                0)
+                    .Select(
+                        surface =>
+                            surface.Height)
+                    .DefaultIfEmpty(
+                        0.10)
+                    .Max();
+
+            IReadOnlyList<RoadProfileSegment>
+                structure =
+                    kind switch
+                    {
+                        RoadStructureKind.Bridge =>
+                        [
+                            new(
+                                1,
+                                minimumX,
+                                roadHeight -
+                                    0.30,
+                                maximumX,
+                                roadHeight -
+                                    0.30,
+                                0.25),
+                            new(
+                                1,
+                                minimumX,
+                                roadHeight,
+                                minimumX,
+                                roadHeight +
+                                    1.10,
+                                0.20),
+                            new(
+                                1,
+                                maximumX,
+                                roadHeight,
+                                maximumX,
+                                roadHeight +
+                                    1.10,
+                                0.20)
+                        ],
+                        RoadStructureKind.Tunnel =>
+                        [
+                            new(
+                                1,
+                                minimumX,
+                                roadHeight,
+                                minimumX,
+                                roadHeight +
+                                    4.20,
+                                0.25),
+                            new(
+                                1,
+                                minimumX,
+                                roadHeight +
+                                    4.20,
+                                maximumX,
+                                roadHeight +
+                                    4.20,
+                                0.25),
+                            new(
+                                1,
+                                maximumX,
+                                roadHeight +
+                                    4.20,
+                                maximumX,
+                                roadHeight,
+                                0.25)
+                        ],
+                        _ =>
+                            []
+                    };
+
+            return this with
+            {
+                FileName =
+                    fileName,
+                StructureSegments =
+                    structure
+            };
+        }
+
         public static RoadVariant CreateRoad(
             string fileName,
             int laneCount,
@@ -893,7 +1108,8 @@ public sealed class MapStudioRoadKitGenerator
             return new RoadVariant(
                 fileName,
                 surfaces,
-                paths);
+                paths,
+                []);
         }
 
         public static RoadVariant
@@ -1035,7 +1251,8 @@ public sealed class MapStudioRoadKitGenerator
             return new RoadVariant(
                 fileName,
                 surfaces,
-                paths);
+                paths,
+                []);
         }
 
         public static RoadVariant
@@ -1065,7 +1282,8 @@ public sealed class MapStudioRoadKitGenerator
                         width *
                         0.9,
                         2)
-                ]);
+                ],
+                []);
         }
 
         private static void AddSidewalkPaths(

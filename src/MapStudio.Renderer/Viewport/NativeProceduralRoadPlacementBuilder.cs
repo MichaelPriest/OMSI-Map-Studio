@@ -434,10 +434,17 @@ public sealed class NativeProceduralRoadPlacementBuilder
             return false;
         }
 
+        var placementSplinePath =
+            MapStudioStandardRoadCatalog
+                .ResolvePlacementRelativePath(
+                    profileId,
+                    sourceSegment.Bridge,
+                    sourceSegment.Tunnel);
+
         request =
             new NativeSplinePlacementRequest(
                 tile.Reference,
-                profileId,
+                placementSplinePath,
                 -1,
                 shape.Start.X -
                     tileX *

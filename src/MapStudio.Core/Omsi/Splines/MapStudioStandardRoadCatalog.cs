@@ -178,6 +178,93 @@ public static class MapStudioStandardRoadCatalog
             Pedestrian
         ];
 
+    public static string GetBridgeFileName(
+        MapStudioStandardRoadProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(
+            profile);
+
+        return AddVariantSuffix(
+            profile.FileName,
+            "bridge");
+    }
+
+    public static string GetTunnelFileName(
+        MapStudioStandardRoadProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(
+            profile);
+
+        return AddVariantSuffix(
+            profile.FileName,
+            "tunnel");
+    }
+
+    public static string ResolvePlacementRelativePath(
+        string relativePath,
+        bool bridge,
+        bool tunnel)
+    {
+        ArgumentException
+            .ThrowIfNullOrWhiteSpace(
+                relativePath);
+
+        if (
+            bridge ==
+            tunnel)
+        {
+            return relativePath;
+        }
+
+        var profile =
+            Profiles
+                .FirstOrDefault(
+                    candidate =>
+                        string.Equals(
+                            candidate.RelativePath,
+                            relativePath,
+                            StringComparison
+                                .OrdinalIgnoreCase));
+
+        if (
+            profile is null ||
+            profile.IsPedestrian)
+        {
+            return relativePath;
+        }
+
+        var fileName =
+            bridge
+                ? GetBridgeFileName(
+                    profile)
+                : GetTunnelFileName(
+                    profile);
+
+        return @"Splines\" +
+            MapStudioRoadKitGenerator
+                .PackFolderName +
+            @"\" +
+            fileName;
+    }
+
+    private static string AddVariantSuffix(
+        string fileName,
+        string suffix)
+    {
+        var extension =
+            Path.GetExtension(
+                fileName);
+
+        var stem =
+            fileName[
+                ..^extension.Length];
+
+        return stem +
+            "_" +
+            suffix +
+            extension;
+    }
+
     public static MapStudioStandardRoadProfile
         FindByRelativePath(
             string relativePath)

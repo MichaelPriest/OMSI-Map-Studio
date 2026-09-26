@@ -1,5 +1,6 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Maps;
+using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Scene;
 using MapStudio.Renderer.Viewport;
 using Xunit;
@@ -414,6 +415,117 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             });
     }
 
+
+    [Fact]
+    public void BuilderSelectsRoadKitBridgeAndTunnelSplineVariants()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    3,
+                    3,
+                    3,
+                    3
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .RoadTwoLaneWithSidewalk;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "bridge",
+                            [
+                                new(20, 30),
+                                new(80, 30)
+                            ],
+                            profile.RelativePath,
+                            2,
+                            false,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                1,
+                            Bridge:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "tunnel",
+                            [
+                                new(20, 90),
+                                new(80, 90)
+                            ],
+                            profile.RelativePath,
+                            2,
+                            false,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                -1,
+                            Tunnel:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        var bridge =
+            Assert.Single(
+                result.Requests,
+                request =>
+                    request.SourceBridge);
+
+        var tunnel =
+            Assert.Single(
+                result.Requests,
+                request =>
+                    request.SourceTunnel);
+
+        Assert.Equal(
+            @"Splines\MapStudio_RoadKit\ms_road_2lane_7m_sidewalk_bridge.sli",
+            bridge.SplinePath);
+
+        Assert.Equal(
+            @"Splines\MapStudio_RoadKit\ms_road_2lane_7m_sidewalk_tunnel.sli",
+            tunnel.SplinePath);
+    }
 
     [Fact]
     public void BuilderCarriesGradeSeparationMetadataIntoRequests()
