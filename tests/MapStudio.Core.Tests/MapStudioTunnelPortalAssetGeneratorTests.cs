@@ -82,6 +82,78 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
     }
 
     [Fact]
+    public void BuildGeometryExtendsRisingSlopeWingDeeper()
+    {
+        var geometry =
+            new MapStudioTunnelPortalAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioTunnelPortalSpec(
+                        "MS_TunnelPortal_W080_DL070_DR030",
+                        8.0,
+                        LeftWingHeightMeters:
+                            5.0,
+                        RightWingHeightMeters:
+                            5.0,
+                        LeftWingDepthMeters:
+                            7.0,
+                        RightWingDepthMeters:
+                            3.0));
+
+        var vertices =
+            Enumerable.Range(
+                0,
+                geometry.Positions.Length / 3)
+                .Select(
+                    index =>
+                        (
+                            X:
+                                geometry.Positions[
+                                    index * 3],
+                            Z:
+                                geometry.Positions[
+                                    index * 3 + 2]
+                        ))
+                .ToArray();
+
+        var leftOuter =
+            vertices
+                .Where(
+                    vertex =>
+                        vertex.X <
+                        -5.0f)
+                .ToArray();
+
+        var rightOuter =
+            vertices
+                .Where(
+                    vertex =>
+                        vertex.X >
+                        5.0f)
+                .ToArray();
+
+        var leftDepth =
+            leftOuter.Max(
+                vertex =>
+                    vertex.Z) -
+            leftOuter.Min(
+                vertex =>
+                    vertex.Z);
+
+        var rightDepth =
+            rightOuter.Max(
+                vertex =>
+                    vertex.Z) -
+            rightOuter.Min(
+                vertex =>
+                    vertex.Z);
+
+        Assert.True(
+            leftDepth >
+            rightDepth +
+                3.0f);
+    }
+
+    [Fact]
     public void BuildGeometryCreatesRealPortalFrame()
     {
         var geometry =
