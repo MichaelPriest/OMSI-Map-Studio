@@ -32,6 +32,8 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainTextureMaskPainter.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTerrainTextureMaskTests.cs"
       - "src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs"
       - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
       - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
