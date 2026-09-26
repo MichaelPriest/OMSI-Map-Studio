@@ -4980,7 +4980,8 @@
                                 <NumberBox x:Name="TerrainTargetHeightBox"
                                            Header="Altura alvo (m)"
                                            SpinButtonPlacementMode="Compact"
-                                           SmallChange="0.25" />
+                                           SmallChange="0.25"
+                                           ValueChanged="OnTerrainShapePreviewValueChanged" />
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -5087,7 +5088,8 @@
                                                Value="1"
                                                Minimum="1"
                                                SpinButtonPlacementMode="Compact"
-                                               SmallChange="1" />
+                                               SmallChange="1"
+                                               ValueChanged="OnTerrainShapePreviewValueChanged" />
                                     <NumberBox x:Name="TerrainPaintAlphaBox"
                                                Grid.Column="1"
                                                Header="Alpha 0–255"
@@ -5095,7 +5097,8 @@
                                                Minimum="0"
                                                Maximum="255"
                                                SpinButtonPlacementMode="Compact"
-                                               SmallChange="16" />
+                                               SmallChange="16"
+                                               ValueChanged="OnTerrainShapePreviewValueChanged" />
                                 </Grid>
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Mistura da textura"
@@ -5147,24 +5150,28 @@
                                             Content="Nivelar forma"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
+                                            PointerEntered="OnTerrainShapeLevelPreviewEntered"
                                             Click="OnTerrainShapeLevelClick" />
                                     <Button x:Name="TerrainShapeRaiseButton"
                                             Grid.Column="1"
                                             Content="Elevar forma"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
+                                            PointerEntered="OnTerrainShapeRaisePreviewEntered"
                                             Click="OnTerrainShapeRaiseClick" />
                                     <Button x:Name="TerrainShapeLowerButton"
                                             Grid.Column="2"
                                             Content="Abaixar forma"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
+                                            PointerEntered="OnTerrainShapeLowerPreviewEntered"
                                             Click="OnTerrainShapeLowerClick" />
                                 </Grid>
                                 <Button x:Name="TerrainShapeFillButton"
                                         Content="Pintar forma"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
+                                        PointerEntered="OnTerrainShapePaintPreviewEntered"
                                         Click="OnTerrainShapeFillClick" />
                                 <TextBlock Text="Suavização da borda da forma = raio do pincel × suavização."
                                            TextWrapping="Wrap"

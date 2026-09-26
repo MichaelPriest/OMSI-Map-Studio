@@ -18,6 +18,14 @@ using Windows.System;
 
 namespace MapStudio.Native.Controls;
 
+public enum NativeTerrainShapePreviewMode
+{
+    Level,
+    Raise,
+    Lower,
+    Paint
+}
+
 public enum NativeSelectionContextAction
 {
     Move,
@@ -85,6 +93,11 @@ public sealed partial class NativeViewport : UserControl
     private bool _terrainPointPickPersistent;
     private bool _terrainBrushPreviewEnabled;
     private OmsiTerrainSplinePreviewBand? _terrainSplinePreviewBand;
+    private IReadOnlyList<Vector3> _terrainShapePreviewPoints = Array.Empty<Vector3>();
+    private NativeTerrainShapePreviewMode _terrainShapePreviewMode = NativeTerrainShapePreviewMode.Level;
+    private double _terrainShapePreviewPrimaryValue;
+    private double _terrainShapePreviewFeather;
+    private double _terrainShapePreviewFeatherMeters;
     private double _terrainBrushRadiusMeters = 20.0;
     private double _terrainBrushFeather = 0.25;
     private double _terrainBrushIntensityMeters = 1.0;
@@ -1067,11 +1080,126 @@ public sealed partial class NativeViewport : UserControl
         }
     }
 
+
+    public void SetTerrainShapePreview(
+        IReadOnlyList<Vector3>? points,
+        NativeTerrainShapePreviewMode mode,
+        double primaryValue,
+        double feather,
+        double featherMeters)
+    {
+        _terrainShapePreviewPoints = points?.ToArray() ?? Array.Empty<Vector3>();
+        _terrainShapePreviewMode = mode;
+        _terrainShapePreviewPrimaryValue = primaryValue;
+        _terrainShapePreviewFeather = double.IsFinite(feather) ? Math.Clamp(feather, 0, 1) : 0;
+        _terrainShapePreviewFeatherMeters = double.IsFinite(featherMeters) ? Math.Max(0, featherMeters) : 0;
+        UpdateTerrainShapePreviewVisual();
+    }
+
+    public void ClearTerrainShapePreview()
+    {
+        _terrainShapePreviewPoints = Array.Empty<Vector3>();
+        TerrainShapePreviewPolygon.Points.Clear();
+        TerrainShapePreviewFeatherPolygon.Points.Clear();
+        TerrainShapePreviewLayer.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdateTerrainShapePreviewVisual()
+    {
+        TerrainShapePreviewPolygon.Points.Clear();
+        TerrainShapePreviewFeatherPolygon.Points.Clear();
+
+        if (_runtime is null || _terrainShapePreviewPoints.Count < 3)
+        {
+            TerrainShapePreviewLayer.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var scaleX = Math.Max(0.01, SwapChainSurface.CompositionScaleX);
+        var scaleY = Math.Max(0.01, SwapChainSurface.CompositionScaleY);
+        var screenPoints = new List<Windows.Foundation.Point>(_terrainShapePreviewPoints.Count);
+
+        foreach (var worldPoint in _terrainShapePreviewPoints)
+        {
+            if (!_runtime.TryProjectWorldPoint(worldPoint + new Vector3(0, 0.05f, 0), out var pixel))
+            {
+                TerrainShapePreviewLayer.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            screenPoints.Add(new Windows.Foundation.Point(pixel.X / scaleX, pixel.Y / scaleY));
+        }
+
+        foreach (var point in screenPoints)
+        {
+            TerrainShapePreviewPolygon.Points.Add(point);
+            TerrainShapePreviewFeatherPolygon.Points.Add(point);
+        }
+
+        var (red, green, blue) = _terrainShapePreviewMode switch
+        {
+            NativeTerrainShapePreviewMode.Raise => ((byte)52, (byte)199, (byte)89),
+            NativeTerrainShapePreviewMode.Lower => ((byte)255, (byte)149, (byte)0),
+            NativeTerrainShapePreviewMode.Paint => ((byte)191, (byte)90, (byte)242),
+            _ => ((byte)89, (byte)217, (byte)255)
+        };
+
+        var opacity = _terrainShapePreviewMode switch
+        {
+            NativeTerrainShapePreviewMode.Raise or NativeTerrainShapePreviewMode.Lower =>
+                NativeTerrainBrushVisualMath.ResolveIntensityOpacity(_terrainShapePreviewPrimaryValue),
+            NativeTerrainShapePreviewMode.Paint =>
+                Math.Clamp(0.06 + (double.IsFinite(_terrainShapePreviewPrimaryValue)
+                    ? Math.Clamp(_terrainShapePreviewPrimaryValue, 0, 255) / 255.0
+                    : 1.0) * 0.30, 0.06, 0.36),
+            _ => 0.18
+        };
+
+        TerrainShapePreviewPolygon.Fill =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(
+                    (byte)Math.Clamp(Math.Round(opacity * 255), 1, 255),
+                    red,
+                    green,
+                    blue));
+
+        TerrainShapePreviewPolygon.Stroke =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(230, red, green, blue));
+
+        TerrainShapePreviewFeatherPolygon.Stroke =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(70, red, green, blue));
+
+        TerrainShapePreviewFeatherPolygon.StrokeThickness =
+            2.0 + _terrainShapePreviewFeather * 10.0;
+
+        TerrainShapePreviewLabelText.Text = _terrainShapePreviewMode switch
+        {
+            NativeTerrainShapePreviewMode.Raise =>
+                $"ELEVAR · Δ {_terrainShapePreviewPrimaryValue:0.##} m · feather {_terrainShapePreviewFeatherMeters:0.#} m",
+            NativeTerrainShapePreviewMode.Lower =>
+                $"ABAIXAR · Δ {_terrainShapePreviewPrimaryValue:0.##} m · feather {_terrainShapePreviewFeatherMeters:0.#} m",
+            NativeTerrainShapePreviewMode.Paint =>
+                $"PINTAR · alpha {_terrainShapePreviewPrimaryValue:0} · feather {_terrainShapePreviewFeatherMeters:0.#} m",
+            _ =>
+                $"NIVELAR → {_terrainShapePreviewPrimaryValue:0.##} m · feather {_terrainShapePreviewFeatherMeters:0.#} m"
+        };
+
+        var labelX = screenPoints.Average(point => point.X);
+        var labelY = screenPoints.Min(point => point.Y) - 30;
+
+        Canvas.SetLeft(TerrainShapePreviewLabel, Math.Max(8, labelX - 70));
+        Canvas.SetTop(TerrainShapePreviewLabel, Math.Max(8, labelY));
+        TerrainShapePreviewLayer.Visibility = Visibility.Visible;
+    }
+
     public void SetTerrainSplinePreview(
         OmsiTerrainSplinePreviewBand? preview)
     {
         _terrainSplinePreviewBand = preview;
         UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
     }
 
     public void ClearTerrainSplinePreview()
@@ -2570,6 +2698,7 @@ public sealed partial class NativeViewport : UserControl
         {
             ResizeAndRender();
             UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
         }
         catch (Exception exception)
         {
@@ -2586,6 +2715,7 @@ public sealed partial class NativeViewport : UserControl
         {
             ResizeAndRender();
             UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
         }
         catch (Exception exception)
         {
@@ -4441,6 +4571,7 @@ public sealed partial class NativeViewport : UserControl
                     deltaY);
 
                 UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
             }
 
             return;
@@ -4459,6 +4590,7 @@ public sealed partial class NativeViewport : UserControl
                 _pendingNavigationPixelY);
 
             UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
         }
     }
 
@@ -4941,6 +5073,7 @@ public sealed partial class NativeViewport : UserControl
                     .MouseWheelDelta);
 
             UpdateTerrainSplinePreviewVisual();
+            UpdateTerrainShapePreviewVisual();
 
             PointerStatusChanged?.Invoke(
                 this,

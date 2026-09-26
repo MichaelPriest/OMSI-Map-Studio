@@ -179,6 +179,30 @@
                 Visibility="Collapsed"
                 IsHitTestVisible="False" />
 
+        <Canvas x:Name="TerrainShapePreviewLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Polygon x:Name="TerrainShapePreviewFeatherPolygon"
+                     Stroke="#5959D9FF"
+                     StrokeThickness="4"
+                     Fill="Transparent" />
+            <Polygon x:Name="TerrainShapePreviewPolygon"
+                     Stroke="#E659D9FF"
+                     StrokeThickness="2"
+                     Fill="#3059D9FF" />
+            <Border x:Name="TerrainShapePreviewLabel"
+                    Padding="7,4"
+                    Background="#E60A141D"
+                    BorderBrush="#8059D9FF"
+                    BorderThickness="1"
+                    CornerRadius="5">
+                <TextBlock x:Name="TerrainShapePreviewLabelText"
+                           Text="Custom Shape"
+                           FontSize="10"
+                           Foreground="#FFF0FAFF" />
+            </Border>
+        </Canvas>
+
         <Canvas x:Name="TerrainBrushLayer"
                 Visibility="Collapsed"
                 IsHitTestVisible="False">

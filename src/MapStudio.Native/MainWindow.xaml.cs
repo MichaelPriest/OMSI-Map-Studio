@@ -250,6 +250,14 @@ public sealed partial class MainWindow : Window
         _terrainShapePoints =
             [];
 
+    private readonly List<Vector3>
+        _terrainShapePreviewWorldPoints =
+            [];
+
+    private NativeTerrainShapePreviewMode
+        _terrainShapePreviewMode =
+            NativeTerrainShapePreviewMode.Level;
+
     private bool
         _terrainShapeCaptureMode;
 
@@ -996,6 +1004,10 @@ public sealed partial class MainWindow : Window
                     {
                         _terrainShapePoints.Add(
                             shapePoint);
+
+                        _terrainShapePreviewWorldPoints
+                            .Add(
+                                point.WorldPoint);
                     }
 
                     SetTerrainShapeActionButtons(
@@ -6235,6 +6247,12 @@ public sealed partial class MainWindow : Window
         _terrainShapePoints
             .Clear();
 
+        _terrainShapePreviewWorldPoints
+            .Clear();
+
+        _terrainShapePreviewMode =
+            NativeTerrainShapePreviewMode.Level;
+
         _terrainShapeCaptureMode =
             true;
 
@@ -6262,6 +6280,9 @@ public sealed partial class MainWindow : Window
         {
             Viewport
                 .ClearProceduralRoadPreview();
+
+            Viewport
+                .ClearTerrainShapePreview();
 
             return;
         }
@@ -6297,9 +6318,116 @@ public sealed partial class MainWindow : Window
             Viewport
                 .PreviewProceduralRoadGraph(
                     graph);
+
+            if (
+                _terrainShapePreviewWorldPoints.Count >=
+                    3)
+            {
+                var radius =
+                    double.IsFinite(
+                        TerrainBrushRadiusBox.Value)
+                        ? Math.Max(
+                            0.25,
+                            TerrainBrushRadiusBox.Value)
+                        : 20.0;
+
+                var feather =
+                    double.IsFinite(
+                        TerrainBrushFeatherBox.Value)
+                        ? Math.Clamp(
+                            TerrainBrushFeatherBox.Value,
+                            0,
+                            1)
+                        : 0.25;
+
+                var primaryValue =
+                    _terrainShapePreviewMode
+                    switch
+                    {
+                        NativeTerrainShapePreviewMode.Raise or
+                        NativeTerrainShapePreviewMode.Lower =>
+                            double.IsFinite(
+                                TerrainBrushDeltaBox.Value)
+                                ? Math.Clamp(
+                                    TerrainBrushDeltaBox.Value,
+                                    0.05,
+                                    100)
+                                : 1.0,
+
+                        NativeTerrainShapePreviewMode.Paint =>
+                            double.IsFinite(
+                                TerrainPaintAlphaBox.Value)
+                                ? Math.Clamp(
+                                    TerrainPaintAlphaBox.Value,
+                                    0,
+                                    255)
+                                : 255,
+
+                        _ =>
+                            double.IsFinite(
+                                TerrainTargetHeightBox.Value)
+                                ? TerrainTargetHeightBox.Value
+                                : 0
+                    };
+
+                Viewport
+                    .SetTerrainShapePreview(
+                        _terrainShapePreviewWorldPoints,
+                        _terrainShapePreviewMode,
+                        primaryValue,
+                        feather,
+                        radius *
+                            feather);
+            }
         }
         catch
         {
+        }
+    }
+
+    private void SetTerrainShapePreviewMode(
+        NativeTerrainShapePreviewMode mode)
+    {
+        _terrainShapePreviewMode =
+            mode;
+
+        UpdateTerrainShapePreview();
+    }
+
+    private void OnTerrainShapeLevelPreviewEntered(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        SetTerrainShapePreviewMode(
+            NativeTerrainShapePreviewMode.Level);
+
+    private void OnTerrainShapeRaisePreviewEntered(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        SetTerrainShapePreviewMode(
+            NativeTerrainShapePreviewMode.Raise);
+
+    private void OnTerrainShapeLowerPreviewEntered(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        SetTerrainShapePreviewMode(
+            NativeTerrainShapePreviewMode.Lower);
+
+    private void OnTerrainShapePaintPreviewEntered(
+        object sender,
+        PointerRoutedEventArgs e) =>
+        SetTerrainShapePreviewMode(
+            NativeTerrainShapePreviewMode.Paint);
+
+    private void OnTerrainShapePreviewValueChanged(
+        NumberBox sender,
+        NumberBoxValueChangedEventArgs args)
+    {
+        if (
+            _terrainShapeCaptureMode ||
+            _terrainShapePoints.Count >=
+                3)
+        {
+            UpdateTerrainShapePreview();
         }
     }
 
@@ -6312,9 +6440,15 @@ public sealed partial class MainWindow : Window
         Viewport
             .CancelTerrainPointPick();
 
+        Viewport
+            .ClearTerrainShapePreview();
+
         if (clearPoints)
         {
             _terrainShapePoints
+                .Clear();
+
+            _terrainShapePreviewWorldPoints
                 .Clear();
         }
 
@@ -9563,6 +9697,16 @@ public sealed partial class MainWindow : Window
                     false,
                     TerrainBrushRadiusBox.Value,
                     TerrainBrushFeatherBox.Value);
+
+            Viewport
+                .ClearTerrainShapePreview();
+
+            if (_terrainShapeCaptureMode)
+            {
+                CancelTerrainShapeCapture(
+                    clearPoints:
+                        true);
+            }
         }
 
         if (
@@ -11936,8 +12080,18 @@ public sealed partial class MainWindow : Window
 
     private void OnTerrainBrushPreviewValueChanged(
         NumberBox sender,
-        NumberBoxValueChangedEventArgs args) =>
+        NumberBoxValueChangedEventArgs args)
+    {
         RefreshTerrainBrushPreview();
+
+        if (
+            _terrainShapeCaptureMode ||
+            _terrainShapePoints.Count >=
+                3)
+        {
+            UpdateTerrainShapePreview();
+        }
+    }
 
     private void RefreshTerrainBrushPreview()
     {
