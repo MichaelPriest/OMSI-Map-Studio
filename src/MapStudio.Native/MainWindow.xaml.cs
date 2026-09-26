@@ -1295,7 +1295,10 @@ public sealed partial class MainWindow : Window
                             PickingKind.Spline,
                         Length:
                             > 0.001
-                    };
+                    } &&
+                    !MapStudioStandardRoadCatalog
+                        .IsTerrainConformProtectedPath(
+                            info.AssetPath);
 
                 if (info is null)
                 {
@@ -7146,6 +7149,15 @@ public sealed partial class MainWindow : Window
             return;
         }
 
+        if (
+            MapStudioStandardRoadCatalog
+                .IsTerrainConformProtectedPath(
+                    selection.AssetPath))
+        {
+            Viewport.ClearTerrainSplinePreview();
+            return;
+        }
+
         var halfWidth = TerrainSplineHalfWidthBox.Value;
         var featherWidth = TerrainSplineFeatherBox.Value;
         var verticalOffset = TerrainSplineVerticalOffsetBox.Value;
@@ -7210,6 +7222,23 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 "Terreno ↕ via: selecione primeiro uma spline/rua.";
+
+            return;
+        }
+
+        if (
+            MapStudioStandardRoadCatalog
+                .IsTerrainConformProtectedPath(
+                    selection.AssetPath))
+        {
+            Viewport
+                .ClearTerrainSplinePreview();
+
+            ConformTerrainToSplineButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                "Terreno ↕ via: ponte/túnel estrutural protegido; o terreno não será alterado.";
 
             return;
         }
@@ -7304,9 +7333,20 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
+            var selected =
+                _selectionInfo;
+
             ConformTerrainToSplineButton.IsEnabled =
-                _selectionInfo?.Kind ==
-                    PickingKind.Spline;
+                selected is
+                {
+                    Kind:
+                        PickingKind.Spline,
+                    Length:
+                        > 0.001
+                } &&
+                !MapStudioStandardRoadCatalog
+                    .IsTerrainConformProtectedPath(
+                        selected.AssetPath);
 
             StatusText.Text =
                 $"Falha ao fazer o terreno acompanhar a via: {exception.Message}";

@@ -88,4 +88,33 @@ public sealed class MapStudioStandardRoadProfileSelectorTests
                     @"Splines\MapStudio_RoadKit\",
                     profile.RelativePath));
     }
+
+    [Theory]
+    [InlineData(@"Splines\MapStudio_RoadKit\ms_road_2lane_7m_bridge.sli")]
+    [InlineData(@"Splines\MapStudio_RoadKit\ms_road_2lane_7m_tunnel.sli")]
+    [InlineData(@"Splines\MapStudio_Bridges\ms_bridge_city.sli")]
+    [InlineData(@"Splines/MapStudio_Tunnels/ms_tunnel_city.sli")]
+    public void CatalogProtectsStructuralSplinesFromTerrainConform(
+        string assetPath)
+    {
+        Assert.True(
+            MapStudioStandardRoadCatalog
+                .IsTerrainConformProtectedPath(
+                    assetPath));
+    }
+
+    [Theory]
+    [InlineData(@"Splines\MapStudio_RoadKit\ms_road_2lane_7m.sli")]
+    [InlineData(@"Splines\Marcel\road.sli")]
+    [InlineData("")]
+    public void CatalogAllowsOrdinarySplinesToConformTerrain(
+        string assetPath)
+    {
+        Assert.False(
+            MapStudioStandardRoadCatalog
+                .IsTerrainConformProtectedPath(
+                    assetPath));
+    }
+
+
 }

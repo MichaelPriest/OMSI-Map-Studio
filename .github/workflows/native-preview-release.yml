@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.62: preserve OSM bridge/tunnel/layer metadata through native spline placement.
+# Test 10.66: protect structural bridge/tunnel splines from terrain conform.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.65-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.65-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.66-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.66-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.65-native
-  TAG: v0.2.0-alpha.5-test.10.65-native
+  VERSION: 0.2.0-alpha.5-test.10.66-native
+  TAG: v0.2.0-alpha.5-test.10.66-native
 
 jobs:
   build-native-preview:
@@ -2580,6 +2580,43 @@ jobs:
 
           Write-Host "Verified layer-only bridge/tunnel variant inference, bounded approach ramps and non-destructive terrain clearance."
 
+      - name: Verify test 10.66 structural terrain-conform protection
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs -Raw
+
+          foreach ($required in @(
+            'IsTerrainConformProtectedPath',
+            'MapStudioBridgeSplineGenerator',
+            'MapStudioTunnelSplineGenerator',
+            '_bridge.sli',
+            '_tunnel.sli'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.66 structural classifier marker is missing: $required"
+            }
+          }
+
+          if (-not $session.Contains('terrainSplineStructuralAssetProtected') -or
+              -not $session.Contains('IsTerrainConformProtectedPath')) {
+            throw "Test 10.66 session write guard is missing."
+          }
+
+          if (-not $main.Contains('ponte/túnel estrutural protegido') -or
+              -not $main.Contains('ClearTerrainSplinePreview')) {
+            throw "Test 10.66 native UI structural protection is missing."
+          }
+
+          if (-not $tests.Contains('CatalogProtectsStructuralSplinesFromTerrainConform') -or
+              -not $tests.Contains('CatalogAllowsOrdinarySplinesToConformTerrain')) {
+            throw "Test 10.66 structural classifier regression coverage is missing."
+          }
+
+          Write-Host "Verified bridge/tunnel terrain-conform preview suppression, UI blocking and session-level writer protection."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2734,11 +2771,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.65-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.66-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.65-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.66-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

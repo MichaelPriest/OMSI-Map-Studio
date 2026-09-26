@@ -247,6 +247,66 @@ public static class MapStudioStandardRoadCatalog
             fileName;
     }
 
+
+    public static bool
+        IsTerrainConformProtectedPath(
+            string? assetPath)
+    {
+        if (string.IsNullOrWhiteSpace(
+                assetPath))
+        {
+            return false;
+        }
+
+        var normalized =
+            assetPath
+                .Replace(
+                    '/',
+                    '\\')
+                .Trim();
+
+        var segments =
+            normalized.Split(
+                '\\',
+                StringSplitOptions
+                    .RemoveEmptyEntries |
+                StringSplitOptions
+                    .TrimEntries);
+
+        if (
+            segments.Any(
+                segment =>
+                    string.Equals(
+                        segment,
+                        MapStudioBridgeSplineGenerator
+                            .PackFolderName,
+                        StringComparison
+                            .OrdinalIgnoreCase) ||
+                    string.Equals(
+                        segment,
+                        MapStudioTunnelSplineGenerator
+                            .PackFolderName,
+                        StringComparison
+                            .OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var fileName =
+            segments.LastOrDefault() ??
+            normalized;
+
+        return
+            fileName.EndsWith(
+                "_bridge.sli",
+                StringComparison
+                    .OrdinalIgnoreCase) ||
+            fileName.EndsWith(
+                "_tunnel.sli",
+                StringComparison
+                    .OrdinalIgnoreCase);
+    }
+
     private static string AddVariantSuffix(
         string fileName,
         string suffix)

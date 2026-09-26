@@ -9442,6 +9442,15 @@ public sealed class OmsiNativeSession
                 "terrainSplineSelectionInvalid");
         }
 
+        if (
+            MapStudioStandardRoadCatalog
+                .IsTerrainConformProtectedPath(
+                    selection.AssetPath))
+        {
+            throw new InvalidOperationException(
+                "terrainSplineStructuralAssetProtected");
+        }
+
         if (_pendingTransforms.Count > 0)
         {
             throw new InvalidOperationException(
