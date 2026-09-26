@@ -110,6 +110,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.75-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.76-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.76-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.77-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md"
   workflow_dispatch:
 
 permissions:
@@ -120,8 +122,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.76-native
-  TAG: v0.2.0-alpha.5-test.10.76-native
+  VERSION: 0.2.0-alpha.5-test.10.77-native
+  TAG: v0.2.0-alpha.5-test.10.77-native
 
 jobs:
   build-native-preview:
@@ -3020,6 +3022,42 @@ jobs:
 
           Write-Host "Verified asymmetric retaining wings driven by real terrain samples without terrain mutation."
 
+      - name: Verify test 10.77 adaptive tunnel wing depth
+        shell: pwsh
+        run: |
+          $portalAsset = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioTunnelPortalAssetGenerator.cs -Raw
+          $portalPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeTunnelPortalPlanBuilder.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioTunnelPortalAssetGeneratorTests.cs -Raw
+          $rendererTests = Get-Content tests/MapStudio.Renderer.Tests/NativeTunnelPortalPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'LeftWingDepthMeters',
+            'RightWingDepthMeters',
+            'roofApronDepth'
+          )) {
+            if (-not $portalAsset.Contains($required)) {
+              throw "Test 10.77 tunnel wing-depth asset marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TerrainLongitudinalProbeMeters',
+            'WingDepthQuantumMeters',
+            'ResolveWingDepth',
+            'TerrainDepthGain'
+          )) {
+            if (-not $portalPlan.Contains($required)) {
+              throw "Test 10.77 tunnel wing-depth planner marker is missing: $required"
+            }
+          }
+
+          if (-not $coreTests.Contains('BuildGeometryExtendsRisingSlopeWingDeeper') -or
+              -not $rendererTests.Contains('BuilderExtendsWingDepthWhereTerrainRisesOutward')) {
+            throw "Test 10.77 adaptive tunnel wing-depth regression coverage is missing."
+          }
+
+          Write-Host "Verified slope-direction retaining-wing depth and roof-apron continuity without terrain mutation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3174,11 +3212,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.76-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.77-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.76-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
