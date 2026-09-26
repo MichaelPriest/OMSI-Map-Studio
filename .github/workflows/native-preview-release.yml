@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.55: Custom Shape terrain leveling/offset across real OMSI terrain tiles.
+# Test 10.56: topology-fitted procedural junction/crossing surfaces.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.55-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.55-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.56-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.56-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.55-native
-  TAG: v0.2.0-alpha.5-test.10.55-native
+  VERSION: 0.2.0-alpha.5-test.10.56-native
+  TAG: v0.2.0-alpha.5-test.10.56-native
 
 jobs:
   build-native-preview:
@@ -2253,6 +2253,33 @@ jobs:
 
           Write-Host "Verified concave Custom Shape leveling/offset, feathering, cross-tile writes and real terrain reload."
 
+      - name: Verify test 10.56 topology-fitted junction surfaces
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'JunctionOutlineSampleCount',
+            'ResolveJunctionOutlineRadius',
+            'minimumHalfWidth',
+            'maximumHalfWidth'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.56 fitted junction marker is missing: $required"
+            }
+          }
+
+          if ($junction.Contains('return ConvexHull(')) {
+            throw "Test 10.56 must not fall back to convex-hull junction filling."
+          }
+
+          if (-not $tests.Contains('GeometryBuilderCutsBackOutsideCrossCornersToRoadWidth')) {
+            throw "Test 10.56 fitted-corner regression test is missing."
+          }
+
+          Write-Host "Verified radial road-mouth union footprint, concave corner cut-backs and origin-centered fan triangulation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2407,11 +2434,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.55-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.56-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.55-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.56-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

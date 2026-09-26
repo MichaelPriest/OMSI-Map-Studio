@@ -171,6 +171,10 @@ public sealed class MapStudioJunctionAssetGenerator
     public const string RootFolderName =
         "MapStudio_Junctions";
 
+    private const int
+        JunctionOutlineSampleCount =
+            144;
+
     public async Task<MapStudioJunctionAssetResult>
         GenerateAsync(
             string omsiRoot,
@@ -472,15 +476,14 @@ public sealed class MapStudioJunctionAssetGenerator
                 "junctionOutlineInvalid");
         }
 
-        var centerX =
-            outline.Average(
-                point =>
-                    point.X);
+        // The radial footprint is star-shaped around the actual
+        // junction origin. Keep the fan center fixed at the origin
+        // so concave cut-backs between road mouths triangulate safely.
+        const double centerX =
+            0;
 
-        var centerZ =
-            outline.Average(
-                point =>
-                    point.Z);
+        const double centerZ =
+            0;
 
         var positions =
             new List<float>(
@@ -633,181 +636,180 @@ public sealed class MapStudioJunctionAssetGenerator
             MapStudioJunctionSpec spec,
             double extent)
     {
-        var candidates =
+        var points =
             new List<
                 JunctionOutlinePoint>(
-                    spec.Arms.Count *
-                    2);
+                    JunctionOutlineSampleCount);
+
+        for (
+            var index = 0;
+            index <
+                JunctionOutlineSampleCount;
+            index++)
+        {
+            var angleDegrees =
+                index *
+                360.0 /
+                JunctionOutlineSampleCount;
+
+            var radius =
+                ResolveJunctionOutlineRadius(
+                    spec,
+                    extent,
+                    angleDegrees);
+
+            var radians =
+                angleDegrees *
+                Math.PI /
+                180.0;
+
+            points.Add(
+                new JunctionOutlinePoint(
+                    Math.Sin(
+                        radians) *
+                    radius,
+                    Math.Cos(
+                        radians) *
+                    radius));
+        }
+
+        return points;
+    }
+
+    private static double
+        ResolveJunctionOutlineRadius(
+            MapStudioJunctionSpec spec,
+            double extent,
+            double angleDegrees)
+    {
+        var radians =
+            angleDegrees *
+            Math.PI /
+            180.0;
+
+        var rayX =
+            Math.Sin(
+                radians);
+
+        var rayZ =
+            Math.Cos(
+                radians);
+
+        var minimumHalfWidth =
+            spec.Arms
+                .Min(
+                    arm =>
+                        arm.WidthMeters /
+                        2.0);
+
+        var maximumHalfWidth =
+            spec.Arms
+                .Max(
+                    arm =>
+                        arm.WidthMeters /
+                        2.0);
+
+        // A small central pad keeps unusual/clustered arm layouts
+        // connected while the outer footprint still follows the
+        // real union of each finite road mouth rectangle.
+        var bestRadius =
+            Math.Clamp(
+                minimumHalfWidth *
+                    0.75,
+                0.75,
+                4.0);
 
         foreach (
-            var arm in
-                spec.Arms)
+            var arm in spec.Arms)
         {
-            var radians =
+            var armRadians =
                 arm.AngleDegrees *
                 Math.PI /
                 180.0;
 
             var forwardX =
                 Math.Sin(
-                    radians);
+                    armRadians);
 
             var forwardZ =
                 Math.Cos(
-                    radians);
+                    armRadians);
 
             var lateralX =
                 Math.Cos(
-                    radians);
+                    armRadians);
 
             var lateralZ =
                 -Math.Sin(
-                    radians);
+                    armRadians);
 
-            var halfWidth =
-                arm.WidthMeters /
-                2.0;
+            var forwardProjection =
+                rayX *
+                    forwardX +
+                rayZ *
+                    forwardZ;
 
-            candidates.Add(
-                new JunctionOutlinePoint(
-                    forwardX *
-                        extent +
-                    lateralX *
-                        halfWidth,
-                    forwardZ *
-                        extent +
-                    lateralZ *
-                        halfWidth));
-
-            candidates.Add(
-                new JunctionOutlinePoint(
-                    forwardX *
-                        extent -
-                    lateralX *
-                        halfWidth,
-                    forwardZ *
-                        extent -
-                    lateralZ *
-                        halfWidth));
-        }
-
-        return ConvexHull(
-            candidates);
-    }
-
-    private static IReadOnlyList<
-        JunctionOutlinePoint>
-        ConvexHull(
-            IEnumerable<
-                JunctionOutlinePoint>
-                points)
-    {
-        var ordered =
-            points
-                .Distinct()
-                .OrderBy(
-                    point =>
-                        point.X)
-                .ThenBy(
-                    point =>
-                        point.Z)
-                .ToArray();
-
-        if (ordered.Length <= 3)
-        {
-            return ordered;
-        }
-
-        var lower =
-            new List<
-                JunctionOutlinePoint>();
-
-        foreach (
-            var point in
-                ordered)
-        {
-            while (
-                lower.Count >= 2 &&
-                Cross(
-                    lower[^2],
-                    lower[^1],
-                    point) <=
-                0)
+            if (
+                forwardProjection <
+                -0.0000001)
             {
-                lower.RemoveAt(
-                    lower.Count -
-                    1);
+                continue;
             }
 
-            lower.Add(
-                point);
-        }
+            var lateralProjection =
+                Math.Abs(
+                    rayX *
+                        lateralX +
+                    rayZ *
+                        lateralZ);
 
-        var upper =
-            new List<
-                JunctionOutlinePoint>();
+            var longitudinalLimit =
+                forwardProjection >
+                    0.0000001
+                    ? extent /
+                        forwardProjection
+                    : double
+                        .PositiveInfinity;
 
-        for (
-            var index =
-                ordered.Length -
-                1;
-            index >= 0;
-            index--)
-        {
-            var point =
-                ordered[index];
+            var lateralLimit =
+                lateralProjection >
+                    0.0000001
+                    ? (
+                        arm.WidthMeters /
+                        2.0
+                    ) /
+                    lateralProjection
+                    : double
+                        .PositiveInfinity;
 
-            while (
-                upper.Count >= 2 &&
-                Cross(
-                    upper[^2],
-                    upper[^1],
-                    point) <=
-                0)
+            var armRadius =
+                Math.Min(
+                    longitudinalLimit,
+                    lateralLimit);
+
+            if (
+                double.IsFinite(
+                    armRadius) &&
+                armRadius >
+                    bestRadius)
             {
-                upper.RemoveAt(
-                    upper.Count -
-                    1);
+                bestRadius =
+                    armRadius;
             }
-
-            upper.Add(
-                point);
         }
 
-        lower.RemoveAt(
-            lower.Count -
-            1);
+        var maximumRadius =
+            Math.Sqrt(
+                extent *
+                    extent +
+                maximumHalfWidth *
+                    maximumHalfWidth);
 
-        upper.RemoveAt(
-            upper.Count -
-            1);
-
-        lower.AddRange(
-            upper);
-
-        return lower;
+        return Math.Clamp(
+            bestRadius,
+            0.25,
+            maximumRadius);
     }
-
-    private static double Cross(
-        JunctionOutlinePoint origin,
-        JunctionOutlinePoint a,
-        JunctionOutlinePoint b) =>
-        (
-            a.X -
-            origin.X
-        ) *
-        (
-            b.Z -
-            origin.Z
-        ) -
-        (
-            a.Z -
-            origin.Z
-        ) *
-        (
-            b.X -
-            origin.X
-        );
 
     private static List<JunctionPath>
         BuildInternalPaths(

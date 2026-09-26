@@ -42,8 +42,8 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             geometry
                 .TriangleMaterialIndices
                 .Length,
-            4,
-            12);
+            100,
+            180);
 
         Assert.Equal(
             geometry
@@ -84,6 +84,91 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             maximumRadius,
             4.0,
             6.5);
+    }
+
+
+    [Fact]
+    public void GeometryBuilderCutsBackOutsideCrossCornersToRoadWidth()
+    {
+        var geometry =
+            new MapStudioJunctionAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioJunctionSpec(
+                        "Cross fitted",
+                        [
+                            new(
+                                0,
+                                7),
+                            new(
+                                90,
+                                7),
+                            new(
+                                180,
+                                7),
+                            new(
+                                270,
+                                7)
+                        ]));
+
+        Assert.Equal(
+            0f,
+            geometry.Positions[0]);
+
+        Assert.Equal(
+            0f,
+            geometry.Positions[2]);
+
+        var diagonal =
+            Enumerable
+                .Range(
+                    1,
+                    geometry.Positions.Length /
+                        3 -
+                    1)
+                .Select(
+                    index =>
+                    {
+                        var x =
+                            geometry.Positions[
+                                index *
+                                3];
+
+                        var z =
+                            geometry.Positions[
+                                index *
+                                3 +
+                                2];
+
+                        return
+                            (
+                                X: x,
+                                Z: z,
+                                Difference:
+                                    Math.Abs(
+                                        x -
+                                        z)
+                            );
+                    })
+                .Where(
+                    point =>
+                        point.X >
+                            0 &&
+                        point.Z >
+                            0)
+                .OrderBy(
+                    point =>
+                        point.Difference)
+                .First();
+
+        Assert.InRange(
+            diagonal.X,
+            3.45f,
+            3.55f);
+
+        Assert.InRange(
+            diagonal.Z,
+            3.45f,
+            3.55f);
     }
 
     [Fact]
