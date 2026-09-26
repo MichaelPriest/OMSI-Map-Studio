@@ -45,6 +45,14 @@ public sealed class NativeProceduralRoadPlacementBuilder
     private const double MaximumCurveSweepDegrees =
         110.0;
 
+    private const double
+        MinimumLayerVerticalSeparationMeters =
+            4.8;
+
+    private const double
+        MaximumLayerRampGradient =
+            0.08;
+
     public NativeProceduralRoadPlacementBuildResult Build(
         NativeSceneSnapshot scene,
         MapStudioRoadGraph graph)
@@ -459,12 +467,19 @@ public sealed class NativeProceduralRoadPlacementBuilder
             return false;
         }
 
+        var (
+            placementBridge,
+            placementTunnel
+        ) =
+            ResolvePlacementStructure(
+                sourceSegment);
+
         var placementSplinePath =
             MapStudioStandardRoadCatalog
                 .ResolvePlacementRelativePath(
                     profileId,
-                    sourceSegment.Bridge,
-                    sourceSegment.Tunnel);
+                    placementBridge,
+                    placementTunnel);
 
         request =
             new NativeSplinePlacementRequest(
@@ -854,6 +869,14 @@ public sealed class NativeProceduralRoadPlacementBuilder
                     continue;
                 }
 
+                var layerDirection =
+                    ResolveLayerVerticalDirection(
+                        first);
+
+                var targetSeparation =
+                    ResolveLayerTargetSeparationMeters(
+                        first);
+
                 var traveled =
                     0.0;
 
@@ -875,6 +898,16 @@ public sealed class NativeProceduralRoadPlacementBuilder
                             traveled /
                             totalLength);
 
+                    segmentStartHeight +=
+                        ResolveLayerClearanceOffset(
+                            scene,
+                            segment.Start,
+                            segmentStartHeight,
+                            traveled,
+                            totalLength,
+                            layerDirection,
+                            targetSeparation);
+
                     traveled +=
                         Math.Max(
                             0,
@@ -887,6 +920,16 @@ public sealed class NativeProceduralRoadPlacementBuilder
                             endHeight,
                             traveled /
                             totalLength);
+
+                    segmentEndHeight +=
+                        ResolveLayerClearanceOffset(
+                            scene,
+                            segment.End,
+                            segmentEndHeight,
+                            traveled,
+                            totalLength,
+                            layerDirection,
+                            targetSeparation);
 
                     result[
                         segment.Id] =
@@ -907,7 +950,160 @@ public sealed class NativeProceduralRoadPlacementBuilder
     private static bool IsStructuralSegment(
         MapStudioRoadGraphSegment segment) =>
         segment.Bridge ||
-        segment.Tunnel;
+        segment.Tunnel ||
+        (segment.Layer ?? 0) !=
+            0;
+
+    private static (
+        bool Bridge,
+        bool Tunnel
+    ) ResolvePlacementStructure(
+        MapStudioRoadGraphSegment segment)
+    {
+        if (
+            segment.Bridge !=
+            segment.Tunnel)
+        {
+            return
+                (
+                    segment.Bridge,
+                    segment.Tunnel
+                );
+        }
+
+        var layer =
+            segment.Layer ??
+            0;
+
+        return layer switch
+        {
+            > 0 =>
+                (
+                    true,
+                    false
+                ),
+            < 0 =>
+                (
+                    false,
+                    true
+                ),
+            _ =>
+                (
+                    false,
+                    false
+                )
+        };
+    }
+
+    private static int
+        ResolveLayerVerticalDirection(
+            MapStudioRoadGraphSegment segment)
+    {
+        var layer =
+            segment.Layer ??
+            0;
+
+        if (layer == 0)
+        {
+            return 0;
+        }
+
+        if (
+            segment.Bridge &&
+            !segment.Tunnel)
+        {
+            return 1;
+        }
+
+        if (
+            segment.Tunnel &&
+            !segment.Bridge)
+        {
+            return -1;
+        }
+
+        return Math.Sign(
+            layer);
+    }
+
+    private static double
+        ResolveLayerTargetSeparationMeters(
+            MapStudioRoadGraphSegment segment)
+    {
+        var layer =
+            Math.Abs(
+                segment.Layer ??
+                0);
+
+        return layer == 0
+            ? 0
+            : MinimumLayerVerticalSeparationMeters *
+                layer;
+    }
+
+    private static double
+        ResolveLayerClearanceOffset(
+            NativeSceneSnapshot scene,
+            MapStudioRoadPoint point,
+            double baselineHeight,
+            double traveled,
+            double totalLength,
+            int direction,
+            double targetSeparation)
+    {
+        if (
+            direction == 0 ||
+            targetSeparation <=
+                0 ||
+            traveled <=
+                0.0001 ||
+            traveled >=
+                totalLength -
+                0.0001 ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    point.X,
+                    point.Z,
+                    out var terrainHeight))
+        {
+            return 0;
+        }
+
+        var currentSeparation =
+            direction *
+            (
+                baselineHeight -
+                terrainHeight
+            );
+
+        var needed =
+            Math.Max(
+                0,
+                targetSeparation -
+                currentSeparation);
+
+        if (
+            needed <=
+            0.0001)
+        {
+            return 0;
+        }
+
+        var rampCapacity =
+            Math.Min(
+                traveled,
+                totalLength -
+                    traveled) *
+            MaximumLayerRampGradient;
+
+        return direction *
+            Math.Min(
+                needed,
+                Math.Max(
+                    0,
+                    rampCapacity));
+    }
 
     private static double LerpHeight(
         double start,

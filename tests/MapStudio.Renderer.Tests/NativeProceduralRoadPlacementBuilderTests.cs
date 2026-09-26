@@ -793,6 +793,200 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             terrain.Heights[2]);
     }
 
+
+    [Fact]
+    public void BuilderInfersLayerOnlyBridgeAndTunnelClearanceOnFlatTerrain()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        0f,
+                        25)
+                    .ToArray());
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .RoadTwoLane;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "layer-bridge",
+                            [
+                                new(60, 75),
+                                new(150, 75),
+                                new(240, 75)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                1,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "layer-tunnel",
+                            [
+                                new(60, 225),
+                                new(150, 225),
+                                new(240, 225)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                -1,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            4,
+            result.Requests.Count);
+
+        var bridgeRequests =
+            result.Requests
+                .Where(
+                    request =>
+                        request.SourceLayer ==
+                            1)
+                .OrderBy(
+                    request =>
+                        request.StartWorld.X)
+                .ToArray();
+
+        var tunnelRequests =
+            result.Requests
+                .Where(
+                    request =>
+                        request.SourceLayer ==
+                            -1)
+                .OrderBy(
+                    request =>
+                        request.StartWorld.X)
+                .ToArray();
+
+        Assert.Equal(
+            2,
+            bridgeRequests.Length);
+
+        Assert.Equal(
+            2,
+            tunnelRequests.Length);
+
+        Assert.All(
+            bridgeRequests,
+            request =>
+            {
+                Assert.False(
+                    request.SourceBridge);
+
+                Assert.EndsWith(
+                    "_bridge.sli",
+                    request.SplinePath,
+                    StringComparison
+                        .OrdinalIgnoreCase);
+            });
+
+        Assert.All(
+            tunnelRequests,
+            request =>
+            {
+                Assert.False(
+                    request.SourceTunnel);
+
+                Assert.EndsWith(
+                    "_tunnel.sli",
+                    request.SplinePath,
+                    StringComparison
+                        .OrdinalIgnoreCase);
+            });
+
+        Assert.InRange(
+            bridgeRequests[0]
+                .StartWorld.Y,
+            -0.001f,
+            0.001f);
+
+        Assert.InRange(
+            bridgeRequests[0]
+                .EndWorld.Y,
+            4.799f,
+            4.801f);
+
+        Assert.InRange(
+            bridgeRequests[1]
+                .StartWorld.Y,
+            4.799f,
+            4.801f);
+
+        Assert.InRange(
+            bridgeRequests[1]
+                .EndWorld.Y,
+            -0.001f,
+            0.001f);
+
+        Assert.InRange(
+            tunnelRequests[0]
+                .EndWorld.Y,
+            -4.801f,
+            -4.799f);
+
+        Assert.InRange(
+            tunnelRequests[1]
+                .StartWorld.Y,
+            -4.801f,
+            -4.799f);
+
+        Assert.All(
+            terrain.Heights,
+            height =>
+                Assert.Equal(
+                    0f,
+                    height));
+    }
+
     [Fact]
     public void BuilderDoesNotMergeCurveAcrossGradeSeparationChange()
     {

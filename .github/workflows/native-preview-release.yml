@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.64-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.64-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.65-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.65-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.64-native
-  TAG: v0.2.0-alpha.5-test.10.64-native
+  VERSION: 0.2.0-alpha.5-test.10.65-native
+  TAG: v0.2.0-alpha.5-test.10.65-native
 
 jobs:
   build-native-preview:
@@ -2552,6 +2552,34 @@ jobs:
 
           Write-Host "Verified bridge/tunnel runs interpolate between boundary terrain heights without following intermediate terrain relief."
 
+      - name: Verify test 10.65 adaptive layer clearance
+        shell: pwsh
+        run: |
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MinimumLayerVerticalSeparationMeters',
+            'MaximumLayerRampGradient',
+            'ResolvePlacementStructure',
+            'ResolveLayerVerticalDirection',
+            'ResolveLayerClearanceOffset'
+          )) {
+            if (-not $placement.Contains($required)) {
+              throw "Test 10.65 adaptive layer-clearance marker is missing: $required"
+            }
+          }
+
+          if (-not $placement.Contains('(segment.Layer ?? 0) !=')) {
+            throw "Test 10.65 layer-only runs must participate in structural elevation planning."
+          }
+
+          if (-not $tests.Contains('BuilderInfersLayerOnlyBridgeAndTunnelClearanceOnFlatTerrain')) {
+            throw "Test 10.65 layer-only clearance regression test is missing."
+          }
+
+          Write-Host "Verified layer-only bridge/tunnel variant inference, bounded approach ramps and non-destructive terrain clearance."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2706,11 +2734,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.64-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.65-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.64-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.65-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
