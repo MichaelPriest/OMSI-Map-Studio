@@ -9227,6 +9227,93 @@ public sealed class NativeViewportRuntime : IDisposable
                 out status);
     }
 
+    public bool TryGetTerrainBrushScreenRadius(
+        uint pixelX,
+        uint pixelY,
+        double radiusMeters,
+        out Vector2 centerPixel,
+        out double radiusPixels)
+    {
+        ThrowIfDisposed();
+
+        centerPixel =
+            Vector2.Zero;
+
+        radiusPixels =
+            0;
+
+        if (
+            Surface is null ||
+            !double.IsFinite(
+                radiusMeters) ||
+            radiusMeters <=
+                0 ||
+            !TryGetTerrainPlacementPoint(
+                pixelX,
+                pixelY,
+                out var centerWorld) ||
+            !Navigation.TryProjectWorldPoint(
+                centerWorld,
+                Surface.Width,
+                Surface.Height,
+                out centerPixel))
+        {
+            return false;
+        }
+
+        var xWorld =
+            centerWorld +
+            new Vector3(
+                (float)radiusMeters,
+                0,
+                0);
+
+        var zWorld =
+            centerWorld +
+            new Vector3(
+                0,
+                0,
+                (float)radiusMeters);
+
+        if (
+            !Navigation.TryProjectWorldPoint(
+                xWorld,
+                Surface.Width,
+                Surface.Height,
+                out var xPixel) ||
+            !Navigation.TryProjectWorldPoint(
+                zWorld,
+                Surface.Width,
+                Surface.Height,
+                out var zPixel))
+        {
+            return false;
+        }
+
+        var radiusX =
+            Vector2.Distance(
+                centerPixel,
+                xPixel);
+
+        var radiusZ =
+            Vector2.Distance(
+                centerPixel,
+                zPixel);
+
+        radiusPixels =
+            Math.Max(
+                2.0,
+                (
+                    radiusX +
+                    radiusZ
+                ) *
+                0.5);
+
+        return
+            double.IsFinite(
+                radiusPixels);
+    }
+
     public bool TryGetTerrainEditPoint(
         uint pixelX,
         uint pixelY,
