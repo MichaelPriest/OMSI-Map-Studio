@@ -8625,6 +8625,15 @@ public sealed partial class MainWindow : Window
         if (
             !ReferenceEquals(
                 activeButton,
+                ToolTrafficButton))
+        {
+            Viewport
+                .ClearTrafficSignalPhasePreview();
+        }
+
+        if (
+            !ReferenceEquals(
+                activeButton,
                 ToolVegetationButton) &&
             _vegetationShapeCaptureMode)
         {
@@ -11479,6 +11488,8 @@ public sealed partial class MainWindow : Window
                 ? 0
                 : -1;
 
+        UpdateTrafficPhasePreview();
+
         StatusText.Text =
             "Tráfego: paths reais e preview de semáforos ativos.";
     }
@@ -13580,6 +13591,9 @@ public sealed partial class MainWindow : Window
             EditTrafficProgramButton.IsEnabled =
                 false;
 
+            Viewport
+                .ClearTrafficSignalPhasePreview();
+
             return;
         }
 
@@ -13970,6 +13984,22 @@ public sealed partial class MainWindow : Window
                 ? "Fase: —"
                 : $"t={TrafficPreviewTimeSlider.Value:F2}s · " +
                   $"{NativeTrafficLightProgramInfo.DescribeSignalCode(phase.SignalCode)} [{phase.SignalCode}]";
+
+        if (phase is null)
+        {
+            Viewport
+                .ClearTrafficSignalPhasePreview();
+
+            return;
+        }
+
+        Viewport
+            .SetTrafficSignalPhasePreview(
+                program.ProgramName,
+                program.ObjectId,
+                phase.SignalCode,
+                TrafficPreviewTimeSlider.Value,
+                program.EffectiveCycleDuration);
     }
 
     private void OnTrafficPlayClick(

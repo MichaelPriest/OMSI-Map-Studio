@@ -32,6 +32,72 @@
         </Border>
 
         <Border
+            x:Name="TrafficSignalPreviewPanel"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10"
+            MinWidth="238"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Background="#E60A141D"
+            BorderBrush="#6659D9FF"
+            BorderThickness="1"
+            CornerRadius="8">
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="34" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="30"
+                        Padding="5"
+                        Background="#F20B0F13"
+                        BorderBrush="#707A8B96"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <StackPanel Spacing="5">
+                        <Ellipse x:Name="TrafficSignalRedLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FFFF3B30"
+                                 Opacity="0.18" />
+                        <Ellipse x:Name="TrafficSignalYellowLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FFFFCC00"
+                                 Opacity="0.18" />
+                        <Ellipse x:Name="TrafficSignalGreenLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FF34C759"
+                                 Opacity="0.18" />
+                    </StackPanel>
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="SEMÁFORO · PREVIEW"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="#FF8DB3CA" />
+                    <TextBlock x:Name="TrafficSignalProgramText"
+                               Text="Programa"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="TrafficSignalPhaseText"
+                               Text="Fase: —"
+                               FontSize="12"
+                               Foreground="#FFF2F6F8" />
+                    <TextBlock x:Name="TrafficSignalTimeText"
+                               Text="t=0,00s"
+                               FontSize="10"
+                               Foreground="#FF9FC7DE" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
             Margin="12"

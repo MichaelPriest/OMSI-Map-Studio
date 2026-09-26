@@ -366,6 +366,69 @@ public sealed partial class NativeViewport : UserControl
         Array.Empty<
             NativeTrafficLightProgramInfo>();
 
+    public void SetTrafficSignalPhasePreview(
+        string programName,
+        int objectId,
+        int signalCode,
+        double seconds,
+        double cycleDuration)
+    {
+        TrafficSignalPreviewPanel.Visibility =
+            Visibility.Visible;
+
+        TrafficSignalProgramText.Text =
+            $"{programName} · objeto #{objectId}";
+
+        TrafficSignalPhaseText.Text =
+            NativeTrafficLightProgramInfo
+                .DescribeSignalCode(
+                    signalCode) +
+            $" [{signalCode}]";
+
+        TrafficSignalTimeText.Text =
+            $"t={seconds:F2}s / {Math.Max(0, cycleDuration):F2}s";
+
+        var redActive =
+            signalCode is >= 0 and <= 5;
+
+        var yellowActive =
+            signalCode is >= 3 and <= 5 or
+                >= 9 and <= 11;
+
+        var greenActive =
+            signalCode is >= 6 and <= 8;
+
+        TrafficSignalRedLamp.Opacity =
+            redActive
+                ? 1.0
+                : 0.18;
+
+        TrafficSignalYellowLamp.Opacity =
+            yellowActive
+                ? 1.0
+                : 0.18;
+
+        TrafficSignalGreenLamp.Opacity =
+            greenActive
+                ? 1.0
+                : 0.18;
+    }
+
+    public void ClearTrafficSignalPhasePreview()
+    {
+        TrafficSignalPreviewPanel.Visibility =
+            Visibility.Collapsed;
+
+        TrafficSignalRedLamp.Opacity =
+            0.18;
+
+        TrafficSignalYellowLamp.Opacity =
+            0.18;
+
+        TrafficSignalGreenLamp.Opacity =
+            0.18;
+    }
+
     public IReadOnlyList<
         NativeExplorerItem>
         GetExplorerItems() =>

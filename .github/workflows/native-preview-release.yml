@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.48: bidirectional traffic-light selection sync.
+# Test 10.49: live traffic-light phase HUD in the viewport.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.48-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.48-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.49-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.49-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.48-native
-  TAG: v0.2.0-alpha.5-test.10.48-native
+  VERSION: 0.2.0-alpha.5-test.10.49-native
+  TAG: v0.2.0-alpha.5-test.10.49-native
 
 jobs:
   build-native-preview:
@@ -1899,6 +1899,46 @@ jobs:
 
           Write-Host "Verified viewport object selection synchronizes the corresponding traffic-light program."
 
+      - name: Verify test 10.49 live traffic-light viewport HUD
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'TrafficSignalPreviewPanel',
+            'TrafficSignalRedLamp',
+            'TrafficSignalYellowLamp',
+            'TrafficSignalGreenLamp'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.49 viewport HUD marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTrafficSignalPhasePreview',
+            'ClearTrafficSignalPhasePreview',
+            'DescribeSignalCode'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.49 viewport phase API marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTrafficSignalPhasePreview',
+            'program.EffectiveCycleDuration',
+            'TrafficPreviewTimeSlider.Value'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.49 live phase synchronization marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified real traffic-light preview time drives the viewport signal HUD."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2053,11 +2093,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.48-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.49-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.48-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.49-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
