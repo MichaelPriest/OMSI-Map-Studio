@@ -545,6 +545,29 @@ public sealed class NativeViewportRuntime : IDisposable
                 graph);
     }
 
+    public NativeBridgePierPlan
+        BuildBridgePierPlan(
+            NativeProceduralRoadPlacementBuildResult
+                placement)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            placement);
+
+        if (Scene is null)
+        {
+            return new NativeBridgePierPlan(
+                [],
+                0);
+        }
+
+        return new NativeBridgePierPlanBuilder()
+            .Build(
+                Scene,
+                placement);
+    }
+
     public NativeOsmVegetationPlacementBuildResult
         BuildOsmVegetationPlacementRequests(
             IReadOnlyList<MapStudioProjectedVegetationPoint> points,

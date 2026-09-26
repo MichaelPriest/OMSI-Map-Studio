@@ -299,6 +299,17 @@ public sealed partial class NativeViewport : UserControl
                 NativeProceduralRoadPlacementLink>(),
             graph.Segments.Count);
 
+    public NativeBridgePierPlan
+        BuildBridgePierPlan(
+            NativeProceduralRoadPlacementBuildResult
+                placement) =>
+        _runtime
+            ?.BuildBridgePierPlan(
+                placement) ??
+        new NativeBridgePierPlan(
+            [],
+            0);
+
     public NativeOsmVegetationPlacementBuildResult
         BuildOsmVegetationPlacementRequests(
             IReadOnlyList<MapStudioProjectedVegetationPoint> points,

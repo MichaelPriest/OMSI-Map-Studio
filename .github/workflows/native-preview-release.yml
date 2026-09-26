@@ -102,6 +102,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.72-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.72-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.73-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.73-native.md"
   workflow_dispatch:
 
 permissions:
@@ -112,8 +114,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.72-native
-  TAG: v0.2.0-alpha.5-test.10.72-native
+  VERSION: 0.2.0-alpha.5-test.10.73-native
+  TAG: v0.2.0-alpha.5-test.10.73-native
 
 jobs:
   build-native-preview:
@@ -2838,6 +2840,58 @@ jobs:
 
           Write-Host "Verified dedicated guard-rail material, concrete curb/deck fascia and dual longitudinal bridge rails."
 
+      - name: Verify test 10.73 automatic bridge piers
+        shell: pwsh
+        run: |
+          $pierAsset = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioBridgePierAssetGenerator.cs -Raw
+          $pierPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeBridgePierPlanBuilder.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioBridgePierAssetGeneratorTests.cs -Raw
+          $rendererTests = Get-Content tests/MapStudio.Renderer.Tests/NativeBridgePierPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'ms_bridge_concrete.bmp',
+            'MapStudioBridgePierSpec',
+            'BuildGeometry',
+            'Road Structures'
+          )) {
+            if (-not $pierAsset.Contains($required)) {
+              throw "Test 10.73 bridge-pier asset marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TargetSpanMeters',
+            'MinimumPierHeightMeters',
+            'DeckUndersideOffsetMeters',
+            'NativeTerrainSampler',
+            'ResolveFrame',
+            'SourceLayer'
+          )) {
+            if (-not $pierPlan.Contains($required)) {
+              throw "Test 10.73 bridge-pier planner marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BuildBridgePierPlan',
+            'MapStudioBridgePierAssetGenerator',
+            'Inserindo pilares automáticos',
+            'Bridge piers inserted='
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.73 bridge-pier host integration is missing: $required"
+            }
+          }
+
+          if (-not $coreTests.Contains('GeneratorWritesReusableScoO3dTextureAndManifest') -or
+              -not $rendererTests.Contains('BuilderCreatesTerrainAdaptivePiersForLayerOnlyBridgeRun') -or
+              -not $rendererTests.Contains('BuilderDoesNotCreatePiersForTunnelRuns')) {
+            throw "Test 10.73 automatic bridge-pier regression coverage is missing."
+          }
+
+          Write-Host "Verified terrain-adaptive, span-distributed automatic bridge piers with generated SCO/O3D assets."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2992,11 +3046,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.72-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.73-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.72-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.73-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

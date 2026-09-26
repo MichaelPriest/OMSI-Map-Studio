@@ -18,6 +18,7 @@ using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Scenery;
 using MapStudio.Core.Omsi.Splines;
+using MapStudio.Core.Omsi.Structures;
 using MapStudio.Core.Omsi.Timetables;
 using MapStudio.Core.Omsi.Traffic;
 using MapStudio.Core.Workspace;
@@ -33371,8 +33372,13 @@ setTimeout(postBounds, 250);
                 .BuildProceduralJunctionPlan(
                     graph);
 
+        var bridgePierPlan =
+            Viewport
+                .BuildBridgePierPlan(
+                    placement);
+
         NativeStartupDiagnostics.Write(
-            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} curvedRequests={placement.CurvedRequestCount} bridgeRequests={placement.BridgeRequestCount} tunnelRequests={placement.TunnelRequestCount} layeredRequests={placement.LayeredRequestCount} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions}");
+            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} curvedRequests={placement.CurvedRequestCount} bridgeRequests={placement.BridgeRequestCount} tunnelRequests={placement.TunnelRequestCount} layeredRequests={placement.LayeredRequestCount} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions} bridgePierItems={bridgePierPlan.Items.Count} bridgePierAssets={bridgePierPlan.UniqueAssetCount} skippedBridgePiers={bridgePierPlan.SkippedSupportCount}");
 
         if (placement.Requests.Count == 0)
         {
@@ -33451,6 +33457,173 @@ setTimeout(postBounds, 250);
 
             var finalSnapshot =
                 insertion.Snapshot;
+
+            var bridgePierBackupDirectories =
+                new List<string>();
+
+            var insertedBridgePierCount =
+                0;
+
+            var failedBridgePierCount =
+                0;
+
+            if (
+                bridgePierPlan.Items.Count >
+                    0)
+            {
+                StatusText.Text =
+                    $"Gerando {bridgePierPlan.UniqueAssetCount} variante(s) de pilar de ponte...";
+
+                var generatedBridgePierAssets =
+                    new Dictionary<
+                        string,
+                        string>(
+                            StringComparer
+                                .OrdinalIgnoreCase);
+
+                foreach (
+                    var group in
+                        bridgePierPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    var sample =
+                        group.First();
+
+                    try
+                    {
+                        var asset =
+                            await new MapStudioBridgePierAssetGenerator()
+                                .GenerateAsync(
+                                    root,
+                                    sample.Spec);
+
+                        var sceneryRoot =
+                            Path.Combine(
+                                root,
+                                "Sceneryobjects");
+
+                        var relativePath =
+                            Path.GetRelativePath(
+                                sceneryRoot,
+                                asset.SceneryObjectPath)
+                                .Replace(
+                                    Path.DirectorySeparatorChar,
+                                    '\\');
+
+                        generatedBridgePierAssets[
+                            sample.AssetName] =
+                            relativePath;
+                    }
+                    catch (Exception exception)
+                    {
+                        failedBridgePierCount +=
+                            group.Count();
+
+                        NativeStartupDiagnostics.Write(
+                            $"Bridge pier asset failed asset={sample.AssetName} count={group.Count()} error={exception}");
+                    }
+                }
+
+                var bridgePierGroups =
+                    new List<
+                        NativeSceneryPlacementBatchGroup>();
+
+                foreach (
+                    var group in
+                        bridgePierPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    if (
+                        !generatedBridgePierAssets
+                            .TryGetValue(
+                                group.Key,
+                                out var sceneryPath))
+                    {
+                        continue;
+                    }
+
+                    var requests =
+                        group
+                            .Select(
+                                item =>
+                                    new NativeSceneryPlacementRequest(
+                                        item.Tile,
+                                        sceneryPath,
+                                        item.X,
+                                        item.Y,
+                                        0,
+                                        item.Rotation,
+                                        0,
+                                        0,
+                                        item.WorldPoint,
+                                        false))
+                            .ToArray();
+
+                    foreach (
+                        var chunk in
+                            requests.Chunk(
+                                256))
+                    {
+                        bridgePierGroups.Add(
+                            new NativeSceneryPlacementBatchGroup(
+                                sceneryPath,
+                                chunk));
+                    }
+                }
+
+                foreach (
+                    var batch in
+                        bridgePierGroups
+                            .Chunk(
+                                2))
+                {
+                    var batchPlacementCount =
+                        batch.Sum(
+                            group =>
+                                group.Placements.Count);
+
+                    StatusText.Text =
+                        $"Inserindo pilares automáticos · {insertedBridgePierCount + batchPlacementCount}/{bridgePierPlan.Items.Count} objeto(s)...";
+
+                    try
+                    {
+                        finalSnapshot =
+                            await _session
+                                .InsertSceneryObjectMultiBatchAsync(
+                                    batch);
+
+                        insertedBridgePierCount +=
+                            batchPlacementCount;
+
+                        if (
+                            !string.IsNullOrWhiteSpace(
+                                _session.LastBackupDirectory))
+                        {
+                            bridgePierBackupDirectories.Add(
+                                _session.LastBackupDirectory!);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        failedBridgePierCount +=
+                            batchPlacementCount;
+
+                        NativeStartupDiagnostics.Write(
+                            $"Bridge pier insertion failed placements={batchPlacementCount} error={exception}");
+                    }
+                }
+            }
+
+            NativeStartupDiagnostics.Write(
+                $"Bridge piers inserted={insertedBridgePierCount} failed={failedBridgePierCount} planned={bridgePierPlan.Items.Count} skipped={bridgePierPlan.SkippedSupportCount}");
 
             var junctionBackupDirectories =
                 new List<string>();
@@ -33624,7 +33797,7 @@ setTimeout(postBounds, 250);
 
             UpdateLoading(
                 "Finalizando vias",
-                $"{insertion.SplineIds.Count} splines · {insertedJunctionCount} junctions · atualizando apenas o viewport...");
+                $"{insertion.SplineIds.Count} splines · {insertedBridgePierCount} pilares · {insertedJunctionCount} junctions · atualizando apenas o viewport...");
 
             NativeStartupDiagnostics.Write(
                 "Procedural roads final viewport reload begin.");
@@ -33677,7 +33850,13 @@ setTimeout(postBounds, 250);
                 false;
 
             StatusText.Text =
-                $"{insertion.SplineIds.Count} spline(s) procedurais + {insertedJunctionCount} junction(s) próprios gravados. " +
+                $"{insertion.SplineIds.Count} spline(s) procedurais + {insertedBridgePierCount} pilar(es) de ponte + {insertedJunctionCount} junction(s) próprios gravados. " +
+                (
+                    failedBridgePierCount >
+                        0
+                        ? $"Pilares não inseridos: {failedBridgePierCount}. "
+                        : string.Empty
+                ) +
                 (
                     failedJunctionCount >
                         0
@@ -33691,6 +33870,12 @@ setTimeout(postBounds, 250);
                         : string.Empty
                 ) +
                 $"Backup das vias: {insertion.BackupDirectory}" +
+                (
+                    bridgePierBackupDirectories.Count >
+                        0
+                        ? $" · backup(s) de pilar: {bridgePierBackupDirectories.Count}"
+                        : string.Empty
+                ) +
                 (
                     junctionBackupDirectories.Count >
                         0
