@@ -6476,6 +6476,8 @@ public sealed partial class MainWindow : Window
 
         Viewport.BeginTerrainPointPick();
 
+        RefreshTerrainBrushPreview();
+
         StatusText.Text =
             "Ferramenta de terreno ativa: clique no ponto que deseja nivelar.";
     }
@@ -9252,6 +9254,18 @@ public sealed partial class MainWindow : Window
         if (
             !ReferenceEquals(
                 activeButton,
+                ToolTerrainButton))
+        {
+            Viewport
+                .SetTerrainBrushPreview(
+                    false,
+                    TerrainBrushRadiusBox.Value,
+                    TerrainBrushFeatherBox.Value);
+        }
+
+        if (
+            !ReferenceEquals(
+                activeButton,
                 ToolTrafficButton))
         {
             Viewport
@@ -11597,8 +11611,63 @@ public sealed partial class MainWindow : Window
         SetSelectionModeFromShortcut(
             3);
 
+        Viewport
+            .BeginTerrainSelectionMode();
+
+        RefreshTerrainBrushPreview();
+
         StatusText.Text =
-            "Terreno: clique no chão para selecionar tile; nivelamento e pintura ficam no Inspector.";
+            "Terreno: pincel visual ativo. O círculo externo mostra o raio e o interno a área sem feather.";
+    }
+
+    private void OnTerrainBrushModeClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        OnToolTerrainClick(
+            sender,
+            e);
+
+        StatusText.Text =
+            "Pincel de terreno ativo: mova o cursor para visualizar raio/feather e clique para escolher o centro.";
+    }
+
+    private void OnTerrainBrushPreviewValueChanged(
+        NumberBox sender,
+        NumberBoxValueChangedEventArgs args) =>
+        RefreshTerrainBrushPreview();
+
+    private void RefreshTerrainBrushPreview()
+    {
+        if (
+            TerrainBrushRadiusBox is null ||
+            TerrainBrushFeatherBox is null)
+        {
+            return;
+        }
+
+        var radius =
+            double.IsFinite(
+                TerrainBrushRadiusBox.Value)
+                ? Math.Max(
+                    0.25,
+                    TerrainBrushRadiusBox.Value)
+                : 20.0;
+
+        var feather =
+            double.IsFinite(
+                TerrainBrushFeatherBox.Value)
+                ? Math.Clamp(
+                    TerrainBrushFeatherBox.Value,
+                    0,
+                    1)
+                : 0.25;
+
+        Viewport
+            .SetTerrainBrushPreview(
+                true,
+                radius,
+                feather);
     }
 
     private async void OnToolWaterClick(
