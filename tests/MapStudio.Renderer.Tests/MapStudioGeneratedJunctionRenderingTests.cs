@@ -96,6 +96,104 @@ public sealed class MapStudioGeneratedJunctionRenderingTests
         }
     }
 
+
+
+    [Fact]
+    public async Task GeneratedJunctionUsesRoadKitSidewalkTexture()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Junction-RoadKit-Sidewalk-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            await new MapStudioRoadKitGenerator()
+                .InstallOrUpdateAsync(
+                    root);
+
+            var result =
+                await new MapStudioJunctionAssetGenerator()
+                    .GenerateAsync(
+                        root,
+                        new MapStudioJunctionSpec(
+                            "SidewalkTextureCross",
+                            [
+                                new(
+                                    0,
+                                    11,
+                                    2,
+                                    false,
+                                    3.5),
+                                new(
+                                    90,
+                                    11,
+                                    2,
+                                    false,
+                                    3.5),
+                                new(
+                                    180,
+                                    11,
+                                    2,
+                                    false,
+                                    3.5),
+                                new(
+                                    270,
+                                    11,
+                                    2,
+                                    false,
+                                    3.5)
+                            ]));
+
+            var roadKitTexture =
+                Path.Combine(
+                    root,
+                    "Splines",
+                    MapStudioRoadKitGenerator
+                        .PackFolderName,
+                    "Texture",
+                    "ms_sidewalk.bmp");
+
+            var junctionTexture =
+                Path.Combine(
+                    result.ObjectDirectory,
+                    "Texture",
+                    "ms_junction_sidewalk.bmp");
+
+            Assert.True(
+                File.Exists(
+                    roadKitTexture));
+
+            Assert.True(
+                File.Exists(
+                    junctionTexture));
+
+            Assert.Equal(
+                await File.ReadAllBytesAsync(
+                    roadKitTexture),
+                await File.ReadAllBytesAsync(
+                    junctionTexture));
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+
     [Fact]
     public async Task TerrainRelativeGeneratedJunctionIsNotDoubleRaised()
     {
@@ -374,7 +472,7 @@ public sealed class MapStudioGeneratedJunctionRenderingTests
                 mesh.Geometry.IsLoaded);
 
             Assert.Equal(
-                2,
+                3,
                 mesh.MaterialTexturePaths.Count);
 
             Assert.All(

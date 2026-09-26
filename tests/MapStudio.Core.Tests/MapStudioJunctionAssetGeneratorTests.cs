@@ -36,7 +36,7 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             geometry.IsLoaded);
 
         Assert.Equal(
-            2,
+            3,
             geometry.Materials.Count);
 
         Assert.Contains(
@@ -53,6 +53,14 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                 string.Equals(
                     material.TextureName,
                     "ms_junction_marking.bmp",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(
+            geometry.Materials,
+            material =>
+                string.Equals(
+                    material.TextureName,
+                    "ms_junction_sidewalk.bmp",
                     StringComparison.OrdinalIgnoreCase));
 
         Assert.InRange(
@@ -186,6 +194,94 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             diagonal.Z,
             3.45f,
             3.55f);
+    }
+
+
+
+
+    [Fact]
+    public void GeometryBuilderAddsSidewalkMouthSurfacesWhenRoadIsWiderThanCarriageway()
+    {
+        var geometry =
+            new MapStudioJunctionAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioJunctionSpec(
+                        "Sidewalk cross",
+                        [
+                            new(
+                                0,
+                                11,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                90,
+                                11,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                180,
+                                11,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                270,
+                                11,
+                                2,
+                                false,
+                                3.5)
+                        ]));
+
+        var sidewalkTriangles =
+            geometry
+                .TriangleMaterialIndices
+                .Count(
+                    material =>
+                        material ==
+                        2);
+
+        Assert.Equal(
+            16,
+            sidewalkTriangles);
+    }
+
+    [Fact]
+    public void GeometryBuilderDoesNotAddSidewalkOverlayWhenTotalWidthEqualsCarriageway()
+    {
+        var geometry =
+            new MapStudioJunctionAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioJunctionSpec(
+                        "Road only",
+                        [
+                            new(
+                                0,
+                                7,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                120,
+                                7,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                240,
+                                7,
+                                2,
+                                false,
+                                3.5)
+                        ]));
+
+        Assert.DoesNotContain(
+            geometry
+                .TriangleMaterialIndices,
+            material =>
+                material ==
+                2);
     }
 
 
@@ -678,7 +774,7 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                 0);
 
             Assert.Equal(
-                2,
+                3,
                 mesh.Materials.Count);
 
             Assert.Contains(
@@ -697,6 +793,14 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                         "ms_junction_marking.bmp",
                         StringComparison.OrdinalIgnoreCase));
 
+            Assert.Contains(
+                mesh.Materials,
+                material =>
+                    string.Equals(
+                        material.TextureName,
+                        "ms_junction_sidewalk.bmp",
+                        StringComparison.OrdinalIgnoreCase));
+
             Assert.True(
                 File.Exists(
                     Path.Combine(
@@ -710,6 +814,13 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                         result.ObjectDirectory,
                         "Texture",
                         "ms_junction_marking.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        result.ObjectDirectory,
+                        "Texture",
+                        "ms_junction_sidewalk.bmp")));
         }
         finally
         {

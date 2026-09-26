@@ -283,6 +283,12 @@ public sealed class MapStudioJunctionAssetGenerator
                     cancellationToken)
                 .ConfigureAwait(false);
 
+            await EnsureJunctionSidewalkAsync(
+                    root,
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             await EnsureJunctionMarkingAsync(
                     root,
                     textureDirectory,
@@ -460,6 +466,85 @@ public sealed class MapStudioJunctionAssetGenerator
                             255,
                             value +
                                 3));
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+
+    private static async Task EnsureJunctionSidewalkAsync(
+        string omsiRoot,
+        string textureDirectory,
+        CancellationToken cancellationToken)
+    {
+        var target =
+            Path.Combine(
+                textureDirectory,
+                "ms_junction_sidewalk.bmp");
+
+        var roadKitSidewalk =
+            Path.Combine(
+                omsiRoot,
+                "Splines",
+                MapStudioRoadKitGenerator
+                    .PackFolderName,
+                "Texture",
+                "ms_sidewalk.bmp");
+
+        if (File.Exists(
+                roadKitSidewalk))
+        {
+            File.Copy(
+                roadKitSidewalk,
+                target,
+                overwrite:
+                    true);
+
+            return;
+        }
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_junction_sidewalk.bmp",
+                128,
+                128,
+                static (x, y) =>
+                {
+                    var joint =
+                        (
+                            x % 32 <= 1 ||
+                            y % 32 <= 1
+                        )
+                            ? -14
+                            : 0;
+
+                    var grain =
+                        Math.Abs(
+                            (
+                                x *
+                                    41 ^
+                                y *
+                                    67
+                            ) %
+                            11) -
+                        5;
+
+                    var value =
+                        Math.Clamp(
+                            142 +
+                            joint +
+                            grain,
+                            104,
+                            174);
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)value,
+                        (byte)value,
+                        (byte)Math.Min(
+                            255,
+                            value +
+                                2));
                 },
                 cancellationToken)
             .ConfigureAwait(false);
@@ -666,6 +751,15 @@ public sealed class MapStudioJunctionAssetGenerator
                 0);
         }
 
+        AppendSidewalkMouthSurfaces(
+            normalized,
+            extent,
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials);
+
         AppendLaneMouthMarkings(
             normalized,
             extent,
@@ -709,8 +803,236 @@ public sealed class MapStudioJunctionAssetGenerator
                     0,
                     0,
                     4,
-                    "ms_junction_marking.bmp")
+                    "ms_junction_marking.bmp"),
+                new OmsiO3dMaterial(
+                    0.62f,
+                    0.62f,
+                    0.62f,
+                    1,
+                    0.02f,
+                    0.02f,
+                    0.02f,
+                    0,
+                    0,
+                    0,
+                    4,
+                    "ms_junction_sidewalk.bmp")
             ]);
+    }
+
+    private static void AppendSidewalkMouthSurfaces(
+        MapStudioJunctionSpec spec,
+        double extent,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        var startDistance =
+            Math.Clamp(
+                extent *
+                    0.42,
+                1.25,
+                Math.Max(
+                    1.25,
+                    extent -
+                        0.25));
+
+        var endDistance =
+            Math.Max(
+                startDistance +
+                    0.10,
+                extent -
+                    0.03);
+
+        foreach (
+            var arm in spec.Arms)
+        {
+            var laneWidth =
+                Math.Clamp(
+                    arm.LaneWidthMeters,
+                    2.0,
+                    4.5);
+
+            var carriagewayWidth =
+                Math.Min(
+                    arm.WidthMeters,
+                    arm.LaneCount *
+                        laneWidth);
+
+            var sidewalkWidth =
+                Math.Max(
+                    0,
+                    arm.WidthMeters -
+                        carriagewayWidth) /
+                2.0;
+
+            if (
+                sidewalkWidth <
+                0.10)
+            {
+                continue;
+            }
+
+            var lateralCenter =
+                carriagewayWidth /
+                    2.0 +
+                sidewalkWidth /
+                    2.0;
+
+            AppendSidewalkMouthQuad(
+                arm.AngleDegrees,
+                startDistance,
+                endDistance,
+                lateralCenter,
+                sidewalkWidth,
+                spec.SurfaceHeightMeters +
+                    0.002,
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials);
+
+            AppendSidewalkMouthQuad(
+                arm.AngleDegrees,
+                startDistance,
+                endDistance,
+                -lateralCenter,
+                sidewalkWidth,
+                spec.SurfaceHeightMeters +
+                    0.002,
+                positions,
+                normals,
+                uvs,
+                indices,
+                triangleMaterials);
+        }
+    }
+
+    private static void AppendSidewalkMouthQuad(
+        double angleDegrees,
+        double startDistance,
+        double endDistance,
+        double lateralCenter,
+        double sidewalkWidth,
+        double height,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        var halfWidth =
+            sidewalkWidth /
+            2.0;
+
+        var startLeft =
+            PointOnArmLane(
+                angleDegrees,
+                startDistance,
+                lateralCenter -
+                    halfWidth);
+
+        var startRight =
+            PointOnArmLane(
+                angleDegrees,
+                startDistance,
+                lateralCenter +
+                    halfWidth);
+
+        var endLeft =
+            PointOnArmLane(
+                angleDegrees,
+                endDistance,
+                lateralCenter -
+                    halfWidth);
+
+        var endRight =
+            PointOnArmLane(
+                angleDegrees,
+                endDistance,
+                lateralCenter +
+                    halfWidth);
+
+        var baseIndex =
+            checked(
+                (uint)(
+                    positions.Count /
+                    3));
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)startLeft.X,
+                (float)height,
+                (float)startLeft.Z),
+            0,
+            1);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)startRight.X,
+                (float)height,
+                (float)startRight.Z),
+            1,
+            1);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)endLeft.X,
+                (float)height,
+                (float)endLeft.Z),
+            0,
+            0);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)endRight.X,
+                (float)height,
+                (float)endRight.Z),
+            1,
+            0);
+
+        indices.Add(
+            baseIndex);
+
+        indices.Add(
+            baseIndex +
+            2);
+
+        indices.Add(
+            baseIndex +
+            3);
+
+        triangleMaterials.Add(
+            2);
+
+        indices.Add(
+            baseIndex);
+
+        indices.Add(
+            baseIndex +
+            3);
+
+        indices.Add(
+            baseIndex +
+            1);
+
+        triangleMaterials.Add(
+            2);
     }
 
     private static void AppendLaneMouthMarkings(
