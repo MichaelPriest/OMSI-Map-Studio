@@ -188,6 +188,11 @@
                      Stroke="#FF59D9FF"
                      StrokeThickness="2"
                      Fill="#1459D9FF" />
+            <Ellipse x:Name="TerrainBrushIntensityDisc"
+                     Width="0"
+                     Height="0"
+                     Fill="#6659D9FF"
+                     Opacity="0.16" />
             <Ellipse x:Name="TerrainBrushInnerRing"
                      Width="0"
                      Height="0"
@@ -201,7 +206,7 @@
                     BorderThickness="1"
                     CornerRadius="5">
                 <TextBlock x:Name="TerrainBrushLabelText"
-                           Text="20 m · feather 25%"
+                           Text="20 m · feather 25% · Δ 1 m"
                            FontSize="10"
                            Foreground="#FFE7F7FF" />
             </Border>

@@ -87,6 +87,7 @@ public sealed partial class NativeViewport : UserControl
     private OmsiTerrainSplinePreviewBand? _terrainSplinePreviewBand;
     private double _terrainBrushRadiusMeters = 20.0;
     private double _terrainBrushFeather = 0.25;
+    private double _terrainBrushIntensityMeters = 1.0;
     private double _lastPointerLogicalX = double.NaN;
     private double _lastPointerLogicalY = double.NaN;
     private readonly InputCursor _defaultCursor =
@@ -1006,7 +1007,8 @@ public sealed partial class NativeViewport : UserControl
     public void SetTerrainBrushPreview(
         bool enabled,
         double radiusMeters,
-        double feather)
+        double feather,
+        double intensityMeters = 1.0)
     {
         _terrainBrushPreviewEnabled =
             enabled;
@@ -1030,6 +1032,19 @@ public sealed partial class NativeViewport : UserControl
                     feather,
                     0,
                     1);
+        }
+
+        if (
+            double.IsFinite(
+                intensityMeters) &&
+            intensityMeters >
+                0)
+        {
+            _terrainBrushIntensityMeters =
+                Math.Clamp(
+                    intensityMeters,
+                    0.05,
+                    100.0);
         }
 
         if (!enabled)
@@ -1264,6 +1279,33 @@ public sealed partial class NativeViewport : UserControl
             logicalCenterY -
             innerRadius);
 
+        TerrainBrushIntensityDisc.Width =
+            innerSize;
+
+        TerrainBrushIntensityDisc.Height =
+            innerSize;
+
+        Canvas.SetLeft(
+            TerrainBrushIntensityDisc,
+            logicalCenterX -
+            innerRadius);
+
+        Canvas.SetTop(
+            TerrainBrushIntensityDisc,
+            logicalCenterY -
+            innerRadius);
+
+        TerrainBrushIntensityDisc.Opacity =
+            NativeTerrainBrushVisualMath
+                .ResolveIntensityOpacity(
+                    _terrainBrushIntensityMeters);
+
+        TerrainBrushIntensityDisc.Visibility =
+            innerRadius >
+                0.5
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
         TerrainBrushInnerRing.Visibility =
             _terrainBrushFeather >
                 0.001
@@ -1271,7 +1313,7 @@ public sealed partial class NativeViewport : UserControl
                 : Visibility.Collapsed;
 
         TerrainBrushLabelText.Text =
-            $"raio {_terrainBrushRadiusMeters:0.#} m · feather {_terrainBrushFeather:P0}";
+            $"raio {_terrainBrushRadiusMeters:0.#} m · feather {_terrainBrushFeather:P0} · Δ {_terrainBrushIntensityMeters:0.##} m";
 
         Canvas.SetLeft(
             TerrainBrushLabel,

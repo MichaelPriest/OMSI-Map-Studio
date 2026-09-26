@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.66: protect structural bridge/tunnel splines from terrain conform.
+# Test 10.67: live terrain brush intensity preview in the native viewport.
 
 on:
   push:
@@ -77,7 +77,9 @@ on:
       - "tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportNavigation.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeTerrainBrushVisualMath.cs"
       - "tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTerrainBrushVisualMathTests.cs"
       - "src/MapStudio.Renderer/Scene/NativeDerivedFileCache.cs"
       - "src/MapStudio.Renderer/Scene/NativeSceneryAssetLoader.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAssetLoader.cs"
@@ -92,8 +94,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.66-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.66-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.67-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.67-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +106,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.66-native
-  TAG: v0.2.0-alpha.5-test.10.66-native
+  VERSION: 0.2.0-alpha.5-test.10.67-native
+  TAG: v0.2.0-alpha.5-test.10.67-native
 
 jobs:
   build-native-preview:
@@ -2617,6 +2619,43 @@ jobs:
 
           Write-Host "Verified bridge/tunnel terrain-conform preview suppression, UI blocking and session-level writer protection."
 
+      - name: Verify test 10.67 live terrain brush intensity
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $visualMath = Get-Content src/MapStudio.Renderer/Viewport/NativeTerrainBrushVisualMath.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeTerrainBrushVisualMathTests.cs -Raw
+
+          if (-not $viewportXaml.Contains('TerrainBrushIntensityDisc')) {
+            throw "Test 10.67 intensity fill is missing."
+          }
+
+          foreach ($required in @('_terrainBrushIntensityMeters','intensityMeters','ResolveIntensityOpacity','Δ')) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.67 terrain brush intensity runtime marker is missing: $required"
+            }
+          }
+
+          if (-not $mainXaml.Contains('TerrainBrushDeltaBox') -or
+              -not $mainXaml.Contains('ValueChanged="OnTerrainBrushPreviewValueChanged"')) {
+            throw "Test 10.67 terrain intensity live-control wiring is missing."
+          }
+
+          if (-not $mainCode.Contains('TerrainBrushDeltaBox.Value') -or
+              -not $mainCode.Contains('intensity')) {
+            throw "Test 10.67 terrain brush intensity is not passed from the inspector."
+          }
+
+          if (-not $visualMath.Contains('ResolveIntensityOpacity') -or
+              -not $tests.Contains('StrongerBrushProducesStrongerVisualOpacity')) {
+            throw "Test 10.67 terrain brush intensity regression coverage is missing."
+          }
+
+          Write-Host "Verified live radius/feather/intensity HUD, intensity fill and renderer-side opacity regression coverage."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2771,11 +2810,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.66-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.67-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.66-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.67-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

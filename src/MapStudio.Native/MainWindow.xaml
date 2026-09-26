@@ -5043,7 +5043,8 @@
                                            Minimum="0.05"
                                            Maximum="100"
                                            SpinButtonPlacementMode="Compact"
-                                           SmallChange="0.25" />
+                                           SmallChange="0.25"
+                                           ValueChanged="OnTerrainBrushPreviewValueChanged" />
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="Intensidade do pincel"
                                                FontSize="10"

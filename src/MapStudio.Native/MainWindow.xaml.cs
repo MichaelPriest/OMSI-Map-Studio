@@ -11919,7 +11919,7 @@ public sealed partial class MainWindow : Window
         RefreshTerrainBrushPreview();
 
         StatusText.Text =
-            "Terreno: pincel visual ativo. O círculo externo mostra o raio e o interno a área sem feather.";
+            "Terreno: pincel visual ativo. O círculo externo mostra o raio, o interno a área sem feather e o preenchimento indica a intensidade Δ.";
     }
 
     private void OnTerrainBrushModeClick(
@@ -11931,7 +11931,7 @@ public sealed partial class MainWindow : Window
             e);
 
         StatusText.Text =
-            "Pincel de terreno ativo: mova o cursor para visualizar raio/feather e clique para escolher o centro.";
+            "Pincel de terreno ativo: mova o cursor para visualizar raio, feather e intensidade Δ; clique para escolher o centro.";
     }
 
     private void OnTerrainBrushPreviewValueChanged(
@@ -11943,7 +11943,8 @@ public sealed partial class MainWindow : Window
     {
         if (
             TerrainBrushRadiusBox is null ||
-            TerrainBrushFeatherBox is null)
+            TerrainBrushFeatherBox is null ||
+            TerrainBrushDeltaBox is null)
         {
             return;
         }
@@ -11965,11 +11966,21 @@ public sealed partial class MainWindow : Window
                     1)
                 : 0.25;
 
+        var intensity =
+            double.IsFinite(
+                TerrainBrushDeltaBox.Value)
+                ? Math.Clamp(
+                    TerrainBrushDeltaBox.Value,
+                    0.05,
+                    100.0)
+                : 1.0;
+
         Viewport
             .SetTerrainBrushPreview(
                 true,
                 radius,
-                feather);
+                feather,
+                intensity);
     }
 
     private async void OnToolWaterClick(
