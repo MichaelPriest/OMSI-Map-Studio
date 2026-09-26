@@ -33555,8 +33555,8 @@ setTimeout(postBounds, 250);
                                         item.Y,
                                         0,
                                         item.Rotation,
-                                        0,
-                                        0,
+                                        item.Pitch,
+                                        item.Bank,
                                         item.WorldPoint,
                                         false))
                             .ToArray();

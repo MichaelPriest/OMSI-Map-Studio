@@ -204,6 +204,109 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
             3);
     }
 
+
+    [Fact]
+    public void JunctionPlanTiltsSurfaceToMatchLocalTerrainPlane()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var heights =
+            Enumerable
+                .Range(
+                    0,
+                    5)
+                .SelectMany(
+                    row =>
+                        Enumerable.Repeat(
+                            row *
+                                7.5f,
+                            5))
+                .ToArray();
+
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                heights);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "horizontal",
+                            [
+                                new(60, 150),
+                                new(240, 150)
+                            ],
+                            "road",
+                            2,
+                            false,
+                            7),
+                        new MapStudioRoadTrace(
+                            "vertical",
+                            [
+                                new(150, 60),
+                                new(150, 240)
+                            ],
+                            "road",
+                            2,
+                            false,
+                            7)
+                    ]);
+
+        var item =
+            Assert.Single(
+                new NativeProceduralJunctionPlanBuilder()
+                    .Build(
+                        scene,
+                        graph)
+                    .Items);
+
+        Assert.InRange(
+            item.WorldPoint.Y,
+            14.999f,
+            15.001f);
+
+        var tiltMagnitude =
+            Math.Sqrt(
+                item.Pitch *
+                    item.Pitch +
+                item.Bank *
+                    item.Bank);
+
+        Assert.InRange(
+            tiltMagnitude,
+            5.60,
+            5.82);
+    }
+
     [Fact]
     public void JunctionArmUsesPhysicalRoadKitWidthButKeepsLaneWidth()
     {

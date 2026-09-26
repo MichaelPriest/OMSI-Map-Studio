@@ -17,6 +17,8 @@ public sealed record NativeProceduralJunctionPlanItem(
     double X,
     double Y,
     double Rotation,
+    double Pitch,
+    double Bank,
     Vector3 WorldPoint);
 
 public sealed record NativeProceduralJunctionPlan(
@@ -36,6 +38,10 @@ public sealed record NativeProceduralJunctionPlan(
 
 public sealed class NativeProceduralJunctionPlanBuilder
 {
+    private const double
+        MaximumTerrainTiltDegrees =
+            12.0;
+
     public NativeProceduralJunctionPlan Build(
         NativeSceneSnapshot scene,
         MapStudioRoadGraph graph)
@@ -122,6 +128,27 @@ public sealed class NativeProceduralJunctionPlanBuilder
                 Canonicalize(
                     actualArms);
 
+            var allowTerrainTilt =
+                incident.All(
+                    item =>
+                        !item.Segment.Bridge &&
+                        !item.Segment.Tunnel &&
+                        (item.Segment.Layer ?? 0) ==
+                            0);
+
+            var (
+                pitch,
+                bank
+            ) =
+                allowTerrainTilt
+                    ? ResolveTerrainTilt(
+                        scene,
+                        junction.Position.X,
+                        junction.Position.Z,
+                        canonical.RotationDegrees,
+                        actualArms)
+                    : (0.0, 0.0);
+
             var tileX =
                 (int)Math.Floor(
                     junction.Position.X /
@@ -187,6 +214,8 @@ public sealed class NativeProceduralJunctionPlanBuilder
                         tileY *
                         300.0,
                     canonical.RotationDegrees,
+                    pitch,
+                    bank,
                     new Vector3(
                         (float)junction.Position.X,
                         (float)height,
@@ -196,6 +225,149 @@ public sealed class NativeProceduralJunctionPlanBuilder
         return new NativeProceduralJunctionPlan(
             items,
             skipped);
+    }
+
+
+    private static (
+        double Pitch,
+        double Bank
+    ) ResolveTerrainTilt(
+        NativeSceneSnapshot scene,
+        double centerX,
+        double centerZ,
+        double rotationDegrees,
+        IReadOnlyList<
+            MapStudioJunctionArm>
+            arms)
+    {
+        if (arms.Count < 3)
+        {
+            return (0, 0);
+        }
+
+        var extent =
+            MapStudioJunctionGeometrySizing
+                .ResolveSurfaceExtentMeters(
+                    arms.Select(
+                        arm =>
+                            arm.WidthMeters));
+
+        var sampleDistance =
+            Math.Clamp(
+                extent *
+                    0.70,
+                2.0,
+                8.0);
+
+        var radians =
+            rotationDegrees *
+            Math.PI /
+            180.0;
+
+        var forwardX =
+            Math.Sin(
+                radians);
+
+        var forwardZ =
+            Math.Cos(
+                radians);
+
+        var rightX =
+            Math.Cos(
+                radians);
+
+        var rightZ =
+            -Math.Sin(
+                radians);
+
+        if (
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    centerX +
+                        forwardX *
+                        sampleDistance,
+                    centerZ +
+                        forwardZ *
+                        sampleDistance,
+                    out var forwardHeight) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    centerX -
+                        forwardX *
+                        sampleDistance,
+                    centerZ -
+                        forwardZ *
+                        sampleDistance,
+                    out var backHeight) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    centerX +
+                        rightX *
+                        sampleDistance,
+                    centerZ +
+                        rightZ *
+                        sampleDistance,
+                    out var rightHeight) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    centerX -
+                        rightX *
+                        sampleDistance,
+                    centerZ -
+                        rightZ *
+                        sampleDistance,
+                    out var leftHeight))
+        {
+            return (0, 0);
+        }
+
+        var forwardSlope =
+            (
+                forwardHeight -
+                backHeight
+            ) /
+            (
+                sampleDistance *
+                2.0
+            );
+
+        var rightSlope =
+            (
+                rightHeight -
+                leftHeight
+            ) /
+            (
+                sampleDistance *
+                2.0
+            );
+
+        var pitch =
+            -Math.Atan(
+                forwardSlope) *
+            180.0 /
+            Math.PI;
+
+        var bank =
+            Math.Atan(
+                rightSlope) *
+            180.0 /
+            Math.PI;
+
+        return
+            (
+                Math.Clamp(
+                    pitch,
+                    -MaximumTerrainTiltDegrees,
+                    MaximumTerrainTiltDegrees),
+                Math.Clamp(
+                    bank,
+                    -MaximumTerrainTiltDegrees,
+                    MaximumTerrainTiltDegrees)
+            );
     }
 
     private static MapStudioJunctionArm BuildArm(

@@ -94,8 +94,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.68-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.68-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md"
   workflow_dispatch:
 
 permissions:
@@ -106,8 +106,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.68-native
-  TAG: v0.2.0-alpha.5-test.10.68-native
+  VERSION: 0.2.0-alpha.5-test.10.69-native
+  TAG: v0.2.0-alpha.5-test.10.69-native
 
 jobs:
   build-native-preview:
@@ -2705,6 +2705,37 @@ jobs:
 
           Write-Host "Verified live Custom Shape fill, operation colors, HUD, feather/intensity updates and camera reprojection."
 
+      - name: Verify test 10.69 terrain-plane junction tilt
+        shell: pwsh
+        run: |
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumTerrainTiltDegrees',
+            'ResolveTerrainTilt',
+            'forwardSlope',
+            'rightSlope',
+            'double Pitch',
+            'double Bank'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.69 terrain-plane junction marker is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('item.Pitch') -or
+              -not $main.Contains('item.Bank')) {
+            throw "Test 10.69 junction placement does not persist Pitch/Bank."
+          }
+
+          if (-not $tests.Contains('JunctionPlanTiltsSurfaceToMatchLocalTerrainPlane')) {
+            throw "Test 10.69 sloped-terrain junction regression is missing."
+          }
+
+          Write-Host "Verified real terrain sampling, safe junction Pitch/Bank and non-destructive sloped placement."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2859,11 +2890,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.68-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.68-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
