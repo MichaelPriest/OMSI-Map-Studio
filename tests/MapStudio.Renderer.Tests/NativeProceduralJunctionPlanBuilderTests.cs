@@ -307,6 +307,126 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
             5.82);
     }
 
+
+    [Fact]
+    public void JunctionPlanUsesStructuralLayerHeightInsteadOfGround()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        0f,
+                        25)
+                    .ToArray());
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var profile =
+            MapStudioStandardRoadCatalog
+                .RoadTwoLane;
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "south",
+                            [
+                                new(150, 30),
+                                new(150, 150)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                1,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "west",
+                            [
+                                new(30, 150),
+                                new(150, 150)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                1,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "east",
+                            [
+                                new(270, 150),
+                                new(150, 150)
+                            ],
+                            profile.RelativePath,
+                            profile.LaneCount,
+                            profile.OneWay,
+                            profile.TotalWidthMeters,
+                            Layer:
+                                1,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var item =
+            Assert.Single(
+                new NativeProceduralJunctionPlanBuilder()
+                    .Build(
+                        scene,
+                        graph)
+                    .Items);
+
+        Assert.InRange(
+            item.WorldPoint.Y,
+            4.799f,
+            4.801f);
+
+        Assert.InRange(
+            Math.Abs(
+                item.Pitch),
+            0,
+            0.001);
+
+        Assert.InRange(
+            Math.Abs(
+                item.Bank),
+            0,
+            0.001);
+    }
+
     [Fact]
     public void JunctionArmUsesPhysicalRoadKitWidthButKeepsLaneWidth()
     {

@@ -42,6 +42,10 @@ public sealed class NativeProceduralJunctionPlanBuilder
         MaximumTerrainTiltDegrees =
             12.0;
 
+    private const double
+        StructuralLayerSeparationMeters =
+            4.8;
+
     public NativeProceduralJunctionPlan Build(
         NativeSceneSnapshot scene,
         MapStudioRoadGraph graph)
@@ -114,6 +118,17 @@ public sealed class NativeProceduralJunctionPlanBuilder
                 skipped++;
                 continue;
             }
+
+            var incidentSegments =
+                incident
+                    .Select(
+                        item =>
+                            item.Segment)
+                    .ToArray();
+
+            height +=
+                ResolveStructuralJunctionHeightOffset(
+                    incidentSegments);
 
             var actualArms =
                 incident
@@ -227,6 +242,80 @@ public sealed class NativeProceduralJunctionPlanBuilder
             skipped);
     }
 
+
+    private static double
+        ResolveStructuralJunctionHeightOffset(
+            IReadOnlyList<
+                MapStudioRoadGraphSegment>
+                segments)
+    {
+        if (
+            segments.Count <
+            3)
+        {
+            return 0;
+        }
+
+        var first =
+            segments[0];
+
+        if (
+            !IsStructuralJunctionSegment(
+                first) ||
+            segments.Any(
+                segment =>
+                    !IsStructuralJunctionSegment(
+                        segment) ||
+                    !HasCompatibleStructuralGrade(
+                        first,
+                        segment)))
+        {
+            return 0;
+        }
+
+        var layer =
+            first.Layer ??
+            0;
+
+        if (layer == 0)
+        {
+            return 0;
+        }
+
+        var direction =
+            first.Bridge &&
+            !first.Tunnel
+                ? 1
+                : first.Tunnel &&
+                    !first.Bridge
+                    ? -1
+                    : Math.Sign(
+                        layer);
+
+        return direction *
+            Math.Abs(
+                layer) *
+            StructuralLayerSeparationMeters;
+    }
+
+    private static bool
+        IsStructuralJunctionSegment(
+            MapStudioRoadGraphSegment segment) =>
+        segment.Bridge ||
+        segment.Tunnel ||
+        (segment.Layer ?? 0) !=
+            0;
+
+    private static bool
+        HasCompatibleStructuralGrade(
+            MapStudioRoadGraphSegment left,
+            MapStudioRoadGraphSegment right) =>
+        left.Bridge ==
+            right.Bridge &&
+        left.Tunnel ==
+            right.Tunnel &&
+        (left.Layer ?? 0) ==
+            (right.Layer ?? 0);
 
     private static (
         double Pitch,

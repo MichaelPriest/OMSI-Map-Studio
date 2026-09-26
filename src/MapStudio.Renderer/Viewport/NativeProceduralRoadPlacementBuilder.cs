@@ -103,7 +103,9 @@ public sealed class NativeProceduralRoadPlacementBuilder
         var structuralElevations =
             BuildStructuralEndpointElevations(
                 scene,
-                graph.Segments);
+                graph.Segments,
+                nodeById,
+                segmentsByNode);
 
         var bindings =
             new List<RequestBinding>(
@@ -747,7 +749,15 @@ public sealed class NativeProceduralRoadPlacementBuilder
             NativeSceneSnapshot scene,
             IReadOnlyList<
                 MapStudioRoadGraphSegment>
-                segments)
+                segments,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphNode>
+                nodeById,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphSegment[]>
+                segmentsByNode)
     {
         var result =
             new Dictionary<
@@ -839,6 +849,20 @@ public sealed class NativeProceduralRoadPlacementBuilder
 
                     continue;
                 }
+
+                startHeight +=
+                    ResolveStructuralJunctionBoundaryOffset(
+                        first.FromNodeId,
+                        first,
+                        nodeById,
+                        segmentsByNode);
+
+                endHeight +=
+                    ResolveStructuralJunctionBoundaryOffset(
+                        last.ToNodeId,
+                        last,
+                        nodeById,
+                        segmentsByNode);
 
                 var totalLength =
                     0.0;
@@ -953,6 +977,54 @@ public sealed class NativeProceduralRoadPlacementBuilder
         segment.Tunnel ||
         (segment.Layer ?? 0) !=
             0;
+
+    private static double
+        ResolveStructuralJunctionBoundaryOffset(
+            int nodeId,
+            MapStudioRoadGraphSegment segment,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphNode>
+                nodeById,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphSegment[]>
+                segmentsByNode)
+    {
+        if (
+            !IsStructuralSegment(
+                segment) ||
+            !nodeById.TryGetValue(
+                nodeId,
+                out var node) ||
+            !node.IsJunction ||
+            !segmentsByNode.TryGetValue(
+                nodeId,
+                out var incident) ||
+            incident.Length <
+                3 ||
+            incident.Any(
+                candidate =>
+                    !IsStructuralSegment(
+                        candidate) ||
+                    !HasCompatibleGradeSeparation(
+                        segment,
+                        candidate)))
+        {
+            return 0;
+        }
+
+        var direction =
+            ResolveLayerVerticalDirection(
+                segment);
+
+        var separation =
+            ResolveLayerTargetSeparationMeters(
+                segment);
+
+        return direction *
+            separation;
+    }
 
     private static (
         bool Bridge,

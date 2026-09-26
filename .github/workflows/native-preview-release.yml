@@ -96,6 +96,8 @@ on:
       - "docs/en/USER_MANUAL.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md"
   workflow_dispatch:
 
 permissions:
@@ -106,8 +108,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.69-native
-  TAG: v0.2.0-alpha.5-test.10.69-native
+  VERSION: 0.2.0-alpha.5-test.10.70-native
+  TAG: v0.2.0-alpha.5-test.10.70-native
 
 jobs:
   build-native-preview:
@@ -2736,6 +2738,44 @@ jobs:
 
           Write-Host "Verified real terrain sampling, safe junction Pitch/Bank and non-destructive sloped placement."
 
+      - name: Verify test 10.70 structural junction elevation
+        shell: pwsh
+        run: |
+          $roads = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junctions = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'ResolveStructuralJunctionBoundaryOffset',
+            'node.IsJunction',
+            'HasCompatibleGradeSeparation'
+          )) {
+            if (-not $roads.Contains($required)) {
+              throw "Test 10.70 structural road/junction continuity marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'StructuralLayerSeparationMeters',
+            'ResolveStructuralJunctionHeightOffset',
+            'HasCompatibleStructuralGrade'
+          )) {
+            if (-not $junctions.Contains($required)) {
+              throw "Test 10.70 structural junction height marker is missing: $required"
+            }
+          }
+
+          if (-not $roadTests.Contains('BuilderKeepsLayerOnlyRoadEndsAtStructuralJunctionHeight')) {
+            throw "Test 10.70 road structural-junction regression is missing."
+          }
+
+          if (-not $junctionTests.Contains('JunctionPlanUsesStructuralLayerHeightInsteadOfGround')) {
+            throw "Test 10.70 junction structural-height regression is missing."
+          }
+
+          Write-Host "Verified homogeneous structural junctions preserve layer elevation across road endpoints and crossing placement."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2890,11 +2930,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
