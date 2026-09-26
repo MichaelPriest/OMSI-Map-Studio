@@ -16,7 +16,7 @@ public sealed class MapStudioRoadKitGenerator
         "MapStudio_RoadKit";
 
     public const string PackVersion =
-        "1.4.0";
+        "1.5.0";
 
     private static readonly Encoding
         SplineEncoding =
@@ -324,6 +324,59 @@ public sealed class MapStudioRoadKitGenerator
                                             noise /
                                             2));
                                 })
+                    ),
+                    (
+                        Name:
+                            "ms_tunnel_lining.bmp",
+                        Data:
+                            CreateTexture(
+                                128,
+                                128,
+                                static (x, y) =>
+                                {
+                                    var horizontalJoint =
+                                        y % 32 < 2;
+
+                                    var verticalJoint =
+                                        (
+                                            x +
+                                            (
+                                                y / 32
+                                            ) % 2 * 16
+                                        ) %
+                                        32 <
+                                        2;
+
+                                    var grain =
+                                        Math.Abs(
+                                            (
+                                                x * 41 ^
+                                                y * 67 ^
+                                                x * y * 5
+                                            ) %
+                                            19) -
+                                        9;
+
+                                    var value =
+                                        Math.Clamp(
+                                            142 +
+                                            grain +
+                                            (
+                                                horizontalJoint ||
+                                                verticalJoint
+                                                    ? -18
+                                                    : 0
+                                            ),
+                                            96,
+                                            178);
+
+                                    return new Rgb(
+                                        (byte)value,
+                                        (byte)value,
+                                        (byte)Math.Min(
+                                            255,
+                                            value + 3));
+                                })
                     )
                 };
 
@@ -536,6 +589,10 @@ public sealed class MapStudioRoadKitGenerator
             "[texture]");
         builder.AppendLine(
             "ms_guardrail.bmp");
+        builder.AppendLine(
+            "[texture]");
+        builder.AppendLine(
+            "ms_tunnel_lining.bmp");
 
         foreach (
             var surface in
@@ -976,33 +1033,10 @@ public sealed class MapStudioRoadKitGenerator
                                 maximumX,
                                 roadHeight),
                         RoadStructureKind.Tunnel =>
-                        [
-                            new(
-                                1,
+                            CreateTunnelLiningSegments(
                                 minimumX,
-                                roadHeight,
-                                minimumX,
-                                roadHeight +
-                                    4.20,
-                                0.25),
-                            new(
-                                1,
-                                minimumX,
-                                roadHeight +
-                                    4.20,
                                 maximumX,
-                                roadHeight +
-                                    4.20,
-                                0.25),
-                            new(
-                                1,
-                                maximumX,
-                                roadHeight +
-                                    4.20,
-                                maximumX,
-                                roadHeight,
-                                0.25)
-                        ],
+                                roadHeight),
                         _ =>
                             []
                     };
@@ -1014,6 +1048,110 @@ public sealed class MapStudioRoadKitGenerator
                 StructureSegments =
                     structure
             };
+        }
+
+        private static IReadOnlyList<
+            RoadProfileSegment>
+            CreateTunnelLiningSegments(
+                double minimumX,
+                double maximumX,
+                double roadHeight)
+        {
+            const double clearSideMargin =
+                0.50;
+
+            const double clearHeight =
+                4.50;
+
+            const double liningThickness =
+                0.35;
+
+            const int tunnelTexture =
+                5;
+
+            var innerLeft =
+                minimumX -
+                clearSideMargin;
+
+            var innerRight =
+                maximumX +
+                clearSideMargin;
+
+            var innerRoof =
+                roadHeight +
+                clearHeight;
+
+            var outerLeft =
+                innerLeft -
+                liningThickness;
+
+            var outerRight =
+                innerRight +
+                liningThickness;
+
+            var outerRoof =
+                innerRoof +
+                liningThickness;
+
+            return
+            [
+                new(
+                    tunnelTexture,
+                    innerLeft,
+                    roadHeight,
+                    innerLeft,
+                    innerRoof,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    innerLeft,
+                    innerRoof,
+                    innerRight,
+                    innerRoof,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    innerRight,
+                    innerRoof,
+                    innerRight,
+                    roadHeight,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    innerRight,
+                    roadHeight,
+                    outerRight,
+                    roadHeight,
+                    0.18),
+                new(
+                    tunnelTexture,
+                    outerRight,
+                    roadHeight,
+                    outerRight,
+                    outerRoof,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    outerRight,
+                    outerRoof,
+                    outerLeft,
+                    outerRoof,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    outerLeft,
+                    outerRoof,
+                    outerLeft,
+                    roadHeight,
+                    0.30),
+                new(
+                    tunnelTexture,
+                    outerLeft,
+                    roadHeight,
+                    innerLeft,
+                    roadHeight,
+                    0.18)
+            ];
         }
 
         private static IReadOnlyList<
