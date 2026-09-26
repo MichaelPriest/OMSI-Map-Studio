@@ -1444,10 +1444,10 @@ jobs:
             throw "Test 10.36 normalized physical width or curve diagnostics are missing."
           }
 
-          if (-not $roadKit.Contains('"1.3.0"') -or
+          if (-not $roadKit.Contains('"1.4.0"') -or
               -not $roadKit.Contains('256,') -or
               -not $roadKitTests.Contains('BitConverter.ToInt32')) {
-            throw "Test 10.36 Road Kit 1.3 detailed texture generation is missing."
+            throw "Test 10.36 Road Kit 1.4 detailed texture generation is missing."
           }
 
           if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh') -or
@@ -1461,7 +1461,7 @@ jobs:
             throw "Test 10.36 implicit OSM roundabout one-way handling is missing."
           }
 
-          Write-Host "Verified complete OSM import, native curved splines, fitted/renderable junction geometry, roundabout topology, physical width normalization and Road Kit 1.3 textures."
+          Write-Host "Verified complete OSM import, native curved splines, fitted/renderable junction geometry, roundabout topology, physical width normalization and Road Kit 1.4 textures."
 
       - name: Verify test 10.37 authoritative OSM topology and directional lanes
         shell: pwsh
