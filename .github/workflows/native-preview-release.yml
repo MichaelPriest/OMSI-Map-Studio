@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.53: conform OMSI terrain to selected spline geometry.
+# Test 10.54: visual terrain brush radius and feather in the native viewport.
 
 on:
   push:
@@ -76,6 +76,8 @@ on:
       - "tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs"
       - "tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs"
       - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeViewportNavigation.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs"
       - "src/MapStudio.Renderer/Scene/NativeDerivedFileCache.cs"
       - "src/MapStudio.Renderer/Scene/NativeSceneryAssetLoader.cs"
       - "src/MapStudio.Renderer/Scene/NativeSplineAssetLoader.cs"
@@ -90,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.53-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.53-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.54-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.54-native.md"
   workflow_dispatch:
 
 permissions:
@@ -102,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.53-native
-  TAG: v0.2.0-alpha.5-test.10.53-native
+  VERSION: 0.2.0-alpha.5-test.10.54-native
+  TAG: v0.2.0-alpha.5-test.10.54-native
 
 jobs:
   build-native-preview:
@@ -2131,6 +2133,61 @@ jobs:
 
           Write-Host "Verified terrain conforms to real straight/curved spline geometry, gradients and cross-tile influence."
 
+
+      - name: Verify test 10.54 visual terrain brush
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $navigation = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportNavigation.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainBrushLayer',
+            'TerrainBrushOuterRing',
+            'TerrainBrushInnerRing',
+            'TerrainBrushLabelText'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.54 terrain brush viewport marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTerrainBrushPreview',
+            'UpdateTerrainBrushVisual'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.54 terrain brush visual API marker is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('TryGetTerrainBrushScreenRadius')) {
+            throw "Test 10.54 runtime terrain brush projection is missing."
+          }
+
+          if (-not $navigation.Contains('TryProjectWorldPoint')) {
+            throw "Test 10.54 world-to-screen projection is missing."
+          }
+
+          foreach ($required in @(
+            'Content="Pincel"',
+            'OnTerrainBrushPreviewValueChanged'
+          )) {
+            if (-not ($mainXaml.Contains($required) -or $mainCode.Contains($required))) {
+              throw "Test 10.54 terrain brush workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('ProjectWorldPointPlacesCameraTargetNearViewportCenter')) {
+            throw "Test 10.54 projection regression test is missing."
+          }
+
+          Write-Host "Verified terrain brush radius/feather projection and live viewport overlay."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2285,11 +2342,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.53-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.54-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.53-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.54-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
