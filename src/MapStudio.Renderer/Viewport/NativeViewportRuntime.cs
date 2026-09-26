@@ -568,6 +568,29 @@ public sealed class NativeViewportRuntime : IDisposable
                 placement);
     }
 
+    public NativeTunnelPortalPlan
+        BuildTunnelPortalPlan(
+            NativeProceduralRoadPlacementBuildResult
+                placement)
+    {
+        ThrowIfDisposed();
+
+        ArgumentNullException.ThrowIfNull(
+            placement);
+
+        if (Scene is null)
+        {
+            return new NativeTunnelPortalPlan(
+                [],
+                0);
+        }
+
+        return new NativeTunnelPortalPlanBuilder()
+            .Build(
+                Scene,
+                placement);
+    }
+
     public NativeOsmVegetationPlacementBuildResult
         BuildOsmVegetationPlacementRequests(
             IReadOnlyList<MapStudioProjectedVegetationPoint> points,
