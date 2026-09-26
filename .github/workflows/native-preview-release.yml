@@ -100,6 +100,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.72-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.72-native.md"
   workflow_dispatch:
 
 permissions:
@@ -110,8 +112,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.71-native
-  TAG: v0.2.0-alpha.5-test.10.71-native
+  VERSION: 0.2.0-alpha.5-test.10.72-native
+  TAG: v0.2.0-alpha.5-test.10.72-native
 
 jobs:
   build-native-preview:
@@ -2813,6 +2815,29 @@ jobs:
 
           Write-Host "Verified bridge slab, tunnel ceiling and structure-specific junction asset signatures."
 
+      - name: Verify test 10.72 bridge guard rails
+        shell: pwsh
+        run: |
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'CreateBridgeGuardRailSegments',
+            'ms_guardrail.bmp',
+            'guardRailTexture',
+            '"1.4.0"'
+          )) {
+            if (-not $roadKit.Contains($required)) {
+              throw "Test 10.72 bridge guard-rail marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('GeneratorBuildsBridgeGuardRailProfileWithDedicatedMaterial')) {
+            throw "Test 10.72 bridge guard-rail regression is missing."
+          }
+
+          Write-Host "Verified dedicated guard-rail material, concrete curb/deck fascia and dual longitudinal bridge rails."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2967,11 +2992,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.72-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.72-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

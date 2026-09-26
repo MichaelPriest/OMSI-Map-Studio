@@ -16,7 +16,7 @@ public sealed class MapStudioRoadKitGenerator
         "MapStudio_RoadKit";
 
     public const string PackVersion =
-        "1.3.0";
+        "1.4.0";
 
     private static readonly Encoding
         SplineEncoding =
@@ -256,6 +256,47 @@ public sealed class MapStudioRoadKitGenerator
                     ),
                     (
                         Name:
+                            "ms_guardrail.bmp",
+                        Data:
+                            CreateTexture(
+                                64,
+                                64,
+                                static (x, y) =>
+                                {
+                                    var brushed =
+                                        (
+                                            x * 7 +
+                                            y * 13
+                                        ) %
+                                        18;
+
+                                    var seam =
+                                        y %
+                                            16 <
+                                        2;
+
+                                    var value =
+                                        Math.Clamp(
+                                            (
+                                                seam
+                                                    ? 126
+                                                    : 164
+                                            ) +
+                                            brushed,
+                                            0,
+                                            255);
+
+                                    return new Rgb(
+                                        (byte)value,
+                                        (byte)value,
+                                        (byte)Math.Min(
+                                            255,
+                                            value +
+                                                8));
+                                })
+                    ),
+                    (
+                        Name:
                             "ms_median.bmp",
                         Data:
                             CreateTexture(
@@ -491,6 +532,10 @@ public sealed class MapStudioRoadKitGenerator
             "[texture]");
         builder.AppendLine(
             "ms_median.bmp");
+        builder.AppendLine(
+            "[texture]");
+        builder.AppendLine(
+            "ms_guardrail.bmp");
 
         foreach (
             var surface in
@@ -926,33 +971,10 @@ public sealed class MapStudioRoadKitGenerator
                     kind switch
                     {
                         RoadStructureKind.Bridge =>
-                        [
-                            new(
-                                1,
+                            CreateBridgeGuardRailSegments(
                                 minimumX,
-                                roadHeight -
-                                    0.30,
                                 maximumX,
-                                roadHeight -
-                                    0.30,
-                                0.25),
-                            new(
-                                1,
-                                minimumX,
-                                roadHeight,
-                                minimumX,
-                                roadHeight +
-                                    1.10,
-                                0.20),
-                            new(
-                                1,
-                                maximumX,
-                                roadHeight,
-                                maximumX,
-                                roadHeight +
-                                    1.10,
-                                0.20)
-                        ],
+                                roadHeight),
                         RoadStructureKind.Tunnel =>
                         [
                             new(
@@ -992,6 +1014,190 @@ public sealed class MapStudioRoadKitGenerator
                 StructureSegments =
                     structure
             };
+        }
+
+        private static IReadOnlyList<
+            RoadProfileSegment>
+            CreateBridgeGuardRailSegments(
+                double minimumX,
+                double maximumX,
+                double roadHeight)
+        {
+            const double deckThickness =
+                0.30;
+
+            const double curbHeight =
+                0.22;
+
+            const double railInset =
+                0.18;
+
+            const double lowerRailCenter =
+                0.64;
+
+            const double upperRailCenter =
+                1.06;
+
+            const double railBandHeight =
+                0.10;
+
+            const int concreteTexture =
+                1;
+
+            const int guardRailTexture =
+                4;
+
+            var segments =
+                new List<RoadProfileSegment>
+                {
+                    new(
+                        concreteTexture,
+                        minimumX,
+                        roadHeight -
+                            deckThickness,
+                        maximumX,
+                        roadHeight -
+                            deckThickness,
+                        0.25),
+                    new(
+                        concreteTexture,
+                        minimumX,
+                        roadHeight -
+                            deckThickness,
+                        minimumX,
+                        roadHeight +
+                            curbHeight,
+                        0.20),
+                    new(
+                        concreteTexture,
+                        maximumX,
+                        roadHeight +
+                            curbHeight,
+                        maximumX,
+                        roadHeight -
+                            deckThickness,
+                        0.20),
+                    new(
+                        concreteTexture,
+                        minimumX,
+                        roadHeight +
+                            curbHeight,
+                        minimumX +
+                            railInset,
+                        roadHeight +
+                            curbHeight,
+                        0.20),
+                    new(
+                        concreteTexture,
+                        minimumX +
+                            railInset,
+                        roadHeight +
+                            curbHeight,
+                        minimumX +
+                            railInset,
+                        roadHeight,
+                        0.20),
+                    new(
+                        concreteTexture,
+                        maximumX -
+                            railInset,
+                        roadHeight,
+                        maximumX -
+                            railInset,
+                        roadHeight +
+                            curbHeight,
+                        0.20),
+                    new(
+                        concreteTexture,
+                        maximumX -
+                            railInset,
+                        roadHeight +
+                            curbHeight,
+                        maximumX,
+                        roadHeight +
+                            curbHeight,
+                        0.20)
+                };
+
+            AddRailBox(
+                minimumX,
+                minimumX +
+                    railInset,
+                lowerRailCenter);
+
+            AddRailBox(
+                maximumX -
+                    railInset,
+                maximumX,
+                lowerRailCenter);
+
+            AddRailBox(
+                minimumX,
+                minimumX +
+                    railInset,
+                upperRailCenter);
+
+            AddRailBox(
+                maximumX -
+                    railInset,
+                maximumX,
+                upperRailCenter);
+
+            return segments;
+
+            void AddRailBox(
+                double left,
+                double right,
+                double centerHeight)
+            {
+                var bottom =
+                    roadHeight +
+                    centerHeight -
+                    railBandHeight /
+                        2.0;
+
+                var top =
+                    roadHeight +
+                    centerHeight +
+                    railBandHeight /
+                        2.0;
+
+                segments.Add(
+                    new RoadProfileSegment(
+                        guardRailTexture,
+                        left,
+                        bottom,
+                        right,
+                        bottom,
+                        0.10));
+
+                segments.Add(
+                    new RoadProfileSegment(
+                        guardRailTexture,
+                        right,
+                        bottom,
+                        right,
+                        top,
+                        0.10));
+
+                segments.Add(
+                    new RoadProfileSegment(
+                        guardRailTexture,
+                        right,
+                        top,
+                        left,
+                        top,
+                        0.10));
+
+                segments.Add(
+                    new RoadProfileSegment(
+                        guardRailTexture,
+                        left,
+                        top,
+                        left,
+                        bottom,
+                        0.10));
+            }
         }
 
         public static RoadVariant CreateRoad(

@@ -239,6 +239,104 @@ public sealed class MapStudioRoadKitGeneratorTests
     }
 
     [Fact]
+    public async Task GeneratorBuildsBridgeGuardRailProfileWithDedicatedMaterial()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-GuardRail-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var profile =
+                MapStudioStandardRoadCatalog
+                    .RoadTwoLaneWithSidewalk;
+
+            var ground =
+                await new OmsiSplineDefinitionReader()
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            profile.FileName));
+
+            var bridgePath =
+                Path.Combine(
+                    result.PackDirectory,
+                    MapStudioStandardRoadCatalog
+                        .GetBridgeFileName(
+                            profile));
+
+            var bridge =
+                await new OmsiSplineDefinitionReader()
+                    .ReadAsync(
+                        bridgePath);
+
+            var source =
+                await File.ReadAllTextAsync(
+                    bridgePath);
+
+            Assert.Contains(
+                result.TexturePaths,
+                path =>
+                    string.Equals(
+                        Path.GetFileName(
+                            path),
+                        "ms_guardrail.bmp",
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            Assert.Contains(
+                "ms_guardrail.bmp",
+                source,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "[profile]\r\n4\r\n",
+                source,
+                StringComparison.Ordinal);
+
+            Assert.True(
+                bridge.Surfaces.Count >=
+                ground.Surfaces.Count +
+                    20);
+
+            var highest =
+                bridge.Surfaces
+                    .SelectMany(
+                        surface =>
+                            new[]
+                            {
+                                surface.From.Z,
+                                surface.To.Z
+                            })
+                    .Max();
+
+            Assert.True(
+                highest >
+                1.15);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task LocalRoadProfilesUsePhysicalOmsiMeterWidths()
     {
         var root =
