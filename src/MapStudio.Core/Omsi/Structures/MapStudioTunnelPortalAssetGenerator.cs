@@ -11,7 +11,9 @@ public sealed record MapStudioTunnelPortalSpec(
     double RoadWidthMeters,
     double ClearHeightMeters = 4.5,
     double FrameThicknessMeters = 0.45,
-    double DepthMeters = 1.2)
+    double DepthMeters = 1.2,
+    double LeftWingHeightMeters = 2.5,
+    double RightWingHeightMeters = 2.5)
 {
     public MapStudioTunnelPortalSpec Normalize() =>
         this with
@@ -34,7 +36,15 @@ public sealed record MapStudioTunnelPortalSpec(
             DepthMeters = Math.Clamp(
                 double.IsFinite(DepthMeters) ? DepthMeters : 1.2,
                 0.4,
-                4.0)
+                4.0),
+            LeftWingHeightMeters = Math.Clamp(
+                double.IsFinite(LeftWingHeightMeters) ? LeftWingHeightMeters : 2.5,
+                1.5,
+                7.0),
+            RightWingHeightMeters = Math.Clamp(
+                double.IsFinite(RightWingHeightMeters) ? RightWingHeightMeters : 2.5,
+                1.5,
+                7.0)
         };
 }
 
@@ -242,28 +252,72 @@ public sealed class MapStudioTunnelPortalAssetGenerator
                 topHeight,
                 depth));
 
-        var wingDepth = Math.Max(depth, 1.8f);
-        var wingHeight = Math.Max(1.6f, clearHeight * 0.55f);
+        var wingDepth = Math.Max(depth, 2.4f);
+        var leftWingHeight =
+            (float)normalized.LeftWingHeightMeters;
+        var rightWingHeight =
+            (float)normalized.RightWingHeightMeters;
+        var wingWidth =
+            thickness * 1.75f;
 
         builder.AddBox(
             new Vector3(
-                -outerWidth / 2.0f - thickness * 0.75f,
-                wingHeight / 2.0f,
-                wingDepth * 0.25f),
+                -outerWidth / 2.0f - wingWidth / 2.0f,
+                leftWingHeight / 2.0f,
+                wingDepth * 0.35f),
             new Vector3(
-                thickness * 1.5f,
-                wingHeight,
+                wingWidth,
+                leftWingHeight,
                 wingDepth));
 
         builder.AddBox(
             new Vector3(
-                outerWidth / 2.0f + thickness * 0.75f,
-                wingHeight / 2.0f,
-                wingDepth * 0.25f),
+                outerWidth / 2.0f + wingWidth / 2.0f,
+                rightWingHeight / 2.0f,
+                wingDepth * 0.35f),
             new Vector3(
-                thickness * 1.5f,
-                wingHeight,
+                wingWidth,
+                rightWingHeight,
                 wingDepth));
+
+        AddSlopeCap(
+            -1.0f,
+            leftWingHeight);
+
+        AddSlopeCap(
+            1.0f,
+            rightWingHeight);
+
+        void AddSlopeCap(
+            float side,
+            float wingHeight)
+        {
+            var shoulderWidth =
+                Math.Max(
+                    0.60f,
+                    thickness * 1.50f);
+
+            var centerX =
+                side *
+                (
+                    outerWidth / 2.0f +
+                    wingWidth +
+                    shoulderWidth / 2.0f
+                );
+
+            builder.AddBox(
+                new Vector3(
+                    centerX,
+                    Math.Max(
+                        thickness / 2.0f,
+                        wingHeight -
+                            thickness / 2.0f),
+                    wingDepth * 0.45f),
+                new Vector3(
+                    shoulderWidth,
+                    thickness,
+                    wingDepth * 0.85f));
+        }
 
         return builder.Build();
     }
@@ -289,7 +343,7 @@ public sealed class MapStudioTunnelPortalAssetGenerator
         MapStudioTunnelPortalSpec spec) =>
         string.Create(
             CultureInfo.InvariantCulture,
-            $"OMSI Map Studio Tunnel Portal\nVersion={AssetVersion}\nName={spec.Name}\nRoadWidth={spec.RoadWidthMeters:0.00}\nClearHeight={spec.ClearHeightMeters:0.00}\nFrameThickness={spec.FrameThicknessMeters:0.00}\nDepth={spec.DepthMeters:0.00}\n");
+            $"OMSI Map Studio Tunnel Portal\nVersion={AssetVersion}\nName={spec.Name}\nRoadWidth={spec.RoadWidthMeters:0.00}\nClearHeight={spec.ClearHeightMeters:0.00}\nFrameThickness={spec.FrameThicknessMeters:0.00}\nDepth={spec.DepthMeters:0.00}\nLeftWingHeight={spec.LeftWingHeightMeters:0.00}\nRightWingHeight={spec.RightWingHeightMeters:0.00}\n");
 
     private static string SanitizeName(string value)
     {
