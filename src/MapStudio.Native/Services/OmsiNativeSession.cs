@@ -63,6 +63,11 @@ public sealed record NativeTerrainSplineConformResult(
     int ChangedTiles,
     int ChangedSamples);
 
+public sealed record NativeTerrainPolygonEditResult(
+    NativeMapSnapshot Snapshot,
+    int ChangedTiles,
+    int ChangedSamples);
+
 public sealed record NativeDeleteBackupEntry(
     string TargetPath,
     string BackupPath);
@@ -9672,6 +9677,299 @@ public sealed class OmsiNativeSession
             };
 
         return new NativeTerrainSplineConformResult(
+            CurrentMap,
+            changedRelativePaths
+                .Count,
+            changedSamples);
+    }
+
+
+    public Task<NativeTerrainPolygonEditResult>
+        LevelTerrainPolygonAsync(
+            IReadOnlyList<Vector2> worldPolygon,
+            double targetHeight,
+            double edgeFeatherMeters,
+            CancellationToken cancellationToken =
+                default) =>
+        EditTerrainPolygonAsync(
+            worldPolygon,
+            targetHeight,
+            deltaHeight:
+                null,
+            edgeFeatherMeters,
+            cancellationToken);
+
+    public Task<NativeTerrainPolygonEditResult>
+        OffsetTerrainPolygonAsync(
+            IReadOnlyList<Vector2> worldPolygon,
+            double deltaHeight,
+            double edgeFeatherMeters,
+            CancellationToken cancellationToken =
+                default) =>
+        EditTerrainPolygonAsync(
+            worldPolygon,
+            targetHeight:
+                null,
+            deltaHeight,
+            edgeFeatherMeters,
+            cancellationToken);
+
+    private async Task<NativeTerrainPolygonEditResult>
+        EditTerrainPolygonAsync(
+            IReadOnlyList<Vector2> worldPolygon,
+            double? targetHeight,
+            double? deltaHeight,
+            double edgeFeatherMeters,
+            CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(
+            worldPolygon);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainEdit");
+        }
+
+        if (
+            worldPolygon.Count < 3 ||
+            worldPolygon.Any(
+                point =>
+                    !float.IsFinite(point.X) ||
+                    !float.IsFinite(point.Y)) ||
+            !double.IsFinite(edgeFeatherMeters) ||
+            edgeFeatherMeters < 0 ||
+            (targetHeight is null) ==
+                (deltaHeight is null) ||
+            targetHeight is double level &&
+                !double.IsFinite(level) ||
+            deltaHeight is double delta &&
+                (
+                    !double.IsFinite(delta) ||
+                    Math.Abs(delta) <
+                        0.000001
+                ))
+        {
+            throw new InvalidDataException(
+                "terrainPolygonEditInvalid");
+        }
+
+        var minX =
+            worldPolygon.Min(
+                point =>
+                    (double)point.X);
+
+        var maxX =
+            worldPolygon.Max(
+                point =>
+                    (double)point.X);
+
+        var minZ =
+            worldPolygon.Min(
+                point =>
+                    (double)point.Y);
+
+        var maxZ =
+            worldPolygon.Max(
+                point =>
+                    (double)point.Y);
+
+        var writes =
+            new List<
+                PendingFileWrite>();
+
+        var changedRelativePaths =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        var changedSamples =
+            0;
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var bounds =
+                OmsiTileGrid
+                    .GetBounds(
+                        tile.X,
+                        tile.Y);
+
+            if (
+                bounds.MaxX <
+                    minX ||
+                bounds.MinX >
+                    maxX ||
+                bounds.MaxZ <
+                    minZ ||
+                bounds.MinZ >
+                    maxZ)
+            {
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath))
+            {
+                continue;
+            }
+
+            var terrainPath =
+                tilePath +
+                ".terrain";
+
+            if (!File.Exists(
+                    terrainPath))
+            {
+                continue;
+            }
+
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(
+                        terrainPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var tileOriginX =
+                OmsiTileGrid
+                    .GetOriginX(
+                        tile.X);
+
+            var tileOriginZ =
+                OmsiTileGrid
+                    .GetOriginZ(
+                        tile.Y);
+
+            var result =
+                targetHeight is
+                    double target
+                    ? OmsiTerrainLeveler
+                        .LevelPolygon(
+                            terrain,
+                            tileOriginX,
+                            tileOriginZ,
+                            worldPolygon,
+                            target,
+                            edgeFeatherMeters)
+                    : OmsiTerrainLeveler
+                        .OffsetPolygon(
+                            terrain,
+                            tileOriginX,
+                            tileOriginZ,
+                            worldPolygon,
+                            deltaHeight!.Value,
+                            edgeFeatherMeters);
+
+            if (
+                result.ChangedSamples ==
+                0)
+            {
+                continue;
+            }
+
+            writes.Add(
+                new PendingFileWrite(
+                    terrainPath,
+                    CreateNativeBackupPath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        terrainPath),
+                    OmsiTerrainWriter
+                        .Write(
+                            result.Terrain)));
+
+            changedRelativePaths.Add(
+                tile.RelativeMapPath);
+
+            changedSamples +=
+                result.ChangedSamples;
+        }
+
+        if (
+            writes.Count ==
+            0)
+        {
+            return new NativeTerrainPolygonEditResult(
+                snapshot,
+                0,
+                0);
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshed =
+            new Dictionary<
+                string,
+                OmsiTileContent>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        foreach (
+            var loaded in
+                snapshot.Tiles)
+        {
+            if (
+                !changedRelativePaths
+                    .Contains(
+                        loaded.Reference
+                            .RelativeMapPath) ||
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        loaded.Reference
+                            .RelativeMapPath,
+                        out var tilePath))
+            {
+                continue;
+            }
+
+            refreshed[
+                loaded.Reference
+                    .RelativeMapPath] =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            item =>
+                                refreshed.TryGetValue(
+                                    item.Reference
+                                        .RelativeMapPath,
+                                    out var content)
+                                    ? new NativeLoadedTile(
+                                        item.Reference,
+                                        content)
+                                    : item)
+                        .ToArray()
+            };
+
+        return new NativeTerrainPolygonEditResult(
             CurrentMap,
             changedRelativePaths
                 .Count,

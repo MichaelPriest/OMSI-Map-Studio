@@ -998,9 +998,9 @@ public sealed partial class MainWindow : Window
                             shapePoint);
                     }
 
-                    TerrainShapeFillButton.IsEnabled =
+                    SetTerrainShapeActionButtons(
                         _terrainShapePoints.Count >=
-                            3;
+                            3);
 
                     TerrainShapeClearButton.IsEnabled =
                         _terrainShapePoints.Count >
@@ -6158,6 +6158,36 @@ public sealed partial class MainWindow : Window
     }
 
 
+    private void SetTerrainShapeActionButtons(
+        bool enabled)
+    {
+        var hasShape =
+            enabled &&
+            _terrainShapePoints.Count >=
+                3;
+
+        TerrainShapeLevelButton.IsEnabled =
+            hasShape;
+
+        TerrainShapeRaiseButton.IsEnabled =
+            hasShape;
+
+        TerrainShapeLowerButton.IsEnabled =
+            hasShape;
+
+        TerrainShapeFillButton.IsEnabled =
+            hasShape &&
+            (
+                _session.CurrentMap?
+                    .Map
+                    .GroundTextures
+                    .Count ??
+                0
+            ) >
+            1;
+    }
+
+
     private void OnTerrainShapeStartClick(
         object sender,
         RoutedEventArgs e)
@@ -6166,14 +6196,10 @@ public sealed partial class MainWindow : Window
             _session.CurrentMap;
 
         if (
-            snapshot is null ||
-            snapshot.Map
-                .GroundTextures
-                .Count <=
-            1)
+            snapshot is null)
         {
             StatusText.Text =
-                "Textura por forma: abra um mapa com ao menos uma groundtex pintável.";
+                "Custom Shape: abra um mapa OMSI antes de editar o terreno.";
 
             return;
         }
@@ -6204,8 +6230,8 @@ public sealed partial class MainWindow : Window
         _terrainShapeCaptureMode =
             true;
 
-        TerrainShapeFillButton.IsEnabled =
-            false;
+        SetTerrainShapeActionButtons(
+            false);
 
         TerrainShapeClearButton.IsEnabled =
             true;
@@ -6217,7 +6243,7 @@ public sealed partial class MainWindow : Window
             .BeginTerrainSelectionMode();
 
         StatusText.Text =
-            "Textura por Custom Shape ativa: clique os vértices no terreno e depois use Pintar forma.";
+            "Custom Shape ativa: clique os vértices no terreno e escolha Nivelar, Elevar, Abaixar ou Pintar forma.";
     }
 
     private void UpdateTerrainShapePreview()
@@ -6284,10 +6310,8 @@ public sealed partial class MainWindow : Window
                 .Clear();
         }
 
-        TerrainShapeFillButton.IsEnabled =
-            !clearPoints &&
-            _terrainShapePoints.Count >=
-                3;
+        SetTerrainShapeActionButtons(
+            !clearPoints);
 
         TerrainShapeClearButton.IsEnabled =
             !clearPoints &&
@@ -6306,7 +6330,7 @@ public sealed partial class MainWindow : Window
                 true);
 
         StatusText.Text =
-            "Custom Shape de textura do terreno limpa.";
+            "Custom Shape do terreno limpa.";
     }
 
     private async void OnTerrainShapeFillClick(
@@ -6389,8 +6413,8 @@ public sealed partial class MainWindow : Window
 
         try
         {
-            TerrainShapeFillButton.IsEnabled =
-                false;
+            SetTerrainShapeActionButtons(
+                false);
 
             StatusText.Text =
                 $"Pintando groundtex {layer} dentro da forma ({_terrainShapePoints.Count} vértices)...";
@@ -6435,12 +6459,172 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception exception)
         {
-            TerrainShapeFillButton.IsEnabled =
-                _terrainShapePoints.Count >=
-                    3;
+            SetTerrainShapeActionButtons(
+                true);
 
             StatusText.Text =
                 $"Falha ao pintar textura por forma: {exception.Message}";
+        }
+    }
+
+    private async void OnTerrainShapeLevelClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyTerrainShapeHeightAsync(
+            levelToTarget:
+                true,
+            direction:
+                0);
+
+    private async void OnTerrainShapeRaiseClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyTerrainShapeHeightAsync(
+            levelToTarget:
+                false,
+            direction:
+                1);
+
+    private async void OnTerrainShapeLowerClick(
+        object sender,
+        RoutedEventArgs e) =>
+        await ApplyTerrainShapeHeightAsync(
+            levelToTarget:
+                false,
+            direction:
+                -1);
+
+    private async Task ApplyTerrainShapeHeightAsync(
+        bool levelToTarget,
+        double direction)
+    {
+        if (
+            _session.CurrentMap is null ||
+            _terrainShapePoints.Count <
+                3)
+        {
+            StatusText.Text =
+                "Custom Shape: desenhe ao menos 3 vértices no terreno.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+                0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de editar o terreno.";
+
+            return;
+        }
+
+        var targetHeight =
+            TerrainTargetHeightBox.Value;
+
+        var magnitude =
+            TerrainBrushDeltaBox.Value;
+
+        var radius =
+            TerrainBrushRadiusBox.Value;
+
+        var feather =
+            TerrainBrushFeatherBox.Value;
+
+        if (
+            !double.IsFinite(radius) ||
+            radius <= 0 ||
+            !double.IsFinite(feather) ||
+            feather < 0 ||
+            feather > 1 ||
+            levelToTarget &&
+                !double.IsFinite(targetHeight) ||
+            !levelToTarget &&
+                (
+                    !double.IsFinite(magnitude) ||
+                    magnitude <= 0
+                ))
+        {
+            StatusText.Text =
+                "Custom Shape: altura/força/suavização inválidas.";
+
+            return;
+        }
+
+        var edgeFeatherMeters =
+            radius *
+            feather;
+
+        var worldPolygon =
+            _terrainShapePoints
+                .Select(
+                    point =>
+                        new Vector2(
+                            (float)point.X,
+                            (float)point.Z))
+                .ToArray();
+
+        try
+        {
+            SetTerrainShapeActionButtons(
+                false);
+
+            StatusText.Text =
+                levelToTarget
+                    ? $"Nivelando Custom Shape para {targetHeight:F2} m..."
+                    : direction > 0
+                        ? $"Elevando Custom Shape em {magnitude:F2} m..."
+                        : $"Abaixando Custom Shape em {magnitude:F2} m...";
+
+            var result =
+                levelToTarget
+                    ? await _session
+                        .LevelTerrainPolygonAsync(
+                            worldPolygon,
+                            targetHeight,
+                            edgeFeatherMeters)
+                    : await _session
+                        .OffsetTerrainPolygonAsync(
+                            worldPolygon,
+                            magnitude *
+                            (
+                                direction >=
+                                0
+                                    ? 1
+                                    : -1
+                            ),
+                            edgeFeatherMeters);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    result.Snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            CancelTerrainShapeCapture(
+                clearPoints:
+                    true);
+
+            StatusText.Text =
+                levelToTarget
+                    ? $"Custom Shape nivelada para {targetHeight:F2} m · {result.ChangedTiles} tile(s) · {result.ChangedSamples} sample(s) · borda {edgeFeatherMeters:F1} m."
+                    : $"{(direction > 0 ? "Custom Shape elevada" : "Custom Shape abaixada")} em {magnitude:F2} m · {result.ChangedTiles} tile(s) · {result.ChangedSamples} sample(s) · borda {edgeFeatherMeters:F1} m.";
+        }
+        catch (Exception exception)
+        {
+            SetTerrainShapeActionButtons(
+                true);
+
+            StatusText.Text =
+                $"Falha ao editar terreno por Custom Shape: {exception.Message}";
         }
     }
 

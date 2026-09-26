@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.54: visual terrain brush radius and feather in the native viewport.
+# Test 10.55: Custom Shape terrain leveling/offset across real OMSI terrain tiles.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.54-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.54-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.55-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.55-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.54-native
-  TAG: v0.2.0-alpha.5-test.10.54-native
+  VERSION: 0.2.0-alpha.5-test.10.55-native
+  TAG: v0.2.0-alpha.5-test.10.55-native
 
 jobs:
   build-native-preview:
@@ -2188,6 +2188,71 @@ jobs:
 
           Write-Host "Verified terrain brush radius/feather projection and live viewport overlay."
 
+      - name: Verify test 10.55 Custom Shape terrain height editing
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainShapeLevelButton',
+            'TerrainShapeRaiseButton',
+            'TerrainShapeLowerButton',
+            'Content="Nivelar forma"',
+            'Content="Elevar forma"',
+            'Content="Abaixar forma"'
+          )) {
+            if (-not $mainXaml.Contains($required)) {
+              throw "Test 10.55 Custom Shape terrain UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainShapeLevelClick',
+            'OnTerrainShapeRaiseClick',
+            'OnTerrainShapeLowerClick',
+            'ApplyTerrainShapeHeightAsync'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.55 Custom Shape terrain workflow marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelTerrainPolygonAsync',
+            'OffsetTerrainPolygonAsync',
+            'NativeTerrainPolygonEditResult'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "Test 10.55 terrain polygon persistence marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelPolygon',
+            'OffsetPolygon',
+            'ContainsPolygonPoint',
+            'DistanceToPolygonBoundary'
+          )) {
+            if (-not $leveler.Contains($required)) {
+              throw "Test 10.55 terrain polygon core marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelPolygon_HandlesConcaveShapeWithoutFillingCutout',
+            'OffsetPolygon_PreservesSharedEdgeAcrossAdjacentTiles'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.55 terrain polygon regression marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified concave Custom Shape leveling/offset, feathering, cross-tile writes and real terrain reload."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2342,11 +2407,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.54-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.55-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.54-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.55-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

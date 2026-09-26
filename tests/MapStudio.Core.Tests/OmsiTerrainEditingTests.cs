@@ -1,3 +1,4 @@
+using System.Numerics;
 using MapStudio.Core.Omsi.Maps;
 using Xunit;
 
@@ -339,4 +340,118 @@ public sealed class OmsiTerrainEditingTests
             0.01f,
             19.99f);
     }
+
+    [Fact]
+    public void LevelPolygon_HandlesConcaveShapeWithoutFillingCutout()
+    {
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        0f,
+                        25)
+                    .ToArray());
+
+        var polygon =
+            new Vector2[]
+            {
+                new(50, 50),
+                new(250, 50),
+                new(250, 250),
+                new(150, 150),
+                new(50, 250)
+            };
+
+        var result =
+            OmsiTerrainLeveler
+                .LevelPolygon(
+                    terrain,
+                    tileOriginX:
+                        0,
+                    tileOriginZ:
+                        0,
+                    polygon,
+                    targetHeight:
+                        12,
+                    edgeFeatherMeters:
+                        0);
+
+        Assert.Equal(
+            12f,
+            result.Terrain
+                .Heights[7]);
+
+        Assert.Equal(
+            0f,
+            result.Terrain
+                .Heights[17]);
+
+        Assert.True(
+            result.ChangedSamples >
+            0);
+    }
+
+    [Fact]
+    public void OffsetPolygon_PreservesSharedEdgeAcrossAdjacentTiles()
+    {
+        var source =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        5f,
+                        25)
+                    .ToArray());
+
+        var polygon =
+            new Vector2[]
+            {
+                new(285, 100),
+                new(315, 100),
+                new(315, 200),
+                new(285, 200)
+            };
+
+        var left =
+            OmsiTerrainLeveler
+                .OffsetPolygon(
+                    source,
+                    tileOriginX:
+                        0,
+                    tileOriginZ:
+                        0,
+                    polygon,
+                    deltaHeight:
+                        2.5,
+                    edgeFeatherMeters:
+                        0);
+
+        var right =
+            OmsiTerrainLeveler
+                .OffsetPolygon(
+                    source,
+                    tileOriginX:
+                        300,
+                    tileOriginZ:
+                        0,
+                    polygon,
+                    deltaHeight:
+                        2.5,
+                    edgeFeatherMeters:
+                        0);
+
+        Assert.Equal(
+            7.5f,
+            left.Terrain
+                .Heights[14]);
+
+        Assert.Equal(
+            left.Terrain
+                .Heights[14],
+            right.Terrain
+                .Heights[10]);
+    }
+
+
 }

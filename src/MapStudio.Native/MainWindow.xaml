@@ -5107,7 +5107,7 @@
                                 <TextBlock Text="Custom Shape"
                                            Margin="0,5,0,0"
                                            FontWeight="SemiBold" />
-                                <TextBlock Text="Capture um polígono no viewport e pinte a groundtex dentro da forma, inclusive em polígonos côncavos e atravessando tiles."
+                                <TextBlock Text="Capture um polígono no viewport para nivelar, elevar, abaixar ou pintar o terreno. Formas côncavas e múltiplos tiles são suportados."
                                            TextWrapping="Wrap"
                                            FontSize="10"
                                            Foreground="{ThemeResource MapStudioTextMutedBrush}" />
@@ -5121,18 +5121,47 @@
                                             Content="Desenhar forma"
                                             HorizontalAlignment="Stretch"
                                             Click="OnTerrainShapeStartClick" />
-                                    <Button x:Name="TerrainShapeFillButton"
+                                    <Button x:Name="TerrainShapeClearButton"
                                             Grid.Column="1"
-                                            Content="Pintar forma"
+                                            Content="Limpar forma"
                                             HorizontalAlignment="Stretch"
                                             IsEnabled="False"
-                                            Click="OnTerrainShapeFillClick" />
+                                            Click="OnTerrainShapeClearClick" />
                                 </Grid>
-                                <Button x:Name="TerrainShapeClearButton"
-                                        Content="Limpar forma"
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="TerrainShapeLevelButton"
+                                            Grid.Column="0"
+                                            Content="Nivelar forma"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnTerrainShapeLevelClick" />
+                                    <Button x:Name="TerrainShapeRaiseButton"
+                                            Grid.Column="1"
+                                            Content="Elevar forma"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnTerrainShapeRaiseClick" />
+                                    <Button x:Name="TerrainShapeLowerButton"
+                                            Grid.Column="2"
+                                            Content="Abaixar forma"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnTerrainShapeLowerClick" />
+                                </Grid>
+                                <Button x:Name="TerrainShapeFillButton"
+                                        Content="Pintar forma"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
-                                        Click="OnTerrainShapeClearClick" />
+                                        Click="OnTerrainShapeFillClick" />
+                                <TextBlock Text="Suavização da borda da forma = raio do pincel × suavização."
+                                           TextWrapping="Wrap"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                             </StackPanel>
                         </Border>
 

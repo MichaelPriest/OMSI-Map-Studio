@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace MapStudio.Core.Omsi.Maps;
 
 public sealed record OmsiTerrainLevelResult(
@@ -689,6 +691,349 @@ public static class OmsiTerrainLeveler
                 terrain.CellCount,
                 next),
             changed);
+    }
+
+
+    public static OmsiTerrainLevelResult
+        LevelPolygon(
+            OmsiTerrainGrid terrain,
+            double tileOriginX,
+            double tileOriginZ,
+            IReadOnlyList<Vector2> worldPolygon,
+            double targetHeight,
+            double edgeFeatherMeters)
+    {
+        if (!double.IsFinite(targetHeight))
+        {
+            throw new InvalidDataException(
+                "invalidTerrainPolygonTargetHeight");
+        }
+
+        return ApplyPolygon(
+            terrain,
+            tileOriginX,
+            tileOriginZ,
+            worldPolygon,
+            edgeFeatherMeters,
+            targetHeight,
+            deltaHeight:
+                null);
+    }
+
+    public static OmsiTerrainLevelResult
+        OffsetPolygon(
+            OmsiTerrainGrid terrain,
+            double tileOriginX,
+            double tileOriginZ,
+            IReadOnlyList<Vector2> worldPolygon,
+            double deltaHeight,
+            double edgeFeatherMeters)
+    {
+        if (
+            !double.IsFinite(deltaHeight) ||
+            Math.Abs(deltaHeight) <
+                0.000001)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainPolygonDeltaHeight");
+        }
+
+        return ApplyPolygon(
+            terrain,
+            tileOriginX,
+            tileOriginZ,
+            worldPolygon,
+            edgeFeatherMeters,
+            targetHeight:
+                null,
+            deltaHeight);
+    }
+
+    private static OmsiTerrainLevelResult
+        ApplyPolygon(
+            OmsiTerrainGrid terrain,
+            double tileOriginX,
+            double tileOriginZ,
+            IReadOnlyList<Vector2> worldPolygon,
+            double edgeFeatherMeters,
+            double? targetHeight,
+            double? deltaHeight)
+    {
+        ArgumentNullException.ThrowIfNull(
+            terrain);
+
+        ArgumentNullException.ThrowIfNull(
+            worldPolygon);
+
+        if (
+            worldPolygon.Count < 3 ||
+            worldPolygon.Any(
+                point =>
+                    !float.IsFinite(point.X) ||
+                    !float.IsFinite(point.Y)) ||
+            !double.IsFinite(tileOriginX) ||
+            !double.IsFinite(tileOriginZ) ||
+            !double.IsFinite(edgeFeatherMeters) ||
+            edgeFeatherMeters < 0 ||
+            (targetHeight is null) ==
+                (deltaHeight is null))
+        {
+            throw new InvalidDataException(
+                "invalidTerrainPolygon");
+        }
+
+        var cellCount =
+            terrain.CellCount;
+
+        if (cellCount <= 0)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainCellCount");
+        }
+
+        var sampleCount =
+            cellCount +
+            1;
+
+        if (
+            terrain.Heights.Count !=
+                sampleCount *
+                sampleCount)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainHeightCount");
+        }
+
+        var spacing =
+            TileSize /
+            cellCount;
+
+        var next =
+            terrain.Heights
+                .ToArray();
+
+        var changed =
+            0;
+
+        for (
+            var row = 0;
+            row < sampleCount;
+            row++)
+        {
+            var worldZ =
+                tileOriginZ +
+                row *
+                spacing;
+
+            for (
+                var column = 0;
+                column < sampleCount;
+                column++)
+            {
+                var worldX =
+                    tileOriginX +
+                    column *
+                    spacing;
+
+                var point =
+                    new Vector2(
+                        (float)worldX,
+                        (float)worldZ);
+
+                if (!ContainsPolygonPoint(
+                        worldPolygon,
+                        point))
+                {
+                    continue;
+                }
+
+                var weight =
+                    edgeFeatherMeters <=
+                        0
+                        ? 1.0
+                        : Math.Clamp(
+                            DistanceToPolygonBoundary(
+                                worldPolygon,
+                                point) /
+                            edgeFeatherMeters,
+                            0,
+                            1);
+
+                var index =
+                    row *
+                    sampleCount +
+                    column;
+
+                var current =
+                    next[index];
+
+                var updated =
+                    targetHeight is
+                        double level
+                        ? current +
+                            (
+                                level -
+                                current
+                            ) *
+                            weight
+                        : current +
+                            deltaHeight!.Value *
+                            weight;
+
+                var asFloat =
+                    (float)updated;
+
+                if (
+                    Math.Abs(
+                        asFloat -
+                        current) <=
+                    0.00001f)
+                {
+                    continue;
+                }
+
+                next[index] =
+                    asFloat;
+
+                changed++;
+            }
+        }
+
+        return new OmsiTerrainLevelResult(
+            new OmsiTerrainGrid(
+                terrain.CellCount,
+                next),
+            changed);
+    }
+
+    private static bool ContainsPolygonPoint(
+        IReadOnlyList<Vector2> polygon,
+        Vector2 point)
+    {
+        var inside =
+            false;
+
+        for (
+            int current = 0,
+                previous =
+                    polygon.Count -
+                    1;
+            current < polygon.Count;
+            previous = current++)
+        {
+            var a =
+                polygon[current];
+
+            var b =
+                polygon[previous];
+
+            if (
+                DistanceToPolygonSegment(
+                    point,
+                    a,
+                    b) <=
+                0.0001f)
+            {
+                return true;
+            }
+
+            var intersects =
+                (
+                    a.Y >
+                    point.Y
+                ) !=
+                (
+                    b.Y >
+                    point.Y
+                ) &&
+                point.X <
+                    (
+                        b.X -
+                        a.X
+                    ) *
+                    (
+                        point.Y -
+                        a.Y
+                    ) /
+                    (
+                        b.Y -
+                        a.Y
+                    ) +
+                    a.X;
+
+            if (intersects)
+            {
+                inside =
+                    !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    private static double DistanceToPolygonBoundary(
+        IReadOnlyList<Vector2> polygon,
+        Vector2 point)
+    {
+        var best =
+            double.PositiveInfinity;
+
+        for (
+            int current = 0,
+                previous =
+                    polygon.Count -
+                    1;
+            current < polygon.Count;
+            previous = current++)
+        {
+            best =
+                Math.Min(
+                    best,
+                    DistanceToPolygonSegment(
+                        point,
+                        polygon[previous],
+                        polygon[current]));
+        }
+
+        return best;
+    }
+
+    private static float DistanceToPolygonSegment(
+        Vector2 point,
+        Vector2 start,
+        Vector2 end)
+    {
+        var segment =
+            end -
+            start;
+
+        var lengthSquared =
+            segment.LengthSquared();
+
+        if (
+            lengthSquared <=
+            0.0000001f)
+        {
+            return Vector2.Distance(
+                point,
+                start);
+        }
+
+        var amount =
+            Math.Clamp(
+                Vector2.Dot(
+                    point -
+                    start,
+                    segment) /
+                lengthSquared,
+                0,
+                1);
+
+        return Vector2.Distance(
+            point,
+            start +
+            segment *
+            amount);
     }
 
     private readonly record struct
