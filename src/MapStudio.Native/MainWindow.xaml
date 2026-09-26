@@ -4030,6 +4030,10 @@
                                         Orientation="Horizontal"
                                         Spacing="6">
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Pincel"
+                                        ToolTipService.ToolTip="Ativar seleção contínua de terreno com raio e feather visíveis no viewport"
+                                        Click="OnTerrainBrushModeClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Escolher ponto"
                                         Click="OnPickTerrainPointClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
@@ -4981,7 +4985,8 @@
                                                Value="20"
                                                Minimum="0.25"
                                                SpinButtonPlacementMode="Compact"
-                                               SmallChange="1" />
+                                               SmallChange="1"
+                                               ValueChanged="OnTerrainBrushPreviewValueChanged" />
                                     <NumberBox x:Name="TerrainBrushFeatherBox"
                                                Grid.Column="1"
                                                Header="Suavização (0–1)"
@@ -4989,7 +4994,8 @@
                                                Minimum="0"
                                                Maximum="1"
                                                SpinButtonPlacementMode="Compact"
-                                               SmallChange="0.05" />
+                                               SmallChange="0.05"
+                                               ValueChanged="OnTerrainBrushPreviewValueChanged" />
                                 </Grid>
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
