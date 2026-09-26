@@ -279,7 +279,7 @@ public sealed class MapStudioTunnelPortalAssetGenerator
         builder.AppendLine("MapStudio");
         builder.AppendLine("Road Structures");
         builder.AppendLine("[mesh]");
-        builder.AppendLine(@"model\portal.o3d");
+        builder.AppendLine("portal.o3d");
 
         return builder.ToString()
             .Replace("\n", "\r\n", StringComparison.Ordinal);
