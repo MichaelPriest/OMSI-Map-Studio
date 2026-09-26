@@ -291,4 +291,28 @@ public sealed class NativeViewportNavigationTests
             navigation.Pitch);
     }
 
+    [Fact]
+    public void ProjectWorldPointPlacesCameraTargetNearViewportCenter()
+    {
+        var navigation =
+            new NativeViewportNavigation();
+
+        Assert.True(
+            navigation.TryProjectWorldPoint(
+                navigation.Target,
+                1280,
+                720,
+                out var pixel));
+
+        Assert.InRange(
+            pixel.X,
+            639.5f,
+            640.5f);
+
+        Assert.InRange(
+            pixel.Y,
+            359.5f,
+            360.5f);
+    }
+
 }
