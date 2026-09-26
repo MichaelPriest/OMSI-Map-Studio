@@ -33377,8 +33377,13 @@ setTimeout(postBounds, 250);
                 .BuildBridgePierPlan(
                     placement);
 
+        var tunnelPortalPlan =
+            Viewport
+                .BuildTunnelPortalPlan(
+                    placement);
+
         NativeStartupDiagnostics.Write(
-            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} curvedRequests={placement.CurvedRequestCount} bridgeRequests={placement.BridgeRequestCount} tunnelRequests={placement.TunnelRequestCount} layeredRequests={placement.LayeredRequestCount} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions} bridgePierItems={bridgePierPlan.Items.Count} bridgePierAssets={bridgePierPlan.UniqueAssetCount} skippedBridgePiers={bridgePierPlan.SkippedSupportCount}");
+            $"Procedural roads placement graphSegments={graph.Segments.Count} requests={placement.Requests.Count} curvedRequests={placement.CurvedRequestCount} bridgeRequests={placement.BridgeRequestCount} tunnelRequests={placement.TunnelRequestCount} layeredRequests={placement.LayeredRequestCount} skippedSegments={placement.SkippedSegments} graphJunctions={graph.Junctions.Count} junctionItems={junctionPlan.Items.Count} skippedJunctions={junctionPlan.SkippedJunctions} bridgePierItems={bridgePierPlan.Items.Count} bridgePierAssets={bridgePierPlan.UniqueAssetCount} skippedBridgePiers={bridgePierPlan.SkippedSupportCount} tunnelPortalItems={tunnelPortalPlan.Items.Count} tunnelPortalAssets={tunnelPortalPlan.UniqueAssetCount} skippedTunnelPortals={tunnelPortalPlan.SkippedPortalCount}");
 
         if (placement.Requests.Count == 0)
         {
@@ -33625,6 +33630,173 @@ setTimeout(postBounds, 250);
             NativeStartupDiagnostics.Write(
                 $"Bridge piers inserted={insertedBridgePierCount} failed={failedBridgePierCount} planned={bridgePierPlan.Items.Count} skipped={bridgePierPlan.SkippedSupportCount}");
 
+            var tunnelPortalBackupDirectories =
+                new List<string>();
+
+            var insertedTunnelPortalCount =
+                0;
+
+            var failedTunnelPortalCount =
+                tunnelPortalPlan.SkippedPortalCount;
+
+            if (
+                tunnelPortalPlan.Items.Count >
+                    0)
+            {
+                StatusText.Text =
+                    $"Gerando {tunnelPortalPlan.UniqueAssetCount} variante(s) de portal de túnel...";
+
+                var generatedTunnelPortalAssets =
+                    new Dictionary<
+                        string,
+                        string>(
+                            StringComparer
+                                .OrdinalIgnoreCase);
+
+                foreach (
+                    var group in
+                        tunnelPortalPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    var sample =
+                        group.First();
+
+                    try
+                    {
+                        var asset =
+                            await new MapStudioTunnelPortalAssetGenerator()
+                                .GenerateAsync(
+                                    root,
+                                    sample.Spec);
+
+                        var sceneryRoot =
+                            Path.Combine(
+                                root,
+                                "Sceneryobjects");
+
+                        var relativePath =
+                            Path.GetRelativePath(
+                                sceneryRoot,
+                                asset.SceneryObjectPath)
+                                .Replace(
+                                    Path.DirectorySeparatorChar,
+                                    '\\');
+
+                        generatedTunnelPortalAssets[
+                            sample.AssetName] =
+                            relativePath;
+                    }
+                    catch (Exception exception)
+                    {
+                        failedTunnelPortalCount +=
+                            group.Count();
+
+                        NativeStartupDiagnostics.Write(
+                            $"Tunnel portal asset failed asset={sample.AssetName} count={group.Count()} error={exception}");
+                    }
+                }
+
+                var tunnelPortalGroups =
+                    new List<
+                        NativeSceneryPlacementBatchGroup>();
+
+                foreach (
+                    var group in
+                        tunnelPortalPlan.Items
+                            .GroupBy(
+                                item =>
+                                    item.AssetName,
+                                StringComparer
+                                    .OrdinalIgnoreCase))
+                {
+                    if (
+                        !generatedTunnelPortalAssets
+                            .TryGetValue(
+                                group.Key,
+                                out var sceneryPath))
+                    {
+                        continue;
+                    }
+
+                    var requests =
+                        group
+                            .Select(
+                                item =>
+                                    new NativeSceneryPlacementRequest(
+                                        item.Tile,
+                                        sceneryPath,
+                                        item.X,
+                                        item.Y,
+                                        0,
+                                        item.Rotation,
+                                        0,
+                                        0,
+                                        item.WorldPoint,
+                                        false))
+                            .ToArray();
+
+                    foreach (
+                        var chunk in
+                            requests.Chunk(
+                                256))
+                    {
+                        tunnelPortalGroups.Add(
+                            new NativeSceneryPlacementBatchGroup(
+                                sceneryPath,
+                                chunk));
+                    }
+                }
+
+                foreach (
+                    var batch in
+                        tunnelPortalGroups
+                            .Chunk(
+                                2))
+                {
+                    var batchPlacementCount =
+                        batch.Sum(
+                            group =>
+                                group.Placements.Count);
+
+                    StatusText.Text =
+                        $"Inserindo portais automáticos de túnel · {insertedTunnelPortalCount + batchPlacementCount}/{tunnelPortalPlan.Items.Count} objeto(s)...";
+
+                    try
+                    {
+                        finalSnapshot =
+                            await _session
+                                .InsertSceneryObjectMultiBatchAsync(
+                                    batch);
+
+                        insertedTunnelPortalCount +=
+                            batchPlacementCount;
+
+                        if (
+                            !string.IsNullOrWhiteSpace(
+                                _session.LastBackupDirectory))
+                        {
+                            tunnelPortalBackupDirectories.Add(
+                                _session.LastBackupDirectory!);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        failedTunnelPortalCount +=
+                            batchPlacementCount;
+
+                        NativeStartupDiagnostics.Write(
+                            $"Tunnel portal insertion failed placements={batchPlacementCount} error={exception}");
+                    }
+                }
+            }
+
+            NativeStartupDiagnostics.Write(
+                $"Tunnel portals inserted={insertedTunnelPortalCount} failed={failedTunnelPortalCount} planned={tunnelPortalPlan.Items.Count} skipped={tunnelPortalPlan.SkippedPortalCount}");
+
             var junctionBackupDirectories =
                 new List<string>();
 
@@ -33797,7 +33969,7 @@ setTimeout(postBounds, 250);
 
             UpdateLoading(
                 "Finalizando vias",
-                $"{insertion.SplineIds.Count} splines · {insertedBridgePierCount} pilares · {insertedJunctionCount} junctions · atualizando apenas o viewport...");
+                $"{insertion.SplineIds.Count} splines · {insertedBridgePierCount} pilares · {insertedTunnelPortalCount} portais · {insertedJunctionCount} junctions · atualizando apenas o viewport...");
 
             NativeStartupDiagnostics.Write(
                 "Procedural roads final viewport reload begin.");
@@ -33850,11 +34022,17 @@ setTimeout(postBounds, 250);
                 false;
 
             StatusText.Text =
-                $"{insertion.SplineIds.Count} spline(s) procedurais + {insertedBridgePierCount} pilar(es) de ponte + {insertedJunctionCount} junction(s) próprios gravados. " +
+                $"{insertion.SplineIds.Count} spline(s) procedurais + {insertedBridgePierCount} pilar(es) de ponte + {insertedTunnelPortalCount} portal(is) de túnel + {insertedJunctionCount} junction(s) próprios gravados. " +
                 (
                     failedBridgePierCount >
                         0
                         ? $"Pilares não inseridos: {failedBridgePierCount}. "
+                        : string.Empty
+                ) +
+                (
+                    failedTunnelPortalCount >
+                        0
+                        ? $"Portais não inseridos: {failedTunnelPortalCount}. "
                         : string.Empty
                 ) +
                 (
@@ -33874,6 +34052,12 @@ setTimeout(postBounds, 250);
                     bridgePierBackupDirectories.Count >
                         0
                         ? $" · backup(s) de pilar: {bridgePierBackupDirectories.Count}"
+                        : string.Empty
+                ) +
+                (
+                    tunnelPortalBackupDirectories.Count >
+                        0
+                        ? $" · backup(s) de portal: {tunnelPortalBackupDirectories.Count}"
                         : string.Empty
                 ) +
                 (
