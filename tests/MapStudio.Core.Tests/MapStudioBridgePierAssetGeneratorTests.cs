@@ -22,9 +22,8 @@ public sealed class MapStudioBridgePierAssetGeneratorTests
 
         Assert.True(
             geometry.IsLoaded);
-        Assert.Equal(
-            1,
-            geometry.Materials.Count);
+        Assert.Single(
+            geometry.Materials);
         Assert.Equal(
             "ms_bridge_concrete.bmp",
             geometry.Materials[0]
