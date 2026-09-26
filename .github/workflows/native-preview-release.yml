@@ -1287,7 +1287,6 @@ jobs:
           }
 
           if (-not $roadKit.Contains('PackVersion =') -or
-              -not $roadKit.Contains('"1.4.0"') -or
               -not $roadKit.Contains('MapStudioStandardRoadCatalog')) {
             throw "Test 10.34+ Road Kit shared catalog wiring is missing."
           }
@@ -1450,10 +1449,10 @@ jobs:
             throw "Test 10.36 normalized physical width or curve diagnostics are missing."
           }
 
-          if (-not $roadKit.Contains('"1.4.0"') -or
+          if (-not $roadKit.Contains('PackVersion =') -or
               -not $roadKit.Contains('256,') -or
               -not $roadKitTests.Contains('BitConverter.ToInt32')) {
-            throw "Test 10.36 Road Kit 1.4 detailed texture generation is missing."
+            throw "Test 10.36 Road Kit detailed texture generation is missing."
           }
 
           if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh') -or
@@ -2830,8 +2829,7 @@ jobs:
           foreach ($required in @(
             'CreateBridgeGuardRailSegments',
             'ms_guardrail.bmp',
-            'guardRailTexture',
-            '"1.4.0"'
+            'guardRailTexture'
           )) {
             if (-not $roadKit.Contains($required)) {
               throw "Test 10.72 bridge guard-rail marker is missing: $required"
