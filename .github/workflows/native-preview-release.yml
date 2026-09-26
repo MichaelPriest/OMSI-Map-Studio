@@ -2901,6 +2901,7 @@ jobs:
           $portalPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeTunnelPortalPlanBuilder.cs -Raw
           $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
           $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
           $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioTunnelPortalAssetGeneratorTests.cs -Raw
           $rendererTests = Get-Content tests/MapStudio.Renderer.Tests/NativeTunnelPortalPlanBuilderTests.cs -Raw
 
@@ -2930,6 +2931,17 @@ jobs:
           if (-not $runtime.Contains('BuildTunnelPortalPlan') -or
               -not $viewport.Contains('BuildTunnelPortalPlan')) {
             throw "Test 10.74 tunnel-portal runtime exposure is missing."
+          }
+
+          foreach ($required in @(
+            'BuildTunnelPortalPlan',
+            'MapStudioTunnelPortalAssetGenerator',
+            'Inserindo portais automáticos de túnel',
+            'Tunnel portals inserted='
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.74 tunnel-portal host integration is missing: $required"
+            }
           }
 
           if (-not $coreTests.Contains('BuildGeometryCreatesRealPortalFrame') -or
