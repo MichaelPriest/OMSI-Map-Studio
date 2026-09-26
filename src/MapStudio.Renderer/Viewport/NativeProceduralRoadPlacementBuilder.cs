@@ -332,7 +332,30 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 second,
                 endPoint,
                 structuralElevations,
-                out var end) ||
+                out var end))
+        {
+            return false;
+        }
+
+        start =
+            ApplyStructuralJunctionBoundaryHeight(
+                scene,
+                first.FromNodeId,
+                first,
+                start,
+                nodeById,
+                segmentsByNode);
+
+        end =
+            ApplyStructuralJunctionBoundaryHeight(
+                scene,
+                second.ToNodeId,
+                second,
+                end,
+                nodeById,
+                segmentsByNode);
+
+        if (
             !NativeSplinePlacementMath
                 .TryCreateArc(
                     start,
@@ -415,7 +438,30 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 segment,
                 points.End,
                 structuralElevations,
-                out var end) ||
+                out var end))
+        {
+            return false;
+        }
+
+        start =
+            ApplyStructuralJunctionBoundaryHeight(
+                scene,
+                segment.FromNodeId,
+                segment,
+                start,
+                nodeById,
+                segmentsByNode);
+
+        end =
+            ApplyStructuralJunctionBoundaryHeight(
+                scene,
+                segment.ToNodeId,
+                segment,
+                end,
+                nodeById,
+                segmentsByNode);
+
+        if (
             !NativeSplinePlacementMath
                 .TryCreateStraight(
                     start,
@@ -1024,6 +1070,62 @@ public sealed class NativeProceduralRoadPlacementBuilder
 
         return direction *
             separation;
+    }
+
+    private static Vector3
+        ApplyStructuralJunctionBoundaryHeight(
+            NativeSceneSnapshot scene,
+            int nodeId,
+            MapStudioRoadGraphSegment segment,
+            Vector3 point,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphNode>
+                nodeById,
+            IReadOnlyDictionary<
+                int,
+                MapStudioRoadGraphSegment[]>
+                segmentsByNode)
+    {
+        if (
+            !IsStructuralSegment(
+                segment) ||
+            !nodeById.TryGetValue(
+                nodeId,
+                out var node) ||
+            !node.IsJunction ||
+            !segmentsByNode.TryGetValue(
+                nodeId,
+                out var incident) ||
+            incident.Length <
+                3 ||
+            incident.Any(
+                candidate =>
+                    !IsStructuralSegment(
+                        candidate) ||
+                    !HasCompatibleGradeSeparation(
+                        segment,
+                        candidate)) ||
+            !NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    node.Position.X,
+                    node.Position.Z,
+                    out var terrainHeight))
+        {
+            return point;
+        }
+
+        point.Y =
+            (float)(
+                terrainHeight +
+                ResolveStructuralJunctionBoundaryOffset(
+                    nodeId,
+                    segment,
+                    nodeById,
+                    segmentsByNode));
+
+        return point;
     }
 
     private static (

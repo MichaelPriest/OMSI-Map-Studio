@@ -2748,6 +2748,7 @@ jobs:
 
           foreach ($required in @(
             'ResolveStructuralJunctionBoundaryOffset',
+            'ApplyStructuralJunctionBoundaryHeight',
             'node.IsJunction',
             'HasCompatibleGradeSeparation'
           )) {
