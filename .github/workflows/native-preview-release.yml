@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.63-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.63-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.64-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.64-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.63-native
-  TAG: v0.2.0-alpha.5-test.10.63-native
+  VERSION: 0.2.0-alpha.5-test.10.64-native
+  TAG: v0.2.0-alpha.5-test.10.64-native
 
 jobs:
   build-native-preview:
@@ -2529,6 +2529,29 @@ jobs:
 
           Write-Host "Verified generated bridge/tunnel profile geometry and automatic structural spline selection."
 
+      - name: Verify test 10.64 continuous structural elevation
+        shell: pwsh
+        run: |
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'BuildStructuralEndpointElevations',
+            'StructuralEndpointElevation',
+            'IsStructuralSegment',
+            'LerpHeight'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.64 structural elevation marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('BuilderKeepsBridgeRunOnBoundaryGradeAcrossTerrainValley')) {
+            throw "Test 10.64 bridge terrain-valley regression is missing."
+          }
+
+          Write-Host "Verified bridge/tunnel runs interpolate between boundary terrain heights without following intermediate terrain relief."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2683,11 +2706,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.63-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.64-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.63-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.64-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

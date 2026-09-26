@@ -92,6 +92,11 @@ public sealed class NativeProceduralRoadPlacementBuilder
                                     item.Segment)
                             .ToArray());
 
+        var structuralElevations =
+            BuildStructuralEndpointElevations(
+                scene,
+                graph.Segments);
+
         var bindings =
             new List<RequestBinding>(
                 graph.Segments.Count);
@@ -142,6 +147,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
                             next,
                             nodeById,
                             segmentsByNode,
+                            structuralElevations,
                             out var curvedRequest))
                     {
                         bindings.Add(
@@ -164,6 +170,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
                         current,
                         nodeById,
                         segmentsByNode,
+                        structuralElevations,
                         out var straightRequest))
                 {
                     bindings.Add(
@@ -255,6 +262,10 @@ public sealed class NativeProceduralRoadPlacementBuilder
             int,
             MapStudioRoadGraphSegment[]>
             segmentsByNode,
+        IReadOnlyDictionary<
+            int,
+            StructuralEndpointElevation>
+            structuralElevations,
         out NativeSplinePlacementRequest?
             request)
     {
@@ -296,15 +307,21 @@ public sealed class NativeProceduralRoadPlacementBuilder
         if (
             !TryGetWorldPoint(
                 scene,
+                first,
                 startPoint,
+                structuralElevations,
                 out var start) ||
             !TryGetWorldPoint(
                 scene,
+                first,
                 controlPoint,
+                structuralElevations,
                 out var control) ||
             !TryGetWorldPoint(
                 scene,
+                second,
                 endPoint,
+                structuralElevations,
                 out var end) ||
             !NativeSplinePlacementMath
                 .TryCreateArc(
@@ -360,6 +377,10 @@ public sealed class NativeProceduralRoadPlacementBuilder
             int,
             MapStudioRoadGraphSegment[]>
             segmentsByNode,
+        IReadOnlyDictionary<
+            int,
+            StructuralEndpointElevation>
+            structuralElevations,
         out NativeSplinePlacementRequest?
             request)
     {
@@ -375,11 +396,15 @@ public sealed class NativeProceduralRoadPlacementBuilder
         if (
             !TryGetWorldPoint(
                 scene,
+                segment,
                 points.Start,
+                structuralElevations,
                 out var start) ||
             !TryGetWorldPoint(
                 scene,
+                segment,
                 points.End,
+                structuralElevations,
                 out var end) ||
             !NativeSplinePlacementMath
                 .TryCreateStraight(
@@ -700,21 +725,268 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 factor);
     }
 
+    private static IReadOnlyDictionary<
+        int,
+        StructuralEndpointElevation>
+        BuildStructuralEndpointElevations(
+            NativeSceneSnapshot scene,
+            IReadOnlyList<
+                MapStudioRoadGraphSegment>
+                segments)
+    {
+        var result =
+            new Dictionary<
+                int,
+                StructuralEndpointElevation>();
+
+        foreach (
+            var traceGroup in
+                segments
+                    .GroupBy(
+                        segment =>
+                            segment.TraceId,
+                        StringComparer
+                            .OrdinalIgnoreCase))
+        {
+            var ordered =
+                traceGroup
+                    .OrderBy(
+                        segment =>
+                            segment.Id)
+                    .ToArray();
+
+            for (
+                var index = 0;
+                index <
+                    ordered.Length;)
+            {
+                if (!IsStructuralSegment(
+                        ordered[index]))
+                {
+                    index++;
+
+                    continue;
+                }
+
+                var runStart =
+                    index;
+
+                var runEnd =
+                    index;
+
+                while (
+                    runEnd + 1 <
+                        ordered.Length &&
+                    ordered[runEnd]
+                        .ToNodeId ==
+                    ordered[
+                        runEnd +
+                        1]
+                        .FromNodeId &&
+                    HasCompatibleGradeSeparation(
+                        ordered[runEnd],
+                        ordered[
+                            runEnd +
+                            1]) &&
+                    IsStructuralSegment(
+                        ordered[
+                            runEnd +
+                            1]))
+                {
+                    runEnd++;
+                }
+
+                var first =
+                    ordered[
+                        runStart];
+
+                var last =
+                    ordered[
+                        runEnd];
+
+                if (
+                    !NativeTerrainSampler
+                        .TryGetHeightAtWorldPoint(
+                            scene,
+                            first.Start.X,
+                            first.Start.Z,
+                            out var startHeight) ||
+                    !NativeTerrainSampler
+                        .TryGetHeightAtWorldPoint(
+                            scene,
+                            last.End.X,
+                            last.End.Z,
+                            out var endHeight))
+                {
+                    index =
+                        runEnd +
+                        1;
+
+                    continue;
+                }
+
+                var totalLength =
+                    0.0;
+
+                for (
+                    var runIndex =
+                        runStart;
+                    runIndex <=
+                        runEnd;
+                    runIndex++)
+                {
+                    totalLength +=
+                        Math.Max(
+                            0,
+                            ordered[
+                                runIndex]
+                                .LengthMeters);
+                }
+
+                if (
+                    totalLength <=
+                    0.0001)
+                {
+                    index =
+                        runEnd +
+                        1;
+
+                    continue;
+                }
+
+                var traveled =
+                    0.0;
+
+                for (
+                    var runIndex =
+                        runStart;
+                    runIndex <=
+                        runEnd;
+                    runIndex++)
+                {
+                    var segment =
+                        ordered[
+                            runIndex];
+
+                    var segmentStartHeight =
+                        LerpHeight(
+                            startHeight,
+                            endHeight,
+                            traveled /
+                            totalLength);
+
+                    traveled +=
+                        Math.Max(
+                            0,
+                            segment
+                                .LengthMeters);
+
+                    var segmentEndHeight =
+                        LerpHeight(
+                            startHeight,
+                            endHeight,
+                            traveled /
+                            totalLength);
+
+                    result[
+                        segment.Id] =
+                        new StructuralEndpointElevation(
+                            segmentStartHeight,
+                            segmentEndHeight);
+                }
+
+                index =
+                    runEnd +
+                    1;
+            }
+        }
+
+        return result;
+    }
+
+    private static bool IsStructuralSegment(
+        MapStudioRoadGraphSegment segment) =>
+        segment.Bridge ||
+        segment.Tunnel;
+
+    private static double LerpHeight(
+        double start,
+        double end,
+        double amount) =>
+        start +
+        (
+            end -
+            start
+        ) *
+        Math.Clamp(
+            amount,
+            0,
+            1);
+
     private static bool TryGetWorldPoint(
         NativeSceneSnapshot scene,
+        MapStudioRoadGraphSegment segment,
         MapStudioRoadPoint point,
+        IReadOnlyDictionary<
+            int,
+            StructuralEndpointElevation>
+            structuralElevations,
         out Vector3 worldPoint)
     {
         worldPoint =
             default;
 
+        double height;
+
         if (
+            structuralElevations
+                .TryGetValue(
+                    segment.Id,
+                    out var structural))
+        {
+            var dx =
+                segment.End.X -
+                segment.Start.X;
+
+            var dz =
+                segment.End.Z -
+                segment.Start.Z;
+
+            var lengthSquared =
+                dx * dx +
+                dz * dz;
+
+            var amount =
+                lengthSquared >
+                    0.0000001
+                    ? (
+                        (
+                            point.X -
+                            segment.Start.X
+                        ) *
+                        dx +
+                        (
+                            point.Z -
+                            segment.Start.Z
+                        ) *
+                        dz
+                    ) /
+                    lengthSquared
+                    : 0.0;
+
+            height =
+                LerpHeight(
+                    structural.StartHeight,
+                    structural.EndHeight,
+                    amount);
+        }
+        else if (
             !NativeTerrainSampler
                 .TryGetHeightAtWorldPoint(
                     scene,
                     point.X,
                     point.Z,
-                    out var height))
+                    out height))
         {
             return false;
         }
@@ -802,6 +1074,10 @@ public sealed class NativeProceduralRoadPlacementBuilder
 
         return links;
     }
+
+    private readonly record struct StructuralEndpointElevation(
+        double StartHeight,
+        double EndHeight);
 
     private sealed record RequestBinding(
         NativeSplinePlacementRequest Request,

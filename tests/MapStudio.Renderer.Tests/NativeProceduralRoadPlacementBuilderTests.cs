@@ -675,6 +675,125 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
     }
 
     [Fact]
+    public void BuilderKeepsBridgeRunOnBoundaryGradeAcrossTerrainValley()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var heights =
+            Enumerable
+                .Range(
+                    0,
+                    5)
+                .SelectMany(
+                    _ =>
+                        new float[]
+                        {
+                            10,
+                            10,
+                            0,
+                            10,
+                            10
+                        })
+                .ToArray();
+
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                heights);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "bridge-run",
+                            [
+                                new(75, 75),
+                                new(150, 75),
+                                new(225, 75)
+                            ],
+                            "road.sli",
+                            Layer:
+                                1,
+                            Bridge:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            2,
+            result.Requests.Count);
+
+        Assert.All(
+            result.Requests,
+            request =>
+            {
+                Assert.True(
+                    request.SourceBridge);
+
+                Assert.InRange(
+                    request.StartWorld.Y,
+                    9.999f,
+                    10.001f);
+
+                Assert.InRange(
+                    request.EndWorld.Y,
+                    9.999f,
+                    10.001f);
+
+                Assert.InRange(
+                    Math.Abs(
+                        request.GradientStart),
+                    0,
+                    0.001);
+
+                Assert.InRange(
+                    Math.Abs(
+                        request.GradientEnd),
+                    0,
+                    0.001);
+            });
+
+        Assert.Equal(
+            0f,
+            terrain.Heights[2]);
+    }
+
+    [Fact]
     public void BuilderDoesNotMergeCurveAcrossGradeSeparationChange()
     {
         var reference =
