@@ -146,6 +146,10 @@ public sealed partial class NativeViewport : UserControl
         NativeTrafficPathNode>?
         TrafficPathNodeFocused;
 
+    public event Action<
+        NativeTrafficPathNode>?
+        TrafficPathNodeEditRequested;
+
     public IReadOnlyList<NativeSelectionInfo>
         GetSelectedSelectionInfos() =>
         _runtime
@@ -1615,6 +1619,26 @@ public sealed partial class NativeViewport : UserControl
 
         if (changed)
         {
+            if (pathIndex.HasValue)
+            {
+                var choice =
+                    GetTrafficPathChoicesForSelection()
+                        .FirstOrDefault(
+                            item =>
+                                item.Index ==
+                                pathIndex.Value);
+
+                if (choice is not null)
+                {
+                    SetTrafficPathFocusPreview(
+                        choice);
+                }
+            }
+            else
+            {
+                ClearTrafficPathFocusPreview();
+            }
+
             PointerStatusChanged?.Invoke(
                 this,
                 pathIndex.HasValue
@@ -1623,6 +1647,61 @@ public sealed partial class NativeViewport : UserControl
         }
 
         return changed;
+    }
+
+    public void SetTrafficPathFocusPreview(
+        NativeTrafficPathChoice choice)
+    {
+        ArgumentNullException.ThrowIfNull(
+            choice);
+
+        TrafficPathFocusPanel.Visibility =
+            Visibility.Visible;
+
+        TrafficPathFocusText.Text =
+            $"Path {choice.Index} · {choice.KindLabel} {choice.DirectionLabel} · {choice.Width:F2} m";
+
+        TrafficPathFocusHintText.Text =
+            "Duplo clique no nó para editar";
+    }
+
+    public void ClearTrafficPathFocusPreview()
+    {
+        TrafficPathFocusPanel.Visibility =
+            Visibility.Collapsed;
+
+        TrafficPathFocusText.Text =
+            "Path —";
+    }
+
+    private void SetTrafficPathFocusPreview(
+        NativeTrafficPathNode node)
+    {
+        var choice =
+            GetTrafficPathChoicesForSelection()
+                .FirstOrDefault(
+                    item =>
+                        item.Index ==
+                        node.PathIndex);
+
+        if (choice is not null)
+        {
+            SetTrafficPathFocusPreview(
+                choice);
+        }
+        else
+        {
+            TrafficPathFocusPanel.Visibility =
+                Visibility.Visible;
+
+            TrafficPathFocusText.Text =
+                $"Path {node.PathIndex}";
+        }
+
+        TrafficPathFocusHintText.Text =
+            node.IsStart
+                ? "Nó inicial · duplo clique para editar"
+                : "Nó final · duplo clique para editar";
     }
 
     public bool SetTrafficPathSelectedOnly(
@@ -1713,6 +1792,11 @@ public sealed partial class NativeViewport : UserControl
 
         if (changed)
         {
+            if (!visible)
+            {
+                ClearTrafficPathFocusPreview();
+            }
+
             PointerStatusChanged?.Invoke(
                 this,
                 visible
@@ -2173,6 +2257,82 @@ public sealed partial class NativeViewport : UserControl
         }
     }
 
+    private void OnDoubleTapped(
+        object sender,
+        DoubleTappedRoutedEventArgs e)
+    {
+        if (
+            _runtime is null ||
+            !_runtime.TrafficPathsVisible)
+        {
+            return;
+        }
+
+        var point =
+            e.GetPosition(
+                InputSurface);
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    point.X *
+                    scaleX));
+
+        var pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    point.Y *
+                    scaleY));
+
+        if (
+            !_runtime.TryFocusTrafficPathNode(
+                pixelX,
+                pixelY,
+                out var pathNode) ||
+            pathNode is null)
+        {
+            return;
+        }
+
+        PublishSelectionInfo();
+
+        SetTrafficPathFocusPreview(
+            pathNode);
+
+        TrafficPathNodeFocused
+            ?.Invoke(
+                pathNode);
+
+        TrafficPathNodeEditRequested
+            ?.Invoke(
+                pathNode);
+
+        SelectionStatusChanged?.Invoke(
+            this,
+            $"Path {pathNode.PathIndex}: edição solicitada pelo nó no viewport.");
+
+        PointerStatusChanged?.Invoke(
+            this,
+            $"Path {pathNode.PathIndex}: abrindo editor real [path]...");
+
+        e.Handled =
+            true;
+    }
+
     private void OnPointerPressed(
         object sender,
         PointerRoutedEventArgs e)
@@ -2622,6 +2782,9 @@ public sealed partial class NativeViewport : UserControl
             pathNode is not null)
         {
             PublishSelectionInfo();
+
+            SetTrafficPathFocusPreview(
+                pathNode);
 
             TrafficPathNodeFocused
                 ?.Invoke(

@@ -1129,6 +1129,17 @@ public sealed partial class MainWindow : Window
                     " focado no viewport.";
             };
 
+        Viewport.TrafficPathNodeEditRequested +=
+            node =>
+            {
+                StatusText.Text =
+                    $"Path {node.PathIndex}: abrindo editor real a partir do viewport.";
+
+                OnEditSceneryPathClick(
+                    EditSceneryPathButton,
+                    new RoutedEventArgs());
+            };
+
         Viewport.SelectionChanged +=
             info =>
             {

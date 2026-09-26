@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.49: live traffic-light phase HUD in the viewport.
+# Test 10.50: direct path-node editing from the viewport.
 
 on:
   push:
@@ -86,8 +86,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.49-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.49-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.50-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.50-native.md"
   workflow_dispatch:
 
 permissions:
@@ -98,8 +98,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.49-native
-  TAG: v0.2.0-alpha.5-test.10.49-native
+  VERSION: 0.2.0-alpha.5-test.10.50-native
+  TAG: v0.2.0-alpha.5-test.10.50-native
 
 jobs:
   build-native-preview:
@@ -1939,6 +1939,46 @@ jobs:
 
           Write-Host "Verified real traffic-light preview time drives the viewport signal HUD."
 
+      - name: Verify test 10.50 direct viewport path editing
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'DoubleTapped="OnDoubleTapped"',
+            'TrafficPathFocusPanel',
+            'Duplo clique no nó para editar'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.50 path viewport UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TrafficPathNodeEditRequested',
+            'TryFocusTrafficPathNode',
+            'SetTrafficPathFocusPreview',
+            'ClearTrafficPathFocusPreview'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.50 path interaction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'Viewport.TrafficPathNodeEditRequested +=',
+            'OnEditSceneryPathClick(',
+            'EditSceneryPathButton'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.50 real path editor reuse marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified path nodes can request the existing real SCO/SLI path editor directly from the viewport."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2093,11 +2133,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.49-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.50-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.49-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.50-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
