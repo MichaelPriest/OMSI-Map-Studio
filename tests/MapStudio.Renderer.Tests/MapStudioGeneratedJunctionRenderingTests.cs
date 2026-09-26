@@ -251,13 +251,35 @@ public sealed class MapStudioGeneratedJunctionRenderingTests
                 geometry.Vertices.Length >
                 0);
 
+            var minimumHeight =
+                geometry.Vertices
+                    .Min(
+                        vertex =>
+                            vertex.Position.Y);
+
+            var maximumHeight =
+                geometry.Vertices
+                    .Max(
+                        vertex =>
+                            vertex.Position.Y);
+
+            Assert.InRange(
+                minimumHeight,
+                12.101f,
+                12.103f);
+
+            Assert.InRange(
+                maximumHeight,
+                12.105f,
+                12.107f);
+
             Assert.All(
                 geometry.Vertices,
                 vertex =>
                     Assert.InRange(
                         vertex.Position.Y,
                         12.101f,
-                        12.103f));
+                        12.107f));
         }
         finally
         {
