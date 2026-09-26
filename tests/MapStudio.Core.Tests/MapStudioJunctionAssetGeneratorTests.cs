@@ -220,8 +220,153 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                             ]));
 
             Assert.Equal(
-                3,
+                9,
                 result.InternalPathCount);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+
+    [Fact]
+    public async Task TurningMovementUsesConnectedBezierPathSegments()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Junction-Curve-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            var result =
+                await new MapStudioJunctionAssetGenerator()
+                    .GenerateAsync(
+                        root,
+                        new MapStudioJunctionSpec(
+                            "Single turn",
+                            [
+                                new(
+                                    0,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    1,
+                                    0),
+                                new(
+                                    90,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    0,
+                                    1),
+                                new(
+                                    180,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    0,
+                                    0)
+                            ]));
+
+            Assert.Equal(
+                4,
+                result.InternalPathCount);
+
+            var metadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        result
+                            .SceneryObjectPath);
+
+            Assert.Equal(
+                4,
+                metadata.Paths.Count);
+
+            Assert.All(
+                metadata.Paths,
+                path =>
+                    Assert.Equal(
+                        0,
+                        path.Radius,
+                        6));
+
+            for (
+                var index = 0;
+                index <
+                    metadata.Paths.Count -
+                    1;
+                index++)
+            {
+                var current =
+                    metadata.Paths[
+                        index];
+
+                var next =
+                    metadata.Paths[
+                        index +
+                        1];
+
+                var radians =
+                    current.Rotation *
+                    Math.PI /
+                    180.0;
+
+                var endX =
+                    current.X +
+                    Math.Sin(
+                        radians) *
+                    current.Length;
+
+                var endZ =
+                    current.Z +
+                    Math.Cos(
+                        radians) *
+                    current.Length;
+
+                Assert.InRange(
+                    Math.Abs(
+                        endX -
+                        next.X),
+                    0,
+                    0.00001);
+
+                Assert.InRange(
+                    Math.Abs(
+                        endZ -
+                        next.Z),
+                    0,
+                    0.00001);
+            }
+
+            Assert.InRange(
+                metadata.Paths[0]
+                    .Rotation,
+                160,
+                180);
+
+            Assert.InRange(
+                metadata.Paths[^1]
+                    .Rotation,
+                90,
+                110);
         }
         finally
         {
@@ -283,7 +428,7 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                     result.MeshPath));
 
             Assert.Equal(
-                12,
+                36,
                 result.InternalPathCount);
 
             var metadata =
@@ -306,7 +451,7 @@ public sealed class MapStudioJunctionAssetGeneratorTests
 
             Assert.True(
                 metadata.Paths.Count ==
-                12);
+                36);
 
             Assert.All(
                 metadata.Paths,

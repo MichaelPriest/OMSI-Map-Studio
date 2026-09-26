@@ -175,6 +175,14 @@ public sealed class MapStudioJunctionAssetGenerator
         JunctionOutlineSampleCount =
             144;
 
+    private const double
+        JunctionMovementDegreesPerSegment =
+            22.5;
+
+    private const int
+        JunctionMovementMaximumSegments =
+            8;
+
     public async Task<MapStudioJunctionAssetResult>
         GenerateAsync(
             string omsiRoot,
@@ -885,22 +893,17 @@ public sealed class MapStudioJunctionAssetGenerator
                     toPoint.Z -
                     fromPoint.Z;
 
-                var length =
+                var directLength =
                     Math.Sqrt(
                         dx * dx +
                         dz * dz);
 
-                if (length < 0.5)
+                if (
+                    directLength <
+                    0.5)
                 {
                     continue;
                 }
-
-                var rotation =
-                    Math.Atan2(
-                        dx,
-                        dz) *
-                    180.0 /
-                    Math.PI;
 
                 var laneWidth =
                     Math.Clamp(
@@ -911,17 +914,212 @@ public sealed class MapStudioJunctionAssetGenerator
                         2.0,
                         4.2);
 
-                paths.Add(
-                    new JunctionPath(
-                        fromPoint.X,
-                        fromPoint.Z,
-                        rotation,
-                        length,
-                        laneWidth));
+                AppendMovementPaths(
+                    paths,
+                    fromPoint,
+                    toPoint,
+                    from.AngleDegrees,
+                    to.AngleDegrees,
+                    laneWidth);
             }
         }
 
         return paths;
+    }
+
+    private static void AppendMovementPaths(
+        ICollection<JunctionPath> paths,
+        (
+            double X,
+            double Z
+        ) start,
+        (
+            double X,
+            double Z
+        ) end,
+        double fromArmAngleDegrees,
+        double toArmAngleDegrees,
+        double laneWidth)
+    {
+        var inboundHeading =
+            NormalizeAngleDegrees(
+                fromArmAngleDegrees +
+                180.0);
+
+        var outboundHeading =
+            NormalizeAngleDegrees(
+                toArmAngleDegrees);
+
+        var turnDegrees =
+            Math.Abs(
+                NormalizeSignedAngleDegrees(
+                    outboundHeading -
+                    inboundHeading));
+
+        var segmentCount =
+            turnDegrees <=
+                1.0
+                ? 1
+                : Math.Clamp(
+                    (int)Math.Ceiling(
+                        turnDegrees /
+                        JunctionMovementDegreesPerSegment),
+                    2,
+                    JunctionMovementMaximumSegments);
+
+        if (
+            segmentCount ==
+            1)
+        {
+            AppendStraightJunctionPath(
+                paths,
+                start,
+                end,
+                laneWidth);
+
+            return;
+        }
+
+        var previous =
+            start;
+
+        for (
+            var segmentIndex = 1;
+            segmentIndex <=
+                segmentCount;
+            segmentIndex++)
+        {
+            var amount =
+                segmentIndex /
+                (double)segmentCount;
+
+            // Quadratic Bezier with the real junction origin as
+            // the control point. This matches the inbound tangent
+            // toward the center and the outbound tangent away from it.
+            var oneMinus =
+                1.0 -
+                amount;
+
+            var current =
+                (
+                    X:
+                        oneMinus *
+                            oneMinus *
+                            start.X +
+                        amount *
+                            amount *
+                            end.X,
+                    Z:
+                        oneMinus *
+                            oneMinus *
+                            start.Z +
+                        amount *
+                            amount *
+                            end.Z
+                );
+
+            AppendStraightJunctionPath(
+                paths,
+                previous,
+                current,
+                laneWidth);
+
+            previous =
+                current;
+        }
+    }
+
+    private static void AppendStraightJunctionPath(
+        ICollection<JunctionPath> paths,
+        (
+            double X,
+            double Z
+        ) start,
+        (
+            double X,
+            double Z
+        ) end,
+        double laneWidth)
+    {
+        var dx =
+            end.X -
+            start.X;
+
+        var dz =
+            end.Z -
+            start.Z;
+
+        var length =
+            Math.Sqrt(
+                dx * dx +
+                dz * dz);
+
+        if (
+            !double.IsFinite(
+                length) ||
+            length <
+                0.05)
+        {
+            return;
+        }
+
+        var rotation =
+            Math.Atan2(
+                dx,
+                dz) *
+            180.0 /
+            Math.PI;
+
+        paths.Add(
+            new JunctionPath(
+                start.X,
+                start.Z,
+                rotation,
+                length,
+                laneWidth));
+    }
+
+    private static double
+        NormalizeAngleDegrees(
+            double angle)
+    {
+        angle %=
+            360.0;
+
+        if (
+            angle <
+            0)
+        {
+            angle +=
+                360.0;
+        }
+
+        return angle;
+    }
+
+    private static double
+        NormalizeSignedAngleDegrees(
+            double angle)
+    {
+        angle %=
+            360.0;
+
+        if (
+            angle >
+            180.0)
+        {
+            angle -=
+                360.0;
+        }
+        else if (
+            angle <=
+            -180.0)
+        {
+            angle +=
+                360.0;
+        }
+
+        return angle;
     }
 
     private static string BuildSceneryObject(
