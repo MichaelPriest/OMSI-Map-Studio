@@ -342,4 +342,237 @@ public sealed class OmsiSceneryMaterialOverrideTests
         Assert.Null(
             material.AlphaMode);
     }
+    [Fact]
+    public void ReadMetadata_ParsesTrafficLightProgramsAndPhases()
+    {
+        const string source =
+            "[traffic_lights_group]\n" +
+            "70\n" +
+            "[traffic_light]\n" +
+            "Main\n" +
+            "[phase]\n3\n2\n" +
+            "[phase]\n6\n26\n" +
+            "[phase]\n9\n3\n" +
+            "[phase]\n0\n39\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        var controller =
+            Assert.Single(
+                metadata
+                    .TrafficLightControllers);
+
+        Assert.Equal(
+            70,
+            controller.CycleDuration);
+
+        var program =
+            Assert.Single(
+                controller.Programs);
+
+        Assert.Equal(
+            "Main",
+            program.Name);
+
+        Assert.Equal(
+            4,
+            program.Phases.Count);
+
+        Assert.Equal(
+            6,
+            program.Phases[1]
+                .SignalCode);
+
+        Assert.Equal(
+            26,
+            program.Phases[1]
+                .Duration);
+    }
+
+    [Fact]
+    public void ReadMetadata_ParsesEnhancedLightAndLightMapFlags()
+    {
+        const string source =
+            "[trafficlight]\n" +
+            "[LightMapMapping]\n" +
+            "[light_enh_2]\n" +
+            "1\n2\n3\n" +
+            "0\n1\n0\n" +
+            "0\n0\n1\n" +
+            "0\n0\n" +
+            "255\n140\n20\n" +
+            "0.25\n20\n50\n" +
+            "NightLightA\n" +
+            "1\n0.1\n1\n0\n0.1\n0\n" +
+            "light.bmp\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.True(
+            metadata
+                .IsTrafficLightObject);
+
+        Assert.True(
+            metadata
+                .UsesLightMapMapping);
+
+        var light =
+            Assert.Single(
+                metadata.LightPoints);
+
+        Assert.Equal(
+            1,
+            light.PositionX);
+
+        Assert.Equal(
+            2,
+            light.PositionY);
+
+        Assert.Equal(
+            3,
+            light.PositionZ);
+
+        Assert.Equal(
+            255,
+            light.Red);
+
+        Assert.Equal(
+            140,
+            light.Green);
+
+        Assert.Equal(
+            20,
+            light.Blue);
+
+        Assert.Equal(
+            "NightLightA",
+            light.ActivationVariable);
+
+        Assert.Equal(
+            "light.bmp",
+            light.EffectTexture);
+    }
+
+    [Fact]
+    public void ReadMetadata_ParsesCrossingPathsAndTrafficLightBinding()
+    {
+        const string source =
+            "[path]\n" +
+            "7\n2\n0.1\n-90\n5\n7.854\n" +
+            "0\n0\n0\n2.5\n0\n3\n" +
+            "[use_traffic_light]\n1\n" +
+            "[crossingproblem]\n" +
+            "[path]\n" +
+            "0\n0\n0.449\n0\n0\n6.97\n" +
+            "0\n0\n2\n2.5\n2\n0\n" +
+            "[switchdir]\n1\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            2,
+            metadata.Paths.Count);
+
+        var road =
+            metadata.Paths[0];
+
+        Assert.Equal(7, road.X);
+        Assert.Equal(2, road.Y);
+        Assert.Equal(0.1, road.Z);
+        Assert.Equal(-90, road.Rotation);
+        Assert.Equal(5, road.Radius);
+        Assert.Equal(7.854, road.Length);
+        Assert.Equal(0, road.Type);
+        Assert.Equal(2.5, road.Width);
+        Assert.Equal(0, road.Direction);
+        Assert.Equal(3, road.BlinkerCode);
+        Assert.Equal(1, road.TrafficLightIndex);
+        Assert.True(road.CrossingProblem);
+
+        var rail =
+            metadata.Paths[1];
+
+        Assert.Equal(2, rail.Type);
+        Assert.Equal(2, rail.Direction);
+        Assert.Equal(1, rail.SwitchDirection);
+        Assert.Null(
+            rail.TrafficLightIndex);
+    }
+
+    [Fact]
+    public void ReadMetadata_ParsesLegacyAndMapLights()
+    {
+        const string source =
+            "[light_enh]\n" +
+            "1\n2\n3\n255\n200\n100\n0.4\n" +
+            "NightLightA\n1\n0.1\n1\n0.2\nflare.bmp\n" +
+            "[maplight]\n" +
+            "4\n5\n6\n255\n180\n90\n25\n" +
+            "[spotlight]\n" +
+            "7\n8\n9\n0\n0\n-1\n" +
+            "255\n255\n220\n30\n20\n50\n";
+
+        var metadata =
+            OmsiSceneryObjectReader
+                .ReadMetadata(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            3,
+            metadata.LightPoints.Count);
+
+        var legacy =
+            metadata.LightPoints[0];
+
+        Assert.Equal(
+            "light_enh",
+            legacy.Keyword);
+
+        Assert.Equal(
+            "flare.bmp",
+            legacy.EffectTexture);
+
+        var mapLight =
+            metadata.LightPoints[1];
+
+        Assert.True(
+            mapLight.IsMapLight);
+
+        Assert.Equal(
+            25,
+            mapLight.Range);
+
+        var spot =
+            metadata.LightPoints[2];
+
+        Assert.Equal(
+            "spotlight",
+            spot.Keyword);
+
+        Assert.Equal(
+            30,
+            spot.Range);
+
+        Assert.Equal(
+            20,
+            spot.InnerAngle);
+
+        Assert.Equal(
+            50,
+            spot.OuterAngle);
+    }
+
 }

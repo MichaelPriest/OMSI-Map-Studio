@@ -869,4 +869,176 @@ public sealed class OmsiSplineTests
             Assert.Single(
                 spline.ExtraValues));
     }
+    [Fact]
+    public void ReadSplines_AssociatesTrafficRulesWithOwner()
+    {
+        const string source =
+            "[spline]\n" +
+            "0\nSplines\\Roads\\street.sli\n" +
+            "120\n-1\n121\n" +
+            "10\n0\n20\n90\n50\n0\n0\n0\n" +
+            "[rule]\n" +
+            "1\nspeedlimit\n40.000\n0\n" +
+            "[rule]\n" +
+            "2\ntrafficdensity\n0.500\n4\n" +
+            "[kill_rule]\n" +
+            "3\ncustom_addon_rule\nabc\n2\n" +
+            "[spline]\n" +
+            "0\nSplines\\Roads\\other.sli\n" +
+            "121\n120\n-1\n" +
+            "0\n0\n0\n0\n10\n0\n0\n0\n";
+
+        var splines =
+            OmsiTileReader
+                .ReadSplines(
+                    OmsiConfigParser.Parse(
+                        source));
+
+        Assert.Equal(
+            2,
+            splines.Count);
+
+        var rules =
+            splines[0]
+                .TrafficRules;
+
+        Assert.Equal(
+            3,
+            rules.Count);
+
+        Assert.Equal(
+            1,
+            rules[0].PathIndex);
+
+        Assert.Equal(
+            "speedlimit",
+            rules[0].RuleName);
+
+        Assert.Equal(
+            40,
+            rules[0].NumericValue);
+
+        Assert.Equal(
+            4,
+            rules[1].VehicleGroupIndex);
+
+        Assert.True(
+            rules[2].IsKillRule);
+
+        Assert.Equal(
+            "custom_addon_rule",
+            rules[2].RuleName);
+
+        Assert.Null(
+            rules[2].NumericValue);
+
+        Assert.Empty(
+            splines[1]
+                .TrafficRules);
+    }
+
+    [Fact]
+    public void ReadObjects_AssociatesTrafficRulesAfterModifiers()
+    {
+        const string source =
+            "[object]\n" +
+            "0\nSceneryobjects\\Test\\cross.sco\n" +
+            "50\n10\n20\n0\n0\n0\n0\n" +
+            "[varparent]\n12\n" +
+            "[spline_terrain_align]\n" +
+            "[rule]\n" +
+            "4\npriority\n192\n0\n";
+
+        var item =
+            Assert.Single(
+                OmsiTileReader
+                    .ReadObjects(
+                        OmsiConfigParser
+                            .Parse(
+                                source)));
+
+        var rule =
+            Assert.Single(
+                item.TrafficRules);
+
+        Assert.Equal(
+            4,
+            rule.PathIndex);
+
+        Assert.Equal(
+            "priority",
+            rule.RuleName);
+
+        Assert.Equal(
+            192,
+            rule.NumericValue);
+    }
+
+    [Fact]
+    public void PlacedSpline_ExposesCantAndMirrorFromExtras()
+    {
+        var normal =
+            new OmsiPlacedSpline(
+                "0",
+                @"Splines\Road.sli",
+                1,
+                -1,
+                -1,
+                0,
+                0,
+                0,
+                0,
+                10,
+                0,
+                0,
+                0,
+                false,
+                [
+                    "2.5",
+                    "-1.25",
+                    "0.1",
+                    "0.2",
+                    "0",
+                    "mirror"
+                ]);
+
+        Assert.Equal(
+            2.5,
+            normal.CantStart);
+
+        Assert.Equal(
+            -1.25,
+            normal.CantEnd);
+
+        Assert.True(
+            normal.IsMirrored);
+
+        var height =
+            normal with
+            {
+                IsHeightSpline = true,
+                ExtraValues =
+                    [
+                        "1.5",
+                        "3",
+                        "4",
+                        "0",
+                        "0",
+                        "0",
+                        "mirror"
+                    ]
+            };
+
+        Assert.Equal(
+            3,
+            height.CantStart);
+
+        Assert.Equal(
+            4,
+            height.CantEnd);
+
+        Assert.True(
+            height.IsMirrored);
+    }
+
 }

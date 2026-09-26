@@ -199,7 +199,71 @@ public sealed class OmsiSplineDefinitionReader
         return new OmsiSplineDefinition(
             Exists: true,
             Textures: textures,
-            Surfaces: surfaces);
+            Surfaces: surfaces)
+        {
+            Paths =
+                ReadPaths(
+                    document)
+        };
+    }
+
+    private static IReadOnlyList<
+        OmsiSplinePathDefinition>
+        ReadPaths(
+            OmsiConfigDocument document)
+    {
+        var paths =
+            new List<
+                OmsiSplinePathDefinition>();
+
+        foreach (
+            var section in
+                document.FindSections(
+                    "path"))
+        {
+            var values =
+                section.DataLines
+                    .Take(5)
+                    .ToArray();
+
+            if (
+                values.Length < 5 ||
+                !int.TryParse(
+                    values[0],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var type) ||
+                type is < 0 or > 3 ||
+                !TryParseDouble(
+                    values[1],
+                    out var x) ||
+                !TryParseDouble(
+                    values[2],
+                    out var z) ||
+                !TryParseDouble(
+                    values[3],
+                    out var width) ||
+                width < 0 ||
+                !int.TryParse(
+                    values[4],
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var direction) ||
+                direction is < 0 or > 2)
+            {
+                continue;
+            }
+
+            paths.Add(
+                new OmsiSplinePathDefinition(
+                    type,
+                    x,
+                    z,
+                    width,
+                    direction));
+        }
+
+        return paths;
     }
 
     private static OmsiSplineProfilePoint?

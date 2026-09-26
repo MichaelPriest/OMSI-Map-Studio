@@ -1,0 +1,391 @@
+<UserControl
+    x:Class="MapStudio.Native.Controls.NativeViewport"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid
+        x:Name="InputSurface"
+        Background="#111A20"
+        PointerPressed="OnPointerPressed"
+        DoubleTapped="OnDoubleTapped"
+        PointerMoved="OnPointerMoved"
+        PointerReleased="OnPointerReleased"
+        PointerExited="OnPointerExited"
+        PointerWheelChanged="OnPointerWheelChanged">
+
+        <SwapChainPanel x:Name="SwapChainSurface" />
+
+        <Border
+            HorizontalAlignment="Left"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10,6"
+            Background="#CC07131D"
+            CornerRadius="6">
+            <StackPanel>
+                <TextBlock Text="Viewport nativo"
+                           FontWeight="SemiBold" />
+                <TextBlock x:Name="RuntimeText"
+                           Text="Inicializando Direct3D 11..."
+                           FontSize="12"
+                           Foreground="#8DB3CA" />
+            </StackPanel>
+        </Border>
+
+        <Border
+            x:Name="JunctionFocusPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10,7"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Background="#E60A141D"
+            BorderBrush="#668DB3CA"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="9">
+                <TextBlock Text="ENCONTRO"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           Foreground="#FF8DB3CA"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="JunctionFocusText"
+                           Text="Splines — / —"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="JunctionFocusHintText"
+                           Text="Use como alvo para posicionar um junction"
+                           FontSize="10"
+                           Foreground="#FF9FC7DE"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <Border
+            x:Name="TrafficPathFocusPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10,7"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Background="#E60A141D"
+            BorderBrush="#668DB3CA"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="9">
+                <TextBlock Text="PATH"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           Foreground="#FF8DB3CA"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="TrafficPathFocusText"
+                           Text="Path —"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="TrafficPathFocusHintText"
+                           Text="Duplo clique no nó para editar"
+                           FontSize="10"
+                           Foreground="#FF9FC7DE"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <Border
+            x:Name="TrafficSignalPreviewPanel"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10"
+            MinWidth="238"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Background="#E60A141D"
+            BorderBrush="#6659D9FF"
+            BorderThickness="1"
+            CornerRadius="8">
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="34" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="30"
+                        Padding="5"
+                        Background="#F20B0F13"
+                        BorderBrush="#707A8B96"
+                        BorderThickness="1"
+                        CornerRadius="8">
+                    <StackPanel Spacing="5">
+                        <Ellipse x:Name="TrafficSignalRedLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FFFF3B30"
+                                 Opacity="0.18" />
+                        <Ellipse x:Name="TrafficSignalYellowLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FFFFCC00"
+                                 Opacity="0.18" />
+                        <Ellipse x:Name="TrafficSignalGreenLamp"
+                                 Width="18"
+                                 Height="18"
+                                 Fill="#FF34C759"
+                                 Opacity="0.18" />
+                    </StackPanel>
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="SEMÁFORO · PREVIEW"
+                               FontSize="10"
+                               FontWeight="SemiBold"
+                               Foreground="#FF8DB3CA" />
+                    <TextBlock x:Name="TrafficSignalProgramText"
+                               Text="Programa"
+                               FontSize="12"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="TrafficSignalPhaseText"
+                               Text="Fase: —"
+                               FontSize="12"
+                               Foreground="#FFF2F6F8" />
+                    <TextBlock x:Name="TrafficSignalTimeText"
+                               Text="t=0,00s"
+                               FontSize="10"
+                               Foreground="#FF9FC7DE" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="12"
+            Padding="8,4"
+            Background="#AA07131D"
+            CornerRadius="4">
+            <TextBlock
+                x:Name="PointerText"
+                Text="x: 0 · y: 0"
+                Foreground="#9FC7DE" />
+        </Border>
+
+        <Canvas x:Name="TerrainSplinePreviewLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False" />
+
+        <Canvas x:Name="TerrainShapePreviewLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Polygon x:Name="TerrainShapePreviewFeatherPolygon"
+                     Stroke="#5959D9FF"
+                     StrokeThickness="4"
+                     Fill="Transparent" />
+            <Polygon x:Name="TerrainShapePreviewPolygon"
+                     Stroke="#E659D9FF"
+                     StrokeThickness="2"
+                     Fill="#3059D9FF" />
+            <Border x:Name="TerrainShapePreviewLabel"
+                    Padding="7,4"
+                    Background="#E60A141D"
+                    BorderBrush="#8059D9FF"
+                    BorderThickness="1"
+                    CornerRadius="5">
+                <TextBlock x:Name="TerrainShapePreviewLabelText"
+                           Text="Custom Shape"
+                           FontSize="10"
+                           Foreground="#FFF0FAFF" />
+            </Border>
+        </Canvas>
+
+        <Canvas x:Name="TerrainBrushLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Ellipse x:Name="TerrainBrushOuterRing"
+                     Width="0"
+                     Height="0"
+                     Stroke="#FF59D9FF"
+                     StrokeThickness="2"
+                     Fill="#1459D9FF" />
+            <Ellipse x:Name="TerrainBrushIntensityDisc"
+                     Width="0"
+                     Height="0"
+                     Fill="#6659D9FF"
+                     Opacity="0.16" />
+            <Ellipse x:Name="TerrainBrushInnerRing"
+                     Width="0"
+                     Height="0"
+                     Stroke="#CCFFFFFF"
+                     StrokeThickness="1"
+                     StrokeDashArray="4,3" />
+            <Border x:Name="TerrainBrushLabel"
+                    Padding="6,3"
+                    Background="#D90A141D"
+                    BorderBrush="#6659D9FF"
+                    BorderThickness="1"
+                    CornerRadius="5">
+                <TextBlock x:Name="TerrainBrushLabelText"
+                           Text="20 m · feather 25% · Δ 1 m"
+                           FontSize="10"
+                           Foreground="#FFE7F7FF" />
+            </Border>
+        </Canvas>
+
+        <Canvas x:Name="SelectionBoxLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Border x:Name="SelectionBoxBorder"
+                    Width="0"
+                    Height="0"
+                    BorderBrush="{ThemeResource MapStudioAccentBrush}"
+                    BorderThickness="1.5"
+                    Background="{ThemeResource MapStudioAccentSurfaceBrush}"
+                    Opacity="0.55"
+                    CornerRadius="2" />
+        </Canvas>
+
+        <Canvas x:Name="RadialMenuLayer"
+                Visibility="Collapsed">
+            <Canvas x:Name="SelectionRadialMenu"
+                    Width="380"
+                    Height="380">
+                <Ellipse Width="380"
+                         Height="380"
+                         Fill="#E6111D28"
+                         Stroke="#8059D9FF"
+                         StrokeThickness="2" />
+                <Ellipse Width="126"
+                         Height="126"
+                         Canvas.Left="127"
+                         Canvas.Top="127"
+                         Fill="#F0182733"
+                         Stroke="#6048B8D7"
+                         StrokeThickness="1" />
+
+                <Button x:Name="RadialTopButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="149"
+                        Canvas.Top="8"
+                        Content="Mover"
+                        Tag="Move"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialTopRightButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="220"
+                        Canvas.Top="28"
+                        Content="Elevar"
+                        Tag="Elevate"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialUpperRightButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="276"
+                        Canvas.Top="85"
+                        Content="Girar"
+                        Tag="Rotate"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialRightButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="292"
+                        Canvas.Top="170"
+                        Content="Nivelar"
+                        Tag="Level"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialLowerRightButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="276"
+                        Canvas.Top="255"
+                        Content="Duplicar"
+                        Tag="Duplicate"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialBottomRightButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="220"
+                        Canvas.Top="312"
+                        Content="Baixar"
+                        Tag="Lower"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialBottomButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="149"
+                        Canvas.Top="332"
+                        Content="Excluir"
+                        Tag="Delete"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialBottomLeftButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="78"
+                        Canvas.Top="312"
+                        Content="Substituir"
+                        Tag="Replace"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialLowerLeftButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="22"
+                        Canvas.Top="255"
+                        Content="Inspector"
+                        Tag="Inspector"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialLeftButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="6"
+                        Canvas.Top="170"
+                        Content="Espelhar"
+                        Tag="Mirror"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialUpperLeftButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="22"
+                        Canvas.Top="85"
+                        Content="Focar"
+                        Tag="Focus"
+                        Click="OnRadialMenuActionClick" />
+                <Button x:Name="RadialTopLeftButton"
+                        Width="82"
+                        Height="40"
+                        Canvas.Left="78"
+                        Canvas.Top="28"
+                        Content="Fluxo"
+                        Tag="Flow"
+                        Click="OnRadialMenuActionClick" />
+
+                <Border Width="112"
+                        Height="72"
+                        Canvas.Left="134"
+                        Canvas.Top="154"
+                        Padding="8"
+                        Background="#E8213442"
+                        CornerRadius="36">
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="SELEÇÃO"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"
+                                   Foreground="#79D9F5" />
+                        <TextBlock x:Name="RadialMenuSelectionText"
+                                   Text="Objeto"
+                                   FontSize="11"
+                                   TextTrimming="CharacterEllipsis"
+                                   HorizontalAlignment="Center"
+                                   Foreground="White" />
+                    </StackPanel>
+                </Border>
+            </Canvas>
+        </Canvas>
+    </Grid>
+</UserControl>

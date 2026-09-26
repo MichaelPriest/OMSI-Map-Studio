@@ -1,0 +1,3012 @@
+name: Native Preview Release
+# Test 10.67: live terrain brush intensity preview in the native viewport.
+
+on:
+  push:
+    branches:
+      - feature/native-winui-d3d11
+    paths:
+      - ".github/workflows/native-preview-release.yml"
+      - "installer/MapStudio.NativePreview.iss"
+      - "src/MapStudio.Native/App.xaml"
+      - "src/MapStudio.Native/App.xaml.cs"
+      - "src/MapStudio.Native/MainWindow.xaml"
+      - "src/MapStudio.Native/MainWindow.xaml.cs"
+      - "src/MapStudio.Native/Controls/NativeViewport.xaml.cs"
+      - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
+      - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
+      - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
+      - "src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs"
+      - "src/MapStudio.Renderer/Graphics/NativePngDecoder.cs"
+      - "tests/MapStudio.Renderer.Tests/NativePngDecoderTests.cs"
+      - "src/MapStudio.Renderer/Graphics/NativeTextureRetentionPlanner.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTextureRetentionPlannerTests.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointSnapFinder.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeSplineEndpointEditMath.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineEndpointEditGeometryBuilder.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointEditMathTests.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeSplineCurveHandleMath.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineCurveEditGeometryBuilder.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplineCurveHandleMathTests.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTileContentCache.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainTextureMaskPainter.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTerrainTextureMaskTests.cs"
+      - "src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioGeoJsonRoadImporter.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadGraphBuilder.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs"
+      - "src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs"
+      - "src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs"
+      - "src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionGeometrySizing.cs"
+      - "src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs"
+      - "src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs"
+      - "src/MapStudio.Core/Workspace/MapStudioWorkspaceBootstrapper.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStarterPropGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStarterTrafficGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioBuildingAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioFootprintBuildingAssetGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRoadTraceSmootherTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiSplineTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTileGridTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTileContentCacheTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTerrainBorderStitcherTests.cs"
+      - "tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTileAdjacencyTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplineEndpointSnapFinderTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeViewportNavigation.cs"
+      - "src/MapStudio.Renderer/Viewport/NativeTerrainBrushVisualMath.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeTerrainBrushVisualMathTests.cs"
+      - "src/MapStudio.Renderer/Scene/NativeDerivedFileCache.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSceneryAssetLoader.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineAssetLoader.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplineAsset.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeDerivedFileCacheTests.cs"
+      - "tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs"
+      - "tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs"
+      - "src/MapStudio.Renderer/Scene/NativeSplinePlacementGeometryBuilder.cs"
+      - "src/MapStudio.Renderer/Scene/NativeReferenceOverlayGeometryBuilder.cs"
+      - "tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs"
+      - "src/MapStudio.Renderer/Scene/NativePickingProxyGeometryBuilder.cs"
+      - "tools/build_user_manual_pdf.py"
+      - "docs/pt-BR/USER_MANUAL.md"
+      - "docs/en/USER_MANUAL.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.69-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-preview-release
+  cancel-in-progress: true
+
+env:
+  VERSION: 0.2.0-alpha.5-test.10.71-native
+  TAG: v0.2.0-alpha.5-test.10.71-native
+
+jobs:
+  build-native-preview:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Python for PDF manual
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PDF manual dependency
+        run: python -m pip install --disable-pip-version-check reportlab
+
+      - name: Verify WinUI theme resources
+        shell: pwsh
+        run: |
+          $appXaml = Get-Content src/MapStudio.Native/App.xaml -Raw
+          if ($appXaml -notmatch "XamlControlsResources") {
+            throw "App.xaml does not load XamlControlsResources. WinUI control theme resources would fail at startup."
+          }
+
+          $requiredThemeKeys = @(
+            "MapStudioWindowBackgroundBrush",
+            "MapStudioSurfaceBrush",
+            "MapStudioSurfaceAltBrush",
+            "MapStudioSurfaceRaisedBrush",
+            "MapStudioBorderBrush",
+            "MapStudioBorderStrongBrush",
+            "MapStudioTextPrimaryBrush",
+            "MapStudioTextSecondaryBrush",
+            "MapStudioTextMutedBrush",
+            "MapStudioAccentBrush",
+            "MapStudioAccentSurfaceBrush",
+            "MapStudioAccentTextBrush",
+            "MapStudioSuccessBrush",
+            "MapStudioTranslucentSurfaceBrush",
+            "MapStudioTranslucentRaisedBrush",
+            "MapStudioPanelBackgroundBrush"
+          )
+
+          foreach ($key in $requiredThemeKeys) {
+            if ($appXaml -notmatch ('x:Key="' + [regex]::Escape($key) + '"')) {
+              throw "App.xaml is missing global theme resource '$key'. MainWindow/Timetable can fail during startup."
+            }
+          }
+
+          Write-Host "Verified XamlControlsResources and required global Map Studio theme resources in App.xaml."
+
+      - name: Verify Map project mode wiring
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          if ($xaml -notmatch 'x:Name="MapExplorerModeButton"') {
+            throw "Project panel is missing MapExplorerModeButton."
+          }
+
+          if ($xaml -notmatch 'Click="OnMapExplorerModeClick"') {
+            throw "MapExplorerModeButton must open the inline Map project mode."
+          }
+
+          if ($xaml -match 'x:Name="GlobalTilesButton"') {
+            throw "Tiles must stay in Project; GlobalTilesButton must not be restored."
+          }
+
+          if ($xaml -match 'Click="OnTileManagerClick"') {
+            throw "No Map/Tiles entry point may call the legacy ContentDialog tile manager."
+          }
+
+          $mapHandler = [regex]::Match(
+            $code,
+            'private void OnMapExplorerModeClick[\s\S]*?private void RefreshMapExplorer'
+          ).Value
+
+          if ($mapHandler -match 'Viewport\.RestoreSceneView') {
+            throw "Switching to Project > Map must not mutate or restore the viewport."
+          }
+
+          if ($code -notmatch 'RefreshMapExplorerAsync[\s\S]{0,12000}Task\.Run') {
+            throw "Map tile aggregation must stay off the UI thread."
+          }
+
+          if ($xaml -notmatch 'x:Name="MapExplorerPanel"') {
+            throw "Inline MapExplorerPanel is missing."
+          }
+
+          if ($code -notmatch 'private void OnMapExplorerModeClick') {
+            throw "OnMapExplorerModeClick handler is missing."
+          }
+
+          Write-Host "Verified inline Map/Tiles project mode and global tile navigation wiring."
+
+      - name: Verify adaptive dialog reparent safety
+        shell: pwsh
+        run: |
+          $helper = Get-Content src/MapStudio.Native/Dialogs/AdaptiveContentDialogExtensions.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          if ($helper -notmatch 'dialog\.Content\s*=\s*null;[\s\S]{0,1600}scroll\.Content\s*=\s*content;') {
+            throw "Adaptive ContentDialog must detach FrameworkElement content before re-parenting it into ScrollViewer."
+          }
+
+          if ($main -notmatch 'OnOpenMapCatalogClick[\s\S]{0,12000}Open map catalog failure type=') {
+            throw "Map catalog handler must catch and log dialog/runtime failures instead of terminating the app."
+          }
+
+          Write-Host "Verified ContentDialog detach/re-parent order and map catalog exception guard."
+
+      - name: Verify Project resize and HUMAN paths
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $options = Get-Content src/MapStudio.Renderer/Scene/NativeTrafficPathDisplayOptions.cs -Raw
+          $geometry = Get-Content src/MapStudio.Renderer/Scene/NativeTrafficPathGeometryBuilder.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          if (-not $xaml.Contains('x:Name="ExplorerResizeGrip"')) {
+            throw "Project panel resize grip is missing."
+          }
+
+          if (-not $xaml.Contains('PointerMoved="OnExplorerResizeGripMoved"')) {
+            throw "Project panel resize grip is not wired."
+          }
+
+          if (-not $main.Contains('private void OnExplorerResizeGripMoved')) {
+            throw "Project panel resize handler is missing."
+          }
+
+          if (-not $xaml.Contains('MaxHeight="340"') -or -not $xaml.Contains('VerticalScrollMode="Auto"')) {
+            throw "Asset Library filter area must keep internal vertical scrolling."
+          }
+
+          if (-not $options.Contains('TransportOverview') -or -not $options.Contains('Pedestrians: true')) {
+            throw "TransportOverview / pedestrian path support is missing."
+          }
+
+          if (-not $runtime.Contains('TransportOverview')) {
+            throw "Viewport runtime must default to the transport overview."
+          }
+
+          $overviewUses = ([regex]::Matches($main, [regex]::Escape('.TransportOverview'))).Count
+          if ($overviewUses -lt 2) {
+            throw "Traffic and Transport tools must both use the overview that includes HUMAN paths."
+          }
+
+          if (-not $geometry.Contains('new(1.0f, 0.82f, 0.08f, 1.0f)')) {
+            throw "HUMAN path high-contrast color is missing."
+          }
+
+          Write-Host "Verified resizable Project panel, library scroll and HUMAN path visibility."
+
+      - name: Verify city-builder road elevation and bundled manuals
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $math = Get-Content src/MapStudio.Renderer/Viewport/NativeSplinePlacementMath.cs -Raw
+
+          foreach ($control in @(
+            'Content="↓ Baixar"',
+            'Content="Nivelar"',
+            'Content="↑ Elevar"',
+            'x:Name="RoadElevationStepBox"',
+            'x:Name="RoadMaxGradientBox"'
+          )) {
+            if (-not $xaml.Contains($control)) {
+              throw "Road elevation UI is missing: $control"
+            }
+          }
+
+          if (-not $math.Contains('ResolveRoadEndpointHeight')) {
+            throw "Real road endpoint elevation resolver is missing."
+          }
+
+          foreach ($mode in @(
+            'NativeRoadElevationMode.Elevate',
+            'NativeRoadElevationMode.Level',
+            'NativeRoadElevationMode.Lower',
+            'NativeRoadElevationMode.FollowTerrain'
+          )) {
+            if (-not ($main.Contains($mode) -or $runtime.Contains($mode) -or $math.Contains($mode))) {
+              throw "Road elevation mode is missing: $mode"
+            }
+          }
+
+          foreach ($action in @(
+            'NativeSelectionContextAction.Elevate',
+            'NativeSelectionContextAction.Level',
+            'NativeSelectionContextAction.Lower',
+            'NativeSelectionContextAction.Replace',
+            'NativeSelectionContextAction.Mirror',
+            'NativeSelectionContextAction.Flow'
+          )) {
+            if (-not $viewport.Contains($action)) {
+              throw "Spline radial wheel action is missing: $action"
+            }
+          }
+
+          if (-not $xaml.Contains('Text="Manual do Usuário (Português)"')) {
+            throw "Help menu does not expose the Portuguese user manual."
+          }
+
+          if (-not $xaml.Contains('Text="User Manual (English)"')) {
+            throw "Help menu does not expose the English user manual."
+          }
+
+          if (-not $main.Contains('OpenUserManual')) {
+            throw "Bundled manual launcher is missing."
+          }
+
+          if (-not (Test-Path docs/pt-BR/USER_MANUAL.md)) {
+            throw "Portuguese user manual is missing."
+          }
+
+          if (-not (Test-Path docs/en/USER_MANUAL.md)) {
+            throw "English user manual is missing."
+          }
+
+          if (-not $viewport.Contains('_isSplineDragCreating')) {
+            throw "Spline drag creation state is missing."
+          }
+
+          if (-not $viewport.Contains('TryConfirmEasyRoad')) {
+            throw "Drag release does not finalize Easy Road."
+          }
+
+          if (-not $runtime.Contains('CollectSelectablePickCandidates')) {
+            throw "Easy overlapping selection candidate collector is missing."
+          }
+
+          if (-not $xaml.Contains('x:Name="AiStatusButton"')) {
+            throw "Map AI connection button is missing."
+          }
+
+          if (-not $main.Contains('OnConnectAiToMapClick')) {
+            throw "Map AI connection handler is missing."
+          }
+
+          if (-not (Test-Path tools/build_user_manual_pdf.py)) {
+            throw "PDF manual generator is missing."
+          }
+
+          Write-Host "Verified road elevation, drag spline finalization, easy selection, map AI connection and manuals."
+
+      - name: Verify direct viewport manipulation and tool icons
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          if (-not $runtime.Contains('TryBeginDirectMove')) {
+            throw "Direct selected-item move is missing from the viewport runtime."
+          }
+
+          if (-not $viewport.Contains('TryBeginDirectMove')) {
+            throw "NativeViewport does not start direct selected-item move."
+          }
+
+          if (-not $runtime.Contains('NativeGizmoHandle.MoveXZ')) {
+            throw "Free planar direct move handle is missing."
+          }
+
+          if (-not $runtime.Contains('TryBeginDirectRotation')) {
+            throw "Direct selected-item rotation is missing from the viewport runtime."
+          }
+
+          if (-not $viewport.Contains('TryBeginDirectRotation')) {
+            throw "NativeViewport does not start direct selected-item rotation."
+          }
+
+          if (-not $main.Contains('arraste o próprio item selecionado')) {
+            throw "Rotate tool does not explain direct viewport interaction."
+          }
+
+          foreach ($symbol in @(
+            'Symbol="Save"',
+            'Symbol="Undo"',
+            'Symbol="Redo"',
+            'Symbol="FullScreen"',
+            'Symbol="Rotate"',
+            'Symbol="Target"',
+            'Symbol="Copy"',
+            'Symbol="Cut"'
+          )) {
+            if (-not $xaml.Contains($symbol)) {
+              throw "Expected tool icon is missing: $symbol"
+            }
+          }
+
+          if ($xaml.Contains('Content="F11"')) {
+            throw "Loose textual F11 toolbar button must not return."
+          }
+
+          if ($xaml.Contains('ToolTipService.ToolTip="Arraste para mover no F11"')) {
+            throw "Floating-panel pointer tooltip still contains F11."
+          }
+
+          if ($xaml.Contains('Use o Inspector e a Biblioteca para configurar esta ferramenta.')) {
+            throw "Primary tool guidance must not require Inspector."
+          }
+
+          if (-not (Test-Path docs/pt-BR/USER_MANUAL.md) -or
+              -not (Get-Content docs/pt-BR/USER_MANUAL.md -Raw).Contains('Nenhuma função principal depende do Inspector')) {
+            throw "Portuguese manual must document Inspector as optional."
+          }
+
+          if (-not (Test-Path docs/en/USER_MANUAL.md) -or
+              -not (Get-Content docs/en/USER_MANUAL.md -Raw).Contains('No primary editor function depends on the Inspector')) {
+            throw "English manual must document Inspector as optional."
+          }
+
+          Write-Host "Verified direct rotation, optional Inspector rule, tool icons and F11 pointer-label cleanup."
+
+      - name: Verify test 10.10 editor workflows
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $planner = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiSplineLinkPlanner.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="AiProfileSelectorBox"',
+            'Click="OnRoadAutoConnectClick"',
+            'x:Name="MapReferenceAttributionBorder"',
+            'Click="OnMapReferenceClick"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.10 UI wiring is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('OnAiProfileSelectorChanged')) {
+            throw "AI profile selector handler is missing."
+          }
+
+          if (-not $main.Contains('OnRoadAutoConnectClick')) {
+            throw "Road Auto connect handler is missing."
+          }
+
+          if (-not $runtime.Contains('TryGetAutoConnectLinksForSelectedSpline')) {
+            throw "Selected spline auto-connect detection is missing."
+          }
+
+          if (-not $renderer.Contains('_selectionGhostBuffer') -or
+              -not $renderer.Contains('RebuildSelectionGhost')) {
+            throw "Filled selection ghost preview is missing."
+          }
+
+          if (-not $session.Contains('LoadCartoReferenceAsync') -or
+              -not $session.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
+              -not $session.Contains('?key=')) {
+            throw "Keyed CARTO/OpenStreetMap reference provider is missing."
+          }
+
+          if (-not $session.Contains('TimeSpan.FromDays') -or
+              -not $session.Contains('OMSI-Map-Studio/0.2')) {
+            throw "OpenStreetMap cache/User-Agent safeguards are missing."
+          }
+
+          if (-not $session.Contains('repairBrokenLinks') -or
+              -not $main.Contains('repairBrokenLinks:')) {
+            throw "Auto connect broken-link repair mode is missing."
+          }
+
+          if (-not $xaml.Contains('x:Name="MapText"') -or
+              -not $xaml.Contains('Visibility="Collapsed"')) {
+            throw "Project map summary must remain visually removed."
+          }
+
+          Write-Host "Verified selection ghost, AI selector, map providers, Project cleanup and spline Auto connect."
+
+      - name: Verify test 10.16 UX and real-map area tools
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="TileNavigatorWindow"',
+            'x:Name="RealMapAreaWindow"',
+            'x:Name="RealMapAreaWebView"',
+            'x:Name="CreateRealMapAreaButton"',
+            'x:Name="ProjectSummaryCard"',
+            'x:Name="MapExplorerCollapseButton"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.16 UI wiring is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BeginPointerPan',
+            'UpdatePointerPan',
+            'TryGetPointerPlanePoint',
+            '_selectedPickingIds',
+            'GetSelectedSelectionInfos'
+          )) {
+            if (-not $runtime.Contains($required)) {
+              throw "Test 10.16 viewport runtime feature is missing: $required"
+            }
+          }
+
+          if (-not $renderer.Contains('SetAdditionalSelections')) {
+            throw "Multiple selection highlighting is missing."
+          }
+
+          foreach ($required in @(
+            'additiveSelection',
+            'GetRadialActionGlyph',
+            'Ctrl+clique adiciona/remove'
+          )) {
+            if (-not $viewport.Contains($required)) {
+              throw "Multi-selection/radial UI feature is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnCreateRealMapAreaClick',
+            'BuildRealMapAreaPickerHtml',
+            'PrepareOsmRoadsForRealMapAreaAsync',
+            'MapStudioOverpassRoadClient',
+            'OnToggleTileNavigatorWindowClick',
+            'OnTileNavigatorResizeMoved',
+            'DeleteCurrentSelectionAsync'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.16 MainWindow workflow is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'overpass-api.de/api/interpreter',
+            'overpass.private.coffee/api/interpreter',
+            'TargetChunkSpanMeters',
+            'SuccessfulChunkCount',
+            'FailedChunkCount'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Resilient Overpass road downloader is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('OpenStreetMap contributors')) {
+            throw "Real-map picker must keep OpenStreetMap attribution."
+          }
+
+          if (-not $main.Contains('Maps JavaScript API') -and
+              -not $main.Contains('maps.googleapis.com/maps/api/js')) {
+            throw "Google area selector integration is missing."
+          }
+
+          Write-Host "Verified Test 10.16 natural movement, multi-selection, radial icons, floating windows and real-map area creation."
+
+      - name: Verify test 10.16 tile-grid persistence and terrain continuity
+        shell: pwsh
+        run: |
+          $grid = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTileGrid.cs -Raw
+          $stitcher = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainBorderStitcher.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $roundTrip = Get-Content tests/MapStudio.Core.Tests/OmsiTileCreationRoundTripTests.cs -Raw
+
+          foreach ($required in @(
+            'TileSize = 300.0',
+            'GetCenteredAreaMinimumOffset',
+            'GetCenteredAreaAnchorLocalCoordinate',
+            'WorldToTileCoordinate'
+          )) {
+            if (-not $grid.Contains($required)) {
+              throw "Canonical OMSI tile-grid feature is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'StitchToNeighbors',
+            'negativeXNegativeY',
+            'positiveXNegativeY',
+            'negativeXPositiveY',
+            'positiveXPositiveY'
+          )) {
+            if (-not $stitcher.Contains($required)) {
+              throw "Terrain edge/corner stitching feature is missing: $required"
+            }
+          }
+
+          if (-not $session.Contains('StitchCreatedTileTerrainAsync')) {
+            throw "Created tiles are not routed through terrain stitching."
+          }
+
+          if (-not $main.Contains('GetCenteredAreaAnchorLocalCoordinate')) {
+            throw "Real-map area centering is not using the canonical OMSI grid."
+          }
+
+          if (-not $roundTrip.Contains('PersistedThreeByThreeGridReopensWithContinuousTerrainEdges')) {
+            throw "Persisted 3x3 tile round-trip regression test is missing."
+          }
+
+          Write-Host "Verified Test 10.16 canonical 300 m grid, diagonal terrain corner continuity and persisted 3x3 round-trip coverage."
+
+      - name: Verify test 10.16 smooth navigation path
+        shell: pwsh
+        run: |
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs -Raw
+
+          foreach ($required in @(
+            '_panGrabStartPixelX',
+            '_panGrabStartPixelY',
+            'Navigation.RestoreState',
+            'Navigation.PanPixels',
+            'refreshPicking:',
+            'updateGizmoGeometry:'
+          )) {
+            if (-not $runtime.Contains($required)) {
+              throw "Smooth navigation runtime feature is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('RefreshPicking()')) {
+            throw "Navigation must refresh picking after the gesture finishes."
+          }
+
+          if (-not $renderer.Contains('bool refreshPicking = true')) {
+            throw "Renderer must allow visible-only navigation frames."
+          }
+
+          if (-not $renderer.Contains('public void RefreshPicking')) {
+            throw "Renderer picking refresh entry point is missing."
+          }
+
+          if (-not $viewport.Contains('_isPanning &&') -or
+              -not $viewport.Contains('_isOrbiting)')) {
+            throw "Pointer coordinate text suppression during pan/orbit is missing."
+          }
+
+          if (-not $tests.Contains('AbsolutePanFromCapturedStateDoesNotAccumulatePointerEvents')) {
+            throw "Absolute pan stability regression test is missing."
+          }
+
+          if (-not $tests.Contains('PanKeepsGrabDirectionNatural')) {
+            throw "Natural grab direction regression test is missing."
+          }
+
+          Write-Host "Verified Test 10.16 stable absolute pan, navigation-only rendering and deferred picking refresh."
+
+      - name: Verify test 10.16 frame-coalesced navigation
+        shell: pwsh
+        run: |
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+
+          foreach ($required in @(
+            'CompositionTarget.Rendering',
+            'QueuePanFrame',
+            'QueueOrbitFrame',
+            'FlushPendingNavigationFrame',
+            'StopNavigationRendering',
+            '_navigationFramePending',
+            '_pendingOrbitDeltaX',
+            '_pendingOrbitDeltaY'
+          )) {
+            if (-not $viewport.Contains($required)) {
+              throw "Frame-coalesced navigation feature is missing: $required"
+            }
+          }
+
+          if (-not $viewport.Contains('FlushPendingNavigationFrame();')) {
+            throw "Pending navigation frame must be flushed when the gesture ends."
+          }
+
+          if (-not $viewport.Contains('CompositionTarget.Rendering -=')) {
+            throw "Navigation rendering hook must be removed when the gesture ends."
+          }
+
+          Write-Host "Verified Test 10.16 one-navigation-update-per-compositor-frame path."
+
+      - name: Verify test 10.16 compact UI, map tiles, AI key and asset flow
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+
+          if (-not $main.Contains('https://tile.openstreetmap.org/{z}/{x}/{y}.png')) {
+            throw "OpenStreetMap interactive fallback is missing when no CARTO key is saved."
+          }
+
+          if (-not $main.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
+              -not $main.Contains('?key={cartoKey}')) {
+            throw "Embedded keyed CARTO/OSM basemap is missing."
+          }
+
+          if (-not $session.Contains('basemaps.cartocdn.com/rastertiles/voyager') -or
+              -not $session.Contains('?key=')) {
+            throw "Terrain map-reference keyed CARTO/OSM source is missing."
+          }
+
+          foreach ($required in @(
+            'FloatingAiCredentialBox',
+            'SaveActiveAiCredentialButton',
+            'OnSaveActiveAiCredentialClick',
+            'OnClearActiveAiCredentialClick'
+          )) {
+            if (-not $xaml.Contains($required) -and -not $main.Contains($required)) {
+              throw "Direct AI credential flow is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RealMapOpenLibraryAfterCreateCheckBox',
+            'OnOpenAssetLibraryFromRealMapClick',
+            '+ Pasta de itens',
+            'Abrir Biblioteca'
+          )) {
+            if (-not $xaml.Contains($required) -and -not $main.Contains($required)) {
+              throw "Real-map asset flow is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'Value="64"',
+            'Value="54"',
+            'Width="560"',
+            'Height="600"',
+            'Width="800"',
+            'Width="300"',
+            'Width="290"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Compact editor layout marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified Test 10.16 compact UI, embedded basemap, direct AI credential and asset insertion flow."
+
+      - name: Verify test 10.31 progressive region navigation
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'LoadPerformanceRegionProgressivelyAsync',
+            'targetAlreadyLoaded',
+            'focusedExistingTarget',
+            'PendingTransformCount',
+            'radius: 0',
+            'radius: 1',
+            'focusActiveTile: false',
+            'Tile alvo pronto'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.31 progressive navigation wiring is missing: $required"
+            }
+          }
+
+          $progressive = [regex]::Match(
+            $main,
+            'private async Task<NativeMapSnapshot>[\s\S]*?LoadPerformanceRegionProgressivelyAsync[\s\S]*?return region;'
+          ).Value
+
+          if (-not $progressive.Contains('_session.SetActiveTile') -or
+              -not $progressive.Contains('Viewport.FocusTile')) {
+            throw "Loaded target tiles must focus immediately before the surrounding 3×3 refresh."
+          }
+
+          Write-Host "Verified visible-first tile focus and progressive 3×3 completion."
+
+      - name: Verify test 10.31 CARTO key integration
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $credentials = Get-Content src/MapStudio.Native/Services/NativeMapCredentialStore.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealMapCartoKeyBox"',
+            'x:Name="SaveRealMapCartoKeyButton"',
+            'Click="OnSaveRealMapCartoKeyClick"',
+            'Click="OnOpenCartoKeyHelpClick"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.31 CARTO credential UI is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TryGetCartoBasemapsApiKey',
+            'SaveCartoBasemapsApiKey',
+            'CartoBasemapsAccount'
+          )) {
+            if (-not $credentials.Contains($required)) {
+              throw "Test 10.31 CARTO credential storage is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('carto.com/basemaps/apikey/')) {
+            throw "CARTO key help URL is missing from the UI."
+          }
+
+          if (-not $main.Contains('tile.openstreetmap.org/{z}/{x}/{y}.png')) {
+            throw "OSM interactive fallback is missing when the CARTO key is absent."
+          }
+
+          if (-not $session.Contains('LoadCartoReferenceAsync') -or
+              -not $session.Contains('/rastertiles/voyager/') -or
+              -not $session.Contains('?key=')) {
+            throw "Keyed CARTO reference loading is missing."
+          }
+
+          if ($session.Contains('"carto-osm"')) {
+            throw "Old unkeyed CARTO cache namespace must not be reused."
+          }
+
+          Write-Host "Verified CARTO Basemaps API key UI, secure storage, keyed URLs and OSM picker fallback."
+
+      - name: Verify test 10.31 CARTO ground-reference decode fix
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $loader = Get-Content src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs -Raw
+          $png = Get-Content src/MapStudio.Renderer/Graphics/NativePngDecoder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativePngDecoderTests.cs -Raw
+
+          foreach ($required in @(
+            'HasPngSignature',
+            'cartoReferenceInvalidPngPayload'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "Test 10.31 CARTO download validation is missing: $required"
+            }
+          }
+
+          if ($session.Contains('EnsureReferenceTgaAsync') -or
+              $session.Contains('BitmapDecoder') -or
+              $session.Contains('BitmapPixelFormat.Bgra8')) {
+            throw "CARTO ground reference must not depend on WinRT PNG-to-TGA conversion."
+          }
+
+          foreach ($required in @(
+            'NativePngDecoder',
+            'TryDecodeFile',
+            'CreateRgbaTexture'
+          )) {
+            if (-not $loader.Contains($required) -and -not $png.Contains($required)) {
+              throw "Test 10.31 direct PNG renderer path is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('DecodesNonInterlacedRgbaPngWithoutWic') -or
+              -not $tests.Contains('RejectsNonPngPayload')) {
+            throw "Test 10.31 PNG decoder regression coverage is missing."
+          }
+
+          if (-not $main.Contains('failureStage') -or
+              -not $main.Contains('download/conversão da referência CARTO') -or
+              -not $main.Contains('envio da textura para o viewport') -or
+              -not $main.Contains('carto-reference.log')) {
+            throw "Test 10.31 staged map-reference diagnostics are missing."
+          }
+
+          Write-Host "Verified CARTO PNG validation, direct native PNG decoding and staged viewport diagnostics."
+
+      - name: Verify CARTO mosaic and georeference hardening
+        shell: pwsh
+        run: |
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $renderer = Get-Content src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs -Raw
+          $overlayBuilder = Get-Content src/MapStudio.Renderer/Scene/NativeReferenceOverlayGeometryBuilder.cs -Raw
+          $overlayTests = Get-Content tests/MapStudio.Renderer.Tests/NativeReferenceOverlayGeometryBuilderTests.cs -Raw
+          $loader = Get-Content src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs -Raw
+
+          foreach ($required in @(
+            'JsonSerializerDefaults.Web',
+            'PropertyNameCaseInsensitive',
+            'georeference.MapType',
+            'carto-keyed-v4',
+            'rastertiles/voyager',
+            'mosaic-coverage',
+            'mosaic-download',
+            'maximumResidentTiles',
+            'SemaphoreSlim',
+            'cartoReferenceInvalidPngPayload:',
+            'TryWriteCartoReferenceDiagnostic',
+            'carto-reference.log',
+            'cartoReferenceNull:'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "CARTO mosaic/georeference hardening marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetReferenceOverlays',
+            'BuildReferenceOverlayDefinitions',
+            'RefreshActiveReferenceOverlayAsync',
+            'reference.TileCount',
+            '_activeCartoBasemapsApiKey'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "CARTO streamed overlay marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            '_referenceOverlayBatches',
+            'SetReferenceOverlays',
+            '_referenceOverlaySampler',
+            '_referenceOverlayRasterizerState',
+            'ReferenceOverlayDepthBias',
+            'ReferenceOverlaySlopeScaledDepthBias',
+            'TextureAddressMode.Border'
+          )) {
+            if (-not $renderer.Contains($required)) {
+              throw "CARTO terrain-decal renderer marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'scene.Tiles',
+            'minimumOverlayX',
+            'terrain.Heights',
+            'spacing',
+            'CreateReferenceUv',
+            'physically coplanar'
+          )) {
+            if (-not $overlayBuilder.Contains($required)) {
+              throw "Coplanar terrain-reference overlay marker is missing: $required"
+            }
+          }
+
+          if (-not $overlayTests.Contains('BuildClipsOverlayToLoadedTerrain') -or
+              -not $overlayTests.Contains('BuildUsesTerrainSurfaceWithoutPhysicalLift') -or
+              -not $overlayTests.Contains('BuildKeepsBoundaryUvOutsideForTransparentBorderSampling') -or
+              -not $overlayTests.Contains('BuildSkipsReferenceOutsideLoadedTerrain')) {
+            throw "Coplanar terrain-reference overlay regression coverage is missing."
+          }
+
+          if (-not $session.Contains('value.MapType.Trim()') -or
+              -not $session.Contains('string.IsNullOrWhiteSpace(')) {
+            throw "ValidateGeoreference null guard is missing."
+          }
+
+          foreach ($required in @(
+            'if (decoder is null)',
+            'if (frame is null)',
+            'if (converter is null)',
+            'NullReferenceException'
+          )) {
+            if (-not $loader.Contains($required)) {
+              throw "WIC null guard is missing: $required"
+            }
+          }
+
+          Write-Host "Verified saved georeference loading, streamed CARTO mosaic, coplanar terrain decal, transparent border sampling, D3D11 depth bias and WIC null safety."
+
+      - name: Verify test 10.31 reference visibility and visual spline endpoints
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $endpointMath = Get-Content src/MapStudio.Renderer/Viewport/NativeSplineEndpointEditMath.cs -Raw
+          $endpointGeometry = Get-Content src/MapStudio.Renderer/Scene/NativeSplineEndpointEditGeometryBuilder.cs -Raw
+          $endpointTests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplineEndpointEditMathTests.cs -Raw
+
+          foreach ($required in @(
+            'DefaultReferenceOverlayOpacity',
+            '0.80f',
+            'Value =',
+            '_referenceOverlayOpacity'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Reference visibility marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnRoadEditEndpointsClick',
+            'Editar pontas'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Road endpoint UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'EditEndpoints',
+            'BeginSelectedSplineEndpointEdit',
+            'IsSelectedSplineEndpointDragging',
+            'TryFinishSelectedSplineEndpointDrag'
+          )) {
+            if (-not $viewport.Contains($required)) {
+              throw "Viewport endpoint interaction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BeginSelectedSplineEndpointEdit',
+            'TryBeginSelectedSplineEndpointDrag',
+            'UpdateSelectedSplineEndpointDrag',
+            'TryFinishSelectedSplineEndpointDrag',
+            'FindFreeEndpoint',
+            'GetOriginX',
+            'GetOriginZ'
+          )) {
+            if (-not $runtime.Contains($required)) {
+              throw "Runtime endpoint edit marker is missing: $required"
+            }
+          }
+
+          if (-not $endpointMath.Contains('EstimateCurveOffset') -or
+              -not $endpointMath.Contains('TryCreateShape') -or
+              -not $endpointGeometry.Contains('StartColor') -or
+              -not $endpointGeometry.Contains('EndColor') -or
+              -not $endpointTests.Contains('EstimateCurveOffsetAndRebuildPreserveCurveSide')) {
+            throw "Endpoint edit math/geometry regression coverage is incomplete."
+          }
+
+          Write-Host "Verified 80% reference default and direct draggable spline endpoint workflow."
+
+      - name: Verify test 10.31 visual curve radius handle
+        shell: pwsh
+        run: |
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $math = Get-Content src/MapStudio.Renderer/Viewport/NativeSplineCurveHandleMath.cs -Raw
+          $geometry = Get-Content src/MapStudio.Renderer/Scene/NativeSplineCurveEditGeometryBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplineCurveHandleMathTests.cs -Raw
+
+          foreach ($required in @(
+            'IsSelectedSplineCurveDragging',
+            'TryBeginSelectedSplineCurveDrag',
+            'TryFinishSelectedSplineCurveEdit',
+            'GetSelectedSplineCurveEditStatus'
+          )) {
+            if (-not $viewport.Contains($required) -and -not $runtime.Contains($required)) {
+              throw "Curve handle interaction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'CreateHandlePoint',
+            'SnapOffset'
+          )) {
+            if (-not $math.Contains($required)) {
+              throw "Curve handle math marker is missing: $required"
+            }
+          }
+
+          if (-not $geometry.Contains('HandleColor') -or
+              -not $geometry.Contains('NativeSplineCurveHandleMath') -or
+              -not $tests.Contains('HandlePointRoundTripsThroughCurveOffsetMath')) {
+            throw "Curve handle geometry/regression coverage is incomplete."
+          }
+
+          if (-not $runtime.Contains('TryGetCurveOffsetFromControlPoint') -or
+              -not $runtime.Contains('TryCreateArcFromOffset')) {
+            throw "Curve edit must use lateral sagitta/offset math."
+          }
+
+          Write-Host "Verified draggable yellow curve handle with live radius/offset math."
+
+      - name: Verify test 10.31 visual join segments
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $solver = Get-Content src/MapStudio.Renderer/Viewport/NativeSplineCompleteToSolver.cs -Raw
+
+          foreach ($required in @(
+            'OnRoadJoinClick',
+            'Text="Unir"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Visual join toolbar marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BeginSplineJoinPick',
+            '_splineJoinSourceId',
+            '_splineJoinMaximumRadius',
+            'TryBuildSplineCompleteToRequest',
+            'SplinePlacementRequested'
+          )) {
+            if (-not $viewport.Contains($required)) {
+              throw "Visual join viewport marker is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('OnRoadJoinClick') -or
+              -not $main.Contains('"Unir trechos"') -or
+              -not $main.Contains('Trechos unidos:')) {
+            throw "Visual join host integration is incomplete."
+          }
+
+          foreach ($required in @(
+            'source.Spline.NextSplineId',
+            'target.Spline.PreviousSplineId',
+            'TrySolveShape',
+            'PreviousSplineId',
+            'NextSplineId'
+          )) {
+            if (-not $solver.Contains($required)) {
+              throw "Safe Complete To solver marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified visual source-to-target spline join using the safe tangent solver and real OMSI links."
+
+      - name: Verify test 10.32 automatic OSM roads and generated textures
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $props = Get-Content src/MapStudio.Core/Omsi/Props/MapStudioStarterPropGenerator.cs -Raw
+          $traffic = Get-Content src/MapStudio.Core/Omsi/Props/MapStudioStarterTrafficGenerator.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $building = Get-Content src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs -Raw
+          $footprint = Get-Content src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs -Raw
+          $textures = Get-Content src/MapStudio.Core/Omsi/Textures/MapStudioGeneratedTextureFactory.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealMapRoadImportModeBox"',
+            'SelectedIndex="2"',
+            'Gerar ruas + cruzamentos automaticamente'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.32 automatic OSM UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'highway',
+            'BuildProceduralRoadGraph()',
+            'AnalyzeProceduralRoadGraphAsync(',
+            'requireConfirmation:',
+            'false',
+            'BuildProceduralJunctionPlan(',
+            'InsertSplineBatchAsync('
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.32 automatic OSM generation marker is missing: $required"
+            }
+          }
+
+          if (-not $props.Contains('ms_prop_metal.bmp')) {
+            throw "Test 10.32 starter prop texture generation is missing."
+          }
+
+          if (-not $traffic.Contains('ms_traffic_red.bmp')) {
+            throw "Test 10.32 traffic-light texture generation is missing."
+          }
+
+          if (-not $junction.Contains('ms_junction_asphalt.bmp')) {
+            throw "Test 10.32 junction texture generation is missing."
+          }
+
+          if (-not $building.Contains('ms_building_facade.bmp')) {
+            throw "Test 10.32 building texture generation is missing."
+          }
+
+          if (-not $footprint.Contains('ms_osm_facade.bmp')) {
+            throw "Test 10.32 OSM building texture generation is missing."
+          }
+
+          if (-not $textures.Contains('CreateBmp24')) {
+            throw "Test 10.32 shared generated texture factory is missing."
+          }
+
+          Write-Host "Verified automatic OSM road/junction generation and procedural textures for Map Studio assets."
+
+      - name: Verify test 10.33 real-map cleanup and visible version
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealMapOpenLibraryAfterCreateCheckBox"',
+            'IsChecked="False"',
+            'x:Name="BuildVersionText"'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.33 UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RestoreAutomaticRealMapEditorState',
+            'CloseAssetLibraryToolWindow',
+            'OnSceneExplorerModeClick',
+            'SetSelectionModeFromShortcut(',
+            'AssemblyInformationalVersionAttribute',
+            'GetApplicationVersionLabel',
+            'BuildVersionText.Text'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.33 host marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified clean automatic real-map completion and runtime build-version display."
+
+      - name: Verify test 10.34 standard Road Kit scale
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs -Raw
+          $selector = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioStandardRoadProfileSelector.cs -Raw
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs -Raw
+
+          foreach ($required in @(
+            'ms_road_local_5_5m.sli',
+            'ms_road_local_5_5m_sidewalk.sli',
+            'CarriagewayWidthMeters',
+            'TotalWidthMeters'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.34 road catalog marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'service',
+            'residential',
+            'living_street',
+            'primary',
+            'motorway'
+          )) {
+            if (-not $selector.Contains($required)) {
+              throw "Test 10.34 OSM profile-selection marker is missing: $required"
+            }
+          }
+
+          if (-not $roadKit.Contains('PackVersion =') -or
+              -not $roadKit.Contains('"1.3.0"') -or
+              -not $roadKit.Contains('MapStudioStandardRoadCatalog')) {
+            throw "Test 10.34+ Road Kit shared catalog wiring is missing."
+          }
+
+          if (-not $main.Contains('profile.WidthMeters') -or
+              -not $main.Contains('MapStudioStandardRoadProfileSelector')) {
+            throw "Test 10.34 standardized road metadata wiring is missing."
+          }
+
+          if (-not $tests.Contains('CatalogKeepsPhysicalWidthsInOmsiMeters')) {
+            throw "Test 10.34 physical road scale regression coverage is missing."
+          }
+
+          Write-Host "Verified 300 m tile-compatible physical road profiles and OSM-to-Road-Kit selection."
+
+      - name: Verify test 10.35 resilient automatic road generation
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $clipper = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceClipper.cs -Raw
+          $smoother = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadTraceSmoother.cs -Raw
+          $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $osmImporter = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $osmImporterTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
+          $clipperTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadTraceClipperTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedRoadKitRenderingTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOverpassRoadClient',
+            'MapStudioRoadTraceClipper',
+            'failedJunctionCount',
+            'Procedural junction insertion failed',
+            'RealMap road import mode selected='
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.35 automatic-road host marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'overpass-api.de/api/interpreter',
+            'overpass.private.coffee/api/interpreter',
+            'TargetChunkSpanMeters',
+            'SuccessfulChunkCount',
+            'FailedChunkCount'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.35 Overpass resilience marker is missing: $required"
+            }
+          }
+
+          if (-not $clipper.Contains('ClipToBounds') -or
+              -not $clipperTests.Contains('CrossingWayIsClippedInsideTileBounds')) {
+            throw "Test 10.35 OSM map-bound clipping regression coverage is missing."
+          }
+
+          if (-not $smoother.Contains('maximumSampleSpacingMeters') -or
+              -not $smoother.Contains('1,')) {
+            throw "Test 10.35 short-segment smoothing fix is missing."
+          }
+
+          if (-not $session.Contains('requests.Count > 50_000')) {
+            throw "Test 10.35 dense automatic spline batch limit is missing."
+          }
+
+          if ($main -match 'RestoreMapStudioBackupAsync\s*\(\s*insertion\.BackupDirectory') {
+            throw "Junction failure must never roll back already-persisted road splines."
+          }
+
+          if ($main -notmatch 'junctionGroups\s*\.Chunk\s*\(\s*2\s*\)') {
+            throw "Junction batches must stay within the 512-placement multi-batch limit."
+          }
+
+          if (-not $overpassTests.Contains('DownloaderFallsBackToSecondEndpoint') -or
+              -not $renderTests.Contains('GeneratedRoadKitSplineLoadsAndBuildsRenderableTriangles') -or
+              -not $junctionTests.Contains('JunctionPlanCarriesTerrainHeightIntoWorldPlacement')) {
+            throw "Test 10.35 network/render/junction-height regression coverage is missing."
+          }
+
+          Write-Host "Verified resilient Overpass download, map clipping, dense spline generation, Road Kit rendering and non-destructive junction failures."
+
+      - name: Verify test 10.36 complete OSM curves and fitted junctions
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionSizing = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionGeometrySizing.cs -Raw
+          $junctionPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $overpassTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+          $osmImporter = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $osmImporterTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
+          $placementTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $curveTests = Get-Content tests/MapStudio.Renderer.Tests/NativeSplinePlacementMathTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+          $junctionRenderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+          $roadKitTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumRecoveryDepth',
+            'overpass.kumi.systems/api/interpreter',
+            'A geração foi cancelada para não criar uma malha parcial'
+          )) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.36 complete OSM recovery marker is missing: $required"
+            }
+          }
+
+          if (-not $overpassTests.Contains('DownloaderRejectsIncompleteAreaAfterRecoveryFails') -or
+              -not $overpassTests.Contains('DownloaderRecoversFailedParentBySubdividingArea')) {
+            throw "Test 10.36 complete OSM recovery regression coverage is missing."
+          }
+
+          foreach ($required in @(
+            'TryBuildCurveRequest',
+            'TryCreateArc',
+            'CurvedRequestCount',
+            'ResolveJunctionTrim',
+            'ResolveMinimumCurveRadius'
+          )) {
+            if (-not $placement.Contains($required)) {
+              throw "Test 10.36 native curve/junction-fit placement marker is missing: $required"
+            }
+          }
+
+          if (-not $placementTests.Contains('BuilderConvertsSmoothThreePointBendIntoOmsiArc') -or
+              -not $placementTests.Contains('BuilderTrimsRoadEndsAwayFromJunctionCenter') -or
+              -not $curveTests.Contains('ArcShapeReachesRequestedEndpointInRendererMath')) {
+            throw "Test 10.36 automatic curve regression coverage is missing."
+          }
+
+          foreach ($required in @(
+            'BuildJunctionOutline',
+            'ResolveJunctionOutlineRadius',
+            'MapStudioJunctionGeometrySizing'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.36 fitted junction geometry marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionSizing.Contains('ResolveSurfaceExtentMeters') -or
+              -not $junctionSizing.Contains('ResolvePathRadiusMeters')) {
+            throw "Test 10.36 shared junction sizing is missing."
+          }
+
+          if (-not $junctionPlan.Contains('profile?.TotalWidthMeters') -or
+              -not $junctionPlan.Contains('profile?.LaneWidthMeters') -or
+              -not $junctionTests.Contains('JunctionArmUsesPhysicalRoadKitWidthButKeepsLaneWidth')) {
+            throw "Test 10.36 physical-width/lane-width separation is missing."
+          }
+
+          if (-not $main.Contains('Profile.TotalWidthMeters') -or
+              -not $main.Contains('curvedRequests={placement.CurvedRequestCount}')) {
+            throw "Test 10.36 normalized physical width or curve diagnostics are missing."
+          }
+
+          if (-not $roadKit.Contains('"1.3.0"') -or
+              -not $roadKit.Contains('256,') -or
+              -not $roadKitTests.Contains('BitConverter.ToInt32')) {
+            throw "Test 10.36 Road Kit 1.3 detailed texture generation is missing."
+          }
+
+          if (-not $junctionRenderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh') -or
+              -not $junction.Contains('builder.AppendLine(') -or
+              -not $junction.Contains('"junction.o3d"')) {
+            throw "Test 10.36 generated junction texture/mesh loader coverage is missing."
+          }
+
+          if (-not $osmImporter.Contains('implicitJunctionOneWay') -or
+              -not $osmImporterTests.Contains('ImporterTreatsRoundaboutAsImplicitOneWay')) {
+            throw "Test 10.36 implicit OSM roundabout one-way handling is missing."
+          }
+
+          Write-Host "Verified complete OSM import, native curved splines, fitted/renderable junction geometry, roundabout topology, physical width normalization and Road Kit 1.3 textures."
+
+      - name: Verify test 10.37 authoritative OSM topology and directional lanes
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $geo = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioGeoJsonRoadImporter.cs -Raw
+          $osm = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOsmRoadImporter.cs -Raw
+          $graph = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioRoadGraphBuilder.cs -Raw
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionPlan = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $osmTests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmRoadImporterTests.cs -Raw
+          $graphTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadGraphBuilderTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $junctionPlanTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'ForwardLaneCount',
+            'BackwardLaneCount',
+            'Layer',
+            'Bridge',
+            'Tunnel'
+          )) {
+            if (-not $geo.Contains($required)) {
+              throw "Test 10.37 extended geographic road metadata is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'lanes:forward',
+            'lanes:backward',
+            '"bridge"',
+            '"tunnel"',
+            '"layer"',
+            'SumDirectionalLanes'
+          )) {
+            if (-not $osm.Contains($required)) {
+              throw "Test 10.37 OSM directional/grade metadata parser is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SourceTopologyAuthoritative',
+            'CanCreateInteriorIntersection'
+          )) {
+            if (-not $graph.Contains($required)) {
+              throw "Test 10.37 authoritative graph marker is missing: $required"
+            }
+          }
+
+          if (-not $graphTests.Contains('AuthoritativeOsmCrossingWithoutSharedNodeDoesNotCreateJunction') -or
+              -not $graphTests.Contains('AuthoritativeOsmSharedNodeStillCreatesRealJunction') -or
+              -not $graphTests.Contains('DifferentLayersDoNotCreateSyntheticInteriorJunction')) {
+            throw "Test 10.37 authoritative OSM graph regression coverage is missing."
+          }
+
+          if (-not $main.Contains('geoTrace.ForwardLaneCount') -or
+              -not $main.Contains('geoTrace.BackwardLaneCount') -or
+              -not $main.Contains('geoTrace.Bridge') -or
+              -not $main.Contains('geoTrace.Tunnel') -or
+              -not $main.Contains('authoritative=') -or
+              -not $main.Contains('directional=') -or
+              -not $main.Contains('gradeSeparated=')) {
+            throw "Test 10.37 OSM metadata wiring/diagnostics are missing."
+          }
+
+          if (-not $placement.Contains('surfaceExtent -') -or
+              -not $placement.Contains('0.45')) {
+            throw "Test 10.37 junction seam overlap is missing."
+          }
+
+          foreach ($required in @(
+            'InboundLaneCount',
+            'OutboundLaneCount'
+          )) {
+            if (-not $junction.Contains($required) -or
+                -not $junctionPlan.Contains($required)) {
+              throw "Test 10.37 junction directional lane marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionTests.Contains('InternalPathsRespectInboundAndOutboundOneWayArms') -or
+              -not $junctionPlanTests.Contains('OneWayArmsKeepNodeRelativeInboundAndOutboundDirection') -or
+              -not $osmTests.Contains('ImporterReadsDirectionalLanesAndGradeSeparationTags')) {
+            throw "Test 10.37 directional lane regression coverage is missing."
+          }
+
+          Write-Host "Verified authoritative OSM topology, bridge/tunnel/layer handling, directional lanes, node-relative junction traffic and seam overlap."
+
+      - name: Verify test 10.38 terrain-relative junction placement
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $junctionRenderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+
+          if ($main -notmatch 'item\.X,\s*item\.Y,\s*0,\s*item\.Rotation') {
+            throw "Test 10.38 junction placements must use terrain-relative Z=0."
+          }
+
+          if ($junction.Contains('double SurfaceHeightMeters = 0.08') -or
+              -not $junction.Contains('double SurfaceHeightMeters = 0.102')) {
+            throw "Test 10.38 junction surface height alignment is missing."
+          }
+
+          foreach ($required in @(
+            'MapStudioRoadKitGenerator',
+            'ms_asphalt.bmp',
+            'ms_junction_asphalt.bmp',
+            'EnsureJunctionAsphaltAsync'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.38 shared Road Kit asphalt marker is missing: $required"
+            }
+          }
+
+          if (-not $junctionRenderTests.Contains('GeneratedJunctionUsesRoadKitAsphaltTexture') -or
+              -not $junctionRenderTests.Contains('TerrainRelativeGeneratedJunctionIsNotDoubleRaised')) {
+            throw "Test 10.38 junction height/texture regression coverage is missing."
+          }
+
+          if (-not $junctionRenderTests.Contains('12.101f') -or
+              -not $junctionRenderTests.Contains('12.103f')) {
+            throw "Test 10.38 elevated-terrain junction renderer assertion is missing."
+          }
+
+          Write-Host "Verified terrain-relative junction Z, single terrain-height application, surface alignment and shared Road Kit asphalt."
+
+      - name: Verify test 10.39 non-blocking post-road reload
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'refreshReferenceOverlay',
+            'refreshExplorer',
+            'ApplyMapSnapshot begin',
+            'viewport-ready elapsedMs=',
+            'reference-refresh skipped',
+            'explorer-ready elapsedMs=',
+            'ApplyMapSnapshot complete elapsedMs=',
+            'Procedural roads final viewport reload begin.',
+            'Procedural roads final viewport reload complete.',
+            'Procedural roads closed active loading overlay after viewport reload.'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.39 post-road reload marker is missing: $required"
+            }
+          }
+
+          if ($main -notmatch 'ApplyMapSnapshotAsync\(\s*finalSnapshot,[\s\S]*?refreshReferenceOverlay:\s*false,[\s\S]*?refreshExplorer:\s*false') {
+            throw "Test 10.39 road generation must skip redundant reference and Explorer refresh work."
+          }
+
+          if (-not $main.Contains('_explorerRefreshPending') -or
+              -not $main.Contains('IsExplorerPanelActuallyVisible')) {
+            throw "Test 10.39 lazy Explorer refresh is missing."
+          }
+
+          if ($main -notmatch 'if \(_loadingOperationDepth > 0\)[\s\S]*?EndLoading\(\)') {
+            throw "Test 10.39 must close the active loading overlay immediately after the final road viewport reload."
+          }
+
+          Write-Host "Verified post-road reload skips redundant CARTO/Explorer work, records timings and closes loading promptly."
+
+      - name: Verify test 10.40 serialized viewport reload
+        shell: pwsh
+        run: |
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewport = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+
+          foreach ($required in @(
+            '_mapSnapshotApplySequence',
+            'ApplyMapSnapshot superseded-after-viewport',
+            'CallerMemberName',
+            '_mapSnapshotReloadGate',
+            '_mapSnapshotReloadCancellation',
+            'SetMapSnapshot coalesced-before-load',
+            'SetMapSnapshot superseded-cancelled',
+            'DiagnosticSink',
+            'ViewportRuntime LoadScene scenery-load begin',
+            'ViewportRuntime LoadScene spline-load complete',
+            'ViewportRuntime geometry-rebuild begin',
+            'ViewportRuntime geometry-rebuild gpu-upload',
+            'snapshot-load:'
+          )) {
+            if (-not ($main.Contains($required) -or $viewport.Contains($required) -or $runtime.Contains($required))) {
+              throw "Test 10.40 viewport reload marker is missing: $required"
+            }
+          }
+
+          if ($runtime -match 'LoadSceneAsync[\s\S]*?_sceneryAssetLoader[\s\S]*?ConfigureAwait\(false\)') {
+            throw "Test 10.40 must not resume D3D scene commit on a pool thread after scenery loading."
+          }
+
+          if ($runtime -match 'LoadSceneAsync[\s\S]*?_splineAssetLoader[\s\S]*?ConfigureAwait\(false\)') {
+            throw "Test 10.40 must not resume D3D scene commit on a pool thread after spline loading."
+          }
+
+          if ($runtime -notmatch 'var nextScene[\s\S]*?var nextSceneryAssets[\s\S]*?var nextSplineAssets[\s\S]*?Scene\s*=\s*nextScene') {
+            throw "Test 10.40 must prepare scene/assets before committing the runtime scene."
+          }
+
+          Write-Host "Verified latest-wins snapshot serialization, atomic scene commit and detailed reload diagnostics."
+
+      - name: Verify test 10.41 bounded Overpass recovery
+        shell: pwsh
+        run: |
+          $overpass = Get-Content src/MapStudio.Core/Generation/Roads/MapStudioOverpassRoadClient.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassRoadClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumRecoveryDepth =',
+            'TimeSpan.FromMinutes(',
+            'EndpointAttemptTimeout',
+            'timeout após',
+            'recovery subdivide',
+            'recovery exhausted',
+            'download budget-exceeded',
+            '_endpointRotation',
+            'RealMap OSM download begin',
+            'DownloaderBoundsFailedRecoveryFanout'
+          )) {
+            if (-not ($overpass.Contains($required) -or $main.Contains($required) -or $tests.Contains($required))) {
+              throw "Test 10.41 bounded Overpass marker is missing: $required"
+            }
+          }
+
+          if ($overpass -notmatch 'MaximumRecoveryDepth\s*=\s*1') {
+            throw "Test 10.41 must keep failed-chunk recovery to one subdivision level."
+          }
+
+          if ($tests -notmatch 'Assert\.Equal\(\s*5,\s*requestCount\s*\)') {
+            throw "Test 10.41 must guard the five-request single-endpoint recovery ceiling."
+          }
+
+          Write-Host "Verified bounded Overpass retry fan-out, download budget, endpoint timeout/rotation and progress diagnostics."
+
+      - name: Verify test 10.42 modular editor workspace
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $app = Get-Content src/MapStudio.Native/App.xaml -Raw
+
+          foreach ($required in @(
+            'EditorModuleRail',
+            'EditorModuleRailButtonStyle',
+            'ModuleSelectionButton',
+            'ModuleObjectsButton',
+            'ModuleRoadsButton',
+            'ModuleTerrainButton',
+            'ModuleVegetationButton',
+            'ModuleCrossingsButton',
+            'ModuleTrafficButton',
+            'ModuleTransportButton'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.42 modular workspace marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'var moduleButtons =',
+            'activeModule.Background',
+            'ModuleRoadsButton',
+            'ModuleTrafficButton'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.42 module-state synchronization marker is missing: $required"
+            }
+          }
+
+          if (-not $app.Contains('#15181C') -or -not $app.Contains('#4FA3FF')) {
+            throw "Test 10.42 neutral dark editor palette is missing."
+          }
+
+          Write-Host "Verified compact module rail, synchronized active state and neutral modern editor palette."
+
+      - name: Verify test 10.43 contextual editor workflow
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'ViewportCommandBar',
+            'ViewportModuleText',
+            'Visibility="Collapsed"',
+            'Pincel / área',
+            'OnVegetationBrushClick',
+            'OnVegetationLineClick',
+            'OnRaiseTerrainClick',
+            'OnLowerTerrainClick',
+            'OnApplyTerrainLevelClick',
+            'OnApplyTerrainPaintClick',
+            'OnToggleTrafficPathsWindowClick'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required))) {
+              throw "Test 10.43 contextual workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $code.Contains('ObjectPlacementModeComboBox.SelectedIndex =')) {
+            throw "Test 10.43 vegetation paint/line workflows must select a real placement mode."
+          }
+
+          if (-not $code.Contains('ViewportModuleText.Text =')) {
+            throw "Test 10.43 viewport module label must follow active editor context."
+          }
+
+          Write-Host "Verified clean viewport workspace, contextual modules and real vegetation/terrain/traffic actions."
+
+      - name: Verify test 10.44 mixed vegetation presets
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $distributor = Get-Content src/MapStudio.Renderer/Viewport/NativeVegetationPresetDistributor.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeVegetationPresetDistributorTests.cs -Raw
+
+          foreach ($required in @(
+            'VegetationPresetComboBox',
+            'GetActiveVegetationPresetAssets',
+            'ShouldUseVegetationPreset',
+            'InsertSceneryObjectMultiBatchAsync',
+            'NativeSceneryPlacementBatchGroup',
+            'NativeVegetationPresetDistributor'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required) -or $distributor.Contains($required))) {
+              throw "Test 10.44 mixed vegetation preset marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('DistributeUsesEveryPresetAssetAcrossEnoughPlacements')) {
+            throw "Test 10.44 vegetation preset coverage test is missing."
+          }
+
+          Write-Host "Verified library-collection vegetation presets, deterministic distribution and multi-batch insertion."
+
+      - name: Verify test 10.45 custom-shape vegetation fill
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $scatterer = Get-Content src/MapStudio.Core/Generation/Vegetation/MapStudioWorldPolygonScatterer.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioWorldPolygonScattererTests.cs -Raw
+
+          foreach ($required in @(
+            'VegetationShapeSpacingBox',
+            'VegetationShapeFillButton',
+            'OnVegetationShapeStartClick',
+            'OnVegetationShapeFillClick',
+            '_vegetationShapeCaptureMode',
+            'UpdateVegetationShapePreview',
+            'MapStudioWorldPolygonScatterer',
+            'InsertSceneryObjectMultiBatchAsync'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required) -or $scatterer.Contains($required))) {
+              throw "Test 10.45 custom-shape marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('ScatterRespectsConcaveCutout')) {
+            throw "Test 10.45 concave polygon scatter regression test is missing."
+          }
+
+          Write-Host "Verified interactive shape capture, polygon scatter, preview outline and vegetation persistence."
+
+      - name: Verify test 10.46 viewport traffic editing
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'OnPreviousTrafficPathClick',
+            'OnNextTrafficPathClick',
+            'OnToggleFocusedTrafficPathIsolationClick',
+            'OnEditFocusedTrafficProgramClick',
+            'Content="Editar path"',
+            'Content="+ Path"',
+            'Content="Semáforo"'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required))) {
+              throw "Test 10.46 traffic workflow marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'GetTrafficPathChoicesForSelection',
+            'SetTrafficPathFocusedIndex',
+            'SetTrafficPathSelectedOnly',
+            'RefreshTrafficPathDisplay',
+            'OnEditTrafficProgramClick'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.46 real traffic editing wiring is missing: $required"
+            }
+          }
+
+          Write-Host "Verified viewport-first path navigation/isolation and real SCO/SLI/signal editing actions."
+
+      - name: Verify test 10.47 traffic-light viewport focus
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'Content="Localizar"',
+            'OnLocateTrafficProgramClick',
+            'FocusTrafficProgramInViewport',
+            'program.ObjectId',
+            'program.TileX',
+            'program.TileY',
+            'Viewport.SelectExplorerItem'
+          )) {
+            if (-not ($xaml.Contains($required) -or $code.Contains($required))) {
+              throw "Test 10.47 signal-focus marker is missing: $required"
+            }
+          }
+
+          if (-not $code.Contains('if (_trafficMode)')) {
+            throw "Test 10.47 must auto-focus selected traffic programs only in traffic mode."
+          }
+
+          Write-Host "Verified traffic-light program selection can locate and frame its real scene object."
+
+      - name: Verify test 10.48 bidirectional signal selection
+        shell: pwsh
+        run: |
+          $code = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'SynchronizeTrafficProgramFromSelection',
+            'candidate.ObjectId ==',
+            'candidate.TileX ==',
+            'candidate.TileY ==',
+            'TrafficProgramListView.SelectedItem =',
+            'TrafficProgramListView.ScrollIntoView'
+          )) {
+            if (-not $code.Contains($required)) {
+              throw "Test 10.48 bidirectional signal selection marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified viewport object selection synchronizes the corresponding traffic-light program."
+
+      - name: Verify test 10.49 live traffic-light viewport HUD
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'TrafficSignalPreviewPanel',
+            'TrafficSignalRedLamp',
+            'TrafficSignalYellowLamp',
+            'TrafficSignalGreenLamp'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.49 viewport HUD marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTrafficSignalPhasePreview',
+            'ClearTrafficSignalPhasePreview',
+            'DescribeSignalCode'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.49 viewport phase API marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTrafficSignalPhasePreview',
+            'program.EffectiveCycleDuration',
+            'TrafficPreviewTimeSlider.Value'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.49 live phase synchronization marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified real traffic-light preview time drives the viewport signal HUD."
+
+      - name: Verify test 10.50 direct viewport path editing
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'DoubleTapped="OnDoubleTapped"',
+            'TrafficPathFocusPanel',
+            'Duplo clique no nó para editar'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.50 path viewport UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'TrafficPathNodeEditRequested',
+            'TryFocusTrafficPathNode',
+            'SetTrafficPathFocusPreview',
+            'ClearTrafficPathFocusPreview'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.50 path interaction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'Viewport.TrafficPathNodeEditRequested +=',
+            'OnEditSceneryPathClick(',
+            'EditSceneryPathButton'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.50 real path editor reuse marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified path nodes can request the existing real SCO/SLI path editor directly from the viewport."
+
+      - name: Verify test 10.51 junction viewport workflow
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'JunctionFocusPanel',
+            'JunctionFocusText',
+            'Use como alvo para posicionar um junction'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.51 junction viewport HUD marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetJunctionFocusPreview',
+            'ClearJunctionFocusPreview'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.51 junction viewport API marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'Content="← Encontro"',
+            'Content="Encontro →"',
+            'Content="Focar"',
+            'Content="Usar alvo"'
+          )) {
+            if (-not $mainXaml.Contains($required)) {
+              throw "Test 10.51 junction toolbar marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ShiftJunctionSuggestion',
+            'OnFocusJunctionSuggestionClick',
+            'OnUseJunctionSuggestionClick',
+            'UseJunctionSuggestionAsync',
+            'OmsiAssetLibraryGroup'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.51 junction workflow marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified real junction suggestions can be navigated, focused and reused as placement targets from the contextual toolbar."
+
+
+      - name: Verify test 10.52 terrain texture custom shape
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $painter = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainTextureMaskPainter.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainTextureMaskTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainShapeStartButton',
+            'TerrainShapeFillButton',
+            'TerrainShapeClearButton',
+            'Content="Forma textura"',
+            'Content="Aplicar forma"'
+          )) {
+            if (-not $mainXaml.Contains($required)) {
+              throw "Test 10.52 terrain custom-shape UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainShapeStartClick',
+            'OnTerrainShapeFillClick',
+            '_terrainShapeCaptureMode',
+            'UpdateTerrainShapePreview',
+            'PaintTerrainTexturePolygonAsync'
+          )) {
+            if (-not ($mainCode.Contains($required) -or $session.Contains($required))) {
+              throw "Test 10.52 terrain custom-shape wiring marker is missing: $required"
+            }
+          }
+
+          if (-not $painter.Contains('PaintPolygon')) {
+            throw "Test 10.52 polygon terrain-mask painter is missing."
+          }
+
+          if (-not $tests.Contains('PaintsConcavePolygonWithoutFillingCutout')) {
+            throw "Test 10.52 concave terrain polygon regression test is missing."
+          }
+
+          Write-Host "Verified viewport polygon capture, concave groundtex fill, cross-tile persistence and terrain reload."
+
+
+      - name: Verify test 10.53 terrain follows selected spline
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainSplineHalfWidthBox',
+            'TerrainSplineFeatherBox',
+            'TerrainSplineVerticalOffsetBox',
+            'ConformTerrainToSplineButton',
+            'Content="Terreno ↕ via"'
+          )) {
+            if (-not $mainXaml.Contains($required)) {
+              throw "Test 10.53 terrain-to-spline UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnConformTerrainToSelectedSplineClick',
+            'ConformTerrainToSplineAsync'
+          )) {
+            if (-not ($mainCode.Contains($required) -or $session.Contains($required))) {
+              throw "Test 10.53 terrain-to-spline wiring marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ConformToSpline',
+            'GetSplineInfluenceBounds',
+            'BuildSplineSamples'
+          )) {
+            if (-not $leveler.Contains($required)) {
+              throw "Test 10.53 terrain spline conformer marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ConformToSpline_FollowsSplineElevationAndLeavesOutsideUntouched',
+            'GetSplineInfluenceBounds_ContainsCurvedArc'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.53 terrain spline regression marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified terrain conforms to real straight/curved spline geometry, gradients and cross-tile influence."
+
+
+      - name: Verify test 10.54 visual terrain brush
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $navigation = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportNavigation.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeViewportNavigationTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainBrushLayer',
+            'TerrainBrushOuterRing',
+            'TerrainBrushInnerRing',
+            'TerrainBrushLabelText'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.54 terrain brush viewport marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'SetTerrainBrushPreview',
+            'UpdateTerrainBrushVisual'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.54 terrain brush visual API marker is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('TryGetTerrainBrushScreenRadius')) {
+            throw "Test 10.54 runtime terrain brush projection is missing."
+          }
+
+          if (-not $navigation.Contains('TryProjectWorldPoint')) {
+            throw "Test 10.54 world-to-screen projection is missing."
+          }
+
+          foreach ($required in @(
+            'Content="Pincel"',
+            'OnTerrainBrushPreviewValueChanged'
+          )) {
+            if (-not ($mainXaml.Contains($required) -or $mainCode.Contains($required))) {
+              throw "Test 10.54 terrain brush workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('ProjectWorldPointPlacesCameraTargetNearViewportCenter')) {
+            throw "Test 10.54 projection regression test is missing."
+          }
+
+          Write-Host "Verified terrain brush radius/feather projection and live viewport overlay."
+
+      - name: Verify test 10.55 Custom Shape terrain height editing
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainShapeLevelButton',
+            'TerrainShapeRaiseButton',
+            'TerrainShapeLowerButton',
+            'Content="Nivelar forma"',
+            'Content="Elevar forma"',
+            'Content="Abaixar forma"'
+          )) {
+            if (-not $mainXaml.Contains($required)) {
+              throw "Test 10.55 Custom Shape terrain UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainShapeLevelClick',
+            'OnTerrainShapeRaiseClick',
+            'OnTerrainShapeLowerClick',
+            'ApplyTerrainShapeHeightAsync'
+          )) {
+            if (-not $mainCode.Contains($required)) {
+              throw "Test 10.55 Custom Shape terrain workflow marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelTerrainPolygonAsync',
+            'OffsetTerrainPolygonAsync',
+            'NativeTerrainPolygonEditResult'
+          )) {
+            if (-not $session.Contains($required)) {
+              throw "Test 10.55 terrain polygon persistence marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelPolygon',
+            'OffsetPolygon',
+            'ContainsPolygonPoint',
+            'DistanceToPolygonBoundary'
+          )) {
+            if (-not $leveler.Contains($required)) {
+              throw "Test 10.55 terrain polygon core marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'LevelPolygon_HandlesConcaveShapeWithoutFillingCutout',
+            'OffsetPolygon_PreservesSharedEdgeAcrossAdjacentTiles'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.55 terrain polygon regression marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified concave Custom Shape leveling/offset, feathering, cross-tile writes and real terrain reload."
+
+      - name: Verify test 10.56 topology-fitted junction surfaces
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'JunctionOutlineSampleCount',
+            'ResolveJunctionOutlineRadius',
+            'minimumHalfWidth',
+            'maximumHalfWidth'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.56 fitted junction marker is missing: $required"
+            }
+          }
+
+          if ($junction.Contains('return ConvexHull(')) {
+            throw "Test 10.56 must not fall back to convex-hull junction filling."
+          }
+
+          if (-not $tests.Contains('GeometryBuilderCutsBackOutsideCrossCornersToRoadWidth')) {
+            throw "Test 10.56 fitted-corner regression test is missing."
+          }
+
+          Write-Host "Verified radial road-mouth union footprint, concave corner cut-backs and origin-centered fan triangulation."
+
+      - name: Verify test 10.57 smooth junction traffic paths
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'JunctionMovementDegreesPerSegment',
+            'AppendMovementPaths',
+            'AppendStraightJunctionPath',
+            'NormalizeSignedAngleDegrees'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.57 smooth junction path marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('TurningMovementUsesConnectedBezierPathSegments')) {
+            throw "Test 10.57 connected-turn regression test is missing."
+          }
+
+          Write-Host "Verified straight-through preservation and connected quadratic-Bezier path segmentation for junction turns."
+
+      - name: Verify test 10.58 terrain-to-spline live preview
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainSplinePreviewLayer',
+            'SetTerrainSplinePreview',
+            'UpdateTerrainSplinePreviewVisual'
+          )) {
+            if (-not ($viewportXaml.Contains($required) -or $viewportCode.Contains($required))) {
+              throw "Test 10.58 viewport spline-preview marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainSplinePreviewValueChanged',
+            'RefreshTerrainSplinePreview',
+            'Content="Seguir rua"'
+          )) {
+            if (-not ($mainXaml.Contains($required) -or $mainCode.Contains($required))) {
+              throw "Test 10.58 terrain spline preview workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('TryProjectWorldPoint')) {
+            throw "Test 10.58 runtime projection wrapper is missing."
+          }
+
+          if (-not $leveler.Contains('BuildSplinePreviewBand') -or
+              -not $leveler.Contains('OmsiTerrainSplinePreviewBand')) {
+            throw "Test 10.58 spline influence band geometry is missing."
+          }
+
+          if (-not $tests.Contains('BuildSplinePreviewBand_OffsetsRoadAndFeatherEdges')) {
+            throw "Test 10.58 spline preview regression test is missing."
+          }
+
+          Write-Host "Verified live center/road-width/feather band preview before real terrain persistence."
+
+      - name: Verify test 10.59 lane-aware junction movements
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'ResolveLaneOffsets',
+            'ResolveLaneConnectionIndex',
+            'PointOnArmLane',
+            'ResolveMovementControlPoint',
+            'Cross2D'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.59 lane-aware junction marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('MultipleDirectionalLanesProduceSeparateLaneCenteredMovements')) {
+            throw "Test 10.59 lane-separated movement regression test is missing."
+          }
+
+          Write-Host "Verified per-lane junction entry/exit offsets, proportional lane pairing and tangent-aligned Bezier control."
+
+      - name: Verify test 10.60 junction lane-mouth markings
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+
+          foreach ($required in @(
+            'EnsureJunctionMarkingAsync',
+            'AppendLaneMouthMarkings',
+            'AppendLaneMouthMarkingQuad',
+            'ms_junction_marking.bmp'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.60 junction marking marker is missing: $required"
+            }
+          }
+
+          if (-not $coreTests.Contains('GeometryBuilderAddsLaneMouthMarkingStubs')) {
+            throw "Test 10.60 junction marking geometry regression test is missing."
+          }
+
+          if (-not $renderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh')) {
+            throw "Test 10.60 junction renderer coverage is missing."
+          }
+
+          Write-Host "Verified lane-divider marking stubs, dedicated material/texture and renderer loading on generated junctions."
+
+      - name: Verify test 10.61 junction sidewalk continuity
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+
+          foreach ($required in @(
+            'EnsureJunctionSidewalkAsync',
+            'AppendSidewalkMouthSurfaces',
+            'AppendSidewalkMouthQuad',
+            'ms_junction_sidewalk.bmp',
+            'ms_sidewalk.bmp'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.61 junction sidewalk marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'GeometryBuilderAddsSidewalkMouthSurfacesWhenRoadIsWiderThanCarriageway',
+            'GeometryBuilderDoesNotAddSidewalkOverlayWhenTotalWidthEqualsCarriageway'
+          )) {
+            if (-not $coreTests.Contains($required)) {
+              throw "Test 10.61 junction sidewalk Core regression is missing: $required"
+            }
+          }
+
+          if (-not $renderTests.Contains('GeneratedJunctionUsesRoadKitSidewalkTexture')) {
+            throw "Test 10.61 Road Kit sidewalk texture regression is missing."
+          }
+
+          Write-Host "Verified carriageway-vs-total-width sidewalk overlays, Road Kit texture reuse and road-only fallback."
+
+      - name: Verify test 10.62 OSM grade-separation placement metadata
+        shell: pwsh
+        run: |
+          $request = Get-Content src/MapStudio.Renderer/Viewport/NativeSplinePlacementRequest.cs -Raw
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'SourceBridge',
+            'SourceTunnel',
+            'SourceLayer'
+          )) {
+            if (-not $request.Contains($required)) {
+              throw "Test 10.62 placement request grade metadata is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'HasCompatibleGradeSeparation',
+            'BridgeRequestCount',
+            'TunnelRequestCount',
+            'LayeredRequestCount'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.62 placement grade-separation marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BuilderCarriesGradeSeparationMetadataIntoRequests',
+            'BuilderDoesNotMergeCurveAcrossGradeSeparationChange'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.62 renderer regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'bridgeRequests={placement.BridgeRequestCount}',
+            'tunnelRequests={placement.TunnelRequestCount}',
+            'layeredRequests={placement.LayeredRequestCount}'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.62 startup diagnostic marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified OSM bridge/tunnel/layer metadata survives placement planning and curve merging respects grade transitions."
+
+      - name: Verify test 10.63 automatic bridge/tunnel Road Kit assets
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs -Raw
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'GetBridgeFileName',
+            'GetTunnelFileName',
+            'ResolvePlacementRelativePath'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.63 structural Road Kit catalog marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadStructureKind',
+            'RoadProfileSegment',
+            'WithStructure',
+            'AppendProfileSegment'
+          )) {
+            if (-not $roadKit.Contains($required)) {
+              throw "Test 10.63 structural spline generator marker is missing: $required"
+            }
+          }
+
+          if (-not $builder.Contains('ResolvePlacementRelativePath')) {
+            throw "Test 10.63 placement does not select structural Road Kit splines."
+          }
+
+          if (-not $coreTests.Contains('GeneratorBuildsBridgeAndTunnelStructuralVariants')) {
+            throw "Test 10.63 structural spline Core regression is missing."
+          }
+
+          if (-not $renderTests.Contains('BuilderSelectsRoadKitBridgeAndTunnelSplineVariants')) {
+            throw "Test 10.63 structural placement regression is missing."
+          }
+
+          Write-Host "Verified generated bridge/tunnel profile geometry and automatic structural spline selection."
+
+      - name: Verify test 10.64 continuous structural elevation
+        shell: pwsh
+        run: |
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'BuildStructuralEndpointElevations',
+            'StructuralEndpointElevation',
+            'IsStructuralSegment',
+            'LerpHeight'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.64 structural elevation marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('BuilderKeepsBridgeRunOnBoundaryGradeAcrossTerrainValley')) {
+            throw "Test 10.64 bridge terrain-valley regression is missing."
+          }
+
+          Write-Host "Verified bridge/tunnel runs interpolate between boundary terrain heights without following intermediate terrain relief."
+
+      - name: Verify test 10.65 adaptive layer clearance
+        shell: pwsh
+        run: |
+          $placement = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MinimumLayerVerticalSeparationMeters',
+            'MaximumLayerRampGradient',
+            'ResolvePlacementStructure',
+            'ResolveLayerVerticalDirection',
+            'ResolveLayerClearanceOffset'
+          )) {
+            if (-not $placement.Contains($required)) {
+              throw "Test 10.65 adaptive layer-clearance marker is missing: $required"
+            }
+          }
+
+          if (-not $placement.Contains('(segment.Layer ?? 0) !=')) {
+            throw "Test 10.65 layer-only runs must participate in structural elevation planning."
+          }
+
+          if (-not $tests.Contains('BuilderInfersLayerOnlyBridgeAndTunnelClearanceOnFlatTerrain')) {
+            throw "Test 10.65 layer-only clearance regression test is missing."
+          }
+
+          Write-Host "Verified layer-only bridge/tunnel variant inference, bounded approach ramps and non-destructive terrain clearance."
+
+      - name: Verify test 10.66 structural terrain-conform protection
+        shell: pwsh
+        run: |
+          $catalog = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioStandardRoadCatalog.cs -Raw
+          $session = Get-Content src/MapStudio.Native/Services/OmsiNativeSession.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioStandardRoadProfileSelectorTests.cs -Raw
+
+          foreach ($required in @(
+            'IsTerrainConformProtectedPath',
+            'MapStudioBridgeSplineGenerator',
+            'MapStudioTunnelSplineGenerator',
+            '_bridge.sli',
+            '_tunnel.sli'
+          )) {
+            if (-not $catalog.Contains($required)) {
+              throw "Test 10.66 structural classifier marker is missing: $required"
+            }
+          }
+
+          if (-not $session.Contains('terrainSplineStructuralAssetProtected') -or
+              -not $session.Contains('IsTerrainConformProtectedPath')) {
+            throw "Test 10.66 session write guard is missing."
+          }
+
+          if (-not $main.Contains('ponte/túnel estrutural protegido') -or
+              -not $main.Contains('ClearTerrainSplinePreview')) {
+            throw "Test 10.66 native UI structural protection is missing."
+          }
+
+          if (-not $tests.Contains('CatalogProtectsStructuralSplinesFromTerrainConform') -or
+              -not $tests.Contains('CatalogAllowsOrdinarySplinesToConformTerrain')) {
+            throw "Test 10.66 structural classifier regression coverage is missing."
+          }
+
+          Write-Host "Verified bridge/tunnel terrain-conform preview suppression, UI blocking and session-level writer protection."
+
+      - name: Verify test 10.67 live terrain brush intensity
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $visualMath = Get-Content src/MapStudio.Renderer/Viewport/NativeTerrainBrushVisualMath.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeTerrainBrushVisualMathTests.cs -Raw
+
+          if (-not $viewportXaml.Contains('TerrainBrushIntensityDisc')) {
+            throw "Test 10.67 intensity fill is missing."
+          }
+
+          foreach ($required in @('_terrainBrushIntensityMeters','intensityMeters','ResolveIntensityOpacity','Δ')) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.67 terrain brush intensity runtime marker is missing: $required"
+            }
+          }
+
+          if (-not $mainXaml.Contains('TerrainBrushDeltaBox') -or
+              -not $mainXaml.Contains('ValueChanged="OnTerrainBrushPreviewValueChanged"')) {
+            throw "Test 10.67 terrain intensity live-control wiring is missing."
+          }
+
+          if (-not $mainCode.Contains('TerrainBrushDeltaBox.Value') -or
+              -not $mainCode.Contains('intensity')) {
+            throw "Test 10.67 terrain brush intensity is not passed from the inspector."
+          }
+
+          if (-not $visualMath.Contains('ResolveIntensityOpacity') -or
+              -not $tests.Contains('StrongerBrushProducesStrongerVisualOpacity')) {
+            throw "Test 10.67 terrain brush intensity regression coverage is missing."
+          }
+
+          Write-Host "Verified live radius/feather/intensity HUD, intensity fill and renderer-side opacity regression coverage."
+
+      - name: Verify test 10.68 live Custom Shape terrain preview
+        shell: pwsh
+        run: |
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'TerrainShapePreviewLayer',
+            'TerrainShapePreviewPolygon',
+            'TerrainShapePreviewFeatherPolygon',
+            'TerrainShapePreviewLabel'
+          )) {
+            if (-not $viewportXaml.Contains($required)) {
+              throw "Test 10.68 Custom Shape preview XAML marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'NativeTerrainShapePreviewMode',
+            'SetTerrainShapePreview',
+            'UpdateTerrainShapePreviewVisual',
+            'ResolveIntensityOpacity'
+          )) {
+            if (-not $viewportCode.Contains($required)) {
+              throw "Test 10.68 Custom Shape viewport marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainShapeLevelPreviewEntered',
+            'OnTerrainShapeRaisePreviewEntered',
+            'OnTerrainShapeLowerPreviewEntered',
+            'OnTerrainShapePaintPreviewEntered',
+            'OnTerrainShapePreviewValueChanged',
+            '_terrainShapePreviewWorldPoints'
+          )) {
+            if (-not $mainXaml.Contains($required) -and -not $mainCode.Contains($required)) {
+              throw "Test 10.68 Custom Shape inspector wiring marker is missing: $required"
+            }
+          }
+
+          if (-not $mainCode.Contains('ClearTerrainShapePreview')) {
+            throw "Test 10.68 Custom Shape preview cleanup is missing."
+          }
+
+          Write-Host "Verified live Custom Shape fill, operation colors, HUD, feather/intensity updates and camera reprojection."
+
+      - name: Verify test 10.69 terrain-plane junction tilt
+        shell: pwsh
+        run: |
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MaximumTerrainTiltDegrees',
+            'ResolveTerrainTilt',
+            'forwardSlope',
+            'rightSlope',
+            'double Pitch',
+            'double Bank'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.69 terrain-plane junction marker is missing: $required"
+            }
+          }
+
+          if (-not $main.Contains('item.Pitch') -or
+              -not $main.Contains('item.Bank')) {
+            throw "Test 10.69 junction placement does not persist Pitch/Bank."
+          }
+
+          if (-not $tests.Contains('JunctionPlanTiltsSurfaceToMatchLocalTerrainPlane')) {
+            throw "Test 10.69 sloped-terrain junction regression is missing."
+          }
+
+          Write-Host "Verified real terrain sampling, safe junction Pitch/Bank and non-destructive sloped placement."
+
+      - name: Verify test 10.70 structural junction elevation
+        shell: pwsh
+        run: |
+          $roads = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $junctions = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'ResolveStructuralJunctionBoundaryOffset',
+            'ApplyStructuralJunctionBoundaryHeight',
+            'node.IsJunction',
+            'HasCompatibleGradeSeparation'
+          )) {
+            if (-not $roads.Contains($required)) {
+              throw "Test 10.70 structural road/junction continuity marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'StructuralLayerSeparationMeters',
+            'ResolveStructuralJunctionHeightOffset',
+            'HasCompatibleStructuralGrade'
+          )) {
+            if (-not $junctions.Contains($required)) {
+              throw "Test 10.70 structural junction height marker is missing: $required"
+            }
+          }
+
+          if (-not $roadTests.Contains('BuilderKeepsLayerOnlyRoadEndsAtStructuralJunctionHeight')) {
+            throw "Test 10.70 road structural-junction regression is missing."
+          }
+
+          if (-not $junctionTests.Contains('JunctionPlanUsesStructuralLayerHeightInsteadOfGround')) {
+            throw "Test 10.70 junction structural-height regression is missing."
+          }
+
+          Write-Host "Verified homogeneous structural junctions preserve layer elevation across road endpoints and crossing placement."
+
+      - name: Verify test 10.71 structural junction geometry
+        shell: pwsh
+        run: |
+          $generator = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $planner = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $rendererTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioJunctionStructureKind',
+            'AppendStructuralJunctionSurfaces',
+            'AppendHorizontalFootprint',
+            'AppendOutlineSkirt'
+          )) {
+            if (-not $generator.Contains($required)) {
+              throw "Test 10.71 structural junction geometry marker is missing: $required"
+            }
+          }
+
+          if (-not $planner.Contains('ResolveStructuralJunctionKind') -or
+              -not $planner.Contains('structureKind +')) {
+            throw "Test 10.71 planner does not separate ground/bridge/tunnel junction assets."
+          }
+
+          if (-not $coreTests.Contains('GeometryBuilderAddsBridgeSlabAndTunnelCeiling')) {
+            throw "Test 10.71 structural junction Core regression is missing."
+          }
+
+          if (-not $rendererTests.Contains('item.Spec.StructureKind')) {
+            throw "Test 10.71 structural junction planner regression is missing."
+          }
+
+          Write-Host "Verified bridge slab, tunnel ceiling and structure-specific junction asset signatures."
+
+      - name: Test OMSI core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
+
+      - name: Test native renderer
+        run: dotnet test tests/MapStudio.Renderer.Tests/MapStudio.Renderer.Tests.csproj --configuration Release --arch x64
+
+      - name: Publish native WinUI x64
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64 | Out-Null
+
+          dotnet publish src/MapStudio.Native/MapStudio.Native.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            -p:Platform=x64 `
+            -p:PublishReadyToRun=false `
+            -p:PublishTrimmed=false `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -p:Version=$env:VERSION `
+            -p:InformationalVersion="$env:VERSION+$env:GITHUB_SHA" `
+            --output artifacts/publish/win-x64
+
+          if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.exe")) {
+            throw "MapStudio.Native.exe was not produced."
+          }
+
+          if (-not (Test-Path "artifacts/publish/win-x64/MapStudio.Native.pri")) {
+            throw "MapStudio.Native.pri was not published. WinUI XAML resources would fail at startup."
+          }
+
+          Write-Host "Verified MapStudio.Native.pri is present in publish output."
+
+          New-Item -ItemType Directory -Force -Path artifacts/publish/win-x64/Docs | Out-Null
+          Copy-Item docs/pt-BR/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-pt-BR.md -Force
+          Copy-Item docs/en/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-en.md -Force
+
+          python tools/build_user_manual_pdf.py docs/pt-BR/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf --language pt-BR
+          if ($LASTEXITCODE -ne 0) {
+            throw "Portuguese PDF manual generation failed."
+          }
+
+          python tools/build_user_manual_pdf.py docs/en/USER_MANUAL.md artifacts/publish/win-x64/Docs/Manual-en.pdf --language en
+          if ($LASTEXITCODE -ne 0) {
+            throw "English PDF manual generation failed."
+          }
+
+          foreach ($manual in @(
+            "artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf",
+            "artifacts/publish/win-x64/Docs/Manual-en.pdf"
+          )) {
+            if (-not (Test-Path $manual)) {
+              throw "Bundled PDF manual is missing: $manual"
+            }
+
+            if ((Get-Item $manual).Length -lt 10000) {
+              throw "Bundled PDF manual is unexpectedly small: $manual"
+            }
+          }
+
+          $ptManualAsset = "artifacts/OMSI-Map-Studio-Manual-pt-BR-$env:VERSION.pdf"
+          $enManualAsset = "artifacts/OMSI-Map-Studio-Manual-en-$env:VERSION.pdf"
+          Copy-Item artifacts/publish/win-x64/Docs/Manual-pt-BR.pdf $ptManualAsset -Force
+          Copy-Item artifacts/publish/win-x64/Docs/Manual-en.pdf $enManualAsset -Force
+
+          Write-Host "Bundled PDF user manuals generated and copied to publish output."
+
+      - name: Run native startup smoke test
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:GITHUB_WORKSPACE "artifacts\publish\win-x64\MapStudio.Native.exe"
+          if (-not (Test-Path $exe)) {
+            throw "Native executable is missing before startup smoke test."
+          }
+
+          $log = Join-Path $env:LOCALAPPDATA "OMSI Map Studio Native Preview\Logs\startup.log"
+          if (Test-Path $log) {
+            Remove-Item $log -Force
+          }
+
+          $process = Start-Process -FilePath $exe -ArgumentList "--startup-smoke-test" -PassThru
+
+          if (-not $process.WaitForExit(45000)) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "Native startup smoke test timed out after 45 seconds."
+          }
+
+          if ($process.ExitCode -ne 0) {
+            throw "Native startup smoke test exited with code $($process.ExitCode)."
+          }
+
+          if (-not (Test-Path $log)) {
+            throw "Native startup smoke test did not create startup.log."
+          }
+
+          $startupLog = Get-Content $log -Raw
+
+          if (-not $startupLog.Contains("STARTUP_SMOKE_TEST_PASSED")) {
+            Write-Host $startupLog
+            throw "Native executable did not reach the successful startup marker."
+          }
+
+          if ($startupLog.Contains("FATAL stage=")) {
+            Write-Host $startupLog
+            throw "Native executable logged a fatal startup failure."
+          }
+
+          Write-Host "Native executable startup smoke test passed."
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: |
+          $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
+          Compress-Archive -Path "artifacts/publish/win-x64/*" -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $zip)" | Set-Content "$zip.sha256" -Encoding ascii
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build separate native preview installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+          }
+          if (-not (Test-Path $iscc)) {
+            throw "Inno Setup 6 not found."
+          }
+
+          & $iscc `
+            "/DAppVersion=$env:VERSION" `
+            "/DSourceDir=$env:GITHUB_WORKSPACE\artifacts\publish\win-x64" `
+            "/DOutputDir=$env:GITHUB_WORKSPACE\artifacts" `
+            "$env:GITHUB_WORKSPACE\installer\MapStudio.NativePreview.iss"
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+          $setup = "artifacts/OMSI-Map-Studio-Native-Preview-Setup-$env:VERSION-win-x64.exe"
+          if (-not (Test-Path $setup)) {
+            throw "Native preview installer was not produced."
+          }
+
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path -Leaf $setup)" | Set-Content "$setup.sha256" -Encoding ascii
+
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Add-Content artifacts/release-notes.md ""
+          Add-Content artifacts/release-notes.md "---"
+          Add-Content artifacts/release-notes.md ""
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OMSI-Map-Studio-${{ env.VERSION }}-win-x64
+          path: |
+            artifacts/OMSI-Map-Studio-${{ env.VERSION }}-portable-win-x64.zip
+            artifacts/OMSI-Map-Studio-${{ env.VERSION }}-portable-win-x64.zip.sha256
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-${{ env.VERSION }}-win-x64.exe
+            artifacts/OMSI-Map-Studio-Native-Preview-Setup-${{ env.VERSION }}-win-x64.exe.sha256
+            artifacts/OMSI-Map-Studio-Manual-pt-BR-${{ env.VERSION }}.pdf
+            artifacts/OMSI-Map-Studio-Manual-en-${{ env.VERSION }}.pdf
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $setup = "artifacts/OMSI-Map-Studio-Native-Preview-Setup-$env:VERSION-win-x64.exe"
+          $setupHash = "$setup.sha256"
+          $zip = "artifacts/OMSI-Map-Studio-$env:VERSION-portable-win-x64.zip"
+          $zipHash = "$zip.sha256"
+          $ptManual = "artifacts/OMSI-Map-Studio-Manual-pt-BR-$env:VERSION.pdf"
+          $enManual = "artifacts/OMSI-Map-Studio-Manual-en-$env:VERSION.pdf"
+
+          gh release view "$env:TAG" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:TAG" $setup $setupHash $zip $zipHash $ptManual $enManual --clobber
+          }
+          else {
+            gh release create "$env:TAG" $setup $setupHash $zip $zipHash $ptManual $enManual `
+              --target "$env:GITHUB_SHA" `
+              --title "OMSI Map Studio $env:TAG — Native Feature Preview" `
+              --notes-file artifacts/release-notes.md `
+              --prerelease
+          }

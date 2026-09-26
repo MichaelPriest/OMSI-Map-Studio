@@ -1,0 +1,46 @@
+name: Native Windows CI
+
+on:
+  pull_request:
+    branches:
+      - feature/alpha3-material-preview
+      - main
+    paths:
+      - "src/MapStudio.Core/**"
+      - "src/MapStudio.Native/**"
+      - "src/MapStudio.Renderer/**"
+      - "tests/MapStudio.Core.Tests/**"
+      - "tests/MapStudio.Renderer.Tests/**"
+      - ".github/workflows/native-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-native:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test OMSI core
+        run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
+
+      - name: Test renderer core
+        run: dotnet test tests/MapStudio.Renderer.Tests/MapStudio.Renderer.Tests.csproj --configuration Release --arch x64
+
+      - name: Build native WinUI host
+        run: dotnet build src/MapStudio.Native/MapStudio.Native.csproj --configuration Release -p:Platform=x64

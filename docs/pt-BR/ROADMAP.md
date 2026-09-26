@@ -111,7 +111,7 @@ O índice não substitui os arquivos OMSI. Ele é derivado deles e pode ser reco
 
 A base persistente usa um banco SQLite local por instalação OMSI. A atualização é executada em segundo plano e não bloqueia a edição. Em uma instalação já indexada, arquivos sem alteração são reaproveitados; uma falha do índice não impede a leitura direta dos arquivos OMSI.
 
-O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. Ainda faltam cache derivado, fila completa por prioridade e gerenciamento/LOD de recursos GPU para concluir a Fase A.
+O streaming automático por tiles agora é o modo padrão ao abrir mapas: os anéis 0–1 recebem conteúdo completo, o anel 2 recebe summary/metadata leve, terreno pesado fora da região ativa é descartado da UI e respostas regionais antigas são invalidadas por geração para não sobrescrever a posição atual da câmera. **Mapa completo** continua disponível como modo explícito de diagnóstico. O primeiro estágio de cache derivado em memória reutiliza parsing de SCO, SLI, O3D e X enquanto o fingerprint do arquivo permanece válido. O renderer também mantém um warm cache GPU limitado a 64 texturas antigas ou 128 MiB. O conteúdo completo dos tiles usados no streaming agora possui cache LRU de 32 entradas com fingerprint dos arquivos dependentes, permitindo reaproveitar os tiles sobrepostos ao mover a janela 3×3 sem reler tudo do disco. A navegação 3×3 também ganhou transição visível primeiro: se o tile alvo já está no snapshot atual, ele é focado imediatamente e o novo entorno é completado depois; em saltos fora da área carregada, o tile central é renderizado antes dos vizinhos. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e gerenciamento/LOD GPU por orçamento global para concluir a Fase A.
 
 ### 3.2 Cache derivado
 
@@ -239,32 +239,32 @@ Legenda:
 | Biblioteca moderna / preview | ✅ |
 | Ferramentas de construção em massa | ✅ |
 | Coordenadas / referência real / elevação | ✅/🟡 |
-| Criar e excluir tiles | ⬜ |
+| Criar e excluir tiles | 🟡 — criação e exclusão segura já integradas; remoção de tile intermediário segue bloqueada até reindexar referências dependentes |
 | Propriedades completas do tile | ⬜ |
-| Água nativa do tile/mapa | ⬜ |
+| Água nativa do tile/mapa | ✅ |
 | Lightmap / iluminação de tile | ⬜ |
 | Attach object → spline | 🟡 |
 | Attach object → object | 🟡 |
 | Parent / hierarchy editável | ⬜ |
 | Labels/opções específicas do objeto | ⬜ |
 | Mirror de spline | ⬜ |
-| Cant start/end | ⬜ |
-| Complete to… | ⬜ |
-| Spline export | ⬜ |
+| Cant start/end | ✅ |
+| Complete to… | ✅ — conecta fim→início compatíveis com solver reto/arco, raio máximo, vínculos transacionais e backup |
+| Spline export | ✅ — seleção múltipla das splines carregadas e exportação geométrica DirectX `.x` com UVs para Blender |
 | Paths editáveis | 🟡 |
-| Traffic Rules | ⬜ |
-| Speed limits | ⬜ |
-| Traffic density | ⬜ |
-| Vehicle restrictions | ⬜ |
-| Prioridades viárias | ⬜ |
+| Traffic Rules | ✅ |
+| Speed limits | ✅ — preset `speedlimit` com valor customizado por path e grupo de veículo |
+| Traffic density | ✅ — presets `trafficdensity` incluindo bloqueio do tráfego não agendado e densidades graduais |
+| Vehicle restrictions | ✅ — presets OMSI `no_cars`, `truck`, `bus` e `overtaking_prohib`, com suporte a `[rule]`/`[kill_rule]` |
+| Prioridades viárias | ✅ — presets `priority` alto/baixo por path, persistidos com backup |
 | AI paths / crossing behavior | ⬜ |
-| Traffic lights / signal phases | ⬜ |
-| Tracks | ⬜ |
-| Trips | ⬜ |
-| Stops/stations | ⬜ |
-| StationLinks | ⬜ |
-| Time profiles | ⬜ |
-| Timetable editor | ⬜ |
+| Traffic lights / signal phases | ✅ |
+| Tracks | ✅ |
+| Trips | ✅ |
+| Stops/stations | ✅ |
+| StationLinks | ✅ |
+| Time profiles | ✅ — editor visual nativo cria/exclui perfis, ajusta duração total e tempos acumulados por parada, preservando os dados OMSI brutos |
+| Timetable editor | 🟡 — Route Studio e a janela Timetable destacável já editam Tracks/Trips/Stops/StationLinks/Lines/Tours e perfis; Lines/Tours possuem tabela de saídas com adicionar/remover/reordenar, e Trips podem ser editados sem sair da janela Timetable. Chrono, calendários/serviços e fluxos avançados ainda evoluem |
 | Signal Routes | ⬜ |
 | Railway priorities/switches | ⬜ |
 | Environment settings | ⬜ |
@@ -292,7 +292,7 @@ Estado atual da Fase A:
 - ⬜ métricas internas completas de tempo de abertura;
 - 🟡 diagnóstico de cache: progresso e contagens do Asset Index já aparecem na tela da instalação OMSI.
 
-Ainda falta transformar o cache de fingerprints em cache derivado de geometria/material/thumbnail e concluir descarte/LOD de recursos GPU para marcar a Fase A como ✅.
+Já existem cache derivado inicial, cache LRU de conteúdo de tiles e retenção LRU GPU limitada. Ainda faltam cache persistente/mais amplo, fila completa por prioridade e descarte/LOD GPU por orçamento global para marcar a Fase A como ✅.
 
 Critério de conclusão:
 
@@ -379,6 +379,8 @@ Criar um editor de linha visual:
 
     path → track → stops → trip → profile → timetable
 
+Estado atual do Route Studio: preview visual de Track, Trip, StationLink e Line/Tours, lista navegável de segmentos reais `ID:pathIndex`, foco do trecho no viewport, overlay opcional de Paths OMSI e edição preservativa dos arquivos TTData existentes. A janela Timetable destacável edita Trip e perfis diretamente, além de Lines/Tours em tabela com inclusão, remoção e reordenação de saídas.
+
 Critério de conclusão:
 
 - uma linha de ônibus pode ser construída e validada no Map Studio sem retornar ao editor antigo para a parte operacional principal.
@@ -422,7 +424,8 @@ Continuar evoluindo ferramentas que não precisam existir no editor antigo:
 - replace tool;
 - elevação/depressão visual;
 - taludes/cortes;
-- pontes/túneis;
+- pontes;
+- ✅ túneis paramétricos por SLI real, com geração de perfil e paths;
 - lotes;
 - vegetação procedural;
 - regras de distribuição;
@@ -685,3 +688,55 @@ Babylon/WebView2 só será substituído se um protótipo isolado, sem React cont
 - centenas de objetos selecionáveis sem degradação perceptível.
 
 Se esses critérios falharem no runtime mínimo, a substituição deve atingir **somente o renderer/viewport**, preservando MapStudio.Core, formatos, cache, persistência e o restante do produto.
+
+
+## Novos diferenciais nativos — geração procedural e IA
+
+Além da paridade com o editor antigo, o roadmap passa a incluir oficialmente:
+
+- **geração automática de ruas** por traçado manual sobre o terreno;
+- **geração assistida por referência georreferenciada**, convertendo um grafo vetorial em splines OMSI reais;
+- **cruzamentos automáticos** derivados do mesmo grafo, com snap e validação de conectividade;
+- **Road Kit próprio do Map Studio**, sem dependência obrigatória de conteúdo de terceiros;
+- **Building Studio** para casas, prédios e outros volumes, gerando SCO/O3D editáveis;
+- uso opcional de fotos como referência/textura de fachada;
+- **IA conectável por adaptadores**, sem fornecedor obrigatório;
+- análise por IA apenas como sugestão estruturada e revisável;
+- suporte futuro a múltiplas fotos, extração de contorno, estimativa de escala, fachada, telhado, materiais, vegetação e mobiliário urbano;
+- preview obrigatório antes de persistir geração automática em mapa real.
+
+A prioridade de implementação é manter um único motor geométrico: traçado manual, dados vetoriais e IA devem alimentar o mesmo pipeline de geração, evitando formatos paralelos.
+
+
+---
+
+## Atualização arquitetural — host nativo é a direção atual
+
+A seção histórica **“Fase de estabilização do viewport”** acima registra a análise que levou à mudança de arquitetura. A decisão posterior já foi executada: o viewport de produção passou para **WinUI 3 + Direct3D 11**. React/WebView2 não é mais a direção do renderer principal.
+
+Estado atual dos diferenciais novos:
+
+- ✅ editor standalone com Workspace próprio, template/terreno inicial e criação/edição sem instalação do OMSI;
+- ✅ importação opcional de pastas de itens SCO/SLI para a biblioteca do Workspace;
+- ✅ atalho **Abrir OMSI** preservado como fonte opcional de mapas/assets;
+- ✅ chrome nativo remodelado com menu + ribbon desktop e barra de editor específica no fullscreen;
+- ✅ Road Kit próprio;
+- ✅ criador paramétrico de túneis SLI com pista, marcações, paredes, teto em arco, paths de tráfego e uso da Estrada fácil em curvas/gradientes;
+- ✅ Cant/Mirror avançado exposto no Inspector nativo com persistência preservativa e backup;
+- ✅ Complete to nativo com solver tangencial conservador, limite de raio e conexão Previous/Next transacional;
+- ✅ Spline Export nativo `.x` com seleção múltipla, malha real SLI e UVs para Blender;
+- ✅ grafo procedural de vias;
+- ✅ traçado manual;
+- ✅ GeoJSON georreferenciado;
+- ✅ OSM XML georreferenciado;
+- ✅ análise de vias da referência Google por IA;
+- ✅ preview D3D11 antes de persistir;
+- ✅ auto-link em continuidade linear segura;
+- ✅ junctions procedurais próprios;
+- ✅ persistência em batch com backup/rollback;
+- ✅ Building Studio procedural com O3D/SCO;
+- ✅ múltiplos tipos de telhado e aberturas de fachada;
+- ✅ contratos de IA independentes de fornecedor;
+- ✅ camada comercial/entitlements preparada, ainda sem cobrança aplicada no Alpha.
+
+A remoção de tiles intermediários continua conscientemente bloqueada até existir um reindexador que prove e atualize todas as referências dependentes do índice do tile. Essa limitação não deve ser contornada apenas removendo uma seção `[map]`.

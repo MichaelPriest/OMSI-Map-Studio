@@ -1059,3 +1059,20 @@ A prioridade usa a primeira superfície aproximada atingida pelo raio, reduzindo
 Foi adicionada uma segunda rota de seleção totalmente independente do raycast de triângulos. O editor projeta as caixas reais das malhas OMSI para coordenadas CSS do viewport e verifica diretamente se o cursor está sobre a área visual do objeto. Isso elimina diferenças de escala entre WebView2, DPI do Windows e framebuffer do Babylon.
 
 Para splines, o eixo real é projetado para a tela e a distância do cursor aos segmentos é calculada em pixels. A seleção também passa a ser confirmada já no pressionamento do botão esquerdo, com captura do ponteiro, pois a camada de seleção já não reconstrói a cena estrutural. O clique fica assim mais próximo do comportamento imediato do editor original do OMSI.
+
+
+## Arquitetura visual híbrida nativa — Desktop, fase 1
+
+A interface nativa WinUI 3 começou a convergir as quatro referências de design em um único sistema. O modo Desktop combina a estrutura **World Builder** com a flexibilidade de **Studio Panels**, sem retornar ao React/WebView.
+
+O shell Desktop agora usa uma barra global compacta: **Salvar**, **Desfazer**, **Refazer** e **F11** ficam à esquerda; o estado **WORKSPACE / Map Studio** fica centralizado; **Dia/noite**, **Workspace**, **Abrir OMSI** e o catálogo de mapas ficam à direita. O Workspace standalone continua sendo o fluxo principal, e o acesso opcional ao OMSI permanece explícito.
+
+O Explorer ganhou modos diretos para **Cena**, **Assets**, **Mapa** e **Transporte**. Os painéis laterais continuam redimensionáveis e recolhíveis pelas mesmas estruturas nativas; nenhuma função de biblioteca, transporte ou edição foi removida.
+
+A dock inferior foi simplificada para funcionar como uma barra de categorias de editor 3D. Os grandes blocos textuais de agrupamento foram substituídos por separadores discretos. Ações secundárias continuam acessíveis por contexto, sem eliminar seus handlers nativos.
+
+Uma nova **paleta contextual** fica acima da dock principal e muda junto com a ferramenta ativa. Ela já possui estados funcionais para Seleção, Objetos, Ruas, Pontes/Túneis, Prédios, Vegetação, Cruzamentos, Terreno, Água, Tráfego e Transporte. Em Ruas, os presets **Estrada fácil**, **Reta**, **Curva** e **Altura** reutilizam o pipeline real de splines e os controles nativos existentes; não são mocks visuais.
+
+O Inspector também passou para uma estrutura contextual em cards. A identidade do item, transformação, geometria/vínculos de spline, ações e ferramentas de terreno aparecem conforme o contexto. O card de terreno é ativado pela ferramenta Terreno, enquanto objeto e spline reutilizam o estado real de seleção/picking do viewport.
+
+Esta é a primeira fase do redesenho. O próximo estágio leva o mesmo modelo ao **F11**, combinando **Creator Focus** com **Minimal Floating Panels**: viewport dominante, Explorer/Biblioteca/Inspector flutuantes e reposicionáveis, sem simplesmente esticar o layout Desktop.

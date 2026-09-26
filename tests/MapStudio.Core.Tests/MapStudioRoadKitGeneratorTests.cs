@@ -1,0 +1,392 @@
+using MapStudio.Core.Omsi.Splines;
+using Xunit;
+
+namespace MapStudio.Core.Tests;
+
+public sealed class MapStudioRoadKitGeneratorTests
+{
+    [Fact]
+    public async Task GeneratorCreatesOriginalSplinePackAndBacksUpUpdates()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            var generator =
+                new MapStudioRoadKitGenerator();
+
+            var first =
+                await generator
+                    .InstallOrUpdateAsync(
+                        root);
+
+            Assert.Equal(
+                28,
+                first
+                    .SplineRelativePaths
+                    .Count);
+
+            Assert.Null(
+                first.BackupDirectory);
+
+            var reader =
+                new OmsiSplineDefinitionReader();
+
+            foreach (
+                var relativePath in
+                    first
+                        .SplineRelativePaths)
+            {
+                var fullPath =
+                    Path.Combine(
+                        root,
+                        relativePath
+                            .Replace(
+                                '\\',
+                                Path.DirectorySeparatorChar));
+
+                Assert.True(
+                    File.Exists(
+                        fullPath));
+
+                var definition =
+                    await reader
+                        .ReadAsync(
+                            fullPath);
+
+                Assert.True(
+                    definition.Exists);
+
+                Assert.NotEmpty(
+                    definition.Surfaces);
+
+                Assert.NotEmpty(
+                    definition.Paths);
+            }
+
+            var asphalt =
+                Path.Combine(
+                    first.PackDirectory,
+                    "Texture",
+                    "ms_asphalt.bmp");
+
+            var header =
+                await File
+                    .ReadAllBytesAsync(
+                        asphalt);
+
+            Assert.True(
+                header.Length >
+                54);
+
+            Assert.Equal(
+                (byte)'B',
+                header[0]);
+
+            Assert.Equal(
+                (byte)'M',
+                header[1]);
+
+            Assert.Equal(
+                256,
+                BitConverter.ToInt32(
+                    header,
+                    18));
+
+            Assert.Equal(
+                256,
+                BitConverter.ToInt32(
+                    header,
+                    22));
+
+            var editedSpline =
+                Path.Combine(
+                    first.PackDirectory,
+                    "ms_road_2lane_7m.sli");
+
+            await File.AppendAllTextAsync(
+                editedSpline,
+                "\r\n; local edit");
+
+            var second =
+                await generator
+                    .InstallOrUpdateAsync(
+                        root);
+
+            Assert.NotNull(
+                second.BackupDirectory);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        second.BackupDirectory!,
+                        "ms_road_2lane_7m.sli")));
+
+            var regenerated =
+                await File
+                    .ReadAllTextAsync(
+                        editedSpline);
+
+            Assert.DoesNotContain(
+                "local edit",
+                regenerated,
+                StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task GeneratorBuildsBridgeAndTunnelStructuralVariants()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-Structure-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var profile =
+                MapStudioStandardRoadCatalog
+                    .RoadTwoLaneWithSidewalk;
+
+            var reader =
+                new OmsiSplineDefinitionReader();
+
+            var ground =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            profile.FileName));
+
+            var bridge =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            MapStudioStandardRoadCatalog
+                                .GetBridgeFileName(
+                                    profile)));
+
+            var tunnel =
+                await reader
+                    .ReadAsync(
+                        Path.Combine(
+                            result.PackDirectory,
+                            MapStudioStandardRoadCatalog
+                                .GetTunnelFileName(
+                                    profile)));
+
+            Assert.True(
+                bridge.Exists);
+
+            Assert.True(
+                tunnel.Exists);
+
+            Assert.True(
+                bridge.Surfaces.Count >
+                ground.Surfaces.Count);
+
+            Assert.True(
+                tunnel.Surfaces.Count >
+                ground.Surfaces.Count);
+
+            Assert.Equal(
+                ground.Paths.Count,
+                bridge.Paths.Count);
+
+            Assert.Equal(
+                ground.Paths.Count,
+                tunnel.Paths.Count);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task LocalRoadProfilesUsePhysicalOmsiMeterWidths()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var reader =
+                new OmsiSplineDefinitionReader();
+
+            var narrow =
+                await reader.ReadAsync(
+                    Path.Combine(
+                        result.PackDirectory,
+                        "ms_road_local_5_5m.sli"));
+
+            var narrowMin =
+                narrow.Surfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.From.X,
+                            surface.To.X));
+
+            var narrowMax =
+                narrow.Surfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.X,
+                            surface.To.X));
+
+            Assert.Equal(
+                5.5,
+                narrowMax -
+                    narrowMin,
+                3);
+
+            var sidewalk =
+                await reader.ReadAsync(
+                    Path.Combine(
+                        result.PackDirectory,
+                        "ms_road_local_5_5m_sidewalk.sli"));
+
+            var sidewalkMin =
+                sidewalk.Surfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.From.X,
+                            surface.To.X));
+
+            var sidewalkMax =
+                sidewalk.Surfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.X,
+                            surface.To.X));
+
+            Assert.Equal(
+                8.5,
+                sidewalkMax -
+                    sidewalkMin,
+                3);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task DividedAvenueProvidesTrafficPedestrianAndMedianProfiles()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var avenue =
+                Path.Combine(
+                    result.PackDirectory,
+                    "ms_avenue_divided_4lane.sli");
+
+            var definition =
+                await new OmsiSplineDefinitionReader()
+                    .ReadAsync(
+                        avenue);
+
+            Assert.Contains(
+                definition.Paths,
+                path =>
+                    path.Type ==
+                    0 &&
+                    path.Direction ==
+                    0);
+
+            Assert.Contains(
+                definition.Paths,
+                path =>
+                    path.Type ==
+                    0 &&
+                    path.Direction ==
+                    1);
+
+            Assert.Contains(
+                definition.Paths,
+                path =>
+                    path.Type ==
+                    1);
+
+            Assert.True(
+                definition.Surfaces.Count >=
+                5);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+}
