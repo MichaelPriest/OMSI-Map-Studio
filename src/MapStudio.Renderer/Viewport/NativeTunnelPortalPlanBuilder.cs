@@ -30,6 +30,12 @@ public sealed record NativeTunnelPortalPlan(
 public sealed class NativeTunnelPortalPlanBuilder
 {
     private const double DefaultRoadWidthMeters = 7.0;
+    private const double PortalClearSideMarginMeters = 0.50;
+    private const double TerrainProbeOutsideMeters = 1.50;
+    private const double MinimumWingHeightMeters = 2.50;
+    private const double MaximumWingHeightMeters = 7.00;
+    private const double TerrainWingFreeboardMeters = 0.60;
+    private const double WingHeightQuantumMeters = 0.50;
 
     public NativeTunnelPortalPlan Build(
         NativeSceneSnapshot scene,
@@ -146,16 +152,74 @@ public sealed class NativeTunnelPortalPlanBuilder
 
             var roadWidth = ResolveRoadWidth(request);
             var quantizedWidth = Math.Ceiling(roadWidth * 2.0) / 2.0;
+            var terrainCenter =
+                NativeTerrainSampler
+                    .GetHeightAtWorldPoint(
+                        scene,
+                        worldPoint.X,
+                        worldPoint.Z);
+
+            var probeDistance =
+                quantizedWidth / 2.0 +
+                PortalClearSideMarginMeters +
+                TerrainProbeOutsideMeters;
+
+            var yaw =
+                NormalizeDegrees(rotation) *
+                Math.PI /
+                180.0;
+
+            var lateralX =
+                Math.Cos(yaw);
+            var lateralZ =
+                -Math.Sin(yaw);
+
+            var leftTerrain =
+                NativeTerrainSampler
+                    .GetHeightAtWorldPoint(
+                        scene,
+                        worldPoint.X -
+                            lateralX *
+                            probeDistance,
+                        worldPoint.Z -
+                            lateralZ *
+                            probeDistance);
+
+            var rightTerrain =
+                NativeTerrainSampler
+                    .GetHeightAtWorldPoint(
+                        scene,
+                        worldPoint.X +
+                            lateralX *
+                            probeDistance,
+                        worldPoint.Z +
+                            lateralZ *
+                            probeDistance);
+
+            var leftWingHeight =
+                ResolveWingHeight(
+                    terrainCenter,
+                    leftTerrain);
+
+            var rightWingHeight =
+                ResolveWingHeight(
+                    terrainCenter,
+                    rightTerrain);
+
             var assetName = string.Create(
                 CultureInfo.InvariantCulture,
-                $"MS_TunnelPortal_W{(int)Math.Round(quantizedWidth * 10):000}");
+                $"MS_TunnelPortal_W{(int)Math.Round(quantizedWidth * 10):000}_L{(int)Math.Round(leftWingHeight * 10):000}_R{(int)Math.Round(rightWingHeight * 10):000}");
 
             items.Add(
                 new NativeTunnelPortalPlanItem(
                     assetName,
                     new MapStudioTunnelPortalSpec(
                         assetName,
-                        quantizedWidth),
+                        quantizedWidth,
+                        LeftWingHeightMeters:
+                            leftWingHeight,
+                        RightWingHeightMeters:
+                            rightWingHeight),
                     tile.Reference,
                     worldPoint.X - tileX * 300.0,
                     worldPoint.Z - tileY * 300.0,
@@ -210,6 +274,30 @@ public sealed class NativeTunnelPortalPlanBuilder
             profile?.TotalWidthMeters ?? DefaultRoadWidthMeters,
             3.0,
             30.0);
+    }
+
+    private static double ResolveWingHeight(
+        double centerTerrain,
+        double sideTerrain)
+    {
+        var required =
+            MinimumWingHeightMeters +
+            Math.Max(
+                0.0,
+                sideTerrain -
+                centerTerrain) +
+            TerrainWingFreeboardMeters;
+
+        var clamped =
+            Math.Clamp(
+                required,
+                MinimumWingHeightMeters,
+                MaximumWingHeightMeters);
+
+        return Math.Ceiling(
+            clamped /
+            WingHeightQuantumMeters) *
+            WingHeightQuantumMeters;
     }
 
     private static double ResolveEndRotation(
