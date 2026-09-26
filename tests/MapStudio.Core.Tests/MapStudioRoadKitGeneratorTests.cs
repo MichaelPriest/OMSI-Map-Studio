@@ -297,10 +297,12 @@ public sealed class MapStudioRoadKitGeneratorTests
                 source,
                 StringComparison.Ordinal);
 
-            Assert.Contains(
-                "[profile]\r\n4\r\n",
-                source,
-                StringComparison.Ordinal);
+            Assert.True(
+                bridge.Surfaces.Count(
+                    surface =>
+                        surface.TextureIndex ==
+                            4) >=
+                16);
 
             Assert.True(
                 bridge.Surfaces.Count >=
