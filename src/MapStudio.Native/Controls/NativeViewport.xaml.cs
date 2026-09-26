@@ -83,6 +83,11 @@ public sealed partial class NativeViewport : UserControl
     private bool _swapChainBound;
     private bool _terrainPointPickActive;
     private bool _terrainPointPickPersistent;
+    private bool _terrainBrushPreviewEnabled;
+    private double _terrainBrushRadiusMeters = 20.0;
+    private double _terrainBrushFeather = 0.25;
+    private double _lastPointerLogicalX = double.NaN;
+    private double _lastPointerLogicalY = double.NaN;
     private readonly InputCursor _defaultCursor =
         InputSystemCursor.Create(
             InputSystemCursorShape.Arrow);
@@ -995,6 +1000,204 @@ public sealed partial class NativeViewport : UserControl
         }
 
         return started;
+    }
+
+    public void SetTerrainBrushPreview(
+        bool enabled,
+        double radiusMeters,
+        double feather)
+    {
+        _terrainBrushPreviewEnabled =
+            enabled;
+
+        if (
+            double.IsFinite(
+                radiusMeters) &&
+            radiusMeters >
+                0)
+        {
+            _terrainBrushRadiusMeters =
+                radiusMeters;
+        }
+
+        if (
+            double.IsFinite(
+                feather))
+        {
+            _terrainBrushFeather =
+                Math.Clamp(
+                    feather,
+                    0,
+                    1);
+        }
+
+        if (!enabled)
+        {
+            TerrainBrushLayer.Visibility =
+                Visibility.Collapsed;
+
+            return;
+        }
+
+        if (
+            double.IsFinite(
+                _lastPointerLogicalX) &&
+            double.IsFinite(
+                _lastPointerLogicalY))
+        {
+            UpdateTerrainBrushVisual(
+                _lastPointerLogicalX,
+                _lastPointerLogicalY);
+        }
+    }
+
+    private void UpdateTerrainBrushVisual(
+        double logicalX,
+        double logicalY)
+    {
+        if (
+            !_terrainBrushPreviewEnabled ||
+            _runtime is null)
+        {
+            TerrainBrushLayer.Visibility =
+                Visibility.Collapsed;
+
+            return;
+        }
+
+        var scaleX =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleX);
+
+        var scaleY =
+            Math.Max(
+                0.01,
+                SwapChainSurface
+                    .CompositionScaleY);
+
+        var pixelX =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    logicalX *
+                    scaleX));
+
+        var pixelY =
+            (uint)Math.Max(
+                0,
+                Math.Round(
+                    logicalY *
+                    scaleY));
+
+        if (
+            !_runtime.TryGetTerrainBrushScreenRadius(
+                pixelX,
+                pixelY,
+                _terrainBrushRadiusMeters,
+                out var centerPixel,
+                out var radiusPixels))
+        {
+            TerrainBrushLayer.Visibility =
+                Visibility.Collapsed;
+
+            return;
+        }
+
+        var logicalCenterX =
+            centerPixel.X /
+            scaleX;
+
+        var logicalCenterY =
+            centerPixel.Y /
+            scaleY;
+
+        var logicalRadius =
+            radiusPixels /
+            (
+                (
+                    scaleX +
+                    scaleY
+                ) *
+                0.5
+            );
+
+        logicalRadius =
+            Math.Clamp(
+                logicalRadius,
+                4.0,
+                2000.0);
+
+        var outerSize =
+            logicalRadius *
+            2.0;
+
+        TerrainBrushOuterRing.Width =
+            outerSize;
+
+        TerrainBrushOuterRing.Height =
+            outerSize;
+
+        Canvas.SetLeft(
+            TerrainBrushOuterRing,
+            logicalCenterX -
+            logicalRadius);
+
+        Canvas.SetTop(
+            TerrainBrushOuterRing,
+            logicalCenterY -
+            logicalRadius);
+
+        var innerRadius =
+            logicalRadius *
+            (
+                1.0 -
+                _terrainBrushFeather
+            );
+
+        var innerSize =
+            innerRadius *
+            2.0;
+
+        TerrainBrushInnerRing.Width =
+            innerSize;
+
+        TerrainBrushInnerRing.Height =
+            innerSize;
+
+        Canvas.SetLeft(
+            TerrainBrushInnerRing,
+            logicalCenterX -
+            innerRadius);
+
+        Canvas.SetTop(
+            TerrainBrushInnerRing,
+            logicalCenterY -
+            innerRadius);
+
+        TerrainBrushInnerRing.Visibility =
+            _terrainBrushFeather >
+                0.001
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        TerrainBrushLabelText.Text =
+            $"raio {_terrainBrushRadiusMeters:0.#} m · feather {_terrainBrushFeather:P0}";
+
+        Canvas.SetLeft(
+            TerrainBrushLabel,
+            logicalCenterX +
+            logicalRadius +
+            8);
+
+        Canvas.SetTop(
+            TerrainBrushLabel,
+            logicalCenterY -
+            12);
+
+        TerrainBrushLayer.Visibility =
+            Visibility.Visible;
     }
 
     public void BeginTerrainPointPick()
@@ -3014,6 +3217,16 @@ public sealed partial class NativeViewport : UserControl
             e.GetCurrentPoint(
                 InputSurface);
 
+        _lastPointerLogicalX =
+            point.Position.X;
+
+        _lastPointerLogicalY =
+            point.Position.Y;
+
+        UpdateTerrainBrushVisual(
+            point.Position.X,
+            point.Position.Y);
+
         if (
             !_isPanning &&
             !_isOrbiting)
@@ -4550,6 +4763,15 @@ public sealed partial class NativeViewport : UserControl
             uint.MaxValue;
 
         _runtime?.ClearHover();
+
+        TerrainBrushLayer.Visibility =
+            Visibility.Collapsed;
+
+        _lastPointerLogicalX =
+            double.NaN;
+
+        _lastPointerLogicalY =
+            double.NaN;
 
         if (
             !_isPanning &&
