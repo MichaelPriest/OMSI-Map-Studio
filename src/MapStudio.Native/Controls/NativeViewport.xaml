@@ -33,6 +33,38 @@
         </Border>
 
         <Border
+            x:Name="JunctionFocusPanel"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Top"
+            Margin="12"
+            Padding="10,7"
+            Visibility="Collapsed"
+            IsHitTestVisible="False"
+            Background="#E60A141D"
+            BorderBrush="#668DB3CA"
+            BorderThickness="1"
+            CornerRadius="8">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="9">
+                <TextBlock Text="ENCONTRO"
+                           FontSize="10"
+                           FontWeight="Bold"
+                           Foreground="#FF8DB3CA"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="JunctionFocusText"
+                           Text="Splines — / —"
+                           FontSize="11"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <TextBlock x:Name="JunctionFocusHintText"
+                           Text="Use como alvo para posicionar um junction"
+                           FontSize="10"
+                           Foreground="#FF9FC7DE"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
+
+        <Border
             x:Name="TrafficPathFocusPanel"
             HorizontalAlignment="Center"
             VerticalAlignment="Top"

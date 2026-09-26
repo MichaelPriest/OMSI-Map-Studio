@@ -1649,6 +1649,31 @@ public sealed partial class NativeViewport : UserControl
         return changed;
     }
 
+    public void SetJunctionFocusPreview(
+        NativeJunctionSuggestion suggestion)
+    {
+        ArgumentNullException.ThrowIfNull(
+            suggestion);
+
+        JunctionFocusPanel.Visibility =
+            Visibility.Visible;
+
+        JunctionFocusText.Text =
+            $"Splines #{suggestion.SplineA} / #{suggestion.SplineB} · tile {suggestion.TileX},{suggestion.TileY}";
+
+        JunctionFocusHintText.Text =
+            $"X {suggestion.X:F1} · Y {suggestion.Y:F1} · giro {suggestion.Rotation:F1}° · usar como alvo";
+    }
+
+    public void ClearJunctionFocusPreview()
+    {
+        JunctionFocusPanel.Visibility =
+            Visibility.Collapsed;
+
+        JunctionFocusText.Text =
+            "Splines — / —";
+    }
+
     public void SetTrafficPathFocusPreview(
         NativeTrafficPathChoice choice)
     {

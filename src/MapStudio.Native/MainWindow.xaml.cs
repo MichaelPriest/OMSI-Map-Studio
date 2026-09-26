@@ -4545,12 +4545,16 @@ public sealed partial class MainWindow : Window
                 NativeJunctionSuggestion
                     suggestion)
         {
+            Viewport
+                .SetJunctionFocusPreview(
+                    suggestion);
+
             Viewport.FocusWorldPoint(
                 suggestion.WorldPoint,
                 55);
 
             StatusText.Text =
-                $"Encontro #{suggestion.SplineA}/#{suggestion.SplineB} · tile {suggestion.TileX},{suggestion.TileY} · duplo clique para usar como alvo.";
+                $"Encontro #{suggestion.SplineA}/#{suggestion.SplineB} · tile {suggestion.TileX},{suggestion.TileY} · duplo clique ou use 'Usar alvo'.";
 
             return;
         }
@@ -4567,6 +4571,196 @@ public sealed partial class MainWindow : Window
             focus: false);
     }
 
+    private IReadOnlyList<
+        NativeJunctionSuggestion>
+        GetVisibleJunctionSuggestions()
+    {
+        if (
+            ExplorerListView.ItemsSource is
+                IEnumerable<
+                    NativeJunctionSuggestion>
+                    visible)
+        {
+            return visible.ToArray();
+        }
+
+        return _junctionSuggestions;
+    }
+
+    private void OnPreviousJunctionSuggestionClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ShiftJunctionSuggestion(
+            -1);
+
+    private void OnNextJunctionSuggestionClick(
+        object sender,
+        RoutedEventArgs e) =>
+        ShiftJunctionSuggestion(
+            1);
+
+    private void ShiftJunctionSuggestion(
+        int delta)
+    {
+        var visible =
+            GetVisibleJunctionSuggestions();
+
+        if (visible.Count == 0)
+        {
+            Viewport
+                .ClearJunctionFocusPreview();
+
+            StatusText.Text =
+                "Cruzamentos: nenhum encontro está disponível no filtro atual.";
+            return;
+        }
+
+        var current =
+            ExplorerListView.SelectedItem is
+                NativeJunctionSuggestion
+                    selected
+                ? Array.FindIndex(
+                    visible.ToArray(),
+                    item =>
+                        string.Equals(
+                            item.Key,
+                            selected.Key,
+                            StringComparison.Ordinal))
+                : -1;
+
+        var next =
+            current < 0
+                ? (
+                    delta < 0
+                        ? visible.Count - 1
+                        : 0
+                )
+                : (
+                    current +
+                    delta +
+                    visible.Count
+                ) %
+                visible.Count;
+
+        ExplorerListView.SelectedItem =
+            visible[next];
+
+        ExplorerListView.ScrollIntoView(
+            visible[next]);
+    }
+
+    private void OnFocusJunctionSuggestionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            ExplorerListView.SelectedItem is not
+                NativeJunctionSuggestion
+                    suggestion)
+        {
+            StatusText.Text =
+                "Cruzamentos: selecione um encontro primeiro.";
+            return;
+        }
+
+        Viewport
+            .SetJunctionFocusPreview(
+                suggestion);
+
+        Viewport.FocusWorldPoint(
+            suggestion.WorldPoint,
+            55);
+
+        StatusText.Text =
+            $"Encontro #{suggestion.SplineA}/#{suggestion.SplineB} focado no viewport.";
+    }
+
+    private async void OnUseJunctionSuggestionClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (
+            ExplorerListView.SelectedItem is not
+                NativeJunctionSuggestion
+                    suggestion)
+        {
+            var visible =
+                GetVisibleJunctionSuggestions();
+
+            if (visible.Count == 0)
+            {
+                StatusText.Text =
+                    "Cruzamentos: nenhum encontro está disponível para usar como alvo.";
+                return;
+            }
+
+            suggestion =
+                visible[0];
+
+            ExplorerListView.SelectedItem =
+                suggestion;
+        }
+
+        await UseJunctionSuggestionAsync(
+            suggestion);
+    }
+
+    private async Task UseJunctionSuggestionAsync(
+        NativeJunctionSuggestion suggestion)
+    {
+        _junctionPlacementTarget =
+            suggestion;
+
+        Viewport
+            .SetJunctionFocusPreview(
+                suggestion);
+
+        Viewport.FocusWorldPoint(
+            suggestion.WorldPoint,
+            55);
+
+        ObjectPlacementModeComboBox
+            .SelectedIndex =
+            0;
+
+        await ActivateLibraryToolAsync(
+            1,
+            null,
+            $"Alvo de cruzamento definido entre splines #{suggestion.SplineA} e #{suggestion.SplineB}. Escolha um SCO compatível e clique Posicionar.");
+
+        var junctionIndex =
+            _libraryGroupOptions
+                .Select(
+                    (option, index) =>
+                        (
+                            option,
+                            index
+                        ))
+                .FirstOrDefault(
+                    pair =>
+                        pair.option.Group ==
+                        OmsiAssetLibraryGroup
+                            .Junctions)
+                .index;
+
+        if (
+            junctionIndex >= 0 &&
+            junctionIndex <
+                _libraryGroupOptions.Count)
+        {
+            LibraryViewComboBox
+                .SelectedIndex =
+                0;
+
+            LibraryGroupComboBox
+                .SelectedIndex =
+                junctionIndex;
+
+            RefreshLibrarySubcategoryOptions();
+            RefreshLibraryFilter();
+        }
+    }
+
     private async void OnExplorerDoubleTapped(
         object sender,
         DoubleTappedRoutedEventArgs e)
@@ -4576,53 +4770,8 @@ public sealed partial class MainWindow : Window
                 NativeJunctionSuggestion
                     suggestion)
         {
-            _junctionPlacementTarget =
-                suggestion;
-
-            Viewport.FocusWorldPoint(
-                suggestion.WorldPoint,
-                55);
-
-            ObjectPlacementModeComboBox
-                .SelectedIndex =
-                0;
-
-            await ActivateLibraryToolAsync(
-                1,
-                null,
-                $"Alvo de cruzamento definido entre splines #{suggestion.SplineA} e #{suggestion.SplineB}. Escolha um SCO compatível e clique Posicionar.");
-
-            var junctionIndex =
-                _libraryGroupOptions
-                    .Select(
-                        (option, index) =>
-                            (
-                                option,
-                                index
-                            ))
-                    .FirstOrDefault(
-                        pair =>
-                            pair.option.Group ==
-                            OmsiAssetLibraryGroup
-                                .Junctions)
-                    .index;
-
-            if (
-                junctionIndex >= 0 &&
-                junctionIndex <
-                    _libraryGroupOptions.Count)
-            {
-                LibraryViewComboBox
-                    .SelectedIndex =
-                    0;
-
-                LibraryGroupComboBox
-                    .SelectedIndex =
-                    junctionIndex;
-
-                RefreshLibrarySubcategoryOptions();
-                RefreshLibraryFilter();
-            }
+            await UseJunctionSuggestionAsync(
+                suggestion);
 
             return;
         }
@@ -8645,6 +8794,27 @@ public sealed partial class MainWindow : Window
         if (
             !ReferenceEquals(
                 activeButton,
+                ToolTrafficButton) &&
+            !ReferenceEquals(
+                activeButton,
+                ToolTransportButton))
+        {
+            Viewport
+                .ClearTrafficPathFocusPreview();
+        }
+
+        if (
+            !ReferenceEquals(
+                activeButton,
+                ToolCrossingsButton))
+        {
+            Viewport
+                .ClearJunctionFocusPreview();
+        }
+
+        if (
+            !ReferenceEquals(
+                activeButton,
                 ToolVegetationButton) &&
             _vegetationShapeCaptureMode)
         {
@@ -10889,6 +11059,12 @@ public sealed partial class MainWindow : Window
                 .GetJunctionSuggestions();
 
         RefreshJunctionSuggestionFilter();
+
+        if (_junctionSuggestions.Count == 0)
+        {
+            Viewport
+                .ClearJunctionFocusPreview();
+        }
 
         StatusText.Text =
             _junctionSuggestions.Count == 0
