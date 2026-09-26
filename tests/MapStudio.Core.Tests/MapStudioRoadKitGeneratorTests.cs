@@ -339,6 +339,124 @@ public sealed class MapStudioRoadKitGeneratorTests
     }
 
     [Fact]
+    public async Task GeneratorBuildsTunnelLiningWithDedicatedMaterialAndPortalClearance()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-RoadKit-TunnelLining-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            var result =
+                await new MapStudioRoadKitGenerator()
+                    .InstallOrUpdateAsync(
+                        root);
+
+            var profile =
+                MapStudioStandardRoadCatalog
+                    .RoadTwoLaneWithSidewalk;
+
+            var tunnelPath =
+                Path.Combine(
+                    result.PackDirectory,
+                    MapStudioStandardRoadCatalog
+                        .GetTunnelFileName(
+                            profile));
+
+            var tunnel =
+                await new OmsiSplineDefinitionReader()
+                    .ReadAsync(
+                        tunnelPath);
+
+            var source =
+                await File.ReadAllTextAsync(
+                    tunnelPath);
+
+            Assert.Contains(
+                result.TexturePaths,
+                texturePath =>
+                    string.Equals(
+                        Path.GetFileName(
+                            texturePath),
+                        "ms_tunnel_lining.bmp",
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            Assert.Contains(
+                "ms_tunnel_lining.bmp",
+                source,
+                StringComparison.Ordinal);
+
+            Assert.True(
+                tunnel.Surfaces.Count(
+                    surface =>
+                        surface.TextureIndex ==
+                            5) >=
+                8);
+
+            var tunnelSurfaces =
+                tunnel.Surfaces
+                    .Where(
+                        surface =>
+                            surface.TextureIndex ==
+                                5)
+                    .ToArray();
+
+            var minimumX =
+                tunnelSurfaces.Min(
+                    surface =>
+                        Math.Min(
+                            surface.From.X,
+                            surface.To.X));
+
+            var maximumX =
+                tunnelSurfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.X,
+                            surface.To.X));
+
+            var maximumHeight =
+                tunnelSurfaces.Max(
+                    surface =>
+                        Math.Max(
+                            surface.From.Z,
+                            surface.To.Z));
+
+            Assert.True(
+                maximumX -
+                    minimumX >
+                profile.TotalWidthMeters +
+                    1.5);
+
+            Assert.InRange(
+                maximumHeight,
+                4.94,
+                5.01);
+
+            Assert.Equal(
+                "1.5.0",
+                MapStudioRoadKitGenerator
+                    .PackVersion);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task LocalRoadProfilesUsePhysicalOmsiMeterWidths()
     {
         var root =
