@@ -23,6 +23,65 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
     }
 
     [Fact]
+    public void BuildGeometryAdaptsWingHeightsIndependently()
+    {
+        var geometry =
+            new MapStudioTunnelPortalAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioTunnelPortalSpec(
+                        "MS_TunnelPortal_W080_L060_R030",
+                        8.0,
+                        LeftWingHeightMeters:
+                            6.0,
+                        RightWingHeightMeters:
+                            3.0));
+
+        var vertices =
+            Enumerable.Range(
+                0,
+                geometry.Positions.Length / 3)
+                .Select(
+                    index =>
+                        (
+                            X:
+                                geometry.Positions[
+                                    index * 3],
+                            Y:
+                                geometry.Positions[
+                                    index * 3 + 1]
+                        ))
+                .ToArray();
+
+        var leftOuter =
+            vertices
+                .Where(
+                    vertex =>
+                        vertex.X <
+                        -4.9f)
+                .ToArray();
+
+        var rightOuter =
+            vertices
+                .Where(
+                    vertex =>
+                        vertex.X >
+                        4.9f)
+                .ToArray();
+
+        Assert.NotEmpty(leftOuter);
+        Assert.NotEmpty(rightOuter);
+
+        Assert.True(
+            leftOuter.Max(
+                vertex =>
+                    vertex.Y) >
+            rightOuter.Max(
+                vertex =>
+                    vertex.Y) +
+                2.0f);
+    }
+
+    [Fact]
     public void BuildGeometryCreatesRealPortalFrame()
     {
         var geometry =
