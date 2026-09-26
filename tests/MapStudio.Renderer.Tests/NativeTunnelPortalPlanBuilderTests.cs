@@ -1,3 +1,4 @@
+using Xunit;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
