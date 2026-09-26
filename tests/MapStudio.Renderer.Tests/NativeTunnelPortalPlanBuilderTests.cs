@@ -221,6 +221,146 @@ public sealed class NativeTunnelPortalPlanBuilderTests
     }
 
     [Fact]
+    public void BuilderExtendsWingDepthWhereTerrainRisesOutward()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        const int cellCount =
+            60;
+
+        var heights =
+            new float[
+                (cellCount + 1) *
+                (cellCount + 1)];
+
+        for (
+            var row = 0;
+            row <= cellCount;
+            row++)
+        {
+            for (
+                var column = 0;
+                column <= cellCount;
+                column++)
+            {
+                var outwardRise =
+                    column >
+                        cellCount / 2
+                        ? Math.Max(
+                            0,
+                            cellCount / 2 -
+                            row) *
+                          0.9f
+                        : 0.0f;
+
+                heights[
+                    row *
+                    (cellCount + 1) +
+                    column] =
+                    12.0f +
+                    outwardRise;
+            }
+        }
+
+        var terrain =
+            new OmsiTerrainGrid(
+                cellCount,
+                heights);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var request =
+            new NativeSplinePlacementRequest(
+                reference,
+                @"Splines\MapStudio_RoadKit\ms_road_2lane_7m_tunnel.sli",
+                -1,
+                150,
+                150,
+                0,
+                0,
+                40,
+                0,
+                0,
+                0,
+                false,
+                new System.Numerics.Vector3(
+                    150,
+                    12,
+                    150),
+                new System.Numerics.Vector3(
+                    150,
+                    12,
+                    190),
+                SourceLayer:
+                    -1);
+
+        var plan =
+            new NativeTunnelPortalPlanBuilder()
+                .Build(
+                    scene,
+                    new NativeProceduralRoadPlacementBuildResult(
+                        [request],
+                        [],
+                        0));
+
+        Assert.Equal(
+            2,
+            plan.Items.Count);
+
+        var startPortal =
+            Assert.Single(
+                plan.Items,
+                item =>
+                    item.IsRunStart);
+
+        Assert.True(
+            startPortal.Spec.LeftWingDepthMeters >
+            startPortal.Spec.RightWingDepthMeters);
+
+        Assert.Contains(
+            "_DL",
+            startPortal.AssetName,
+            StringComparison.Ordinal);
+
+        Assert.Contains(
+            "_DR",
+            startPortal.AssetName,
+            StringComparison.Ordinal);
+
+        Assert.All(
+            terrain.Heights,
+            (height, index) =>
+                Assert.Equal(
+                    heights[index],
+                    height));
+    }
+
+    [Fact]
     public void BuilderDoesNotCreatePortalsForBridgeRun()
     {
         var reference = new OmsiTileReference(
