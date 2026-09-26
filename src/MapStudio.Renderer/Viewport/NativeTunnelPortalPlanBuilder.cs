@@ -3,6 +3,7 @@ using System.Numerics;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Core.Omsi.Structures;
+using MapStudio.Renderer.Scene;
 
 namespace MapStudio.Renderer.Viewport;
 
