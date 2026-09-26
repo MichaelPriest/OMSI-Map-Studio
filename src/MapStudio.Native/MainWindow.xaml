@@ -281,6 +281,9 @@
                     <MenuFlyoutItem
                         Text="Exportar mapa como pacote OMSI..."
                         Click="OnExportWorkspaceOmsiPackageClick" />
+                    <MenuFlyoutItem
+                        Text="Exportar para Proton Bus..."
+                        Click="OnExportProtonBusPackageClick" />
                     <MenuFlyoutSeparator />
                     <MenuFlyoutItem
                         Text="Abrir OMSI..."
