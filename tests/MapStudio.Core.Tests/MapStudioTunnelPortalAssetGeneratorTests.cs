@@ -57,7 +57,7 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
                 .Where(
                     vertex =>
                         vertex.X <
-                        -5.0f)
+                        -5.8f)
                 .ToArray();
 
         var rightOuter =
@@ -65,7 +65,7 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
                 .Where(
                     vertex =>
                         vertex.X >
-                        5.0f)
+                        5.8f)
                 .ToArray();
 
         Assert.NotEmpty(leftOuter);
@@ -120,7 +120,7 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
                 .Where(
                     vertex =>
                         vertex.X <
-                        -5.0f)
+                        -5.8f)
                 .ToArray();
 
         var rightOuter =
@@ -128,7 +128,7 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
                 .Where(
                     vertex =>
                         vertex.X >
-                        5.0f)
+                        5.8f)
                 .ToArray();
 
         var leftDepth =
