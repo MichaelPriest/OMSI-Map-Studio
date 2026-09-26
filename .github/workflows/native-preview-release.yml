@@ -106,6 +106,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.73-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.74-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.74-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.75-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.75-native.md"
   workflow_dispatch:
 
 permissions:
@@ -116,8 +118,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.74-native
-  TAG: v0.2.0-alpha.5-test.10.74-native
+  VERSION: 0.2.0-alpha.5-test.10.75-native
+  TAG: v0.2.0-alpha.5-test.10.75-native
 
 jobs:
   build-native-preview:
@@ -2952,6 +2954,35 @@ jobs:
 
           Write-Host "Verified generated SCO/O3D tunnel portals and continuous-run endpoint planning."
 
+      - name: Verify test 10.75 continuous tunnel lining
+        shell: pwsh
+        run: |
+          $roadKit = Get-Content src/MapStudio.Core/Omsi/Splines/MapStudioRoadKitGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRoadKitGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'PackVersion =',
+            '"1.5.0"',
+            'ms_tunnel_lining.bmp',
+            'CreateTunnelLiningSegments',
+            'clearHeight =',
+            '4.50',
+            'liningThickness =',
+            '0.35',
+            'tunnelTexture =',
+            '5'
+          )) {
+            if (-not $roadKit.Contains($required)) {
+              throw "Test 10.75 tunnel-lining marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('GeneratorBuildsTunnelLiningWithDedicatedMaterialAndPortalClearance')) {
+            throw "Test 10.75 tunnel-lining regression coverage is missing."
+          }
+
+          Write-Host "Verified dedicated tunnel lining material, portal-compatible clearance and continuous structural shell."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3106,11 +3137,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.74-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.75-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.74-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.75-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
