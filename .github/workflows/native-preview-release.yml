@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.59: lane-aware internal junction movements with tangent-aligned turns.
+# Test 10.60: Road Kit lane-marking stubs on procedural junction mouths.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.59-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.59-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.60-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.60-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.59-native
-  TAG: v0.2.0-alpha.5-test.10.59-native
+  VERSION: 0.2.0-alpha.5-test.10.60-native
+  TAG: v0.2.0-alpha.5-test.10.60-native
 
 jobs:
   build-native-preview:
@@ -2373,6 +2373,34 @@ jobs:
 
           Write-Host "Verified per-lane junction entry/exit offsets, proportional lane pairing and tangent-aligned Bezier control."
 
+      - name: Verify test 10.60 junction lane-mouth markings
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $renderTests = Get-Content tests/MapStudio.Renderer.Tests/MapStudioGeneratedJunctionRenderingTests.cs -Raw
+
+          foreach ($required in @(
+            'EnsureJunctionMarkingAsync',
+            'AppendLaneMouthMarkings',
+            'AppendLaneMouthMarkingQuad',
+            'ms_junction_marking.bmp'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.60 junction marking marker is missing: $required"
+            }
+          }
+
+          if (-not $coreTests.Contains('GeometryBuilderAddsLaneMouthMarkingStubs')) {
+            throw "Test 10.60 junction marking geometry regression test is missing."
+          }
+
+          if (-not $renderTests.Contains('GeneratedJunctionLoadsItsOwnTextureAndMesh')) {
+            throw "Test 10.60 junction renderer coverage is missing."
+          }
+
+          Write-Host "Verified lane-divider marking stubs, dedicated material/texture and renderer loading on generated junctions."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2527,11 +2555,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.59-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.60-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.59-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.60-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

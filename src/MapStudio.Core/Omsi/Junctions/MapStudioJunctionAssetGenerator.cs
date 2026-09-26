@@ -283,6 +283,12 @@ public sealed class MapStudioJunctionAssetGenerator
                     cancellationToken)
                 .ConfigureAwait(false);
 
+            await EnsureJunctionMarkingAsync(
+                    root,
+                    textureDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
             var geometry =
                 BuildGeometry(
                     normalized);
@@ -459,6 +465,53 @@ public sealed class MapStudioJunctionAssetGenerator
             .ConfigureAwait(false);
     }
 
+
+    private static async Task EnsureJunctionMarkingAsync(
+        string omsiRoot,
+        string textureDirectory,
+        CancellationToken cancellationToken)
+    {
+        var target =
+            Path.Combine(
+                textureDirectory,
+                "ms_junction_marking.bmp");
+
+        var roadKitMarking =
+            Path.Combine(
+                omsiRoot,
+                "Splines",
+                MapStudioRoadKitGenerator
+                    .PackFolderName,
+                "Texture",
+                "ms_marking.bmp");
+
+        if (File.Exists(
+                roadKitMarking))
+        {
+            File.Copy(
+                roadKitMarking,
+                target,
+                overwrite:
+                    true);
+
+            return;
+        }
+
+        await MapStudioGeneratedTextureFactory
+            .EnsureBmpAsync(
+                textureDirectory,
+                "ms_junction_marking.bmp",
+                64,
+                64,
+                static (_, _) =>
+                    new MapStudioGeneratedRgb(
+                        238,
+                        236,
+                        218),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public OmsiO3dGeometry BuildGeometry(
         MapStudioJunctionSpec spec)
     {
@@ -613,6 +666,15 @@ public sealed class MapStudioJunctionAssetGenerator
                 0);
         }
 
+        AppendLaneMouthMarkings(
+            normalized,
+            extent,
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials);
+
         return new OmsiO3dGeometry(
             true,
             null,
@@ -634,8 +696,226 @@ public sealed class MapStudioJunctionAssetGenerator
                     0,
                     0,
                     8,
-                    "ms_junction_asphalt.bmp")
+                    "ms_junction_asphalt.bmp"),
+                new OmsiO3dMaterial(
+                    1,
+                    1,
+                    1,
+                    1,
+                    0.05f,
+                    0.05f,
+                    0.05f,
+                    0,
+                    0,
+                    0,
+                    4,
+                    "ms_junction_marking.bmp")
             ]);
+    }
+
+    private static void AppendLaneMouthMarkings(
+        MapStudioJunctionSpec spec,
+        double extent,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        const double markingWidth =
+            0.12;
+
+        var markingLength =
+            Math.Clamp(
+                extent *
+                    0.45,
+                1.25,
+                3.5);
+
+        var startDistance =
+            Math.Max(
+                0.25,
+                extent -
+                    markingLength);
+
+        var endDistance =
+            Math.Max(
+                startDistance +
+                    0.1,
+                extent -
+                    0.05);
+
+        foreach (
+            var arm in spec.Arms)
+        {
+            if (
+                arm.LaneCount <=
+                1)
+            {
+                continue;
+            }
+
+            var laneWidth =
+                Math.Clamp(
+                    arm.LaneWidthMeters,
+                    2.0,
+                    4.5);
+
+            var roadWidth =
+                arm.LaneCount *
+                laneWidth;
+
+            for (
+                var laneBoundary = 1;
+                laneBoundary <
+                    arm.LaneCount;
+                laneBoundary++)
+            {
+                var lateralOffset =
+                    -roadWidth /
+                        2.0 +
+                    laneBoundary *
+                        laneWidth;
+
+                AppendLaneMouthMarkingQuad(
+                    arm.AngleDegrees,
+                    startDistance,
+                    endDistance,
+                    lateralOffset,
+                    markingWidth,
+                    spec.SurfaceHeightMeters +
+                        0.004,
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials);
+            }
+        }
+    }
+
+    private static void AppendLaneMouthMarkingQuad(
+        double angleDegrees,
+        double startDistance,
+        double endDistance,
+        double lateralOffset,
+        double markingWidth,
+        double height,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        var halfWidth =
+            markingWidth /
+            2.0;
+
+        var startLeft =
+            PointOnArmLane(
+                angleDegrees,
+                startDistance,
+                lateralOffset -
+                    halfWidth);
+
+        var startRight =
+            PointOnArmLane(
+                angleDegrees,
+                startDistance,
+                lateralOffset +
+                    halfWidth);
+
+        var endLeft =
+            PointOnArmLane(
+                angleDegrees,
+                endDistance,
+                lateralOffset -
+                    halfWidth);
+
+        var endRight =
+            PointOnArmLane(
+                angleDegrees,
+                endDistance,
+                lateralOffset +
+                    halfWidth);
+
+        var baseIndex =
+            checked(
+                (uint)(
+                    positions.Count /
+                    3));
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)startLeft.X,
+                (float)height,
+                (float)startLeft.Z),
+            0,
+            1);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)startRight.X,
+                (float)height,
+                (float)startRight.Z),
+            1,
+            1);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)endLeft.X,
+                (float)height,
+                (float)endLeft.Z),
+            0,
+            0);
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                (float)endRight.X,
+                (float)height,
+                (float)endRight.Z),
+            1,
+            0);
+
+        indices.Add(
+            baseIndex);
+
+        indices.Add(
+            baseIndex +
+            2);
+
+        indices.Add(
+            baseIndex +
+            3);
+
+        triangleMaterials.Add(
+            1);
+
+        indices.Add(
+            baseIndex);
+
+        indices.Add(
+            baseIndex +
+            3);
+
+        indices.Add(
+            baseIndex +
+            1);
+
+        triangleMaterials.Add(
+            1);
     }
 
     private static IReadOnlyList<

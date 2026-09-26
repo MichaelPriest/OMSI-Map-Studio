@@ -35,8 +35,25 @@ public sealed class MapStudioJunctionAssetGeneratorTests
         Assert.True(
             geometry.IsLoaded);
 
-        Assert.Single(
-            geometry.Materials);
+        Assert.Equal(
+            2,
+            geometry.Materials.Count);
+
+        Assert.Contains(
+            geometry.Materials,
+            material =>
+                string.Equals(
+                    material.TextureName,
+                    "ms_junction_asphalt.bmp",
+                    StringComparison.OrdinalIgnoreCase));
+
+        Assert.Contains(
+            geometry.Materials,
+            material =>
+                string.Equals(
+                    material.TextureName,
+                    "ms_junction_marking.bmp",
+                    StringComparison.OrdinalIgnoreCase));
 
         Assert.InRange(
             geometry
@@ -169,6 +186,82 @@ public sealed class MapStudioJunctionAssetGeneratorTests
             diagonal.Z,
             3.45f,
             3.55f);
+    }
+
+
+    [Fact]
+    public void GeometryBuilderAddsLaneMouthMarkingStubs()
+    {
+        var geometry =
+            new MapStudioJunctionAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioJunctionSpec(
+                        "Marked cross",
+                        [
+                            new(
+                                0,
+                                7,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                90,
+                                14,
+                                4,
+                                false,
+                                3.5),
+                            new(
+                                180,
+                                7,
+                                2,
+                                false,
+                                3.5),
+                            new(
+                                270,
+                                14,
+                                4,
+                                false,
+                                3.5)
+                        ]));
+
+        var markingTriangles =
+            geometry
+                .TriangleMaterialIndices
+                .Count(
+                    material =>
+                        material ==
+                        1);
+
+        // Two 2-lane mouths contribute one divider each and
+        // two 4-lane mouths contribute three dividers each.
+        // Every divider is a two-triangle quad.
+        Assert.Equal(
+            16,
+            markingTriangles);
+
+        Assert.All(
+            Enumerable.Range(
+                0,
+                geometry
+                    .Positions
+                    .Length /
+                3)
+                .Where(
+                    index =>
+                        geometry
+                            .Positions[
+                                index *
+                                3 +
+                                1] >
+                            0.102f),
+            index =>
+                Assert.InRange(
+                    geometry.Positions[
+                        index *
+                        3 +
+                        1],
+                    0.103f,
+                    0.107f));
     }
 
     [Fact]
@@ -585,10 +678,24 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                 0);
 
             Assert.Equal(
-                "ms_junction_asphalt.bmp",
-                Assert.Single(
-                    mesh.Materials)
-                    .TextureName);
+                2,
+                mesh.Materials.Count);
+
+            Assert.Contains(
+                mesh.Materials,
+                material =>
+                    string.Equals(
+                        material.TextureName,
+                        "ms_junction_asphalt.bmp",
+                        StringComparison.OrdinalIgnoreCase));
+
+            Assert.Contains(
+                mesh.Materials,
+                material =>
+                    string.Equals(
+                        material.TextureName,
+                        "ms_junction_marking.bmp",
+                        StringComparison.OrdinalIgnoreCase));
 
             Assert.True(
                 File.Exists(
@@ -596,6 +703,13 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                         result.ObjectDirectory,
                         "Texture",
                         "ms_junction_asphalt.bmp")));
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        result.ObjectDirectory,
+                        "Texture",
+                        "ms_junction_marking.bmp")));
         }
         finally
         {

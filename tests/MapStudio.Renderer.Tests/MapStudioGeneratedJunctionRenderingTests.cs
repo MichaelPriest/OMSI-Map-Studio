@@ -351,17 +351,22 @@ public sealed class MapStudioGeneratedJunctionRenderingTests
             Assert.True(
                 mesh.Geometry.IsLoaded);
 
-            var texture =
-                Assert.Single(
-                    mesh.MaterialTexturePaths);
+            Assert.Equal(
+                2,
+                mesh.MaterialTexturePaths.Count);
 
-            Assert.False(
-                string.IsNullOrWhiteSpace(
-                    texture));
+            Assert.All(
+                mesh.MaterialTexturePaths,
+                texture =>
+                {
+                    Assert.False(
+                        string.IsNullOrWhiteSpace(
+                            texture));
 
-            Assert.True(
-                File.Exists(
-                    texture!));
+                    Assert.True(
+                        File.Exists(
+                            texture!));
+                });
         }
         finally
         {
