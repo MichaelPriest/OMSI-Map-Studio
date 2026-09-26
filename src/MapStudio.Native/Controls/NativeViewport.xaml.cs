@@ -310,6 +310,17 @@ public sealed partial class NativeViewport : UserControl
             [],
             0);
 
+    public NativeTunnelPortalPlan
+        BuildTunnelPortalPlan(
+            NativeProceduralRoadPlacementBuildResult
+                placement) =>
+        _runtime
+            ?.BuildTunnelPortalPlan(
+                placement) ??
+        new NativeTunnelPortalPlan(
+            [],
+            0);
+
     public NativeOsmVegetationPlacementBuildResult
         BuildOsmVegetationPlacementRequests(
             IReadOnlyList<MapStudioProjectedVegetationPoint> points,
