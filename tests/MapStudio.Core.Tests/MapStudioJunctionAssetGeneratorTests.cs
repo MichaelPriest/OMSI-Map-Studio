@@ -112,6 +112,115 @@ public sealed class MapStudioJunctionAssetGeneratorTests
     }
 
 
+
+    [Fact]
+    public void GeometryBuilderAddsBridgeSlabAndTunnelCeiling()
+    {
+        var arms =
+            new MapStudioJunctionArm[]
+            {
+                new(
+                    0,
+                    7),
+                new(
+                    90,
+                    7),
+                new(
+                    180,
+                    7),
+                new(
+                    270,
+                    7)
+            };
+
+        var generator =
+            new MapStudioJunctionAssetGenerator();
+
+        var ground =
+            generator.BuildGeometry(
+                new MapStudioJunctionSpec(
+                    "Ground",
+                    arms));
+
+        var bridge =
+            generator.BuildGeometry(
+                new MapStudioJunctionSpec(
+                    "Bridge",
+                    arms,
+                    StructureKind:
+                        MapStudioJunctionStructureKind
+                            .Bridge));
+
+        var tunnel =
+            generator.BuildGeometry(
+                new MapStudioJunctionSpec(
+                    "Tunnel",
+                    arms,
+                    StructureKind:
+                        MapStudioJunctionStructureKind
+                            .Tunnel));
+
+        Assert.True(
+            bridge.Positions.Length >
+            ground.Positions.Length);
+
+        Assert.True(
+            tunnel.Positions.Length >
+            ground.Positions.Length);
+
+        var bridgeMinimumY =
+            Enumerable
+                .Range(
+                    0,
+                    bridge.Positions.Length /
+                        3)
+                .Select(
+                    index =>
+                        bridge.Positions[
+                            index *
+                            3 +
+                            1])
+                .Min();
+
+        var tunnelMaximumY =
+            Enumerable
+                .Range(
+                    0,
+                    tunnel.Positions.Length /
+                        3)
+                .Select(
+                    index =>
+                        tunnel.Positions[
+                            index *
+                            3 +
+                            1])
+                .Max();
+
+        Assert.InRange(
+            bridgeMinimumY,
+            -0.199f,
+            -0.197f);
+
+        Assert.InRange(
+            tunnelMaximumY,
+            4.301f,
+            4.303f);
+
+        Assert.True(
+            bridge
+                .TriangleMaterialIndices
+                .Count(
+                    material =>
+                        material ==
+                            2) >
+            ground
+                .TriangleMaterialIndices
+                .Count(
+                    material =>
+                        material ==
+                            2));
+    }
+
     [Fact]
     public void GeometryBuilderCutsBackOutsideCrossCornersToRoadWidth()
     {

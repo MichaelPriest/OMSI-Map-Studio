@@ -1,4 +1,5 @@
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
 using MapStudio.Renderer.Scene;
@@ -413,6 +414,11 @@ public sealed class NativeProceduralJunctionPlanBuilderTests
             item.WorldPoint.Y,
             4.799f,
             4.801f);
+
+        Assert.Equal(
+            MapStudioJunctionStructureKind
+                .Bridge,
+            item.Spec.StructureKind);
 
         Assert.InRange(
             Math.Abs(

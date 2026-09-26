@@ -16,10 +16,19 @@ public sealed record MapStudioJunctionArm(
     int InboundLaneCount = -1,
     int OutboundLaneCount = -1);
 
+public enum MapStudioJunctionStructureKind
+{
+    Ground,
+    Bridge,
+    Tunnel
+}
+
 public sealed record MapStudioJunctionSpec(
     string Name,
     IReadOnlyList<MapStudioJunctionArm> Arms,
-    double SurfaceHeightMeters = 0.102)
+    double SurfaceHeightMeters = 0.102,
+    MapStudioJunctionStructureKind StructureKind =
+        MapStudioJunctionStructureKind.Ground)
 {
     public MapStudioJunctionSpec Normalize()
     {
@@ -98,7 +107,15 @@ public sealed record MapStudioJunctionSpec(
                         ? SurfaceHeightMeters
                         : 0.102,
                     0,
-                    1)
+                    1),
+            StructureKind =
+                Enum.IsDefined(
+                    typeof(
+                        MapStudioJunctionStructureKind),
+                    StructureKind)
+                    ? StructureKind
+                    : MapStudioJunctionStructureKind
+                        .Ground
         };
     }
 
@@ -751,6 +768,15 @@ public sealed class MapStudioJunctionAssetGenerator
                 0);
         }
 
+        AppendStructuralJunctionSurfaces(
+            normalized,
+            outline,
+            positions,
+            normals,
+            uvs,
+            indices,
+            triangleMaterials);
+
         AppendSidewalkMouthSurfaces(
             normalized,
             extent,
@@ -818,6 +844,295 @@ public sealed class MapStudioJunctionAssetGenerator
                     4,
                     "ms_junction_sidewalk.bmp")
             ]);
+    }
+
+
+    private static void AppendStructuralJunctionSurfaces(
+        MapStudioJunctionSpec spec,
+        IReadOnlyList<JunctionOutlinePoint> outline,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        switch (spec.StructureKind)
+        {
+            case MapStudioJunctionStructureKind.Bridge:
+                var lowerHeight =
+                    spec.SurfaceHeightMeters -
+                    0.30;
+
+                AppendHorizontalFootprint(
+                    outline,
+                    lowerHeight,
+                    normalY:
+                        -1,
+                    reverseWinding:
+                        true,
+                    materialIndex:
+                        2,
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials);
+
+                AppendOutlineSkirt(
+                    outline,
+                    spec.SurfaceHeightMeters,
+                    lowerHeight,
+                    materialIndex:
+                        2,
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials);
+
+                break;
+
+            case MapStudioJunctionStructureKind.Tunnel:
+                AppendHorizontalFootprint(
+                    outline,
+                    spec.SurfaceHeightMeters +
+                        4.20,
+                    normalY:
+                        -1,
+                    reverseWinding:
+                        true,
+                    materialIndex:
+                        2,
+                    positions,
+                    normals,
+                    uvs,
+                    indices,
+                    triangleMaterials);
+
+                break;
+        }
+    }
+
+    private static void AppendHorizontalFootprint(
+        IReadOnlyList<JunctionOutlinePoint> outline,
+        double height,
+        float normalY,
+        bool reverseWinding,
+        ushort materialIndex,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        var baseIndex =
+            checked(
+                (uint)(
+                    positions.Count /
+                    3));
+
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            new Vector3(
+                0,
+                (float)height,
+                0),
+            new Vector3(
+                0,
+                normalY,
+                0),
+            0.5f,
+            0.5f);
+
+        foreach (var point in outline)
+        {
+            AddVertex(
+                positions,
+                normals,
+                uvs,
+                new Vector3(
+                    (float)point.X,
+                    (float)height,
+                    (float)point.Z),
+                new Vector3(
+                    0,
+                    normalY,
+                    0),
+                (float)(
+                    0.5 +
+                    point.X /
+                    20.0),
+                (float)(
+                    0.5 -
+                    point.Z /
+                    20.0));
+        }
+
+        for (
+            var index = 0;
+            index < outline.Count;
+            index++)
+        {
+            var current =
+                baseIndex +
+                checked(
+                    (uint)(
+                        index +
+                        1));
+
+            var next =
+                baseIndex +
+                checked(
+                    (uint)(
+                        (
+                            index +
+                            1
+                        ) %
+                        outline.Count +
+                        1));
+
+            indices.Add(
+                baseIndex);
+
+            indices.Add(
+                reverseWinding
+                    ? next
+                    : current);
+
+            indices.Add(
+                reverseWinding
+                    ? current
+                    : next);
+
+            triangleMaterials.Add(
+                materialIndex);
+        }
+    }
+
+    private static void AppendOutlineSkirt(
+        IReadOnlyList<JunctionOutlinePoint> outline,
+        double topHeight,
+        double bottomHeight,
+        ushort materialIndex,
+        List<float> positions,
+        List<float> normals,
+        List<float> uvs,
+        List<uint> indices,
+        List<ushort> triangleMaterials)
+    {
+        for (
+            var index = 0;
+            index < outline.Count;
+            index++)
+        {
+            var current =
+                outline[index];
+
+            var next =
+                outline[
+                    (
+                        index +
+                        1
+                    ) %
+                    outline.Count];
+
+            var midpoint =
+                new Vector3(
+                    (float)(
+                        current.X +
+                        next.X),
+                    0,
+                    (float)(
+                        current.Z +
+                        next.Z));
+
+            var normal =
+                midpoint.LengthSquared() >
+                    0.000001f
+                    ? Vector3.Normalize(
+                        midpoint)
+                    : Vector3.UnitX;
+
+            var baseIndex =
+                checked(
+                    (uint)(
+                        positions.Count /
+                        3));
+
+            AddVertex(
+                positions,
+                normals,
+                uvs,
+                new Vector3(
+                    (float)current.X,
+                    (float)topHeight,
+                    (float)current.Z),
+                normal,
+                0,
+                0);
+
+            AddVertex(
+                positions,
+                normals,
+                uvs,
+                new Vector3(
+                    (float)current.X,
+                    (float)bottomHeight,
+                    (float)current.Z),
+                normal,
+                0,
+                1);
+
+            AddVertex(
+                positions,
+                normals,
+                uvs,
+                new Vector3(
+                    (float)next.X,
+                    (float)bottomHeight,
+                    (float)next.Z),
+                normal,
+                1,
+                1);
+
+            AddVertex(
+                positions,
+                normals,
+                uvs,
+                new Vector3(
+                    (float)next.X,
+                    (float)topHeight,
+                    (float)next.Z),
+                normal,
+                1,
+                0);
+
+            indices.Add(
+                baseIndex);
+            indices.Add(
+                baseIndex +
+                1);
+            indices.Add(
+                baseIndex +
+                2);
+
+            triangleMaterials.Add(
+                materialIndex);
+
+            indices.Add(
+                baseIndex);
+            indices.Add(
+                baseIndex +
+                2);
+            indices.Add(
+                baseIndex +
+                3);
+
+            triangleMaterials.Add(
+                materialIndex);
+        }
     }
 
     private static void AppendSidewalkMouthSurfaces(
@@ -2156,6 +2471,7 @@ public sealed class MapStudioJunctionAssetGenerator
         $"OMSI Map Studio Junction\n" +
         $"Name={spec.Name}\n" +
         $"Arms={spec.Arms.Count}\n" +
+        $"Structure={spec.StructureKind}\n" +
         $"InternalPaths={pathCount}\n";
 
     private static (
@@ -2187,6 +2503,23 @@ public sealed class MapStudioJunctionAssetGenerator
         ICollection<float> uvs,
         Vector3 position,
         float u,
+        float v) =>
+        AddVertex(
+            positions,
+            normals,
+            uvs,
+            position,
+            Vector3.UnitY,
+            u,
+            v);
+
+    private static void AddVertex(
+        ICollection<float> positions,
+        ICollection<float> normals,
+        ICollection<float> uvs,
+        Vector3 position,
+        Vector3 normal,
+        float u,
         float v)
     {
         positions.Add(
@@ -2199,13 +2532,13 @@ public sealed class MapStudioJunctionAssetGenerator
             position.Z);
 
         normals.Add(
-            0);
+            normal.X);
 
         normals.Add(
-            1);
+            normal.Y);
 
         normals.Add(
-            0);
+            normal.Z);
 
         uvs.Add(
             u);

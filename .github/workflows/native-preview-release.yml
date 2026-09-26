@@ -98,6 +98,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.69-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md"
   workflow_dispatch:
 
 permissions:
@@ -108,8 +110,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.70-native
-  TAG: v0.2.0-alpha.5-test.10.70-native
+  VERSION: 0.2.0-alpha.5-test.10.71-native
+  TAG: v0.2.0-alpha.5-test.10.71-native
 
 jobs:
   build-native-preview:
@@ -2777,6 +2779,40 @@ jobs:
 
           Write-Host "Verified homogeneous structural junctions preserve layer elevation across road endpoints and crossing placement."
 
+      - name: Verify test 10.71 structural junction geometry
+        shell: pwsh
+        run: |
+          $generator = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $planner = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralJunctionPlanBuilder.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+          $rendererTests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralJunctionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioJunctionStructureKind',
+            'AppendStructuralJunctionSurfaces',
+            'AppendHorizontalFootprint',
+            'AppendOutlineSkirt'
+          )) {
+            if (-not $generator.Contains($required)) {
+              throw "Test 10.71 structural junction geometry marker is missing: $required"
+            }
+          }
+
+          if (-not $planner.Contains('ResolveStructuralJunctionKind') -or
+              -not $planner.Contains('structureKind +')) {
+            throw "Test 10.71 planner does not separate ground/bridge/tunnel junction assets."
+          }
+
+          if (-not $coreTests.Contains('GeometryBuilderAddsBridgeSlabAndTunnelCeiling')) {
+            throw "Test 10.71 structural junction Core regression is missing."
+          }
+
+          if (-not $rendererTests.Contains('item.Spec.StructureKind')) {
+            throw "Test 10.71 structural junction planner regression is missing."
+          }
+
+          Write-Host "Verified bridge slab, tunnel ceiling and structure-specific junction asset signatures."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2931,11 +2967,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.70-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.71-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.70-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.71-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

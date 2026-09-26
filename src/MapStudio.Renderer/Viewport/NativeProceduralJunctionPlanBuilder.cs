@@ -126,6 +126,10 @@ public sealed class NativeProceduralJunctionPlanBuilder
                             item.Segment)
                     .ToArray();
 
+            var structureKind =
+                ResolveStructuralJunctionKind(
+                    incidentSegments);
+
             height +=
                 ResolveStructuralJunctionHeightOffset(
                     incidentSegments);
@@ -190,6 +194,8 @@ public sealed class NativeProceduralJunctionPlanBuilder
             }
 
             var signature =
+                structureKind +
+                "|" +
                 string.Join(
                     ";",
                     canonical.Arms
@@ -215,7 +221,9 @@ public sealed class NativeProceduralJunctionPlanBuilder
             var spec =
                 new MapStudioJunctionSpec(
                     assetName,
-                    canonical.Arms);
+                    canonical.Arms,
+                    StructureKind:
+                        structureKind);
 
             items.Add(
                 new NativeProceduralJunctionPlanItem(
@@ -242,6 +250,68 @@ public sealed class NativeProceduralJunctionPlanBuilder
             skipped);
     }
 
+
+    private static MapStudioJunctionStructureKind
+        ResolveStructuralJunctionKind(
+            IReadOnlyList<
+                MapStudioRoadGraphSegment>
+                segments)
+    {
+        if (
+            segments.Count <
+            3)
+        {
+            return MapStudioJunctionStructureKind
+                .Ground;
+        }
+
+        var first =
+            segments[0];
+
+        if (
+            !IsStructuralJunctionSegment(
+                first) ||
+            segments.Any(
+                segment =>
+                    !IsStructuralJunctionSegment(
+                        segment) ||
+                    !HasCompatibleStructuralGrade(
+                        first,
+                        segment)))
+        {
+            return MapStudioJunctionStructureKind
+                .Ground;
+        }
+
+        if (
+            first.Bridge &&
+            !first.Tunnel)
+        {
+            return MapStudioJunctionStructureKind
+                .Bridge;
+        }
+
+        if (
+            first.Tunnel &&
+            !first.Bridge)
+        {
+            return MapStudioJunctionStructureKind
+                .Tunnel;
+        }
+
+        return (first.Layer ?? 0) switch
+        {
+            > 0 =>
+                MapStudioJunctionStructureKind
+                    .Bridge,
+            < 0 =>
+                MapStudioJunctionStructureKind
+                    .Tunnel,
+            _ =>
+                MapStudioJunctionStructureKind
+                    .Ground
+        };
+    }
 
     private static double
         ResolveStructuralJunctionHeightOffset(
