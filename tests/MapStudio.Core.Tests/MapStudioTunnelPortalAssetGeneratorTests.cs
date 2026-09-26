@@ -1,3 +1,4 @@
+using Xunit;
 using MapStudio.Core.Omsi.Structures;
 
 namespace MapStudio.Core.Tests;
