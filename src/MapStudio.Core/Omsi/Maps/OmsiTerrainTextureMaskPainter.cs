@@ -320,7 +320,7 @@ public static class OmsiTerrainTextureMaskPainter
             false;
 
         for (
-            var current = 0,
+            int current = 0,
                 previous =
                     polygon.Count -
                     1;
@@ -385,7 +385,7 @@ public static class OmsiTerrainTextureMaskPainter
             double.PositiveInfinity;
 
         for (
-            var current = 0,
+            int current = 0,
                 previous =
                     polygon.Count -
                     1;
