@@ -454,4 +454,34 @@ public sealed class OmsiTerrainEditingTests
     }
 
 
+
+    [Fact]
+    public void BuildSplinePreviewBand_OffsetsRoadAndFeatherEdges()
+    {
+        var preview =
+            OmsiTerrainLeveler
+                .BuildSplinePreviewBand(
+                    splineWorldX: 100,
+                    splineWorldY: 10,
+                    splineWorldZ: 100,
+                    rotationDegrees: 0,
+                    length: 80,
+                    radius: 0,
+                    gradientStart: 0,
+                    gradientEnd: 0,
+                    halfWidth: 5,
+                    featherWidth: 10,
+                    verticalOffset: 1);
+
+        Assert.True(preview.Centerline.Count > 2);
+        Assert.Equal(preview.Centerline.Count, preview.InnerLeft.Count);
+        Assert.Equal(100f, preview.Centerline[0].X, 3);
+        Assert.Equal(11f, preview.Centerline[0].Y, 3);
+        Assert.Equal(105f, preview.InnerLeft[0].X, 3);
+        Assert.Equal(95f, preview.InnerRight[0].X, 3);
+        Assert.Equal(115f, preview.OuterLeft[0].X, 3);
+        Assert.Equal(85f, preview.OuterRight[0].X, 3);
+    }
+
+
 }

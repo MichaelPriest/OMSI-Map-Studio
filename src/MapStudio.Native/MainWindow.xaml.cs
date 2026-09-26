@@ -1194,6 +1194,8 @@ public sealed partial class MainWindow : Window
                 _selectionInfo =
                     info;
 
+                RefreshTerrainSplinePreview();
+
                 SynchronizeTrafficProgramFromSelection(
                     info);
 
@@ -4918,6 +4920,9 @@ public sealed partial class MainWindow : Window
         ConformTerrainToSplineButton.IsEnabled =
             false;
 
+        Viewport
+            .ClearTerrainSplinePreview();
+
         SelectionText.Text =
             "Sem seleção";
 
@@ -7112,6 +7117,79 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 "Não foi possível nivelar: o início ou o fim da spline está fora do terreno carregado.";
+        }
+    }
+
+
+    private void OnTerrainSplinePreviewValueChanged(
+        NumberBox sender,
+        NumberBoxValueChangedEventArgs args) =>
+        RefreshTerrainSplinePreview();
+
+    private void RefreshTerrainSplinePreview()
+    {
+        if (
+            Viewport is null ||
+            TerrainSplineHalfWidthBox is null ||
+            TerrainSplineFeatherBox is null ||
+            TerrainSplineVerticalOffsetBox is null ||
+            _selectionInfo is not
+                {
+                    Kind: PickingKind.Spline,
+                    Length: > 0.001
+                } selection ||
+            selection.Radius is not double radius ||
+            selection.GradientStart is not double gradientStart ||
+            selection.GradientEnd is not double gradientEnd)
+        {
+            Viewport?.ClearTerrainSplinePreview();
+            return;
+        }
+
+        var halfWidth = TerrainSplineHalfWidthBox.Value;
+        var featherWidth = TerrainSplineFeatherBox.Value;
+        var verticalOffset = TerrainSplineVerticalOffsetBox.Value;
+
+        if (
+            !double.IsFinite(halfWidth) ||
+            halfWidth <= 0 ||
+            !double.IsFinite(featherWidth) ||
+            featherWidth < 0 ||
+            !double.IsFinite(verticalOffset))
+        {
+            Viewport.ClearTerrainSplinePreview();
+            return;
+        }
+
+        try
+        {
+            var splineWorldX =
+                OmsiTileGrid.GetOriginX(selection.TileX) +
+                selection.X;
+
+            var splineWorldZ =
+                OmsiTileGrid.GetOriginZ(selection.TileY) +
+                selection.Y;
+
+            var preview =
+                OmsiTerrainLeveler.BuildSplinePreviewBand(
+                    splineWorldX,
+                    selection.Z,
+                    splineWorldZ,
+                    selection.Rotation,
+                    selection.Length ?? 0,
+                    radius,
+                    gradientStart,
+                    gradientEnd,
+                    halfWidth,
+                    featherWidth,
+                    verticalOffset);
+
+            Viewport.SetTerrainSplinePreview(preview);
+        }
+        catch
+        {
+            Viewport.ClearTerrainSplinePreview();
         }
     }
 

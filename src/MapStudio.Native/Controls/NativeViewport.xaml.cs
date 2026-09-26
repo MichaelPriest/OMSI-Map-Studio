@@ -84,6 +84,7 @@ public sealed partial class NativeViewport : UserControl
     private bool _terrainPointPickActive;
     private bool _terrainPointPickPersistent;
     private bool _terrainBrushPreviewEnabled;
+    private OmsiTerrainSplinePreviewBand? _terrainSplinePreviewBand;
     private double _terrainBrushRadiusMeters = 20.0;
     private double _terrainBrushFeather = 0.25;
     private double _lastPointerLogicalX = double.NaN;
@@ -1048,6 +1049,93 @@ public sealed partial class NativeViewport : UserControl
             UpdateTerrainBrushVisual(
                 _lastPointerLogicalX,
                 _lastPointerLogicalY);
+        }
+    }
+
+    public void SetTerrainSplinePreview(
+        OmsiTerrainSplinePreviewBand? preview)
+    {
+        _terrainSplinePreviewBand = preview;
+        UpdateTerrainSplinePreviewVisual();
+    }
+
+    public void ClearTerrainSplinePreview()
+    {
+        _terrainSplinePreviewBand = null;
+        TerrainSplinePreviewLayer.Children.Clear();
+        TerrainSplinePreviewLayer.Visibility = Visibility.Collapsed;
+    }
+
+    private void UpdateTerrainSplinePreviewVisual()
+    {
+        TerrainSplinePreviewLayer.Children.Clear();
+
+        if (
+            _runtime is null ||
+            _terrainSplinePreviewBand is not { } preview ||
+            preview.Centerline.Count < 2)
+        {
+            TerrainSplinePreviewLayer.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var scaleX = Math.Max(0.01, SwapChainSurface.CompositionScaleX);
+        var scaleY = Math.Max(0.01, SwapChainSurface.CompositionScaleY);
+
+        DrawTerrainSplinePreviewSeries(preview.OuterLeft, scaleX, scaleY, 150, 89, 217, 255, 1.0);
+        DrawTerrainSplinePreviewSeries(preview.OuterRight, scaleX, scaleY, 150, 89, 217, 255, 1.0);
+        DrawTerrainSplinePreviewSeries(preview.InnerLeft, scaleX, scaleY, 220, 255, 255, 255, 1.4);
+        DrawTerrainSplinePreviewSeries(preview.InnerRight, scaleX, scaleY, 220, 255, 255, 255, 1.4);
+        DrawTerrainSplinePreviewSeries(preview.Centerline, scaleX, scaleY, 255, 89, 217, 255, 2.0);
+
+        TerrainSplinePreviewLayer.Visibility =
+            TerrainSplinePreviewLayer.Children.Count > 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void DrawTerrainSplinePreviewSeries(
+        IReadOnlyList<Vector3> points,
+        double scaleX,
+        double scaleY,
+        byte alpha,
+        byte red,
+        byte green,
+        byte blue,
+        double thickness)
+    {
+        if (_runtime is null || points.Count < 2)
+        {
+            return;
+        }
+
+        var brush =
+            new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(
+                    alpha,
+                    red,
+                    green,
+                    blue));
+
+        for (var index = 0; index < points.Count - 1; index++)
+        {
+            if (
+                !_runtime.TryProjectWorldPoint(points[index], out var startPixel) ||
+                !_runtime.TryProjectWorldPoint(points[index + 1], out var endPixel))
+            {
+                continue;
+            }
+
+            TerrainSplinePreviewLayer.Children.Add(
+                new Microsoft.UI.Xaml.Shapes.Line
+                {
+                    X1 = startPixel.X / scaleX,
+                    Y1 = startPixel.Y / scaleY,
+                    X2 = endPixel.X / scaleX,
+                    Y2 = endPixel.Y / scaleY,
+                    Stroke = brush,
+                    StrokeThickness = thickness
+                });
         }
     }
 
@@ -2439,6 +2527,7 @@ public sealed partial class NativeViewport : UserControl
         try
         {
             ResizeAndRender();
+            UpdateTerrainSplinePreviewVisual();
         }
         catch (Exception exception)
         {
@@ -2454,6 +2543,7 @@ public sealed partial class NativeViewport : UserControl
         try
         {
             ResizeAndRender();
+            UpdateTerrainSplinePreviewVisual();
         }
         catch (Exception exception)
         {
@@ -4307,6 +4397,8 @@ public sealed partial class NativeViewport : UserControl
                 _runtime.Orbit(
                     deltaX,
                     deltaY);
+
+                UpdateTerrainSplinePreviewVisual();
             }
 
             return;
@@ -4323,6 +4415,8 @@ public sealed partial class NativeViewport : UserControl
             _runtime.UpdatePointerPan(
                 _pendingNavigationPixelX,
                 _pendingNavigationPixelY);
+
+            UpdateTerrainSplinePreviewVisual();
         }
     }
 
@@ -4803,6 +4897,8 @@ public sealed partial class NativeViewport : UserControl
             _runtime.Zoom(
                 point.Properties
                     .MouseWheelDelta);
+
+            UpdateTerrainSplinePreviewVisual();
 
             PointerStatusChanged?.Invoke(
                 this,

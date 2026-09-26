@@ -175,6 +175,10 @@
                 Foreground="#9FC7DE" />
         </Border>
 
+        <Canvas x:Name="TerrainSplinePreviewLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False" />
+
         <Canvas x:Name="TerrainBrushLayer"
                 Visibility="Collapsed"
                 IsHitTestVisible="False">

@@ -4857,7 +4857,8 @@
                                                Minimum="0.5"
                                                Maximum="100"
                                                SmallChange="0.5"
-                                               SpinButtonPlacementMode="Compact" />
+                                               SpinButtonPlacementMode="Compact"
+                                               ValueChanged="OnTerrainSplinePreviewValueChanged" />
                                     <NumberBox x:Name="TerrainSplineFeatherBox"
                                                Grid.Column="1"
                                                Header="Transição (m)"
@@ -4865,7 +4866,8 @@
                                                Minimum="0"
                                                Maximum="200"
                                                SmallChange="0.5"
-                                               SpinButtonPlacementMode="Compact" />
+                                               SpinButtonPlacementMode="Compact"
+                                               ValueChanged="OnTerrainSplinePreviewValueChanged" />
                                 </Grid>
                                 <NumberBox x:Name="TerrainSplineVerticalOffsetBox"
                                            Header="Offset vertical do terreno (m)"
@@ -4873,9 +4875,14 @@
                                            Minimum="-20"
                                            Maximum="20"
                                            SmallChange="0.05"
-                                           SpinButtonPlacementMode="Compact" />
+                                           SpinButtonPlacementMode="Compact"
+                                           ValueChanged="OnTerrainSplinePreviewValueChanged" />
+                                <TextBlock Text="Preview: ciano = eixo/limite externo; branco = área principal sob a via."
+                                           TextWrapping="Wrap"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
                                 <Button x:Name="ConformTerrainToSplineButton"
-                                        Content="Fazer terreno acompanhar esta via"
+                                        Content="Seguir rua"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
                                         ToolTipService.ToolTip="Remodela os .terrain reais nos tiles atravessados pela spline; cria backup antes de gravar"

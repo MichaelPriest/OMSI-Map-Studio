@@ -9227,6 +9227,25 @@ public sealed class NativeViewportRuntime : IDisposable
                 out status);
     }
 
+    public bool TryProjectWorldPoint(
+        Vector3 worldPoint,
+        out Vector2 pixel)
+    {
+        ThrowIfDisposed();
+
+        pixel =
+            Vector2.Zero;
+
+        return
+            Surface is not null &&
+            Navigation
+                .TryProjectWorldPoint(
+                    worldPoint,
+                    Surface.Width,
+                    Surface.Height,
+                    out pixel);
+    }
+
     public bool TryGetTerrainBrushScreenRadius(
         uint pixelX,
         uint pixelY,

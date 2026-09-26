@@ -6,6 +6,13 @@ public sealed record OmsiTerrainLevelResult(
     OmsiTerrainGrid Terrain,
     int ChangedSamples);
 
+public sealed record OmsiTerrainSplinePreviewBand(
+    IReadOnlyList<Vector3> Centerline,
+    IReadOnlyList<Vector3> InnerLeft,
+    IReadOnlyList<Vector3> InnerRight,
+    IReadOnlyList<Vector3> OuterLeft,
+    IReadOnlyList<Vector3> OuterRight);
+
 public static class OmsiTerrainLeveler
 {
     private const double TileSize = OmsiTileGrid.TileSize;
@@ -1036,6 +1043,112 @@ public static class OmsiTerrainLeveler
             amount);
     }
 
+
+    public static OmsiTerrainSplinePreviewBand
+        BuildSplinePreviewBand(
+            double splineWorldX,
+            double splineWorldY,
+            double splineWorldZ,
+            double rotationDegrees,
+            double length,
+            double radius,
+            double gradientStart,
+            double gradientEnd,
+            double halfWidth,
+            double featherWidth,
+            double verticalOffset)
+    {
+        ValidateSplineConformParameters(
+            splineWorldX,
+            splineWorldY,
+            splineWorldZ,
+            rotationDegrees,
+            length,
+            radius,
+            gradientStart,
+            gradientEnd,
+            halfWidth,
+            featherWidth,
+            verticalOffset);
+
+        var samples =
+            BuildSplineSamples(
+                splineWorldX,
+                splineWorldY,
+                splineWorldZ,
+                rotationDegrees,
+                length,
+                radius,
+                gradientStart,
+                gradientEnd,
+                sampleSpacingMeters:
+                    8.0,
+                maximumSegments:
+                    96);
+
+        var centerline = new Vector3[samples.Count];
+        var innerLeft = new Vector3[samples.Count];
+        var innerRight = new Vector3[samples.Count];
+        var outerLeft = new Vector3[samples.Count];
+        var outerRight = new Vector3[samples.Count];
+        var outerWidth = halfWidth + featherWidth;
+
+        for (var index = 0; index < samples.Count; index++)
+        {
+            var sample = samples[index];
+            var previous = samples[Math.Max(0, index - 1)];
+            var next = samples[Math.Min(samples.Count - 1, index + 1)];
+            var dx = next.X - previous.X;
+            var dz = next.Z - previous.Z;
+            var tangentLength = Math.Sqrt(dx * dx + dz * dz);
+
+            if (tangentLength <= 0.000001)
+            {
+                var yaw = rotationDegrees * Math.PI / 180.0;
+                dx = Math.Sin(yaw);
+                dz = Math.Cos(yaw);
+                tangentLength = 1.0;
+            }
+
+            var lateralX = dz / tangentLength;
+            var lateralZ = -dx / tangentLength;
+            var center =
+                new Vector3(
+                    (float)sample.X,
+                    (float)(sample.Y + verticalOffset),
+                    (float)sample.Z);
+
+            centerline[index] = center;
+            innerLeft[index] =
+                new Vector3(
+                    (float)(sample.X + lateralX * halfWidth),
+                    center.Y,
+                    (float)(sample.Z + lateralZ * halfWidth));
+            innerRight[index] =
+                new Vector3(
+                    (float)(sample.X - lateralX * halfWidth),
+                    center.Y,
+                    (float)(sample.Z - lateralZ * halfWidth));
+            outerLeft[index] =
+                new Vector3(
+                    (float)(sample.X + lateralX * outerWidth),
+                    center.Y,
+                    (float)(sample.Z + lateralZ * outerWidth));
+            outerRight[index] =
+                new Vector3(
+                    (float)(sample.X - lateralX * outerWidth),
+                    center.Y,
+                    (float)(sample.Z - lateralZ * outerWidth));
+        }
+
+        return new OmsiTerrainSplinePreviewBand(
+            centerline,
+            innerLeft,
+            innerRight,
+            outerLeft,
+            outerRight);
+    }
+
     private readonly record struct
         TerrainSplineSample(
             double X,
@@ -1052,16 +1165,28 @@ public static class OmsiTerrainLeveler
             double length,
             double radius,
             double gradientStart,
-            double gradientEnd)
+            double gradientEnd,
+            double sampleSpacingMeters =
+                1.0,
+            int maximumSegments =
+                2048)
     {
+        if (
+            !double.IsFinite(sampleSpacingMeters) ||
+            sampleSpacingMeters <= 0 ||
+            maximumSegments <= 0)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainSplineSampling");
+        }
+
         var segmentCount =
             Math.Clamp(
-                (int)Math.Min(
-                    2048.0,
-                    Math.Ceiling(
-                        length)),
+                (int)Math.Ceiling(
+                    length /
+                    sampleSpacingMeters),
                 1,
-                2048);
+                maximumSegments);
 
         var samples =
             new TerrainSplineSample[

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.57: smooth segmented internal traffic paths through junctions.
+# Test 10.58: live terrain-to-spline influence preview in the native viewport.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.57-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.57-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.58-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.58-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.57-native
-  TAG: v0.2.0-alpha.5-test.10.57-native
+  VERSION: 0.2.0-alpha.5-test.10.58-native
+  TAG: v0.2.0-alpha.5-test.10.58-native
 
 jobs:
   build-native-preview:
@@ -2303,6 +2303,52 @@ jobs:
 
           Write-Host "Verified straight-through preservation and connected quadratic-Bezier path segmentation for junction turns."
 
+      - name: Verify test 10.58 terrain-to-spline live preview
+        shell: pwsh
+        run: |
+          $mainXaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $mainCode = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $viewportXaml = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml -Raw
+          $viewportCode = Get-Content src/MapStudio.Native/Controls/NativeViewport.xaml.cs -Raw
+          $runtime = Get-Content src/MapStudio.Renderer/Viewport/NativeViewportRuntime.cs -Raw
+          $leveler = Get-Content src/MapStudio.Core/Omsi/Maps/OmsiTerrainLeveler.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/OmsiTerrainEditingTests.cs -Raw
+
+          foreach ($required in @(
+            'TerrainSplinePreviewLayer',
+            'SetTerrainSplinePreview',
+            'UpdateTerrainSplinePreviewVisual'
+          )) {
+            if (-not ($viewportXaml.Contains($required) -or $viewportCode.Contains($required))) {
+              throw "Test 10.58 viewport spline-preview marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OnTerrainSplinePreviewValueChanged',
+            'RefreshTerrainSplinePreview',
+            'Content="Seguir rua"'
+          )) {
+            if (-not ($mainXaml.Contains($required) -or $mainCode.Contains($required))) {
+              throw "Test 10.58 terrain spline preview workflow marker is missing: $required"
+            }
+          }
+
+          if (-not $runtime.Contains('TryProjectWorldPoint')) {
+            throw "Test 10.58 runtime projection wrapper is missing."
+          }
+
+          if (-not $leveler.Contains('BuildSplinePreviewBand') -or
+              -not $leveler.Contains('OmsiTerrainSplinePreviewBand')) {
+            throw "Test 10.58 spline influence band geometry is missing."
+          }
+
+          if (-not $tests.Contains('BuildSplinePreviewBand_OffsetsRoadAndFeatherEdges')) {
+            throw "Test 10.58 spline preview regression test is missing."
+          }
+
+          Write-Host "Verified live center/road-width/feather band preview before real terrain persistence."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2457,11 +2503,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.57-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.58-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.57-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.58-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
