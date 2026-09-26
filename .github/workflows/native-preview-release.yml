@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.61: Road Kit sidewalk continuity at procedural junction mouths.
+# Test 10.62: preserve OSM bridge/tunnel/layer metadata through native spline placement.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.61-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.61-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.62-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.62-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.61-native
-  TAG: v0.2.0-alpha.5-test.10.61-native
+  VERSION: 0.2.0-alpha.5-test.10.62-native
+  TAG: v0.2.0-alpha.5-test.10.62-native
 
 jobs:
   build-native-preview:
@@ -2435,6 +2435,56 @@ jobs:
 
           Write-Host "Verified carriageway-vs-total-width sidewalk overlays, Road Kit texture reuse and road-only fallback."
 
+      - name: Verify test 10.62 OSM grade-separation placement metadata
+        shell: pwsh
+        run: |
+          $request = Get-Content src/MapStudio.Renderer/Viewport/NativeSplinePlacementRequest.cs -Raw
+          $builder = Get-Content src/MapStudio.Renderer/Viewport/NativeProceduralRoadPlacementBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Renderer.Tests/NativeProceduralRoadPlacementBuilderTests.cs -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+
+          foreach ($required in @(
+            'SourceBridge',
+            'SourceTunnel',
+            'SourceLayer'
+          )) {
+            if (-not $request.Contains($required)) {
+              throw "Test 10.62 placement request grade metadata is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'HasCompatibleGradeSeparation',
+            'BridgeRequestCount',
+            'TunnelRequestCount',
+            'LayeredRequestCount'
+          )) {
+            if (-not $builder.Contains($required)) {
+              throw "Test 10.62 placement grade-separation marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BuilderCarriesGradeSeparationMetadataIntoRequests',
+            'BuilderDoesNotMergeCurveAcrossGradeSeparationChange'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.62 renderer regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'bridgeRequests={placement.BridgeRequestCount}',
+            'tunnelRequests={placement.TunnelRequestCount}',
+            'layeredRequests={placement.LayeredRequestCount}'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.62 startup diagnostic marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified OSM bridge/tunnel/layer metadata survives placement planning and curve merging respects grade transitions."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2589,11 +2639,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.61-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.62-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.61-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.62-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

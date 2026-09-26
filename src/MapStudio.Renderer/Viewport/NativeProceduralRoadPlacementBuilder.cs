@@ -19,6 +19,22 @@ public sealed record NativeProceduralRoadPlacementBuildResult(
         Requests.Count(
             request =>
                 request.IsCurved);
+
+    public int BridgeRequestCount =>
+        Requests.Count(
+            request =>
+                request.SourceBridge);
+
+    public int TunnelRequestCount =>
+        Requests.Count(
+            request =>
+                request.SourceTunnel);
+
+    public int LayeredRequestCount =>
+        Requests.Count(
+            request =>
+                (request.SourceLayer ?? 0) !=
+                0);
 }
 
 public sealed class NativeProceduralRoadPlacementBuilder
@@ -200,6 +216,9 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 second.ProfileId,
                 StringComparison
                     .OrdinalIgnoreCase) ||
+            !HasCompatibleGradeSeparation(
+                first,
+                second) ||
             !nodeById.TryGetValue(
                 first.ToNodeId,
                 out var shared) ||
@@ -212,6 +231,17 @@ public sealed class NativeProceduralRoadPlacementBuilder
 
         return true;
     }
+
+
+    private static bool HasCompatibleGradeSeparation(
+        MapStudioRoadGraphSegment first,
+        MapStudioRoadGraphSegment second) =>
+        first.Bridge ==
+            second.Bridge &&
+        first.Tunnel ==
+            second.Tunnel &&
+        (first.Layer ?? 0) ==
+            (second.Layer ?? 0);
 
     private static bool TryBuildCurveRequest(
         NativeSceneSnapshot scene,
@@ -315,6 +345,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
             scene,
             first.ProfileId,
             shape,
+            first,
             out request);
     }
 
@@ -364,6 +395,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
             scene,
             segment.ProfileId,
             shape,
+            segment,
             out request);
     }
 
@@ -371,6 +403,7 @@ public sealed class NativeProceduralRoadPlacementBuilder
         NativeSceneSnapshot scene,
         string profileId,
         NativeSplinePlacementShape shape,
+        MapStudioRoadGraphSegment sourceSegment,
         out NativeSplinePlacementRequest?
             request)
     {
@@ -422,7 +455,10 @@ public sealed class NativeProceduralRoadPlacementBuilder
                 shape.Start,
                 shape.End,
                 -1,
-                false);
+                false,
+                sourceSegment.Bridge,
+                sourceSegment.Tunnel,
+                sourceSegment.Layer);
 
         return true;
     }

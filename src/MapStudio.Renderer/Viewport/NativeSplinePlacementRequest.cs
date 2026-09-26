@@ -19,4 +19,7 @@ public sealed record NativeSplinePlacementRequest(
     Vector3 StartWorld,
     Vector3 EndWorld,
     int NextSplineId = -1,
-    bool IsHeightSpline = false);
+    bool IsHeightSpline = false,
+    bool SourceBridge = false,
+    bool SourceTunnel = false,
+    int? SourceLayer = null);

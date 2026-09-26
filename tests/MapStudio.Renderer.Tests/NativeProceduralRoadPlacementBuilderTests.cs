@@ -414,6 +414,295 @@ public sealed class NativeProceduralRoadPlacementBuilderTests
             });
     }
 
+
+    [Fact]
+    public void BuilderCarriesGradeSeparationMetadataIntoRequests()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    3,
+                    3,
+                    3,
+                    3
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var graph =
+            new MapStudioRoadGraphBuilder()
+                .Build(
+                    [
+                        new MapStudioRoadTrace(
+                            "bridge",
+                            [
+                                new(20, 30),
+                                new(80, 30)
+                            ],
+                            "road.sli",
+                            Layer:
+                                1,
+                            Bridge:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "tunnel",
+                            [
+                                new(20, 90),
+                                new(80, 90)
+                            ],
+                            "road.sli",
+                            Layer:
+                                -1,
+                            Tunnel:
+                                true,
+                            SourceTopologyAuthoritative:
+                                true),
+                        new MapStudioRoadTrace(
+                            "layered",
+                            [
+                                new(140, 30),
+                                new(200, 30)
+                            ],
+                            "road.sli",
+                            Layer:
+                                2,
+                            SourceTopologyAuthoritative:
+                                true)
+                    ]);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            3,
+            result.Requests.Count);
+
+        Assert.Equal(
+            1,
+            result.BridgeRequestCount);
+
+        Assert.Equal(
+            1,
+            result.TunnelRequestCount);
+
+        Assert.Equal(
+            3,
+            result.LayeredRequestCount);
+
+        var bridge =
+            Assert.Single(
+                result.Requests,
+                request =>
+                    request.SourceBridge);
+
+        Assert.False(
+            bridge.SourceTunnel);
+
+        Assert.Equal(
+            1,
+            bridge.SourceLayer);
+
+        var tunnel =
+            Assert.Single(
+                result.Requests,
+                request =>
+                    request.SourceTunnel);
+
+        Assert.False(
+            tunnel.SourceBridge);
+
+        Assert.Equal(
+            -1,
+            tunnel.SourceLayer);
+
+        var layered =
+            Assert.Single(
+                result.Requests,
+                request =>
+                    request.SourceLayer ==
+                        2);
+
+        Assert.False(
+            layered.SourceBridge);
+
+        Assert.False(
+            layered.SourceTunnel);
+    }
+
+    [Fact]
+    public void BuilderDoesNotMergeCurveAcrossGradeSeparationChange()
+    {
+        var reference =
+            new OmsiTileReference(
+                0,
+                0,
+                "tile_0_0.map");
+
+        var terrain =
+            new OmsiTerrainGrid(
+                1,
+                [
+                    0,
+                    0,
+                    0,
+                    0
+                ]);
+
+        var scene =
+            new NativeSceneSnapshot(
+                [
+                    new NativeSceneTile(
+                        reference,
+                        new OmsiTileContent(
+                            new OmsiTileSummary(
+                                true,
+                                0,
+                                0,
+                                0),
+                            [],
+                            [],
+                            terrain))
+                ],
+                [],
+                [],
+                [
+                    new NativeTerrainEntity(
+                        reference,
+                        terrain)
+                ]);
+
+        var nodes =
+            new[]
+            {
+                new MapStudioRoadGraphNode(
+                    1,
+                    new MapStudioRoadPoint(
+                        20,
+                        30),
+                    1,
+                    false,
+                    new HashSet<string>
+                    {
+                        "mixed"
+                    }),
+                new MapStudioRoadGraphNode(
+                    2,
+                    new MapStudioRoadPoint(
+                        60,
+                        30),
+                    2,
+                    false,
+                    new HashSet<string>
+                    {
+                        "mixed"
+                    }),
+                new MapStudioRoadGraphNode(
+                    3,
+                    new MapStudioRoadPoint(
+                        90,
+                        60),
+                    1,
+                    false,
+                    new HashSet<string>
+                    {
+                        "mixed"
+                    })
+            };
+
+        var graph =
+            new MapStudioRoadGraph(
+                nodes,
+                [
+                    new MapStudioRoadGraphSegment(
+                        1,
+                        1,
+                        2,
+                        "mixed",
+                        "road.sli",
+                        nodes[0].Position,
+                        nodes[1].Position,
+                        40,
+                        2,
+                        false,
+                        7,
+                        Layer:
+                            0),
+                    new MapStudioRoadGraphSegment(
+                        2,
+                        2,
+                        3,
+                        "mixed",
+                        "road.sli",
+                        nodes[1].Position,
+                        nodes[2].Position,
+                        Math.Sqrt(
+                            1800),
+                        2,
+                        false,
+                        7,
+                        Layer:
+                            1,
+                        Bridge:
+                            true)
+                ],
+                []);
+
+        var result =
+            new NativeProceduralRoadPlacementBuilder()
+                .Build(
+                    scene,
+                    graph);
+
+        Assert.Equal(
+            2,
+            result.Requests.Count);
+
+        Assert.Equal(
+            0,
+            result.CurvedRequestCount);
+
+        Assert.False(
+            result.Requests[0]
+                .SourceBridge);
+
+        Assert.True(
+            result.Requests[1]
+                .SourceBridge);
+    }
+
     [Fact]
     public void BuilderSkipsSegmentsOutsideLoadedTerrain()
     {
