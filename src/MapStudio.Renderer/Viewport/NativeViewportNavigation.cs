@@ -447,6 +447,70 @@ public sealed class NativeViewportNavigation
         return true;
     }
 
+    public bool TryProjectWorldPoint(
+        Vector3 worldPoint,
+        uint viewportWidth,
+        uint viewportHeight,
+        out Vector2 pixelPoint)
+    {
+        pixelPoint =
+            Vector2.Zero;
+
+        if (
+            viewportWidth == 0 ||
+            viewportHeight == 0 ||
+            !float.IsFinite(worldPoint.X) ||
+            !float.IsFinite(worldPoint.Y) ||
+            !float.IsFinite(worldPoint.Z))
+        {
+            return false;
+        }
+
+        var projected =
+            Vector4.Transform(
+                new Vector4(
+                    worldPoint,
+                    1.0f),
+                GetViewProjection(
+                    viewportWidth,
+                    viewportHeight));
+
+        if (
+            !float.IsFinite(projected.W) ||
+            projected.W <=
+                0.000001f)
+        {
+            return false;
+        }
+
+        projected /=
+            projected.W;
+
+        if (
+            !float.IsFinite(projected.X) ||
+            !float.IsFinite(projected.Y))
+        {
+            return false;
+        }
+
+        pixelPoint =
+            new Vector2(
+                (
+                    projected.X +
+                    1.0f
+                ) *
+                0.5f *
+                viewportWidth,
+                (
+                    1.0f -
+                    projected.Y
+                ) *
+                0.5f *
+                viewportHeight);
+
+        return true;
+    }
+
     public void FocusOn(
         Vector3 target,
         float preferredDistance =
