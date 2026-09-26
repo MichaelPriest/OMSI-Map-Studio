@@ -336,6 +336,551 @@ public static class OmsiTerrainLeveler
             changed);
     }
 
+
+    public static OmsiTileWorldBounds
+        GetSplineInfluenceBounds(
+            double splineWorldX,
+            double splineWorldY,
+            double splineWorldZ,
+            double rotationDegrees,
+            double length,
+            double radius,
+            double gradientStart,
+            double gradientEnd,
+            double influenceWidth)
+    {
+        ValidateSplineConformParameters(
+            splineWorldX,
+            splineWorldY,
+            splineWorldZ,
+            rotationDegrees,
+            length,
+            radius,
+            gradientStart,
+            gradientEnd,
+            halfWidth:
+                Math.Max(
+                    0.001,
+                    influenceWidth),
+            featherWidth:
+                0,
+            verticalOffset:
+                0);
+
+        if (
+            !double.IsFinite(
+                influenceWidth) ||
+            influenceWidth < 0)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainSplineInfluence");
+        }
+
+        var samples =
+            BuildSplineSamples(
+                splineWorldX,
+                splineWorldY,
+                splineWorldZ,
+                rotationDegrees,
+                length,
+                radius,
+                gradientStart,
+                gradientEnd);
+
+        return new OmsiTileWorldBounds(
+            samples.Min(
+                sample =>
+                    sample.X) -
+                influenceWidth,
+            samples.Min(
+                sample =>
+                    sample.Z) -
+                influenceWidth,
+            samples.Max(
+                sample =>
+                    sample.X) +
+                influenceWidth,
+            samples.Max(
+                sample =>
+                    sample.Z) +
+                influenceWidth);
+    }
+
+    public static OmsiTerrainLevelResult
+        ConformToSpline(
+            OmsiTerrainGrid terrain,
+            double tileOriginX,
+            double tileOriginZ,
+            double splineWorldX,
+            double splineWorldY,
+            double splineWorldZ,
+            double rotationDegrees,
+            double length,
+            double radius,
+            double gradientStart,
+            double gradientEnd,
+            double halfWidth,
+            double featherWidth,
+            double verticalOffset)
+    {
+        ArgumentNullException.ThrowIfNull(
+            terrain);
+
+        ValidateSplineConformParameters(
+            splineWorldX,
+            splineWorldY,
+            splineWorldZ,
+            rotationDegrees,
+            length,
+            radius,
+            gradientStart,
+            gradientEnd,
+            halfWidth,
+            featherWidth,
+            verticalOffset);
+
+        if (
+            !double.IsFinite(
+                tileOriginX) ||
+            !double.IsFinite(
+                tileOriginZ))
+        {
+            throw new InvalidDataException(
+                "invalidTerrainTileOrigin");
+        }
+
+        var cellCount =
+            terrain.CellCount;
+
+        if (cellCount <= 0)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainCellCount");
+        }
+
+        var sampleCount =
+            cellCount +
+            1;
+
+        if (
+            terrain.Heights.Count !=
+                sampleCount *
+                sampleCount)
+        {
+            throw new InvalidDataException(
+                "invalidTerrainHeightCount");
+        }
+
+        var path =
+            BuildSplineSamples(
+                splineWorldX,
+                splineWorldY,
+                splineWorldZ,
+                rotationDegrees,
+                length,
+                radius,
+                gradientStart,
+                gradientEnd);
+
+        var spacing =
+            TileSize /
+            cellCount;
+
+        var outerWidth =
+            halfWidth +
+            featherWidth;
+
+        var next =
+            terrain.Heights
+                .ToArray();
+
+        var changed =
+            0;
+
+        for (
+            var row = 0;
+            row < sampleCount;
+            row++)
+        {
+            var worldZ =
+                tileOriginZ +
+                row *
+                spacing;
+
+            for (
+                var column = 0;
+                column < sampleCount;
+                column++)
+            {
+                var worldX =
+                    tileOriginX +
+                    column *
+                    spacing;
+
+                var bestDistanceSquared =
+                    double.PositiveInfinity;
+
+                var targetHeight =
+                    0.0;
+
+                for (
+                    var index = 0;
+                    index <
+                        path.Count -
+                        1;
+                    index++)
+                {
+                    var start =
+                        path[index];
+
+                    var end =
+                        path[
+                            index +
+                            1];
+
+                    var dx =
+                        end.X -
+                        start.X;
+
+                    var dz =
+                        end.Z -
+                        start.Z;
+
+                    var lengthSquared =
+                        dx *
+                        dx +
+                        dz *
+                        dz;
+
+                    var amount =
+                        lengthSquared <=
+                            0.0000001
+                            ? 0.0
+                            : Math.Clamp(
+                                (
+                                    (
+                                        worldX -
+                                        start.X
+                                    ) *
+                                    dx +
+                                    (
+                                        worldZ -
+                                        start.Z
+                                    ) *
+                                    dz
+                                ) /
+                                lengthSquared,
+                                0,
+                                1);
+
+                    var closestX =
+                        start.X +
+                        dx *
+                        amount;
+
+                    var closestZ =
+                        start.Z +
+                        dz *
+                        amount;
+
+                    var deltaX =
+                        worldX -
+                        closestX;
+
+                    var deltaZ =
+                        worldZ -
+                        closestZ;
+
+                    var distanceSquared =
+                        deltaX *
+                        deltaX +
+                        deltaZ *
+                        deltaZ;
+
+                    if (
+                        distanceSquared >=
+                        bestDistanceSquared)
+                    {
+                        continue;
+                    }
+
+                    bestDistanceSquared =
+                        distanceSquared;
+
+                    targetHeight =
+                        start.Y +
+                        (
+                            end.Y -
+                            start.Y
+                        ) *
+                        amount;
+                }
+
+                var distance =
+                    Math.Sqrt(
+                        bestDistanceSquared);
+
+                if (
+                    distance >
+                    outerWidth)
+                {
+                    continue;
+                }
+
+                var weight =
+                    distance <=
+                        halfWidth ||
+                    featherWidth <=
+                        0
+                        ? 1.0
+                        : Math.Clamp(
+                            1.0 -
+                            (
+                                distance -
+                                halfWidth
+                            ) /
+                            featherWidth,
+                            0,
+                            1);
+
+                var terrainIndex =
+                    row *
+                    sampleCount +
+                    column;
+
+                var current =
+                    next[
+                        terrainIndex];
+
+                var desired =
+                    targetHeight +
+                    verticalOffset;
+
+                var updated =
+                    current +
+                    (
+                        desired -
+                        current
+                    ) *
+                    weight;
+
+                var asFloat =
+                    (float)updated;
+
+                if (
+                    Math.Abs(
+                        asFloat -
+                        current) <=
+                    0.00001f)
+                {
+                    continue;
+                }
+
+                next[
+                    terrainIndex] =
+                    asFloat;
+
+                changed++;
+            }
+        }
+
+        return new OmsiTerrainLevelResult(
+            new OmsiTerrainGrid(
+                terrain.CellCount,
+                next),
+            changed);
+    }
+
+    private readonly record struct
+        TerrainSplineSample(
+            double X,
+            double Y,
+            double Z);
+
+    private static IReadOnlyList<
+        TerrainSplineSample>
+        BuildSplineSamples(
+            double splineWorldX,
+            double splineWorldY,
+            double splineWorldZ,
+            double rotationDegrees,
+            double length,
+            double radius,
+            double gradientStart,
+            double gradientEnd)
+    {
+        var segmentCount =
+            Math.Clamp(
+                (int)Math.Min(
+                    2048.0,
+                    Math.Ceiling(
+                        length)),
+                1,
+                2048);
+
+        var samples =
+            new TerrainSplineSample[
+                segmentCount +
+                1];
+
+        var yaw =
+            rotationDegrees *
+            Math.PI /
+            180.0;
+
+        var cosYaw =
+            Math.Cos(
+                yaw);
+
+        var sinYaw =
+            Math.Sin(
+                yaw);
+
+        var curved =
+            Math.Abs(
+                radius) >
+            0.001;
+
+        for (
+            var index = 0;
+            index <=
+                segmentCount;
+            index++)
+        {
+            var distance =
+                length *
+                index /
+                segmentCount;
+
+            var curveAngle =
+                curved
+                    ? distance /
+                        radius
+                    : 0.0;
+
+            var localX =
+                curved
+                    ? radius *
+                        (
+                            1.0 -
+                            Math.Cos(
+                                curveAngle)
+                        )
+                    : 0.0;
+
+            var localZ =
+                curved
+                    ? radius *
+                        Math.Sin(
+                            curveAngle)
+                    : distance;
+
+            var worldX =
+                splineWorldX +
+                localX *
+                    cosYaw +
+                localZ *
+                    sinYaw;
+
+            var worldZ =
+                splineWorldZ -
+                localX *
+                    sinYaw +
+                localZ *
+                    cosYaw;
+
+            var worldY =
+                splineWorldY +
+                GetSplineGradientRise(
+                    gradientStart,
+                    gradientEnd,
+                    length,
+                    distance);
+
+            samples[index] =
+                new TerrainSplineSample(
+                    worldX,
+                    worldY,
+                    worldZ);
+        }
+
+        return samples;
+    }
+
+    private static double
+        GetSplineGradientRise(
+            double gradientStart,
+            double gradientEnd,
+            double length,
+            double distance)
+    {
+        var startSlope =
+            gradientStart /
+            100.0;
+
+        var slopeDelta =
+            (
+                gradientEnd -
+                gradientStart
+            ) /
+            100.0;
+
+        return
+            startSlope *
+            distance +
+            0.5 *
+            slopeDelta *
+            distance *
+            distance /
+            length;
+    }
+
+    private static void
+        ValidateSplineConformParameters(
+            double splineWorldX,
+            double splineWorldY,
+            double splineWorldZ,
+            double rotationDegrees,
+            double length,
+            double radius,
+            double gradientStart,
+            double gradientEnd,
+            double halfWidth,
+            double featherWidth,
+            double verticalOffset)
+    {
+        if (
+            !double.IsFinite(
+                splineWorldX) ||
+            !double.IsFinite(
+                splineWorldY) ||
+            !double.IsFinite(
+                splineWorldZ) ||
+            !double.IsFinite(
+                rotationDegrees) ||
+            !double.IsFinite(
+                length) ||
+            length <= 0 ||
+            !double.IsFinite(
+                radius) ||
+            !double.IsFinite(
+                gradientStart) ||
+            !double.IsFinite(
+                gradientEnd) ||
+            !double.IsFinite(
+                halfWidth) ||
+            halfWidth <= 0 ||
+            !double.IsFinite(
+                featherWidth) ||
+            featherWidth < 0 ||
+            !double.IsFinite(
+                verticalOffset))
+        {
+            throw new InvalidDataException(
+                "invalidTerrainSplineConform");
+        }
+    }
+
     public static OmsiTerrainLevelResult
         ApplyElevationGrid(
             OmsiTerrainGrid terrain,

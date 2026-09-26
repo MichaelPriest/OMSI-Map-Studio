@@ -58,6 +58,11 @@ public sealed record NativeSplineFlowToggleResult(
     bool Reversed,
     int ReversedVehiclePathCount);
 
+public sealed record NativeTerrainSplineConformResult(
+    NativeMapSnapshot Snapshot,
+    int ChangedTiles,
+    int ChangedSamples);
+
 public sealed record NativeDeleteBackupEntry(
     string TargetPath,
     string BackupPath);
@@ -9395,6 +9400,282 @@ public sealed class OmsiNativeSession
             };
 
         return CurrentMap;
+    }
+
+
+    public async Task<NativeTerrainSplineConformResult>
+        ConformTerrainToSplineAsync(
+            NativeSelectionInfo selection,
+            double halfWidth,
+            double featherWidth,
+            double verticalOffset,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            selection);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (
+            selection.Kind !=
+                PickingKind.Spline ||
+            selection.Length is not
+                double length ||
+            length <= 0 ||
+            selection.Radius is not
+                double radius ||
+            selection.GradientStart is not
+                double gradientStart ||
+            selection.GradientEnd is not
+                double gradientEnd)
+        {
+            throw new InvalidDataException(
+                "terrainSplineSelectionInvalid");
+        }
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainSplineConform");
+        }
+
+        if (
+            !double.IsFinite(
+                halfWidth) ||
+            halfWidth <= 0 ||
+            !double.IsFinite(
+                featherWidth) ||
+            featherWidth < 0 ||
+            !double.IsFinite(
+                verticalOffset))
+        {
+            throw new InvalidDataException(
+                "terrainSplineBrushInvalid");
+        }
+
+        var splineWorldX =
+            OmsiTileGrid
+                .GetOriginX(
+                    selection.TileX) +
+            selection.X;
+
+        var splineWorldZ =
+            OmsiTileGrid
+                .GetOriginZ(
+                    selection.TileY) +
+            selection.Y;
+
+        var splineWorldY =
+            selection.Z;
+
+        var influenceWidth =
+            halfWidth +
+            featherWidth;
+
+        var influence =
+            OmsiTerrainLeveler
+                .GetSplineInfluenceBounds(
+                    splineWorldX,
+                    splineWorldY,
+                    splineWorldZ,
+                    selection.Rotation,
+                    length,
+                    radius,
+                    gradientStart,
+                    gradientEnd,
+                    influenceWidth);
+
+        var writes =
+            new List<
+                PendingFileWrite>();
+
+        var changedRelativePaths =
+            new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+        var changedSamples =
+            0;
+
+        foreach (
+            var tile in
+                snapshot.Map.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            var tileBounds =
+                OmsiTileGrid
+                    .GetBounds(
+                        tile.X,
+                        tile.Y);
+
+            if (
+                tileBounds.MaxX <
+                    influence.MinX ||
+                tileBounds.MinX >
+                    influence.MaxX ||
+                tileBounds.MaxZ <
+                    influence.MinZ ||
+                tileBounds.MinZ >
+                    influence.MaxZ)
+            {
+                continue;
+            }
+
+            if (
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        tile.RelativeMapPath,
+                        out var tilePath))
+            {
+                continue;
+            }
+
+            var terrainPath =
+                tilePath +
+                ".terrain";
+
+            if (!File.Exists(
+                    terrainPath))
+            {
+                continue;
+            }
+
+            var terrain =
+                await new OmsiTerrainReader()
+                    .ReadAsync(
+                        terrainPath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+
+            var result =
+                OmsiTerrainLeveler
+                    .ConformToSpline(
+                        terrain,
+                        OmsiTileGrid
+                            .GetOriginX(
+                                tile.X),
+                        OmsiTileGrid
+                            .GetOriginZ(
+                                tile.Y),
+                        splineWorldX,
+                        splineWorldY,
+                        splineWorldZ,
+                        selection.Rotation,
+                        length,
+                        radius,
+                        gradientStart,
+                        gradientEnd,
+                        halfWidth,
+                        featherWidth,
+                        verticalOffset);
+
+            if (
+                result.ChangedSamples ==
+                0)
+            {
+                continue;
+            }
+
+            writes.Add(
+                new PendingFileWrite(
+                    terrainPath,
+                    CreateNativeBackupPath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        terrainPath),
+                    OmsiTerrainWriter
+                        .Write(
+                            result.Terrain)));
+
+            changedRelativePaths.Add(
+                tile.RelativeMapPath);
+
+            changedSamples +=
+                result.ChangedSamples;
+        }
+
+        if (
+            writes.Count ==
+            0)
+        {
+            return new NativeTerrainSplineConformResult(
+                snapshot,
+                0,
+                0);
+        }
+
+        await SafeFileTransaction
+            .WriteAllAsync(
+                writes,
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        var refreshed =
+            new Dictionary<
+                string,
+                OmsiTileContent>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        foreach (
+            var loaded in
+                snapshot.Tiles)
+        {
+            if (
+                !changedRelativePaths
+                    .Contains(
+                        loaded.Reference
+                            .RelativeMapPath) ||
+                !OmsiMapPathResolver
+                    .TryResolveTilePath(
+                        snapshot.Map
+                            .DirectoryPath,
+                        loaded.Reference
+                            .RelativeMapPath,
+                        out var tilePath))
+            {
+                continue;
+            }
+
+            refreshed[
+                loaded.Reference
+                    .RelativeMapPath] =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            item =>
+                                refreshed.TryGetValue(
+                                    item.Reference
+                                        .RelativeMapPath,
+                                    out var content)
+                                    ? new NativeLoadedTile(
+                                        item.Reference,
+                                        content)
+                                    : item)
+                        .ToArray()
+            };
+
+        return new NativeTerrainSplineConformResult(
+            CurrentMap,
+            changedRelativePaths
+                .Count,
+            changedSamples);
     }
 
     public async Task<NativeMapSnapshot>

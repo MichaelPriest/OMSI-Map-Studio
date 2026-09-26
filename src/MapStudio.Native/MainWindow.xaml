@@ -3831,6 +3831,10 @@
                                         Content="↑ Elevar"
                                         ToolTipService.ToolTip="Aumentar a cota final pelo passo selecionado; permite rampas, pontes e viadutos"
                                         Click="OnRoadElevationUpClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Terreno ↕ via"
+                                        ToolTipService.ToolTip="Fazer o terreno acompanhar a spline selecionada usando largura e transição configuradas no Inspector"
+                                        Click="OnConformTerrainToSelectedSplineClick" />
                                 <ComboBox x:Name="RoadElevationStepBox"
                                           Width="72"
                                           SelectedIndex="1"
@@ -4827,10 +4831,51 @@
                                                SmallChange="1" />
                                 </Grid>
                                 <Button x:Name="LevelSplineToTerrainButton"
-                                        Content="Ajustar ao terreno"
+                                        Content="Ajustar via ao terreno"
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
+                                        ToolTipService.ToolTip="Move a spline para acompanhar o terreno existente"
                                         Click="OnLevelSelectedSplineToTerrainClick" />
+                                <TextBlock Text="Terreno acompanha a via"
+                                           Margin="0,4,0,0"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{ThemeResource MapStudioTextPrimaryBrush}" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <NumberBox x:Name="TerrainSplineHalfWidthBox"
+                                               Grid.Column="0"
+                                               Header="Meia largura (m)"
+                                               Value="6"
+                                               Minimum="0.5"
+                                               Maximum="100"
+                                               SmallChange="0.5"
+                                               SpinButtonPlacementMode="Compact" />
+                                    <NumberBox x:Name="TerrainSplineFeatherBox"
+                                               Grid.Column="1"
+                                               Header="Transição (m)"
+                                               Value="8"
+                                               Minimum="0"
+                                               Maximum="200"
+                                               SmallChange="0.5"
+                                               SpinButtonPlacementMode="Compact" />
+                                </Grid>
+                                <NumberBox x:Name="TerrainSplineVerticalOffsetBox"
+                                           Header="Offset vertical do terreno (m)"
+                                           Value="0"
+                                           Minimum="-20"
+                                           Maximum="20"
+                                           SmallChange="0.05"
+                                           SpinButtonPlacementMode="Compact" />
+                                <Button x:Name="ConformTerrainToSplineButton"
+                                        Content="Fazer terreno acompanhar esta via"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        ToolTipService.ToolTip="Remodela os .terrain reais nos tiles atravessados pela spline; cria backup antes de gravar"
+                                        Click="OnConformTerrainToSelectedSplineClick" />
                                 <Button x:Name="SaveSplineLinksButton"
                                         Content="Salvar vínculos"
                                         HorizontalAlignment="Stretch"

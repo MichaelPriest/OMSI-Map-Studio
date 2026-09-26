@@ -141,6 +141,125 @@ public sealed class OmsiTerrainEditingTests
             1);
     }
 
+
+    [Fact]
+    public void ConformToSpline_FollowsSplineElevationAndLeavesOutsideUntouched()
+    {
+        var terrain =
+            new OmsiTerrainGrid(
+                4,
+                Enumerable
+                    .Repeat(
+                        0f,
+                        25)
+                    .ToArray());
+
+        var result =
+            OmsiTerrainLeveler
+                .ConformToSpline(
+                    terrain,
+                    tileOriginX:
+                        0,
+                    tileOriginZ:
+                        0,
+                    splineWorldX:
+                        150,
+                    splineWorldY:
+                        10,
+                    splineWorldZ:
+                        0,
+                    rotationDegrees:
+                        0,
+                    length:
+                        300,
+                    radius:
+                        0,
+                    gradientStart:
+                        10,
+                    gradientEnd:
+                        10,
+                    halfWidth:
+                        20,
+                    featherWidth:
+                        20,
+                    verticalOffset:
+                        0);
+
+        Assert.Equal(
+            10f,
+            result.Terrain
+                .Heights[2]);
+
+        Assert.Equal(
+            25f,
+            result.Terrain
+                .Heights[12]);
+
+        Assert.Equal(
+            40f,
+            result.Terrain
+                .Heights[22]);
+
+        Assert.Equal(
+            0f,
+            result.Terrain
+                .Heights[0]);
+
+        Assert.True(
+            result.ChangedSamples >=
+            5);
+    }
+
+    [Fact]
+    public void GetSplineInfluenceBounds_ContainsCurvedArc()
+    {
+        var length =
+            Math.PI *
+            100 /
+            2;
+
+        var bounds =
+            OmsiTerrainLeveler
+                .GetSplineInfluenceBounds(
+                    splineWorldX:
+                        100,
+                    splineWorldY:
+                        5,
+                    splineWorldZ:
+                        100,
+                    rotationDegrees:
+                        0,
+                    length,
+                    radius:
+                        100,
+                    gradientStart:
+                        0,
+                    gradientEnd:
+                        0,
+                    influenceWidth:
+                        10);
+
+        Assert.InRange(
+            bounds.MinX,
+            89.9,
+            90.1);
+
+        Assert.InRange(
+            bounds.MinZ,
+            89.9,
+            90.1);
+
+        Assert.InRange(
+            bounds.MaxX,
+            209.9,
+            210.1);
+
+        Assert.InRange(
+            bounds.MaxZ,
+            209.9,
+            210.1);
+    }
+
     [Fact]
     public void ApplyElevationGrid_ResamplesCornersAndCenter()
     {

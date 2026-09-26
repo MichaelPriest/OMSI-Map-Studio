@@ -1286,6 +1286,15 @@ public sealed partial class MainWindow : Window
                             > 0.001
                     };
 
+                ConformTerrainToSplineButton.IsEnabled =
+                    info is
+                    {
+                        Kind:
+                            PickingKind.Spline,
+                        Length:
+                            > 0.001
+                    };
+
                 if (info is null)
                 {
                     InspectorTypeText.Text =
@@ -4906,6 +4915,9 @@ public sealed partial class MainWindow : Window
         LevelSplineToTerrainButton.IsEnabled =
             false;
 
+        ConformTerrainToSplineButton.IsEnabled =
+            false;
+
         SelectionText.Text =
             "Sem seleção";
 
@@ -6914,6 +6926,126 @@ public sealed partial class MainWindow : Window
         {
             StatusText.Text =
                 "Não foi possível nivelar: o início ou o fim da spline está fora do terreno carregado.";
+        }
+    }
+
+
+    private async void OnConformTerrainToSelectedSplineClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var selection =
+            _selectionInfo;
+
+        if (
+            selection is null ||
+            selection.Kind !=
+                PickingKind.Spline ||
+            selection.Length is not
+                > 0.001)
+        {
+            StatusText.Text =
+                "Terreno ↕ via: selecione primeiro uma spline/rua.";
+
+            return;
+        }
+
+        var halfWidth =
+            TerrainSplineHalfWidthBox
+                .Value;
+
+        var featherWidth =
+            TerrainSplineFeatherBox
+                .Value;
+
+        var verticalOffset =
+            TerrainSplineVerticalOffsetBox
+                .Value;
+
+        if (
+            !double.IsFinite(
+                halfWidth) ||
+            halfWidth <= 0 ||
+            !double.IsFinite(
+                featherWidth) ||
+            featherWidth < 0 ||
+            !double.IsFinite(
+                verticalOffset))
+        {
+            StatusText.Text =
+                "Terreno ↕ via: largura, transição ou offset inválidos.";
+
+            return;
+        }
+
+        try
+        {
+            ConformTerrainToSplineButton.IsEnabled =
+                false;
+
+            if (
+                _session.PendingTransformCount >
+                0)
+            {
+                StatusText.Text =
+                    "Terreno ↕ via: salvando a geometria atual da spline...";
+
+                await _session
+                    .SavePendingTransformsAsync();
+
+                SaveChangesButton.IsEnabled =
+                    false;
+            }
+
+            StatusText.Text =
+                $"Terreno ↕ via: ajustando largura {halfWidth:F1} m + transição {featherWidth:F1} m...";
+
+            var result =
+                await _session
+                    .ConformTerrainToSplineAsync(
+                        selection,
+                        halfWidth,
+                        featherWidth,
+                        verticalOffset);
+
+            if (
+                result.ChangedTiles ==
+                0)
+            {
+                ConformTerrainToSplineButton.IsEnabled =
+                    true;
+
+                StatusText.Text =
+                    "Terreno ↕ via: nenhum sample de terreno precisou ser alterado.";
+
+                return;
+            }
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    result.Snapshot,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            StatusText.Text =
+                $"Terreno acompanha a via · {result.ChangedTiles} tile(s) · {result.ChangedSamples} sample(s) alterados · offset {verticalOffset:+0.00;-0.00;0.00} m.";
+        }
+        catch (Exception exception)
+        {
+            ConformTerrainToSplineButton.IsEnabled =
+                _selectionInfo?.Kind ==
+                    PickingKind.Spline;
+
+            StatusText.Text =
+                $"Falha ao fazer o terreno acompanhar a via: {exception.Message}";
         }
     }
 
