@@ -220,7 +220,7 @@ public sealed class MapStudioJunctionAssetGeneratorTests
                             ]));
 
             Assert.Equal(
-                9,
+                18,
                 result.InternalPathCount);
         }
         finally
@@ -237,6 +237,107 @@ public sealed class MapStudioJunctionAssetGeneratorTests
         }
     }
 
+
+
+    [Fact]
+    public async Task MultipleDirectionalLanesProduceSeparateLaneCenteredMovements()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "MapStudio-Junction-Lanes-" +
+                Guid.NewGuid()
+                    .ToString("N"));
+
+        try
+        {
+            Directory.CreateDirectory(
+                root);
+
+            var result =
+                await new MapStudioJunctionAssetGenerator()
+                    .GenerateAsync(
+                        root,
+                        new MapStudioJunctionSpec(
+                            "Two lane turn",
+                            [
+                                new(
+                                    0,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    2,
+                                    0),
+                                new(
+                                    90,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    0,
+                                    2),
+                                new(
+                                    180,
+                                    7,
+                                    2,
+                                    true,
+                                    3.5,
+                                    0,
+                                    0)
+                            ]));
+
+            Assert.Equal(
+                8,
+                result.InternalPathCount);
+
+            var metadata =
+                await new OmsiSceneryObjectReader()
+                    .ReadMetadataAsync(
+                        result
+                            .SceneryObjectPath);
+
+            Assert.Equal(
+                8,
+                metadata.Paths.Count);
+
+            var firstLaneStart =
+                metadata.Paths[0];
+
+            var secondLaneStart =
+                metadata.Paths[4];
+
+            Assert.InRange(
+                Math.Abs(
+                    firstLaneStart.X -
+                    secondLaneStart.X),
+                3.49,
+                3.51);
+
+            Assert.InRange(
+                Math.Abs(
+                    firstLaneStart.Z -
+                    secondLaneStart.Z),
+                0,
+                0.00001);
+
+            Assert.NotEqual(
+                firstLaneStart.Rotation,
+                secondLaneStart.Rotation);
+        }
+        finally
+        {
+            if (
+                Directory.Exists(
+                    root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive:
+                        true);
+            }
+        }
+    }
 
     [Fact]
     public async Task TurningMovementUsesConnectedBezierPathSegments()

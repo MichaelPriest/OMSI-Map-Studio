@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.58: live terrain-to-spline influence preview in the native viewport.
+# Test 10.59: lane-aware internal junction movements with tangent-aligned turns.
 
 on:
   push:
@@ -92,8 +92,8 @@ on:
       - "tools/build_user_manual_pdf.py"
       - "docs/pt-BR/USER_MANUAL.md"
       - "docs/en/USER_MANUAL.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.58-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.58-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.59-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.59-native.md"
   workflow_dispatch:
 
 permissions:
@@ -104,8 +104,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.58-native
-  TAG: v0.2.0-alpha.5-test.10.58-native
+  VERSION: 0.2.0-alpha.5-test.10.59-native
+  TAG: v0.2.0-alpha.5-test.10.59-native
 
 jobs:
   build-native-preview:
@@ -2349,6 +2349,30 @@ jobs:
 
           Write-Host "Verified live center/road-width/feather band preview before real terrain persistence."
 
+      - name: Verify test 10.59 lane-aware junction movements
+        shell: pwsh
+        run: |
+          $junction = Get-Content src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioJunctionAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'ResolveLaneOffsets',
+            'ResolveLaneConnectionIndex',
+            'PointOnArmLane',
+            'ResolveMovementControlPoint',
+            'Cross2D'
+          )) {
+            if (-not $junction.Contains($required)) {
+              throw "Test 10.59 lane-aware junction marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('MultipleDirectionalLanesProduceSeparateLaneCenteredMovements')) {
+            throw "Test 10.59 lane-separated movement regression test is missing."
+          }
+
+          Write-Host "Verified per-lane junction entry/exit offsets, proportional lane pairing and tangent-aligned Bezier control."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -2503,11 +2527,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.58-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.59-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.58-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.59-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

@@ -844,17 +844,18 @@ public sealed class MapStudioJunctionAssetGenerator
                 spec.Arms[
                     fromIndex];
 
+            var inboundOffsets =
+                ResolveLaneOffsets(
+                    from,
+                    inbound:
+                        true);
+
             if (
-                from.InboundLaneCount <=
-                    0)
+                inboundOffsets.Count ==
+                0)
             {
                 continue;
             }
-
-            var fromPoint =
-                PointOnRay(
-                    from.AngleDegrees,
-                    radius);
 
             for (
                 var toIndex = 0;
@@ -873,34 +874,15 @@ public sealed class MapStudioJunctionAssetGenerator
                     spec.Arms[
                         toIndex];
 
-                if (
-                    to.OutboundLaneCount <=
-                        0)
-                {
-                    continue;
-                }
-
-                var toPoint =
-                    PointOnRay(
-                        to.AngleDegrees,
-                        radius);
-
-                var dx =
-                    toPoint.X -
-                    fromPoint.X;
-
-                var dz =
-                    toPoint.Z -
-                    fromPoint.Z;
-
-                var directLength =
-                    Math.Sqrt(
-                        dx * dx +
-                        dz * dz);
+                var outboundOffsets =
+                    ResolveLaneOffsets(
+                        to,
+                        inbound:
+                            false);
 
                 if (
-                    directLength <
-                    0.5)
+                    outboundOffsets.Count ==
+                    0)
                 {
                     continue;
                 }
@@ -914,17 +896,247 @@ public sealed class MapStudioJunctionAssetGenerator
                         2.0,
                         4.2);
 
-                AppendMovementPaths(
-                    paths,
-                    fromPoint,
-                    toPoint,
-                    from.AngleDegrees,
-                    to.AngleDegrees,
-                    laneWidth);
+                var connectionCount =
+                    Math.Max(
+                        inboundOffsets.Count,
+                        outboundOffsets.Count);
+
+                for (
+                    var connectionIndex = 0;
+                    connectionIndex <
+                        connectionCount;
+                    connectionIndex++)
+                {
+                    var sourceLaneIndex =
+                        ResolveLaneConnectionIndex(
+                            connectionIndex,
+                            connectionCount,
+                            inboundOffsets.Count);
+
+                    var targetLaneIndex =
+                        ResolveLaneConnectionIndex(
+                            connectionIndex,
+                            connectionCount,
+                            outboundOffsets.Count);
+
+                    var fromPoint =
+                        PointOnArmLane(
+                            from.AngleDegrees,
+                            radius,
+                            inboundOffsets[
+                                sourceLaneIndex]);
+
+                    var toPoint =
+                        PointOnArmLane(
+                            to.AngleDegrees,
+                            radius,
+                            outboundOffsets[
+                                targetLaneIndex]);
+
+                    if (
+                        Distance(
+                            fromPoint,
+                            toPoint) <
+                        0.5)
+                    {
+                        continue;
+                    }
+
+                    AppendMovementPaths(
+                        paths,
+                        fromPoint,
+                        toPoint,
+                        from.AngleDegrees,
+                        to.AngleDegrees,
+                        laneWidth);
+                }
             }
         }
 
         return paths;
+    }
+
+    private static IReadOnlyList<double>
+        ResolveLaneOffsets(
+            MapStudioJunctionArm arm,
+            bool inbound)
+    {
+        var laneCount =
+            inbound
+                ? arm.InboundLaneCount
+                : arm.OutboundLaneCount;
+
+        if (
+            laneCount <=
+            0)
+        {
+            return Array.Empty<double>();
+        }
+
+        var oppositeLaneCount =
+            inbound
+                ? arm.OutboundLaneCount
+                : arm.InboundLaneCount;
+
+        var laneWidth =
+            Math.Clamp(
+                arm.LaneWidthMeters,
+                2.0,
+                4.5);
+
+        var offsets =
+            new double[
+                laneCount];
+
+        if (
+            arm.OneWay ||
+            oppositeLaneCount <=
+                0)
+        {
+            var first =
+                -(
+                    laneCount -
+                    1
+                ) *
+                laneWidth /
+                2.0;
+
+            for (
+                var index = 0;
+                index <
+                    laneCount;
+                index++)
+            {
+                offsets[
+                    index] =
+                    first +
+                    index *
+                    laneWidth;
+            }
+
+            return offsets;
+        }
+
+        var direction =
+            inbound
+                ? -1.0
+                : 1.0;
+
+        for (
+            var index = 0;
+            index <
+                laneCount;
+            index++)
+        {
+            offsets[
+                index] =
+                direction *
+                (
+                    index +
+                    0.5
+                ) *
+                laneWidth;
+        }
+
+        return offsets;
+    }
+
+    private static int
+        ResolveLaneConnectionIndex(
+            int connectionIndex,
+            int connectionCount,
+            int laneCount)
+    {
+        if (
+            laneCount <=
+                1 ||
+            connectionCount <=
+                1)
+        {
+            return 0;
+        }
+
+        return Math.Clamp(
+            (int)Math.Round(
+                connectionIndex *
+                (
+                    laneCount -
+                    1
+                ) /
+                (double)(
+                    connectionCount -
+                    1
+                ),
+                MidpointRounding
+                    .AwayFromZero),
+            0,
+            laneCount -
+                1);
+    }
+
+    private static (
+        double X,
+        double Z
+    ) PointOnArmLane(
+        double angleDegrees,
+        double distance,
+        double lateralOffset)
+    {
+        var radians =
+            angleDegrees *
+            Math.PI /
+            180.0;
+
+        var forwardX =
+            Math.Sin(
+                radians);
+
+        var forwardZ =
+            Math.Cos(
+                radians);
+
+        var lateralX =
+            Math.Cos(
+                radians);
+
+        var lateralZ =
+            -Math.Sin(
+                radians);
+
+        return
+            (
+                forwardX *
+                    distance +
+                lateralX *
+                    lateralOffset,
+                forwardZ *
+                    distance +
+                lateralZ *
+                    lateralOffset
+            );
+    }
+
+    private static double Distance(
+        (
+            double X,
+            double Z
+        ) first,
+        (
+            double X,
+            double Z
+        ) second)
+    {
+        var dx =
+            second.X -
+            first.X;
+
+        var dz =
+            second.Z -
+            first.Z;
+
+        return Math.Sqrt(
+            dx * dx +
+            dz * dz);
     }
 
     private static void AppendMovementPaths(
@@ -967,6 +1179,13 @@ public sealed class MapStudioJunctionAssetGenerator
                     2,
                     JunctionMovementMaximumSegments);
 
+        var control =
+            ResolveMovementControlPoint(
+                start,
+                end,
+                inboundHeading,
+                outboundHeading);
+
         if (
             segmentCount ==
             1)
@@ -993,9 +1212,9 @@ public sealed class MapStudioJunctionAssetGenerator
                 segmentIndex /
                 (double)segmentCount;
 
-            // Quadratic Bezier with the real junction origin as
-            // the control point. This matches the inbound tangent
-            // toward the center and the outbound tangent away from it.
+            // Quadratic Bezier using the intersection of the real
+            // inbound/outbound lane tangents as the control point.
+            // This preserves lane alignment at both road mouths.
             var oneMinus =
                 1.0 -
                 amount;
@@ -1006,6 +1225,10 @@ public sealed class MapStudioJunctionAssetGenerator
                         oneMinus *
                             oneMinus *
                             start.X +
+                        2.0 *
+                            oneMinus *
+                            amount *
+                            control.X +
                         amount *
                             amount *
                             end.X,
@@ -1013,6 +1236,10 @@ public sealed class MapStudioJunctionAssetGenerator
                         oneMinus *
                             oneMinus *
                             start.Z +
+                        2.0 *
+                            oneMinus *
+                            amount *
+                            control.Z +
                         amount *
                             amount *
                             end.Z
@@ -1028,6 +1255,117 @@ public sealed class MapStudioJunctionAssetGenerator
                 current;
         }
     }
+
+    private static (
+        double X,
+        double Z
+    ) ResolveMovementControlPoint(
+        (
+            double X,
+            double Z
+        ) start,
+        (
+            double X,
+            double Z
+        ) end,
+        double inboundHeadingDegrees,
+        double outboundHeadingDegrees)
+    {
+        var inboundRadians =
+            inboundHeadingDegrees *
+            Math.PI /
+            180.0;
+
+        var outboundRadians =
+            outboundHeadingDegrees *
+            Math.PI /
+            180.0;
+
+        var inboundDirection =
+            (
+                X:
+                    Math.Sin(
+                        inboundRadians),
+                Z:
+                    Math.Cos(
+                        inboundRadians)
+            );
+
+        var outboundDirection =
+            (
+                X:
+                    Math.Sin(
+                        outboundRadians),
+                Z:
+                    Math.Cos(
+                        outboundRadians)
+            );
+
+        var denominator =
+            Cross2D(
+                inboundDirection,
+                outboundDirection);
+
+        if (
+            Math.Abs(
+                denominator) <
+            0.000001)
+        {
+            return
+                (
+                    (
+                        start.X +
+                        end.X
+                    ) /
+                    2.0,
+                    (
+                        start.Z +
+                        end.Z
+                    ) /
+                    2.0
+                );
+        }
+
+        var between =
+            (
+                X:
+                    end.X -
+                    start.X,
+                Z:
+                    end.Z -
+                    start.Z
+            );
+
+        var amount =
+            Cross2D(
+                between,
+                outboundDirection) /
+            denominator;
+
+        return
+            (
+                start.X +
+                    inboundDirection.X *
+                    amount,
+                start.Z +
+                    inboundDirection.Z *
+                    amount
+            );
+    }
+
+    private static double Cross2D(
+        (
+            double X,
+            double Z
+        ) first,
+        (
+            double X,
+            double Z
+        ) second) =>
+        first.X *
+            second.Z -
+        first.Z *
+            second.X;
 
     private static void AppendStraightJunctionPath(
         ICollection<JunctionPath> paths,
