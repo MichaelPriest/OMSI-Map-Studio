@@ -175,26 +175,26 @@ public sealed class NativeTunnelPortalPlanBuilder
                 -Math.Sin(yaw);
 
             var leftTerrain =
-                NativeTerrainSampler
-                    .GetHeightAtWorldPoint(
-                        scene,
-                        worldPoint.X -
-                            lateralX *
-                            probeDistance,
-                        worldPoint.Z -
-                            lateralZ *
-                            probeDistance);
+                ResolveTerrainHeight(
+                    scene,
+                    worldPoint.X -
+                        lateralX *
+                        probeDistance,
+                    worldPoint.Z -
+                        lateralZ *
+                        probeDistance,
+                    terrainCenter);
 
             var rightTerrain =
-                NativeTerrainSampler
-                    .GetHeightAtWorldPoint(
-                        scene,
-                        worldPoint.X +
-                            lateralX *
-                            probeDistance,
-                        worldPoint.Z +
-                            lateralZ *
-                            probeDistance);
+                ResolveTerrainHeight(
+                    scene,
+                    worldPoint.X +
+                        lateralX *
+                        probeDistance,
+                    worldPoint.Z +
+                        lateralZ *
+                        probeDistance,
+                    terrainCenter);
 
             var leftWingHeight =
                 ResolveWingHeight(
@@ -274,6 +274,23 @@ public sealed class NativeTunnelPortalPlanBuilder
             profile?.TotalWidthMeters ?? DefaultRoadWidthMeters,
             3.0,
             30.0);
+    }
+
+    private static double ResolveTerrainHeight(
+        NativeSceneSnapshot scene,
+        double worldX,
+        double worldZ,
+        double fallback)
+    {
+        return
+            NativeTerrainSampler
+                .TryGetHeightAtWorldPoint(
+                    scene,
+                    worldX,
+                    worldZ,
+                    out var height)
+                ? height
+                : fallback;
     }
 
     private static double ResolveWingHeight(
