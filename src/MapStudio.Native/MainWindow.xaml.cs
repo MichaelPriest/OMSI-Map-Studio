@@ -246,6 +246,13 @@ public sealed partial class MainWindow : Window
     private bool
         _vegetationShapeCaptureMode;
 
+    private readonly List<MapStudioRoadPoint>
+        _terrainShapePoints =
+            [];
+
+    private bool
+        _terrainShapeCaptureMode;
+
     private int _proceduralRoadTraceSequence;
     private RoadProfileOption?
         _activeRoadProfile;
@@ -972,6 +979,47 @@ public sealed partial class MainWindow : Window
         Viewport.TerrainPointSelected +=
             point =>
             {
+                if (_terrainShapeCaptureMode)
+                {
+                    var shapePoint =
+                        new MapStudioRoadPoint(
+                            point.WorldPoint.X,
+                            point.WorldPoint.Z);
+
+                    if (
+                        _terrainShapePoints.Count ==
+                            0 ||
+                        _terrainShapePoints[^1]
+                            .DistanceTo(
+                                shapePoint) >=
+                            0.20)
+                    {
+                        _terrainShapePoints.Add(
+                            shapePoint);
+                    }
+
+                    TerrainShapeFillButton.IsEnabled =
+                        _terrainShapePoints.Count >=
+                            3;
+
+                    TerrainShapeClearButton.IsEnabled =
+                        _terrainShapePoints.Count >
+                            0;
+
+                    UpdateTerrainShapePreview();
+
+                    StatusText.Text =
+                        $"Textura por forma · {_terrainShapePoints.Count} vértice(s) · " +
+                        (
+                            _terrainShapePoints.Count >=
+                                3
+                                ? "use Pintar forma ou continue adicionando vértices."
+                                : "adicione pelo menos 3 vértices."
+                        );
+
+                    return;
+                }
+
                 if (_vegetationShapeCaptureMode)
                 {
                     var shapePoint =
@@ -6097,6 +6145,293 @@ public sealed partial class MainWindow : Window
         }
     }
 
+
+    private void OnTerrainShapeStartClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (
+            snapshot is null ||
+            snapshot.Map
+                .GroundTextures
+                .Count <=
+            1)
+        {
+            StatusText.Text =
+                "Textura por forma: abra um mapa com ao menos uma groundtex pintável.";
+
+            return;
+        }
+
+        if (_vegetationShapeCaptureMode)
+        {
+            CancelVegetationShapeCapture(
+                clearPoints:
+                    false);
+        }
+
+        _proceduralRoadTraceMode =
+            false;
+
+        _activeRoadProfile =
+            null;
+
+        _activeRoadTracePoints
+            .Clear();
+
+        FinishProceduralRoadTraceMenuItem
+            .IsEnabled =
+            false;
+
+        _terrainShapePoints
+            .Clear();
+
+        _terrainShapeCaptureMode =
+            true;
+
+        TerrainShapeFillButton.IsEnabled =
+            false;
+
+        TerrainShapeClearButton.IsEnabled =
+            true;
+
+        Viewport
+            .ClearProceduralRoadPreview();
+
+        Viewport
+            .BeginTerrainSelectionMode();
+
+        StatusText.Text =
+            "Textura por Custom Shape ativa: clique os vértices no terreno e depois use Pintar forma.";
+    }
+
+    private void UpdateTerrainShapePreview()
+    {
+        if (
+            _terrainShapePoints.Count <
+                2)
+        {
+            Viewport
+                .ClearProceduralRoadPreview();
+
+            return;
+        }
+
+        try
+        {
+            var points =
+                _terrainShapePoints
+                    .ToList();
+
+            if (
+                points.Count >=
+                    3)
+            {
+                points.Add(
+                    points[0]);
+            }
+
+            var graph =
+                new MapStudioRoadGraphBuilder()
+                    .Build(
+                        [
+                            new MapStudioRoadTrace(
+                                "terrain-shape-preview",
+                                points,
+                                "terrain-shape-preview")
+                        ],
+                        snapToleranceMeters:
+                            0.05,
+                        minimumSegmentLengthMeters:
+                            0.05);
+
+            Viewport
+                .PreviewProceduralRoadGraph(
+                    graph);
+        }
+        catch
+        {
+        }
+    }
+
+    private void CancelTerrainShapeCapture(
+        bool clearPoints)
+    {
+        _terrainShapeCaptureMode =
+            false;
+
+        Viewport
+            .CancelTerrainPointPick();
+
+        if (clearPoints)
+        {
+            _terrainShapePoints
+                .Clear();
+        }
+
+        TerrainShapeFillButton.IsEnabled =
+            !clearPoints &&
+            _terrainShapePoints.Count >=
+                3;
+
+        TerrainShapeClearButton.IsEnabled =
+            !clearPoints &&
+            _terrainShapePoints.Count >
+                0;
+
+        RestoreProceduralRoadPreviewAfterShape();
+    }
+
+    private void OnTerrainShapeClearClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        CancelTerrainShapeCapture(
+            clearPoints:
+                true);
+
+        StatusText.Text =
+            "Custom Shape de textura do terreno limpa.";
+    }
+
+    private async void OnTerrainShapeFillClick(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var snapshot =
+            _session.CurrentMap;
+
+        if (
+            snapshot is null ||
+            _terrainShapePoints.Count <
+                3)
+        {
+            StatusText.Text =
+                "Textura por forma: desenhe ao menos 3 vértices no terreno.";
+
+            return;
+        }
+
+        if (
+            _session.PendingTransformCount >
+            0)
+        {
+            StatusText.Text =
+                "Salve as transformações pendentes antes de pintar o terreno.";
+
+            return;
+        }
+
+        var layerValue =
+            TerrainPaintLayerBox.Value;
+
+        var alphaValue =
+            TerrainPaintAlphaBox.Value;
+
+        var radius =
+            TerrainBrushRadiusBox.Value;
+
+        var feather =
+            TerrainBrushFeatherBox.Value;
+
+        if (
+            !double.IsFinite(layerValue) ||
+            Math.Truncate(layerValue) !=
+                layerValue ||
+            layerValue < 1 ||
+            layerValue >=
+                snapshot.Map
+                    .GroundTextures
+                    .Count ||
+            !double.IsFinite(alphaValue) ||
+            Math.Truncate(alphaValue) !=
+                alphaValue ||
+            alphaValue < 0 ||
+            alphaValue > 255 ||
+            !double.IsFinite(radius) ||
+            radius <= 0 ||
+            !double.IsFinite(feather) ||
+            feather < 0 ||
+            feather > 1)
+        {
+            StatusText.Text =
+                "Textura por forma: groundtex/alpha/raio/suavização inválidos.";
+
+            return;
+        }
+
+        var layer =
+            checked(
+                (int)layerValue);
+
+        var alpha =
+            checked(
+                (byte)alphaValue);
+
+        var edgeFeatherMeters =
+            radius *
+            feather;
+
+        try
+        {
+            TerrainShapeFillButton.IsEnabled =
+                false;
+
+            StatusText.Text =
+                $"Pintando groundtex {layer} dentro da forma ({_terrainShapePoints.Count} vértices)...";
+
+            var worldPolygon =
+                _terrainShapePoints
+                    .Select(
+                        point =>
+                            new Vector2(
+                                (float)point.X,
+                                (float)point.Z))
+                    .ToArray();
+
+            var updated =
+                await _session
+                    .PaintTerrainTexturePolygonAsync(
+                        worldPolygon,
+                        layer,
+                        alpha,
+                        edgeFeatherMeters);
+
+            if (_session.OmsiRootPath is null)
+            {
+                throw new InvalidOperationException(
+                    "Instalação OMSI não selecionada.");
+            }
+
+            await Viewport
+                .SetMapSnapshotAsync(
+                    updated,
+                    _session.OmsiRootPath);
+
+            ClearInspectorSelectionState();
+            RefreshExplorer();
+
+            CancelTerrainShapeCapture(
+                clearPoints:
+                    true);
+
+            StatusText.Text =
+                $"Textura por forma aplicada · groundtex {layer} · alpha {alpha} · suavização de borda {edgeFeatherMeters:F1} m.";
+        }
+        catch (Exception exception)
+        {
+            TerrainShapeFillButton.IsEnabled =
+                _terrainShapePoints.Count >=
+                    3;
+
+            StatusText.Text =
+                $"Falha ao pintar textura por forma: {exception.Message}";
+        }
+    }
+
     private void OnPickTerrainPointClick(
         object sender,
         RoutedEventArgs e)
@@ -10509,6 +10844,13 @@ public sealed partial class MainWindow : Window
 
         SetActiveMapTool(
             ToolVegetationButton);
+
+        if (_terrainShapeCaptureMode)
+        {
+            CancelTerrainShapeCapture(
+                clearPoints:
+                    false);
+        }
 
         _proceduralRoadTraceMode =
             false;

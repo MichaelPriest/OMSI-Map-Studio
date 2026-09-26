@@ -10,6 +10,7 @@ using MapStudio.Core.Workspace;
 using MapStudio.Renderer.Viewport;
 using MapStudio.Renderer.Picking;
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 
 namespace MapStudio.Native.Services;
@@ -9600,6 +9601,283 @@ public sealed class OmsiNativeSession
                                     ? new NativeLoadedTile(
                                         item.Reference,
                                         refreshedContent)
+                                    : item)
+                        .ToArray()
+            };
+
+        return CurrentMap;
+    }
+
+
+    public async Task<NativeMapSnapshot>
+        PaintTerrainTexturePolygonAsync(
+            IReadOnlyList<Vector2> worldPolygon,
+            int layerIndex,
+            byte targetAlpha,
+            double edgeFeatherMeters,
+            CancellationToken cancellationToken =
+                default)
+    {
+        ArgumentNullException.ThrowIfNull(
+            worldPolygon);
+
+        var snapshot =
+            CurrentMap ??
+            throw new InvalidOperationException(
+                "Nenhum mapa OMSI está aberto.");
+
+        if (_pendingTransforms.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "savePendingBeforeTerrainPaint");
+        }
+
+        if (
+            worldPolygon.Count < 3 ||
+            worldPolygon.Any(
+                point =>
+                    !float.IsFinite(point.X) ||
+                    !float.IsFinite(point.Y)) ||
+            !double.IsFinite(
+                edgeFeatherMeters) ||
+            edgeFeatherMeters < 0)
+        {
+            throw new InvalidDataException(
+                "terrainPaintPolygonInvalid");
+        }
+
+        if (
+            layerIndex <= 0 ||
+            layerIndex >=
+                snapshot.Map
+                    .GroundTextures
+                    .Count)
+        {
+            throw new InvalidDataException(
+                "terrainPaintLayerInvalid");
+        }
+
+        var resolution =
+            snapshot.Map
+                .GroundTextures[
+                    layerIndex]
+                .MaskResolution;
+
+        var mapRoot =
+            Path.GetFullPath(
+                snapshot.Map.DirectoryPath)
+            .TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+
+        var requiredPrefix =
+            mapRoot +
+            Path.DirectorySeparatorChar;
+
+        var maskDirectory =
+            Path.Combine(
+                snapshot.Map.DirectoryPath,
+                "texture",
+                "map");
+
+        var refreshed =
+            new Dictionary<
+                string,
+                OmsiTileContent>(
+                    StringComparer.OrdinalIgnoreCase);
+
+        foreach (var loaded in snapshot.Tiles)
+        {
+            cancellationToken
+                .ThrowIfCancellationRequested();
+
+            if (
+                !OmsiMapPathResolver.TryResolveTilePath(
+                    snapshot.Map.DirectoryPath,
+                    loaded.Reference.RelativeMapPath,
+                    out var tilePath))
+            {
+                continue;
+            }
+
+            var tileOriginX =
+                (float)OmsiTileGrid.GetOriginX(
+                    loaded.Reference.X);
+
+            var tileOriginY =
+                (float)OmsiTileGrid.GetOriginZ(
+                    loaded.Reference.Y);
+
+            var localPolygon =
+                worldPolygon
+                    .Select(
+                        point =>
+                            new Vector2(
+                                point.X -
+                                    tileOriginX,
+                                point.Y -
+                                    tileOriginY))
+                    .ToArray();
+
+            var minX =
+                localPolygon.Min(
+                    point =>
+                        point.X);
+
+            var maxX =
+                localPolygon.Max(
+                    point =>
+                        point.X);
+
+            var minY =
+                localPolygon.Min(
+                    point =>
+                        point.Y);
+
+            var maxY =
+                localPolygon.Max(
+                    point =>
+                        point.Y);
+
+            if (
+                maxX < 0 ||
+                maxY < 0 ||
+                minX >
+                    OmsiTileGrid.TileSize ||
+                minY >
+                    OmsiTileGrid.TileSize)
+            {
+                continue;
+            }
+
+            var maskPath =
+                Path.GetFullPath(
+                    Path.Combine(
+                        maskDirectory,
+                        Path.GetFileName(
+                            tilePath) +
+                        "." +
+                        layerIndex.ToString(
+                            CultureInfo.InvariantCulture) +
+                        ".dds"));
+
+            if (
+                !maskPath.StartsWith(
+                    requiredPrefix,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException(
+                    "terrainMaskPathInvalid");
+            }
+
+            var existed =
+                File.Exists(
+                    maskPath);
+
+            OmsiTerrainTextureMaskData source;
+
+            if (existed)
+            {
+                source =
+                    OmsiTerrainTextureMaskDataReader
+                        .Read(
+                            maskPath);
+            }
+            else
+            {
+                if (
+                    resolution is not int size ||
+                    size <= 0)
+                {
+                    throw new InvalidDataException(
+                        "terrainMaskResolutionUnavailable");
+                }
+
+                source =
+                    new OmsiTerrainTextureMaskData(
+                        size,
+                        size,
+                        new byte[
+                            checked(
+                                size *
+                                size)]);
+            }
+
+            var result =
+                OmsiTerrainTextureMaskPainter
+                    .PaintPolygon(
+                        source,
+                        localPolygon,
+                        targetAlpha,
+                        edgeFeatherMeters);
+
+            if (
+                result.ChangedPixels ==
+                0)
+            {
+                continue;
+            }
+
+            var bytes =
+                OmsiTerrainTextureMaskWriter
+                    .Write(
+                        result.Mask);
+
+            if (existed)
+            {
+                await SafeFileTransaction
+                    .WriteAllAsync(
+                        [
+                            new PendingFileWrite(
+                                maskPath,
+                                CreateNativeBackupPath(
+                                    snapshot.Map.DirectoryPath,
+                                    maskPath),
+                                bytes)
+                        ],
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                await CreateNewFileAtomicallyAsync(
+                        maskPath,
+                        bytes,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            refreshed[
+                loaded.Reference
+                    .RelativeMapPath] =
+                await _tileReader
+                    .ReadContentAsync(
+                        tilePath,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+        }
+
+        if (
+            refreshed.Count ==
+            0)
+        {
+            return snapshot;
+        }
+
+        CurrentMap =
+            snapshot with
+            {
+                Tiles =
+                    snapshot.Tiles
+                        .Select(
+                            item =>
+                                refreshed.TryGetValue(
+                                    item.Reference
+                                        .RelativeMapPath,
+                                    out var content)
+                                    ? new NativeLoadedTile(
+                                        item.Reference,
+                                        content)
                                     : item)
                         .ToArray()
             };

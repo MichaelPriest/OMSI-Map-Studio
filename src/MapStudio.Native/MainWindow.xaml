@@ -4041,6 +4041,14 @@
                                         Content="Pintar"
                                         Click="OnApplyTerrainPaintClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Forma textura"
+                                        ToolTipService.ToolTip="Desenhar um polígono no terreno para pintar groundtex"
+                                        Click="OnTerrainShapeStartClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
+                                        Content="Aplicar forma"
+                                        ToolTipService.ToolTip="Aplicar a textura dentro do polígono capturado"
+                                        Click="OnTerrainShapeFillClick" />
+                                <Button Style="{StaticResource EditorToolbarButtonStyle}"
                                         Content="Água"
                                         Click="OnToolWaterClick" />
                                 <Button Style="{StaticResource EditorToolbarButtonStyle}"
@@ -5045,6 +5053,35 @@
                                         HorizontalAlignment="Stretch"
                                         IsEnabled="False"
                                         Click="OnApplyTerrainPaintClick" />
+                                <TextBlock Text="Custom Shape"
+                                           Margin="0,5,0,0"
+                                           FontWeight="SemiBold" />
+                                <TextBlock Text="Capture um polígono no viewport e pinte a groundtex dentro da forma, inclusive em polígonos côncavos e atravessando tiles."
+                                           TextWrapping="Wrap"
+                                           FontSize="10"
+                                           Foreground="{ThemeResource MapStudioTextMutedBrush}" />
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="TerrainShapeStartButton"
+                                            Grid.Column="0"
+                                            Content="Desenhar forma"
+                                            HorizontalAlignment="Stretch"
+                                            Click="OnTerrainShapeStartClick" />
+                                    <Button x:Name="TerrainShapeFillButton"
+                                            Grid.Column="1"
+                                            Content="Pintar forma"
+                                            HorizontalAlignment="Stretch"
+                                            IsEnabled="False"
+                                            Click="OnTerrainShapeFillClick" />
+                                </Grid>
+                                <Button x:Name="TerrainShapeClearButton"
+                                        Content="Limpar forma"
+                                        HorizontalAlignment="Stretch"
+                                        IsEnabled="False"
+                                        Click="OnTerrainShapeClearClick" />
                             </StackPanel>
                         </Border>
 

@@ -433,6 +433,50 @@ public sealed class OmsiTerrainTextureMaskTests
                     > 0 and < 255);
     }
 
+
+    [Fact]
+    public void TerrainTextureMaskPainter_PaintsConcavePolygonWithoutFillingCutout()
+    {
+        var source =
+            new OmsiTerrainTextureMaskData(
+                9,
+                9,
+                new byte[81]);
+
+        var result =
+            OmsiTerrainTextureMaskPainter
+                .PaintPolygon(
+                    source,
+                    [
+                        new System.Numerics.Vector2(50, 50),
+                        new System.Numerics.Vector2(250, 50),
+                        new System.Numerics.Vector2(250, 120),
+                        new System.Numerics.Vector2(120, 120),
+                        new System.Numerics.Vector2(120, 250),
+                        new System.Numerics.Vector2(50, 250)
+                    ],
+                    targetAlpha:
+                        255);
+
+        Assert.True(
+            result.ChangedPixels >
+            0);
+
+        Assert.Equal(
+            255,
+            result.Mask
+                .AlphaPixels[
+                    2 * 9 +
+                    2]);
+
+        Assert.Equal(
+            0,
+            result.Mask
+                .AlphaPixels[
+                    4 * 9 +
+                    4]);
+    }
+
     private static byte[] CreateA8Dds(
         int width,
         int height,
