@@ -1281,7 +1281,7 @@ jobs:
           }
 
           if (-not $roadKit.Contains('PackVersion =') -or
-              -not $roadKit.Contains('"1.3.0"') -or
+              -not $roadKit.Contains('"1.4.0"') -or
               -not $roadKit.Contains('MapStudioStandardRoadCatalog')) {
             throw "Test 10.34+ Road Kit shared catalog wiring is missing."
           }
