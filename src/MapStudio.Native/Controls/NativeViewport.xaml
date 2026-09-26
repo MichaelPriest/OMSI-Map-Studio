@@ -175,6 +175,34 @@
                 Foreground="#9FC7DE" />
         </Border>
 
+        <Canvas x:Name="TerrainBrushLayer"
+                Visibility="Collapsed"
+                IsHitTestVisible="False">
+            <Ellipse x:Name="TerrainBrushOuterRing"
+                     Width="0"
+                     Height="0"
+                     Stroke="#FF59D9FF"
+                     StrokeThickness="2"
+                     Fill="#1459D9FF" />
+            <Ellipse x:Name="TerrainBrushInnerRing"
+                     Width="0"
+                     Height="0"
+                     Stroke="#CCFFFFFF"
+                     StrokeThickness="1"
+                     StrokeDashArray="4,3" />
+            <Border x:Name="TerrainBrushLabel"
+                    Padding="6,3"
+                    Background="#D90A141D"
+                    BorderBrush="#6659D9FF"
+                    BorderThickness="1"
+                    CornerRadius="5">
+                <TextBlock x:Name="TerrainBrushLabelText"
+                           Text="20 m · feather 25%"
+                           FontSize="10"
+                           Foreground="#FFE7F7FF" />
+            </Border>
+        </Canvas>
+
         <Canvas x:Name="SelectionBoxLayer"
                 Visibility="Collapsed"
                 IsHitTestVisible="False">
