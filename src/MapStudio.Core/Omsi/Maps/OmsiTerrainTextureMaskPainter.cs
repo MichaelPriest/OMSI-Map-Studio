@@ -361,10 +361,10 @@ public static class OmsiTerrainTextureMaskPainter
                         point.Y -
                         a.Y
                     ) /
-                    Math.Max(
-                        0.000001f,
+                    (
                         b.Y -
-                        a.Y) +
+                        a.Y
+                    ) +
                     a.X;
 
             if (intersects)
