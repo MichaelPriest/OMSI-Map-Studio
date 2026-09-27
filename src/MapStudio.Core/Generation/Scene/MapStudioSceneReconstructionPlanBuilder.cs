@@ -17,12 +17,13 @@ public enum MapStudioSceneFeatureKind
     UtilityPole = 3,
     StreetLight = 4,
     Tree = 5,
-    TrafficSign = 6,
-    BusShelter = 7,
-    GuardRail = 8,
-    Sidewalk = 9,
-    Driveway = 10,
-    Parking = 11,
+    Shrub = 6,
+    TrafficSign = 7,
+    BusShelter = 8,
+    GuardRail = 9,
+    Sidewalk = 10,
+    Driveway = 11,
+    Parking = 12,
     Unknown = 99
 }
 
