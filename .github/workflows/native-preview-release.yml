@@ -118,6 +118,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.79-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.80-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.80-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.81-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.81-native.md"
   workflow_dispatch:
 
 permissions:
@@ -128,8 +130,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.80-native
-  TAG: v0.2.0-alpha.5-test.10.80-native
+  VERSION: 0.2.0-alpha.5-test.10.81-native
+  TAG: v0.2.0-alpha.5-test.10.81-native
 
 jobs:
   build-native-preview:
@@ -3152,6 +3154,38 @@ jobs:
 
           Write-Host "Verified OSM building evidence bridge and confidence-gated street-level refinement."
 
+      - name: Verify test 10.81 OSM vegetation reconstruction
+        shell: pwsh
+        run: |
+          $adapter = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmVegetationReconstructionAdapter.cs -Raw
+          $planner = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioSceneReconstructionPlanBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmVegetationReconstructionAdapterTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOsmVegetationReconstructionAdapter',
+            'MapStudioSceneFeatureKind.Shrub',
+            'MapStudioOsmVegetationLineKind.Hedge',
+            'ResolvePointConfidence',
+            'ResolveLineConfidence'
+          )) {
+            if (-not ($adapter.Contains($required) -or $planner.Contains($required))) {
+              throw "Test 10.81 vegetation reconstruction marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'PointAdapterBuildsStrongTreeEvidenceWhenSpeciesKnown',
+            'ShrubPointRemainsShrubFeature',
+            'HedgeLineMapsToFenceSceneFeature',
+            'TreeRowCanAutoGenerateFromGeometryAndMetadata'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.81 vegetation regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified OSM vegetation evidence mapping, shrub preservation and tree-row confidence."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3306,11 +3340,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.80-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.81-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.80-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.81-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
