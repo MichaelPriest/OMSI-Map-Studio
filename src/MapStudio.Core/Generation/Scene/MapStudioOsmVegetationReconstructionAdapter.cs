@@ -15,7 +15,10 @@ public sealed class MapStudioOsmVegetationReconstructionAdapter
                 point =>
                     new MapStudioSceneFeatureCandidate(
                         point.Id,
-                        MapStudioSceneFeatureKind.Tree,
+                        point.Kind ==
+                            MapStudioOsmVegetationKind.Tree
+                                ? MapStudioSceneFeatureKind.Tree
+                                : MapStudioSceneFeatureKind.Shrub,
                         [
                             new MapStudioSceneEvidence(
                                 MapStudioSceneEvidenceSource.Osm,
