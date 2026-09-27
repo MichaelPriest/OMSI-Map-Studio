@@ -40,6 +40,30 @@ public sealed class MapStudioOsmVegetationReconstructionAdapterTests
     }
 
     [Fact]
+    public void ShrubPointRemainsShrubFeature()
+    {
+        var candidate =
+            Assert.Single(
+                new MapStudioOsmVegetationReconstructionAdapter()
+                    .BuildPointCandidates(
+                        [
+                            new MapStudioGeoVegetationPoint(
+                                "osm-shrub-1",
+                                -23.55,
+                                -46.63,
+                                MapStudioOsmVegetationKind.Shrub,
+                                null,
+                                null,
+                                null,
+                                null)
+                        ]));
+
+        Assert.Equal(
+            MapStudioSceneFeatureKind.Shrub,
+            candidate.Kind);
+    }
+
+    [Fact]
     public void HedgeLineMapsToFenceSceneFeature()
     {
         var candidate =
