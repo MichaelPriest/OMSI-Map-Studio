@@ -154,6 +154,57 @@ public sealed class MapStudioTunnelPortalAssetGeneratorTests
     }
 
     [Fact]
+    public void BuildGeometryAddsDrainageAndEmissivePortalLighting()
+    {
+        var geometry =
+            new MapStudioTunnelPortalAssetGenerator()
+                .BuildGeometry(
+                    new MapStudioTunnelPortalSpec(
+                        "MS_TunnelPortal_W080_L040_R040_DL050_DR050",
+                        8.0,
+                        LeftWingHeightMeters:
+                            4.0,
+                        RightWingHeightMeters:
+                            4.0,
+                        LeftWingDepthMeters:
+                            5.0,
+                        RightWingDepthMeters:
+                            5.0));
+
+        Assert.Equal(
+            3,
+            geometry.Materials.Count);
+
+        var light =
+            geometry.Materials[1];
+
+        Assert.Equal(
+            "ms_tunnel_light.bmp",
+            light.TextureName);
+
+        Assert.True(
+            light.EmissionR > 0.5f);
+
+        Assert.True(
+            light.EmissionG > 0.5f);
+
+        Assert.Contains(
+            (ushort)1,
+            geometry.TriangleMaterialIndices);
+
+        var drain =
+            geometry.Materials[2];
+
+        Assert.Equal(
+            "ms_tunnel_drain.bmp",
+            drain.TextureName);
+
+        Assert.Contains(
+            (ushort)2,
+            geometry.TriangleMaterialIndices);
+    }
+
+    [Fact]
     public void BuildGeometryCreatesRealPortalFrame()
     {
         var geometry =
