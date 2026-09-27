@@ -70,7 +70,7 @@ public sealed class MapStudioTunnelPortalAssetGenerator
     public const string RootFolderName =
         MapStudioBridgePierAssetGenerator.RootFolderName;
 
-    private const string AssetVersion = "1.0.0";
+    private const string AssetVersion = "1.1.0";
 
     public async Task<MapStudioTunnelPortalAssetResult> GenerateAsync(
         string omsiRoot,
@@ -162,6 +162,51 @@ public sealed class MapStudioTunnelPortalAssetGenerator
                         128 + grain + (joint ? -16 : 0),
                         84,
                         164);
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)value,
+                        (byte)value,
+                        (byte)Math.Min(255, value + 3));
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            await MapStudioGeneratedTextureFactory.EnsureBmpAsync(
+                textureDirectory,
+                "ms_tunnel_light.bmp",
+                64,
+                64,
+                static (x, y) =>
+                {
+                    var edge =
+                        x < 3 ||
+                        y < 3 ||
+                        x > 60 ||
+                        y > 60;
+                    var value =
+                        edge
+                            ? 160
+                            : 246;
+
+                    return new MapStudioGeneratedRgb(
+                        (byte)value,
+                        (byte)Math.Min(255, value + 5),
+                        (byte)Math.Min(255, value + 9));
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            await MapStudioGeneratedTextureFactory.EnsureBmpAsync(
+                textureDirectory,
+                "ms_tunnel_drain.bmp",
+                64,
+                64,
+                static (x, y) =>
+                {
+                    var groove =
+                        x % 8 < 2;
+                    var value =
+                        groove
+                            ? 42
+                            : 74;
 
                     return new MapStudioGeneratedRgb(
                         (byte)value,
@@ -314,6 +359,81 @@ public sealed class MapStudioTunnelPortalAssetGenerator
                 thickness * 0.70f,
                 roofApronDepth));
 
+        var drainageDepth =
+            Math.Max(
+                roofApronDepth,
+                depth);
+
+        var drainageWidth =
+            Math.Clamp(
+                clearWidth * 0.035f,
+                0.18f,
+                0.32f);
+
+        var drainageOffset =
+            clearWidth / 2.0f -
+            drainageWidth / 2.0f;
+
+        builder.AddBox(
+            new Vector3(
+                -drainageOffset,
+                0.035f,
+                drainageDepth * 0.32f),
+            new Vector3(
+                drainageWidth,
+                0.07f,
+                drainageDepth),
+            2);
+
+        builder.AddBox(
+            new Vector3(
+                drainageOffset,
+                0.035f,
+                drainageDepth * 0.32f),
+            new Vector3(
+                drainageWidth,
+                0.07f,
+                drainageDepth),
+            2);
+
+        var lightBarLength =
+            Math.Clamp(
+                clearWidth * 0.32f,
+                1.8f,
+                4.2f);
+
+        var lightBarDepth =
+            Math.Clamp(
+                roofApronDepth * 0.34f,
+                0.8f,
+                2.4f);
+
+        var lightBarY =
+            clearHeight -
+            0.18f;
+
+        builder.AddBox(
+            new Vector3(
+                -clearWidth * 0.22f,
+                lightBarY,
+                lightBarDepth * 0.35f),
+            new Vector3(
+                lightBarLength * 0.42f,
+                0.08f,
+                lightBarDepth),
+            1);
+
+        builder.AddBox(
+            new Vector3(
+                clearWidth * 0.22f,
+                lightBarY,
+                lightBarDepth * 0.35f),
+            new Vector3(
+                lightBarLength * 0.42f,
+                0.08f,
+                lightBarDepth),
+            1);
+
         AddSlopeCap(
             -1.0f,
             leftWingHeight,
@@ -436,7 +556,10 @@ public sealed class MapStudioTunnelPortalAssetGenerator
         private readonly List<uint> _indices = [];
         private readonly List<ushort> _materials = [];
 
-        public void AddBox(Vector3 center, Vector3 size)
+        public void AddBox(
+            Vector3 center,
+            Vector3 size,
+            ushort materialIndex = 0)
         {
             var half = size * 0.5f;
             var p000 = center + new Vector3(-half.X, -half.Y, -half.Z);
@@ -448,12 +571,12 @@ public sealed class MapStudioTunnelPortalAssetGenerator
             var p111 = center + new Vector3(half.X, half.Y, half.Z);
             var p011 = center + new Vector3(-half.X, half.Y, half.Z);
 
-            AddQuad(p000, p010, p110, p100, -Vector3.UnitZ);
-            AddQuad(p101, p111, p011, p001, Vector3.UnitZ);
-            AddQuad(p001, p011, p010, p000, -Vector3.UnitX);
-            AddQuad(p100, p110, p111, p101, Vector3.UnitX);
-            AddQuad(p010, p011, p111, p110, Vector3.UnitY);
-            AddQuad(p001, p000, p100, p101, -Vector3.UnitY);
+            AddQuad(p000, p010, p110, p100, -Vector3.UnitZ, materialIndex);
+            AddQuad(p101, p111, p011, p001, Vector3.UnitZ, materialIndex);
+            AddQuad(p001, p011, p010, p000, -Vector3.UnitX, materialIndex);
+            AddQuad(p100, p110, p111, p101, Vector3.UnitX, materialIndex);
+            AddQuad(p010, p011, p111, p110, Vector3.UnitY, materialIndex);
+            AddQuad(p001, p000, p100, p101, -Vector3.UnitY, materialIndex);
         }
 
         public OmsiO3dGeometry Build() =>
@@ -478,7 +601,33 @@ public sealed class MapStudioTunnelPortalAssetGenerator
                         0,
                         0,
                         10,
-                        "ms_tunnel_concrete.bmp")
+                        "ms_tunnel_concrete.bmp"),
+                    new OmsiO3dMaterial(
+                        0.96f,
+                        0.96f,
+                        0.90f,
+                        1.0f,
+                        0.10f,
+                        0.10f,
+                        0.08f,
+                        0.82f,
+                        0.84f,
+                        0.76f,
+                        4,
+                        "ms_tunnel_light.bmp"),
+                    new OmsiO3dMaterial(
+                        0.22f,
+                        0.22f,
+                        0.23f,
+                        1.0f,
+                        0.02f,
+                        0.02f,
+                        0.02f,
+                        0,
+                        0,
+                        0,
+                        4,
+                        "ms_tunnel_drain.bmp")
                 ]);
 
         private void AddQuad(
@@ -486,7 +635,8 @@ public sealed class MapStudioTunnelPortalAssetGenerator
             Vector3 b,
             Vector3 c,
             Vector3 d,
-            Vector3 normal)
+            Vector3 normal,
+            ushort materialIndex)
         {
             var start = checked((uint)(_positions.Count / 3));
             AddVertex(a, normal, 0, 1);
@@ -504,8 +654,8 @@ public sealed class MapStudioTunnelPortalAssetGenerator
                     start + 3
                 ]);
 
-            _materials.Add(0);
-            _materials.Add(0);
+            _materials.Add(materialIndex);
+            _materials.Add(materialIndex);
         }
 
         private void AddVertex(
