@@ -96,6 +96,14 @@ public sealed class MapStudioTunnelPortalAssetGenerator
             objectDirectory,
             "Texture",
             "ms_tunnel_concrete.bmp");
+        var lightTexturePath = Path.Combine(
+            objectDirectory,
+            "Texture",
+            "ms_tunnel_light.bmp");
+        var drainTexturePath = Path.Combine(
+            objectDirectory,
+            "Texture",
+            "ms_tunnel_drain.bmp");
         var manifestPath = Path.Combine(
             objectDirectory,
             "mapstudio-tunnel-portal.txt");
@@ -104,6 +112,8 @@ public sealed class MapStudioTunnelPortalAssetGenerator
         if (File.Exists(scoPath) &&
             File.Exists(meshPath) &&
             File.Exists(texturePath) &&
+            File.Exists(lightTexturePath) &&
+            File.Exists(drainTexturePath) &&
             File.Exists(manifestPath) &&
             string.Equals(
                 await File.ReadAllTextAsync(
