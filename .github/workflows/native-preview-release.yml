@@ -114,6 +114,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.78-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.78-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.79-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.79-native.md"
   workflow_dispatch:
 
 permissions:
@@ -124,8 +126,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.78-native
-  TAG: v0.2.0-alpha.5-test.10.78-native
+  VERSION: 0.2.0-alpha.5-test.10.79-native
+  TAG: v0.2.0-alpha.5-test.10.79-native
 
 jobs:
   build-native-preview:
@@ -3085,6 +3087,38 @@ jobs:
 
           Write-Host "Verified physical portal drainage, emissive O3D lighting and support-texture cache validation."
 
+      - name: Verify test 10.79 real-world reconstruction planner
+        shell: pwsh
+        run: |
+          $planner = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioSceneReconstructionPlanBuilder.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioSceneReconstructionPlanBuilderTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioSceneEvidenceSource',
+            'StreetLevelImagery',
+            'UserImagery',
+            'MapStudioSceneFeatureKind',
+            'AutoGenerateThreshold',
+            'ReviewThreshold',
+            'FuseEvidence'
+          )) {
+            if (-not $planner.Contains($required)) {
+              throw "Test 10.79 scene reconstruction planner marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'BuilderAutoGeneratesFeatureWithIndependentStrongEvidence',
+            'BuilderKeepsMediumConfidenceFeatureForReview',
+            'BuilderDoesNotAutoGenerateUnsupportedLowConfidenceGuess'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.79 scene reconstruction regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified source-aware real-world reconstruction planning and confidence gating."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3239,11 +3273,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.78-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.79-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.78-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.79-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
