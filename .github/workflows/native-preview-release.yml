@@ -112,6 +112,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.76-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.77-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.78-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.78-native.md"
   workflow_dispatch:
 
 permissions:
@@ -122,8 +124,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.77-native
-  TAG: v0.2.0-alpha.5-test.10.77-native
+  VERSION: 0.2.0-alpha.5-test.10.78-native
+  TAG: v0.2.0-alpha.5-test.10.78-native
 
 jobs:
   build-native-preview:
@@ -3058,6 +3060,31 @@ jobs:
 
           Write-Host "Verified slope-direction retaining-wing depth and roof-apron continuity without terrain mutation."
 
+      - name: Verify test 10.78 tunnel drainage and emissive lighting
+        shell: pwsh
+        run: |
+          $portalAsset = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioTunnelPortalAssetGenerator.cs -Raw
+          $coreTests = Get-Content tests/MapStudio.Core.Tests/MapStudioTunnelPortalAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'AssetVersion = "1.1.0"',
+            'ms_tunnel_light.bmp',
+            'ms_tunnel_drain.bmp',
+            'light.EmissionR',
+            'BuildGeometryAddsDrainageAndEmissivePortalLighting'
+          )) {
+            if (-not ($portalAsset.Contains($required) -or $coreTests.Contains($required))) {
+              throw "Test 10.78 tunnel drainage/lighting marker is missing: $required"
+            }
+          }
+
+          if (-not $portalAsset.Contains('File.Exists(lightTexturePath)') -or
+              -not $portalAsset.Contains('File.Exists(drainTexturePath)')) {
+            throw "Test 10.78 generated portal texture cache validation is incomplete."
+          }
+
+          Write-Host "Verified physical portal drainage, emissive O3D lighting and support-texture cache validation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3212,11 +3239,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.77-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.78-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.77-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.78-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
