@@ -59,6 +59,7 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/MapStudioGeneratedSceneryBatchWriter.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Reconstruction*Tests.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Batch*Tests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRealWorldAssetCatalogLoaderTests.cs"
       - "src/MapStudio.Core/Workspace/MapStudioWorkspaceBootstrapper.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStarterPropGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStarterTrafficGeneratorTests.cs"
