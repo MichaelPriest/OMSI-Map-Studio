@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.88: batch OSM vegetation reconstruction preview.
+# Test 10.89: batch OSM street furniture reconstruction preview.
 
 on:
   push:
@@ -141,6 +141,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.88-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.89-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.89-native.md"
   workflow_dispatch:
 
 permissions:
@@ -151,8 +153,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.88-native
-  TAG: v0.2.0-alpha.5-test.10.88-native
+  VERSION: 0.2.0-alpha.5-test.10.89-native
+  TAG: v0.2.0-alpha.5-test.10.89-native
 
 jobs:
   build-native-preview:
@@ -3452,6 +3454,48 @@ jobs:
 
           Write-Host "Verified confidence-gated OSM vegetation placement with real OMSI assets."
 
+      - name: Verify test 10.89 batch OSM street furniture reconstruction
+        shell: pwsh
+        run: |
+          $suggester = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioStreetFurnitureBatchReconstructionRunner.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioStreetFurnitureBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioStreetFurnitureAssetSuggester',
+            'StreetLight',
+            'UtilityPole',
+            'TrafficSign',
+            'BusShelter',
+            'HasKindToken'
+          )) {
+            if (-not $suggester.Contains($required)) {
+              throw "Test 10.89 furniture suggester marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioStreetFurnitureBatchReconstructionRunner',
+            'MapStudioOsmStreetFurnitureImporter',
+            'MapStudioOsmStreetFurnitureReconstructionAdapter',
+            'MapStudioGeneratedSceneryBatchWriter'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.89 furniture batch marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncPlacesMappedFurnitureWithMatchingOmsiAssets',
+            'RunAsyncReportsMissingFurnitureAssetWithoutChangingMap'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.89 furniture regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified confidence-gated OSM street furniture placement with real OMSI assets."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3606,11 +3650,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.88-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.89-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.89-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
