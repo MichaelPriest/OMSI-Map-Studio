@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
 
@@ -88,6 +89,8 @@ public sealed class MapStudioRealWorldAssetCatalogLoaderTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
+
             if (Directory.Exists(root))
             {
                 Directory.Delete(
