@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.89: batch OSM street furniture reconstruction preview.
+# Test 10.90: unified Overpass real-world scene capture preview.
 
 on:
   push:
@@ -143,6 +143,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.89-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.89-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.90-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.90-native.md"
   workflow_dispatch:
 
 permissions:
@@ -153,8 +155,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.89-native
-  TAG: v0.2.0-alpha.5-test.10.89-native
+  VERSION: 0.2.0-alpha.5-test.10.90-native
+  TAG: v0.2.0-alpha.5-test.10.90-native
 
 jobs:
   build-native-preview:
@@ -3496,6 +3498,41 @@ jobs:
 
           Write-Host "Verified confidence-gated OSM street furniture placement with real OMSI assets."
 
+      - name: Verify test 10.90 unified Overpass scene capture
+        shell: pwsh
+        run: |
+          $client = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOverpassSceneClient.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOverpassSceneClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOverpassSceneClient',
+            'way["highway"]',
+            'way["building"]',
+            'node["natural"',
+            'node["highway"="street_lamp"]',
+            'wall|fence|guard_rail',
+            'amenity"="parking',
+            'MaximumRecoveryDepth',
+            'SceneAggregate'
+          )) {
+            if (-not $client.Contains($required)) {
+              throw "Test 10.90 scene downloader marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'DownloaderReturnsUnifiedXmlConsumableBySceneImporters',
+            'DownloaderFallsBackToSecondEndpoint',
+            'DownloaderChunksLargeAreaAndDeduplicatesElements',
+            'DownloaderRecoversFailedParentBySubdivision'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.90 scene downloader regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified unified Overpass scene query, fallback, chunking and deduplication."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3650,11 +3687,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.89-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.90-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.89-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.90-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
