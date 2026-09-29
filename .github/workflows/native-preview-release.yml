@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.87: batch OSM building reconstruction preview.
+# Test 10.88: batch OSM vegetation reconstruction preview.
 
 on:
   push:
@@ -52,6 +52,13 @@ on:
       - "src/MapStudio.Core/Omsi/Junctions/MapStudioJunctionGeometrySizing.cs"
       - "src/MapStudio.Core/Omsi/Buildings/MapStudioBuildingAssetGenerator.cs"
       - "src/MapStudio.Core/Omsi/Buildings/MapStudioFootprintBuildingAssetGenerator.cs"
+      - "src/MapStudio.Core/Generation/Scene/**"
+      - "src/MapStudio.Core/Generation/Vegetation/**"
+      - "src/MapStudio.Core/Generation/Buildings/**"
+      - "src/MapStudio.Core/Omsi/Structures/**"
+      - "src/MapStudio.Core/Omsi/Maps/MapStudioGeneratedSceneryBatchWriter.cs"
+      - "tests/MapStudio.Core.Tests/MapStudio*Reconstruction*Tests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudio*Batch*Tests.cs"
       - "src/MapStudio.Core/Workspace/MapStudioWorkspaceBootstrapper.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStarterPropGeneratorTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioStarterTrafficGeneratorTests.cs"
@@ -132,6 +139,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.86-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.87-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.88-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md"
   workflow_dispatch:
 
 permissions:
@@ -142,8 +151,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.87-native
-  TAG: v0.2.0-alpha.5-test.10.87-native
+  VERSION: 0.2.0-alpha.5-test.10.88-native
+  TAG: v0.2.0-alpha.5-test.10.88-native
 
 jobs:
   build-native-preview:
@@ -3413,6 +3422,36 @@ jobs:
 
           Write-Host "Verified shared scenery batch writes and automatic OSM building generation."
 
+      - name: Verify test 10.88 batch OSM vegetation reconstruction
+        shell: pwsh
+        run: |
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioVegetationBatchReconstructionRunner.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioVegetationBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioVegetationBatchReconstructionRunner',
+            'MapStudioOsmVegetationImporter',
+            'MapStudioOsmVegetationProjector',
+            'MapStudioVegetationAssetSuggester',
+            'MapStudioGeneratedSceneryBatchWriter',
+            'ResolveStableRotation'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.88 vegetation batch marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncPlacesStrongTreeWithSpeciesMatchedOmsiAsset',
+            'RunAsyncReportsMissingVegetationAssetWithoutChangingMap'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.88 vegetation regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified confidence-gated OSM vegetation placement with real OMSI assets."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3567,11 +3606,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.87-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.88-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.88-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
