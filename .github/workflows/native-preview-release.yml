@@ -124,6 +124,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.82-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.83-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.84-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.84-native.md"
   workflow_dispatch:
 
 permissions:
@@ -3260,6 +3262,49 @@ jobs:
 
           Write-Host "Verified OSM urban infrastructure import and reconstruction confidence."
 
+      - name: Verify test 10.84 physical infrastructure generation
+        shell: pwsh
+        run: |
+          $projector = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmInfrastructureProjector.cs -Raw
+          $generator = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioInfrastructureAssetGenerator.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioInfrastructureAssetGeneratorTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOsmInfrastructureProjector',
+            'MapStudioProjectedInfrastructureFeature',
+            'MapStudioGeographicProjection'
+          )) {
+            if (-not $projector.Contains($required)) {
+              throw "Test 10.84 projector marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioInfrastructureAssetGenerator',
+            'OmsiO3dGeometryWriter',
+            'AddBarrierGeometry',
+            'AddRibbonSurface',
+            'AddAreaSurface',
+            'Triangulate'
+          )) {
+            if (-not $generator.Contains($required)) {
+              throw "Test 10.84 generator marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'GuardRailBuildsPhysicalMesh',
+            'ParkingBuildsTriangulatedSurface',
+            'SidewalkWidthControlsRibbonMesh',
+            'GenerateAsyncCreatesOmsiAssetPackage'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.84 infrastructure asset regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified projected OSM infrastructure and physical OMSI asset generation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3414,11 +3459,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.83-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.84-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.84-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
