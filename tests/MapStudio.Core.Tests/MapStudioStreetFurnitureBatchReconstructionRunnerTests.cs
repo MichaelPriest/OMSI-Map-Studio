@@ -1,5 +1,6 @@
 using System.Text;
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Structures;
@@ -128,7 +129,12 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
                             -46.63000,
                             50,
                             50),
-                        assets);
+                        assets,
+                        BuildStreetLevelEvidence(
+                            "osm-street-furniture-10",
+                            "osm-street-furniture-20",
+                            "osm-street-furniture-30",
+                            "osm-street-furniture-40"));
 
             Assert.Equal(
                 4,
@@ -293,7 +299,9 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
                             -46.63000,
                             50,
                             50),
-                        Array.Empty<OmsiAssetIndexEntry>());
+                        Array.Empty<OmsiAssetIndexEntry>(),
+                        BuildStreetLevelEvidence(
+                            "osm-street-furniture-10"));
 
             Assert.Empty(
                 result.Placements);
@@ -320,6 +328,25 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunnerTests
             }
         }
     }
+
+    private static IReadOnlyDictionary<
+        string,
+        IReadOnlyList<MapStudioSceneEvidence>>
+        BuildStreetLevelEvidence(
+            params string[] ids) =>
+        ids.ToDictionary(
+            id =>
+                id,
+            id =>
+                (IReadOnlyList<MapStudioSceneEvidence>)
+                [
+                    new(
+                        MapStudioSceneEvidenceSource
+                            .StreetLevelImagery,
+                        0.92,
+                        "test-street-image-" + id)
+                ],
+            StringComparer.Ordinal);
 
     private static void AddAsset(
         string root,

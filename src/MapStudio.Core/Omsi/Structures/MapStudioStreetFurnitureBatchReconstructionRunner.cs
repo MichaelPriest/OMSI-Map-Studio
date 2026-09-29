@@ -36,6 +36,10 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
             string osmXml,
             MapStudioGeographicAnchor anchor,
             IReadOnlyList<OmsiAssetIndexEntry> assets,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MapStudioSceneEvidence>>?
+                additionalEvidence = null,
             CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
@@ -51,6 +55,29 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
             new MapStudioOsmStreetFurnitureReconstructionAdapter()
                 .BuildCandidates(
                     imported.Points);
+
+        if (
+            additionalEvidence is not null &&
+            additionalEvidence.Count > 0)
+        {
+            candidates =
+                candidates
+                    .Select(
+                        candidate =>
+                            additionalEvidence.TryGetValue(
+                                candidate.Id,
+                                out var evidence)
+                                ? candidate with
+                                {
+                                    Evidence =
+                                        [
+                                            ..candidate.Evidence,
+                                            ..evidence
+                                        ]
+                                }
+                                : candidate)
+                    .ToArray();
+        }
 
         var plan =
             new MapStudioSceneReconstructionPlanBuilder()
