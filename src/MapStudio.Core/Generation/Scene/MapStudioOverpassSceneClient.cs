@@ -625,6 +625,10 @@ public sealed class MapStudioOverpassSceneClient
             $"node[\"public_transport\"=\"platform\"]({bbox});" +
             $"node[\"amenity\"=\"shelter\"]({bbox});" +
             $"node[\"shelter\"=\"yes\"]({bbox});" +
+            $"node[\"amenity\"=\"bench\"]({bbox});" +
+            $"node[\"amenity\"=\"waste_basket\"]({bbox});" +
+            $"node[\"barrier\"=\"bollard\"]({bbox});" +
+            $"node[\"emergency\"=\"fire_hydrant\"]({bbox});" +
             $"way[\"barrier\"~\"^(wall|fence|guard_rail)$\"]({bbox});" +
             $"way[\"highway\"=\"footway\"][\"footway\"=\"sidewalk\"]({bbox});" +
             $"way[\"highway\"=\"service\"][\"service\"=\"driveway\"]({bbox});" +

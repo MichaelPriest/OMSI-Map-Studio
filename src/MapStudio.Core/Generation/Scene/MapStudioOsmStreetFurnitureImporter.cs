@@ -9,7 +9,11 @@ public enum MapStudioOsmStreetFurnitureKind
     UtilityPole,
     StreetLight,
     TrafficSign,
-    BusShelter
+    BusShelter,
+    Bench,
+    WasteBasket,
+    Bollard,
+    FireHydrant
 }
 
 public sealed record MapStudioGeoStreetFurniturePoint(
@@ -161,6 +165,14 @@ public sealed class MapStudioOsmStreetFurnitureImporter
             Clean(
                 tags.GetValueOrDefault("amenity"));
 
+        var barrier =
+            Clean(
+                tags.GetValueOrDefault("barrier"));
+
+        var emergency =
+            Clean(
+                tags.GetValueOrDefault("emergency"));
+
         var shelter =
             Clean(
                 tags.GetValueOrDefault("shelter"));
@@ -227,6 +239,50 @@ public sealed class MapStudioOsmStreetFurnitureImporter
         {
             kind =
                 MapStudioOsmStreetFurnitureKind.BusShelter;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                amenity,
+                "bench",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.Bench;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                amenity,
+                "waste_basket",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.WasteBasket;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                barrier,
+                "bollard",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.Bollard;
+            return true;
+        }
+
+        if (
+            string.Equals(
+                emergency,
+                "fire_hydrant",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            kind =
+                MapStudioOsmStreetFurnitureKind.FireHydrant;
             return true;
         }
 
@@ -324,6 +380,14 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                 MapStudioSceneFeatureKind.TrafficSign,
             MapStudioOsmStreetFurnitureKind.BusShelter =>
                 MapStudioSceneFeatureKind.BusShelter,
+            MapStudioOsmStreetFurnitureKind.Bench =>
+                MapStudioSceneFeatureKind.Bench,
+            MapStudioOsmStreetFurnitureKind.WasteBasket =>
+                MapStudioSceneFeatureKind.WasteBasket,
+            MapStudioOsmStreetFurnitureKind.Bollard =>
+                MapStudioSceneFeatureKind.Bollard,
+            MapStudioOsmStreetFurnitureKind.FireHydrant =>
+                MapStudioSceneFeatureKind.FireHydrant,
             _ =>
                 MapStudioSceneFeatureKind.Unknown
         };
@@ -342,6 +406,14 @@ public sealed class MapStudioOsmStreetFurnitureReconstructionAdapter
                     0.84,
                 MapStudioOsmStreetFurnitureKind.BusShelter =>
                     0.82,
+                MapStudioOsmStreetFurnitureKind.Bench =>
+                    0.86,
+                MapStudioOsmStreetFurnitureKind.WasteBasket =>
+                    0.84,
+                MapStudioOsmStreetFurnitureKind.Bollard =>
+                    0.88,
+                MapStudioOsmStreetFurnitureKind.FireHydrant =>
+                    0.90,
                 _ =>
                     0.60
             };

@@ -24,6 +24,10 @@ public enum MapStudioSceneFeatureKind
     Sidewalk = 10,
     Driveway = 11,
     Parking = 12,
+    Bench = 13,
+    WasteBasket = 14,
+    Bollard = 15,
+    FireHydrant = 16,
     Unknown = 99
 }
 

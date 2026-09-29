@@ -75,6 +75,15 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
             MapStudioOsmStreetFurnitureKind.TrafficSign =>
                 group ==
                     OmsiAssetLibraryGroup.StreetFurniture,
+            MapStudioOsmStreetFurnitureKind.Bench or
+            MapStudioOsmStreetFurnitureKind.WasteBasket or
+            MapStudioOsmStreetFurnitureKind.Bollard =>
+                group ==
+                    OmsiAssetLibraryGroup.StreetFurniture,
+            MapStudioOsmStreetFurnitureKind.FireHydrant =>
+                group is
+                    OmsiAssetLibraryGroup.Utilities or
+                    OmsiAssetLibraryGroup.StreetFurniture,
             _ =>
                 false
         };
@@ -216,6 +225,32 @@ public sealed class MapStudioStreetFurnitureAssetSuggester
                     "shelter",
                     "abrigo",
                     "ponto"
+                ],
+            MapStudioOsmStreetFurnitureKind.Bench =>
+                [
+                    "bench",
+                    "bank",
+                    "banco"
+                ],
+            MapStudioOsmStreetFurnitureKind.WasteBasket =>
+                [
+                    "bin",
+                    "trash",
+                    "waste",
+                    "basket",
+                    "lixeira"
+                ],
+            MapStudioOsmStreetFurnitureKind.Bollard =>
+                [
+                    "bollard",
+                    "balizador",
+                    "postelete"
+                ],
+            MapStudioOsmStreetFurnitureKind.FireHydrant =>
+                [
+                    "hydrant",
+                    "fire hydrant",
+                    "hidrante"
                 ],
             _ =>
                 Array.Empty<string>()

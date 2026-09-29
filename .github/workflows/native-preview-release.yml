@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.96: automatic real-world asset indexing preview.
+# Test 10.97: expanded real-world street furniture preview.
 
 on:
   push:
@@ -158,6 +158,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.96-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.97-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.97-native.md"
   workflow_dispatch:
 
 permissions:
@@ -168,8 +170,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.96-native
-  TAG: v0.2.0-alpha.5-test.10.96-native
+  VERSION: 0.2.0-alpha.5-test.10.97-native
+  TAG: v0.2.0-alpha.5-test.10.97-native
 
 jobs:
   build-native-preview:
@@ -3760,6 +3762,39 @@ jobs:
 
           Write-Host "Verified persistent automatic OMSI scenery indexing for one-call real-world reconstruction."
 
+      - name: Verify test 10.97 expanded street furniture
+        shell: pwsh
+        run: |
+          $importer = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmStreetFurnitureImporter.cs -Raw
+          $planner = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioSceneReconstructionPlanBuilder.cs -Raw
+          $suggester = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioStreetFurnitureAssetSuggester.cs -Raw
+          $overpass = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOverpassSceneClient.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioExtendedStreetFurnitureTests.cs -Raw
+
+          foreach ($required in @('Bench','WasteBasket','Bollard','FireHydrant')) {
+            if (-not $importer.Contains($required) -or -not $planner.Contains($required)) {
+              throw "Test 10.97 scene kind is missing: $required"
+            }
+          }
+
+          foreach ($required in @('bench','waste_basket','bollard','fire_hydrant')) {
+            if (-not $overpass.Contains($required)) {
+              throw "Test 10.97 Overpass selector is missing: $required"
+            }
+          }
+
+          foreach ($required in @('bench','trash','bollard','hydrant')) {
+            if (-not $suggester.ToLowerInvariant().Contains($required)) {
+              throw "Test 10.97 asset token is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('ImporterRecognizesExtendedFurnitureKinds')) {
+            throw "Test 10.97 regression is missing."
+          }
+
+          Write-Host "Verified expanded OSM furniture import, planner kinds, asset selection and Overpass coverage."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3914,11 +3949,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.96-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.97-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.97-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

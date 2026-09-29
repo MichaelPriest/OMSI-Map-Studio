@@ -245,6 +245,8 @@ public static class OmsiAssetLibraryClassifier
                 "fence",
                 "zaun",
                 "bollard",
+                "hydrant",
+                "hidrante",
                 "pole",
                 "poste",
                 "placa",
