@@ -9,30 +9,36 @@ public static class OmsiTileSplineInserter
         OmsiConfigDocument document,
         OmsiNewPlacedSpline placedSpline)
     {
-        ArgumentNullException.ThrowIfNull(document);
-        ArgumentNullException.ThrowIfNull(placedSpline);
+        var batch =
+            AppendMany(
+                document,
+                [placedSpline]);
 
-        if (
-            string.IsNullOrWhiteSpace(
-                placedSpline.HeaderValue) ||
-            string.IsNullOrWhiteSpace(
-                placedSpline.SplinePath) ||
-            placedSpline.SplineId <= 0 ||
-            !IsFinite(placedSpline))
+        return new OmsiTileSplineInsertResult(
+            batch.Bytes,
+            batch.SourceSectionOrdinals[0]);
+    }
+
+    public static OmsiTileSplineBatchInsertResult AppendMany(
+        OmsiConfigDocument document,
+        IReadOnlyList<OmsiNewPlacedSpline> placedSplines)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(placedSplines);
+
+        if (placedSplines.Count == 0)
         {
             throw new InvalidDataException(
-                "invalidNewSpline");
+                "invalidNewSplineBatch");
+        }
+
+        foreach (var placedSpline in placedSplines)
+        {
+            Validate(placedSpline);
         }
 
         var lines =
             document.Lines.ToList();
-
-        if (
-            lines.Count > 0 &&
-            lines[^1].Length != 0)
-        {
-            lines.Add(string.Empty);
-        }
 
         var sourceSectionOrdinal =
             document.Sections.Count(
@@ -46,54 +52,90 @@ public static class OmsiTileSplineInserter
                         "spline_h",
                         StringComparison.OrdinalIgnoreCase));
 
-        lines.Add(
-            placedSpline.IsHeightSpline
-                ? "[spline_h]"
-                : "[spline]");
-        lines.Add(
-            placedSpline.HeaderValue);
-        lines.Add(
-            placedSpline.SplinePath);
-        lines.Add(
-            placedSpline.SplineId
-                .ToString(
-                    CultureInfo.InvariantCulture));
-        lines.Add(
-            placedSpline.PreviousSplineId
-                .ToString(
-                    CultureInfo.InvariantCulture));
-        lines.Add(
-            placedSpline.NextSplineId
-                .ToString(
-                    CultureInfo.InvariantCulture));
-        lines.Add(Format(placedSpline.X));
-        lines.Add(Format(placedSpline.Z));
-        lines.Add(Format(placedSpline.Y));
-        lines.Add(
-            Format(
-                placedSpline.Rotation));
-        lines.Add(
-            Format(
-                placedSpline.Length));
-        lines.Add(
-            Format(
-                placedSpline.Radius));
-        lines.Add(
-            Format(
-                placedSpline.GradientStart));
-        lines.Add(
-            Format(
-                placedSpline.GradientEnd));
+        var ordinals =
+            new List<int>(
+                placedSplines.Count);
 
-        foreach (var extra in
-            placedSpline.ExtraValues)
+        foreach (var placedSpline in placedSplines)
         {
-            lines.Add(extra);
+            if (
+                lines.Count > 0 &&
+                lines[^1].Length != 0)
+            {
+                lines.Add(string.Empty);
+            }
+
+            ordinals.Add(
+                sourceSectionOrdinal++);
+
+            lines.Add(
+                placedSpline.IsHeightSpline
+                    ? "[spline_h]"
+                    : "[spline]");
+            lines.Add(
+                placedSpline.HeaderValue);
+            lines.Add(
+                placedSpline.SplinePath);
+            lines.Add(
+                placedSpline.SplineId
+                    .ToString(
+                        CultureInfo.InvariantCulture));
+            lines.Add(
+                placedSpline.PreviousSplineId
+                    .ToString(
+                        CultureInfo.InvariantCulture));
+            lines.Add(
+                placedSpline.NextSplineId
+                    .ToString(
+                        CultureInfo.InvariantCulture));
+            lines.Add(Format(placedSpline.X));
+            lines.Add(Format(placedSpline.Z));
+            lines.Add(Format(placedSpline.Y));
+            lines.Add(
+                Format(
+                    placedSpline.Rotation));
+            lines.Add(
+                Format(
+                    placedSpline.Length));
+            lines.Add(
+                Format(
+                    placedSpline.Radius));
+            lines.Add(
+                Format(
+                    placedSpline.GradientStart));
+            lines.Add(
+                Format(
+                    placedSpline.GradientEnd));
+
+            foreach (var extra in
+                placedSpline.ExtraValues)
+            {
+                lines.Add(extra);
+            }
         }
 
-        return new OmsiTileSplineInsertResult(
+        return new OmsiTileSplineBatchInsertResult(
             Encode(document, lines),
-            sourceSectionOrdinal);
+            ordinals);
+    }
+
+    private static void Validate(
+        OmsiNewPlacedSpline placedSpline)
+    {
+        ArgumentNullException.ThrowIfNull(
+            placedSpline);
+
+        if (
+            string.IsNullOrWhiteSpace(
+                placedSpline.HeaderValue) ||
+            string.IsNullOrWhiteSpace(
+                placedSpline.SplinePath) ||
+            placedSpline.SplineId <= 0 ||
+            !IsFinite(placedSpline))
+        {
+            throw new InvalidDataException(
+                "invalidNewSpline");
+        }
     }
 
     private static bool IsFinite(
