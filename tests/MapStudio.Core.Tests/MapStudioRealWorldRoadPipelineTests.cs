@@ -100,6 +100,83 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerGeneratesPhysicalJunctionAtSharedOsmNode()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-junction-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        JunctionXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            50,
+                            50));
+
+            Assert.Equal(
+                1,
+                result.JunctionCandidateCount);
+
+            var junction =
+                Assert.Single(
+                    result.JunctionPlacements);
+
+            Assert.Equal(
+                "osm-junction-3",
+                junction.Id);
+
+            Assert.Equal(
+                1,
+                result.GeneratedJunctionCount);
+
+            Assert.True(
+                File.Exists(
+                    Path.Combine(
+                        root,
+                        junction.SceneryObjectPath.Replace(
+                            '\\',
+                            Path.DirectorySeparatorChar))));
+
+            var tile =
+                await OmsiConfigParser
+                    .ParseFileAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            Assert.NotEmpty(
+                tile.FindSections(
+                    "spline"));
+
+            Assert.Single(
+                tile.FindSections(
+                    "object"));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task FullMapPipelineDownloadsOnceAndCreatesRoadsAndScene()
     {
         var root =
@@ -380,6 +457,35 @@ public sealed class MapStudioRealWorldRoadPipelineTests
           <way id="100">
             <nd ref="1"/><nd ref="2"/><nd ref="3"/>
             <tag k="highway" v="residential"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+        </osm>
+        """;
+
+    private const string JunctionXml =
+        """
+        <osm version="0.6">
+          <node id="1" lat="-23.55000" lon="-46.63010"/>
+          <node id="2" lat="-23.55000" lon="-46.63005"/>
+          <node id="3" lat="-23.55000" lon="-46.63000"/>
+          <node id="4" lat="-23.55000" lon="-46.62995"/>
+          <node id="5" lat="-23.55000" lon="-46.62990"/>
+          <node id="6" lat="-23.55010" lon="-46.63000"/>
+          <node id="7" lat="-23.55005" lon="-46.63000"/>
+          <node id="8" lat="-23.54995" lon="-46.63000"/>
+          <node id="9" lat="-23.54990" lon="-46.63000"/>
+
+          <way id="100">
+            <nd ref="1"/><nd ref="2"/><nd ref="3"/><nd ref="4"/><nd ref="5"/>
+            <tag k="highway" v="residential"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+
+          <way id="200">
+            <nd ref="6"/><nd ref="7"/><nd ref="3"/><nd ref="8"/><nd ref="9"/>
+            <tag k="highway" v="secondary"/>
             <tag k="lanes" v="2"/>
             <tag k="width" v="7"/>
           </way>

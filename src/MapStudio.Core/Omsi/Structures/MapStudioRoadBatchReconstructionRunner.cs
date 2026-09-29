@@ -1,5 +1,6 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Splines;
 
@@ -22,6 +23,7 @@ public sealed record MapStudioRoadBatchPlacement(
 
 public sealed record MapStudioRoadBatchReconstructionResult(
     IReadOnlyList<MapStudioRoadBatchPlacement> Placements,
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement> JunctionPlacements,
     int JunctionCandidateCount,
     int SkippedOutsideMapSegmentCount,
     int IgnoredWayCount,
@@ -32,6 +34,9 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     public int PlacedSplineCount =>
         Placements.Count;
 
+    public int GeneratedJunctionCount =>
+        JunctionPlacements.Count;
+
     public int ModifiedTileCount =>
         Placements
             .Select(
@@ -40,6 +45,14 @@ public sealed record MapStudioRoadBatchReconstructionResult(
                         placement.TileX,
                         placement.TileY
                     ))
+            .Concat(
+                JunctionPlacements
+                    .Select(
+                        placement =>
+                            (
+                                placement.TileX,
+                                placement.TileY
+                            )))
             .Distinct()
             .Count();
 }
@@ -272,6 +285,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         {
             return new MapStudioRoadBatchReconstructionResult(
                 Array.Empty<MapStudioRoadBatchPlacement>(),
+                Array.Empty<MapStudioGeneratedSceneryPlacement>(),
                 graph.Junctions.Count,
                 skippedOutside,
                 imported.IgnoredWayCount,
@@ -453,6 +467,158 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             }
         }
 
+        MapStudioGeneratedSceneryBatchWriteResult
+            junctionWrite =
+                new(
+                    Array.Empty<MapStudioGeneratedSceneryPlacement>(),
+                    Array.Empty<string>(),
+                    Array.Empty<string>());
+
+        try
+        {
+            var junctionRequests =
+                new List<MapStudioGeneratedSceneryPlacementRequest>();
+
+            var junctionGenerator =
+                new MapStudioJunctionAssetGenerator();
+
+            foreach (var junction in graph.Junctions)
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var connected =
+                    graph.Segments
+                        .Where(
+                            segment =>
+                                segment.FromNodeId ==
+                                    junction.NodeId ||
+                                segment.ToNodeId ==
+                                    junction.NodeId)
+                        .Select(
+                            segment =>
+                                (
+                                    Segment:
+                                        segment,
+                                    Profile:
+                                        ResolveProfile(
+                                            segment.ProfileId)
+                                ))
+                        .Where(
+                            item =>
+                                item.Profile?.IsPedestrian !=
+                                    true)
+                        .ToArray();
+
+                if (connected.Length < 3)
+                {
+                    continue;
+                }
+
+                var arms =
+                    connected
+                        .Select(
+                            item =>
+                            {
+                                var other =
+                                    item.Segment.FromNodeId ==
+                                        junction.NodeId
+                                        ? item.Segment.End
+                                        : item.Segment.Start;
+
+                                var profile =
+                                    item.Profile;
+
+                                var width =
+                                    Math.Max(
+                                        item.Segment.WidthMeters ??
+                                            0,
+                                        profile?.TotalWidthMeters ??
+                                            7.0);
+
+                                return new MapStudioJunctionArm(
+                                    ResolveRotationDegrees(
+                                        junction.Position,
+                                        other),
+                                    width,
+                                    item.Segment.LaneCount ??
+                                        profile?.LaneCount ??
+                                        2,
+                                    item.Segment.OneWay ??
+                                        profile?.OneWay ??
+                                        false,
+                                    profile?.LaneWidthMeters ??
+                                        3.5);
+                            })
+                        .ToArray();
+
+                var structureKind =
+                    connected.All(
+                        item =>
+                            item.Segment.Bridge)
+                        ? MapStudioJunctionStructureKind.Bridge
+                        : connected.All(
+                            item =>
+                                item.Segment.Tunnel)
+                            ? MapStudioJunctionStructureKind.Tunnel
+                            : MapStudioJunctionStructureKind.Ground;
+
+                var asset =
+                    await junctionGenerator
+                        .GenerateAsync(
+                            root,
+                            new MapStudioJunctionSpec(
+                                "OSM Junction " +
+                                    junction.NodeId,
+                                arms,
+                                StructureKind:
+                                    structureKind),
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                junctionRequests.Add(
+                    new MapStudioGeneratedSceneryPlacementRequest(
+                        "osm-junction-" +
+                            junction.NodeId,
+                        asset.SceneryObjectPath,
+                        junction.Position));
+            }
+
+            if (junctionRequests.Count > 0)
+            {
+                junctionWrite =
+                    await new MapStudioGeneratedSceneryBatchWriter()
+                        .WriteAsync(
+                            root,
+                            mapRoot,
+                            junctionRequests,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                backupPaths.AddRange(
+                    junctionWrite.BackupPaths);
+            }
+        }
+        catch
+        {
+            foreach (var write in writes)
+            {
+                if (
+                    !string.IsNullOrWhiteSpace(
+                        write.BackupPath) &&
+                    File.Exists(
+                        write.BackupPath))
+                {
+                    File.Copy(
+                        write.BackupPath,
+                        write.Tile.Path,
+                        overwrite: true);
+                }
+            }
+
+            throw;
+        }
+
         return new MapStudioRoadBatchReconstructionResult(
             planned
                 .Select(
@@ -472,6 +638,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             placement.Segment.Bridge,
                             placement.Segment.Tunnel))
                 .ToArray(),
+            junctionWrite.Placements,
             graph.Junctions.Count,
             skippedOutside,
             imported.IgnoredWayCount,
@@ -479,6 +646,18 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             backupPaths,
             roadKit);
     }
+
+    private static MapStudioStandardRoadProfile?
+        ResolveProfile(
+            string relativePath) =>
+        MapStudioStandardRoadCatalog
+            .Profiles
+            .FirstOrDefault(
+                profile =>
+                    string.Equals(
+                        profile.RelativePath,
+                        relativePath,
+                        StringComparison.OrdinalIgnoreCase));
 
     private static double ResolveRotationDegrees(
         MapStudioRoadPoint start,

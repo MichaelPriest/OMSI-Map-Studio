@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.93: complete real-world map pipeline with roads preview.
+# Test 10.94: physical real-world junction generation preview.
 
 on:
   push:
@@ -151,6 +151,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.92-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.93-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.93-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.94-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md"
   workflow_dispatch:
 
 permissions:
@@ -161,8 +163,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.93-native
-  TAG: v0.2.0-alpha.5-test.10.93-native
+  VERSION: 0.2.0-alpha.5-test.10.94-native
+  TAG: v0.2.0-alpha.5-test.10.94-native
 
 jobs:
   build-native-preview:
@@ -3648,6 +3650,35 @@ jobs:
 
           Write-Host "Verified batched Road Kit splines and complete roads plus scenery pipeline."
 
+      - name: Verify test 10.94 physical OSM junction generation
+        shell: pwsh
+        run: |
+          $roads = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioJunctionAssetGenerator',
+            'MapStudioJunctionSpec',
+            'JunctionPlacements',
+            'GeneratedJunctionCount',
+            'MapStudioGeneratedSceneryBatchWriter'
+          )) {
+            if (-not $roads.Contains($required)) {
+              throw "Test 10.94 junction marker is missing: $required"
+            }
+          }
+
+          if (-not $pipeline.Contains('Roads.GeneratedJunctionCount')) {
+            throw "Test 10.94 pipeline does not count generated junctions."
+          }
+
+          if (-not $tests.Contains('RoadRunnerGeneratesPhysicalJunctionAtSharedOsmNode')) {
+            throw "Test 10.94 junction regression is missing."
+          }
+
+          Write-Host "Verified physical junction assets generated from the OSM road graph."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3802,11 +3833,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.93-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.94-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.93-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
