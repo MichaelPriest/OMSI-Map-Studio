@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.67: live terrain brush intensity preview in the native viewport.
+# Test 10.87: batch OSM building reconstruction preview.
 
 on:
   push:
@@ -142,8 +142,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.82-native
-  TAG: v0.2.0-alpha.5-test.10.82-native
+  VERSION: 0.2.0-alpha.5-test.10.87-native
+  TAG: v0.2.0-alpha.5-test.10.87-native
 
 jobs:
   build-native-preview:
