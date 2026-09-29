@@ -7,6 +7,7 @@ namespace MapStudio.Core.Omsi.Structures;
 
 public enum MapStudioRealWorldMapPipelineStage
 {
+    IndexingAssets,
     DownloadingOpenStreetMap,
     GeneratingRoads,
     ReconstructingScene,
@@ -48,6 +49,56 @@ public sealed class MapStudioRealWorldMapPipeline
 
         _sceneClient =
             sceneClient;
+    }
+
+    public async Task<MapStudioRealWorldMapPipelineResult>
+        RunAutoIndexedAsync(
+            string omsiRoot,
+            string mapDirectory,
+            double south,
+            double west,
+            double north,
+            double east,
+            MapStudioGeographicAnchor anchor,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MapStudioSceneEvidence>>?
+                streetFurnitureEvidence = null,
+            IProgress<MapStudioRealWorldMapPipelineProgress>?
+                progress = null,
+            IProgress<OmsiAssetIndexProgress>?
+                assetIndexProgress = null,
+            CancellationToken cancellationToken = default)
+    {
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                "Atualizando biblioteca de assets OMSI..."));
+
+        var catalog =
+            await new MapStudioRealWorldAssetCatalogLoader()
+                .LoadAsync(
+                    omsiRoot,
+                    assetIndexProgress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return await RunAsync(
+                omsiRoot,
+                mapDirectory,
+                south,
+                west,
+                north,
+                east,
+                anchor,
+                catalog.SceneryObjects,
+                streetFurnitureEvidence,
+                progress,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<MapStudioRealWorldMapPipelineResult>

@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.95: transactional generated-asset rollback preview.
+# Test 10.96: automatic real-world asset indexing preview.
 
 on:
   push:
@@ -155,6 +155,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.95-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.96-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md"
   workflow_dispatch:
 
 permissions:
@@ -165,8 +167,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.95-native
-  TAG: v0.2.0-alpha.5-test.10.95-native
+  VERSION: 0.2.0-alpha.5-test.10.96-native
+  TAG: v0.2.0-alpha.5-test.10.96-native
 
 jobs:
   build-native-preview:
@@ -3722,6 +3724,41 @@ jobs:
 
           Write-Host "Verified transactional rollback for tiles and generated OMSI assets."
 
+      - name: Verify test 10.96 automatic asset indexing
+        shell: pwsh
+        run: |
+          $loader = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldAssetCatalogLoader.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldAssetCatalogLoaderTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioRealWorldAssetCatalogLoader',
+            'assets.sqlite',
+            'RefreshAsync',
+            'GetEntriesAsync',
+            'SceneryObject'
+          )) {
+            if (-not $loader.Contains($required)) {
+              throw "Test 10.96 asset index marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAutoIndexedAsync',
+            'IndexingAssets',
+            'assetIndexProgress'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.96 pipeline marker is missing: $required"
+            }
+          }
+
+          if (-not $tests.Contains('LoadAsyncRefreshesPersistentIndexAndReturnsSceneryObjects')) {
+            throw "Test 10.96 asset index regression is missing."
+          }
+
+          Write-Host "Verified persistent automatic OMSI scenery indexing for one-call real-world reconstruction."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3876,11 +3913,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.95-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.96-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
