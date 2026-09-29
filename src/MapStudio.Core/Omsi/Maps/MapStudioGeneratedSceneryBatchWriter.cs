@@ -237,10 +237,7 @@ public sealed class MapStudioGeneratedSceneryBatchWriter
                                         placement
                                             .SceneryObjectPath,
                                         placement.ObjectId,
-                                        placement.Request
-                                            .WorldCenter is { }
-                                            ? placement.LocalX
-                                            : placement.LocalX,
+                                        placement.LocalX,
                                         placement.Request
                                             .HeightMeters,
                                         placement.LocalZ,
