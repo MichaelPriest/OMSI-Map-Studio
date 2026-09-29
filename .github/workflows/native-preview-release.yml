@@ -126,6 +126,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.84-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.84-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.85-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.85-native.md"
   workflow_dispatch:
 
 permissions:
@@ -3305,6 +3307,36 @@ jobs:
 
           Write-Host "Verified projected OSM infrastructure and physical OMSI asset generation."
 
+      - name: Verify test 10.85 automatic infrastructure tile placement
+        shell: pwsh
+        run: |
+          $placer = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioInfrastructureTilePlacer.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioInfrastructureTilePlacerTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioInfrastructureTilePlacer',
+            'OmsiTileGrid',
+            'OmsiMapCatalog',
+            'OmsiObjectInsertionAnalyzer',
+            'OmsiTileObjectInserter',
+            'infrastructureTargetTileMissing'
+          )) {
+            if (-not $placer.Contains($required)) {
+              throw "Test 10.85 placement marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'PlaceAsyncUsesCorrectTileAndGlobalNextId',
+            'PlaceAsyncRejectsMissingTargetTile'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.85 placement regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified automatic infrastructure tile selection, global IDs and safe writes."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3459,11 +3491,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.84-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.85-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.84-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.85-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
