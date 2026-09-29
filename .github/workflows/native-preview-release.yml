@@ -3506,12 +3506,11 @@ jobs:
 
           foreach ($required in @(
             'MapStudioOverpassSceneClient',
-            'way["highway"]',
-            'way["building"]',
-            'node["natural"',
-            'node["highway"="street_lamp"]',
+            'BuildQuery',
+            'street_lamp',
+            'tree|shrub',
             'wall|fence|guard_rail',
-            'amenity"="parking',
+            'parking',
             'MaximumRecoveryDepth',
             'SceneAggregate'
           )) {

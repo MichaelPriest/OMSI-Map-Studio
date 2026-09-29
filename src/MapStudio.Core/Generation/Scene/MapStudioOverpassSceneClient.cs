@@ -874,11 +874,12 @@ public sealed class MapStudioOverpassSceneClient
                             null
                     };
 
-                target?[
-                    id
-                ] =
-                    new XElement(
-                        element);
+                if (target is not null)
+                {
+                    target[id] =
+                        new XElement(
+                            element);
+                }
             }
         }
 
