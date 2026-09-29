@@ -130,6 +130,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.85-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.86-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.86-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.87-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md"
   workflow_dispatch:
 
 permissions:
@@ -3370,6 +3372,47 @@ jobs:
 
           Write-Host "Verified one-click OSM infrastructure reconstruction, grouped tile writes and safe backups."
 
+      - name: Verify test 10.87 batch OSM building reconstruction
+        shell: pwsh
+        run: |
+          $writer = Get-Content src/MapStudio.Core/Omsi/Maps/MapStudioGeneratedSceneryBatchWriter.cs -Raw
+          $runner = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioBuildingBatchReconstructionRunner.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioBuildingBatchReconstructionRunnerTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioGeneratedSceneryBatchWriter',
+            'OmsiTileElementIdScanner',
+            'AppendMany',
+            'generated-scenery-batch'
+          )) {
+            if (-not $writer.Contains($required)) {
+              throw "Test 10.87 shared writer marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioBuildingBatchReconstructionRunner',
+            'MapStudioOsmBuildingImporter',
+            'MapStudioOsmBuildingProjector',
+            'MapStudioOsmBuildingReconstructionAdapter',
+            'MapStudioFootprintBuildingAssetGenerator'
+          )) {
+            if (-not $runner.Contains($required)) {
+              throw "Test 10.87 building batch marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAsyncGeneratesStrongBuildingAndKeepsWeakBuildingForReview',
+            'GenericWriterBatchesMultipleGeneratedObjectsPerTile'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.87 building regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified shared scenery batch writes and automatic OSM building generation."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3524,11 +3567,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.86-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.87-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.86-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.87-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
