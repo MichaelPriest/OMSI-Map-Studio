@@ -98,7 +98,7 @@ public sealed class MapStudioRealWorldSceneReconstructionRunnerTests
                     .Select(
                         section =>
                             int.Parse(
-                                section.ContentLines[1]))
+                                section.ContentLines[2]))
                     .ToArray();
 
             Assert.Contains(
