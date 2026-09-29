@@ -122,6 +122,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.81-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.82-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.82-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.83-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md"
   workflow_dispatch:
 
 permissions:
@@ -3221,6 +3223,43 @@ jobs:
 
           Write-Host "Verified OSM street-furniture import and multi-source confidence fusion."
 
+      - name: Verify test 10.83 OSM urban infrastructure reconstruction
+        shell: pwsh
+        run: |
+          $importer = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOsmInfrastructureImporter.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOsmInfrastructureImporterTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioOsmInfrastructureImporter',
+            'MapStudioOsmInfrastructureReconstructionAdapter',
+            'barrier',
+            'guard_rail',
+            'footway',
+            'driveway',
+            'amenity',
+            'parking'
+          )) {
+            if (-not $importer.Contains($required)) {
+              throw "Test 10.83 infrastructure marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ImporterRecognizesUrbanInfrastructureWays',
+            'ImporterPreservesWidthSurfaceAndAreaEvidence',
+            'OpenParkingWayIsRejected',
+            'AdapterMapsAllSupportedInfrastructureKinds',
+            'BareFenceNeedsReview',
+            'DetailedParkingCanAutoGenerate',
+            'IndependentAerialEvidenceRaisesSidewalkConfidence'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.83 infrastructure regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified OSM urban infrastructure import and reconstruction confidence."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3375,11 +3414,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.82-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.83-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.82-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.83-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
