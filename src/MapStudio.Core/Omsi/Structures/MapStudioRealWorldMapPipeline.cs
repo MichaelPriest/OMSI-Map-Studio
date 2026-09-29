@@ -106,6 +106,16 @@ public sealed class MapStudioRealWorldMapPipeline
                     cancellationToken)
                 .ConfigureAwait(false);
 
+        var generatedAssetTransaction =
+            new MapStudioGeneratedAssetTransaction();
+
+        var generatedAssets =
+            await generatedAssetTransaction
+                .CaptureAsync(
+                    root,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
         try
         {
             progress?.Report(
@@ -156,6 +166,9 @@ public sealed class MapStudioRealWorldMapPipeline
         }
         catch (Exception original)
         {
+            var rollbackErrors =
+                new List<Exception>();
+
             try
             {
                 RestoreSnapshot(
@@ -163,10 +176,25 @@ public sealed class MapStudioRealWorldMapPipeline
             }
             catch (Exception rollback)
             {
+                rollbackErrors.Add(rollback);
+            }
+
+            try
+            {
+                generatedAssetTransaction
+                    .Restore(
+                        generatedAssets);
+            }
+            catch (Exception rollback)
+            {
+                rollbackErrors.Add(rollback);
+            }
+
+            if (rollbackErrors.Count > 0)
+            {
                 throw new AggregateException(
                     "realWorldMapRollbackFailed",
-                    original,
-                    rollback);
+                    [original, ..rollbackErrors]);
             }
 
             throw;

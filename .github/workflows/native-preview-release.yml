@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.94: physical real-world junction generation preview.
+# Test 10.95: transactional generated-asset rollback preview.
 
 on:
   push:
@@ -153,6 +153,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.93-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.94-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.95-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md"
   workflow_dispatch:
 
 permissions:
@@ -163,8 +165,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.94-native
-  TAG: v0.2.0-alpha.5-test.10.94-native
+  VERSION: 0.2.0-alpha.5-test.10.95-native
+  TAG: v0.2.0-alpha.5-test.10.95-native
 
 jobs:
   build-native-preview:
@@ -3679,6 +3681,47 @@ jobs:
 
           Write-Host "Verified physical junction assets generated from the OSM road graph."
 
+      - name: Verify test 10.95 generated asset rollback
+        shell: pwsh
+        run: |
+          $transaction = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioGeneratedAssetTransaction.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioGeneratedAssetTransactionTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioGeneratedAssetTransaction',
+            'MapStudio_RoadKit',
+            'MapStudio_Junctions',
+            'MapStudio_Buildings',
+            'MapStudio_Infrastructure',
+            'generatedAssetSnapshotMissing'
+          )) {
+            if (-not $transaction.Contains($required)) {
+              throw "Test 10.95 asset rollback marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'generatedAssetTransaction',
+            'generatedAssets',
+            'realWorldMapRollbackFailed'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.95 pipeline rollback marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RestoreReinstatesPreexistingAssetsAndRemovesNewRoots',
+            'RestoreRemovesGeneratedBuildingAndInfrastructureRoots'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.95 rollback regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified transactional rollback for tiles and generated OMSI assets."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3833,11 +3876,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.94-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.95-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.94-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.95-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
