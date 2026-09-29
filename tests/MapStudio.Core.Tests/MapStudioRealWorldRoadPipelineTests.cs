@@ -5,6 +5,7 @@ using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
 
