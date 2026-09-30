@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.102: native real-world generation session preview.
+# Test 10.103: WinUI real-world generation ViewModel preview.
 
 on:
   push:
@@ -16,6 +16,7 @@ on:
       - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationService.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationController.cs"
+      - "src/MapStudio.Native/ViewModels/RealWorldGenerationViewModel.cs"
       - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
       - "src/MapStudio.Renderer/Graphics/NativeGpuTextureLoader.cs"
@@ -177,6 +178,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.101-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.102-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.103-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.103-native.md"
   workflow_dispatch:
 
 permissions:
@@ -187,8 +190,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.102-native
-  TAG: v0.2.0-alpha.5-test.10.102-native
+  VERSION: 0.2.0-alpha.5-test.10.103-native
+  TAG: v0.2.0-alpha.5-test.10.103-native
 
 jobs:
   build-native-preview:
@@ -3981,6 +3984,30 @@ jobs:
 
           Write-Host "Verified native generation state, progress, cancellation and result summary."
 
+      - name: Verify test 10.103 real-world generation ViewModel
+        shell: pwsh
+        run: |
+          $vm = Get-Content src/MapStudio.Native/ViewModels/RealWorldGenerationViewModel.cs -Raw
+
+          foreach ($required in @(
+            'RealWorldGenerationViewModel',
+            'INotifyPropertyChanged',
+            'CanStart',
+            'CanCancel',
+            'ElevationProgress',
+            'SummaryText',
+            'StartAsync',
+            'Cancel()',
+            'Reset()',
+            'NativeRealWorldMapGenerationController'
+          )) {
+            if (-not $vm.Contains($required)) {
+              throw "Test 10.103 ViewModel marker is missing: $required"
+            }
+          }
+
+          Write-Host "Verified WinUI-bindable real-world generation state and progress."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4135,11 +4162,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.102-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.103-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.102-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.103-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
