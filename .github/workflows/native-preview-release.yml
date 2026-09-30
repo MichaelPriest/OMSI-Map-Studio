@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.108: free keyless Open-Meteo/Copernicus elevation preview.
+# Test 10.109: clip real-world roads and infrastructure to created map bounds.
 
 on:
   push:
@@ -187,8 +187,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.104-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.105-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.105-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.108-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.108-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.109-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md"
   workflow_dispatch:
 
 permissions:
@@ -199,8 +199,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.108-native
-  TAG: v0.2.0-alpha.5-test.10.108-native
+  VERSION: 0.2.0-alpha.5-test.10.109-native
+  TAG: v0.2.0-alpha.5-test.10.109-native
 
 jobs:
   build-native-preview:
@@ -4295,6 +4295,66 @@ jobs:
 
           Write-Host "Verified keyless public Open-Meteo elevation with optional customer API key."
 
+      - name: Verify test 10.109 map-bounds clipping
+        shell: pwsh
+        run: |
+          $roads = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $infra = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioInfrastructureBatchReconstructionRunner.cs -Raw
+          $clipper = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioInfrastructureFeatureClipper.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+          $infraTests = Get-Content tests/MapStudio.Core.Tests/MapStudioInfrastructureFeatureClipperTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioRoadTraceClipper',
+            'mapBounds',
+            'realWorldRoadMapHasNoTiles'
+          )) {
+            if (-not $roads.Contains($required)) {
+              throw "Test 10.109 road clipping marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioInfrastructureFeatureClipper',
+            'clippedProjected',
+            'OmsiTileWorldBounds'
+          )) {
+            if (-not $infra.Contains($required)) {
+              throw "Test 10.109 infrastructure batch clipping marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ClipAgainstBoundary',
+            'BoundaryInsetMeters',
+            'ResolvePolygonCentroid',
+            'MapStudioRoadTraceClipper'
+          )) {
+            if (-not $clipper.Contains($required)) {
+              throw "Test 10.109 infrastructure clipper marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RoadRunnerClipsCrossingRoadToCreatedMapBounds',
+            'CrossingRoadXml'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.109 crossing-road regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'AreaIsClippedToCreatedTileBounds',
+            'LineCrossingMapIsClippedInsteadOfGeneratingOutlierMesh'
+          )) {
+            if (-not $infraTests.Contains($required)) {
+              throw "Test 10.109 infrastructure clipping regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified road and generated-infrastructure clipping to the created map extent."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4449,11 +4509,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.108-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.109-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.108-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
