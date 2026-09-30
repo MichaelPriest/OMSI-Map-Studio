@@ -306,7 +306,17 @@ public sealed class MapStudioStreetLevelBuildingRefiner
             RoofType =
                 roofType,
             RoofHeightMeters =
-                roofHeight
+                roofHeight,
+            FacadeMaterial =
+                string.IsNullOrWhiteSpace(
+                    normalized.FacadeMaterial)
+                    ? building.FacadeMaterial
+                    : normalized.FacadeMaterial.Trim(),
+            RoofMaterial =
+                string.IsNullOrWhiteSpace(
+                    normalized.RoofMaterial)
+                    ? building.RoofMaterial
+                    : normalized.RoofMaterial.Trim()
         };
     }
 }
