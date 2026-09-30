@@ -27864,8 +27864,8 @@ setTimeout(postBounds, 250);
 
             RealMapOpenMeteoKeyBox.PlaceholderText =
                 hasKey
-                    ? "Chave já salva · digite para substituir"
-                    : "API key Open-Meteo";
+                    ? "Chave comercial já salva · digite para substituir"
+                    : "Opcional · chave comercial Open-Meteo";
 
             SaveRealMapOpenMeteoKeyButton.Content =
                 hasKey
@@ -27886,7 +27886,7 @@ setTimeout(postBounds, 250);
                 key))
         {
             StatusText.Text =
-                "Open-Meteo: informe a API key do usuário para salvar.";
+                "Open-Meteo: a chave comercial é opcional; deixe vazio para usar o endpoint público gratuito.";
 
             return;
         }
@@ -28679,14 +28679,13 @@ setTimeout(postBounds, 250);
                     .TryGetGoogleMapsApiKey();
 
         if (
+            providerIndex ==
+                2 &&
             string.IsNullOrWhiteSpace(
                 apiKey))
         {
             StatusText.Text =
-                providerIndex ==
-                    1
-                    ? "Mapa real criado. Elevação Open-Meteo/Copernicus não aplicada porque não há API key do usuário salva."
-                    : "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
+                "Mapa real criado. Elevação Google não aplicada porque não há API key salva.";
 
             return;
         }
@@ -28730,7 +28729,10 @@ setTimeout(postBounds, 250);
         StatusText.Text =
             providerIndex ==
                 1
-                ? "Elevação Open-Meteo/Copernicus GLO-90 aplicada ao mapa real."
+                ? string.IsNullOrWhiteSpace(
+                    apiKey)
+                    ? "Elevação Open-Meteo/Copernicus GLO-90 aplicada pelo endpoint público gratuito."
+                    : "Elevação Open-Meteo/Copernicus GLO-90 aplicada pela API customer."
                 : "Elevação Google aplicada ao mapa real.";
     }
 
