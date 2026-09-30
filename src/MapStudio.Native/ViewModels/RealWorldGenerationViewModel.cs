@@ -245,6 +245,7 @@ public sealed class RealWorldGenerationViewModel :
               $"{Summary.RoadStructures} estrutura(s) viária(s) · " +
               $"{Summary.SceneObjects} objeto(s) · " +
               $"{Summary.ReviewItems} revisão(ões) · " +
+              $"{Summary.MissingAssets} asset(s) ausente(s) · " +
               $"elevação {FormatElevationMode(Summary.ElevationMode)}";
 
     private static string FormatElevationMode(
