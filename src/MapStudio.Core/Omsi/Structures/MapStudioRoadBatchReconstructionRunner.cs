@@ -30,13 +30,18 @@ public sealed record MapStudioRoadBatchReconstructionResult(
     int IgnoredWayCount,
     int MissingNodeReferenceCount,
     IReadOnlyList<string> BackupPaths,
-    MapStudioRoadKitInstallResult RoadKit)
+    MapStudioRoadKitInstallResult RoadKit,
+    IReadOnlyList<MapStudioGeneratedSceneryPlacement>? StructurePlacements = null)
 {
     public int PlacedSplineCount =>
         Placements.Count;
 
     public int GeneratedJunctionCount =>
         JunctionPlacements.Count;
+
+    public int GeneratedStructureCount =>
+        StructurePlacements?.Count ??
+        0;
 
     public int ModifiedTileCount =>
         Placements
@@ -48,6 +53,17 @@ public sealed record MapStudioRoadBatchReconstructionResult(
                     ))
             .Concat(
                 JunctionPlacements
+                    .Select(
+                        placement =>
+                            (
+                                placement.TileX,
+                                placement.TileY
+                            )))
+            .Concat(
+                (
+                    StructurePlacements ??
+                    Array.Empty<MapStudioGeneratedSceneryPlacement>()
+                )
                     .Select(
                         placement =>
                             (
@@ -376,10 +392,25 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             segment.Start.Z,
                             tile.Y),
                     startHeight,
+                    endHeight,
                     gradientPercent,
                     rotation,
                     splinePath));
         }
+
+        var structurePlan =
+            new MapStudioRoadStructureSceneryPlanner()
+                .Build(
+                    planned
+                        .Select(
+                            item =>
+                                new MapStudioRoadStructureSpline(
+                                    item.Segment,
+                                    item.StartHeight,
+                                    item.EndHeight))
+                        .ToArray(),
+                    anchor,
+                    elevation);
 
         if (planned.Count == 0)
         {
@@ -568,7 +599,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         }
 
         MapStudioGeneratedSceneryBatchWriteResult
-            junctionWrite =
+            sceneryWrite =
                 new(
                     Array.Empty<MapStudioGeneratedSceneryPlacement>(),
                     Array.Empty<string>(),
@@ -576,7 +607,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
 
         try
         {
-            var junctionRequests =
+            var sceneryRequests =
                 new List<MapStudioGeneratedSceneryPlacementRequest>();
 
             var junctionGenerator =
@@ -694,7 +725,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             cancellationToken)
                         .ConfigureAwait(false);
 
-                junctionRequests.Add(
+                sceneryRequests.Add(
                     new MapStudioGeneratedSceneryPlacementRequest(
                         "osm-junction-" +
                             junction.NodeId,
@@ -704,19 +735,121 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             junctionHeight));
             }
 
-            if (junctionRequests.Count > 0)
+            var bridgeAssets =
+                new Dictionary<
+                    string,
+                    string>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            var bridgeGenerator =
+                new MapStudioBridgePierAssetGenerator();
+
+            foreach (
+                var group in
+                    structurePlan
+                        .BridgePiers
+                        .GroupBy(
+                            item =>
+                                item.AssetName,
+                            StringComparer.OrdinalIgnoreCase))
             {
-                junctionWrite =
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var sample =
+                    group.First();
+
+                var asset =
+                    await bridgeGenerator
+                        .GenerateAsync(
+                            root,
+                            sample.Spec,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                bridgeAssets[
+                    group.Key] =
+                    asset.SceneryObjectPath;
+            }
+
+            foreach (
+                var item in
+                    structurePlan.BridgePiers)
+            {
+                sceneryRequests.Add(
+                    new MapStudioGeneratedSceneryPlacementRequest(
+                        item.Id,
+                        bridgeAssets[
+                            item.AssetName],
+                        item.WorldCenter,
+                        item.HeightMeters,
+                        item.Rotation));
+            }
+
+            var tunnelAssets =
+                new Dictionary<
+                    string,
+                    string>(
+                    StringComparer.OrdinalIgnoreCase);
+
+            var tunnelGenerator =
+                new MapStudioTunnelPortalAssetGenerator();
+
+            foreach (
+                var group in
+                    structurePlan
+                        .TunnelPortals
+                        .GroupBy(
+                            item =>
+                                item.AssetName,
+                            StringComparer.OrdinalIgnoreCase))
+            {
+                cancellationToken
+                    .ThrowIfCancellationRequested();
+
+                var sample =
+                    group.First();
+
+                var asset =
+                    await tunnelGenerator
+                        .GenerateAsync(
+                            root,
+                            sample.Spec,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                tunnelAssets[
+                    group.Key] =
+                    asset.SceneryObjectPath;
+            }
+
+            foreach (
+                var item in
+                    structurePlan.TunnelPortals)
+            {
+                sceneryRequests.Add(
+                    new MapStudioGeneratedSceneryPlacementRequest(
+                        item.Id,
+                        tunnelAssets[
+                            item.AssetName],
+                        item.WorldCenter,
+                        item.HeightMeters,
+                        item.Rotation));
+            }
+
+            if (sceneryRequests.Count > 0)
+            {
+                sceneryWrite =
                     await new MapStudioGeneratedSceneryBatchWriter()
                         .WriteAsync(
                             root,
                             mapRoot,
-                            junctionRequests,
+                            sceneryRequests,
                             cancellationToken)
                         .ConfigureAwait(false);
 
                 backupPaths.AddRange(
-                    junctionWrite.BackupPaths);
+                    sceneryWrite.BackupPaths);
             }
         }
         catch
@@ -762,13 +895,31 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                 placement.Segment)
                                 .Tunnel))
                 .ToArray(),
-            junctionWrite.Placements,
+            sceneryWrite
+                .Placements
+                .Where(
+                    placement =>
+                        placement.Id.StartsWith(
+                            "osm-junction-",
+                            StringComparison.Ordinal))
+                .ToArray(),
             graph.Junctions.Count,
             skippedOutside,
             imported.IgnoredWayCount,
             imported.MissingNodeReferenceCount,
             backupPaths,
-            roadKit);
+            roadKit,
+            sceneryWrite
+                .Placements
+                .Where(
+                    placement =>
+                        placement.Id.StartsWith(
+                            "osm-bridge-pier-",
+                            StringComparison.Ordinal) ||
+                        placement.Id.StartsWith(
+                            "osm-tunnel-portal-",
+                            StringComparison.Ordinal))
+                .ToArray());
     }
 
     private static IReadOnlyDictionary<
@@ -1400,6 +1551,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         double LocalX,
         double LocalZ,
         double StartHeight,
+        double EndHeight,
         double GradientPercent,
         double Rotation,
         string SplinePath);
