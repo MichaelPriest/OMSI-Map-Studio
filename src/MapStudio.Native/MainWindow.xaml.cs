@@ -28705,7 +28705,7 @@ setTimeout(postBounds, 250);
                             9)
                     : await _session
                         .LoadGoogleElevationGridAsync(
-                            apiKey,
+                            apiKey!,
                             tile.X,
                             tile.Y,
                             9);
