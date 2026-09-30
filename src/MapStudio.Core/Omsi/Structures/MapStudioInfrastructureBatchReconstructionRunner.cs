@@ -1,4 +1,5 @@
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Maps;
@@ -46,7 +47,8 @@ public sealed class MapStudioInfrastructureBatchReconstructionRunner
             string mapDirectory,
             string osmXml,
             MapStudioGeographicAnchor anchor,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -353,7 +355,9 @@ public sealed class MapStudioInfrastructureBatchReconstructionRunner
                                             .SceneryObjectPath,
                                         placement.ObjectId,
                                         placement.LocalX,
-                                        0,
+                                        elevation?.SampleRelativeHeightOrDefault(
+                                            anchor,
+                                            placement.Feature.Center) ?? 0,
                                         placement.LocalZ,
                                         0,
                                         0,

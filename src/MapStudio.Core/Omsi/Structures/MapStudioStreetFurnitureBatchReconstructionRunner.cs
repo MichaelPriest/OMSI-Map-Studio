@@ -1,5 +1,6 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 
@@ -40,7 +41,8 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
                 string,
                 IReadOnlyList<MapStudioSceneEvidence>>?
                 additionalEvidence = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -166,6 +168,10 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
                     point.Id,
                     assetPath,
                     position,
+                    HeightMeters:
+                        elevation?.SampleRelativeHeightOrDefault(
+                            anchor,
+                            position) ?? 0,
                     Rotation:
                         ResolveStableRotation(
                             point.Id)));

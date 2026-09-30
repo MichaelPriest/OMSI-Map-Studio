@@ -1,5 +1,6 @@
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
 
@@ -9,6 +10,7 @@ public enum MapStudioRealWorldMapPipelineStage
 {
     IndexingAssets,
     DownloadingOpenStreetMap,
+    ApplyingElevation,
     GeneratingRoads,
     ReconstructingScene,
     Completed
@@ -22,7 +24,8 @@ public sealed record MapStudioRealWorldMapPipelineResult(
     MapStudioOverpassSceneDownloadResult Download,
     MapStudioRoadBatchReconstructionResult Roads,
     MapStudioRealWorldSceneReconstructionResult Scene,
-    string SessionBackupDirectory)
+    string SessionBackupDirectory,
+    MapStudioTerrainElevationBatchResult? Elevation = null)
 {
     public int PlacedElementCount =>
         Roads.PlacedSplineCount +
@@ -68,7 +71,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 progress = null,
             IProgress<OmsiAssetIndexProgress>?
                 assetIndexProgress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -97,7 +101,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 catalog.SceneryObjects,
                 streetFurnitureEvidence,
                 progress,
-                cancellationToken)
+                cancellationToken,
+                elevation)
             .ConfigureAwait(false);
     }
 
@@ -117,7 +122,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 streetFurnitureEvidence = null,
             IProgress<MapStudioRealWorldMapPipelineProgress>?
                 progress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -169,6 +175,29 @@ public sealed class MapStudioRealWorldMapPipeline
 
         try
         {
+            MapStudioTerrainElevationBatchResult?
+                elevationResult =
+                    null;
+
+            if (elevation is not null)
+            {
+                progress?.Report(
+                    new MapStudioRealWorldMapPipelineProgress(
+                        MapStudioRealWorldMapPipelineStage
+                            .ApplyingElevation,
+                        "Aplicando elevação real ao terreno e ao posicionamento vertical..."));
+
+                elevationResult =
+                    await new MapStudioTerrainElevationBatchApplier()
+                        .ApplyAsync(
+                            root,
+                            mapRoot,
+                            anchor,
+                            elevation,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+            }
+
             progress?.Report(
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
@@ -182,7 +211,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         mapRoot,
                         download.OsmXml,
                         anchor,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             progress?.Report(
@@ -200,7 +230,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         anchor,
                         assets,
                         streetFurnitureEvidence,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             progress?.Report(
@@ -213,7 +244,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 download,
                 roads,
                 scene,
-                snapshot.BackupRoot);
+                snapshot.BackupRoot,
+                elevationResult);
         }
         catch (Exception original)
         {
@@ -328,6 +360,37 @@ public sealed class MapStudioRealWorldMapPipeline
                 new SnapshotFile(
                     tilePath,
                     backupPath));
+
+            var terrainPath =
+                tilePath +
+                ".terrain";
+
+            if (File.Exists(terrainPath))
+            {
+                var terrainRelative =
+                    Path.GetRelativePath(
+                        mapDirectory,
+                        terrainPath);
+
+                var terrainBackupPath =
+                    Path.Combine(
+                        backupRoot,
+                        terrainRelative);
+
+                Directory.CreateDirectory(
+                    Path.GetDirectoryName(
+                        terrainBackupPath)!);
+
+                File.Copy(
+                    terrainPath,
+                    terrainBackupPath,
+                    overwrite: true);
+
+                files.Add(
+                    new SnapshotFile(
+                        terrainPath,
+                        terrainBackupPath));
+            }
         }
 
         return new MapSnapshot(

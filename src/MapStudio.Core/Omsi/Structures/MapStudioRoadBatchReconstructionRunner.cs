@@ -1,4 +1,5 @@
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Junctions;
 using MapStudio.Core.Omsi.Maps;
@@ -65,7 +66,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             string mapDirectory,
             string osmXml,
             MapStudioGeographicAnchor anchor,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -328,7 +330,9 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                         -1,
                                         -1,
                                         placement.LocalX,
-                                        0,
+                                        elevation?.SampleRelativeHeightOrDefault(
+                                            anchor,
+                                            placement.Segment.Start) ?? 0,
                                         placement.LocalZ,
                                         placement.Rotation,
                                         placement.Segment
@@ -581,7 +585,11 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         "osm-junction-" +
                             junction.NodeId,
                         asset.SceneryObjectPath,
-                        junction.Position));
+                        junction.Position,
+                        HeightMeters:
+                            elevation?.SampleRelativeHeightOrDefault(
+                                anchor,
+                                junction.Position) ?? 0));
             }
 
             if (junctionRequests.Count > 0)

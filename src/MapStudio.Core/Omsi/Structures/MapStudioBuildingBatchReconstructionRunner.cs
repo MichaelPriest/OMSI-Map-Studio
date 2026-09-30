@@ -1,6 +1,7 @@
 using MapStudio.Core.Generation.Buildings;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Buildings;
 using MapStudio.Core.Omsi.Maps;
 
@@ -36,7 +37,8 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             string mapDirectory,
             string osmXml,
             MapStudioGeographicAnchor anchor,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -141,7 +143,11 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                 new MapStudioGeneratedSceneryPlacementRequest(
                     building.Id,
                     asset.SceneryObjectPath,
-                    asset.WorldCenter));
+                    asset.WorldCenter,
+                    HeightMeters:
+                        elevation?.SampleRelativeHeightOrDefault(
+                            anchor,
+                            asset.WorldCenter) ?? 0));
         }
 
         var writeResult =

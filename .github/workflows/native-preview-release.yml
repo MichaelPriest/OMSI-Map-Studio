@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.97: expanded real-world street furniture preview.
+# Test 10.98: unified real-world elevation preview.
 
 on:
   push:
@@ -55,8 +55,12 @@ on:
       - "src/MapStudio.Core/Generation/Scene/**"
       - "src/MapStudio.Core/Generation/Vegetation/**"
       - "src/MapStudio.Core/Generation/Buildings/**"
+      - "src/MapStudio.Core/Generation/Terrain/**"
       - "src/MapStudio.Core/Omsi/Structures/**"
       - "src/MapStudio.Core/Omsi/Maps/MapStudioGeneratedSceneryBatchWriter.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainReader.cs"
+      - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainWriter.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioRealWorldElevationTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Reconstruction*Tests.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Batch*Tests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldAssetCatalogLoaderTests.cs"
@@ -160,6 +164,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.96-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.97-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.97-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.98-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.98-native.md"
   workflow_dispatch:
 
 permissions:
@@ -170,8 +176,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.97-native
-  TAG: v0.2.0-alpha.5-test.10.97-native
+  VERSION: 0.2.0-alpha.5-test.10.98-native
+  TAG: v0.2.0-alpha.5-test.10.98-native
 
 jobs:
   build-native-preview:
@@ -3795,6 +3801,61 @@ jobs:
 
           Write-Host "Verified expanded OSM furniture import, planner kinds, asset selection and Overpass coverage."
 
+      - name: Verify test 10.98 unified real-world elevation
+        shell: pwsh
+        run: |
+          $surface = Get-Content src/MapStudio.Core/Generation/Terrain/MapStudioGeoreferencedElevationSurface.cs -Raw
+          $applier = Get-Content src/MapStudio.Core/Generation/Terrain/MapStudioTerrainElevationBatchApplier.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $roads = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldElevationTests.cs -Raw
+
+          foreach ($required in @(
+            'TrySampleAbsoluteHeight',
+            'TrySampleRelativeHeight',
+            'SampleRelativeHeightOrDefault'
+          )) {
+            if (-not $surface.Contains($required)) {
+              throw "Test 10.98 elevation surface marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MapStudioTerrainElevationBatchApplier',
+            '.mapstudio',
+            'real-world-elevation',
+            'OmsiTerrainWriter'
+          )) {
+            if (-not $applier.Contains($required)) {
+              throw "Test 10.98 terrain batch marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ApplyingElevation',
+            '.terrain',
+            'MapStudioTerrainElevationBatchApplier'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.98 map pipeline marker is missing: $required"
+            }
+          }
+
+          if (-not $roads.Contains('SampleRelativeHeightOrDefault')) {
+            throw "Test 10.98 road vertical placement marker is missing."
+          }
+
+          foreach ($required in @(
+            'SurfaceUsesBilinearInterpolationAndMinimumAsDefaultDatum',
+            'TerrainBatchResamplesDemIntoStandardOmsiTerrain'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.98 elevation regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified shared DEM terrain and vertical placement pipeline."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -3949,11 +4010,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.97-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.98-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.97-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.98-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4

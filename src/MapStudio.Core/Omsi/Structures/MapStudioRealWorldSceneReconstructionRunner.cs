@@ -1,4 +1,5 @@
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Generation.Scene;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
@@ -38,7 +39,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                 string,
                 IReadOnlyList<MapStudioSceneEvidence>>?
                 streetFurnitureEvidence = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            MapStudioGeoreferencedElevationSurface? elevation = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -67,7 +69,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         mapRoot,
                         osmXml,
                         anchor,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             var buildings =
@@ -77,7 +80,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         mapRoot,
                         osmXml,
                         anchor,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             var vegetation =
@@ -88,7 +92,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         osmXml,
                         anchor,
                         assets,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             var streetFurniture =
@@ -100,7 +105,8 @@ public sealed class MapStudioRealWorldSceneReconstructionRunner
                         anchor,
                         assets,
                         streetFurnitureEvidence,
-                        cancellationToken)
+                        cancellationToken,
+                        elevation)
                     .ConfigureAwait(false);
 
             return new MapStudioRealWorldSceneReconstructionResult(
