@@ -28461,7 +28461,11 @@ setTimeout(postBounds, 250);
                             useSavedOpenMeteoElevation:
                                 applyElevation &&
                                 elevationProviderIndex ==
-                                    1);
+                                    1,
+                            useBuildingVisualEvidence:
+                                RealMapUseBuildingVisualEvidenceCheckBox
+                                    .IsChecked ==
+                                true);
                 }
                 catch (OperationCanceledException)
                 {
