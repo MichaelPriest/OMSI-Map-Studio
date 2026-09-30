@@ -28,7 +28,7 @@ public sealed class MapStudioOverpassSceneClient
         6_378_137.0;
 
     private const double TargetChunkSpanMeters =
-        500.0;
+        300.0;
 
     private const int MaximumChunksPerAxis =
         6;
@@ -41,7 +41,7 @@ public sealed class MapStudioOverpassSceneClient
 
     private static readonly TimeSpan
         EndpointAttemptTimeout =
-            TimeSpan.FromSeconds(20);
+            TimeSpan.FromSeconds(12);
 
     private static readonly TimeSpan
         EndpointConnectTimeout =
@@ -62,8 +62,14 @@ public sealed class MapStudioOverpassSceneClient
                 "https://overpass.private.coffee/api/interpreter")
         ];
 
+    private static readonly Uri
+        DefaultDirectMapEndpoint =
+            new(
+                "https://api.openstreetmap.org/api/0.6/map");
+
     private readonly HttpClient _httpClient;
     private readonly IReadOnlyList<Uri> _endpoints;
+    private readonly Uri? _directMapEndpoint;
     private readonly Action<string>? _diagnostic;
     private int _endpointRotation;
 
@@ -71,6 +77,7 @@ public sealed class MapStudioOverpassSceneClient
         : this(
             SharedHttpClient,
             DefaultEndpoints,
+            DefaultDirectMapEndpoint,
             null)
     {
     }
@@ -80,6 +87,7 @@ public sealed class MapStudioOverpassSceneClient
         : this(
             SharedHttpClient,
             DefaultEndpoints,
+            DefaultDirectMapEndpoint,
             diagnostic)
     {
     }
@@ -90,6 +98,7 @@ public sealed class MapStudioOverpassSceneClient
         : this(
             httpClient,
             endpoints,
+            null,
             null)
     {
     }
@@ -98,6 +107,19 @@ public sealed class MapStudioOverpassSceneClient
         HttpClient httpClient,
         IReadOnlyList<Uri> endpoints,
         Action<string>? diagnostic)
+        : this(
+            httpClient,
+            endpoints,
+            null,
+            diagnostic)
+    {
+    }
+
+    public MapStudioOverpassSceneClient(
+        HttpClient httpClient,
+        IReadOnlyList<Uri> endpoints,
+        Uri? directMapEndpoint,
+        Action<string>? diagnostic = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         ArgumentNullException.ThrowIfNull(endpoints);
@@ -116,8 +138,23 @@ public sealed class MapStudioOverpassSceneClient
                 nameof(endpoints));
         }
 
+        if (
+            directMapEndpoint is not null &&
+            (
+                !directMapEndpoint.IsAbsoluteUri ||
+                directMapEndpoint.Scheme !=
+                    Uri.UriSchemeHttps
+            ))
+        {
+            throw new ArgumentException(
+                "osmDirectMapEndpointInvalid",
+                nameof(directMapEndpoint));
+        }
+
         _httpClient = httpClient;
         _endpoints = endpoints.ToArray();
+        _directMapEndpoint =
+            directMapEndpoint;
         _diagnostic = diagnostic;
     }
 
@@ -360,7 +397,7 @@ public sealed class MapStudioOverpassSceneClient
         if (failedChunks > 0)
         {
             throw new HttpRequestException(
-                "Importação de cenário OpenStreetMap ficou incompleta após recuperação limitada. " +
+                "Importação de cenário OpenStreetMap ficou incompleta após Overpass + fallback OSM API. " +
                 string.Join(
                     " / ",
                     failures
@@ -435,10 +472,48 @@ public sealed class MapStudioOverpassSceneClient
                 Array.Empty<string>());
         }
 
-        if (
-            !fetched.CanRecoverBySubdivision ||
-            depth >= MaximumRecoveryDepth)
+        var directFallback =
+            await TryDownloadDirectMapAsync(
+                    bounds,
+                    requestConcurrency,
+                    onAttempt,
+                    cancellationToken)
+                .ConfigureAwait(false);
 
+        if (directFallback.Document is not null)
+        {
+            return new RecoveryResult(
+                [directFallback.Document],
+                1,
+                0,
+                fetched.RequestAttemptCount +
+                    directFallback.RequestAttemptCount,
+                directFallback.Endpoint is null
+                    ? Array.Empty<string>()
+                    : [directFallback.Endpoint],
+                Array.Empty<string>());
+        }
+
+        var canRecover =
+            fetched.CanRecoverBySubdivision ||
+            directFallback.CanRecoverBySubdivision;
+
+        var combinedFailure =
+            string.Join(
+                " / ",
+                new[]
+                {
+                    fetched.Error,
+                    directFallback.Error
+                }
+                    .Where(
+                        error =>
+                            !string.IsNullOrWhiteSpace(
+                                error)));
+
+        if (
+            !canRecover ||
+            depth >= MaximumRecoveryDepth)
         {
             WriteDiagnostic(
                 $"scene recovery exhausted depth={depth}");
@@ -447,12 +522,13 @@ public sealed class MapStudioOverpassSceneClient
                 Array.Empty<XDocument>(),
                 0,
                 1,
-                fetched.RequestAttemptCount,
+                fetched.RequestAttemptCount +
+                    directFallback.RequestAttemptCount,
                 Array.Empty<string>(),
                 string.IsNullOrWhiteSpace(
-                    fetched.Error)
+                    combinedFailure)
                     ? Array.Empty<string>()
-                    : [fetched.Error]);
+                    : [combinedFailure]);
         }
 
         WriteDiagnostic(
@@ -507,7 +583,8 @@ public sealed class MapStudioOverpassSceneClient
             0;
 
         var requestAttempts =
-            fetched.RequestAttemptCount;
+            fetched.RequestAttemptCount +
+            directFallback.RequestAttemptCount;
 
         var endpoints =
             new HashSet<string>(
@@ -518,10 +595,10 @@ public sealed class MapStudioOverpassSceneClient
 
         if (
             !string.IsNullOrWhiteSpace(
-                fetched.Error))
+                combinedFailure))
         {
             failures.Add(
-                fetched.Error);
+                combinedFailure);
         }
 
         var childResults =
@@ -604,9 +681,19 @@ public sealed class MapStudioOverpassSceneClient
                 1) %
             _endpoints.Count;
 
+        var maximumEndpointAttempts =
+            _directMapEndpoint is null
+                ? _endpoints.Count
+                : 1;
+
+        var attemptedEndpoints =
+            0;
+
         for (
             var endpointOffset = 0;
-            endpointOffset < _endpoints.Count;
+            endpointOffset < _endpoints.Count &&
+            attemptedEndpoints <
+                maximumEndpointAttempts;
             endpointOffset++)
         {
             cancellationToken
@@ -632,6 +719,7 @@ public sealed class MapStudioOverpassSceneClient
                 continue;
             }
 
+            attemptedEndpoints++;
             attemptCount++;
 
             onAttempt?.Invoke(
@@ -698,6 +786,12 @@ public sealed class MapStudioOverpassSceneClient
                     {
                         canRecoverBySubdivision =
                             true;
+                    }
+
+                    if (statusCode == 429)
+                    {
+                        unavailableEndpoints.Add(
+                            endpointKey);
                     }
 
                     errors.Add(
@@ -785,6 +879,162 @@ public sealed class MapStudioOverpassSceneClient
             unavailableEndpoints.ToArray());
     }
 
+    private async Task<ChunkFetchResult>
+        TryDownloadDirectMapAsync(
+            Bounds bounds,
+            SemaphoreSlim requestConcurrency,
+            Action<Uri, int, int>? onAttempt,
+            CancellationToken cancellationToken)
+    {
+        if (_directMapEndpoint is null)
+        {
+            return new ChunkFetchResult(
+                null,
+                null,
+                0,
+                null,
+                false,
+                Array.Empty<string>());
+        }
+
+        onAttempt?.Invoke(
+            _directMapEndpoint,
+            1,
+            1);
+
+        await requestConcurrency
+            .WaitAsync(
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        using var attemptCancellation =
+            CancellationTokenSource
+                .CreateLinkedTokenSource(
+                    cancellationToken);
+
+        attemptCancellation.CancelAfter(
+            EndpointAttemptTimeout);
+
+        try
+        {
+            var invariant =
+                CultureInfo.InvariantCulture;
+
+            var bbox =
+                string.Create(
+                    invariant,
+                    $"{bounds.West:G17},{bounds.South:G17},{bounds.East:G17},{bounds.North:G17}");
+
+            var separator =
+                string.IsNullOrWhiteSpace(
+                    _directMapEndpoint.Query)
+                    ? "?"
+                    : "&";
+
+            var requestUri =
+                new Uri(
+                    _directMapEndpoint +
+                    separator +
+                    "bbox=" +
+                    Uri.EscapeDataString(
+                        bbox));
+
+            using var request =
+                new HttpRequestMessage(
+                    HttpMethod.Get,
+                    requestUri);
+
+            using var response =
+                await _httpClient
+                    .SendAsync(
+                        request,
+                        HttpCompletionOption
+                            .ResponseHeadersRead,
+                        attemptCancellation.Token)
+                    .ConfigureAwait(false);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var statusCode =
+                    (int)response.StatusCode;
+
+                return new ChunkFetchResult(
+                    null,
+                    null,
+                    1,
+                    $"{_directMapEndpoint.Host}: HTTP {statusCode} no fallback OSM API",
+                    statusCode is
+                        400 or
+                        408 or
+                        413 or
+                        429 or
+                        500 or
+                        502 or
+                        503 or
+                        504 or
+                        509,
+                    Array.Empty<string>());
+            }
+
+            var xml =
+                await response.Content
+                    .ReadAsStringAsync(
+                        attemptCancellation.Token)
+                    .ConfigureAwait(false);
+
+            if (string.IsNullOrWhiteSpace(xml))
+            {
+                return new ChunkFetchResult(
+                    null,
+                    null,
+                    1,
+                    $"{_directMapEndpoint.Host}: resposta vazia no fallback OSM API",
+                    false,
+                    Array.Empty<string>());
+            }
+
+            return new ChunkFetchResult(
+                ParseOsm(
+                    xml),
+                _directMapEndpoint
+                    .GetLeftPart(
+                        UriPartial.Authority),
+                1,
+                null,
+                false,
+                Array.Empty<string>());
+        }
+        catch (
+            Exception exception)
+            when (
+                exception is
+                    HttpRequestException or
+                    TaskCanceledException)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+
+            return new ChunkFetchResult(
+                null,
+                null,
+                1,
+                exception is TaskCanceledException &&
+                attemptCancellation
+                    .IsCancellationRequested
+                    ? $"{_directMapEndpoint.Host}: timeout após {EndpointAttemptTimeout.TotalSeconds:0}s no fallback OSM API"
+                    : $"{_directMapEndpoint.Host}: {exception.Message}",
+                exception is TaskCanceledException,
+                Array.Empty<string>());
+        }
+        finally
+        {
+            requestConcurrency
+                .Release();
+        }
+    }
+
     private static string BuildQuery(
         Bounds bounds)
     {
@@ -797,7 +1047,7 @@ public sealed class MapStudioOverpassSceneClient
                 $"{bounds.South:G17},{bounds.West:G17},{bounds.North:G17},{bounds.East:G17}");
 
         return
-            "[out:xml][timeout:20];(" +
+            "[out:xml][timeout:12];(" +
             $"way[\"highway\"]({bbox});" +
             $"way[\"building\"]({bbox});" +
             $"relation[\"building\"]({bbox});" +

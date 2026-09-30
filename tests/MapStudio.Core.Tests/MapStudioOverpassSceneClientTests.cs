@@ -538,6 +538,190 @@ public sealed class MapStudioOverpassSceneClientTests
     }
 
     [Fact]
+    public async Task DownloaderUsesOfficialOsmMapFallbackAfterSingleOverpassFailure()
+    {
+        var requests =
+            new List<Uri>();
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    request =>
+                    {
+                        requests.Add(
+                            request.RequestUri!);
+
+                        return request.RequestUri!
+                            .Host ==
+                            "overpass.test"
+                            ? new HttpResponseMessage(
+                                HttpStatusCode
+                                    .GatewayTimeout)
+                            : XmlResponse(
+                                SampleSceneOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var result =
+            await new MapStudioOverpassSceneClient(
+                    httpClient,
+                    [
+                        new Uri(
+                            "https://overpass.test/api/interpreter"),
+                        new Uri(
+                            "https://unused-overpass.test/api/interpreter")
+                    ],
+                    new Uri(
+                        "https://osm.test/api/0.6/map"))
+                .DownloadAsync(
+                    -23.551,
+                    -46.634,
+                    -23.549,
+                    -46.632);
+
+        Assert.Equal(
+            2,
+            requests.Count);
+
+        Assert.Equal(
+            "overpass.test",
+            requests[0].Host);
+
+        Assert.Equal(
+            "osm.test",
+            requests[1].Host);
+
+        Assert.Contains(
+            "bbox=",
+            requests[1]
+                .Query,
+            StringComparison.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain(
+            requests,
+            request =>
+                request.Host ==
+                "unused-overpass.test");
+
+        Assert.True(
+            result.NodeCount >
+                0);
+
+        Assert.Equal(
+            0,
+            result.FailedChunkCount);
+
+        Assert.Contains(
+            "https://osm.test",
+            result.UsedEndpoints);
+    }
+
+    [Fact]
+    public async Task DownloaderDirectMapFallbackUsesWestSouthEastNorthBboxOrder()
+    {
+        string? query =
+            null;
+
+        using var httpClient =
+            new HttpClient(
+                new DelegateHandler(
+                    request =>
+                    {
+                        if (
+                            request.RequestUri!
+                                .Host ==
+                            "overpass.test")
+                        {
+                            return new HttpResponseMessage(
+                                HttpStatusCode
+                                    .GatewayTimeout);
+                        }
+
+                        query =
+                            request.RequestUri!
+                                .Query;
+
+                        return XmlResponse(
+                            SampleSceneOsm);
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        await new MapStudioOverpassSceneClient(
+                httpClient,
+                [
+                    new Uri(
+                        "https://overpass.test/api/interpreter")
+                ],
+                new Uri(
+                    "https://osm.test/api/0.6/map"))
+            .DownloadAsync(
+                -23.551,
+                -46.634,
+                -23.549,
+                -46.632);
+
+        Assert.NotNull(
+            query);
+
+        var decoded =
+            Uri.UnescapeDataString(
+                query!)
+                .TrimStart(
+                    '?');
+
+        Assert.StartsWith(
+            "bbox=",
+            decoded,
+            StringComparison.Ordinal);
+
+        var values =
+            decoded[
+                "bbox=".Length..]
+                .Split(
+                    ',',
+                    StringSplitOptions
+                        .TrimEntries)
+                .Select(
+                    value =>
+                        double.Parse(
+                            value,
+                            System.Globalization
+                                .CultureInfo
+                                .InvariantCulture))
+                .ToArray();
+
+        Assert.Equal(
+            4,
+            values.Length);
+
+        Assert.Equal(
+            -46.634,
+            values[0],
+            6);
+
+        Assert.Equal(
+            -23.551,
+            values[1],
+            6);
+
+        Assert.Equal(
+            -46.632,
+            values[2],
+            6);
+
+        Assert.Equal(
+            -23.549,
+            values[3],
+            6);
+    }
+
+    [Fact]
     public async Task DownloaderRecoversFailedParentBySubdivision()
     {
         var requestCount =
