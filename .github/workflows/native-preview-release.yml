@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.106: OSM-aware generated building appearance.
+# Test 10.107: one-click real-world reconstruction visual evidence preview.
 
 on:
   push:
@@ -18,6 +18,7 @@ on:
       - "src/MapStudio.Native/Services/NativeMapCredentialStore.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationService.cs"
       - "src/MapStudio.Native/Services/NativeRealWorldMapGenerationController.cs"
+      - "src/MapStudio.Native/Services/Native*BuildingVisualEvidenceProvider.cs"
       - "src/MapStudio.Native/ViewModels/RealWorldGenerationViewModel.cs"
       - "src/MapStudio.Native/Services/OmsiNativeSession.cs"
       - "src/MapStudio.Renderer/Graphics/D3D11NativeMapRenderer.cs"
@@ -186,8 +187,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.104-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.105-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.105-native.md"
-      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.106-native.md"
-      - "docs/en/releases/v0.2.0-alpha.5-test.10.106-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.107-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.107-native.md"
   workflow_dispatch:
 
 permissions:
@@ -198,8 +199,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.106-native
-  TAG: v0.2.0-alpha.5-test.10.106-native
+  VERSION: 0.2.0-alpha.5-test.10.107-native
+  TAG: v0.2.0-alpha.5-test.10.107-native
 
 jobs:
   build-native-preview:
@@ -1255,7 +1256,7 @@ jobs:
           foreach ($required in @(
             'x:Name="RealMapRoadImportModeBox"',
             'SelectedIndex="2"',
-            'Gerar ruas + cruzamentos automaticamente'
+            'Reconstrução completa automática · vias + cruzamentos + cenário'
           )) {
             if (-not $xaml.Contains($required)) {
               throw "Test 10.32 automatic OSM UI marker is missing: $required"
@@ -4137,6 +4138,100 @@ jobs:
 
           Write-Host "Verified OSM building appearance metadata, generated textures and deterministic texture test wiring."
 
+      - name: Verify test 10.107 real-world visual evidence and unified generation
+        shell: pwsh
+        run: |
+          $xaml = Get-Content src/MapStudio.Native/MainWindow.xaml -Raw
+          $main = Get-Content src/MapStudio.Native/MainWindow.xaml.cs -Raw
+          $panel = Get-Content src/MapStudio.Native/Controls/RealWorldGenerationPanel.xaml -Raw
+          $service = Get-Content src/MapStudio.Native/Services/NativeRealWorldMapGenerationService.cs -Raw
+          $oam = Get-Content src/MapStudio.Core/Generation/Scene/MapStudioOpenAerialMapCatalogClient.cs -Raw
+          $oamNative = Get-Content src/MapStudio.Native/Services/NativeOpenAerialMapBuildingVisualEvidenceProvider.cs -Raw
+          $building = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioBuildingBatchReconstructionRunner.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioOpenAerialMapCatalogClientTests.cs -Raw
+
+          foreach ($required in @(
+            'x:Name="RealWorldGenerationStatusPanel"',
+            'x:Name="RealMapUseBuildingVisualEvidenceCheckBox"',
+            'x:Name="RealMapUseOpenAerialMapEvidenceCheckBox"',
+            'OpenAerialMap + IA para telhados'
+          )) {
+            if (-not $xaml.Contains($required)) {
+              throw "Test 10.107 real-world visual evidence UI marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'useBuildingVisualEvidence:',
+            'useOpenAerialMapEvidence:',
+            'RealWorldGenerationStatusPanel'
+          )) {
+            if (-not $main.Contains($required)) {
+              throw "Test 10.107 one-click visual evidence wiring is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'OverallProgressPanel',
+            'OverallProgressBar'
+          )) {
+            if (-not $panel.Contains($required)) {
+              throw "Test 10.107 generation HUD marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'CreateBuildingVisualEvidenceProvider',
+            'NativeCompositeBuildingVisualEvidenceProvider',
+            'NativeOpenAerialMapBuildingVisualEvidenceProvider'
+          )) {
+            if (-not $service.Contains($required)) {
+              throw "Test 10.107 native visual evidence service marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'CCBY40',
+            'SelectBestForPoint',
+            'GroundSampleDistanceMeters',
+            'TmsTemplate'
+          )) {
+            if (-not $oam.Contains($required)) {
+              throw "Test 10.107 OpenAerialMap catalog marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'MaximumBuildingsPerRun',
+            'MaximumUsefulGsdMeters',
+            'AerialImagery',
+            'RoofMaterial'
+          )) {
+            if (-not $oamNative.Contains($required)) {
+              throw "Test 10.107 OpenAerialMap refinement guard is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'AttachVisualAttribution',
+            'visualEvidenceProvider'
+          )) {
+            if (-not $building.Contains($required)) {
+              throw "Test 10.107 building visual evidence fusion marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'AutomaticDerivationUsesConservativeLicenseAllowList',
+            'SelectBestForPointPrefersFinerGroundResolution'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.107 OpenAerialMap regression coverage is missing: $required"
+            }
+          }
+
+          Write-Host "Verified one-click real-world generation, local imagery and licensed OpenAerialMap roof refinement."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4291,11 +4386,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.106-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.107-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.106-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.107-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
