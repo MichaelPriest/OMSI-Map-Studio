@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Numerics;
 using System.Text;
 using MapStudio.Core.AI;
@@ -107,6 +108,7 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
 
             await EnsureGeneratedTexturesAsync(
                     textureDirectory,
+                    building,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -197,70 +199,39 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
     private static async Task
         EnsureGeneratedTexturesAsync(
             string textureDirectory,
+            MapStudioProjectedBuildingFootprint building,
             CancellationToken cancellationToken)
     {
+        var facadeMaterial =
+            NormalizeAppearanceTag(
+                building.FacadeMaterial);
+
+        var roofMaterial =
+            NormalizeAppearanceTag(
+                building.RoofMaterial);
+
+        var facadeBase =
+            ResolveFacadeBaseColor(
+                building,
+                facadeMaterial);
+
+        var roofBase =
+            ResolveRoofBaseColor(
+                building,
+                roofMaterial);
+
         await MapStudioGeneratedTextureFactory
             .EnsureBmpAsync(
                 textureDirectory,
                 "ms_osm_facade.bmp",
                 128,
                 128,
-                static (x, y) =>
-                {
-                    var floorBand =
-                        y %
-                            32 <=
-                            2;
-
-                    var window =
-                        y %
-                            32 >=
-                            9 &&
-                        y %
-                            32 <=
-                            22 &&
-                        x %
-                            32 >=
-                            8 &&
-                        x %
-                            32 <=
-                            23;
-
-                    if (floorBand)
-                    {
-                        return new MapStudioGeneratedRgb(
-                            150,
-                            146,
-                            138);
-                    }
-
-                    if (window)
-                    {
-                        return new MapStudioGeneratedRgb(
-                            78,
-                            112,
-                            132);
-                    }
-
-                    var noise =
-                        (
-                            x * 11 +
-                            y * 5
-                        ) %
-                            10;
-
-                    return new MapStudioGeneratedRgb(
-                        (byte)(
-                            184 +
-                            noise),
-                        (byte)(
-                            180 +
-                            noise),
-                        (byte)(
-                            170 +
-                            noise /
-                                2));
-                },
+                (x, y) =>
+                    BuildFacadePixel(
+                        x,
+                        y,
+                        facadeBase,
+                        facadeMaterial),
                 cancellationToken)
             .ConfigureAwait(false);
 
@@ -270,29 +241,601 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
                 "ms_osm_roof.bmp",
                 128,
                 128,
-                static (x, y) =>
-                {
-                    var seam =
-                        x %
-                            24 <=
-                            1 ||
-                        y %
-                            24 <=
-                            1;
-
-                    return seam
-                        ? new MapStudioGeneratedRgb(
-                            72,
-                            64,
-                            58)
-                        : new MapStudioGeneratedRgb(
-                            98,
-                            88,
-                            80);
-                },
+                (x, y) =>
+                    BuildRoofPixel(
+                        x,
+                        y,
+                        roofBase,
+                        roofMaterial),
                 cancellationToken)
             .ConfigureAwait(false);
     }
+
+    private static MapStudioGeneratedRgb
+        ResolveFacadeBaseColor(
+            MapStudioProjectedBuildingFootprint building,
+            string material)
+    {
+        if (
+            TryParseOsmColour(
+                building.FacadeColour,
+                out var tagged))
+        {
+            return tagged;
+        }
+
+        if (
+            material.Contains(
+                "brick",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                171,
+                112,
+                88);
+        }
+
+        if (
+            material.Contains(
+                "stone",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                165,
+                159,
+                147);
+        }
+
+        if (
+            material.Contains(
+                "wood",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                154,
+                121,
+                84);
+        }
+
+        if (
+            material.Contains(
+                "metal",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                156,
+                164,
+                166);
+        }
+
+        if (
+            material.Contains(
+                "glass",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                106,
+                143,
+                158);
+        }
+
+        if (
+            material.Contains(
+                "concrete",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                174,
+                174,
+                169);
+        }
+
+        var type =
+            building.BuildingType
+                .Trim()
+                .ToLowerInvariant();
+
+        return type switch
+        {
+            "house" or
+            "detached" or
+            "semidetached_house" or
+            "residential" =>
+                new MapStudioGeneratedRgb(
+                    194,
+                    181,
+                    158),
+
+            "apartments" or
+            "dormitory" =>
+                new MapStudioGeneratedRgb(
+                    184,
+                    180,
+                    170),
+
+            "commercial" or
+            "retail" or
+            "office" =>
+                new MapStudioGeneratedRgb(
+                    174,
+                    180,
+                    181),
+
+            "industrial" or
+            "warehouse" =>
+                new MapStudioGeneratedRgb(
+                    160,
+                    165,
+                    164),
+
+            "church" or
+            "chapel" or
+            "cathedral" or
+            "religious" =>
+                new MapStudioGeneratedRgb(
+                    181,
+                    174,
+                    159),
+
+            _ =>
+                new MapStudioGeneratedRgb(
+                    184,
+                    180,
+                    170)
+        };
+    }
+
+    private static MapStudioGeneratedRgb
+        ResolveRoofBaseColor(
+            MapStudioProjectedBuildingFootprint building,
+            string material)
+    {
+        if (
+            TryParseOsmColour(
+                building.RoofColour,
+                out var tagged))
+        {
+            return tagged;
+        }
+
+        if (
+            material.Contains(
+                "tile",
+                StringComparison.Ordinal) ||
+            material.Contains(
+                "clay",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                132,
+                72,
+                55);
+        }
+
+        if (
+            material.Contains(
+                "slate",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                72,
+                78,
+                82);
+        }
+
+        if (
+            material.Contains(
+                "metal",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                112,
+                119,
+                122);
+        }
+
+        if (
+            material.Contains(
+                "concrete",
+                StringComparison.Ordinal))
+        {
+            return new MapStudioGeneratedRgb(
+                116,
+                114,
+                108);
+        }
+
+        return building.RoofType ==
+               MapStudioBuildingRoofType.Flat
+            ? new MapStudioGeneratedRgb(
+                104,
+                102,
+                96)
+            : new MapStudioGeneratedRgb(
+                116,
+                83,
+                68);
+    }
+
+    private static MapStudioGeneratedRgb
+        BuildFacadePixel(
+            int x,
+            int y,
+            MapStudioGeneratedRgb baseColor,
+            string material)
+    {
+        var floorBand =
+            y %
+                32 <=
+            2;
+
+        var window =
+            y %
+                32 >=
+                9 &&
+            y %
+                32 <=
+                22 &&
+            x %
+                32 >=
+                8 &&
+            x %
+                32 <=
+                23;
+
+        if (window)
+        {
+            return material.Contains(
+                "glass",
+                StringComparison.Ordinal)
+                ? new MapStudioGeneratedRgb(
+                    70,
+                    119,
+                    145)
+                : new MapStudioGeneratedRgb(
+                    76,
+                    108,
+                    126);
+        }
+
+        if (
+            material.Contains(
+                "brick",
+                StringComparison.Ordinal))
+        {
+            var row =
+                y /
+                8;
+
+            var mortar =
+                y %
+                    8 <=
+                    1 ||
+                (
+                    x +
+                    (
+                        row %
+                            2
+                            == 0
+                            ? 0
+                            : 8
+                    )
+                ) %
+                    16 <=
+                    1;
+
+            if (mortar)
+            {
+                return ScaleColor(
+                    baseColor,
+                    0.72);
+            }
+        }
+        else if (
+            material.Contains(
+                "wood",
+                StringComparison.Ordinal) &&
+            x %
+                12 <=
+                1)
+        {
+            return ScaleColor(
+                baseColor,
+                0.78);
+        }
+        else if (
+            material.Contains(
+                "metal",
+                StringComparison.Ordinal) &&
+            x %
+                20 <=
+                1)
+        {
+            return ScaleColor(
+                baseColor,
+                0.82);
+        }
+
+        if (floorBand)
+        {
+            return ScaleColor(
+                baseColor,
+                0.80);
+        }
+
+        var noise =
+            (
+                x *
+                    11 +
+                y *
+                    5
+            ) %
+                9 -
+            4;
+
+        return OffsetColor(
+            baseColor,
+            noise);
+    }
+
+    private static MapStudioGeneratedRgb
+        BuildRoofPixel(
+            int x,
+            int y,
+            MapStudioGeneratedRgb baseColor,
+            string material)
+    {
+        var seam =
+            material.Contains(
+                "metal",
+                StringComparison.Ordinal)
+                ? x %
+                      20 <=
+                  1
+                : material.Contains(
+                      "tile",
+                      StringComparison.Ordinal) ||
+                  material.Contains(
+                      "clay",
+                      StringComparison.Ordinal)
+                    ? y %
+                          12 <=
+                          1 ||
+                      (
+                          x +
+                          (
+                              y /
+                                  12 %
+                                  2 ==
+                                  0
+                                  ? 0
+                                  : 8
+                          )
+                      ) %
+                          16 <=
+                          1
+                    : material.Contains(
+                          "slate",
+                          StringComparison.Ordinal)
+                        ? y %
+                              12 <=
+                              1 ||
+                          x %
+                              24 <=
+                              1
+                        : x %
+                              24 <=
+                              1 ||
+                          y %
+                              24 <=
+                              1;
+
+        if (seam)
+        {
+            return ScaleColor(
+                baseColor,
+                0.72);
+        }
+
+        var noise =
+            (
+                x *
+                    7 +
+                y *
+                    13
+            ) %
+                7 -
+            3;
+
+        return OffsetColor(
+            baseColor,
+            noise);
+    }
+
+    private static string NormalizeAppearanceTag(
+        string? value) =>
+        value
+            ?.Trim()
+            .ToLowerInvariant() ??
+        string.Empty;
+
+    private static bool TryParseOsmColour(
+        string? value,
+        out MapStudioGeneratedRgb color)
+    {
+        color =
+            default;
+
+        var normalized =
+            value
+                ?.Trim()
+                .ToLowerInvariant();
+
+        if (string.IsNullOrWhiteSpace(
+            normalized))
+        {
+            return false;
+        }
+
+        var hex =
+            normalized[0] ==
+            '#'
+                ? normalized[1..]
+                : normalized;
+
+        if (hex.Length == 3)
+        {
+            hex =
+                string.Concat(
+                    hex[0],
+                    hex[0],
+                    hex[1],
+                    hex[1],
+                    hex[2],
+                    hex[2]);
+        }
+
+        if (
+            hex.Length == 6 &&
+            byte.TryParse(
+                hex.AsSpan(
+                    0,
+                    2),
+                NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture,
+                out var red) &&
+            byte.TryParse(
+                hex.AsSpan(
+                    2,
+                    2),
+                NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture,
+                out var green) &&
+            byte.TryParse(
+                hex.AsSpan(
+                    4,
+                    2),
+                NumberStyles.HexNumber,
+                CultureInfo.InvariantCulture,
+                out var blue))
+        {
+            color =
+                new MapStudioGeneratedRgb(
+                    red,
+                    green,
+                    blue);
+
+            return true;
+        }
+
+        color =
+            normalized switch
+            {
+                "white" =>
+                    new MapStudioGeneratedRgb(
+                        232,
+                        231,
+                        225),
+                "cream" =>
+                    new MapStudioGeneratedRgb(
+                        225,
+                        214,
+                        181),
+                "beige" =>
+                    new MapStudioGeneratedRgb(
+                        207,
+                        193,
+                        165),
+                "yellow" =>
+                    new MapStudioGeneratedRgb(
+                        211,
+                        190,
+                        105),
+                "orange" =>
+                    new MapStudioGeneratedRgb(
+                        202,
+                        132,
+                        73),
+                "red" =>
+                    new MapStudioGeneratedRgb(
+                        171,
+                        74,
+                        63),
+                "brown" =>
+                    new MapStudioGeneratedRgb(
+                        126,
+                        91,
+                        68),
+                "green" =>
+                    new MapStudioGeneratedRgb(
+                        101,
+                        132,
+                        99),
+                "blue" =>
+                    new MapStudioGeneratedRgb(
+                        96,
+                        126,
+                        150),
+                "grey" or
+                "gray" =>
+                    new MapStudioGeneratedRgb(
+                        155,
+                        155,
+                        151),
+                "silver" =>
+                    new MapStudioGeneratedRgb(
+                        184,
+                        187,
+                        186),
+                "black" =>
+                    new MapStudioGeneratedRgb(
+                        62,
+                        62,
+                        60),
+                _ =>
+                    default
+            };
+
+        return color !=
+               default;
+    }
+
+    private static MapStudioGeneratedRgb ScaleColor(
+        MapStudioGeneratedRgb color,
+        double factor) =>
+        new(
+            ClampByte(
+                color.R *
+                factor),
+            ClampByte(
+                color.G *
+                factor),
+            ClampByte(
+                color.B *
+                factor));
+
+    private static MapStudioGeneratedRgb OffsetColor(
+        MapStudioGeneratedRgb color,
+        int offset) =>
+        new(
+            ClampByte(
+                color.R +
+                offset),
+            ClampByte(
+                color.G +
+                offset),
+            ClampByte(
+                color.B +
+                offset));
+
+    private static byte ClampByte(
+        double value) =>
+        (byte)Math.Clamp(
+            (int)Math.Round(
+                value,
+                MidpointRounding.AwayFromZero),
+            byte.MinValue,
+            byte.MaxValue);
 
     public OmsiO3dGeometry BuildGeometry(
         MapStudioProjectedBuildingFootprint building)
@@ -2023,6 +2566,10 @@ public sealed class MapStudioFootprintBuildingAssetGenerator
         $"WallHeight={building.WallHeightMeters:0.###}\n" +
         $"Roof={building.RoofType}\n" +
         $"RoofHeight={building.RoofHeightMeters:0.###}\n" +
+        $"FacadeMaterial={building.FacadeMaterial}\n" +
+        $"FacadeColour={building.FacadeColour}\n" +
+        $"RoofMaterial={building.RoofMaterial}\n" +
+        $"RoofColour={building.RoofColour}\n" +
         $"FootprintPoints={building.Points.Count}\n" +
         $"Street={building.Street}\n" +
         $"HouseNumber={building.HouseNumber}\n";
