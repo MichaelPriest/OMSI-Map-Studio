@@ -84,6 +84,65 @@ public sealed class MapStudioOpenMeteoElevationSurfaceClientTests
     }
 
     [Fact]
+    public async Task DownloadWithoutKeyUsesPublicEndpoint()
+    {
+        var handler =
+            new DelegateHandler(
+                request =>
+                {
+                    Assert.Contains(
+                        "api.open-meteo.com/v1/elevation",
+                        request.RequestUri!.AbsoluteUri,
+                        StringComparison.Ordinal);
+
+                    Assert.DoesNotContain(
+                        "customer-api.open-meteo.com",
+                        request.RequestUri.AbsoluteUri,
+                        StringComparison.Ordinal);
+
+                    Assert.DoesNotContain(
+                        "apikey=",
+                        request.RequestUri.AbsoluteUri,
+                        StringComparison.Ordinal);
+
+                    return JsonResponse(
+                        """
+                        {
+                          "elevation": [10.0, 20.0, 30.0, 40.0]
+                        }
+                        """);
+                });
+
+        using var httpClient =
+            new HttpClient(
+                handler);
+
+        var surface =
+            await new MapStudioOpenMeteoElevationSurfaceClient(
+                    httpClient)
+                .DownloadAsync(
+                    null,
+                    south: -1,
+                    west: 10,
+                    north: 1,
+                    east: 12,
+                    rows: 2,
+                    columns: 2);
+
+        Assert.Equal(
+            "open-meteo-copernicus",
+            surface.Grid.SourceFormat);
+
+        Assert.Equal(
+            10,
+            surface.Grid.MinimumElevation);
+
+        Assert.Equal(
+            40,
+            surface.Grid.MaximumElevation);
+    }
+
+    [Fact]
     public async Task DownloadSplitsLargeGridIntoBoundedBatches()
     {
         var calls =
