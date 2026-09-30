@@ -96,7 +96,8 @@ public sealed class NativeRealWorldMapGenerationController :
                 progress = null,
             CancellationToken cancellationToken = default,
             bool useSavedGoogleElevation = true,
-            bool useSavedOpenMeteoElevation = false)
+            bool useSavedOpenMeteoElevation = false,
+            bool useBuildingVisualEvidence = false)
     {
         CancellationTokenSource linked;
 
@@ -189,7 +190,9 @@ public sealed class NativeRealWorldMapGenerationController :
                         useSavedGoogleElevation:
                             useSavedGoogleElevation,
                         useSavedOpenMeteoElevation:
-                            useSavedOpenMeteoElevation)
+                            useSavedOpenMeteoElevation,
+                        useBuildingVisualEvidence:
+                            useBuildingVisualEvidence)
                     .ConfigureAwait(false);
 
             var summary =
