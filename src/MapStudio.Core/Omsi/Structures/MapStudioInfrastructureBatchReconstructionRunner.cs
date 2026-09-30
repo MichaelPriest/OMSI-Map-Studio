@@ -400,10 +400,8 @@ public sealed class MapStudioInfrastructureBatchReconstructionRunner
                                             .SceneryObjectPath,
                                         placement.ObjectId,
                                         placement.LocalX,
-                                        elevation?.SampleRelativeHeightOrDefault(
-                                            anchor,
-                                            placement.Feature.Center) ?? 0,
                                         placement.LocalZ,
+                                        0,
                                         0,
                                         0,
                                         0,
