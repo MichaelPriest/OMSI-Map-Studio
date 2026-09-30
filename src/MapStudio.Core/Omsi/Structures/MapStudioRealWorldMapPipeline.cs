@@ -435,6 +435,18 @@ public sealed class MapStudioRealWorldMapPipeline
                         .ReconstructingScene,
                     "Reconstruindo prédios, vegetação, infraestrutura e mobiliário..."));
 
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                buildingVisualEvidenceProgress =
+                    buildingVisualEvidenceProvider is null
+                        ? null
+                        : new Progress<MapStudioBuildingVisualEvidenceProgress>(
+                            update =>
+                                progress?.Report(
+                                    new MapStudioRealWorldMapPipelineProgress(
+                                        MapStudioRealWorldMapPipelineStage
+                                            .ReconstructingScene,
+                                        update.Message)));
+
             var scene =
                 await new MapStudioRealWorldSceneReconstructionRunner()
                     .RunAsync(
@@ -446,7 +458,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         streetFurnitureEvidence,
                         cancellationToken,
                         elevation,
-                        buildingVisualEvidenceProvider)
+                        buildingVisualEvidenceProvider,
+                        buildingVisualEvidenceProgress)
                     .ConfigureAwait(false);
 
             progress?.Report(
