@@ -173,8 +173,8 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
                             anchor,
                             position) ?? 0,
                     Rotation:
-                        ResolveStableRotation(
-                            point.Id)));
+                        ResolvePlacementRotation(
+                            point)));
         }
 
         if (requests.Count == 0)
@@ -251,6 +251,38 @@ public sealed class MapStudioStreetFurnitureBatchReconstructionRunner
         }
 
         return fullPath;
+    }
+
+    private static double ResolvePlacementRotation(
+        MapStudioGeoStreetFurniturePoint point)
+    {
+        if (
+            point.DirectionDegrees is
+                { } bearing &&
+            double.IsFinite(
+                bearing))
+        {
+            return NormalizeDegrees(
+                180.0 -
+                bearing);
+        }
+
+        return ResolveStableRotation(
+            point.Id);
+    }
+
+    private static double NormalizeDegrees(
+        double degrees)
+    {
+        var normalized =
+            degrees %
+            360.0;
+
+        return normalized <
+            0
+                ? normalized +
+                    360.0
+                : normalized;
     }
 
     private static double ResolveStableRotation(
