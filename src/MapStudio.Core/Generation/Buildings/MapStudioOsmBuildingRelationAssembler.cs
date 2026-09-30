@@ -288,7 +288,19 @@ public sealed class MapStudioOsmBuildingRelationAssembler
                         tags.GetValueOrDefault(
                             "addr:street"),
                         tags.GetValueOrDefault(
-                            "addr:housenumber")));
+                            "addr:housenumber"),
+                        tags.GetValueOrDefault(
+                            "building:material"),
+                        tags.GetValueOrDefault(
+                            "building:colour") ??
+                        tags.GetValueOrDefault(
+                            "building:color"),
+                        tags.GetValueOrDefault(
+                            "roof:material"),
+                        tags.GetValueOrDefault(
+                            "roof:colour") ??
+                        tags.GetValueOrDefault(
+                            "roof:color")));
             }
 
             missingNodeReferences +=
