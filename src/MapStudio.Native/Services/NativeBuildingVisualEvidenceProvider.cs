@@ -90,6 +90,8 @@ public sealed class NativeBuildingVisualEvidenceProvider :
                 MapStudioProjectedBuildingFootprint>
                 buildings,
             MapStudioGeographicAnchor anchor,
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                progress = null,
             CancellationToken cancellationToken =
                 default)
     {
@@ -114,10 +116,21 @@ public sealed class NativeBuildingVisualEvidenceProvider :
                 MapStudioBuildingVisualEvidence>(
                     StringComparer.Ordinal);
 
+        var processed =
+            0;
+
         foreach (var building in buildings)
         {
             cancellationToken
                 .ThrowIfCancellationRequested();
+
+            progress?.Report(
+                new MapStudioBuildingVisualEvidenceProgress(
+                    processed,
+                    buildings.Count,
+                    $"Imagens locais: analisando {processed + 1}/{buildings.Count} · {building.Id}"));
+
+            processed++;
 
             var directory =
                 Path.Combine(
@@ -322,6 +335,12 @@ public sealed class NativeBuildingVisualEvidenceProvider :
                     normalized,
                     evidence);
         }
+
+        progress?.Report(
+            new MapStudioBuildingVisualEvidenceProgress(
+                buildings.Count,
+                buildings.Count,
+                $"Imagens locais: {results.Count} prédio(s) com evidência visual válida."));
 
         return results;
     }
