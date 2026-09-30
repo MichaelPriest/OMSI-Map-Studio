@@ -1,6 +1,7 @@
 using System.Text;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Omsi.Config;
+using MapStudio.Core.Omsi.Maps;
 using MapStudio.Core.Omsi.Structures;
 using Xunit;
 
@@ -175,6 +176,38 @@ public sealed class MapStudioInfrastructureBatchReconstructionRunnerTests
                     .FindSections(
                         "object")
                     .Count());
+
+            var updatedContent =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        firstTile);
+
+            foreach (
+                var placement in
+                    result.Placements)
+            {
+                var generatedObject =
+                    Assert.Single(
+                        updatedContent.Objects,
+                        item =>
+                            item.ObjectId ==
+                            placement.ObjectId);
+
+                Assert.Equal(
+                    placement.LocalX,
+                    generatedObject.X,
+                    6);
+
+                Assert.Equal(
+                    placement.LocalZ,
+                    generatedObject.Y,
+                    6);
+
+                Assert.Equal(
+                    0,
+                    generatedObject.Z,
+                    6);
+            }
 
             Assert.Equal(
                 originalSecondTile,
