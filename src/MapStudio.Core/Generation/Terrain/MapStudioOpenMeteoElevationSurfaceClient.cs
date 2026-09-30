@@ -5,6 +5,12 @@ namespace MapStudio.Core.Generation.Terrain;
 
 public sealed class MapStudioOpenMeteoElevationSurfaceClient
 {
+    public const string PublicEndpoint =
+        "https://api.open-meteo.com/v1/elevation";
+
+    public const string CustomerEndpoint =
+        "https://customer-api.open-meteo.com/v1/elevation";
+
     private const int BatchSize = 100;
 
     private readonly HttpClient _httpClient;
@@ -32,7 +38,7 @@ public sealed class MapStudioOpenMeteoElevationSurfaceClient
 
     public async Task<MapStudioGeoreferencedElevationSurface>
         DownloadAsync(
-            string apiKey,
+            string? apiKey,
             double south,
             double west,
             double north,
@@ -44,7 +50,6 @@ public sealed class MapStudioOpenMeteoElevationSurfaceClient
             CancellationToken cancellationToken = default)
     {
         if (
-            string.IsNullOrWhiteSpace(apiKey) ||
             !double.IsFinite(south) ||
             !double.IsFinite(west) ||
             !double.IsFinite(north) ||
@@ -163,17 +168,30 @@ public sealed class MapStudioOpenMeteoElevationSurfaceClient
                                     "G17",
                                     CultureInfo.InvariantCulture)));
 
+            var hasCustomerApiKey =
+                !string.IsNullOrWhiteSpace(
+                    apiKey);
+
             var uri =
-                "https://customer-api.open-meteo.com/v1/elevation" +
+                (
+                    hasCustomerApiKey
+                        ? CustomerEndpoint
+                        : PublicEndpoint
+                ) +
                 "?latitude=" +
                 Uri.EscapeDataString(
                     latitudes) +
                 "&longitude=" +
                 Uri.EscapeDataString(
-                    longitudes) +
-                "&apikey=" +
-                Uri.EscapeDataString(
-                    apiKey.Trim());
+                    longitudes);
+
+            if (hasCustomerApiKey)
+            {
+                uri +=
+                    "&apikey=" +
+                    Uri.EscapeDataString(
+                        apiKey!.Trim());
+            }
 
             using var response =
                 await _httpClient
