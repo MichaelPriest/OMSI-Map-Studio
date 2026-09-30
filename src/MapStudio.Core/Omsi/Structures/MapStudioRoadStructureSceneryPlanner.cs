@@ -387,6 +387,18 @@ public sealed class MapStudioRoadStructureSceneryPlanner
             ResolveRoadWidth(
                 spline.Segment);
 
+        var roadHeight =
+            isRunStart
+                ? spline.StartHeightMeters
+                : spline.EndHeightMeters;
+
+        if (!double.IsFinite(
+                roadHeight))
+        {
+            roadHeight =
+                0;
+        }
+
         var quantizedWidth =
             Math.Ceiling(
                 roadWidth *
@@ -452,12 +464,12 @@ public sealed class MapStudioRoadStructureSceneryPlanner
 
         var leftWingHeight =
             ResolveWingHeight(
-                terrainCenter,
+                roadHeight,
                 leftTerrain);
 
         var rightWingHeight =
             ResolveWingHeight(
-                terrainCenter,
+                roadHeight,
                 rightTerrain);
 
         var outwardX =
@@ -529,7 +541,7 @@ public sealed class MapStudioRoadStructureSceneryPlanner
                     RightWingDepthMeters:
                         rightWingDepth),
                 point,
-                terrainCenter,
+                roadHeight,
                 NormalizeDegrees(
                     rotation),
                 isRunStart));
@@ -751,7 +763,7 @@ public sealed class MapStudioRoadStructureSceneryPlanner
                         StringComparison.OrdinalIgnoreCase));
 
     private static double ResolveWingHeight(
-        double centerTerrain,
+        double roadHeight,
         double sideTerrain)
     {
         var required =
@@ -759,7 +771,7 @@ public sealed class MapStudioRoadStructureSceneryPlanner
             Math.Max(
                 0.0,
                 sideTerrain -
-                    centerTerrain) +
+                    roadHeight) +
             TerrainWingFreeboardMeters;
 
         var clamped =
