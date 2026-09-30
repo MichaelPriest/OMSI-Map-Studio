@@ -1171,8 +1171,6 @@ public sealed class OmsiNativeSession
                 default)
     {
         if (
-            string.IsNullOrWhiteSpace(
-                apiKey) ||
             sampleCount is
                 < 3 or > 33)
         {
@@ -1455,7 +1453,7 @@ public sealed class OmsiNativeSession
 
     public async Task<NativeGoogleElevationGrid>
         LoadOpenMeteoElevationGridAsync(
-            string apiKey,
+            string? apiKey,
             int tileX,
             int tileY,
             int sampleCount,
@@ -1651,17 +1649,32 @@ public sealed class OmsiNativeSession
                                     "G17",
                                     CultureInfo.InvariantCulture)));
 
+            var hasCustomerApiKey =
+                !string.IsNullOrWhiteSpace(
+                    apiKey);
+
             var uri =
-                "https://customer-api.open-meteo.com/v1/elevation" +
+                (
+                    hasCustomerApiKey
+                        ? MapStudioOpenMeteoElevationSurfaceClient
+                            .CustomerEndpoint
+                        : MapStudioOpenMeteoElevationSurfaceClient
+                            .PublicEndpoint
+                ) +
                 "?latitude=" +
                 Uri.EscapeDataString(
                     latitudes) +
                 "&longitude=" +
                 Uri.EscapeDataString(
-                    longitudes) +
-                "&apikey=" +
-                Uri.EscapeDataString(
-                    apiKey.Trim());
+                    longitudes);
+
+            if (hasCustomerApiKey)
+            {
+                uri +=
+                    "&apikey=" +
+                    Uri.EscapeDataString(
+                        apiKey!.Trim());
+            }
 
             using var response =
                 await OpenMeteoHttpClient
