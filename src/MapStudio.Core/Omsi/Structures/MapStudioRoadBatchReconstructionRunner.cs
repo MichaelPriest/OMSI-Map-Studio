@@ -761,6 +761,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             cancellationToken)
                         .ConfigureAwait(false);
 
+                var junctionTerrainHeight =
+                    SampleTerrainHeight(
+                        elevation,
+                        anchor,
+                        junction.Position,
+                        junctionHeight);
+
                 sceneryRequests.Add(
                     new MapStudioGeneratedSceneryPlacementRequest(
                         "osm-junction-" +
@@ -768,7 +775,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         asset.SceneryObjectPath,
                         junction.Position,
                         HeightMeters:
-                            junctionHeight));
+                            junctionHeight -
+                            junctionTerrainHeight));
             }
 
             var bridgeAssets =
@@ -818,7 +826,7 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         bridgeAssets[
                             item.AssetName],
                         item.WorldCenter,
-                        item.HeightMeters,
+                        0,
                         item.Rotation));
             }
 
@@ -869,7 +877,12 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         tunnelAssets[
                             item.AssetName],
                         item.WorldCenter,
-                        item.HeightMeters,
+                        item.HeightMeters -
+                            SampleTerrainHeight(
+                                elevation,
+                                anchor,
+                                item.WorldCenter,
+                                item.HeightMeters),
                         item.Rotation));
             }
 
