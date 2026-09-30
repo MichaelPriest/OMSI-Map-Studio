@@ -69,7 +69,9 @@ public sealed record MapStudioBuildingReferenceAnalysis(
     string? RoofMaterial,
     string? ArchitecturalStyle,
     string? Notes,
-    double Confidence)
+    double Confidence,
+    string? FacadeColour = null,
+    string? RoofColour = null)
 {
     public MapStudioBuildingReferenceAnalysis Normalize()
     {
