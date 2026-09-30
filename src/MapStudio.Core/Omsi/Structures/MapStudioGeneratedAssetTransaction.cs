@@ -115,6 +115,10 @@ public sealed class MapStudioGeneratedAssetTransaction
             Path.Combine(
                 omsiRoot,
                 "Sceneryobjects",
+                MapStudioBridgePierAssetGenerator.RootFolderName),
+            Path.Combine(
+                omsiRoot,
+                "Sceneryobjects",
                 "MapStudio_Buildings"),
             Path.Combine(
                 omsiRoot,
