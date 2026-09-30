@@ -237,6 +237,27 @@ public sealed class MapStudioTerrainElevationBatchApplier
                 changed;
         }
 
+        if (uncovered > 0)
+        {
+            try
+            {
+                if (Directory.Exists(
+                        backupRoot))
+                {
+                    Directory.Delete(
+                        backupRoot,
+                        recursive: true);
+                }
+            }
+            catch
+            {
+                // No terrain file has been modified yet.
+            }
+
+            throw new InvalidDataException(
+                $"realWorldElevationCoverageIncomplete:{uncovered}");
+        }
+
         try
         {
             foreach (var tile in prepared)
