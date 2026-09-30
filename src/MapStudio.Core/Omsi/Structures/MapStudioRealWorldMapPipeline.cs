@@ -140,20 +140,31 @@ public sealed class MapStudioRealWorldMapPipeline
         cancellationToken
             .ThrowIfCancellationRequested();
 
+        var elevationCoverage =
+            await ResolveElevationCoverageAsync(
+                    mapDirectory,
+                    anchor,
+                    south,
+                    west,
+                    north,
+                    east,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .DownloadingElevation,
-                "Baixando grade de elevação real..."));
+                "Baixando grade de elevação real para toda a área física dos tiles..."));
 
         var elevation =
             await _elevationClient
                 .DownloadAsync(
                     googleElevationApiKey,
-                    south,
-                    west,
-                    north,
-                    east,
+                    elevationCoverage.South,
+                    elevationCoverage.West,
+                    elevationCoverage.North,
+                    elevationCoverage.East,
                     elevationRows,
                     elevationColumns,
                     elevationProgress,
@@ -223,23 +234,34 @@ public sealed class MapStudioRealWorldMapPipeline
         cancellationToken
             .ThrowIfCancellationRequested();
 
+        var elevationCoverage =
+            await ResolveElevationCoverageAsync(
+                    mapDirectory,
+                    anchor,
+                    south,
+                    west,
+                    north,
+                    east,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .DownloadingElevation,
                 string.IsNullOrWhiteSpace(
                     openMeteoApiKey)
-                    ? "Baixando grade Open-Meteo/Copernicus gratuita..."
-                    : "Baixando grade Open-Meteo/Copernicus customer..."));
+                    ? "Baixando grade Open-Meteo/Copernicus gratuita para todos os tiles..."
+                    : "Baixando grade Open-Meteo/Copernicus customer para todos os tiles..."));
 
         var elevation =
             await _openMeteoElevationClient
                 .DownloadAsync(
                     openMeteoApiKey,
-                    south,
-                    west,
-                    north,
-                    east,
+                    elevationCoverage.South,
+                    elevationCoverage.West,
+                    elevationCoverage.North,
+                    elevationCoverage.East,
                     elevationRows,
                     elevationColumns,
                     elevationProgress,
@@ -654,4 +676,38 @@ public sealed class MapStudioRealWorldMapPipeline
     private sealed record SnapshotFile(
         string OriginalPath,
         string BackupPath);
+
+    private static async Task<MapStudioElevationCoverageBounds>
+        ResolveElevationCoverageAsync(
+            string mapDirectory,
+            MapStudioGeographicAnchor anchor,
+            double selectedSouth,
+            double selectedWest,
+            double selectedNorth,
+            double selectedEast,
+            CancellationToken cancellationToken)
+    {
+        var descriptor =
+            await OmsiMapCatalog
+                .OpenMapAsync(
+                    mapDirectory,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        var tileCoverage =
+            MapStudioElevationCoverageResolver
+                .Resolve(
+                    descriptor.Tiles,
+                    anchor,
+                    marginMeters:
+                        1.0);
+
+        return MapStudioElevationCoverageResolver
+            .Union(
+                tileCoverage,
+                selectedSouth,
+                selectedWest,
+                selectedNorth,
+                selectedEast);
+    }
 }
