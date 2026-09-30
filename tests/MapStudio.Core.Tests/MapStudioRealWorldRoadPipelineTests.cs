@@ -133,6 +133,71 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerClipsCrossingRoadToCreatedMapBounds()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-clip-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        CrossingRoadXml,
+                        new MapStudioGeographicAnchor(
+                            -23.55000,
+                            -46.63000,
+                            150,
+                            150));
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            Assert.Equal(
+                0,
+                placement.TileX);
+
+            Assert.Equal(
+                0,
+                placement.TileY);
+
+            Assert.InRange(
+                placement.LocalX,
+                0.0,
+                300.0);
+
+            Assert.InRange(
+                placement.LocalZ,
+                0.0,
+                300.0);
+
+            Assert.InRange(
+                placement.LengthMeters,
+                295,
+                300);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RoadRunnerUsesDemHeightAndGradientForSplinePlacement()
     {
         var root =
@@ -828,6 +893,20 @@ public sealed class MapStudioRealWorldRoadPipelineTests
           <way id="100">
             <nd ref="1"/><nd ref="2"/><nd ref="3"/>
             <tag k="highway" v="residential"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+        </osm>
+        """;
+
+    private const string CrossingRoadXml =
+        """
+        <osm version="0.6">
+          <node id="1" lat="-23.55000" lon="-46.63200"/>
+          <node id="2" lat="-23.55000" lon="-46.62800"/>
+          <way id="125">
+            <nd ref="1"/><nd ref="2"/>
+            <tag k="highway" v="primary"/>
             <tag k="lanes" v="2"/>
             <tag k="width" v="7"/>
           </way>
