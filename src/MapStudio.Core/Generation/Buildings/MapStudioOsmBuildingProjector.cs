@@ -14,7 +14,11 @@ public sealed record MapStudioProjectedBuildingFootprint(
     MapStudioBuildingRoofType RoofType,
     double RoofHeightMeters,
     string? Street,
-    string? HouseNumber);
+    string? HouseNumber,
+    string? FacadeMaterial = null,
+    string? FacadeColour = null,
+    string? RoofMaterial = null,
+    string? RoofColour = null);
 
 public sealed class MapStudioOsmBuildingProjector
 {
@@ -101,7 +105,11 @@ public sealed class MapStudioOsmBuildingProjector
                     roofType,
                     roofHeight,
                     building.Street,
-                    building.HouseNumber));
+                    building.HouseNumber,
+                    building.FacadeMaterial,
+                    building.FacadeColour,
+                    building.RoofMaterial,
+                    building.RoofColour));
         }
 
         return result;
