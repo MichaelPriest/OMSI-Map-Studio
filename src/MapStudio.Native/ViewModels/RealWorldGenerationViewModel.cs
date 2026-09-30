@@ -246,6 +246,7 @@ public sealed class RealWorldGenerationViewModel :
               $"{Summary.SceneObjects} objeto(s) · " +
               $"{Summary.ReviewItems} revisão(ões) · " +
               $"{Summary.MissingAssets} asset(s) ausente(s) · " +
+              $"{Summary.VisualRefinedBuildings} prédio(s) refinado(s) por imagem · " +
               $"elevação {FormatElevationMode(Summary.ElevationMode)}";
 
     private static string FormatElevationMode(
