@@ -9,6 +9,7 @@ namespace MapStudio.Core.Omsi.Structures;
 public enum MapStudioRealWorldMapPipelineStage
 {
     IndexingAssets,
+    DownloadingElevation,
     DownloadingOpenStreetMap,
     ApplyingElevation,
     GeneratingRoads,
@@ -38,20 +39,119 @@ public sealed class MapStudioRealWorldMapPipeline
     private readonly MapStudioOverpassSceneClient
         _sceneClient;
 
+    private readonly MapStudioGoogleElevationSurfaceClient
+        _elevationClient;
+
     public MapStudioRealWorldMapPipeline()
         : this(
-            new MapStudioOverpassSceneClient())
+            new MapStudioOverpassSceneClient(),
+            new MapStudioGoogleElevationSurfaceClient())
     {
     }
 
     public MapStudioRealWorldMapPipeline(
         MapStudioOverpassSceneClient sceneClient)
+        : this(
+            sceneClient,
+            new MapStudioGoogleElevationSurfaceClient())
+    {
+    }
+
+    public MapStudioRealWorldMapPipeline(
+        MapStudioOverpassSceneClient sceneClient,
+        MapStudioGoogleElevationSurfaceClient elevationClient)
     {
         ArgumentNullException.ThrowIfNull(
             sceneClient);
 
+        ArgumentNullException.ThrowIfNull(
+            elevationClient);
+
         _sceneClient =
             sceneClient;
+
+        _elevationClient =
+            elevationClient;
+    }
+
+    public async Task<MapStudioRealWorldMapPipelineResult>
+        RunAutoIndexedWithGoogleElevationAsync(
+            string omsiRoot,
+            string mapDirectory,
+            double south,
+            double west,
+            double north,
+            double east,
+            MapStudioGeographicAnchor anchor,
+            string googleElevationApiKey,
+            int elevationRows = 17,
+            int elevationColumns = 17,
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MapStudioSceneEvidence>>?
+                streetFurnitureEvidence = null,
+            IProgress<MapStudioRealWorldMapPipelineProgress>?
+                progress = null,
+            IProgress<OmsiAssetIndexProgress>?
+                assetIndexProgress = null,
+            IProgress<MapStudioElevationDownloadProgress>?
+                elevationProgress = null,
+            CancellationToken cancellationToken = default)
+    {
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .IndexingAssets,
+                "Atualizando biblioteca de assets OMSI..."));
+
+        var catalog =
+            await new MapStudioRealWorldAssetCatalogLoader()
+                .LoadAsync(
+                    omsiRoot,
+                    assetIndexProgress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        progress?.Report(
+            new MapStudioRealWorldMapPipelineProgress(
+                MapStudioRealWorldMapPipelineStage
+                    .DownloadingElevation,
+                "Baixando grade de elevação real..."));
+
+        var elevation =
+            await _elevationClient
+                .DownloadAsync(
+                    googleElevationApiKey,
+                    south,
+                    west,
+                    north,
+                    east,
+                    elevationRows,
+                    elevationColumns,
+                    elevationProgress,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        cancellationToken
+            .ThrowIfCancellationRequested();
+
+        return await RunAsync(
+                omsiRoot,
+                mapDirectory,
+                south,
+                west,
+                north,
+                east,
+                anchor,
+                catalog.SceneryObjects,
+                streetFurnitureEvidence,
+                progress,
+                cancellationToken,
+                elevation)
+            .ConfigureAwait(false);
     }
 
     public async Task<MapStudioRealWorldMapPipelineResult>

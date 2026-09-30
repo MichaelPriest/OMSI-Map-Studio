@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.99: DEM-driven road gradient preview.
+# Test 10.100: Core Google Elevation pipeline preview.
 
 on:
   push:
@@ -61,6 +61,7 @@ on:
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainReader.cs"
       - "src/MapStudio.Core/Omsi/Maps/OmsiTerrainWriter.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldElevationTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioGoogleElevationSurfaceClientTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Reconstruction*Tests.cs"
       - "tests/MapStudio.Core.Tests/MapStudio*Batch*Tests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioRealWorldAssetCatalogLoaderTests.cs"
@@ -168,6 +169,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.98-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.99-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.99-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.100-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.100-native.md"
   workflow_dispatch:
 
 permissions:
@@ -178,8 +181,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.99-native
-  TAG: v0.2.0-alpha.5-test.10.99-native
+  VERSION: 0.2.0-alpha.5-test.10.100-native
+  TAG: v0.2.0-alpha.5-test.10.100-native
 
 jobs:
   build-native-preview:
@@ -3886,6 +3889,47 @@ jobs:
 
           Write-Host "Verified DEM-driven OMSI road gradients."
 
+      - name: Verify test 10.100 Core Google Elevation pipeline
+        shell: pwsh
+        run: |
+          $client = Get-Content src/MapStudio.Core/Generation/Terrain/MapStudioGoogleElevationSurfaceClient.cs -Raw
+          $pipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $tests = Get-Content tests/MapStudio.Core.Tests/MapStudioGoogleElevationSurfaceClientTests.cs -Raw
+
+          foreach ($required in @(
+            'MapStudioGoogleElevationSurfaceClient',
+            'BatchSize = 64',
+            'googleElevationHttp',
+            'googleElevationGridError'
+          )) {
+            if (-not $client.Contains($required)) {
+              throw "Test 10.100 elevation client marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'RunAutoIndexedWithGoogleElevationAsync',
+            'DownloadingElevation',
+            'elevationRows',
+            'elevationColumns'
+          )) {
+            if (-not $pipeline.Contains($required)) {
+              throw "Test 10.100 pipeline marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'DownloadBuildsNorthToSouthGeoreferencedSurface',
+            'DownloadSplitsLargeGridIntoBoundedBatches',
+            'DownloadRejectsProviderErrorStatus'
+          )) {
+            if (-not $tests.Contains($required)) {
+              throw "Test 10.100 elevation client regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified Core Google Elevation acquisition and pipeline entry point."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4040,11 +4084,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.99-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.100-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.99-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.100-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
