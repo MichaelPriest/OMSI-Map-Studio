@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.109: clip real-world roads and infrastructure to created map bounds.
+# Test 10.110: fix real-world DEM coverage and OMSI object/spline axis semantics.
 
 on:
   push:
@@ -189,6 +189,10 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.105-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.109-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.110-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md"
+      - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
+      - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
 
 permissions:
@@ -199,8 +203,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.109-native
-  TAG: v0.2.0-alpha.5-test.10.109-native
+  VERSION: 0.2.0-alpha.5-test.10.110-native
+  TAG: v0.2.0-alpha.5-test.10.110-native
 
 jobs:
   build-native-preview:
@@ -4355,6 +4359,103 @@ jobs:
 
           Write-Host "Verified road and generated-infrastructure clipping to the created map extent."
 
+      - name: Verify test 10.110 DEM coverage and OMSI axes
+        shell: pwsh
+        run: |
+          $terrainPipeline = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRealWorldMapPipeline.cs -Raw
+          $coverage = Get-Content src/MapStudio.Core/Generation/Terrain/MapStudioElevationCoverageResolver.cs -Raw
+          $terrainBatch = Get-Content src/MapStudio.Core/Generation/Terrain/MapStudioTerrainElevationBatchApplier.cs -Raw
+          $writer = Get-Content src/MapStudio.Core/Omsi/Maps/MapStudioGeneratedSceneryBatchWriter.cs -Raw
+          $roads = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioRoadBatchReconstructionRunner.cs -Raw
+          $infra = Get-Content src/MapStudio.Core/Omsi/Structures/MapStudioInfrastructureBatchReconstructionRunner.cs -Raw
+          $roadTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldRoadPipelineTests.cs -Raw
+          $writerTests = Get-Content tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs -Raw
+          $coverageTests = Get-Content tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs -Raw
+          $junctionTests = Get-Content tests/MapStudio.Core.Tests/MapStudioRealWorldJunctionElevationTests.cs -Raw
+
+          foreach ($required in @(
+            'ResolveElevationCoverageAsync',
+            'MapStudioElevationCoverageResolver',
+            'elevationCoverage.South',
+            'elevationCoverage.West',
+            'elevationCoverage.North',
+            'elevationCoverage.East'
+          )) {
+            if (-not $terrainPipeline.Contains($required)) {
+              throw "Test 10.110 full-tile DEM coverage marker is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'GetOriginX',
+            'GetOriginZ',
+            'marginMeters',
+            'MapStudioGeographicProjection'
+          )) {
+            if (-not $coverage.Contains($required)) {
+              throw "Test 10.110 tile-coverage resolver marker is missing: $required"
+            }
+          }
+
+          if (-not $terrainBatch.Contains('realWorldElevationCoverageIncomplete:')) {
+            throw "Test 10.110 must abort incomplete DEM coverage before terrain writes."
+          }
+
+          if ($writer -notmatch 'placement\.LocalX[\s\S]{0,350}placement\.LocalZ[\s\S]{0,350}HeightMeters') {
+            throw "Test 10.110 generated scenery must be written as OMSI X, ground-Y, height-Z."
+          }
+
+          if ($roads -notmatch 'placement\.LocalX[\s\S]{0,350}placement\.StartHeight[\s\S]{0,350}placement\.LocalZ') {
+            throw "Test 10.110 road splines must be written as OMSI X, height-Z, ground-Y."
+          }
+
+          if ($infra -notmatch 'placement\.LocalX[\s\S]{0,250}placement\.LocalZ[\s\S]{0,250}\b0,') {
+            throw "Test 10.110 generated infrastructure must stay terrain-relative in OMSI object axes."
+          }
+
+          foreach ($required in @(
+            'WriteStoresGroundPlaneAndHeightInOmsiAxisOrder',
+            'placed.Y',
+            'placed.Z'
+          )) {
+            if (-not $writerTests.Contains($required)) {
+              throw "Test 10.110 generated scenery axis regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'ResolveCoversCompleteOmsiTileRectangle',
+            'TerrainBatchRejectsPartialElevationCoverageBeforeWriting'
+          )) {
+            if (-not $coverageTests.Contains($required)) {
+              throw "Test 10.110 DEM coverage regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'placement.LocalZ',
+            'spline.Y',
+            'spline.Z',
+            'bridgeSecond.Z',
+            'tunnelSecond.Z'
+          )) {
+            if (-not $roadTests.Contains($required)) {
+              throw "Test 10.110 road spline axis regression is missing: $required"
+            }
+          }
+
+          foreach ($required in @(
+            'junction.Y',
+            'junction.Z',
+            'placement.LocalZ'
+          )) {
+            if (-not $junctionTests.Contains($required)) {
+              throw "Test 10.110 junction axis regression is missing: $required"
+            }
+          }
+
+          Write-Host "Verified complete DEM coverage and OMSI object/spline coordinate semantics."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4509,11 +4610,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.109-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.110-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.109-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.110-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
