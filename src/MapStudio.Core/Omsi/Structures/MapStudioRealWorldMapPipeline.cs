@@ -31,6 +31,7 @@ public sealed record MapStudioRealWorldMapPipelineResult(
     public int PlacedElementCount =>
         Roads.PlacedSplineCount +
         Roads.GeneratedJunctionCount +
+        Roads.GeneratedStructureCount +
         Scene.PlacedObjectCount;
 }
 
@@ -338,7 +339,7 @@ public sealed class MapStudioRealWorldMapPipeline
                 new MapStudioRealWorldMapPipelineProgress(
                     MapStudioRealWorldMapPipelineStage
                         .Completed,
-                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.GeneratedJunctionCount} junction(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
+                    $"Mapa real concluído: {roads.PlacedSplineCount} spline(s) de via, {roads.GeneratedJunctionCount} junction(s), {roads.GeneratedStructureCount} estrutura(s) viária(s) e {scene.PlacedObjectCount} objeto(s) de cenário."));
 
             return new MapStudioRealWorldMapPipelineResult(
                 download,
