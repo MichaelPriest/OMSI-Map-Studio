@@ -111,12 +111,12 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                     6);
 
                 Assert.Equal(
-                    placement.LocalZ,
+                    0,
                     spline.Z,
                     6);
 
                 Assert.Equal(
-                    0,
+                    placement.LocalZ,
                     spline.Y,
                     6);
             }
@@ -265,11 +265,11 @@ public sealed class MapStudioRealWorldRoadPipelineTests
 
             Assert.Equal(
                 placement.LocalZ,
-                spline.Z,
+                spline.Y,
                 6);
 
             Assert.InRange(
-                spline.Y,
+                spline.Z,
                 0.8,
                 1.2);
 
@@ -415,12 +415,12 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                             .SplineId);
 
             Assert.InRange(
-                bridgeSecond.Y,
+                bridgeSecond.Z,
                 4.79,
                 4.81);
 
             Assert.InRange(
-                tunnelSecond.Y,
+                tunnelSecond.Z,
                 -4.81,
                 -4.79);
 
