@@ -97,9 +97,19 @@ public sealed class MapStudioRealWorldJunctionElevationTests
                         placement.ObjectId);
 
             Assert.InRange(
+                junction.X,
+                placement.LocalX - 0.001,
+                placement.LocalX + 0.001);
+
+            Assert.InRange(
                 junction.Y,
-                4.99,
-                5.01);
+                placement.LocalZ - 0.001,
+                placement.LocalZ + 0.001);
+
+            Assert.InRange(
+                junction.Z,
+                -0.001,
+                0.001);
 
             var touchingSplines =
                 content.Splines
@@ -110,7 +120,7 @@ public sealed class MapStudioRealWorldJunctionElevationTests
                                 placement.LocalX) <
                                 0.01 ||
                             Math.Abs(
-                                spline.Z -
+                                spline.Y -
                                 placement.LocalZ) <
                                 0.01)
                     .ToArray();
