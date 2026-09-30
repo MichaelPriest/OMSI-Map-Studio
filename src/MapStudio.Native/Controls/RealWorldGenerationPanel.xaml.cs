@@ -121,6 +121,19 @@ public sealed partial class RealWorldGenerationPanel :
         CancelButton.IsEnabled =
             ViewModel.CanCancel;
 
+        OverallProgressPanel.Visibility =
+            ViewModel.State ==
+                NativeRealWorldGenerationState.Idle
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+        OverallProgressText.Text =
+            ViewModel.OverallProgressText;
+
+        OverallProgressBar.Value =
+            ViewModel.OverallProgress *
+            100.0;
+
         AssetIndexPanel.Visibility =
             ViewModel.IndexedFiles > 0 ||
             ViewModel.IndexedCandidates > 0
