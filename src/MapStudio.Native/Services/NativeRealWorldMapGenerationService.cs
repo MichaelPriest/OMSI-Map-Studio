@@ -61,8 +61,14 @@ public sealed class NativeRealWorldMapGenerationService
                 elevationProgress = null,
             CancellationToken cancellationToken = default,
             bool useSavedGoogleElevation = true,
-            bool useSavedOpenMeteoElevation = false)
+            bool useSavedOpenMeteoElevation = false,
+            bool useBuildingVisualEvidence = false)
     {
+        var buildingVisualEvidenceProvider =
+            CreateBuildingVisualEvidenceProvider(
+                mapDirectory,
+                useBuildingVisualEvidence);
+
         var googleKey =
             NativeMapCredentialStore
                 .TryGetGoogleMapsApiKey();
@@ -89,7 +95,8 @@ public sealed class NativeRealWorldMapGenerationService
                         progress,
                         assetIndexProgress,
                         elevationProgress,
-                        cancellationToken)
+                        cancellationToken,
+                        buildingVisualEvidenceProvider)
                     .ConfigureAwait(false);
 
             return new NativeRealWorldMapGenerationResult(
@@ -144,7 +151,9 @@ public sealed class NativeRealWorldMapGenerationService
                     streetFurnitureEvidence,
                     progress,
                     assetIndexProgress,
-                    cancellationToken)
+                    cancellationToken,
+                    buildingVisualEvidenceProvider:
+                        buildingVisualEvidenceProvider)
                 .ConfigureAwait(false);
 
         return new NativeRealWorldMapGenerationResult(
@@ -210,5 +219,75 @@ public sealed class NativeRealWorldMapGenerationService
         return new NativeRealWorldMapGenerationResult(
             pipeline,
             NativeRealWorldElevationMode.Google);
+    }
+
+    private static IMapStudioBuildingVisualEvidenceProvider?
+        CreateBuildingVisualEvidenceProvider(
+            string mapDirectory,
+            bool enabled)
+    {
+        if (!enabled)
+        {
+            return null;
+        }
+
+        var referenceRoot =
+            Path.Combine(
+                Path.GetFullPath(
+                    mapDirectory),
+                ".mapstudio",
+                "references",
+                "buildings");
+
+        if (
+            !Directory.Exists(
+                referenceRoot) ||
+            !Directory
+                .EnumerateFiles(
+                    referenceRoot,
+                    "*.*",
+                    SearchOption.AllDirectories)
+                .Any(
+                    path =>
+                        Path.GetExtension(
+                            path)
+                            .ToLowerInvariant() is
+                                ".png" or
+                                ".jpg" or
+                                ".jpeg" or
+                                ".webp"))
+        {
+            return null;
+        }
+
+        var settings =
+            NativeAiConnectionSettingsStore
+                .Load();
+
+        var profile =
+            settings.GetActiveProfile()
+            ?? throw new InvalidOperationException(
+                "buildingVisualEvidenceAiProfileRequired");
+
+        var provider =
+            NativeAiProviderFactory
+                .Create(
+                    profile);
+
+        if (
+            (
+                provider.Descriptor.Capabilities &
+                MapStudio.Core.AI.MapStudioAiCapability
+                    .BuildingReferenceAnalysis
+            ) ==
+            0)
+        {
+            throw new InvalidOperationException(
+                "buildingVisualEvidenceAiCapabilityRequired");
+        }
+
+        return new NativeBuildingVisualEvidenceProvider(
+            mapDirectory,
+            provider);
     }
 }
