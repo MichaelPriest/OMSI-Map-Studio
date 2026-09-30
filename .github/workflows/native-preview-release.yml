@@ -4485,7 +4485,7 @@ jobs:
           foreach ($required in @(
             'EndpointAttemptTimeout',
             'TargetChunkSpanMeters',
-            '500.0',
+            '320.0',
             'MaximumConcurrentChunkRequests',
             'MapStudioOverpassSceneDownloadProgress',
             'Task',
@@ -4563,7 +4563,7 @@ jobs:
 
           foreach ($required in @(
             'TargetChunkSpanMeters',
-            '500.0',
+            '320.0',
             'EndpointConnectTimeout',
             'ConnectTimeout',
             'ResponseHeadersRead',
