@@ -266,6 +266,25 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         segment.Bridge,
                         segment.Tunnel);
 
+            var startHeight =
+                elevation?.SampleRelativeHeightOrDefault(
+                    anchor,
+                    segment.Start) ??
+                0;
+
+            var endHeight =
+                elevation?.SampleRelativeHeightOrDefault(
+                    anchor,
+                    segment.End,
+                    startHeight) ??
+                startHeight;
+
+            var gradientPercent =
+                ResolveGradientPercent(
+                    startHeight,
+                    endHeight,
+                    segment.LengthMeters);
+
             planned.Add(
                 new PlannedSpline(
                     segment,
@@ -279,6 +298,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         .WorldToLocalZ(
                             segment.Start.Z,
                             tile.Y),
+                    startHeight,
+                    gradientPercent,
                     rotation,
                     splinePath));
         }
@@ -331,15 +352,13 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                         -1,
                                         placement.LocalX,
                                         placement.LocalZ,
-                                        elevation?.SampleRelativeHeightOrDefault(
-                                            anchor,
-                                            placement.Segment.Start) ?? 0,
+                                        placement.StartHeight,
                                         placement.Rotation,
                                         placement.Segment
                                             .LengthMeters,
                                         0,
-                                        0,
-                                        0,
+                                        placement.GradientPercent,
+                                        placement.GradientPercent,
                                         false,
                                         Array.Empty<string>()))
                             .ToArray());
@@ -667,6 +686,33 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                         relativePath,
                         StringComparison.OrdinalIgnoreCase));
 
+    private static double ResolveGradientPercent(
+        double startHeight,
+        double endHeight,
+        double lengthMeters)
+    {
+        if (
+            !double.IsFinite(startHeight) ||
+            !double.IsFinite(endHeight) ||
+            !double.IsFinite(lengthMeters) ||
+            lengthMeters <= 0.001)
+        {
+            return 0;
+        }
+
+        var gradient =
+            (
+                endHeight -
+                startHeight
+            ) /
+            lengthMeters *
+            100.0;
+
+        return double.IsFinite(gradient)
+            ? gradient
+            : 0;
+    }
+
     private static double ResolveRotationDegrees(
         MapStudioRoadPoint start,
         MapStudioRoadPoint end)
@@ -695,6 +741,8 @@ public sealed class MapStudioRoadBatchReconstructionRunner
         int SplineId,
         double LocalX,
         double LocalZ,
+        double StartHeight,
+        double GradientPercent,
         double Rotation,
         string SplinePath);
 

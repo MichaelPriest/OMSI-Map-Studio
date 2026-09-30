@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text;
 using MapStudio.Core.Generation.Roads;
 using MapStudio.Core.Generation.Scene;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Config;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Maps;
@@ -119,6 +120,103 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                     spline.Y,
                     6);
             }
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task RoadRunnerUsesDemHeightAndGradientForSplinePlacement()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-elevation-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var anchor =
+                new MapStudioGeographicAnchor(
+                    -23.55000,
+                    -46.63000,
+                    50,
+                    50);
+
+            var elevation =
+                new MapStudioGeoreferencedElevationSurface(
+                    new MapStudioElevationGrid(
+                        2,
+                        2,
+                        [
+                            100,
+                            100,
+                            103,
+                            103
+                        ],
+                        100,
+                        103,
+                        "test"),
+                    south: -23.55020,
+                    west: -46.63010,
+                    north: -23.54990,
+                    east: -46.62990);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        ElevationRoadXml,
+                        anchor,
+                        CancellationToken.None,
+                        elevation);
+
+            var placement =
+                Assert.Single(
+                    result.Placements);
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            var spline =
+                Assert.Single(
+                    content.Splines);
+
+            Assert.Equal(
+                placement.LocalZ,
+                spline.Z,
+                6);
+
+            Assert.InRange(
+                spline.Y,
+                0.8,
+                1.2);
+
+            Assert.InRange(
+                spline.GradientStart,
+                7.0,
+                11.0);
+
+            Assert.Equal(
+                spline.GradientStart,
+                spline.GradientEnd,
+                6);
         }
         finally
         {
@@ -488,6 +586,20 @@ public sealed class MapStudioRealWorldRoadPipelineTests
           <node id="3" lat="-23.55000" lon="-46.62980"/>
           <way id="100">
             <nd ref="1"/><nd ref="2"/><nd ref="3"/>
+            <tag k="highway" v="residential"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+          </way>
+        </osm>
+        """;
+
+    private const string ElevationRoadXml =
+        """
+        <osm version="0.6">
+          <node id="1" lat="-23.55000" lon="-46.63000"/>
+          <node id="2" lat="-23.55010" lon="-46.63000"/>
+          <way id="150">
+            <nd ref="1"/><nd ref="2"/>
             <tag k="highway" v="residential"/>
             <tag k="lanes" v="2"/>
             <tag k="width" v="7"/>
