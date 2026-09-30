@@ -94,7 +94,8 @@ public sealed class NativeRealWorldMapGenerationController :
             IProgress<NativeRealWorldGenerationProgress>?
                 progress = null,
             CancellationToken cancellationToken = default,
-            bool useSavedGoogleElevation = true)
+            bool useSavedGoogleElevation = true,
+            bool useSavedOpenMeteoElevation = false)
     {
         CancellationTokenSource linked;
 
@@ -185,7 +186,9 @@ public sealed class NativeRealWorldMapGenerationController :
                         cancellationToken:
                             linked.Token,
                         useSavedGoogleElevation:
-                            useSavedGoogleElevation)
+                            useSavedGoogleElevation,
+                        useSavedOpenMeteoElevation:
+                            useSavedOpenMeteoElevation)
                     .ConfigureAwait(false);
 
             var summary =
