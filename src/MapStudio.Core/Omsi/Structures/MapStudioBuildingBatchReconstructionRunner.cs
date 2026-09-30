@@ -38,7 +38,9 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             string osmXml,
             MapStudioGeographicAnchor anchor,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IMapStudioBuildingVisualEvidenceProvider?
+                visualEvidenceProvider = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -74,15 +76,99 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                         building.Id)
                 .ToArray();
 
+        var adapter =
+            new MapStudioOsmBuildingReconstructionAdapter();
+
+        var planBuilder =
+            new MapStudioSceneReconstructionPlanBuilder();
+
         var candidates =
-            new MapStudioOsmBuildingReconstructionAdapter()
+            adapter
                 .BuildCandidates(
                     projected);
 
         var plan =
-            new MapStudioSceneReconstructionPlanBuilder()
+            planBuilder
                 .Build(
                     candidates);
+
+        if (
+            visualEvidenceProvider is not null)
+        {
+            var initialReviewIds =
+                plan.Features
+                    .Where(
+                        feature =>
+                            feature.NeedsReview)
+                    .Select(
+                        feature =>
+                            feature.Id)
+                    .ToHashSet(
+                        StringComparer.Ordinal);
+
+            if (initialReviewIds.Count > 0)
+            {
+                var targets =
+                    projected
+                        .Where(
+                            building =>
+                                initialReviewIds.Contains(
+                                    building.Id))
+                        .ToArray();
+
+                var visualEvidence =
+                    await visualEvidenceProvider
+                        .AnalyzeAsync(
+                            targets,
+                            anchor,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+
+                if (visualEvidence.Count > 0)
+                {
+                    var refiner =
+                        new MapStudioStreetLevelBuildingRefiner();
+
+                    projected =
+                        projected
+                            .Select(
+                                building =>
+                                    visualEvidence.TryGetValue(
+                                        building.Id,
+                                        out var visual)
+                                        ? refiner.Refine(
+                                            building,
+                                            visual.Analysis)
+                                        : building)
+                            .ToArray();
+
+                    candidates =
+                        adapter
+                            .BuildCandidates(
+                                projected)
+                            .Select(
+                                candidate =>
+                                    visualEvidence.TryGetValue(
+                                        candidate.Id,
+                                        out var visual)
+                                        ? candidate with
+                                        {
+                                            Evidence =
+                                                [
+                                                    ..candidate.Evidence,
+                                                    ..visual.Evidence
+                                                ]
+                                        }
+                                        : candidate)
+                            .ToArray();
+
+                    plan =
+                        planBuilder
+                            .Build(
+                                candidates);
+                }
+            }
+        }
 
         var automaticIds =
             plan.Features
