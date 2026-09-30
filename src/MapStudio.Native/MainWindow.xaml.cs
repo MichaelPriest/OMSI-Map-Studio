@@ -28379,11 +28379,7 @@ setTimeout(postBounds, 250);
 
             if (
                 applyElevation &&
-                (
-                    !fullReconstruction ||
-                    elevationProviderIndex ==
-                        1
-                ))
+                !fullReconstruction)
             {
                 try
                 {
@@ -28461,7 +28457,11 @@ setTimeout(postBounds, 250);
                             useSavedGoogleElevation:
                                 applyElevation &&
                                 elevationProviderIndex ==
-                                    2);
+                                    2,
+                            useSavedOpenMeteoElevation:
+                                applyElevation &&
+                                elevationProviderIndex ==
+                                    1);
                 }
                 catch (OperationCanceledException)
                 {
