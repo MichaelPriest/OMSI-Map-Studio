@@ -119,8 +119,15 @@ public sealed class MapStudioGeneratedAssetTransactionTests
                     "Sceneryobjects",
                     "MapStudio_Infrastructure");
 
+            var roadStructureRoot =
+                Path.Combine(
+                    root,
+                    "Sceneryobjects",
+                    MapStudioBridgePierAssetGenerator.RootFolderName);
+
             Directory.CreateDirectory(buildingRoot);
             Directory.CreateDirectory(infrastructureRoot);
+            Directory.CreateDirectory(roadStructureRoot);
 
             await File.WriteAllTextAsync(
                 Path.Combine(
@@ -134,6 +141,12 @@ public sealed class MapStudioGeneratedAssetTransactionTests
                     "generated.sco"),
                 "infra");
 
+            await File.WriteAllTextAsync(
+                Path.Combine(
+                    roadStructureRoot,
+                    "generated.sco"),
+                "road-structure");
+
             transaction.Restore(snapshot);
 
             Assert.False(
@@ -141,6 +154,9 @@ public sealed class MapStudioGeneratedAssetTransactionTests
 
             Assert.False(
                 Directory.Exists(infrastructureRoot));
+
+            Assert.False(
+                Directory.Exists(roadStructureRoot));
         }
         finally
         {
