@@ -238,9 +238,9 @@ public sealed class MapStudioGeneratedSceneryBatchWriter
                                             .SceneryObjectPath,
                                         placement.ObjectId,
                                         placement.LocalX,
+                                        placement.LocalZ,
                                         placement.Request
                                             .HeightMeters,
-                                        placement.LocalZ,
                                         placement.Request
                                             .Rotation,
                                         placement.Request
