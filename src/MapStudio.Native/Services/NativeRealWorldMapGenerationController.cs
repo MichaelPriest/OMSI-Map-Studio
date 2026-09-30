@@ -31,7 +31,8 @@ public sealed record NativeRealWorldGenerationSummary(
     int SceneObjects,
     int ReviewItems,
     int TotalPlacedElements,
-    string SessionBackupDirectory);
+    string SessionBackupDirectory,
+    int RoadStructures = 0);
 
 public sealed class NativeRealWorldMapGenerationController :
     IDisposable
@@ -205,7 +206,10 @@ public sealed class NativeRealWorldMapGenerationController :
                     result.Pipeline
                         .PlacedElementCount,
                     result.Pipeline
-                        .SessionBackupDirectory);
+                        .SessionBackupDirectory,
+                    result.Pipeline
+                        .Roads
+                        .GeneratedStructureCount);
 
             SetState(
                 NativeRealWorldGenerationState.Completed);
@@ -214,7 +218,7 @@ public sealed class NativeRealWorldMapGenerationController :
                 progress,
                 NativeRealWorldGenerationState.Completed,
                 MapStudioRealWorldMapPipelineStage.Completed,
-                $"Mapa real concluído: {summary.RoadSplines} via(s), {summary.Junctions} junction(s), {summary.SceneObjects} objeto(s) de cenário.");
+                $"Mapa real concluído: {summary.RoadSplines} via(s), {summary.Junctions} junction(s), {summary.RoadStructures} estrutura(s) viária(s), {summary.SceneObjects} objeto(s) de cenário.");
 
             return summary;
         }
