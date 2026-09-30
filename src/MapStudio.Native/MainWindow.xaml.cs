@@ -28639,7 +28639,7 @@ setTimeout(postBounds, 250);
                 {
                     try
                     {
-                        var generationSummary =
+                        var generationRunSummary =
                             await RealWorldGenerationStatusPanel
                                 .StartAsync(
                             omsiRoot,
@@ -28667,7 +28667,7 @@ setTimeout(postBounds, 250);
                                 true);
 
                     if (
-                        generationSummary
+                        generationRunSummary
                             .TotalPlacedElements <=
                         0)
                     {
