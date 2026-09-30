@@ -167,6 +167,14 @@ public sealed class MapStudioOsmBuildingReconstructionAdapterTests
         Assert.Equal(
             2,
             refined.RoofHeightMeters);
+
+        Assert.Equal(
+            "stucco",
+            refined.FacadeMaterial);
+
+        Assert.Equal(
+            "tile",
+            refined.RoofMaterial);
     }
 
     [Fact]
