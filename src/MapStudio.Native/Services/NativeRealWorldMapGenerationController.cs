@@ -1,4 +1,5 @@
 using MapStudio.Core.Generation.Roads;
+using MapStudio.Core.Generation.Terrain;
 using MapStudio.Core.Omsi.Indexing;
 using MapStudio.Core.Omsi.Structures;
 
