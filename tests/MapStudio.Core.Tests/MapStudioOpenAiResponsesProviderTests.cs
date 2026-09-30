@@ -51,7 +51,7 @@ public sealed class MapStudioOpenAiResponsesProviderTests
     {
         var handler =
             new FakeHandler(
-                "{\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"widthMeters\\\":12,\\\"heightMeters\\\":8,\\\"depthMeters\\\":9,\\\"floorCount\\\":2,\\\"roofType\\\":\\\"flat\\\",\\\"confidence\\\":0.88}\"}]}]}");
+                "{\"output\":[{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"{\\\"widthMeters\\\":12,\\\"heightMeters\\\":8,\\\"depthMeters\\\":9,\\\"floorCount\\\":2,\\\"roofType\\\":\\\"flat\\\",\\\"facadeColour\\\":\\\"#d8c6a0\\\",\\\"roofColour\\\":\\\"#7a4b35\\\",\\\"confidence\\\":0.88}\"}]}]}");
 
         using var client =
             new HttpClient(
@@ -87,6 +87,14 @@ public sealed class MapStudioOpenAiResponsesProviderTests
         Assert.Equal(
             MapStudioBuildingRoofType.Flat,
             result.RoofType);
+
+        Assert.Equal(
+            "#d8c6a0",
+            result.FacadeColour);
+
+        Assert.Equal(
+            "#7a4b35",
+            result.RoofColour);
 
         Assert.Contains(
             "\"type\":\"input_image\"",
