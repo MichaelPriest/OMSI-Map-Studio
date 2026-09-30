@@ -214,7 +214,8 @@ public sealed class RealWorldGenerationViewModel :
             double north,
             double east,
             MapStudioGeographicAnchor anchor,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            bool useSavedGoogleElevation = true)
     {
         if (IsBusy)
         {
@@ -260,7 +261,8 @@ public sealed class RealWorldGenerationViewModel :
                         east,
                         anchor,
                         progress,
-                        cancellationToken);
+                        cancellationToken,
+                        useSavedGoogleElevation);
 
             Summary =
                 summary;
