@@ -28639,9 +28639,9 @@ setTimeout(postBounds, 250);
                 {
                     try
                     {
-                    var generationSummary =
-                        await RealWorldGenerationStatusPanel
-                        .StartAsync(
+                        var generationSummary =
+                            await RealWorldGenerationStatusPanel
+                                .StartAsync(
                             omsiRoot,
                             created.DirectoryPath,
                             _realMapSouth,

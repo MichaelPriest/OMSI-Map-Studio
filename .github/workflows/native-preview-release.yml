@@ -4631,7 +4631,7 @@ jobs:
           foreach ($required in @(
             'OnLoadingCancelClick',
             'RefreshRealMapLoading',
-            'generationViewModel.PropertyChanged',
+            'loadingProgressHandler',
             'TotalPlacedElements'
           )) {
             if (-not $main.Contains($required)) {
