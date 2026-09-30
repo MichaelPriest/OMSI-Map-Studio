@@ -215,13 +215,58 @@ public sealed class MapStudioInfrastructureBatchReconstructionRunner
             }
         }
 
-        var placeable =
-            new List<PlaceableFeature>();
+        var mapBounds =
+            new OmsiTileWorldBounds(
+                OmsiTileGrid.GetOriginX(
+                    tiles.Keys.Min(
+                        coordinate =>
+                            coordinate.X)),
+                OmsiTileGrid.GetOriginZ(
+                    tiles.Keys.Min(
+                        coordinate =>
+                            coordinate.Y)),
+                OmsiTileGrid.GetOriginX(
+                    tiles.Keys.Max(
+                        coordinate =>
+                            coordinate.X) +
+                    1),
+                OmsiTileGrid.GetOriginZ(
+                    tiles.Keys.Max(
+                        coordinate =>
+                            coordinate.Y) +
+                    1));
+
+        var clippedProjected =
+            new List<
+                MapStudioProjectedInfrastructureFeature>();
 
         var outsideMapFeatureIds =
             new List<string>();
 
         foreach (var feature in projected)
+        {
+            var clipped =
+                MapStudioInfrastructureFeatureClipper
+                    .ClipToBounds(
+                        feature,
+                        mapBounds);
+
+            if (clipped.Count == 0)
+            {
+                outsideMapFeatureIds.Add(
+                    feature.Id);
+
+                continue;
+            }
+
+            clippedProjected.AddRange(
+                clipped);
+        }
+
+        var placeable =
+            new List<PlaceableFeature>();
+
+        foreach (var feature in clippedProjected)
         {
             var tileX =
                 OmsiTileGrid
