@@ -136,9 +136,11 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
                                     visualEvidence.TryGetValue(
                                         building.Id,
                                         out var visual)
-                                        ? refiner.Refine(
-                                            building,
-                                            visual.Analysis)
+                                        ? AttachVisualAttribution(
+                                            refiner.Refine(
+                                                building,
+                                                visual.Analysis),
+                                            visual.Evidence)
                                         : building)
                             .ToArray();
 
@@ -251,5 +253,48 @@ public sealed class MapStudioBuildingBatchReconstructionRunner
             writeResult.OutsideMapIds,
             rejectedGeometryIds,
             writeResult.BackupPaths);
+    }
+
+    private static MapStudioProjectedBuildingFootprint
+        AttachVisualAttribution(
+            MapStudioProjectedBuildingFootprint building,
+            IReadOnlyList<MapStudioSceneEvidence> evidence)
+    {
+        var existing =
+            building.SourceAttributions ??
+            Array.Empty<string>();
+
+        var added =
+            evidence
+                .Select(
+                    item =>
+                        string.Join(
+                            " | ",
+                            item.Source.ToString(),
+                            item.ReferenceId ??
+                                string.Empty,
+                            item.Notes ??
+                                string.Empty))
+                .Where(
+                    value =>
+                        !string.IsNullOrWhiteSpace(
+                            value))
+                .ToArray();
+
+        if (added.Length == 0)
+        {
+            return building;
+        }
+
+        return building with
+        {
+            SourceAttributions =
+                existing
+                    .Concat(
+                        added)
+                    .Distinct(
+                        StringComparer.Ordinal)
+                    .ToArray()
+        };
     }
 }
