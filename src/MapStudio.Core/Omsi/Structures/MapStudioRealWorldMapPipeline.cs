@@ -119,7 +119,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 assetIndexProgress = null,
             IProgress<MapStudioElevationDownloadProgress>?
                 elevationProgress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -173,7 +175,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 streetFurnitureEvidence,
                 progress,
                 cancellationToken,
-                elevation)
+                elevation,
+                buildingVisualEvidenceProvider)
             .ConfigureAwait(false);
     }
 
@@ -199,7 +202,9 @@ public sealed class MapStudioRealWorldMapPipeline
                 assetIndexProgress = null,
             IProgress<MapStudioElevationDownloadProgress>?
                 elevationProgress = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -253,7 +258,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 streetFurnitureEvidence,
                 progress,
                 cancellationToken,
-                elevation)
+                elevation,
+                buildingVisualEvidenceProvider)
             .ConfigureAwait(false);
     }
 
@@ -275,7 +281,9 @@ public sealed class MapStudioRealWorldMapPipeline
             IProgress<OmsiAssetIndexProgress>?
                 assetIndexProgress = null,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null)
     {
         progress?.Report(
             new MapStudioRealWorldMapPipelineProgress(
@@ -305,7 +313,8 @@ public sealed class MapStudioRealWorldMapPipeline
                 streetFurnitureEvidence,
                 progress,
                 cancellationToken,
-                elevation)
+                elevation,
+                buildingVisualEvidenceProvider)
             .ConfigureAwait(false);
     }
 
@@ -326,7 +335,9 @@ public sealed class MapStudioRealWorldMapPipeline
             IProgress<MapStudioRealWorldMapPipelineProgress>?
                 progress = null,
             CancellationToken cancellationToken = default,
-            MapStudioGeoreferencedElevationSurface? elevation = null)
+            MapStudioGeoreferencedElevationSurface? elevation = null,
+            IMapStudioBuildingVisualEvidenceProvider?
+                buildingVisualEvidenceProvider = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(omsiRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(mapDirectory);
@@ -434,7 +445,8 @@ public sealed class MapStudioRealWorldMapPipeline
                         assets,
                         streetFurnitureEvidence,
                         cancellationToken,
-                        elevation)
+                        elevation,
+                        buildingVisualEvidenceProvider)
                     .ConfigureAwait(false);
 
             progress?.Report(
