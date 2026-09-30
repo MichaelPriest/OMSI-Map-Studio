@@ -28637,6 +28637,8 @@ setTimeout(postBounds, 250);
 
                 try
                 {
+                    try
+                    {
                     var generationSummary =
                         await RealWorldGenerationStatusPanel
                         .StartAsync(
