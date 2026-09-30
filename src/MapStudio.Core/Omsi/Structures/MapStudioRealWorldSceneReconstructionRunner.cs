@@ -24,6 +24,9 @@ public sealed record MapStudioRealWorldSceneReconstructionResult(
         Buildings.ReviewBuildingIds.Count +
         Vegetation.ReviewVegetationIds.Count +
         StreetFurniture.ReviewFeatureIds.Count;
+
+    public int VisualRefinedBuildingCount =>
+        Buildings.VisualRefinedBuildingCount;
 }
 
 public sealed class MapStudioRealWorldSceneReconstructionRunner
