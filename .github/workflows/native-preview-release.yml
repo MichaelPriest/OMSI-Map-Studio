@@ -1,5 +1,5 @@
 name: Native Preview Release
-# Test 10.115: use physical tile coverage for OSM, reject zero-placement success, and keep animated loading visible.
+# Test 10.116: keep Test 10.115 generation fixes and bound installer-tool bootstrap so preview packaging cannot hang indefinitely.
 
 on:
   push:
@@ -201,6 +201,8 @@ on:
       - "docs/en/releases/v0.2.0-alpha.5-test.10.114-native.md"
       - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.115-native.md"
       - "docs/en/releases/v0.2.0-alpha.5-test.10.115-native.md"
+      - "docs/pt-BR/releases/v0.2.0-alpha.5-test.10.116-native.md"
+      - "docs/en/releases/v0.2.0-alpha.5-test.10.116-native.md"
       - "tests/MapStudio.Core.Tests/MapStudioElevationCoverageResolverTests.cs"
       - "tests/MapStudio.Core.Tests/MapStudioGeneratedSceneryBatchWriterTests.cs"
   workflow_dispatch:
@@ -213,8 +215,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: 0.2.0-alpha.5-test.10.115-native
-  TAG: v0.2.0-alpha.5-test.10.115-native
+  VERSION: 0.2.0-alpha.5-test.10.116-native
+  TAG: v0.2.0-alpha.5-test.10.116-native
 
 jobs:
   build-native-preview:
@@ -4645,6 +4647,24 @@ jobs:
 
           Write-Host "Verified physical OSM tile coverage, zero-placement rejection, cancellable animated loading, and regressions."
 
+      - name: Verify test 10.116 bounded installer bootstrap
+        shell: pwsh
+        run: |
+          $workflow = Get-Content .github/workflows/native-preview-release.yml -Raw
+          foreach ($required in @(
+            'https://jrsoftware.org/download.php/is.exe',
+            '-TimeoutSec 60',
+            'attempt -le 3',
+            'WaitForExit(120000)',
+            'installation exceeded the 120-second limit',
+            'ISCC.exe was not found'
+          )) {
+            if (-not $workflow.Contains($required)) { throw "Test 10.116 bounded installer marker is missing: $required" }
+          }
+          $activeOldCommand = ($workflow -split "`n") | Where-Object { $_ -match '^\s*run:\s*choco install innosetup' }
+          if ($activeOldCommand) { throw "Old unbounded Chocolatey installer command is still active." }
+          Write-Host "Verified bounded direct Inno Setup bootstrap with retries and process timeout."
+
       - name: Test OMSI core
         run: dotnet test tests/MapStudio.Core.Tests/MapStudio.Core.Tests.csproj --configuration Release --arch x64
 
@@ -4765,7 +4785,45 @@ jobs:
 
       - name: Install Inno Setup
         shell: pwsh
-        run: choco install innosetup --no-progress -y
+        run: |
+          $candidatePaths = @(
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+            "$env:ProgramFiles\Inno Setup 6\ISCC.exe".Replace("Program Files", "Program Files (x86)")
+          )
+          $existing = $candidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($existing) {
+            Write-Host "Inno Setup already available at $existing"
+            exit 0
+          }
+          $installer = Join-Path $env:RUNNER_TEMP "innosetup-bootstrap.exe"
+          $downloadUrl = "https://jrsoftware.org/download.php/is.exe"
+          $downloaded = $false
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+              Write-Host "Downloading Inno Setup bootstrap (attempt $attempt/3)..."
+              Invoke-WebRequest -Uri $downloadUrl -OutFile $installer -MaximumRedirection 8 -TimeoutSec 60
+              if ((Test-Path $installer) -and ((Get-Item $installer).Length -gt 1MB)) {
+                $downloaded = $true
+                break
+              }
+              Write-Warning "Downloaded Inno Setup file is missing or unexpectedly small."
+            }
+            catch {
+              Write-Warning ("Inno Setup download attempt {0} failed: {1}" -f $attempt, $_.Exception.Message)
+            }
+            if ($attempt -lt 3) { Start-Sleep -Seconds (5 * $attempt) }
+          }
+          if (-not $downloaded) { throw "Unable to download Inno Setup after 3 bounded attempts." }
+          Write-Host "Installing Inno Setup silently with a 120-second process limit..."
+          $process = Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/SP-" -PassThru
+          if (-not $process.WaitForExit(120000)) {
+            try { $process.Kill($true) } catch { Write-Warning ("Failed to terminate timed-out Inno Setup process: {0}" -f $_.Exception.Message) }
+            throw "Inno Setup installation exceeded the 120-second limit."
+          }
+          if ($process.ExitCode -ne 0) { throw ("Inno Setup installation failed with exit code {0}." -f $process.ExitCode) }
+          $installed = $candidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $installed) { throw "Inno Setup installer completed but ISCC.exe was not found." }
+          Write-Host "Inno Setup ready at $installed"
 
       - name: Build separate native preview installer
         shell: pwsh
@@ -4799,11 +4857,11 @@ jobs:
       - name: Prepare release notes
         shell: pwsh
         run: |
-          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.115-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/pt-BR/releases/v0.2.0-alpha.5-test.10.116-native.md | Set-Content artifacts/release-notes.md -Encoding utf8
           Add-Content artifacts/release-notes.md ""
           Add-Content artifacts/release-notes.md "---"
           Add-Content artifacts/release-notes.md ""
-          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.115-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
+          Get-Content docs/en/releases/v0.2.0-alpha.5-test.10.116-native.md | Add-Content artifacts/release-notes.md -Encoding utf8
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
