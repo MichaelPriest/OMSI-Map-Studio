@@ -284,7 +284,10 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
                     "brick",
                     "#c08060",
                     "roof_tiles",
-                    "#804020");
+                    "#804020",
+                    [
+                        "AerialImagery | image-1 | OpenAerialMap | license=CC-BY 4.0 | provider=Example"
+                    ]);
 
             var result =
                 await new MapStudioFootprintBuildingAssetGenerator()
@@ -429,6 +432,11 @@ public sealed class MapStudioFootprintBuildingAssetGeneratorTests
 
             Assert.Contains(
                 "RoofColour=#804020",
+                manifest,
+                StringComparison.Ordinal);
+
+            Assert.Contains(
+                "SourceAttribution=AerialImagery | image-1 | OpenAerialMap | license=CC-BY 4.0 | provider=Example",
                 manifest,
                 StringComparison.Ordinal);
         }
