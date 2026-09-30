@@ -189,7 +189,7 @@ public sealed class MapStudioRealWorldMapPipeline
             double north,
             double east,
             MapStudioGeographicAnchor anchor,
-            string openMeteoApiKey,
+            string? openMeteoApiKey,
             int elevationRows = 17,
             int elevationColumns = 17,
             IReadOnlyDictionary<
@@ -227,7 +227,10 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioRealWorldMapPipelineProgress(
                 MapStudioRealWorldMapPipelineStage
                     .DownloadingElevation,
-                "Baixando grade Open-Meteo/Copernicus..."));
+                string.IsNullOrWhiteSpace(
+                    openMeteoApiKey)
+                    ? "Baixando grade Open-Meteo/Copernicus gratuita..."
+                    : "Baixando grade Open-Meteo/Copernicus customer..."));
 
         var elevation =
             await _openMeteoElevationClient
