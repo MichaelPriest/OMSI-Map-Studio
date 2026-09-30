@@ -32,7 +32,8 @@ public sealed record NativeRealWorldGenerationSummary(
     int ReviewItems,
     int TotalPlacedElements,
     string SessionBackupDirectory,
-    int RoadStructures = 0);
+    int RoadStructures = 0,
+    int MissingAssets = 0);
 
 public sealed class NativeRealWorldMapGenerationController :
     IDisposable
@@ -212,7 +213,17 @@ public sealed class NativeRealWorldMapGenerationController :
                         .SessionBackupDirectory,
                     result.Pipeline
                         .Roads
-                        .GeneratedStructureCount);
+                        .GeneratedStructureCount,
+                    result.Pipeline
+                        .Scene
+                        .Vegetation
+                        .MissingAssetVegetationIds
+                        .Count +
+                    result.Pipeline
+                        .Scene
+                        .StreetFurniture
+                        .MissingAssetFeatureIds
+                        .Count);
 
             SetState(
                 NativeRealWorldGenerationState.Completed);
