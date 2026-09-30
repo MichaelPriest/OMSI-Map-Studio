@@ -105,6 +105,40 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             Path.GetFullPath(
                 mapDirectory);
 
+        var descriptor =
+            await OmsiMapCatalog
+                .OpenMapAsync(
+                    mapRoot,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+        if (descriptor.Tiles.Count == 0)
+        {
+            throw new InvalidDataException(
+                "realWorldRoadMapHasNoTiles");
+        }
+
+        var mapBounds =
+            new OmsiTileWorldBounds(
+                OmsiTileGrid.GetOriginX(
+                    descriptor.Tiles.Min(
+                        tile =>
+                            tile.X)),
+                OmsiTileGrid.GetOriginZ(
+                    descriptor.Tiles.Min(
+                        tile =>
+                            tile.Y)),
+                OmsiTileGrid.GetOriginX(
+                    descriptor.Tiles.Max(
+                        tile =>
+                            tile.X) +
+                    1),
+                OmsiTileGrid.GetOriginZ(
+                    descriptor.Tiles.Max(
+                        tile =>
+                            tile.Y) +
+                    1));
+
         var imported =
             new MapStudioOsmRoadImporter()
                 .Parse(
@@ -145,6 +179,15 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                             SourceTopologyAuthoritative:
                                 true);
                     })
+                .Where(
+                    trace =>
+                        trace.Points.Count >= 2)
+                .SelectMany(
+                    trace =>
+                        MapStudioRoadTraceClipper
+                            .ClipToBounds(
+                                trace,
+                                mapBounds))
                 .Where(
                     trace =>
                         trace.Points.Count >= 2)
@@ -204,13 +247,6 @@ public sealed class MapStudioRoadBatchReconstructionRunner
             await new MapStudioRoadKitGenerator()
                 .InstallOrUpdateAsync(
                     root,
-                    cancellationToken)
-                .ConfigureAwait(false);
-
-        var descriptor =
-            await OmsiMapCatalog
-                .OpenMapAsync(
-                    mapRoot,
                     cancellationToken)
                 .ConfigureAwait(false);
 
