@@ -18,7 +18,8 @@ public sealed record MapStudioProjectedBuildingFootprint(
     string? FacadeMaterial = null,
     string? FacadeColour = null,
     string? RoofMaterial = null,
-    string? RoofColour = null);
+    string? RoofColour = null,
+    IReadOnlyList<string>? SourceAttributions = null);
 
 public sealed class MapStudioOsmBuildingProjector
 {
