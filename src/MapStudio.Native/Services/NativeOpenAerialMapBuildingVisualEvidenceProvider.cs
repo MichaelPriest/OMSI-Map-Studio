@@ -69,6 +69,8 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                 MapStudioProjectedBuildingFootprint>
                 buildings,
             MapStudioGeographicAnchor anchor,
+            IProgress<MapStudioBuildingVisualEvidenceProgress>?
+                progress = null,
             CancellationToken cancellationToken =
                 default)
     {
@@ -147,6 +149,14 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
             MapStudioOpenAerialMapImage>
             imagery;
 
+        progress?.Report(
+            new MapStudioBuildingVisualEvidenceProgress(
+                0,
+                Math.Min(
+                    buildings.Count,
+                    MaximumBuildingsPerRun),
+                "OpenAerialMap: procurando ortofotos CC BY 4.0 para os prédios em revisão..."));
+
         try
         {
             imagery =
@@ -222,6 +232,14 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
             }
 
             attemptedCount++;
+
+            progress?.Report(
+                new MapStudioBuildingVisualEvidenceProgress(
+                    attemptedCount - 1,
+                    Math.Min(
+                        buildings.Count,
+                        MaximumBuildingsPerRun),
+                    $"OpenAerialMap + IA: {attemptedCount}/{Math.Min(buildings.Count, MaximumBuildingsPerRun)} · {target.Building.Id}"));
 
             var zoom =
                 ResolveZoom(
@@ -369,6 +387,14 @@ public sealed class NativeOpenAerialMapBuildingVisualEvidenceProvider :
                     ]);
 
         }
+
+        progress?.Report(
+            new MapStudioBuildingVisualEvidenceProgress(
+                attemptedCount,
+                Math.Min(
+                    buildings.Count,
+                    MaximumBuildingsPerRun),
+                $"OpenAerialMap: {results.Count} telhado(s) refinado(s) com evidência aérea válida."));
 
         return results;
     }
