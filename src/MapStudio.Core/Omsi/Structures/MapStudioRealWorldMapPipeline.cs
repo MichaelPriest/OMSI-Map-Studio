@@ -40,6 +40,9 @@ public sealed class MapStudioRealWorldMapPipeline
     private readonly MapStudioOverpassSceneClient
         _sceneClient;
 
+    private readonly MapStudioLayeredOsmSceneClient?
+        _layeredSceneClient;
+
     private readonly MapStudioGoogleElevationSurfaceClient
         _elevationClient;
 
@@ -52,6 +55,8 @@ public sealed class MapStudioRealWorldMapPipeline
             new MapStudioGoogleElevationSurfaceClient(),
             new MapStudioOpenMeteoElevationSurfaceClient())
     {
+        _layeredSceneClient =
+            new MapStudioLayeredOsmSceneClient();
     }
 
     public MapStudioRealWorldMapPipeline(
@@ -406,16 +411,34 @@ public sealed class MapStudioRealWorldMapPipeline
                                         .DownloadingOpenStreetMap,
                                     update.Message)));
 
+        var osmCacheRoot =
+            Path.Combine(
+                root,
+                ".mapstudio",
+                "cache",
+                "osm");
+
         var download =
-            await _sceneClient
-                .DownloadAsync(
-                    osmCoverage.South,
-                    osmCoverage.West,
-                    osmCoverage.North,
-                    osmCoverage.East,
-                    cancellationToken,
-                    osmProgress)
-                .ConfigureAwait(false);
+            _layeredSceneClient is null
+                ? await _sceneClient
+                    .DownloadAsync(
+                        osmCoverage.South,
+                        osmCoverage.West,
+                        osmCoverage.North,
+                        osmCoverage.East,
+                        cancellationToken,
+                        osmProgress)
+                    .ConfigureAwait(false)
+                : await _layeredSceneClient
+                    .DownloadAsync(
+                        osmCoverage.South,
+                        osmCoverage.West,
+                        osmCoverage.North,
+                        osmCoverage.East,
+                        osmCacheRoot,
+                        cancellationToken,
+                        osmProgress)
+                    .ConfigureAwait(false);
 
         cancellationToken
             .ThrowIfCancellationRequested();
