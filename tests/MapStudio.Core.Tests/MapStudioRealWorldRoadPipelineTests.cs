@@ -87,6 +87,39 @@ public sealed class MapStudioRealWorldRoadPipelineTests
                     .FindSections(
                         "spline")
                     .Count());
+
+            var tileContent =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            foreach (var placement in result.Placements)
+            {
+                var spline =
+                    Assert.Single(
+                        tileContent.Splines
+                            .Where(
+                                item =>
+                                    item.SplineId ==
+                                    placement.SplineId));
+
+                Assert.Equal(
+                    placement.LocalX,
+                    spline.X,
+                    6);
+
+                Assert.Equal(
+                    placement.LocalZ,
+                    spline.Z,
+                    6);
+
+                Assert.Equal(
+                    0,
+                    spline.Y,
+                    6);
+            }
         }
         finally
         {

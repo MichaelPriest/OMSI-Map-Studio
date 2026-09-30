@@ -330,10 +330,10 @@ public sealed class MapStudioRoadBatchReconstructionRunner
                                         -1,
                                         -1,
                                         placement.LocalX,
+                                        placement.LocalZ,
                                         elevation?.SampleRelativeHeightOrDefault(
                                             anchor,
                                             placement.Segment.Start) ?? 0,
-                                        placement.LocalZ,
                                         placement.Rotation,
                                         placement.Segment
                                             .LengthMeters,
