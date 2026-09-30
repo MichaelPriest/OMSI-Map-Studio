@@ -230,6 +230,155 @@ public sealed class MapStudioRealWorldRoadPipelineTests
     }
 
     [Fact]
+    public async Task RoadRunnerAppliesBridgeAndTunnelVerticalSeparation()
+    {
+        var root =
+            Path.Combine(
+                Path.GetTempPath(),
+                "mapstudio-road-structures-" +
+                Guid.NewGuid().ToString("N"));
+
+        try
+        {
+            var mapDirectory =
+                await CreateMapAsync(
+                    root);
+
+            var anchor =
+                new MapStudioGeographicAnchor(
+                    -23.55000,
+                    -46.63000,
+                    50,
+                    100);
+
+            var elevation =
+                new MapStudioGeoreferencedElevationSurface(
+                    new MapStudioElevationGrid(
+                        2,
+                        2,
+                        [
+                            100,
+                            100,
+                            100,
+                            100
+                        ],
+                        100,
+                        100,
+                        "flat-test"),
+                    south: -23.55030,
+                    west: -46.63010,
+                    north: -23.54990,
+                    east: -46.62830);
+
+            var result =
+                await new MapStudioRoadBatchReconstructionRunner()
+                    .RunAsync(
+                        root,
+                        mapDirectory,
+                        StructuralRoadXml,
+                        anchor,
+                        CancellationToken.None,
+                        elevation);
+
+            var bridgePlacements =
+                result.Placements
+                    .Where(
+                        placement =>
+                            placement.Bridge)
+                    .OrderBy(
+                        placement =>
+                            placement.SplineId)
+                    .ToArray();
+
+            var tunnelPlacements =
+                result.Placements
+                    .Where(
+                        placement =>
+                            placement.Tunnel)
+                    .OrderBy(
+                        placement =>
+                            placement.SplineId)
+                    .ToArray();
+
+            Assert.Equal(
+                2,
+                bridgePlacements.Length);
+
+            Assert.Equal(
+                2,
+                tunnelPlacements.Length);
+
+            Assert.All(
+                bridgePlacements,
+                placement =>
+                    Assert.EndsWith(
+                        "_bridge.sli",
+                        placement.SplinePath,
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            Assert.All(
+                tunnelPlacements,
+                placement =>
+                    Assert.EndsWith(
+                        "_tunnel.sli",
+                        placement.SplinePath,
+                        StringComparison
+                            .OrdinalIgnoreCase));
+
+            var content =
+                await new OmsiTileReader()
+                    .ReadContentAsync(
+                        Path.Combine(
+                            mapDirectory,
+                            "tile_0_0.map"));
+
+            var bridgeSecond =
+                Assert.Single(
+                    content.Splines,
+                    spline =>
+                        spline.SplineId ==
+                        bridgePlacements[1]
+                            .SplineId);
+
+            var tunnelSecond =
+                Assert.Single(
+                    content.Splines,
+                    spline =>
+                        spline.SplineId ==
+                        tunnelPlacements[1]
+                            .SplineId);
+
+            Assert.InRange(
+                bridgeSecond.Y,
+                4.79,
+                4.81);
+
+            Assert.InRange(
+                tunnelSecond.Y,
+                -4.81,
+                -4.79);
+
+            Assert.True(
+                bridgeSecond.GradientStart <
+                0);
+
+            Assert.True(
+                tunnelSecond.GradientStart >
+                0);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task RoadRunnerGeneratesPhysicalJunctionAtSharedOsmNode()
     {
         var root =
@@ -603,6 +752,34 @@ public sealed class MapStudioRealWorldRoadPipelineTests
             <tag k="highway" v="residential"/>
             <tag k="lanes" v="2"/>
             <tag k="width" v="7"/>
+          </way>
+        </osm>
+        """;
+
+    private const string StructuralRoadXml =
+        """
+        <osm version="0.6">
+          <node id="1" lat="-23.55000" lon="-46.63000"/>
+          <node id="2" lat="-23.55000" lon="-46.62920"/>
+          <node id="3" lat="-23.55000" lon="-46.62840"/>
+          <node id="4" lat="-23.55020" lon="-46.63000"/>
+          <node id="5" lat="-23.55020" lon="-46.62920"/>
+          <node id="6" lat="-23.55020" lon="-46.62840"/>
+
+          <way id="300">
+            <nd ref="1"/><nd ref="2"/><nd ref="3"/>
+            <tag k="highway" v="primary"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+            <tag k="bridge" v="yes"/>
+          </way>
+
+          <way id="400">
+            <nd ref="4"/><nd ref="5"/><nd ref="6"/>
+            <tag k="highway" v="primary"/>
+            <tag k="lanes" v="2"/>
+            <tag k="width" v="7"/>
+            <tag k="tunnel" v="yes"/>
           </way>
         </osm>
         """;
