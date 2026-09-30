@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http;
 using MapStudio.Core.Generation.Buildings;
@@ -227,6 +228,153 @@ public sealed class MapStudioOverpassSceneClientTests
     }
 
     [Fact]
+    public async Task DownloaderProcessesPrimaryChunksConcurrentlyAndReportsProgress()
+    {
+        var stateGate =
+            new object();
+
+        var activeRequests =
+            0;
+
+        var maximumConcurrentRequests =
+            0;
+
+        var startedRequests =
+            0;
+
+        var twoRequestsStarted =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        var releaseRequests =
+            new TaskCompletionSource<bool>(
+                TaskCreationOptions
+                    .RunContinuationsAsynchronously);
+
+        using var httpClient =
+            new HttpClient(
+                new AsyncDelegateHandler(
+                    async (
+                        _,
+                        cancellationToken) =>
+                    {
+                        lock (stateGate)
+                        {
+                            activeRequests++;
+
+                            maximumConcurrentRequests =
+                                Math.Max(
+                                    maximumConcurrentRequests,
+                                    activeRequests);
+
+                            startedRequests++;
+
+                            if (startedRequests >= 2)
+                            {
+                                twoRequestsStarted
+                                    .TrySetResult(
+                                        true);
+                            }
+                        }
+
+                        try
+                        {
+                            await releaseRequests
+                                .Task
+                                .WaitAsync(
+                                    cancellationToken);
+
+                            return XmlResponse(
+                                SampleSceneOsm);
+                        }
+                        finally
+                        {
+                            lock (stateGate)
+                            {
+                                activeRequests--;
+                            }
+                        }
+                    }))
+            {
+                Timeout =
+                    TimeSpan.FromSeconds(5)
+            };
+
+        var updates =
+            new ConcurrentQueue<
+                MapStudioOverpassSceneDownloadProgress>();
+
+        var client =
+            new MapStudioOverpassSceneClient(
+                httpClient,
+                [
+                    new Uri(
+                        "https://scene.test/api/interpreter")
+                ]);
+
+        var downloadTask =
+            client.DownloadAsync(
+                -23.556,
+                -46.636,
+                -23.544,
+                -46.624,
+                CancellationToken.None,
+                new InlineProgress<
+                    MapStudioOverpassSceneDownloadProgress>(
+                        updates.Enqueue));
+
+        var concurrencyObserved =
+            await Task.WhenAny(
+                twoRequestsStarted.Task,
+                Task.Delay(
+                    TimeSpan.FromSeconds(2)));
+
+        Assert.Same(
+            twoRequestsStarted.Task,
+            concurrencyObserved);
+
+        releaseRequests
+            .TrySetResult(
+                true);
+
+        var result =
+            await downloadTask;
+
+        Assert.Equal(
+            2,
+            maximumConcurrentRequests);
+
+        Assert.True(
+            result.SuccessfulChunkCount >
+                1);
+
+        var finalProgress =
+            updates
+                .OrderBy(
+                    update =>
+                        update.CompletedPrimaryChunks)
+                .Last();
+
+        Assert.True(
+            finalProgress.TotalPrimaryChunks >
+                1);
+
+        Assert.Equal(
+            finalProgress.TotalPrimaryChunks,
+            finalProgress.CompletedPrimaryChunks);
+
+        Assert.Equal(
+            result.RequestAttemptCount,
+            finalProgress.RequestAttemptCount);
+
+        Assert.Contains(
+            "OpenStreetMap",
+            finalProgress.Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DownloaderRecoversFailedParentBySubdivision()
     {
         var requestCount =
@@ -307,6 +455,32 @@ public sealed class MapStudioOverpassSceneClientTests
             Content =
                 new StringContent(xml)
         };
+
+    private sealed class InlineProgress<T>(
+        Action<T> report)
+        : IProgress<T>
+    {
+        public void Report(
+            T value) =>
+            report(value);
+    }
+
+    private sealed class AsyncDelegateHandler(
+        Func<
+            HttpRequestMessage,
+            CancellationToken,
+            Task<HttpResponseMessage>>
+            handler)
+        : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage>
+            SendAsync(
+                HttpRequestMessage request,
+                CancellationToken cancellationToken) =>
+            handler(
+                request,
+                cancellationToken);
+    }
 
     private sealed class DelegateHandler(
         Func<HttpRequestMessage, HttpResponseMessage> handler)

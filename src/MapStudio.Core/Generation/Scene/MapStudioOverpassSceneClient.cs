@@ -14,16 +14,27 @@ public sealed record MapStudioOverpassSceneDownloadResult(
     int RequestAttemptCount,
     IReadOnlyList<string> UsedEndpoints);
 
+public sealed record MapStudioOverpassSceneDownloadProgress(
+    int CompletedPrimaryChunks,
+    int TotalPrimaryChunks,
+    int SuccessfulLeafChunks,
+    int FailedLeafChunks,
+    int RequestAttemptCount,
+    string Message);
+
 public sealed class MapStudioOverpassSceneClient
 {
     private const double EarthRadiusMeters =
         6_378_137.0;
 
     private const double TargetChunkSpanMeters =
-        1_500.0;
+        750.0;
 
     private const int MaximumChunksPerAxis =
         6;
+
+    private const int MaximumConcurrentChunkRequests =
+        2;
 
     private const int MaximumRecoveryDepth =
         1;
@@ -31,10 +42,6 @@ public sealed class MapStudioOverpassSceneClient
     private static readonly TimeSpan
         EndpointAttemptTimeout =
             TimeSpan.FromSeconds(20);
-
-    private static readonly TimeSpan
-        MaximumDownloadDuration =
-            TimeSpan.FromMinutes(2);
 
     private static readonly HttpClient
         SharedHttpClient =
@@ -116,7 +123,9 @@ public sealed class MapStudioOverpassSceneClient
             double west,
             double north,
             double east,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            IProgress<MapStudioOverpassSceneDownloadProgress>?
+                progress = null)
     {
         ValidateBounds(
             south,
@@ -124,35 +133,17 @@ public sealed class MapStudioOverpassSceneClient
             north,
             east);
 
-        using var budgetCancellation =
-            CancellationTokenSource
-                .CreateLinkedTokenSource(
-                    cancellationToken);
-
-        budgetCancellation.CancelAfter(
-            MaximumDownloadDuration);
-
         WriteDiagnostic(
             $"scene download begin bounds={south:F6},{west:F6},{north:F6},{east:F6}");
 
-        try
-        {
-            return await DownloadCoreAsync(
-                    south,
-                    west,
-                    north,
-                    east,
-                    budgetCancellation.Token)
-                .ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-            when (
-                !cancellationToken.IsCancellationRequested &&
-                budgetCancellation.IsCancellationRequested)
-        {
-            throw new HttpRequestException(
-                $"Importação de cenário OpenStreetMap excedeu o limite de {MaximumDownloadDuration.TotalSeconds:0} segundos.");
-        }
+        return await DownloadCoreAsync(
+                south,
+                west,
+                north,
+                east,
+                progress,
+                cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task<MapStudioOverpassSceneDownloadResult>
@@ -161,6 +152,8 @@ public sealed class MapStudioOverpassSceneClient
             double west,
             double north,
             double east,
+            IProgress<MapStudioOverpassSceneDownloadProgress>?
+                progress,
             CancellationToken cancellationToken)
     {
         var (
@@ -172,6 +165,139 @@ public sealed class MapStudioOverpassSceneClient
                 west,
                 north,
                 east);
+
+        var primaryChunks =
+            new List<Bounds>(
+                checked(
+                    rows *
+                    columns));
+
+        for (var row = 0; row < rows; row++)
+        {
+            for (var column = 0; column < columns; column++)
+            {
+                primaryChunks.Add(
+                    new Bounds(
+                        Lerp(
+                            south,
+                            north,
+                            row /
+                                (double)rows),
+                        Lerp(
+                            west,
+                            east,
+                            column /
+                                (double)columns),
+                        Lerp(
+                            south,
+                            north,
+                            (row + 1) /
+                                (double)rows),
+                        Lerp(
+                            west,
+                            east,
+                            (column + 1) /
+                                (double)columns)));
+            }
+        }
+
+        progress?.Report(
+            new MapStudioOverpassSceneDownloadProgress(
+                0,
+                primaryChunks.Count,
+                0,
+                0,
+                0,
+                $"OpenStreetMap: preparando {primaryChunks.Count} bloco(s) de download..."));
+
+        using var chunkConcurrency =
+            new SemaphoreSlim(
+                MaximumConcurrentChunkRequests,
+                MaximumConcurrentChunkRequests);
+
+        var completedPrimaryChunks =
+            0;
+
+        var reportedSuccessfulLeafChunks =
+            0;
+
+        var reportedFailedLeafChunks =
+            0;
+
+        var reportedRequestAttempts =
+            0;
+
+        var chunkTasks =
+            primaryChunks
+                .Select(
+                    async bounds =>
+                    {
+                        await chunkConcurrency
+                            .WaitAsync(
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                        RecoveryResult result;
+
+                        try
+                        {
+                            cancellationToken
+                                .ThrowIfCancellationRequested();
+
+                            result =
+                                await DownloadChunkWithRecoveryAsync(
+                                        bounds,
+                                        depth: 0,
+                                        cancellationToken)
+                                    .ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            chunkConcurrency
+                                .Release();
+                        }
+
+                        var completed =
+                            System.Threading.Interlocked
+                                .Increment(
+                                    ref completedPrimaryChunks);
+
+                        var successful =
+                            System.Threading.Interlocked
+                                .Add(
+                                    ref reportedSuccessfulLeafChunks,
+                                    result.SuccessfulChunkCount);
+
+                        var failed =
+                            System.Threading.Interlocked
+                                .Add(
+                                    ref reportedFailedLeafChunks,
+                                    result.FailedChunkCount);
+
+                        var attempts =
+                            System.Threading.Interlocked
+                                .Add(
+                                    ref reportedRequestAttempts,
+                                    result.RequestAttemptCount);
+
+                        progress?.Report(
+                            new MapStudioOverpassSceneDownloadProgress(
+                                completed,
+                                primaryChunks.Count,
+                                successful,
+                                failed,
+                                attempts,
+                                $"OpenStreetMap: bloco {completed}/{primaryChunks.Count} concluído · {attempts} tentativa(s)."));
+
+                        return result;
+                    })
+                .ToArray();
+
+        var chunkResults =
+            await Task
+                .WhenAll(
+                    chunkTasks)
+                .ConfigureAwait(false);
 
         var aggregate =
             new SceneAggregate();
@@ -187,74 +313,29 @@ public sealed class MapStudioOverpassSceneClient
             new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase);
 
-        for (var row = 0; row < rows; row++)
+        foreach (var result in chunkResults)
         {
-            for (var column = 0; column < columns; column++)
+            successfulChunks +=
+                result.SuccessfulChunkCount;
+
+            failedChunks +=
+                result.FailedChunkCount;
+
+            requestAttempts +=
+                result.RequestAttemptCount;
+
+            foreach (var endpoint in result.UsedEndpoints)
             {
-                cancellationToken
-                    .ThrowIfCancellationRequested();
-
-                var chunkSouth =
-                    Lerp(
-                        south,
-                        north,
-                        row /
-                            (double)rows);
-
-                var chunkNorth =
-                    Lerp(
-                        south,
-                        north,
-                        (row + 1) /
-                            (double)rows);
-
-                var chunkWest =
-                    Lerp(
-                        west,
-                        east,
-                        column /
-                            (double)columns);
-
-                var chunkEast =
-                    Lerp(
-                        west,
-                        east,
-                        (column + 1) /
-                            (double)columns);
-
-                var result =
-                    await DownloadChunkWithRecoveryAsync(
-                            new Bounds(
-                                chunkSouth,
-                                chunkWest,
-                                chunkNorth,
-                                chunkEast),
-                            depth: 0,
-                            cancellationToken)
-                        .ConfigureAwait(false);
-
-                successfulChunks +=
-                    result.SuccessfulChunkCount;
-
-                failedChunks +=
-                    result.FailedChunkCount;
-
-                requestAttempts +=
-                    result.RequestAttemptCount;
-
-                foreach (var endpoint in result.UsedEndpoints)
-                {
-                    usedEndpoints.Add(endpoint);
-                }
-
-                foreach (var document in result.Documents)
-                {
-                    aggregate.Add(document);
-                }
-
-                failures.AddRange(
-                    result.Failures);
+                usedEndpoints.Add(endpoint);
             }
+
+            foreach (var document in result.Documents)
+            {
+                aggregate.Add(document);
+            }
+
+            failures.AddRange(
+                result.Failures);
         }
 
         if (failedChunks > 0)

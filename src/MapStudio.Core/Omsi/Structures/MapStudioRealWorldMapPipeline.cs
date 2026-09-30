@@ -382,6 +382,18 @@ public sealed class MapStudioRealWorldMapPipeline
                     .DownloadingOpenStreetMap,
                 "Baixando vias e cenário real do OpenStreetMap..."));
 
+        var osmProgress =
+            progress is null
+                ? null
+                : new Progress<
+                    MapStudioOverpassSceneDownloadProgress>(
+                        update =>
+                            progress.Report(
+                                new MapStudioRealWorldMapPipelineProgress(
+                                    MapStudioRealWorldMapPipelineStage
+                                        .DownloadingOpenStreetMap,
+                                    update.Message)));
+
         var download =
             await _sceneClient
                 .DownloadAsync(
@@ -389,7 +401,8 @@ public sealed class MapStudioRealWorldMapPipeline
                     west,
                     north,
                     east,
-                    cancellationToken)
+                    cancellationToken,
+                    osmProgress)
                 .ConfigureAwait(false);
 
         cancellationToken
