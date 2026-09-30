@@ -84,11 +84,63 @@ public sealed class RealWorldGenerationViewModel :
         Stage
     {
         get => _stage;
-        private set =>
-            SetField(
-                ref _stage,
-                value);
+        private set
+        {
+            if (
+                SetField(
+                    ref _stage,
+                    value))
+            {
+                OnPropertyChanged(
+                    nameof(OverallProgress));
+
+                OnPropertyChanged(
+                    nameof(OverallProgressText));
+            }
+        }
     }
+
+    public double OverallProgress =>
+        Stage switch
+        {
+            MapStudioRealWorldMapPipelineStage.IndexingAssets =>
+                0.10,
+            MapStudioRealWorldMapPipelineStage.DownloadingElevation =>
+                0.25,
+            MapStudioRealWorldMapPipelineStage.DownloadingOpenStreetMap =>
+                0.40,
+            MapStudioRealWorldMapPipelineStage.ApplyingElevation =>
+                0.55,
+            MapStudioRealWorldMapPipelineStage.GeneratingRoads =>
+                0.70,
+            MapStudioRealWorldMapPipelineStage.ReconstructingScene =>
+                0.88,
+            MapStudioRealWorldMapPipelineStage.Completed =>
+                1.0,
+            _ =>
+                0.0
+        };
+
+    public string OverallProgressText =>
+        Stage switch
+        {
+            MapStudioRealWorldMapPipelineStage.IndexingAssets =>
+                "1/6 · assets OMSI",
+            MapStudioRealWorldMapPipelineStage.DownloadingElevation =>
+                "2/6 · elevação",
+            MapStudioRealWorldMapPipelineStage.DownloadingOpenStreetMap =>
+                "3/6 · OpenStreetMap",
+            MapStudioRealWorldMapPipelineStage.ApplyingElevation =>
+                "4/6 · terreno",
+            MapStudioRealWorldMapPipelineStage.GeneratingRoads =>
+                "5/6 · vias e estruturas",
+            MapStudioRealWorldMapPipelineStage.ReconstructingScene =>
+                "6/6 · cenário",
+            MapStudioRealWorldMapPipelineStage.Completed =>
+                "concluído",
+            _ =>
+                string.Empty
+        };
 
     public string StatusText
     {
@@ -301,13 +353,15 @@ public sealed class RealWorldGenerationViewModel :
 
             throw;
         }
-        catch
+        catch (Exception exception)
         {
             State =
                 NativeRealWorldGenerationState.Failed;
 
             StatusText =
-                "Falha ao gerar mapa real. O rollback foi solicitado pelo pipeline.";
+                "Falha ao gerar mapa real: " +
+                exception.Message +
+                ". O rollback foi solicitado pelo pipeline.";
 
             throw;
         }
