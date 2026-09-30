@@ -210,7 +210,7 @@ public sealed class MapStudioOverpassSceneClient
                 0,
                 $"OpenStreetMap: preparando {primaryChunks.Count} bloco(s) de download..."));
 
-        using var chunkConcurrency =
+        using var requestConcurrency =
             new SemaphoreSlim(
                 MaximumConcurrentChunkRequests,
                 MaximumConcurrentChunkRequests);
@@ -232,30 +232,16 @@ public sealed class MapStudioOverpassSceneClient
                 .Select(
                     async bounds =>
                     {
-                        await chunkConcurrency
-                            .WaitAsync(
-                                cancellationToken)
-                            .ConfigureAwait(false);
+                        cancellationToken
+                            .ThrowIfCancellationRequested();
 
-                        RecoveryResult result;
-
-                        try
-                        {
-                            cancellationToken
-                                .ThrowIfCancellationRequested();
-
-                            result =
-                                await DownloadChunkWithRecoveryAsync(
-                                        bounds,
-                                        depth: 0,
-                                        cancellationToken)
-                                    .ConfigureAwait(false);
-                        }
-                        finally
-                        {
-                            chunkConcurrency
-                                .Release();
-                        }
+                        var result =
+                            await DownloadChunkWithRecoveryAsync(
+                                    bounds,
+                                    depth: 0,
+                                    requestConcurrency,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
 
                         var completed =
                             System.Threading.Interlocked
@@ -386,6 +372,7 @@ public sealed class MapStudioOverpassSceneClient
         DownloadChunkWithRecoveryAsync(
             Bounds bounds,
             int depth,
+            SemaphoreSlim requestConcurrency,
             CancellationToken cancellationToken)
     {
         WriteDiagnostic(
@@ -394,6 +381,7 @@ public sealed class MapStudioOverpassSceneClient
         var fetched =
             await TryDownloadChunkAsync(
                     bounds,
+                    requestConcurrency,
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -496,15 +484,21 @@ public sealed class MapStudioOverpassSceneClient
                 fetched.Error);
         }
 
-        foreach (var child in children)
-        {
-            var childResult =
-                await DownloadChunkWithRecoveryAsync(
-                        child,
-                        depth + 1,
-                        cancellationToken)
-                    .ConfigureAwait(false);
+        var childResults =
+            await Task
+                .WhenAll(
+                    children
+                        .Select(
+                            child =>
+                                DownloadChunkWithRecoveryAsync(
+                                    child,
+                                    depth + 1,
+                                    requestConcurrency,
+                                    cancellationToken)))
+                .ConfigureAwait(false);
 
+        foreach (var childResult in childResults)
+        {
             documents.AddRange(
                 childResult.Documents);
 
@@ -538,6 +532,7 @@ public sealed class MapStudioOverpassSceneClient
     private async Task<ChunkFetchResult>
         TryDownloadChunkAsync(
             Bounds bounds,
+            SemaphoreSlim requestConcurrency,
             CancellationToken cancellationToken)
     {
         var query =
@@ -574,6 +569,11 @@ public sealed class MapStudioOverpassSceneClient
                     _endpoints.Count];
 
             attemptCount++;
+
+            await requestConcurrency
+                .WaitAsync(
+                    cancellationToken)
+                .ConfigureAwait(false);
 
             using var attemptCancellation =
                 CancellationTokenSource
@@ -663,6 +663,11 @@ public sealed class MapStudioOverpassSceneClient
                     attemptCancellation.IsCancellationRequested
                         ? $"{endpoint.Host}: timeout após {EndpointAttemptTimeout.TotalSeconds:0}s"
                         : $"{endpoint.Host}: {exception.Message}");
+            }
+            finally
+            {
+                requestConcurrency
+                    .Release();
             }
         }
 
